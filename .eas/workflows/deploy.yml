@@ -1,12 +1,12 @@
-name: Deploy website
+name: Deploy web
 
 on:
   push:
-    branches:
-      - main
+    branches: ['main']
 
 jobs:
-  deploy:
+  deploy_web:
+    name: Deploy web
     type: deploy
     params:
       prod: true
