@@ -2,32 +2,39 @@
 
 ## Document status
 
-This document describes the currently implemented structure of the repo as it exists in code today.
+This document describes the repo as it exists in code today.
 
-It does not treat aspirational copy, placeholder text, or long-range planning documents as implemented behavior.
+It records the currently implemented product surface, route structure, layout behavior, and interaction boundaries. It does not treat canon text, long-range planning copy, or deferred portal ideas as implemented behavior.
 
-Sections marked **Provisional** reflect incomplete, placeholder, or ambiguous implementation.
+Sections marked **Provisional** reflect mock-data surfaces, incomplete workflows, or intentionally deferred systems.
 
 ## Current product surface
 
-The current app is a small Expo Router application that presents a public-facing OWA shell.
+The app is an Expo Router application with two visible layers:
+
+- a public OWA website shell for orientation and placeholder public pages
+- a dedicated portal shell under `/portal/*` for the first guest-facing OWA Nexus slice
 
 Implemented scope today:
 
-- a shared application shell with a persistent header and footer
-- a public landing page
-- placeholder public information pages
-- placeholder authentication entry screens
-- a placeholder portal entry screen
+- a shared public shell with persistent `Header` and `Footer`
+- a public landing page at `/`
+- placeholder public information and auth destination pages
+- a dedicated portal layout for `/portal/*`
+- portal routes for `Dashboard`, `Discussions`, `Votes`, `Library`, and `Account`
+- portal shell state for scope selection, scope tree expansion, section selection, guest capabilities, and function-first vs scope-first mode
+- typed mock portal data for scopes, forums, votes, packets, and guest onboarding cues
+- NativeWind-based styling for the portal layer
 
 Not implemented today:
 
 - authenticated user state
-- form submission
-- data fetching
-- persistent storage
-- domain models in active use
-- interactive assembly, proposal, or participation workflows
+- persistent form submission or saved portal actions
+- API fetching or remote storage
+- real packet detail routes
+- real-time chat
+- protected/private spaces
+- trust-weighted ranking, delegation, or moderation workflows
 
 ## Current routes and screens
 
@@ -74,7 +81,7 @@ Status:
 
 - **Provisional**
 - contains static placeholder copy only
-- does not currently render or link the canon, implementation guide, or other repo docs
+- does not currently render or link repo docs inside the app
 
 ### `/login`
 
@@ -88,7 +95,7 @@ Status:
 
 - **Provisional**
 - contains static placeholder copy only
-- no form, validation, auth provider, or session handling is implemented
+- no real auth flow, validation, or session handling is implemented
 
 ### `/signup`
 
@@ -102,44 +109,104 @@ Status:
 
 - **Provisional**
 - contains static placeholder copy only
-- no form, validation, account creation, or onboarding flow is implemented
+- no account creation or onboarding workflow is implemented
+
+## Portal route tree
+
+The portal now has its own nested route layout under `app/portal/_layout.tsx`.
 
 ### `/portal`
 
 Route file: `app/portal/index.tsx`
 
-Screen component: `PortalPage`
+Role:
+
+- portal entry path
+- immediately redirects to `/portal/dashboard`
+
+### `/portal/dashboard`
+
+Screen component: `PortalDashboardPage`
 
 Role:
 
-- placeholder portal landing page
-- described in copy as the future authenticated participation surface
+- guest dashboard and civic control panel
+- shows current scope summary, aggregate queues, and recommended packet previews
 
 Status:
 
 - **Provisional**
-- contains static placeholder copy only
-- no protected routing, portal modules, or authenticated workspace behavior is implemented
+- driven entirely by seeded mock data
+
+### `/portal/discussions`
+
+Screen component: `PortalDiscussionsPage`
+
+Role:
+
+- Reddit-inspired discussion surface with forum previews and active thread cards
+- includes the only enabled guest write affordance in the current portal slice: the visitor lobby composer
+
+Status:
+
+- **Provisional**
+- guest posts are local session-only UI state, not persisted packets
+
+### `/portal/votes`
+
+Screen component: `PortalVotesPage`
+
+Role:
+
+- dedicated vote floor surface
+- shows public pipeline stages, proposal previews, and governance visibility cues
+
+Status:
+
+- **Provisional**
+- guests can inspect but cannot vote, object, or delegate
+
+### `/portal/library`
+
+Screen component: `PortalLibraryPage`
+
+Role:
+
+- basic packet browser surface
+- supports packet-type filtering and packet preview cards
+
+Status:
+
+- **Provisional**
+- packet actions are visible as placeholders and remain disabled
+
+### `/portal/account`
+
+Screen component: `PortalAccountPage`
+
+Role:
+
+- guest-facing identity and onboarding shell
+- shows anonymous guest status, capabilities, followed scopes, and locality/trust placeholders
+
+Status:
+
+- **Provisional**
+- no authentication, credential proofs, or persistent profile data is implemented
 
 ## Current navigation structure
 
-Navigation is implemented with Expo Router and a top-level stack inside `app/_layout.tsx`.
+Navigation is implemented with Expo Router using a top-level stack in `app/_layout.tsx` and a nested portal stack in `app/portal/_layout.tsx`.
 
-### Shared shell
+### Public shell
 
-Every route renders inside a persistent shell composed of:
+Public routes render inside a persistent shell composed of:
 
 - `Header`
 - main stack content area
 - `Footer`
 
-The stack has `headerShown: false`, so navigation chrome is handled by the shared layout components rather than native stack headers.
-
-### Header navigation
-
-The header is the primary global navigation surface.
-
-Top-level header links:
+Current public header links:
 
 - `Home` -> `/`
 - `About` -> `/about`
@@ -147,31 +214,40 @@ Top-level header links:
 - `Login` -> `/login`
 - `Sign Up` -> `/signup`
 
-Current behavior:
+Current public behavior:
 
-- the active link is highlighted by comparing the current pathname to the item `href`
-- the brand label `OWA` links to `/`
+- the active public link is highlighted from the current pathname
+- the `OWA` brand label links to `/`
+- the portal is still entered from the home-page CTA rather than from the public header nav
 
-### Portal access
+### Portal shell
 
-The portal route is registered in the app stack, but it is not included in the header navigation list.
+Portal routes do not render the public `Header` or `Footer`.
 
-Current portal entry path:
+Portal shell composition:
 
-- CTA button on the home page linking to `/portal`
+- persistent left-side shell on desktop
+- mobile top bar with a toggle that opens the left shell as an overlay panel
+- main surface on the right for the active route
 
-### Footer
+Left-side shell sections:
 
-The footer is informational rather than navigational.
+- guest identity block
+- current locality placeholder
+- scope switcher and branch tree
+- followed scopes
+- function-first vs scope-first mode toggle
+- accordion-based secondary navigation
 
-Current footer content:
+Portal route list:
 
-- `Open World Assembly`
-- short descriptive subtext about theory, documentation, and portal shell
+- `/portal/dashboard`
+- `/portal/discussions`
+- `/portal/votes`
+- `/portal/library`
+- `/portal/account`
 
 ## Existing workflows
-
-The implemented workflows are simple navigation flows rather than functional product workflows.
 
 ### Public orientation workflow
 
@@ -185,238 +261,239 @@ Implemented flow:
 
 Implemented flow:
 
-1. user uses the persistent header on any route
+1. user uses the persistent public header on any public route
 2. user moves among the public pages
-3. current page is indicated by active header link styling
+3. current page is indicated by active header-link styling
 
-### Portal discovery workflow
+### Portal entry workflow
 
 Implemented flow:
 
-1. user reaches the landing page
-2. user selects `Enter Portal`
-3. user is taken to the placeholder portal page
+1. user selects `Enter Portal` from the landing page
+2. router enters `/portal`
+3. `/portal` redirects to `/portal/dashboard`
+4. portal loads in `Global Guest` state with `Global Commons` as the initial scope lens
+
+### Portal scope workflow
+
+Implemented flow:
+
+1. guest opens the scope tree or followed scope chips
+2. guest chooses a scope
+3. the active scope updates in shared portal shell state
+4. dashboard, discussion, vote, library, and account surfaces filter against that scope lens
 
 Status:
 
 - **Provisional**
-- this is route navigation only, not a real participation flow
+- the scope model is mock data only
 
-### Authentication workflow
+### Portal mode workflow
 
-Status:
+Implemented flow:
 
-- **Provisional**
-- `/login` and `/signup` exist as destinations only
-- there is no implemented sign-in, sign-up, identity, session, or access control workflow
-
-### Documentation workflow
+1. guest toggles between `Function-first` and `Scope-first`
+2. route structure remains unchanged
+3. the left-side accordion copy and emphasis changes, but the same surfaces remain reachable
 
 Status:
 
 - **Provisional**
-- `/docs` exists as a destination only
-- there is no implemented document index, file rendering, or canon browsing workflow inside the app
+- mode is a shell preference only; it does not change data shape or persistence
+
+### Visitor lobby posting workflow
+
+Implemented flow:
+
+1. guest opens `/portal/discussions`
+2. guest enters a title and/or body in the visitor lobby composer
+3. guest presses `Post to visitor lobby`
+4. a local session-only draft preview appears in the discussion surface
+
+Status:
+
+- **Provisional**
+- posts are not stored, synced, or converted into durable packets yet
 
 ## Major entities and their roles
 
-The current implementation contains very few product-level entities.
-
 ### Implemented application entities
 
-#### App shell
+#### Root layout
 
 Defined by `app/_layout.tsx`.
 
 Role:
 
-- wraps the whole app in a theme provider
-- applies the persistent shell
-- defines the stack route list
+- wraps the app in a theme provider
+- conditionally applies the public shell only on non-portal routes
+- keeps the portal route subtree available in the top-level stack
 
-#### Header
+#### Portal layout
 
-Defined by `components/layout/header.tsx`.
-
-Role:
-
-- renders the global brand and top-level navigation
-- determines which nav item is active based on pathname
-
-#### Footer
-
-Defined by `components/layout/footer.tsx`.
+Defined by `app/portal/_layout.tsx`.
 
 Role:
 
-- renders persistent site footer copy
+- provides the dedicated portal shell
+- mounts the nested portal stack
+- shares portal shell state across all portal screens
 
-#### Screen components
+#### Portal shell provider
 
-Defined by the route files under `app`.
+Defined by `components/portal/portal-shell-context.tsx`.
 
 Role:
 
-- each route owns its own visible page content
-- pages are currently self-contained and mostly static
+- stores `navigationMode`
+- stores `activeScopeId`
+- stores `expandedScopeIds`
+- derives `activeSection` from the current pathname
+- exposes guest capabilities and scope data to portal screens
+
+#### Portal sidebar and shell
+
+Defined by `components/portal/portal-shell.tsx` and `components/portal/portal-sidebar.tsx`.
+
+Role:
+
+- render the left-heavy portal UI
+- keep the scope branch visible
+- provide responsive collapse behavior for smaller viewports
+
+#### Portal mock data
+
+Defined by `data/portal/mock-portal-data.ts`.
+
+Role:
+
+- seeds the current portal UI
+- provides scope summaries, dashboard queues, forum previews, vote previews, packet previews, and guest onboarding copy
 
 ### Domain-level entities
 
 Status:
 
 - **Provisional**
-- no active domain entity system is implemented in the app today
+- there is still no runtime domain model, persistence layer, or packet engine wired into the UI
 
 Important note:
 
-- terms such as `assemblies`, `proposals`, and `participation` appear in page copy only
-- they are not currently backed by route-specific modules, data schemas in use, or runtime workflows
-
-### Data and schema entities
-
-Status:
-
-- **Provisional**
-- `data/schemas` exists as a directory, but no active schema files are present there
-- `domain` and `lib` directories are present in the repo, but there is no implemented application behavior currently using them
+- portal content is packet-themed and type-labeled
+- packet, proposal, assembly, mission, and trust concepts remain mock UI data rather than active runtime entities
 
 ## Current architecture patterns
 
 ### Routing pattern
 
 - Expo Router file-based routing
-- one top-level stack in `app/_layout.tsx`
-- direct route files for simple pages
-- nested folder route for `/portal` via `app/portal/index.tsx`
+- top-level stack in `app/_layout.tsx`
+- nested portal stack in `app/portal/_layout.tsx`
+- `/portal` redirects to `/portal/dashboard`
 
 ### Layout pattern
 
-- one shared shell for all routes
-- header and footer live outside the stack content
-- page components render inside a centered content container
+- public and portal shells now have separate layout behavior
+- public pages remain centered content pages with shared header/footer chrome
+- portal pages render inside a dedicated app-style shell with a persistent left rail on desktop and an overlay shell on smaller screens
 
 ### Component pattern
 
 - function components throughout
 - route screens use default exports
-- layout pieces are split into reusable components under `components/layout`
+- portal layout logic is split into reusable components under `components/portal`
 
 ### Styling pattern
 
-- styling is done with `StyleSheet.create`
-- screens define local `styles` objects in the same file
-- active route files do not use NativeWind classes
-
-### Import pattern
-
-- path alias imports use `@/`
-- active layout code imports shared components and hooks through the alias
-
-### Theme pattern
-
-- app shell uses `ThemeProvider` from `@react-navigation/native`
-- color scheme is resolved through `useColorScheme`
-- active route styling mostly uses explicit hard-coded colors rather than shared theme tokens
+- public screens still primarily use `StyleSheet.create`
+- portal screens and portal shell use NativeWind `className` styling
+- portal theme tokens are defined in `tailwind.config.js`
+- NativeWind is configured through `babel.config.js`, `metro.config.js`, `global.css`, and `nativewind-env.d.ts`
 
 ### State and data pattern
 
-- current pages are stateless
-- there is no app-wide state container
-- there are no API calls or persisted app data flows in the active routes
+- public pages are still stateless
+- portal state is shared through a local React context provider
+- all current portal content is mock data, not fetched or persisted data
+- no API or storage integration is implemented
 
 ## Current naming patterns
-
-The implemented naming is consistent with a small React and Expo codebase.
 
 ### Route file naming
 
 - route filenames are lowercase
-- route files match URL segments directly
-- nested routes use directory plus `index.tsx`
+- nested routes match URL segments directly
 
 Examples:
 
 - `app/index.tsx`
-- `app/about.tsx`
-- `app/portal/index.tsx`
+- `app/portal/dashboard.tsx`
+- `app/portal/discussions.tsx`
 
 ### Component naming
 
 - React component names use PascalCase
-- route components end with `Page`
-- layout components use plain descriptive names such as `Header` and `Footer`
-
-Examples:
-
-- `HomePage`
-- `AboutPage`
-- `PortalPage`
-- `Header`
-- `Footer`
-
-### Style object naming
-
-- each file uses a local `styles` constant
-- style keys are descriptive and tied to UI role
-
-Examples:
-
-- `page`
-- `hero`
-- `actions`
-- `primaryButton`
-- `navTextActive`
+- route components continue to end with `Page`
+- shared portal building blocks use descriptive names such as `PortalShell`, `PortalSidebar`, and `PortalCard`
 
 ## Repo structure in current use
 
 ### Active implementation areas
 
 - `app`
-  - route files and app shell
+  - public route files, root layout, and portal route files
 - `components/layout`
-  - shared header and footer used by the live app
+  - shared public header and footer
+- `components/portal`
+  - portal shell, sidebar, context, and UI primitives
+- `data/portal`
+  - mock portal data
+- `lib/portal`
+  - portal route and scope helpers
 - `hooks`
-  - color scheme and theme helpers
+  - color scheme helpers
 - `constants/theme.ts`
   - shared theme constants and font mappings
 
-### Present but not active in the current route surface
+### Present but not active in runtime behavior
 
-- `components`
-  - includes several starter or generic UI helpers that are not used by the current route files
-- `data`
-  - contains an empty `schemas` directory
+- `data/schemas`
+  - still present but empty
 - `domain`
-  - present but not currently part of the implemented route behavior
+  - still present but not wired into active app behavior
 - `lib`
-  - present but not currently part of the implemented route behavior
+  - now partially active through `lib/portal`, but still not a domain/data engine layer
 
 ## Implementation boundaries
-
-The current codebase is still at a shell stage.
 
 What is implemented:
 
 - public route structure
-- persistent layout
-- static content pages
-- basic link-based navigation
+- public header/footer shell
+- dedicated portal shell under `/portal/*`
+- first-slice portal surfaces for dashboard, discussions, votes, library, and account
+- guest-only interaction policy with visitor-lobby posting as the only enabled write affordance
+- typed mock data for scope-aware portal UI blocking
 
-What remains unimplemented but is referenced by copy or planning docs:
+What remains unimplemented but is still referenced by docs or shell affordances:
 
-- document browsing inside the app
-- authentication and account flows
-- portal feature modules
-- domain objects for assemblies or proposals
-- data architecture connected to runtime behavior
+- real authentication and identity continuity
+- persistent packets and packet detail pages
+- map / nexus browser
+- missions surface
+- messages / live chat
+- notifications
+- protected assemblies and trust-gated spaces
+- moderation workflows
+- backend data architecture
 
 ## Provisional notes
 
-The following areas should be treated as provisional until implemented in code:
+The following areas should still be treated as provisional:
 
-- meaning of the portal beyond its placeholder page
-- authentication requirements and flow shape
-- document hub structure
-- domain model for assemblies, proposals, actions, or records
-- use of `domain`, `data`, and `lib` directories
-- any architecture described in `docs/implementation-guide.md` that is not yet represented in executable code
+- guest posting behavior beyond the local visitor-lobby mock
+- the exact final ontology for assemblies, scopes, and overlays
+- how locality claiming, join/start flows, and trust progression will work
+- vote execution, delegation, and propagation semantics
+- packet actions that currently appear as disabled placeholders
+- any architecture in `docs/implementation-guide.md` that is not yet represented in executable code

@@ -1,7 +1,13 @@
+/**
+ * File: header.tsx
+ * Description: Renders the public-site header and top-level navigation links.
+ */
 import { Link, usePathname } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-const navItems = [
+type PublicHref = '/' | '/about' | '/docs' | '/login' | '/signup';
+
+const navItems: { href: PublicHref; label: string }[] = [
   { href: '/', label: 'Home' },
   { href: '/about', label: 'About' },
   { href: '/docs', label: 'Docs' },
@@ -9,6 +15,10 @@ const navItems = [
   { href: '/signup', label: 'Sign Up' },
 ];
 
+/**
+ * Inputs: none.
+ * Output: the public-site header with route-aware active navigation styling.
+ */
 export default function Header() {
   const pathname = usePathname();
 

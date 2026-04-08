@@ -120,6 +120,32 @@ Practically, this becomes a route tree like:
 
 Layout rule: desktop can be multi-pane, with left for scope tree, center for content, and right for context/related graph. Tablet can be partially split. Phone can be stacked. The route tree stays stable; pane density adapts.
 
+### Current implemented portal slice
+
+The current repo now has a first blocked-in portal slice under `/portal/*`.
+
+Implemented routes in this slice:
+
+- `/portal/dashboard`
+- `/portal/discussions`
+- `/portal/votes`
+- `/portal/library`
+- `/portal/account`
+
+Implemented shell behavior in this slice:
+
+- dedicated portal layout separate from the public header/footer shell
+- left-heavy desktop shell with guest identity, scope tree, followed scopes, and accordion navigation
+- responsive mobile overlay for the same left-side shell
+- function-first vs scope-first as a shell preference rather than separate route systems
+- `Global Guest` as the default portal entry state
+- visitor-lobby posting as the only enabled guest write interaction
+
+Current implementation boundary:
+
+- all portal content is mock data for UI blocking and navigation feel
+- packet details, persistence, auth, trust mechanics, and protected spaces remain later phases
+
 ## Core entities and data model
 
 The most robust unifying model we have is the packet graph: everything is a typed packet node, relationships are explicit edges, and the system is the evolving graph.
@@ -454,6 +480,38 @@ Examples of decisions worth logging early:
 - bundle format and signing approach
 - trust tier definitions and influence weighting
 - how OBMS aggregation is represented and audited
+
+### 2026-04-08 - Dedicated portal shell under `/portal/*`
+
+- Context: the repo only had a public website shell plus a placeholder portal page.
+- Options considered: keep the portal inside the public header/footer shell, create a hybrid shell, or split the portal into its own nested layout.
+- Decision: create a dedicated nested portal layout while leaving the outer public website unchanged.
+- Why: the portal needs app-like navigation density, persistent scope context, and a responsive left rail that would fight the public-site shell.
+- Consequences / follow-ups: public pages remain simple and static, while portal work can now evolve independently through `app/portal/_layout.tsx` and portal-specific components.
+
+### 2026-04-08 - Global guest default with visitor-lobby-only posting
+
+- Context: the portal needed a usable initial state before auth, credentials, locality claiming, or trust progression exist.
+- Options considered: force scope selection first, open in a demo locality, or default to a global guest portal.
+- Decision: default to `Global Guest` in `Global Commons`, allow public browsing across scopes, and allow posting only in visitor lobby spaces.
+- Why: it preserves open browsing and orientation without pretending trust, membership, or vote rights already exist.
+- Consequences / follow-ups: join/start-locality flows, identity continuity, and trust-aware permissions can arrive later without rewriting the first portal shell.
+
+### 2026-04-08 - Function-first and scope-first as one system
+
+- Context: the portal needs to support both “go to a function then filter by scope” and “go to a scope then explore its surfaces.”
+- Options considered: separate route systems, separate tabs with duplicated screens, or one shared shell preference over the same routes.
+- Decision: keep the same portal routes and data in both modes, and change only the navigation emphasis in the left rail.
+- Why: it keeps the product mentally coherent and prevents two parallel navigation stacks from drifting out of sync.
+- Consequences / follow-ups: future portal sections should remain reachable in both modes without forking route structure.
+
+### 2026-04-08 - NativeWind as the portal styling boundary
+
+- Context: `nativewind` was installed but not wired correctly, and the new portal shell needed a faster token-driven styling system than the existing public `StyleSheet.create` pages.
+- Options considered: continue the portal in local `StyleSheet` files, migrate the whole app immediately, or use NativeWind for the portal slice first.
+- Decision: formalize NativeWind with dedicated config files and use it for the portal layer while leaving the public site on its existing styling pattern for now.
+- Why: it keeps the portal iteration fast and visually cohesive without forcing an immediate rewrite of the public pages.
+- Consequences / follow-ups: future portal work should continue to use shared portal tokens and NativeWind primitives; public pages can be migrated later if needed.
 
 ## Major tradeoffs
 
