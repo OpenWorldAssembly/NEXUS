@@ -1,6 +1,6 @@
 /**
  * File: tailwind.config.js
- * Description: Defines the NativeWind content scan paths and shared public and portal theme tokens.
+ * Description: Defines the NativeWind content scan paths and shared public and nexus theme tokens.
  */
 module.exports = {
   content: [
@@ -15,7 +15,7 @@ module.exports = {
       },
       boxShadow: {
         public: '0 24px 80px rgba(5, 10, 18, 0.32)',
-        portal: '0 18px 60px rgba(3, 8, 13, 0.35)',
+        nexus: '0 18px 60px rgba(3, 8, 13, 0.35)',
       },
       colors: {
         public: {
@@ -31,7 +31,7 @@ module.exports = {
           cyan: '#6dd3ff',
           sand: '#f7d995',
         },
-        portal: {
+        nexus: {
           canvas: '#06111a',
           ink: '#08131d',
           panel: '#0f1d2b',
@@ -47,7 +47,7 @@ module.exports = {
         },
       },
       letterSpacing: {
-        portal: '0.24em',
+        nexus: '0.24em',
       },
     },
   },

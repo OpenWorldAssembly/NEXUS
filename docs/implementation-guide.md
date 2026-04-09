@@ -120,35 +120,55 @@ Practically, this becomes a route tree like:
 
 Layout rule: desktop can be multi-pane, with left for scope tree, center for content, and right for context/related graph. Tablet can be partially split. Phone can be stacked. The route tree stays stable; pane density adapts.
 
-### Current implemented portal slice
+### Current implemented nexus slice
 
-The current repo now has a first blocked-in portal slice under `/portal/*`.
+The current repo now has a first blocked-in nexus slice under `/nexus/*`.
 
 Implemented routes in this slice:
 
-- `/portal/dashboard`
-- `/portal/discussions`
-- `/portal/votes`
-- `/portal/library`
-- `/portal/account`
+- `/nexus/dashboard`
+- `/nexus/discussions`
+- `/nexus/votes`
+- `/nexus/library`
+- `/nexus/account`
 
 Implemented shell behavior in this slice:
 
-- dedicated portal layout separate from the public header/footer shell
+- dedicated nexus layout separate from the public header/footer shell
 - left-heavy desktop shell with a compact guest header, a home link, an embedded preference switch, a primary rail, and a secondary rail
 - responsive mobile overlay for the same left-side shell, still opening from the left edge
 - function-first vs scope-first as a shell preference rather than separate route systems
-- `Global Guest` as the default portal entry state
+- the scope menu uses a full visible scope map instead of an indented tree, so deeper scopes do not lose width as the branch descends and the user does not have to drill into path-only views
+- per-rail collapse handles and swipe gestures that collapse the outer-most rail first and expand the primary rail first
+- current-scope summary content lives with the active scope menu rather than staying fixed to one rail, it stays above the scope map when the scope menu is visible, and long badge labels are constrained to wrap inside the card
+- secondary rail can remain open while the primary rail is collapsed
+- `Global Guest` as the default nexus entry state
 - visitor-lobby posting as the only enabled guest write interaction
+- visitor-lobby posts now flow through local API routes into a shared file-backed bundle of canonical discussion packets with session-scoped anonymous guest labels
 
 Current implementation boundary:
 
-- all portal content is mock data for UI blocking and navigation feel
-- packet details, persistence, auth, trust mechanics, and protected spaces remain later phases
+- most nexus content is still mock data for UI blocking and navigation feel
+- a packet foundation now exists under `domain/schema`, `domain/core`, `domain/storage`, and `domain/projections`
+- the current codebase now includes a canonical `PacketEnvelope = { header, body }` model, Zod packet-family parsers, packet-store/query-service interfaces, packet label projections, and a first SQLite schema in `data/schemas/packet-store.sql`
+- the first persistence adapter is a local file-backed visitor-lobby packet bundle rather than SQL or the full packet store
+- packet detail routes, SQL persistence, auth, trust mechanics, and protected spaces remain later phases
 
 ## Core entities and data model
 
 The most robust unifying model we have is the packet graph: everything is a typed packet node, relationships are explicit edges, and the system is the evolving graph.
+
+The current repo foundation should treat the packet envelope as:
+
+- `packet_id` = stable logical packet identity
+- `revision_id` = immutable exact revision reference
+- `parent_revision_refs` = exact revision ancestry, including merge revisions with multiple parents
+- `family` = canonical packet family
+- `edges` = the single typed relationship collection
+- `authority_scope_ref` plus `applicable_scope_refs` = ownership and applicability, separated
+- `parent_scope` = the explicit child-to-parent assembly edge for geographic scope trees
+
+The current repo foundation also now treats `Element` as the only identity-root family. Assemblies, teams, nodes, people, orgs, and services are `Element` kinds rather than separate top-level storage primitives.
 
 The implementation guide should treat the following as first-class packet families. Some already exist in prototype form; others are to be added or extended.
 
@@ -248,6 +268,12 @@ Human-readable constraints and rules that can be referenced by missions, plans, 
 AARs already exist conceptually and in prototype.
 
 We should canonize records as packets, and ensure auditability plus portability.
+
+### DiscussionThread / DiscussionPost
+
+Discussion should also be packet-native rather than treated as a special UI-only surface.
+
+`DiscussionThread` and `DiscussionPost` should remain their own packet families, while narrower ideas such as forum posts stay as subtypes inside those families.
 
 ## Graph relationships
 
@@ -402,15 +428,18 @@ The guide should define naming at four levels.
 
 ### Packet IDs
 
-- stable, machine-readable refs, for example namespace + type + name + version
-- consistent rules for version bumps and deprecation
-- rules for forks, `fork_of`, and derivations
+- `packet_id` is the stable logical packet identity
+- `revision_id` is the immutable exact revision reference
+- revision ancestry belongs in `parent_revision_refs`, and packet-to-packet lineage belongs in typed `edges`
+- packet stores should track multiple head revisions plus one preferred revision instead of assuming every packet stays linear
+- human-facing semantic versioning should live inside body schemas where it actually matters, not in the generic header
 
 ### Schemas and types
 
 - TypeScript types mirror schema names exactly
-- Zod validators, or equivalent, are the canonical validators
+- Zod validators are the canonical validators
 - display models are views, never the source of truth
+- every packet family should have one body schema, one body type, and one parser entrypoint through the schema registry
 
 ### UI labels
 
@@ -481,53 +510,133 @@ Examples of decisions worth logging early:
 - trust tier definitions and influence weighting
 - how OBMS aggregation is represented and audited
 
-### 2026-04-08 - Dedicated portal shell under `/portal/*`
+### 2026-04-08 - Packet identity uses stable packets plus immutable revisions
 
-- Context: the repo only had a public website shell plus a placeholder portal page.
-- Options considered: keep the portal inside the public header/footer shell, create a hybrid shell, or split the portal into its own nested layout.
-- Decision: create a dedicated nested portal layout while leaving the outer public website unchanged.
-- Why: the portal needs app-like navigation density, persistent scope context, and a responsive left rail that would fight the public-site shell.
-- Consequences / follow-ups: public pages remain simple and static, while portal work can now evolve independently through `app/portal/_layout.tsx` and portal-specific components.
+- Context: earlier Nexus variants mixed object IDs, packet versions, and packet snapshots in ways that made lineage and storage harder to normalize.
+- Options considered: keep `object_id + packet_version`, keep the old flat packet shape, or move to a nested envelope with stable packet identity and immutable revisions.
+- Decision: use `PacketEnvelope = { header, body }`, with stable `packet_id`, immutable `revision_id`, and `schema_version` reserved for parser compatibility.
+- Why: this cleanly separates logical identity from exact stored state, fits append-only storage, and lines up better with bundle sync, revision comparison, and future merge rules.
+- Consequences / follow-ups: SQLite storage should normalize `packets` and `packet_revisions`, future bundle manifests should export revision refs directly, and body-level semantic versioning stays family-specific instead of leaking into the generic header.
+
+### 2026-04-08 - Revision history is a DAG, not a single chain
+
+- Context: mesh sync, offline edits, and interface diversity mean multiple valid revisions can descend from the same parent before a device sees the other branch.
+- Options considered: keep one `previous_revision_id`, store conflicts only as packet edges, or model revision ancestry as a multi-parent DAG.
+- Decision: replace single-predecessor revision ancestry with `parent_revision_refs`, allow multiple concurrent head revisions per packet, and track one preferred revision separately from the full head set.
+- Why: real conflict handling needs merge revisions with multiple parents, not just a linear timeline plus hand-wavy lineage metadata.
+- Consequences / follow-ups: packet stores should expose head status, import logic should detect fast-forward vs divergence vs merge, append-only families should usually coexist rather than merge, and forkable document families need merge policies plus compare UX.
+
+### 2026-04-08 - Packet relationships use one typed edge collection
+
+- Context: older Nexus variants used a mix of header slots, nullable relation fields, and separate dependency lists, which made graph traversal inconsistent.
+- Options considered: keep dedicated relation slots, keep a separate dependency list plus ad hoc links, or normalize all relationships into one edge model.
+- Decision: store packet relationships in a single `edges: PacketEdge[]` collection, with scope ownership separated into `authority_scope_ref` and `applicable_scope_refs`.
+- Why: one edge model gives the browser, storage layer, and nexus projections a single graph vocabulary for lineage, dependencies, memberships, reports, and scope applicability.
+- Consequences / follow-ups: packet family bodies should point to other packets through refs, storage should index normalized edges, and localized nexus views should read projections from the shared graph rather than inventing separate packet-like types.
+
+### 2026-04-08 - Element stays the identity-root family
+
+- Context: OWA needs to represent assemblies, teams, nodes, people, orgs, and services without fragmenting the identity layer into parallel storage primitives.
+- Options considered: separate top-level families for assemblies and teams, keep the old mixed approach, or make `Element` the single identity root with kinds.
+- Decision: keep `Element` as the identity-root family and model assemblies, teams, nodes, people, organizations, and services as `Element` kinds.
+- Why: it keeps identity continuity, trust, and scope references centered on one root family while still allowing subtype-specific UI labels.
+- Consequences / follow-ups: scope refs should target `Element` packets, nexus labels can still say `assembly packet` or similar through display projections, and follow-on schema work should prefer subtypes before creating new top-level families.
+
+### 2026-04-08 - Add packet builders and first seed dataset
+
+- Context: the schema layer existed, but we still needed a concrete way to start creating canonical packets for forum work, scope trees, and later persistence adapters.
+- Options considered: keep hand-authoring raw packet JSON, build packet families ad hoc inside UI/data files, or add a dedicated builder layer with reusable seed datasets.
+- Decision: add typed packet builders under `domain/packets` for the active creation slice (`Element`, `DiscussionThread`, `DiscussionPost`, `Policy`, `Proposal`, and `Vote`) plus a reusable seed dataset for `Global Commons -> United States -> California -> Moreno Valley -> Sunnymead Ranch`, a person element, and forum-linked packets.
+- Why: it gives the repo one consistent path for creating valid packets, keeps packet logic out of the UI layer, and gives forum work a real packet dataset instead of temporary shapes.
+- Consequences / follow-ups: the next persistence step should import these seed packets into an in-memory or SQLite-backed `PacketStore`, future seed datasets should use the same builder layer, and additional packet-family builders can be added as those surfaces move from concept to implementation.
+
+### 2026-04-08 - Use `parent_scope` for assembly hierarchy
+
+- Context: the first real assembly seeds needed an explicit way to represent `Global -> national -> state -> city -> neighborhood` lineage without overloading person membership or scope applicability.
+- Options considered: overload `member_of`, rely only on `authority_scope_ref` / `applicable_scope_refs`, or add a dedicated edge type for assembly hierarchy.
+- Decision: use `parent_scope` as the child-to-parent assembly edge in the packet graph.
+- Why: it keeps scope hierarchy legible and queryable without conflating assembly lineage with person membership, proposal scope, or packet ownership.
+- Consequences / follow-ups: incoming `parent_scope` edges can power child-assembly discovery later, and packet-store indexing should treat `parent_scope` as a first-class navigational edge.
+
+### 2026-04-08 - Dedicated nexus shell under `/nexus/*`
+
+- Context: the repo only had a public website shell plus a placeholder nexus page.
+- Options considered: keep the nexus inside the public header/footer shell, create a hybrid shell, or split the nexus into its own nested layout.
+- Decision: create a dedicated nested nexus layout while leaving the outer public website unchanged.
+- Why: the nexus needs app-like navigation density, persistent scope context, and a responsive left rail that would fight the public-site shell.
+- Consequences / follow-ups: public pages remain simple and static, while nexus work can now evolve independently through `app/nexus/_layout.tsx` and nexus-specific components.
 
 ### 2026-04-08 - Global guest default with visitor-lobby-only posting
 
-- Context: the portal needed a usable initial state before auth, credentials, locality claiming, or trust progression exist.
-- Options considered: force scope selection first, open in a demo locality, or default to a global guest portal.
+- Context: the nexus needed a usable initial state before auth, credentials, locality claiming, or trust progression exist.
+- Options considered: force scope selection first, open in a demo locality, or default to a global guest nexus.
 - Decision: default to `Global Guest` in `Global Commons`, allow public browsing across scopes, and allow posting only in visitor lobby spaces.
 - Why: it preserves open browsing and orientation without pretending trust, membership, or vote rights already exist.
-- Consequences / follow-ups: join/start-locality flows, identity continuity, and trust-aware permissions can arrive later without rewriting the first portal shell.
+- Consequences / follow-ups: join/start-locality flows, identity continuity, and trust-aware permissions can arrive later without rewriting the first nexus shell.
+
+### 2026-04-08 - File-backed visitor lobby before SQL
+
+- Context: the discussions surface needed to become genuinely usable before the SQL adapter and full packet-store persistence path are wired into the app.
+- Options considered: keep visitor-lobby posting local-only, wait for SQL before adding any persistence, or introduce a lightweight local API plus shared bundle file as the first durable write path.
+- Decision: persist visitor-lobby posts through Expo Router API routes into a shared JSON bundle file, store them as canonical `DiscussionThread` and `DiscussionPost` packets, and use session-scoped anonymous guest labels through external refs rather than overloading packet authorship fields.
+- Why: it creates a real read/write loop now, exercises a repository seam the later SQL adapter can replace, and avoids blocking the UI on unfinished infrastructure.
+- Consequences / follow-ups: only the visitor lobby uses live persistence in this slice, the bundle path remains local-dev oriented, later SQL work should swap the repository implementation without changing the discussions UI contract, and anonymous guests can later gain real `Element(kind: "person")` packets without changing the discussion packet family itself.
 
 ### 2026-04-08 - Function-first and scope-first as one system
 
-- Context: the portal needs to support both “go to a function then filter by scope” and “go to a scope then explore its surfaces.”
+- Context: the nexus needs to support both “go to a function then filter by scope” and “go to a scope then explore its surfaces.”
 - Options considered: separate route systems, separate tabs with duplicated screens, or one shared shell preference over the same routes.
-- Decision: keep the same portal routes and data in both modes, and change only the navigation emphasis in the left rail.
+- Decision: keep the same nexus routes and data in both modes, and change only the navigation emphasis in the left rail.
 - Why: it keeps the product mentally coherent and prevents two parallel navigation stacks from drifting out of sync.
-- Consequences / follow-ups: future portal sections should remain reachable in both modes without forking route structure.
+- Consequences / follow-ups: future nexus sections should remain reachable in both modes without forking route structure.
 
 ### 2026-04-08 - Primary and secondary left-side navigation columns
 
-- Context: the first portal shell still felt like stacked cards rather than a true app navigation system.
+- Context: the first nexus shell still felt like stacked cards rather than a true app navigation system.
 - Options considered: keep the scope tree and function controls in separate cards, move secondary navigation into the main surface, or split the left shell into primary and secondary columns.
 - Decision: place a compact guest header at the top, put the navigation preference toggle directly beneath it, then render a primary column and an adjacent secondary column within the left-side shell.
 - Why: it makes the shell behavior legible. The chosen preference determines whether functions or scopes are primary, and the other menu becomes the secondary column immediately to the right.
-- Consequences / follow-ups: future portal sections should plug into the same two-stage left-side navigation pattern, and responsive trays should continue to open from the left rather than flipping sides.
+- Consequences / follow-ups: future nexus sections should plug into the same two-stage left-side navigation pattern, and responsive trays should continue to open from the left rather than flipping sides.
 
-### 2026-04-08 - NativeWind as the portal styling boundary
+### 2026-04-08 - Rail collapse order and content ownership
 
-- Context: `nativewind` was installed but not wired correctly, and the new portal shell needed a faster token-driven styling system than the existing public `StyleSheet.create` pages.
-- Options considered: continue the portal in local `StyleSheet` files, migrate the whole app immediately, or use NativeWind for the portal slice first.
-- Decision: formalize NativeWind with dedicated config files and use it for the portal layer while leaving the public site on its existing styling pattern for now.
-- Why: it keeps the portal iteration fast and visually cohesive without forcing an immediate rewrite of the public pages.
-- Consequences / follow-ups: future portal work should continue to use shared portal tokens and NativeWind primitives; public pages can be migrated later if needed.
+- Context: the two-rail shell needed to behave more like a real workspace navigator and less like two static columns.
+- Options considered: collapse both rails together, allow independent collapse without ordering, or use ordered collapse and expansion with gesture support.
+- Decision: each rail keeps its own saved open or closed state, swipe-left collapses the outer-most visible rail first, swipe-right opens the primary rail first, followed scopes stay with the scope menu, and deferred surfaces stay with the function menu.
+- Why: this keeps navigation predictable. Scope-only helpers remain near scope navigation, function-only helpers remain near function navigation, and collapse behavior stays consistent across desktop and responsive nexus use.
+- Consequences / follow-ups: future additions to the left shell should declare whether they belong to the scope menu or the function menu rather than living in mixed utility sections.
 
-### 2026-04-08 - NativeWind public-site redesign without touching portal routes
+### 2026-04-08 - Full scope map replaces the indented scope tree
 
-- Context: the main static public pages were still sparse `StyleSheet.create` placeholders, and the requested redesign needed stronger public storytelling without altering the new portal shell.
-- Options considered: leave the public site minimal, restyle the whole app including portal, or upgrade only the non-portal public pages and shell.
-- Decision: migrate the public header/footer plus `/`, `/about`, and `/docs` onto a dedicated NativeWind-based public visual system while keeping `/portal/*` unchanged.
-- Why: it creates a more professional public front door, supports richer storytelling on the about page, and preserves the portal as a separate application surface.
-- Consequences / follow-ups: `/docs` now functions as the charter destination route until the actual charter text is written; public header auth links were removed in favor of a single `Nexus` portal entry; the landing page now uses a rotating multi-message hero with generated background artwork; and future public-site work should reuse the shared public tokens and content structures added in this pass.
+- Context: the earlier scope tree still pushed deeper scopes further to the right, which made labels harder to read and kept the scope summary card from feeling anchored to the scope menu.
+- Options considered: keep tuning the indented tree, move to a breadcrumb-only model, use a path-and-connections navigator, or replace the tree with a flatter full scope map.
+- Decision: keep the scope menu as a branch-oriented navigator with a current-context card first, then a full visible scope map with a fixed-width connector lane, followed by `Followed scopes`.
+- Why: this preserves hierarchy and branch relationships without stealing horizontal space from the lower rows, keeps every scope visible at once, and makes the active scope summary feel like part of the same menu.
+- Consequences / follow-ups: future scope affordances should prefer branch and connection patterns over deeper indentation, and both rails should keep the normalized `Function menu` and `Scope menu` naming.
+
+### 2026-04-08 - NativeWind as the nexus styling boundary
+
+- Context: `nativewind` was installed but not wired correctly, and the new nexus shell needed a faster token-driven styling system than the existing public `StyleSheet.create` pages.
+- Options considered: continue the nexus in local `StyleSheet` files, migrate the whole app immediately, or use NativeWind for the nexus slice first.
+- Decision: formalize NativeWind with dedicated config files and use it for the nexus layer while leaving the public site on its existing styling pattern for now.
+- Why: it keeps the nexus iteration fast and visually cohesive without forcing an immediate rewrite of the public pages.
+- Consequences / follow-ups: future nexus work should continue to use shared nexus tokens and NativeWind primitives; public pages can be migrated later if needed.
+
+### 2026-04-08 - NativeWind public-site redesign without touching nexus routes
+
+- Context: the main static public pages were still sparse `StyleSheet.create` placeholders, and the requested redesign needed stronger public storytelling without altering the new nexus shell.
+- Options considered: leave the public site minimal, restyle the whole app including nexus, or upgrade only the non-nexus public pages and shell.
+- Decision: migrate the public header/footer plus `/`, `/about`, and `/docs` onto a dedicated NativeWind-based public visual system while keeping `/nexus/*` unchanged.
+- Why: it creates a more professional public front door, supports richer storytelling on the about page, and preserves the nexus as a separate application surface.
+- Consequences / follow-ups: `/docs` now functions as the charter destination route until the actual charter text is written; public header auth links were removed in favor of a single `Nexus` site entry; the landing page now uses a rotating multi-message hero with generated background artwork, slower eased horizontal carousel transitions between slides, and a dedicated control row below a clipped hero viewport so the CTA layout stays stable as slides change; and future public-site work should reuse the shared public tokens and content structures added in this pass.
+
+### 2026-04-08 - About page sections grounded in canon and workspace language
+
+- Context: the first public about page grouped ideas too loosely and still read partly like implementation notes rather than a crisp public explanation surface.
+- Options considered: keep the simpler expandable cards, write new copy from scratch, or derive the public section model from the canon plus the workspace document while improving the interaction model.
+- Decision: restructure the public about page around canon/workspace-derived themes and present them as scroll-focused sections with per-section background imagery.
+- Why: it keeps the public explanation closer to the project’s actual principles while making the page easier to scan, more visual, and less placeholder-like.
+- Consequences / follow-ups: future about-page revisions should continue to source their section set from public-facing canon/workspace language, and the page now behaves like a set of large scroll chapters whose card height, detail density, and parallax treatment are all driven from one measured midpoint focus line rather than a stack of separate assumptions; the page also now uses an explicit section navigator, measured in-layout viewport height so both active-state logic and animation timing stay centered within the public shell rather than drifting toward the full browser window midpoint, a widened focus band with a short center hold so section motion starts earlier and stays open longer through the scroll, a slower detail reveal so the inner highlight blocks fade and expand in with the same shared progress curve instead of popping in abruptly, and stronger blurred edge strips plus increased spacing between chapters rather than a true mask effect so the public page gets softer image boundaries without adding a heavier graphics dependency.
 
 ## Major tradeoffs
 
@@ -543,7 +652,7 @@ Capture the real tensions explicitly, such as:
 
 Keep a living list, aggressively pruned:
 
-- final ontology for assemblies + overlays
+- exact body depth for the newer first-class families such as `Signal`, `Decision`, `DiscussionThread`, `DiscussionPost`, `Minutes`, and `Artifact`
 - exact vote aggregation semantics for OBMS and audit trails
 - how proposal lifecycle state machines are represented
 - merge/conflict UX and policy

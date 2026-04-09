@@ -1,20 +1,20 @@
 /**
  * File: _layout.tsx
- * Description: Provides the dedicated shell and nested stack for all portal routes.
+ * Description: Provides the dedicated shell and nested stack for all nexus routes.
  */
 import { Stack } from 'expo-router';
 
-import PortalShell from '@/components/portal/portal-shell';
-import { PortalShellProvider } from '@/components/portal/portal-shell-context';
+import NexusShell from '@/components/nexus/nexus-shell';
+import { NexusShellProvider } from '@/components/nexus/nexus-shell-context';
 
 /**
  * Inputs: none.
- * Output: the nested portal route stack wrapped in the shared portal shell.
+ * Output: the nested nexus route stack wrapped in the shared nexus shell.
  */
-export default function PortalLayout() {
+export default function NexusLayout() {
   return (
-    <PortalShellProvider>
-      <PortalShell>
+    <NexusShellProvider>
+      <NexusShell>
         <Stack
           screenOptions={{
             headerShown: false,
@@ -31,7 +31,7 @@ export default function PortalLayout() {
           <Stack.Screen name="library" />
           <Stack.Screen name="account" />
         </Stack>
-      </PortalShell>
-    </PortalShellProvider>
+      </NexusShell>
+    </NexusShellProvider>
   );
 }

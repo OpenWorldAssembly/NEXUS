@@ -1,33 +1,33 @@
 /**
- * File: mock-portal-data.ts
- * Description: Provides seeded portal mock data for the initial guest-facing civic shell.
+ * File: mock-nexus-data.ts
+ * Description: Provides seeded nexus mock data for the initial guest-facing civic shell.
  */
 import type {
-  PortalGuestCapability,
-  PortalScopeSummary,
-} from '@/lib/portal/portal-shell';
+  NexusGuestCapability,
+  NexusScopeSummary,
+} from '@/lib/nexus/nexus-shell';
 
-export type PortalCardTone = 'sky' | 'mint' | 'gold' | 'rose';
+export type NexusCardTone = 'sky' | 'mint' | 'gold' | 'rose';
 
-export type PortalDashboardMetric = {
+export type NexusDashboardMetric = {
   id: string;
   title: string;
   value: string;
   detail: string;
-  tone: PortalCardTone;
+  tone: NexusCardTone;
   scopeIds: string[];
 };
 
-export type PortalDashboardQueue = {
+export type NexusDashboardQueue = {
   id: string;
   title: string;
   detail: string;
   stat: string;
-  tone: PortalCardTone;
+  tone: NexusCardTone;
   scopeIds: string[];
 };
 
-export type PortalDiscussionForum = {
+export type NexusDiscussionForum = {
   id: string;
   title: string;
   description: string;
@@ -37,27 +37,27 @@ export type PortalDiscussionForum = {
   scopeIds: string[];
 };
 
-export type PortalThreadPreview = {
+export type NexusThreadPreview = {
   id: string;
   forumId: string;
   title: string;
   author: string;
   preview: string;
   activity: string;
-  tone: PortalCardTone;
+  tone: NexusCardTone;
   scopeIds: string[];
 };
 
-export type PortalVoteStageCard = {
+export type NexusVoteStageCard = {
   id: string;
   title: string;
   count: number;
   detail: string;
-  tone: PortalCardTone;
+  tone: NexusCardTone;
   scopeIds: string[];
 };
 
-export type PortalProposalPreview = {
+export type NexusProposalPreview = {
   id: string;
   title: string;
   stage: string;
@@ -67,7 +67,7 @@ export type PortalProposalPreview = {
   scopeIds: string[];
 };
 
-export type PortalPacketPreview = {
+export type NexusPacketPreview = {
   id: string;
   title: string;
   type: 'proposal' | 'report' | 'assembly' | 'policy' | 'forum-post' | 'charter';
@@ -76,34 +76,34 @@ export type PortalPacketPreview = {
   scopeIds: string[];
 };
 
-export type PortalGuestChecklistItem = {
+export type NexusGuestChecklistItem = {
   id: string;
   title: string;
   detail: string;
-  tone: PortalCardTone;
+  tone: NexusCardTone;
 };
 
-export const portalGuestCapabilities: PortalGuestCapability[] = [
+export const nexusGuestCapabilities: NexusGuestCapability[] = [
   'browse-public-scopes',
   'browse-public-packets',
   'post-visitor-lobby',
 ];
 
-export const portalDefaultScopeId = 'global-commons';
+export const nexusDefaultScopeId = 'global-commons';
 
-export const portalDefaultExpandedScopeIds = [
+export const nexusDefaultExpandedScopeIds = [
   'global-commons',
   'united-states',
   'california',
   'east-bay',
 ];
 
-export const portalFollowedScopeIds = [
+export const nexusFollowedScopeIds = [
   'oakland-lake-merritt',
   'richmond-waterfront',
 ];
 
-export const portalGuestProfile = {
+export const nexusGuestProfile = {
   displayName: 'Anonymous Guest',
   trustLabel: 'Self-proclaimed assembly member',
   statusLabel: 'Global Guest',
@@ -111,16 +111,16 @@ export const portalGuestProfile = {
   note: 'Guests can browse public assemblies, switch scopes, and post only inside visitor lobby discussions.',
 };
 
-export const portalComingSoonSurfaces = [
+export const nexusComingSoonSurfaces = [
   'Missions',
   'Assemblies',
-  'Map / Nexus Browser',
+  'Map / Nexus',
   'Messages / Chat',
   'Notifications',
   'Admin / Stewardship',
 ];
 
-export const portalScopeSummaries: PortalScopeSummary[] = [
+export const nexusScopeSummaries: NexusScopeSummary[] = [
   {
     id: 'global-commons',
     name: 'Global Commons',
@@ -131,7 +131,7 @@ export const portalScopeSummaries: PortalScopeSummary[] = [
     badge: 'Guest default',
     relationshipLabel: 'Cross-scope coordination',
     childIds: ['united-states'],
-    followedScopeIds: portalFollowedScopeIds,
+    followedScopeIds: nexusFollowedScopeIds,
     publicLobbyLabel: 'Global visitor lobby',
     stats: {
       members: 1820,
@@ -152,7 +152,7 @@ export const portalScopeSummaries: PortalScopeSummary[] = [
     relationshipLabel: 'Parent to California',
     parentId: 'global-commons',
     childIds: ['california'],
-    followedScopeIds: portalFollowedScopeIds,
+    followedScopeIds: nexusFollowedScopeIds,
     publicLobbyLabel: 'National visitor lobby',
     stats: {
       members: 430,
@@ -173,7 +173,7 @@ export const portalScopeSummaries: PortalScopeSummary[] = [
     relationshipLabel: 'Parent to East Bay',
     parentId: 'united-states',
     childIds: ['east-bay'],
-    followedScopeIds: portalFollowedScopeIds,
+    followedScopeIds: nexusFollowedScopeIds,
     publicLobbyLabel: 'California visitor lobby',
     stats: {
       members: 112,
@@ -190,11 +190,11 @@ export const portalScopeSummaries: PortalScopeSummary[] = [
     level: 'city',
     description: 'Metro branch with active locality discovery, adoption flow, and nearby public assemblies.',
     localityLabel: 'Regional locality',
-    badge: 'Current branch candidate',
+    badge: 'Current branch',
     relationshipLabel: 'Parent to Oakland and Richmond',
     parentId: 'california',
     childIds: ['oakland-lake-merritt', 'richmond-waterfront'],
-    followedScopeIds: portalFollowedScopeIds,
+    followedScopeIds: nexusFollowedScopeIds,
     publicLobbyLabel: 'East Bay visitor lobby',
     stats: {
       members: 57,
@@ -215,7 +215,7 @@ export const portalScopeSummaries: PortalScopeSummary[] = [
     relationshipLabel: 'Child of East Bay',
     parentId: 'east-bay',
     childIds: [],
-    followedScopeIds: portalFollowedScopeIds,
+    followedScopeIds: nexusFollowedScopeIds,
     publicLobbyLabel: 'Oakland visitor lobby',
     stats: {
       members: 29,
@@ -236,7 +236,7 @@ export const portalScopeSummaries: PortalScopeSummary[] = [
     relationshipLabel: 'Child of East Bay',
     parentId: 'east-bay',
     childIds: [],
-    followedScopeIds: portalFollowedScopeIds,
+    followedScopeIds: nexusFollowedScopeIds,
     publicLobbyLabel: 'Richmond visitor lobby',
     stats: {
       members: 18,
@@ -248,7 +248,7 @@ export const portalScopeSummaries: PortalScopeSummary[] = [
   },
 ];
 
-export const portalDashboardMetrics: PortalDashboardMetric[] = [
+export const nexusDashboardMetrics: NexusDashboardMetric[] = [
   {
     id: 'open-public-assemblies',
     title: 'Public assemblies open',
@@ -283,7 +283,7 @@ export const portalDashboardMetrics: PortalDashboardMetric[] = [
   },
 ];
 
-export const portalDashboardQueues: PortalDashboardQueue[] = [
+export const nexusDashboardQueues: NexusDashboardQueue[] = [
   {
     id: 'discussion-heat',
     title: 'Hot discussions',
@@ -334,7 +334,7 @@ export const portalDashboardQueues: PortalDashboardQueue[] = [
   },
 ];
 
-export const portalDiscussionForums: PortalDiscussionForum[] = [
+export const nexusDiscussionForums: NexusDiscussionForum[] = [
   {
     id: 'visitor-lobby',
     title: 'Visitor Lobby',
@@ -373,7 +373,7 @@ export const portalDiscussionForums: PortalDiscussionForum[] = [
   },
 ];
 
-export const portalThreadPreviews: PortalThreadPreview[] = [
+export const nexusThreadPreviews: NexusThreadPreview[] = [
   {
     id: 'welcome-thread',
     forumId: 'visitor-lobby',
@@ -416,7 +416,7 @@ export const portalThreadPreviews: PortalThreadPreview[] = [
   },
 ];
 
-export const portalVoteStages: PortalVoteStageCard[] = [
+export const nexusVoteStages: NexusVoteStageCard[] = [
   {
     id: 'petitioning',
     title: 'Petitioning',
@@ -451,7 +451,7 @@ export const portalVoteStages: PortalVoteStageCard[] = [
   },
 ];
 
-export const portalProposalPreviews: PortalProposalPreview[] = [
+export const nexusProposalPreviews: NexusProposalPreview[] = [
   {
     id: 'public-lobby-charter',
     title: 'Standardize public visitor lobby policy',
@@ -481,14 +481,14 @@ export const portalProposalPreviews: PortalProposalPreview[] = [
   },
 ];
 
-export const portalVoteMechanics = [
+export const nexusVoteMechanics = [
   'Quorum, thresholds, and timing should be legible without opening a separate admin panel.',
   'Delegation remains visible as a later system, but this slice does not implement delegation flows.',
   'Guests can inspect public ballots and linked discussions, but they cannot cast votes in this phase.',
   'Fork and compare affordances stay visible as packet-native cues even when the actions remain disabled.',
 ];
 
-export const portalPacketPreviews: PortalPacketPreview[] = [
+export const nexusPacketPreviews: NexusPacketPreview[] = [
   {
     id: 'packet-guest-lobby-policy',
     title: 'Visitor Lobby Policy Packet',
@@ -539,7 +539,7 @@ export const portalPacketPreviews: PortalPacketPreview[] = [
   },
 ];
 
-export const portalGuestChecklist: PortalGuestChecklistItem[] = [
+export const nexusGuestChecklist: NexusGuestChecklistItem[] = [
   {
     id: 'pick-locality',
     title: 'Pick or search a locality',

@@ -4,134 +4,134 @@
  */
 import { ScrollView, Text, View } from 'react-native';
 
-import { usePortalShell } from '@/components/portal/portal-shell-context';
+import { useNexusShell } from '@/components/nexus/nexus-shell-context';
 import {
-  PortalActionButton,
-  PortalBadge,
-  PortalCard,
-  PortalSectionHeader,
-} from '@/components/portal/portal-ui';
+  NexusActionButton,
+  NexusBadge,
+  NexusCard,
+  NexusSectionHeader,
+} from '@/components/nexus/nexus-ui';
 import {
-  portalProposalPreviews,
-  portalVoteMechanics,
-  portalVoteStages,
-} from '@/data/portal/mock-portal-data';
-import { matchesScope } from '@/lib/portal/portal-shell';
+  nexusProposalPreviews,
+  nexusVoteMechanics,
+  nexusVoteStages,
+} from '@/data/nexus/mock-nexus-data';
+import { matchesScope } from '@/lib/nexus/nexus-shell';
 
 /**
  * Inputs: none.
  * Output: the vote floor surface for the active scope, with public ballot visibility and disabled action cues.
  */
-export default function PortalVotesPage() {
-  const { activeScope } = usePortalShell();
-  const visibleStages = portalVoteStages.filter((stage) =>
+export default function NexusVotesPage() {
+  const { activeScope } = useNexusShell();
+  const visibleStages = nexusVoteStages.filter((stage) =>
     matchesScope(stage.scopeIds, activeScope.id),
   );
-  const visibleProposals = portalProposalPreviews.filter((proposal) =>
+  const visibleProposals = nexusProposalPreviews.filter((proposal) =>
     matchesScope(proposal.scopeIds, activeScope.id),
   );
 
   return (
     <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
       <View className="gap-6 px-4 py-6 lg:px-8 lg:py-8">
-        <PortalSectionHeader
+        <NexusSectionHeader
           eyebrow="Vote floor"
           title={`${activeScope.shortLabel} civic voting lane`}
           description="Votes live as their own surface instead of hiding inside discussion tags. Guests can inspect public ballots, packet lineages, and visible governance mechanics."
           trailing={
             <View className="flex-row flex-wrap gap-3">
-              <PortalBadge label="Quorum visible" tone="sky" />
-              <PortalBadge label="Guests cannot vote yet" tone="rose" />
+              <NexusBadge label="Quorum visible" tone="sky" />
+              <NexusBadge label="Guests cannot vote yet" tone="rose" />
             </View>
           }
         />
 
         <View className="flex-row flex-wrap gap-4">
           {visibleStages.map((stage) => (
-            <PortalCard
+            <NexusCard
               key={stage.id}
               className="min-w-[220px] flex-1"
               tone={stage.tone}
             >
-              <Text className="text-sm font-semibold uppercase tracking-[2px] text-portal-muted">
+              <Text className="text-sm font-semibold uppercase tracking-[2px] text-nexus-muted">
                 {stage.title}
               </Text>
-              <Text className="mt-3 text-4xl font-bold text-portal-text">
+              <Text className="mt-3 text-4xl font-bold text-nexus-text">
                 {stage.count}
               </Text>
-              <Text className="mt-3 text-sm leading-6 text-portal-muted">
+              <Text className="mt-3 text-sm leading-6 text-nexus-muted">
                 {stage.detail}
               </Text>
-            </PortalCard>
+            </NexusCard>
           ))}
         </View>
 
         <View className="gap-4 xl:flex-row">
           <View className="flex-1 gap-4">
             {visibleProposals.map((proposal) => (
-              <PortalCard key={proposal.id} className="gap-4">
+              <NexusCard key={proposal.id} className="gap-4">
                 <View className="gap-2">
                   <View className="flex-row flex-wrap items-center gap-2">
-                    <Text className="text-2xl font-bold text-portal-text">
+                    <Text className="text-2xl font-bold text-nexus-text">
                       {proposal.title}
                     </Text>
-                    <PortalBadge label={proposal.stage} tone="gold" />
+                    <NexusBadge label={proposal.stage} tone="gold" />
                   </View>
-                  <Text className="text-sm leading-7 text-portal-muted">
+                  <Text className="text-sm leading-7 text-nexus-muted">
                     {proposal.summary}
                   </Text>
                 </View>
 
                 <View className="flex-row flex-wrap gap-3">
-                  <PortalBadge label={proposal.votingWindow} tone="rose" />
-                  <PortalBadge label={proposal.lineage} tone="default" />
+                  <NexusBadge label={proposal.votingWindow} tone="rose" />
+                  <NexusBadge label={proposal.lineage} tone="default" />
                 </View>
 
                 <View className="flex-row flex-wrap gap-3">
-                  <PortalActionButton label="Support petition" disabled />
-                  <PortalActionButton label="Object" disabled />
-                  <PortalActionButton label="Compare lineages" disabled />
+                  <NexusActionButton label="Support petition" disabled />
+                  <NexusActionButton label="Object" disabled />
+                  <NexusActionButton label="Compare lineages" disabled />
                 </View>
-              </PortalCard>
+              </NexusCard>
             ))}
           </View>
 
           <View className="flex-1 gap-4">
-            <PortalCard className="gap-4">
-              <Text className="text-xs font-semibold uppercase tracking-[3px] text-portal-sky">
+            <NexusCard className="gap-4">
+              <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
                 Governance mechanics in view
               </Text>
               <View className="gap-3">
-                {portalVoteMechanics.map((mechanic) => (
-                  <PortalCard
+                {nexusVoteMechanics.map((mechanic) => (
+                  <NexusCard
                     key={mechanic}
                     className="gap-2 bg-white/5 p-4"
                     tone="default"
                   >
-                    <Text className="text-sm leading-6 text-portal-muted">
+                    <Text className="text-sm leading-6 text-nexus-muted">
                       {mechanic}
                     </Text>
-                  </PortalCard>
+                  </NexusCard>
                 ))}
               </View>
-            </PortalCard>
+            </NexusCard>
 
-            <PortalCard className="gap-4">
-              <Text className="text-xs font-semibold uppercase tracking-[3px] text-portal-sky">
+            <NexusCard className="gap-4">
+              <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
                 Downstream effects
               </Text>
-              <Text className="text-sm leading-7 text-portal-muted">
+              <Text className="text-sm leading-7 text-nexus-muted">
                 Proposal detail pages in later slices should link directly into
                 related discussions, mission implications, amendment history,
                 objections, and scope propagation. This slice blocks those ideas in
                 with visible placeholders rather than deep workflow logic.
               </Text>
               <View className="flex-row flex-wrap gap-3">
-                <PortalBadge label="Amendment history later" />
-                <PortalBadge label="Delegation later" />
-                <PortalBadge label="Propagation compare later" />
+                <NexusBadge label="Amendment history later" />
+                <NexusBadge label="Delegation later" />
+                <NexusBadge label="Propagation compare later" />
               </View>
-            </PortalCard>
+            </NexusCard>
           </View>
         </View>
       </View>

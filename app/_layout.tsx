@@ -1,6 +1,6 @@
 /**
  * File: _layout.tsx
- * Description: Provides the root app stack and swaps between the public shell and the dedicated portal shell.
+ * Description: Provides the root app stack and swaps between the public shell and the dedicated nexus shell.
  */
 import '../global.css';
 
@@ -16,12 +16,12 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 
 /**
  * Inputs: none.
- * Output: themed route layout with the public shell hidden on `/portal/*` routes.
+ * Output: themed route layout with the public shell hidden on `/nexus/*` routes.
  */
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const pathname = usePathname();
-  const isPortalRoute = pathname?.startsWith('/portal') ?? false;
+  const isNexusRoute = pathname?.startsWith('/nexus') ?? false;
 
   const stack = (
     <Stack
@@ -37,14 +37,14 @@ export default function RootLayout() {
       <Stack.Screen name="docs" />
       <Stack.Screen name="login" />
       <Stack.Screen name="signup" />
-      <Stack.Screen name="portal" />
+      <Stack.Screen name="nexus" />
     </Stack>
   );
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      {isPortalRoute ? (
-        <View style={styles.portalRoot}>{stack}</View>
+      {isNexusRoute ? (
+        <View style={styles.nexusRoot}>{stack}</View>
       ) : (
         <View style={styles.appShell}>
           <Header />
@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
   mainContent: {
     flex: 1,
   },
-  portalRoot: {
+  nexusRoot: {
     flex: 1,
     backgroundColor: '#06111a',
   },

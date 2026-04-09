@@ -1,0 +1,556 @@
+/**
+ * File: packet-schema.ts
+ * Description: Defines the canonical OWA packet envelope, packet-family registry, and parser entrypoints.
+ */
+
+import { z } from 'zod';
+
+export const PACKET_FAMILIES = [
+  'Element',
+  'Signal',
+  'Proposal',
+  'Vote',
+  'Decision',
+  'Initiative',
+  'Program',
+  'Campaign',
+  'MissionTemplate',
+  'MissionPlan',
+  'MissionReport',
+  'Module',
+  'Policy',
+  'DiscussionThread',
+  'DiscussionPost',
+  'Minutes',
+  'Artifact',
+] as const;
+
+export const ELEMENT_KINDS = [
+  'assembly',
+  'team',
+  'node',
+  'person',
+  'organization',
+  'service',
+] as const;
+
+export const MISSION_PARTICIPATION_MODES = [
+  'integrated',
+  'independent',
+  'hybrid',
+] as const;
+
+export const CORE_EDGE_TYPES = [
+  'authority_scope',
+  'applicable_scope',
+  'parent_scope',
+  'member_of',
+  'subscribed_to',
+  'depends_on',
+  'fork_of',
+  'derived_from',
+  'reports_on',
+  'references',
+  'implements',
+  'governed_by',
+  'reply_to',
+  'belongs_to',
+  'supports',
+  'decides',
+  'votes_on',
+  'uses_template',
+  'uses_module',
+  'uses_policy',
+] as const;
+
+export const REVISION_STATES = ['linear', 'diverged', 'merged'] as const;
+
+export const MERGE_STRATEGIES = [
+  'manual',
+  'three_way',
+  'set_union',
+  'append_only',
+  'last_write_wins',
+] as const;
+
+export const DEFAULT_PROTOCOL_VERSION = '0.1.0';
+export const DEFAULT_SCHEMA_VERSION = '1.0.0';
+
+export const PacketFamilySchema = z.enum(PACKET_FAMILIES);
+export const ElementKindSchema = z.enum(ELEMENT_KINDS);
+export const MissionParticipationModeSchema = z.enum(
+  MISSION_PARTICIPATION_MODES
+);
+export const PacketRevisionStateSchema = z.enum(REVISION_STATES);
+export const PacketMergeStrategySchema = z.enum(MERGE_STRATEGIES);
+
+export type PacketFamily = z.infer<typeof PacketFamilySchema>;
+export type ElementKind = z.infer<typeof ElementKindSchema>;
+export type PacketRevisionState = z.infer<typeof PacketRevisionStateSchema>;
+export type PacketMergeStrategy = z.infer<typeof PacketMergeStrategySchema>;
+
+export const PacketRefSchema = z
+  .object({
+    packet_id: z.string().min(1),
+  })
+  .strict();
+
+export const PacketRevisionRefSchema = PacketRefSchema.extend({
+  revision_id: z.string().min(1),
+}).strict();
+
+export const PacketEdgeSchema = z
+  .object({
+    edge_type: z.string().min(1),
+    target: PacketRefSchema,
+    metadata: z.record(z.string(), z.unknown()).default({}),
+  })
+  .strict();
+
+export const ExternalRefSchema = z
+  .object({
+    adapter: z.string().min(1),
+    ref_type: z.string().min(1),
+    ref_id: z.string().min(1),
+    url: z.string().min(1).nullable().optional(),
+    metadata: z.record(z.string(), z.unknown()).default({}),
+  })
+  .strict();
+
+export const PacketProducerSchema = z
+  .object({
+    adapter: z.string().min(1),
+    app_version: z.string().min(1).nullable().default(null),
+  })
+  .strict();
+
+export const PacketProvenanceSchema = z
+  .object({
+    created_by: PacketRefSchema.nullable().default(null),
+    submitted_by: PacketRefSchema.nullable().default(null),
+    adapter: z.string().min(1),
+    recorded_at: z.string().min(1).nullable().default(null),
+    imported_from_revision: PacketRevisionRefSchema.nullable().default(null),
+  })
+  .strict();
+
+export const PacketIntegritySchema = z
+  .object({
+    canonicalization: z.string().min(1).default('RFC8785'),
+    hash_alg: z.string().min(1).default('sha-256'),
+    digest: z.string().min(1).nullable().default(null),
+    signature_refs: z.array(PacketRevisionRefSchema).default([]),
+  })
+  .strict();
+
+export const PacketModerationSchema = z
+  .object({
+    visibility: z.enum(['public', 'unlisted', 'private', 'sealed']).default('public'),
+    moderation_state: z
+      .enum(['open', 'flagged', 'restricted', 'removed'])
+      .default('open'),
+    policy_refs: z.array(PacketRefSchema).default([]),
+    content_warning_ids: z.array(z.string().min(1)).default([]),
+  })
+  .strict();
+
+export const PacketMetadataSchema = z
+  .object({
+    tags: z.array(z.string().min(1)).default([]),
+    language: z.string().min(1).nullable().default(null),
+    summary: z.string().min(1).nullable().default(null),
+  })
+  .strict();
+
+export const PacketHeaderSchema = z
+  .object({
+    packet_id: z.string().min(1),
+    revision_id: z.string().min(1),
+    family: PacketFamilySchema,
+    schema_version: z.string().min(1).default(DEFAULT_SCHEMA_VERSION),
+    protocol_version: z.string().min(1).default(DEFAULT_PROTOCOL_VERSION),
+    created_at: z.string().min(1),
+    parent_revision_refs: z.array(PacketRevisionRefSchema).default([]),
+    merge_strategy: PacketMergeStrategySchema.nullable().default(null),
+    authority_scope_ref: PacketRefSchema.nullable().default(null),
+    applicable_scope_refs: z.array(PacketRefSchema).default([]),
+    edges: z.array(PacketEdgeSchema).default([]),
+    provenance: PacketProvenanceSchema,
+    integrity: PacketIntegritySchema.default({
+      canonicalization: 'RFC8785',
+      hash_alg: 'sha-256',
+      digest: null,
+      signature_refs: [],
+    }),
+    moderation: PacketModerationSchema.default({
+      visibility: 'public',
+      moderation_state: 'open',
+      policy_refs: [],
+      content_warning_ids: [],
+    }),
+    external_refs: z.array(ExternalRefSchema).default([]),
+    metadata: PacketMetadataSchema.default({
+      tags: [],
+      language: null,
+      summary: null,
+    }),
+    producer: PacketProducerSchema,
+  })
+  .strict();
+
+export const TemplateFieldSchema = z
+  .object({
+    key: z.string().min(1),
+    label: z.string().min(1),
+    field_type: z.enum([
+      'string',
+      'markdown',
+      'date',
+      'datetime',
+      'boolean',
+      'number',
+      'string_list',
+      'select',
+    ]),
+    required: z.boolean().default(false),
+    help_text: z.string().min(1).nullable().optional(),
+    options: z.array(z.string().min(1)).default([]),
+  })
+  .strict();
+
+export const ElementBodySchema = z
+  .object({
+    kind: ElementKindSchema,
+    name: z.string().min(1),
+    subtype: z.string().min(1).nullable().optional(),
+    summary: z.string().min(1).nullable().optional(),
+    locality_label: z.string().min(1).nullable().optional(),
+    tags: z.array(z.string().min(1)).default([]),
+  })
+  .strict();
+
+export const SignalBodySchema = z
+  .object({
+    title: z.string().min(1),
+    summary: z.string().min(1).nullable().optional(),
+    signal_kind: z.string().min(1),
+    status: z.string().min(1),
+    problem_statement: z.string().min(1).nullable().optional(),
+  })
+  .strict();
+
+export const ProposalBodySchema = z
+  .object({
+    title: z.string().min(1),
+    summary: z.string().min(1).nullable().optional(),
+    proposal_kind: z.string().min(1),
+    status: z.string().min(1),
+    decision_scope_refs: z.array(PacketRefSchema).default([]),
+    related_policy_refs: z.array(PacketRefSchema).default([]),
+  })
+  .strict();
+
+export const VoteBodySchema = z
+  .object({
+    title: z.string().min(1),
+    proposal_ref: PacketRefSchema,
+    vote_method: z.string().min(1),
+    status: z.string().min(1),
+    opened_at: z.string().min(1).nullable().optional(),
+    closes_at: z.string().min(1).nullable().optional(),
+  })
+  .strict();
+
+export const DecisionBodySchema = z
+  .object({
+    title: z.string().min(1),
+    summary: z.string().min(1).nullable().optional(),
+    outcome: z.string().min(1),
+    proposal_ref: PacketRefSchema.nullable().optional(),
+    vote_ref: PacketRefSchema.nullable().optional(),
+  })
+  .strict();
+
+export const InitiativeBodySchema = z
+  .object({
+    title: z.string().min(1),
+    summary: z.string().min(1).nullable().optional(),
+    status: z.string().min(1),
+  })
+  .strict();
+
+export const ProgramBodySchema = z
+  .object({
+    title: z.string().min(1),
+    summary: z.string().min(1).nullable().optional(),
+    initiative_ref: PacketRefSchema.nullable().optional(),
+    status: z.string().min(1),
+  })
+  .strict();
+
+export const CampaignBodySchema = z
+  .object({
+    title: z.string().min(1),
+    summary: z.string().min(1).nullable().optional(),
+    initiative_ref: PacketRefSchema.nullable().optional(),
+    program_ref: PacketRefSchema.nullable().optional(),
+    status: z.string().min(1),
+  })
+  .strict();
+
+export const MissionTemplateBodySchema = z
+  .object({
+    title: z.string().min(1),
+    summary: z.string().min(1).nullable().optional(),
+    initiative_ref: PacketRefSchema.nullable().optional(),
+    field_schema: z.array(TemplateFieldSchema).default([]),
+    default_values: z.record(z.string(), z.unknown()).default({}),
+    render_hints: z.record(z.string(), z.unknown()).default({}),
+    module_refs: z.array(PacketRefSchema).default([]),
+    policy_refs: z.array(PacketRefSchema).default([]),
+  })
+  .strict();
+
+export const MissionPlanBodySchema = z
+  .object({
+    title: z.string().min(1),
+    summary: z.string().min(1).nullable().optional(),
+    initiative_ref: PacketRefSchema.nullable().optional(),
+    template_ref: PacketRefSchema.nullable().optional(),
+    status: z.string().min(1),
+    alignment_mode: z.string().min(1),
+    participation_mode: MissionParticipationModeSchema,
+    objectives: z.array(z.string().min(1)).default([]),
+    coordinator_refs: z.array(PacketRefSchema).default([]),
+    schedule: z
+      .object({
+        location_name: z.string().min(1),
+        start_local: z.string().min(1),
+        timezone: z.string().min(1).nullable().optional(),
+        duration_minutes: z.number().int().nonnegative().nullable().optional(),
+      })
+      .strict(),
+    modules: z
+      .object({
+        module_refs: z.array(PacketRefSchema).default([]),
+        safety_items: z.array(z.string().min(1)).default([]),
+        comms_channel: z.string().min(1).nullable().optional(),
+        supply_items: z.array(z.string().min(1)).default([]),
+      })
+      .strict(),
+  })
+  .strict();
+
+export const MissionReportBodySchema = z
+  .object({
+    title: z.string().min(1),
+    mission_plan_ref: PacketRefSchema,
+    template_ref: PacketRefSchema.nullable().optional(),
+    report_type: z.enum([
+      'coordinator_aar',
+      'participant_report',
+      'external_element_report',
+    ]),
+    completion_checklist: z
+      .array(
+        z
+          .object({
+            objective: z.string().min(1),
+            status: z.enum([
+              'complete',
+              'incomplete',
+              'partial',
+              'not_applicable',
+            ]),
+            notes: z.string().min(1).nullable().optional(),
+          })
+          .strict()
+      )
+      .default([]),
+    notes: z.string().min(1),
+    improvements: z.array(z.string().min(1)).default([]),
+    artifact_refs: z.array(PacketRefSchema).default([]),
+  })
+  .strict();
+
+export const ModuleBodySchema = z
+  .object({
+    title: z.string().min(1),
+    summary: z.string().min(1).nullable().optional(),
+    module_kind: z.string().min(1),
+    status: z.string().min(1),
+  })
+  .strict();
+
+export const PolicyBodySchema = z
+  .object({
+    title: z.string().min(1),
+    summary: z.string().min(1).nullable().optional(),
+    policy_kind: z.string().min(1),
+    body_markdown: z.string().min(1),
+    status: z.string().min(1),
+  })
+  .strict();
+
+export const DiscussionThreadBodySchema = z
+  .object({
+    title: z.string().min(1),
+    summary: z.string().min(1).nullable().optional(),
+    thread_kind: z.string().min(1),
+    status: z.string().min(1),
+    related_refs: z.array(PacketRefSchema).default([]),
+  })
+  .strict();
+
+export const DiscussionPostBodySchema = z
+  .object({
+    title: z.string().min(1),
+    thread_ref: PacketRefSchema,
+    post_kind: z.string().min(1),
+    content_markdown: z.string().min(1),
+    reply_to_ref: PacketRefSchema.nullable().optional(),
+  })
+  .strict();
+
+export const MinutesBodySchema = z
+  .object({
+    title: z.string().min(1),
+    summary: z.string().min(1),
+    meeting_at: z.string().min(1).nullable().optional(),
+    decision_refs: z.array(PacketRefSchema).default([]),
+    artifact_refs: z.array(PacketRefSchema).default([]),
+  })
+  .strict();
+
+export const ArtifactBodySchema = z
+  .object({
+    title: z.string().min(1),
+    summary: z.string().min(1).nullable().optional(),
+    artifact_kind: z.string().min(1),
+    media_type: z.string().min(1).nullable().optional(),
+    sha256: z.string().min(1).nullable().optional(),
+    byte_length: z.number().int().nonnegative().nullable().optional(),
+  })
+  .strict();
+
+export const PACKET_BODY_SCHEMAS = {
+  Element: ElementBodySchema,
+  Signal: SignalBodySchema,
+  Proposal: ProposalBodySchema,
+  Vote: VoteBodySchema,
+  Decision: DecisionBodySchema,
+  Initiative: InitiativeBodySchema,
+  Program: ProgramBodySchema,
+  Campaign: CampaignBodySchema,
+  MissionTemplate: MissionTemplateBodySchema,
+  MissionPlan: MissionPlanBodySchema,
+  MissionReport: MissionReportBodySchema,
+  Module: ModuleBodySchema,
+  Policy: PolicyBodySchema,
+  DiscussionThread: DiscussionThreadBodySchema,
+  DiscussionPost: DiscussionPostBodySchema,
+  Minutes: MinutesBodySchema,
+  Artifact: ArtifactBodySchema,
+} satisfies Record<PacketFamily, z.ZodTypeAny>;
+
+export type PacketRef = z.infer<typeof PacketRefSchema>;
+export type PacketRevisionRef = z.infer<typeof PacketRevisionRefSchema>;
+export type PacketEdge = z.infer<typeof PacketEdgeSchema>;
+export type PacketHeader = z.infer<typeof PacketHeaderSchema>;
+export type PacketBodyByType = {
+  [TFamily in PacketFamily]: z.infer<(typeof PACKET_BODY_SCHEMAS)[TFamily]>;
+};
+
+export type PacketEnvelopeByType = {
+  [TFamily in PacketFamily]: {
+    header: PacketHeader & { family: TFamily };
+    body: PacketBodyByType[TFamily];
+  };
+};
+
+export type PacketEnvelope = PacketEnvelopeByType[PacketFamily];
+
+const RESERVED_BODY_KEYS = new Set([
+  'packet_id',
+  'revision_id',
+  'family',
+  'schema_version',
+  'protocol_version',
+  'created_at',
+  'parent_revision_refs',
+  'merge_strategy',
+  'authority_scope_ref',
+  'applicable_scope_refs',
+  'edges',
+  'provenance',
+  'integrity',
+  'moderation',
+  'external_refs',
+  'metadata',
+  'producer',
+]);
+
+const EnvelopeInputSchema = z
+  .object({
+    header: PacketHeaderSchema,
+    body: z.unknown(),
+  })
+  .strict();
+
+function rejectHeaderBodyCollisions(
+  body: unknown,
+  family: PacketFamily
+): void {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return;
+  }
+
+  Object.keys(body).forEach((key) => {
+    if (RESERVED_BODY_KEYS.has(key)) {
+      throw new z.ZodError([
+        {
+          code: 'custom',
+          path: ['body', key],
+          message: `Body field collides with reserved header field for ${family}.`,
+        },
+      ]);
+    }
+  });
+}
+
+export function getPacketBodySchema<TFamily extends PacketFamily>(
+  family: TFamily
+): (typeof PACKET_BODY_SCHEMAS)[TFamily] {
+  return PACKET_BODY_SCHEMAS[family];
+}
+
+export function parsePacketBody<TFamily extends PacketFamily>(
+  family: TFamily,
+  body: unknown
+): PacketBodyByType[TFamily] {
+  rejectHeaderBodyCollisions(body, family);
+  return getPacketBodySchema(family).parse(body) as PacketBodyByType[TFamily];
+}
+
+export function parsePacketEnvelope(input: unknown): PacketEnvelope {
+  const envelope = EnvelopeInputSchema.parse(input);
+  const parsedBody = parsePacketBody(envelope.header.family, envelope.body);
+
+  return {
+    header: envelope.header,
+    body: parsedBody,
+  } as PacketEnvelope;
+}
+
+export function createPacketEnvelope<TFamily extends PacketFamily>(input: {
+  header: z.input<typeof PacketHeaderSchema> & { family: TFamily };
+  body: z.input<(typeof PACKET_BODY_SCHEMAS)[TFamily]>;
+}): PacketEnvelopeByType[TFamily] {
+  const header = PacketHeaderSchema.parse(input.header);
+  const body = parsePacketBody(input.header.family, input.body);
+
+  return {
+    header: header as PacketHeader & { family: TFamily },
+    body,
+  } as PacketEnvelopeByType[TFamily];
+}

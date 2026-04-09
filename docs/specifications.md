@@ -4,7 +4,7 @@
 
 This document describes the repo as it exists in code today.
 
-It records the currently implemented product surface, route structure, layout behavior, and interaction boundaries. It does not treat canon text, long-range planning copy, or deferred portal ideas as implemented behavior.
+It records the currently implemented product surface, route structure, layout behavior, and interaction boundaries. It does not treat canon text, long-range planning copy, or deferred nexus ideas as implemented behavior.
 
 Sections marked **Provisional** reflect mock-data surfaces, incomplete workflows, or intentionally deferred systems.
 
@@ -13,24 +13,24 @@ Sections marked **Provisional** reflect mock-data surfaces, incomplete workflows
 The app is an Expo Router application with two visible layers:
 
 - a public OWA website shell for orientation and placeholder public pages
-- a dedicated portal shell under `/portal/*` for the first guest-facing OWA Nexus slice
+- a dedicated nexus shell under `/nexus/*` for the first guest-facing OWA nexus slice
 
 Implemented scope today:
 
 - a shared public shell with persistent `Header` and `Footer`
 - redesigned public landing, about, and charter destination pages using NativeWind styling
 - placeholder public auth destination pages
-- a dedicated portal layout for `/portal/*`
-- portal routes for `Dashboard`, `Discussions`, `Votes`, `Library`, and `Account`
-- portal shell state for scope selection, scope tree expansion, section selection, guest capabilities, and function-first vs scope-first mode
-- typed mock portal data for scopes, forums, votes, packets, and guest onboarding cues
-- NativeWind-based styling for the portal layer
+- a dedicated nexus layout for `/nexus/*`
+- nexus routes for `Dashboard`, `Discussions`, `Votes`, `Library`, and `Account`
+- nexus shell state for scope selection, section selection, guest capabilities, and function-first vs scope-first mode
+- typed mock nexus data for scopes, forums, votes, packets, and guest onboarding cues
+- NativeWind-based styling for the nexus layer
 
 Not implemented today:
 
 - authenticated user state
-- persistent form submission or saved portal actions
-- API fetching or remote storage
+- persistent form submission or saved nexus actions
+- remote or SQL-backed storage beyond the visitor-lobby MVP file bundle
 - real packet detail routes
 - real-time chat
 - protected/private spaces
@@ -52,7 +52,7 @@ Role:
 
 Implemented content blocks:
 
-- rotating hero slider with multiple public narratives and generated background artwork
+- rotating hero slider with multiple public narratives, generated background artwork, slower eased horizontal carousel transitions, and a dedicated control row below a clipped slide viewport
 - principle cards for decentralization, consent, and scale
 - supporting cards focused on local legitimacy and action-oriented democratic coordination
 
@@ -66,9 +66,17 @@ Role:
 
 Status:
 
-- contains multiple expandable content sections
-- includes section-link chips that switch focus among the main explanatory areas
-- stays within the public site shell and does not enter the portal layout
+- contains multiple canon/workspace-derived public explanation sections
+- includes a dedicated section navigator that centers the chosen chapter in view
+- drives both the active chapter state and the section animations from one shared focus line at the vertical midpoint of the visible scroll viewport
+- measures the actual scroll viewport inside the public shell so chapter focus is centered between the header and footer rather than against the full browser window
+- collapses and expands each chapter card based on a widened midpoint-distance interpolation band with a short center hold
+- gives each section its own parallax background artwork
+- uses a restrained parallax background shift that stays in sync with the same longer chapter progress curve
+- separates chapters with larger vertical spacing so the page reads as distinct sections rather than a continuous strip of imagery
+- softens chapter edges with stronger blurred edge strips and shadows rather than a true masked fade effect
+- presents each section as a large scroll chapter rather than a compact accordion card
+- stays within the public site shell and does not enter the nexus layout
 
 ### `/docs`
 
@@ -111,22 +119,22 @@ Status:
 - contains static placeholder copy only
 - no account creation or onboarding workflow is implemented
 
-## Portal route tree
+## Nexus route tree
 
-The portal now has its own nested route layout under `app/portal/_layout.tsx`.
+The nexus now has its own nested route layout under `app/nexus/_layout.tsx`.
 
-### `/portal`
+### `/nexus`
 
-Route file: `app/portal/index.tsx`
+Route file: `app/nexus/index.tsx`
 
 Role:
 
-- portal entry path
-- immediately redirects to `/portal/dashboard`
+- nexus route entry path
+- immediately redirects to `/nexus/dashboard`
 
-### `/portal/dashboard`
+### `/nexus/dashboard`
 
-Screen component: `PortalDashboardPage`
+Screen component: `NexusDashboardPage`
 
 Role:
 
@@ -138,23 +146,25 @@ Status:
 - **Provisional**
 - driven entirely by seeded mock data
 
-### `/portal/discussions`
+### `/nexus/discussions`
 
-Screen component: `PortalDiscussionsPage`
+Screen component: `NexusDiscussionsPage`
 
 Role:
 
 - Reddit-inspired discussion surface with forum previews and active thread cards
-- includes the only enabled guest write affordance in the current portal slice: the visitor lobby composer
+- includes the only enabled guest write affordance in the current nexus slice: the visitor lobby composer
+- loads and saves visitor-lobby posts through local Expo Router API routes backed by a shared JSON bundle
 
 Status:
 
 - **Provisional**
-- guest posts are local session-only UI state, not persisted packets
+- visitor-lobby posts persist through a shared file-backed canonical discussion-packet bundle in local web development
+- non-lobby discussion areas remain read-only and mock-backed
 
-### `/portal/votes`
+### `/nexus/votes`
 
-Screen component: `PortalVotesPage`
+Screen component: `NexusVotesPage`
 
 Role:
 
@@ -166,9 +176,9 @@ Status:
 - **Provisional**
 - guests can inspect but cannot vote, object, or delegate
 
-### `/portal/library`
+### `/nexus/library`
 
-Screen component: `PortalLibraryPage`
+Screen component: `NexusLibraryPage`
 
 Role:
 
@@ -180,9 +190,9 @@ Status:
 - **Provisional**
 - packet actions are visible as placeholders and remain disabled
 
-### `/portal/account`
+### `/nexus/account`
 
-Screen component: `PortalAccountPage`
+Screen component: `NexusAccountPage`
 
 Role:
 
@@ -196,7 +206,7 @@ Status:
 
 ## Current navigation structure
 
-Navigation is implemented with Expo Router using a top-level stack in `app/_layout.tsx` and a nested portal stack in `app/portal/_layout.tsx`.
+Navigation is implemented with Expo Router using a top-level stack in `app/_layout.tsx` and a nested nexus stack in `app/nexus/_layout.tsx`.
 
 ### Public shell
 
@@ -211,20 +221,21 @@ Current public header links:
 - `Home` -> `/`
 - `About` -> `/about`
 - `Charter` -> `/docs`
-- `Nexus` -> `/portal`
+- `Nexus` -> `/nexus`
 
 Current public behavior:
 
 - the active public link is highlighted from the current pathname
 - the `OWA` brand label links to `/`
 - the public header no longer exposes auth routes
-- the portal is reachable from both the home-page CTA and the `Nexus` header link
+- the nexus is reachable from both the home-page CTA and the `Nexus` header link
+- the public footer now uses a denser multi-column layout rather than repeating the header nav as simple pills
 
-### Portal shell
+### Nexus shell
 
-Portal routes do not render the public `Header` or `Footer`.
+Nexus routes do not render the public `Header` or `Footer`.
 
-Portal shell composition:
+Nexus shell composition:
 
 - two adjacent left-side navigation columns on desktop
 - mobile top bar with a toggle that opens the same left-side navigation tray from the left edge
@@ -233,20 +244,27 @@ Portal shell composition:
 Left-side shell sections:
 
 - compact guest identity strip showing `Anonymous Guest`
-- public-site return link at the top of the portal rail
+- public-site return link at the top of the nexus rail
 - `Sign In` and `Sign Up` actions
-- compact navigation preference switch inside the guest identity strip
-- primary navigation column that switches between functions or the scope tree
+- compact navigation preference switch inside the guest identity strip, with readable mode text above the control
+- primary navigation column that switches between the function menu or scope menu
 - secondary navigation column that reveals the other menu immediately to the right
-- followed scopes and visitor-channel context inside the secondary column
+- the scope menu uses a full visible scope map with a fixed-width connector lane, so every scope stays visible without pushing lower labels to the right
+- followed scopes stay with the scope menu column
+- deferred surfaces stay with the functions menu column
+- current-scope summary card stays with whichever column is currently acting as the scope menu and appears above the branch navigator
+- current-context badges stay inside the card and wrap within the available width when labels run long
+- secondary rail can remain open even when the primary rail is collapsed
+- each rail can be collapsed independently and remembers its own open or closed state
+- left and right swipe gestures collapse or expand the rails from the outside in and inside out
 
-Portal route list:
+Nexus route list:
 
-- `/portal/dashboard`
-- `/portal/discussions`
-- `/portal/votes`
-- `/portal/library`
-- `/portal/account`
+- `/nexus/dashboard`
+- `/nexus/discussions`
+- `/nexus/votes`
+- `/nexus/library`
+- `/nexus/account`
 
 ## Existing workflows
 
@@ -256,7 +274,7 @@ Implemented flow:
 
 1. user lands on `/`
 2. user reads public framing and summary cards
-3. user navigates to `/about`, `/docs`, or `/portal`
+3. user navigates to `/about`, `/docs`, or `/nexus`
 
 ### Public site navigation workflow
 
@@ -266,22 +284,22 @@ Implemented flow:
 2. user moves among the public pages
 3. current page is indicated by active header-link styling
 
-### Portal entry workflow
+### Nexus entry workflow
 
 Implemented flow:
 
-1. user selects `Enter Portal` from the landing page
-2. router enters `/portal`
-3. `/portal` redirects to `/portal/dashboard`
-4. portal loads in `Global Guest` state with `Global Commons` as the initial scope lens
+1. user selects `Enter Nexus` from the landing page
+2. router enters `/nexus`
+3. `/nexus` redirects to `/nexus/dashboard`
+4. nexus loads in `Global Guest` state with `Global Commons` as the initial scope lens
 
-### Portal scope workflow
+### Nexus scope workflow
 
 Implemented flow:
 
-1. guest opens the scope tree or followed scope chips
+1. guest opens the scope menu branch navigator or followed scope chips
 2. guest chooses a scope
-3. the active scope updates in shared portal shell state
+3. the active scope updates in shared nexus shell state
 4. dashboard, discussion, vote, library, and account surfaces filter against that scope lens
 
 Status:
@@ -289,12 +307,12 @@ Status:
 - **Provisional**
 - the scope model is mock data only
 
-### Portal mode workflow
+### Nexus mode workflow
 
 Implemented flow:
 
 1. guest toggles between `Function-first` and `Scope-first`
-2. the primary left rail switches between function tabs and the scope tree
+2. the primary left rail switches between the function menu and the scope menu
 3. the secondary column immediately to the right switches to the complementary menu
 4. route structure remains unchanged and the same surfaces remain reachable
 
@@ -307,15 +325,17 @@ Status:
 
 Implemented flow:
 
-1. guest opens `/portal/discussions`
-2. guest enters a title and/or body in the visitor lobby composer
-3. guest presses `Post to visitor lobby`
-4. a local session-only draft preview appears in the discussion surface
+1. guest opens `/nexus/discussions`
+2. guest receives a session-scoped anonymous guest label for the current browser session
+3. guest enters a title and/or body in the visitor lobby composer
+4. guest presses `Post to visitor lobby`
+5. the request is sent to a local API route, written into the shared visitor-lobby bundle, and returned to the UI
 
 Status:
 
 - **Provisional**
-- posts are not stored, synced, or converted into durable packets yet
+- posts are persisted only through the local shared file bundle
+- posts are not stored in SQL or converted into canonical persisted packets yet
 
 ## Major entities and their roles
 
@@ -328,22 +348,22 @@ Defined by `app/_layout.tsx`.
 Role:
 
 - wraps the app in a theme provider
-- conditionally applies the public shell only on non-portal routes
-- keeps the portal route subtree available in the top-level stack
+- conditionally applies the public shell only on non-nexus routes
+- keeps the nexus route subtree available in the top-level stack
 
-#### Portal layout
+#### Nexus layout
 
-Defined by `app/portal/_layout.tsx`.
+Defined by `app/nexus/_layout.tsx`.
 
 Role:
 
-- provides the dedicated portal shell
-- mounts the nested portal stack
-- shares portal shell state across all portal screens
+- provides the dedicated nexus shell
+- mounts the nested nexus stack
+- shares nexus shell state across all nexus screens
 
-#### Portal shell provider
+#### Nexus shell provider
 
-Defined by `components/portal/portal-shell-context.tsx`.
+Defined by `components/nexus/nexus-shell-context.tsx`.
 
 Role:
 
@@ -351,39 +371,46 @@ Role:
 - stores `activeScopeId`
 - stores `expandedScopeIds`
 - derives `activeSection` from the current pathname
-- exposes guest capabilities and scope data to portal screens
+- exposes guest capabilities and scope data to nexus screens
 
-#### Portal sidebar and shell
+#### Nexus sidebar and shell
 
-Defined by `components/portal/portal-shell.tsx` and `components/portal/portal-sidebar.tsx`.
+Defined by `components/nexus/nexus-shell.tsx` and `components/nexus/nexus-sidebar.tsx`.
 
 Role:
 
 - render a compact account header plus a two-stage left-side navigation system
 - keep either functions or scopes primary based on shell preference
 - render the complementary secondary menu in the adjacent column
+- render the scope menu as a full visible scope map rather than an indented nested tree
+- keep scope-only support content with the scope menu and function-only support content with the function menu
+- support persisted rail collapse state and horizontal swipe collapse/expand behavior
 - provide responsive collapse behavior while keeping the tray anchored to the left edge
 
-#### Portal mock data
+#### Nexus mock data
 
-Defined by `data/portal/mock-portal-data.ts`.
+Defined by `data/nexus/mock-nexus-data.ts`.
 
 Role:
 
-- seeds the current portal UI
+- seeds the current nexus UI
 - provides scope summaries, dashboard queues, forum previews, vote previews, packet previews, and guest onboarding copy
+- a separate shared bundle file under `data/nexus/visitor-lobby-bundle.json` now stores the durable visitor-lobby discussion packets
 
 ### Domain-level entities
 
 Status:
 
 - **Provisional**
-- there is still no runtime domain model, persistence layer, or packet engine wired into the UI
+- there is now a runtime packet-schema foundation under `domain/*`, but it is not wired into the UI yet
+- there are now typed packet builders and an initial seed packet dataset under `domain/packets/*`
+- there is still no live persistence adapter, query service implementation, or packet-backed nexus flow in active routes
 
 Important note:
 
-- portal content is packet-themed and type-labeled
-- packet, proposal, assembly, mission, and trust concepts remain mock UI data rather than active runtime entities
+- nexus content is packet-themed and type-labeled
+- packet, proposal, assembly, mission, and trust concepts remain mock UI data in the nexus surfaces even though the repo now contains canonical packet schemas and storage contracts
+- the seed packet dataset currently exists for domain validation and future import work, not as live UI data
 
 ## Current architecture patterns
 
@@ -391,36 +418,37 @@ Important note:
 
 - Expo Router file-based routing
 - top-level stack in `app/_layout.tsx`
-- nested portal stack in `app/portal/_layout.tsx`
-- `/portal` redirects to `/portal/dashboard`
+- nested nexus stack in `app/nexus/_layout.tsx`
+- `/nexus` redirects to `/nexus/dashboard`
 
 ### Layout pattern
 
-- public and portal shells now have separate layout behavior
+- public and nexus shells now have separate layout behavior
 - public pages remain centered content pages with shared header/footer chrome
-- portal pages render inside a dedicated app-style shell with a persistent left rail on desktop and an overlay shell on smaller screens
+- nexus pages render inside a dedicated app-style shell with a persistent left rail on desktop and an overlay shell on smaller screens
 
 ### Component pattern
 
 - function components throughout
 - route screens use default exports
-- portal layout logic is split into reusable components under `components/portal`
+- nexus layout logic is split into reusable components under `components/nexus`
 
 ### Styling pattern
 
 - public shell chrome and the landing/about/charter pages now use NativeWind `className` styling
 - public pages use a dedicated public token set layered into `tailwind.config.js`
 - the public landing page hero now includes a rotating slider with generated SVG background imagery
-- portal screens and portal shell use NativeWind `className` styling
-- portal theme tokens are defined in `tailwind.config.js`
+- the public about page uses large scroll-driven chapters with per-section parallax artwork and smooth scroll-based emphasis
+- nexus screens and nexus shell use NativeWind `className` styling
+- nexus theme tokens are defined in `tailwind.config.js`
 - NativeWind is configured through `babel.config.js`, `metro.config.js`, `global.css`, and `nativewind-env.d.ts`
 
 ### State and data pattern
 
 - public pages are still stateless
-- portal state is shared through a local React context provider
-- all current portal content is mock data, not fetched or persisted data
-- no API or storage integration is implemented
+- nexus state is shared through a local React context provider
+- most nexus content is still mock data, but the visitor-lobby surface now reads and writes through local API routes
+- only the visitor-lobby bundle has live persistence; SQL and packet-store-backed persistence are not implemented yet
 
 ## Current naming patterns
 
@@ -432,29 +460,34 @@ Important note:
 Examples:
 
 - `app/index.tsx`
-- `app/portal/dashboard.tsx`
-- `app/portal/discussions.tsx`
+- `app/nexus/dashboard.tsx`
+- `app/nexus/discussions.tsx`
+- `app/api/nexus/scopes/[scopeId]/visitor-lobby+api.ts`
 
 ### Component naming
 
 - React component names use PascalCase
 - route components continue to end with `Page`
-- shared portal building blocks use descriptive names such as `PortalShell`, `PortalSidebar`, and `PortalCard`
+- shared nexus building blocks use descriptive names such as `NexusShell`, `NexusSidebar`, and `NexusCard`
 
 ## Repo structure in current use
 
 ### Active implementation areas
 
 - `app`
-  - public route files, root layout, and portal route files
+  - public route files, root layout, and nexus route files
 - `components/layout`
   - shared public header and footer
-- `components/portal`
-  - portal shell, sidebar, context, and UI primitives
-- `data/portal`
-  - mock portal data
-- `lib/portal`
-  - portal route and scope helpers
+- `components/nexus`
+    - nexus shell, sidebar, context, and UI primitives
+- `data/nexus`
+    - mock nexus data plus the shared visitor-lobby bundle file
+- `data/schemas`
+  - packet-store SQLite schema for canonical packet and revision storage
+- `domain`
+  - package-style packet foundation split into schema, core, storage, and projections
+- `lib/nexus`
+    - nexus route and scope helpers plus visitor-lobby client and repository helpers
 - `hooks`
   - color scheme helpers
 - `constants/theme.ts`
@@ -462,12 +495,16 @@ Examples:
 
 ### Present but not active in runtime behavior
 
-- `data/schemas`
-  - still present but empty
-- `domain`
-  - still present but not wired into active app behavior
+- `domain/schema`
+  - defines the canonical `PacketEnvelope`, packet-family Zod schemas, packet refs, revision refs, multi-parent revision ancestry, and parser entrypoints
+- `domain/core`
+  - defines `PacketStore`, `BrowserQueryService`, and `NexusQueryService` interfaces, including preferred-revision and revision-head contracts
+- `domain/storage`
+  - defines SQLite-oriented record projections for packets, revisions, revision heads, edges, and search indices
+- `domain/projections`
+  - derives display labels, titles, summaries, and statuses from canonical packet family plus subtype
 - `lib`
-  - now partially active through `lib/portal`, but still not a domain/data engine layer
+  - now partially active through `lib/nexus`, but still not the canonical domain/data engine layer
 
 ## Implementation boundaries
 
@@ -476,10 +513,15 @@ What is implemented:
 - public route structure
 - public header/footer shell
 - redesigned public splash, about, and charter destination pages
-- dedicated portal shell under `/portal/*`
-- first-slice portal surfaces for dashboard, discussions, votes, library, and account
+- dedicated nexus shell under `/nexus/*`
+- first-slice nexus surfaces for dashboard, discussions, votes, library, and account
 - guest-only interaction policy with visitor-lobby posting as the only enabled write affordance
-- typed mock data for scope-aware portal UI blocking
+- typed mock data for scope-aware nexus UI blocking
+- canonical packet schema definitions with nested `header/body` envelopes
+- stable `packet_id` plus immutable `revision_id` packet identity rules
+- multi-parent revision ancestry for divergent branches and merge revisions
+- typed packet edges, scope refs, packet-store interfaces, and SQLite storage schema definitions
+- derived packet label helpers for future browser and nexus projections
 
 What remains unimplemented but is still referenced by docs or shell affordances:
 
@@ -491,7 +533,8 @@ What remains unimplemented but is still referenced by docs or shell affordances:
 - notifications
 - protected assemblies and trust-gated spaces
 - moderation workflows
-- backend data architecture
+- live packet persistence adapters and revision writes
+- browser and nexus query service implementations over the shared packet store
 
 ## Provisional notes
 
@@ -502,4 +545,4 @@ The following areas should still be treated as provisional:
 - how locality claiming, join/start flows, and trust progression will work
 - vote execution, delegation, and propagation semantics
 - packet actions that currently appear as disabled placeholders
-- any architecture in `docs/implementation-guide.md` that is not yet represented in executable code
+- any architecture in `docs/implementation-guide.md` beyond the new packet schema foundation that is not yet represented in executable code

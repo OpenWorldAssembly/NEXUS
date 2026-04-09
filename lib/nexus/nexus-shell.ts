@@ -1,29 +1,29 @@
 /**
- * File: portal-shell.ts
- * Description: Defines portal shell types and helpers for route, scope, and guest state.
+ * File: nexus-shell.ts
+ * Description: Defines nexus shell types and helpers for route, scope, and guest state.
  */
-export type PortalNavMode = 'function' | 'scope';
+export type NexusNavMode = 'function' | 'scope';
 
-export type PortalSection =
+export type NexusSection =
   | 'dashboard'
   | 'discussions'
   | 'votes'
   | 'library'
   | 'account';
 
-export type PortalGuestCapability =
+export type NexusGuestCapability =
   | 'browse-public-scopes'
   | 'browse-public-packets'
   | 'post-visitor-lobby';
 
-export type PortalScopeRelationship =
+export type NexusScopeRelationship =
   | 'global'
   | 'parent'
   | 'current'
   | 'child'
   | 'followed';
 
-export type PortalScopeSummary = {
+export type NexusScopeSummary = {
   id: string;
   name: string;
   shortLabel: string;
@@ -45,23 +45,23 @@ export type PortalScopeSummary = {
   };
 };
 
-export type PortalScopeBranchNode = {
+export type NexusScopeBranchNode = {
   scopeId: string;
-  relationship: PortalScopeRelationship;
+  relationship: NexusScopeRelationship;
   depth: number;
   isExpanded: boolean;
   hasChildren: boolean;
 };
 
-export type PortalShellState = {
-  navigationMode: PortalNavMode;
+export type NexusShellState = {
+  navigationMode: NexusNavMode;
   activeScopeId: string;
   expandedScopeIds: string[];
-  activeSection: PortalSection;
-  guestCapabilities: PortalGuestCapability[];
+  activeSection: NexusSection;
+  guestCapabilities: NexusGuestCapability[];
 };
 
-export const PORTAL_SECTION_ORDER: PortalSection[] = [
+export const NEXUS_SECTION_ORDER: NexusSection[] = [
   'dashboard',
   'discussions',
   'votes',
@@ -69,7 +69,7 @@ export const PORTAL_SECTION_ORDER: PortalSection[] = [
   'account',
 ];
 
-export const PORTAL_SECTION_LABELS: Record<PortalSection, string> = {
+export const NEXUS_SECTION_LABELS: Record<NexusSection, string> = {
   dashboard: 'Dashboard',
   discussions: 'Discussions',
   votes: 'Votes',
@@ -79,24 +79,24 @@ export const PORTAL_SECTION_LABELS: Record<PortalSection, string> = {
 
 /**
  * Inputs: a route pathname string.
- * Output: the active portal section represented by the pathname.
+ * Output: the active nexus section represented by the pathname.
  */
-export function getPortalSectionFromPathname(pathname: string): PortalSection {
-  const section = pathname.replace('/portal/', '').split('/')[0];
+export function getNexusSectionFromPathname(pathname: string): NexusSection {
+  const section = pathname.replace('/nexus/', '').split('/')[0];
 
-  if (PORTAL_SECTION_ORDER.includes(section as PortalSection)) {
-    return section as PortalSection;
+  if (NEXUS_SECTION_ORDER.includes(section as NexusSection)) {
+    return section as NexusSection;
   }
 
   return 'dashboard';
 }
 
 /**
- * Inputs: a portal section key.
+ * Inputs: a nexus section key.
  * Output: the route path for the requested section.
  */
-export function getPortalSectionHref(section: PortalSection): `/portal/${PortalSection}` {
-  return `/portal/${section}`;
+export function getNexusSectionHref(section: NexusSection): `/nexus/${NexusSection}` {
+  return `/nexus/${section}`;
 }
 
 /**
@@ -111,8 +111,8 @@ export function matchesScope(scopeIds: string[], activeScopeId: string): boolean
  * Inputs: all known scopes and a target scope id.
  * Output: ordered ancestor ids from the root scope to the parent of the target.
  */
-export function getPortalAncestorIds(
-  scopes: PortalScopeSummary[],
+export function getNexusAncestorIds(
+  scopes: NexusScopeSummary[],
   scopeId: string,
 ): string[] {
   const ancestors: string[] = [];
@@ -130,14 +130,14 @@ export function getPortalAncestorIds(
  * Inputs: scope summaries, the active scope id, and any expanded scope ids.
  * Output: the visible branch tree nodes for the persistent scope viewer.
  */
-export function buildPortalBranchNodes(
-  scopes: PortalScopeSummary[],
+export function buildNexusBranchNodes(
+  scopes: NexusScopeSummary[],
   activeScopeId: string,
   expandedScopeIds: string[],
-): PortalScopeBranchNode[] {
+): NexusScopeBranchNode[] {
   const scopeMap = Object.fromEntries(scopes.map((scope) => [scope.id, scope]));
   const lineageIds = new Set([
-    ...getPortalAncestorIds(scopes, activeScopeId),
+    ...getNexusAncestorIds(scopes, activeScopeId),
     activeScopeId,
   ]);
   const expandedSet = new Set([
@@ -145,7 +145,7 @@ export function buildPortalBranchNodes(
     ...Array.from(lineageIds),
   ]);
   const rootScopes = scopes.filter((scope) => !scope.parentId);
-  const nodes: PortalScopeBranchNode[] = [];
+  const nodes: NexusScopeBranchNode[] = [];
 
   const addNode = (scopeId: string, depth: number) => {
     const scope = scopeMap[scopeId];
@@ -154,7 +154,7 @@ export function buildPortalBranchNodes(
       return;
     }
 
-    let relationship: PortalScopeRelationship = 'child';
+    let relationship: NexusScopeRelationship = 'child';
 
     if (depth === 0) {
       relationship = 'global';

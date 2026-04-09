@@ -67,7 +67,7 @@ export default function DocsPage() {
             </Pressable>
           </Link>
 
-          <Link href="/portal" asChild>
+          <Link href="/nexus/dashboard" asChild>
             <Pressable className="rounded-full border border-public-line bg-public-panel/70 px-6 py-3">
               <Text className="text-sm font-bold uppercase tracking-[0.18em] text-public-text">
                 Browse the Nexus

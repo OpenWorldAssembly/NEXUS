@@ -17,11 +17,19 @@ export type PublicHeroSlide = {
   backgroundImageUri: string;
 };
 
+export type AboutHighlight = {
+  title: string;
+  body: string;
+};
+
 export type AboutSection = {
   id: string;
   title: string;
+  eyebrow: string;
+  headline: string;
   summary: string;
-  points: string[];
+  highlights: AboutHighlight[];
+  backgroundImageUri: string;
 };
 
 export type CharterResource = {
@@ -35,6 +43,14 @@ type HeroPalette = {
   accent: string;
   accentSoft: string;
   glow: string;
+};
+
+type AboutPalette = {
+  base: string;
+  accent: string;
+  accentSoft: string;
+  glow: string;
+  ridge: string;
 };
 
 /**
@@ -79,6 +95,58 @@ function buildHeroBackgroundImageUri(palette: HeroPalette) {
         <rect x="970" y="180" width="360" height="14" rx="7" />
         <rect x="1020" y="246" width="250" height="14" rx="7" />
         <rect x="1085" y="312" width="170" height="14" rx="7" />
+      </g>
+    </svg>
+  `;
+
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+/**
+ * Inputs: a color palette for the generated about-section background artwork.
+ * Output: a data URI pointing to an abstract SVG image for a single about section.
+ */
+function buildAboutBackgroundImageUri(palette: AboutPalette) {
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 980">
+      <defs>
+        <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="${palette.base}" />
+          <stop offset="100%" stop-color="#07111c" />
+        </linearGradient>
+        <radialGradient id="glowA" cx="20%" cy="18%" r="52%">
+          <stop offset="0%" stop-color="${palette.glow}" stop-opacity="0.7" />
+          <stop offset="100%" stop-color="${palette.glow}" stop-opacity="0" />
+        </radialGradient>
+        <radialGradient id="glowB" cx="82%" cy="24%" r="44%">
+          <stop offset="0%" stop-color="${palette.accentSoft}" stop-opacity="0.4" />
+          <stop offset="100%" stop-color="${palette.accentSoft}" stop-opacity="0" />
+        </radialGradient>
+      </defs>
+
+      <rect width="1600" height="980" fill="url(#bg)" />
+      <rect width="1600" height="980" fill="url(#glowA)" />
+      <rect width="1600" height="980" fill="url(#glowB)" />
+
+      <g opacity="0.22" fill="none" stroke="${palette.accent}" stroke-width="2">
+        <path d="M-80 640 C 220 460, 430 720, 760 560 S 1260 420, 1700 620" />
+        <path d="M-60 760 C 220 560, 520 860, 860 700 S 1360 560, 1710 760" />
+      </g>
+
+      <g opacity="0.36" fill="${palette.ridge}">
+        <path d="M0 780 C180 740 320 660 480 670 C650 680 760 760 930 750 C1110 740 1260 630 1440 660 C1515 672 1568 694 1600 710 L1600 980 L0 980 Z" />
+        <path d="M0 860 C200 820 350 760 520 770 C700 782 830 848 1010 838 C1168 830 1340 758 1520 780 C1552 784 1580 790 1600 798 L1600 980 L0 980 Z" />
+      </g>
+
+      <g opacity="0.2" fill="${palette.accentSoft}">
+        <circle cx="1220" cy="260" r="122" />
+        <circle cx="360" cy="220" r="84" />
+      </g>
+
+      <g opacity="0.78" fill="${palette.accent}">
+        <rect x="970" y="210" width="320" height="14" rx="7" />
+        <rect x="1015" y="280" width="240" height="14" rx="7" />
+        <rect x="1080" y="350" width="170" height="14" rx="7" />
       </g>
     </svg>
   `;
@@ -148,48 +216,149 @@ export const publicPrinciples: PublicPrinciple[] = [
 
 export const aboutSections: AboutSection[] = [
   {
-    id: 'foundation',
-    title: 'Foundation',
+    id: 'what-is-owa',
+    title: 'What OWA Is',
+    eyebrow: 'The basic proposition',
+    headline: 'A parallel democratic layer for coordination at any scale.',
     summary:
-      'OWA is a democratic coordination layer built to help people deliberate, decide, and act together without centralized command.',
-    points: [
-      'It is a civic substrate rather than a sovereign replacement for existing institutions.',
-      'Its goal is coordination without command and unity without uniformity across different communities and scales.',
-      'The public site explains the model, while the portal will eventually support active participation.',
+      'Open World Assembly is a decentralized, fractal system of direct democracy built so people can coordinate, deliberate, and make decisions together from local communities to planetary alignment without centralized control.',
+    highlights: [
+      {
+        title: 'Direct by default',
+        body: 'Participation stays open and direct as the baseline, without requiring a permanent political intermediary to carry a person’s voice.',
+      },
+      {
+        title: 'Consent made visible',
+        body: 'Shared direction emerges from public participation and visible consent rather than command, coercion, or opaque bargaining.',
+      },
+      {
+        title: 'Lawful and nonviolent',
+        body: 'The project is framed as peaceful, adaptive cooperation that expands representation without relying on destabilizing force.',
+      },
     ],
+    backgroundImageUri: buildAboutBackgroundImageUri({
+      base: '#102233',
+      accent: '#6dd3ff',
+      accentSoft: '#d7ffbf',
+      glow: '#245d7d',
+      ridge: '#16354d',
+    }),
+  },
+  {
+    id: 'substrate',
+    title: 'Substrate, Not Sovereignty',
+    eyebrow: 'What OWA is not',
+    headline: 'It coordinates people without becoming a new ruling center.',
+    summary:
+      'OWA is not a shadow government, a centralized command hierarchy, or a replacement superstate. It is designed as a civic substrate that strengthens what works, exposes misalignment, and supports reform through clarity rather than confrontation.',
+    highlights: [
+      {
+        title: 'Not a shadow government',
+        body: 'The system does not seize authority or depend on existing institutions granting it permission to exist.',
+      },
+      {
+        title: 'Works alongside institutions',
+        body: 'It is meant to add democratic visibility and coordination capacity while preserving continuity in the broader civic landscape.',
+      },
+      {
+        title: 'Coordination without command',
+        body: 'Its influence is intended to come from legitimacy, alignment, and usefulness rather than enforcement power.',
+      },
+    ],
+    backgroundImageUri: buildAboutBackgroundImageUri({
+      base: '#1b2233',
+      accent: '#f7d995',
+      accentSoft: '#6dd3ff',
+      glow: '#6a5b2f',
+      ridge: '#2d3044',
+    }),
   },
   {
     id: 'assemblies',
-    title: 'Fractal assemblies',
+    title: 'Fractal Assemblies',
+    eyebrow: 'The structural pattern',
+    headline: 'The same democratic grammar repeats from neighborhood to world.',
     summary:
-      'The same assembly pattern repeats from neighborhood to world scale so local legitimacy can connect into larger coordination.',
-    points: [
-      'Assemblies are geographic-first and rooted in real places and real participants.',
-      'Each level keeps full democratic capacity instead of acting as a symbolic layer beneath a central authority.',
-      'Teams, nodes, and other overlays can coordinate work, but they do not replace assembly legitimacy.',
+      'Assemblies are geographic-first and structurally consistent across scale, so local legitimacy can connect into larger coordination without being overridden by it.',
+    highlights: [
+      {
+        title: 'Geographic-first legitimacy',
+        body: 'Real people in real places remain the grounding layer from which wider coordination becomes credible and resilient.',
+      },
+      {
+        title: 'Autonomous but compatible',
+        body: 'Each assembly can function meaningfully on its own while still connecting into broader patterns of alignment.',
+      },
+      {
+        title: 'Overlays remain secondary',
+        body: 'Teams, nodes, and other abstract groupings can coordinate work, but they do not replace assembly legitimacy.',
+      },
     ],
+    backgroundImageUri: buildAboutBackgroundImageUri({
+      base: '#162734',
+      accent: '#9fe870',
+      accentSoft: '#f7d995',
+      glow: '#395f3a',
+      ridge: '#1d3a35',
+    }),
   },
   {
-    id: 'consent',
-    title: 'Consent and legitimacy',
+    id: 'alignment',
+    title: 'Local Voice, Global Alignment',
+    eyebrow: 'How scale works',
+    headline: 'Local decisions can contribute to wider coordination without losing context.',
     summary:
-      'OWA treats legitimacy as something that emerges from visible participation and consent, not coercion or inherited office.',
-    points: [
-      'Trust is layered and probabilistic rather than a simple verified versus unverified switch.',
-      'Identity continuity matters, but public exposure should not be mandatory for participation.',
-      'Influence can be shaped by local grounding, relationship history, and demonstrated credibility.',
+      'OWA is designed around a local expression of consent that can propagate across relevant scales. Delegation, where used, is optional, revocable, and subordinate to direct participation.',
+    highlights: [
+      {
+        title: 'One signal across scales',
+        body: 'The system is built so local participation can inform broader coordination without forcing duplicate political machinery at every level.',
+      },
+      {
+        title: 'Revocable delegation',
+        body: 'Delegation is a bandwidth tool, not a permanent transfer of sovereignty, and it remains optional wherever it exists.',
+      },
+      {
+        title: 'Human-scale alignment',
+        body: 'The goal is to keep decisions as local as possible while still making larger-scale coordination structurally possible.',
+      },
     ],
+    backgroundImageUri: buildAboutBackgroundImageUri({
+      base: '#202033',
+      accent: '#6dd3ff',
+      accentSoft: '#f7d995',
+      glow: '#473f75',
+      ridge: '#2f3150',
+    }),
   },
   {
-    id: 'coordination',
-    title: 'Coordination loop',
+    id: 'action',
+    title: 'Action, Memory, Adaptation',
+    eyebrow: 'What the system does',
+    headline: 'Discussion should lead to proposals, action, records, and learning.',
     summary:
-      'The system follows a simple civic loop that lets communities sense reality, deliberate, act, learn, and adapt.',
-    points: [
-      'Sense, think, act, learn, and adapt is the repeating operational pattern.',
-      'Proposals, decisions, actions, and records are meant to form a durable civic memory rather than disappear into feeds.',
-      'Large-scale coordination should emerge from connected local decisions rather than top-down instruction.',
+      'OWA follows a recurring loop of sense, think, act, learn, and adapt. Public memory and iterative improvement make the model stronger as more people participate in it.',
+    highlights: [
+      {
+        title: 'From signal to follow-through',
+        body: 'The point is not endless discussion but a visible path from collective reasoning into proposals, decisions, missions, and reform.',
+      },
+      {
+        title: 'Durable civic memory',
+        body: 'Decisions, votes, and records are meant to stay auditable and legible so communities can build on what they have learned.',
+      },
+      {
+        title: 'Antifragile by participation',
+        body: 'The system is designed to gain clarity through use, adapting to context and strengthening as more assemblies engage.',
+      },
     ],
+    backgroundImageUri: buildAboutBackgroundImageUri({
+      base: '#241f2f',
+      accent: '#f7d995',
+      accentSoft: '#9fe870',
+      glow: '#704f7d',
+      ridge: '#3a3043',
+    }),
   },
 ];
 

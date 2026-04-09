@@ -1,30 +1,32 @@
 /**
- * File: portal-ui.tsx
- * Description: Provides shared NativeWind UI primitives for the guest portal screens.
+ * File: nexus-ui.tsx
+ * Description: Provides shared NativeWind UI primitives for the guest nexus screens.
  */
 import type { PropsWithChildren, ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import type { PortalCardTone } from '@/data/portal/mock-portal-data';
+import type { NexusCardTone } from '@/data/nexus/mock-nexus-data';
 
-type PortalCardProps = PropsWithChildren<{
+type NexusCardProps = PropsWithChildren<{
   className?: string;
-  tone?: PortalCardTone | 'default';
+  tone?: NexusCardTone | 'default';
 }>;
 
-type PortalSectionHeaderProps = {
+type NexusSectionHeaderProps = {
   eyebrow: string;
   title: string;
   description: string;
   trailing?: ReactNode;
 };
 
-type PortalBadgeProps = {
+type NexusBadgeProps = {
   label: string;
-  tone?: PortalCardTone | 'default';
+  tone?: NexusCardTone | 'default';
+  className?: string;
+  textClassName?: string;
 };
 
-type PortalActionButtonProps = {
+type NexusActionButtonProps = {
   label: string;
   onPress?: () => void;
   disabled?: boolean;
@@ -39,44 +41,44 @@ function joinClasses(...classes: (string | undefined)[]): string {
   return classes.filter(Boolean).join(' ');
 }
 
-const portalToneClasses: Record<PortalCardTone | 'default', string> = {
-  default: 'border-portal-line/70 bg-portal-panel',
-  sky: 'border-portal-sky/30 bg-portal-strong',
-  mint: 'border-portal-mint/30 bg-portal-strong',
-  gold: 'border-portal-gold/30 bg-portal-strong',
-  rose: 'border-portal-rose/30 bg-portal-strong',
+const nexusToneClasses: Record<NexusCardTone | 'default', string> = {
+  default: 'border-nexus-line/70 bg-nexus-panel',
+  sky: 'border-nexus-sky/30 bg-nexus-strong',
+  mint: 'border-nexus-mint/30 bg-nexus-strong',
+  gold: 'border-nexus-gold/30 bg-nexus-strong',
+  rose: 'border-nexus-rose/30 bg-nexus-strong',
 };
 
-const portalBadgeWrapperClasses: Record<PortalCardTone | 'default', string> = {
-  default: 'border-portal-line/70 bg-white/5',
-  sky: 'border-portal-sky/40 bg-portal-sky/10',
-  mint: 'border-portal-mint/40 bg-portal-mint/10',
-  gold: 'border-portal-gold/40 bg-portal-gold/10',
-  rose: 'border-portal-rose/40 bg-portal-rose/10',
+const nexusBadgeWrapperClasses: Record<NexusCardTone | 'default', string> = {
+  default: 'border-nexus-line/70 bg-white/5',
+  sky: 'border-nexus-sky/40 bg-nexus-sky/10',
+  mint: 'border-nexus-mint/40 bg-nexus-mint/10',
+  gold: 'border-nexus-gold/40 bg-nexus-gold/10',
+  rose: 'border-nexus-rose/40 bg-nexus-rose/10',
 };
 
-const portalBadgeTextClasses: Record<PortalCardTone | 'default', string> = {
-  default: 'text-portal-text',
-  sky: 'text-portal-sky',
-  mint: 'text-portal-mint',
-  gold: 'text-portal-gold',
-  rose: 'text-portal-rose',
+const nexusBadgeTextClasses: Record<NexusCardTone | 'default', string> = {
+  default: 'text-nexus-text',
+  sky: 'text-nexus-sky',
+  mint: 'text-nexus-mint',
+  gold: 'text-nexus-gold',
+  rose: 'text-nexus-rose',
 };
 
 /**
  * Inputs: children content plus optional layout and tone classes.
- * Output: a styled portal card container.
+ * Output: a styled nexus card container.
  */
-export function PortalCard({
+export function NexusCard({
   children,
   className,
   tone = 'default',
-}: PortalCardProps) {
+}: NexusCardProps) {
   return (
     <View
       className={joinClasses(
-        'rounded-[28px] border p-5 shadow-portal',
-        portalToneClasses[tone],
+        'rounded-[28px] border p-5 shadow-nexus',
+        nexusToneClasses[tone],
         className,
       )}
     >
@@ -87,24 +89,24 @@ export function PortalCard({
 
 /**
  * Inputs: eyebrow, title, description, and optional trailing content.
- * Output: a standard section header block for portal screens.
+ * Output: a standard section header block for nexus screens.
  */
-export function PortalSectionHeader({
+export function NexusSectionHeader({
   eyebrow,
   title,
   description,
   trailing,
-}: PortalSectionHeaderProps) {
+}: NexusSectionHeaderProps) {
   return (
     <View className="gap-4 lg:flex-row lg:items-end lg:justify-between">
       <View className="max-w-3xl gap-2">
-        <Text className="text-xs font-semibold uppercase tracking-[3px] text-portal-sky">
+        <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
           {eyebrow}
         </Text>
-        <Text className="text-3xl font-bold text-portal-text lg:text-5xl">
+        <Text className="text-3xl font-bold text-nexus-text lg:text-5xl">
           {title}
         </Text>
-        <Text className="text-base leading-7 text-portal-muted lg:text-lg">
+        <Text className="text-base leading-7 text-nexus-muted lg:text-lg">
           {description}
         </Text>
       </View>
@@ -118,18 +120,25 @@ export function PortalSectionHeader({
  * Inputs: a label string and an optional color tone.
  * Output: a small badge used for metadata, state, and policy cues.
  */
-export function PortalBadge({ label, tone = 'default' }: PortalBadgeProps) {
+export function NexusBadge({
+  label,
+  tone = 'default',
+  className,
+  textClassName,
+}: NexusBadgeProps) {
   return (
     <View
       className={joinClasses(
         'rounded-full border px-3 py-1.5',
-        portalBadgeWrapperClasses[tone],
+        nexusBadgeWrapperClasses[tone],
+        className,
       )}
     >
       <Text
         className={joinClasses(
           'text-xs font-semibold uppercase tracking-[2px]',
-          portalBadgeTextClasses[tone],
+          nexusBadgeTextClasses[tone],
+          textClassName,
         )}
       >
         {label}
@@ -140,25 +149,25 @@ export function PortalBadge({ label, tone = 'default' }: PortalBadgeProps) {
 
 /**
  * Inputs: button label, optional press handler, disabled flag, and variant.
- * Output: a shared portal action button.
+ * Output: a shared nexus action button.
  */
-export function PortalActionButton({
+export function NexusActionButton({
   label,
   onPress,
   disabled = false,
   variant = 'secondary',
-}: PortalActionButtonProps) {
+}: NexusActionButtonProps) {
   const variantClasses =
     variant === 'primary'
-      ? 'border-portal-sky bg-portal-sky'
+      ? 'border-nexus-sky bg-nexus-sky'
       : variant === 'ghost'
         ? 'border-transparent bg-transparent'
-        : 'border-portal-line bg-white/5';
+        : 'border-nexus-line bg-white/5';
 
   const textClasses =
     variant === 'primary'
-      ? 'text-portal-canvas'
-      : 'text-portal-text';
+      ? 'text-nexus-canvas'
+      : 'text-nexus-text';
 
   return (
     <Pressable
