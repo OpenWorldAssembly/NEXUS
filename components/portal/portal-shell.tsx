@@ -60,7 +60,7 @@ export default function PortalShell({ children }: PropsWithChildren) {
 
       <View className="flex-1 lg:flex-row">
         {isDesktop ? (
-          <View className="w-[380px] border-r border-portal-line">
+          <View className="w-[560px] border-r border-portal-line">
             <PortalSidebar
               isDesktop={isDesktop}
               onRequestClose={() => setIsSidebarOpen(false)}
@@ -73,18 +73,18 @@ export default function PortalShell({ children }: PropsWithChildren) {
 
       {!isDesktop && isSidebarOpen ? (
         <View className="absolute inset-0 z-20 flex-row">
-          <Pressable
-            accessibilityRole="button"
-            className="flex-1 bg-slate-950/60"
-            onPress={() => setIsSidebarOpen(false)}
-          />
-
-          <View className="w-[88%] max-w-[380px] border-l border-portal-line bg-portal-ink">
+          <View className="w-[96%] max-w-[680px] border-r border-portal-line bg-portal-ink">
             <PortalSidebar
               isDesktop={isDesktop}
               onRequestClose={() => setIsSidebarOpen(false)}
             />
           </View>
+
+          <Pressable
+            accessibilityRole="button"
+            className="flex-1 bg-slate-950/60"
+            onPress={() => setIsSidebarOpen(false)}
+          />
         </View>
       ) : null}
     </View>
