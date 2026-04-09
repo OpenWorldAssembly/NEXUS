@@ -18,8 +18,8 @@ The app is an Expo Router application with two visible layers:
 Implemented scope today:
 
 - a shared public shell with persistent `Header` and `Footer`
-- a public landing page at `/`
-- placeholder public information and auth destination pages
+- redesigned public landing, about, and charter destination pages using NativeWind styling
+- placeholder public auth destination pages
 - a dedicated portal layout for `/portal/*`
 - portal routes for `Dashboard`, `Discussions`, `Votes`, `Library`, and `Account`
 - portal shell state for scope selection, scope tree expansion, section selection, guest capabilities, and function-first vs scope-first mode
@@ -47,14 +47,14 @@ Screen component: `HomePage`
 Role:
 
 - public landing page for OWA
-- introduces the site as a civic coordination layer
-- presents three call-to-action links: `Learn More`, `Read the Docs`, and `Enter Portal`
+- introduces OWA as a democratic coordination layer for humanity
+- presents three call-to-action links: `Learn More`, `Read the Charter`, and `Browse the Nexus`
 
 Implemented content blocks:
 
-- hero section
-- short explanatory section
-- three summary cards
+- rotating hero slider with multiple public narratives and generated background artwork
+- principle cards for decentralization, consent, and scale
+- supporting cards focused on local legitimacy and action-oriented democratic coordination
 
 ### `/about`
 
@@ -62,12 +62,13 @@ Screen component: `AboutPage`
 
 Role:
 
-- placeholder public explanation page
+- public explanation page for the system model and civic framing
 
 Status:
 
-- **Provisional**
-- contains static placeholder copy only
+- contains multiple expandable content sections
+- includes section-link chips that switch focus among the main explanatory areas
+- stays within the public site shell and does not enter the portal layout
 
 ### `/docs`
 
@@ -75,13 +76,12 @@ Screen component: `DocsPage`
 
 Role:
 
-- placeholder document hub page
+- public charter destination page
 
 Status:
 
-- **Provisional**
-- contains static placeholder copy only
-- does not currently render or link repo docs inside the app
+- still **Provisional** because the charter text itself is not written yet
+- now frames `/docs` as the charter route and explains the role of canon, implementation guide, and workspace notes as current source material
 
 ### `/login`
 
@@ -210,15 +210,15 @@ Current public header links:
 
 - `Home` -> `/`
 - `About` -> `/about`
-- `Docs` -> `/docs`
-- `Login` -> `/login`
-- `Sign Up` -> `/signup`
+- `Charter` -> `/docs`
+- `Nexus` -> `/portal`
 
 Current public behavior:
 
 - the active public link is highlighted from the current pathname
 - the `OWA` brand label links to `/`
-- the portal is still entered from the home-page CTA rather than from the public header nav
+- the public header no longer exposes auth routes
+- the portal is reachable from both the home-page CTA and the `Nexus` header link
 
 ### Portal shell
 
@@ -226,18 +226,19 @@ Portal routes do not render the public `Header` or `Footer`.
 
 Portal shell composition:
 
-- persistent left-side shell on desktop
-- mobile top bar with a toggle that opens the left shell as an overlay panel
+- two adjacent left-side navigation columns on desktop
+- mobile top bar with a toggle that opens the same left-side navigation tray from the left edge
 - main surface on the right for the active route
 
 Left-side shell sections:
 
-- guest identity block
-- current locality placeholder
-- scope switcher and branch tree
-- followed scopes
-- function-first vs scope-first mode toggle
-- accordion-based secondary navigation
+- compact guest identity strip showing `Anonymous Guest`
+- public-site return link at the top of the portal rail
+- `Sign In` and `Sign Up` actions
+- compact navigation preference switch inside the guest identity strip
+- primary navigation column that switches between functions or the scope tree
+- secondary navigation column that reveals the other menu immediately to the right
+- followed scopes and visitor-channel context inside the secondary column
 
 Portal route list:
 
@@ -293,8 +294,9 @@ Status:
 Implemented flow:
 
 1. guest toggles between `Function-first` and `Scope-first`
-2. route structure remains unchanged
-3. the left-side accordion copy and emphasis changes, but the same surfaces remain reachable
+2. the primary left rail switches between function tabs and the scope tree
+3. the secondary column immediately to the right switches to the complementary menu
+4. route structure remains unchanged and the same surfaces remain reachable
 
 Status:
 
@@ -357,9 +359,10 @@ Defined by `components/portal/portal-shell.tsx` and `components/portal/portal-si
 
 Role:
 
-- render the left-heavy portal UI
-- keep the scope branch visible
-- provide responsive collapse behavior for smaller viewports
+- render a compact account header plus a two-stage left-side navigation system
+- keep either functions or scopes primary based on shell preference
+- render the complementary secondary menu in the adjacent column
+- provide responsive collapse behavior while keeping the tray anchored to the left edge
 
 #### Portal mock data
 
@@ -405,7 +408,9 @@ Important note:
 
 ### Styling pattern
 
-- public screens still primarily use `StyleSheet.create`
+- public shell chrome and the landing/about/charter pages now use NativeWind `className` styling
+- public pages use a dedicated public token set layered into `tailwind.config.js`
+- the public landing page hero now includes a rotating slider with generated SVG background imagery
 - portal screens and portal shell use NativeWind `className` styling
 - portal theme tokens are defined in `tailwind.config.js`
 - NativeWind is configured through `babel.config.js`, `metro.config.js`, `global.css`, and `nativewind-env.d.ts`
@@ -470,6 +475,7 @@ What is implemented:
 
 - public route structure
 - public header/footer shell
+- redesigned public splash, about, and charter destination pages
 - dedicated portal shell under `/portal/*`
 - first-slice portal surfaces for dashboard, discussions, votes, library, and account
 - guest-only interaction policy with visitor-lobby posting as the only enabled write affordance

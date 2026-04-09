@@ -135,8 +135,8 @@ Implemented routes in this slice:
 Implemented shell behavior in this slice:
 
 - dedicated portal layout separate from the public header/footer shell
-- left-heavy desktop shell with guest identity, scope tree, followed scopes, and accordion navigation
-- responsive mobile overlay for the same left-side shell
+- left-heavy desktop shell with a compact guest header, a home link, an embedded preference switch, a primary rail, and a secondary rail
+- responsive mobile overlay for the same left-side shell, still opening from the left edge
 - function-first vs scope-first as a shell preference rather than separate route systems
 - `Global Guest` as the default portal entry state
 - visitor-lobby posting as the only enabled guest write interaction
@@ -505,6 +505,14 @@ Examples of decisions worth logging early:
 - Why: it keeps the product mentally coherent and prevents two parallel navigation stacks from drifting out of sync.
 - Consequences / follow-ups: future portal sections should remain reachable in both modes without forking route structure.
 
+### 2026-04-08 - Primary and secondary left-side navigation columns
+
+- Context: the first portal shell still felt like stacked cards rather than a true app navigation system.
+- Options considered: keep the scope tree and function controls in separate cards, move secondary navigation into the main surface, or split the left shell into primary and secondary columns.
+- Decision: place a compact guest header at the top, put the navigation preference toggle directly beneath it, then render a primary column and an adjacent secondary column within the left-side shell.
+- Why: it makes the shell behavior legible. The chosen preference determines whether functions or scopes are primary, and the other menu becomes the secondary column immediately to the right.
+- Consequences / follow-ups: future portal sections should plug into the same two-stage left-side navigation pattern, and responsive trays should continue to open from the left rather than flipping sides.
+
 ### 2026-04-08 - NativeWind as the portal styling boundary
 
 - Context: `nativewind` was installed but not wired correctly, and the new portal shell needed a faster token-driven styling system than the existing public `StyleSheet.create` pages.
@@ -512,6 +520,14 @@ Examples of decisions worth logging early:
 - Decision: formalize NativeWind with dedicated config files and use it for the portal layer while leaving the public site on its existing styling pattern for now.
 - Why: it keeps the portal iteration fast and visually cohesive without forcing an immediate rewrite of the public pages.
 - Consequences / follow-ups: future portal work should continue to use shared portal tokens and NativeWind primitives; public pages can be migrated later if needed.
+
+### 2026-04-08 - NativeWind public-site redesign without touching portal routes
+
+- Context: the main static public pages were still sparse `StyleSheet.create` placeholders, and the requested redesign needed stronger public storytelling without altering the new portal shell.
+- Options considered: leave the public site minimal, restyle the whole app including portal, or upgrade only the non-portal public pages and shell.
+- Decision: migrate the public header/footer plus `/`, `/about`, and `/docs` onto a dedicated NativeWind-based public visual system while keeping `/portal/*` unchanged.
+- Why: it creates a more professional public front door, supports richer storytelling on the about page, and preserves the portal as a separate application surface.
+- Consequences / follow-ups: `/docs` now functions as the charter destination route until the actual charter text is written; public header auth links were removed in favor of a single `Nexus` portal entry; the landing page now uses a rotating multi-message hero with generated background artwork; and future public-site work should reuse the shared public tokens and content structures added in this pass.
 
 ## Major tradeoffs
 
