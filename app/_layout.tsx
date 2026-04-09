@@ -71,6 +71,6 @@ const styles = StyleSheet.create({
   },
   nexusRoot: {
     flex: 1,
-    backgroundColor: '#06111a',
+    backgroundColor: 'transparent',
   },
 });

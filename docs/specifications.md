@@ -6,7 +6,7 @@ This document describes the repo as it exists in code today.
 
 It records the currently implemented product surface, route structure, layout behavior, and interaction boundaries. It does not treat canon text, long-range planning copy, or deferred nexus ideas as implemented behavior.
 
-Sections marked **Provisional** reflect mock-data surfaces, incomplete workflows, or intentionally deferred systems.
+Sections marked **Provisional** reflect incomplete workflows or intentionally deferred systems.
 
 ## Current product surface
 
@@ -23,14 +23,14 @@ Implemented scope today:
 - a dedicated nexus layout for `/nexus/*`
 - nexus routes for `Dashboard`, `Discussions`, `Votes`, `Library`, and `Account`
 - nexus shell state for scope selection, section selection, guest capabilities, and function-first vs scope-first mode
-- typed mock nexus data for scopes, forums, votes, packets, and guest onboarding cues
+- packet-backed shell and scope query APIs feeding dashboard, discussions, votes, and library surfaces
 - NativeWind-based styling for the nexus layer
 
 Not implemented today:
 
 - authenticated user state
 - persistent form submission or saved nexus actions
-- remote or SQL-backed storage beyond the visitor-lobby MVP file bundle
+- remote multi-node sync beyond the local SQLite packet store
 - real packet detail routes
 - real-time chat
 - protected/private spaces
@@ -143,8 +143,8 @@ Role:
 
 Status:
 
-- **Provisional**
-- driven entirely by seeded mock data
+- packet-backed
+- metrics, queue cards, and recommended packets load from `/api/nexus/scopes/[scopeId]/dashboard`
 
 ### `/nexus/discussions`
 
@@ -152,15 +152,19 @@ Screen component: `NexusDiscussionsPage`
 
 Role:
 
-- Reddit-inspired discussion surface with forum previews and active thread cards
+- Reddit-inspired discussion surface with horizontal forum tabs and one active forum workspace
 - includes the only enabled guest write affordance in the current nexus slice: the visitor lobby composer
-- loads and saves visitor-lobby posts through local Expo Router API routes backed by a shared JSON bundle
+- loads and saves visitor-lobby posts through local Expo Router API routes backed by the local SQLite packet store
+- requires local web server output so those API routes can execute during development
 
 Status:
 
 - **Provisional**
-- visitor-lobby posts persist through a shared file-backed canonical discussion-packet bundle in local web development
-- non-lobby discussion areas remain read-only and mock-backed
+- visitor-lobby posts persist as canonical `DiscussionThread` and `DiscussionPost` packets inside the local SQLite packet store for web development
+- forum tabs are packet-backed from `/api/nexus/scopes/[scopeId]/discussions`, can be deep-linked through the optional `forum` query parameter, and still fall back safely to visitor-lobby when no thread packets are available
+- discussion tabs now project one forum per thread kind and prefer authority threads from the active scope over inherited ancestor threads, which prevents duplicate visitor-lobby tabs
+- read-only forum tab labels are scope-aware (for example `Sunnymead Ranch general`) even when the backing thread packet is inherited from an ancestor scope
+- non-lobby discussion areas remain read-only placeholders even though their forum metadata is now packet-backed
 
 ### `/nexus/votes`
 
@@ -173,7 +177,8 @@ Role:
 
 Status:
 
-- **Provisional**
+- packet-backed
+- stage cards and vote/proposal cards load from `/api/nexus/scopes/[scopeId]/votes`
 - guests can inspect but cannot vote, object, or delegate
 
 ### `/nexus/library`
@@ -187,7 +192,8 @@ Role:
 
 Status:
 
-- **Provisional**
+- packet-backed
+- library cards load from `/api/nexus/scopes/[scopeId]/library` with optional family filtering
 - packet actions are visible as placeholders and remain disabled
 
 ### `/nexus/account`
@@ -244,16 +250,21 @@ Nexus shell composition:
 Left-side shell sections:
 
 - compact guest identity strip showing `Anonymous Guest`
-- public-site return link at the top of the nexus rail
+- anonymous guest avatar between the `OWA Nexus` label and guest display name
+- centered brand label, auth actions, and preference rows inside the guest identity strip
 - `Sign In` and `Sign Up` actions
-- compact navigation preference switch inside the guest identity strip, with readable mode text above the control
+- public-site return link positioned beneath the auth actions inside the guest identity strip
+- a small `Preferences` tab at the bottom of the guest identity strip that expands a drawer for navigation mode, shell theme, and UI size controls
+- compact one-line shell preference rows inside that drawer, with the setting label on the left, the switch centered, and the current mode label on the right
 - primary navigation column that switches between the function menu or scope menu
 - secondary navigation column that reveals the other menu immediately to the right
+- open primary and secondary rails use the same width, and the Nexus UI-size preference also adjusts shared route-surface spacing, typography, badges, buttons, and form controls through the Nexus appearance layer
 - the scope menu uses a full visible scope map with a fixed-width connector lane, so every scope stays visible without pushing lower labels to the right
 - followed scopes stay with the scope menu column
 - deferred surfaces stay with the functions menu column
 - current-scope summary card stays with whichever column is currently acting as the scope menu and appears above the branch navigator
 - current-context badges stay inside the card and wrap within the available width when labels run long
+- the shell theme preference affects the dedicated Nexus shell, the nested Nexus navigator background, and the current Nexus route surfaces without changing the public-site shell
 - secondary rail can remain open even when the primary rail is collapsed
 - each rail can be collapsed independently and remembers its own open or closed state
 - left and right swipe gestures collapse or expand the rails from the outside in and inside out
@@ -304,8 +315,9 @@ Implemented flow:
 
 Status:
 
-- **Provisional**
-- the scope model is mock data only
+- packet-backed
+- scope summaries are now loaded from `/api/nexus/shell` and derived from `Element(kind: "assembly")` packets
+- shell scope ids are route-safe labels (for example `global-commons`) that map server-side to canonical packet refs
 
 ### Nexus mode workflow
 
@@ -329,13 +341,14 @@ Implemented flow:
 2. guest receives a session-scoped anonymous guest label for the current browser session
 3. guest enters a title and/or body in the visitor lobby composer
 4. guest presses `Post to visitor lobby`
-5. the request is sent to a local API route, written into the shared visitor-lobby bundle, and returned to the UI
+5. the request is sent to a local API route, written into the local SQLite packet store as a canonical discussion packet, and returned to the UI
 
 Status:
 
 - **Provisional**
-- posts are persisted only through the local shared file bundle
-- posts are not stored in SQL or converted into canonical persisted packets yet
+- posts are persisted through the local SQLite packet store in `data/nexus/owa-packets.db`
+- visitor-lobby scope resolution accepts both route-safe scope ids and percent-encoded canonical packet refs
+- the older `data/nexus/visitor-lobby-bundle.json` file now serves only as a legacy import source during backend initialization
 
 ## Major entities and their roles
 
@@ -387,30 +400,35 @@ Role:
 - support persisted rail collapse state and horizontal swipe collapse/expand behavior
 - provide responsive collapse behavior while keeping the tray anchored to the left edge
 
-#### Nexus mock data
+#### Nexus query payloads
 
-Defined by `data/nexus/mock-nexus-data.ts`.
+Defined by:
+
+- `lib/nexus/server/nexus-query-data.ts`
+- `app/api/nexus/shell+api.ts`
+- `app/api/nexus/scopes/[scopeId]/*+api.ts`
 
 Role:
 
-- seeds the current nexus UI
-- provides scope summaries, dashboard queues, forum previews, vote previews, packet previews, and guest onboarding copy
-- a separate shared bundle file under `data/nexus/visitor-lobby-bundle.json` now stores the durable visitor-lobby discussion packets
+- project packet-store data into shell, dashboard, discussions, votes, and library payloads
+- keep UI clients decoupled from storage classes through route-level contracts
+- preserve the old visitor-lobby JSON bundle only as a legacy migration source during service bootstrap
 
 ### Domain-level entities
 
 Status:
 
-- **Provisional**
-- there is now a runtime packet-schema foundation under `domain/*`, but it is not wired into the UI yet
+- packet-backed
+- runtime packet-schema foundation under `domain/*` is now wired into active nexus surfaces through server query routes
 - there are now typed packet builders and an initial seed packet dataset under `domain/packets/*`
-- there is still no live persistence adapter, query service implementation, or packet-backed nexus flow in active routes
+- there are now Expo and Node SQLite-backed `PacketStore` implementations under `storage/*`, plus concrete browser/nexus query-service implementations that read from the same SQLite search index
 
 Important note:
 
 - nexus content is packet-themed and type-labeled
-- packet, proposal, assembly, mission, and trust concepts remain mock UI data in the nexus surfaces even though the repo now contains canonical packet schemas and storage contracts
-- the seed packet dataset currently exists for domain validation and future import work, not as live UI data
+- packet, proposal, assembly, mission, and trust concepts now render from packet-backed API projections on the active nexus routes
+- seed packet data is now loaded into the local SQLite store through the shared server bootstrap when no assembly packets exist yet
+- query services remain the projection seam, while packet detail routes and deeper action workflows are still pending
 
 ## Current architecture patterns
 
@@ -447,8 +465,11 @@ Important note:
 
 - public pages are still stateless
 - nexus state is shared through a local React context provider
-- most nexus content is still mock data, but the visitor-lobby surface now reads and writes through local API routes
-- only the visitor-lobby bundle has live persistence; SQL and packet-store-backed persistence are not implemented yet
+- shell scope data and active route cards now load from packet-backed API routes
+- visitor-lobby read and write flows use the same local packet store as shell/query projections
+- server bootstrap backfills missing personal-tree seed packets on startup so partially-seeded local DBs recover automatically
+- Node SQLite writes use strict query-specific named-parameter bindings to avoid runtime binding errors during packet updates
+- local web forum persistence depends on `expo.web.output = "server"` in `app.json`
 
 ## Current naming patterns
 
@@ -462,6 +483,8 @@ Examples:
 - `app/index.tsx`
 - `app/nexus/dashboard.tsx`
 - `app/nexus/discussions.tsx`
+- `app/api/nexus/shell+api.ts`
+- `app/api/nexus/scopes/[scopeId]/dashboard+api.ts`
 - `app/api/nexus/scopes/[scopeId]/visitor-lobby+api.ts`
 
 ### Component naming
@@ -481,13 +504,13 @@ Examples:
 - `components/nexus`
     - nexus shell, sidebar, context, and UI primitives
 - `data/nexus`
-    - mock nexus data plus the shared visitor-lobby bundle file
-- `data/schemas`
-  - packet-store SQLite schema for canonical packet and revision storage
+  - runtime packet database files plus legacy migration artifacts such as the old visitor-lobby bundle
 - `domain`
-  - package-style packet foundation split into schema, core, storage, and projections
+  - package-style packet foundation split into schema, core, packets, and projections
+- `storage`
+  - packet-store schema constant, SQLite row projections, shared query-service logic, and the Expo/Node SQLite-backed packet-store and query-service implementations
 - `lib/nexus`
-    - nexus route and scope helpers plus visitor-lobby client and repository helpers
+    - nexus route/scope helpers, packet-backed query API clients, and server projection/repository helpers
 - `hooks`
   - color scheme helpers
 - `constants/theme.ts`
@@ -499,8 +522,8 @@ Examples:
   - defines the canonical `PacketEnvelope`, packet-family Zod schemas, packet refs, revision refs, multi-parent revision ancestry, and parser entrypoints
 - `domain/core`
   - defines `PacketStore`, `BrowserQueryService`, and `NexusQueryService` interfaces, including preferred-revision and revision-head contracts
-- `domain/storage`
-  - defines SQLite-oriented record projections for packets, revisions, revision heads, edges, and search indices
+- `storage`
+  - defines the concrete persistence layer and query adapters, including SQLite-oriented record projections, schema initialization, Expo/native packet-store logic, Node/server packet-store logic, and shared browser/nexus query-service implementations
 - `domain/projections`
   - derives display labels, titles, summaries, and statuses from canonical packet family plus subtype
 - `lib`
@@ -516,11 +539,13 @@ What is implemented:
 - dedicated nexus shell under `/nexus/*`
 - first-slice nexus surfaces for dashboard, discussions, votes, library, and account
 - guest-only interaction policy with visitor-lobby posting as the only enabled write affordance
-- typed mock data for scope-aware nexus UI blocking
+- packet-backed shell and scope query routes feeding active nexus surfaces
 - canonical packet schema definitions with nested `header/body` envelopes
 - stable `packet_id` plus immutable `revision_id` packet identity rules
 - multi-parent revision ancestry for divergent branches and merge revisions
-- typed packet edges, scope refs, packet-store interfaces, and SQLite storage schema definitions
+- typed packet edges, scope refs, packet-store interfaces, a SQLite-backed packet-store implementation, and storage schema definitions
+- shared browser and nexus query-service implementations over the packet search index
+- a live visitor-lobby backend that stores canonical discussion packets in the local SQLite packet store and imports the old bundle only for migration
 - derived packet label helpers for future browser and nexus projections
 
 What remains unimplemented but is still referenced by docs or shell affordances:
@@ -533,14 +558,13 @@ What remains unimplemented but is still referenced by docs or shell affordances:
 - notifications
 - protected assemblies and trust-gated spaces
 - moderation workflows
-- live packet persistence adapters and revision writes
-- browser and nexus query service implementations over the shared packet store
+- packet detail routes and cross-surface navigation from card projections into packet inspectors
 
 ## Provisional notes
 
 The following areas should still be treated as provisional:
 
-- guest posting behavior beyond the local visitor-lobby mock
+- guest posting behavior beyond the local visitor-lobby packet-store implementation
 - the exact final ontology for assemblies, scopes, and overlays
 - how locality claiming, join/start flows, and trust progression will work
 - vote execution, delegation, and propagation semantics

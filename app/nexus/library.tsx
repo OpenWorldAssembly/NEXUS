@@ -2,7 +2,7 @@
  * File: library.tsx
  * Description: Renders the packet library with typed filters and packet-native previews.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
 import { useNexusShell } from '@/components/nexus/nexus-shell-context';
@@ -10,28 +10,18 @@ import {
   NexusActionButton,
   NexusBadge,
   NexusCard,
+  useNexusAppearance,
   NexusSectionHeader,
 } from '@/components/nexus/nexus-ui';
-import { nexusPacketPreviews } from '@/data/nexus/mock-nexus-data';
-import { matchesScope } from '@/lib/nexus/nexus-shell';
+import { PACKET_FAMILIES, type PacketFamily } from '@/domain/schema/packet-schema';
+import type { NexusLibraryPayload } from '@/lib/nexus/nexus-api-types';
+import { fetchNexusLibraryPayload } from '@/lib/nexus/nexus-query-api';
 
-type PacketFilter =
-  | 'all'
-  | 'proposal'
-  | 'report'
-  | 'assembly'
-  | 'policy'
-  | 'forum-post'
-  | 'charter';
+type PacketFilter = 'all' | PacketFamily;
 
 const packetFilters: PacketFilter[] = [
   'all',
-  'proposal',
-  'report',
-  'assembly',
-  'policy',
-  'forum-post',
-  'charter',
+  ...PACKET_FAMILIES,
 ];
 
 /**
@@ -40,17 +30,69 @@ const packetFilters: PacketFilter[] = [
  */
 export default function NexusLibraryPage() {
   const { activeScope } = useNexusShell();
+  const appearance = useNexusAppearance();
   const [packetFilter, setPacketFilter] = useState<PacketFilter>('all');
-  const visiblePackets = nexusPacketPreviews.filter((packet) => {
-    const matchesPacketType =
-      packetFilter === 'all' ? true : packet.type === packetFilter;
+  const [libraryPayload, setLibraryPayload] = useState<NexusLibraryPayload | null>(
+    null,
+  );
+  const [isLoadingLibrary, setIsLoadingLibrary] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-    return matchesPacketType && matchesScope(packet.scopeIds, activeScope.id);
-  });
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadLibraryPayload = async () => {
+      setIsLoadingLibrary(true);
+      setLoadError(null);
+
+      try {
+        const nextLibraryPayload = await fetchNexusLibraryPayload({
+          scopeId: activeScope.id,
+          familyFilter: packetFilter === 'all' ? null : packetFilter,
+        });
+
+        if (!isMounted) {
+          return;
+        }
+
+        setLibraryPayload(nextLibraryPayload);
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        setLoadError(
+          error instanceof Error
+            ? error.message
+            : 'Unable to load packet-backed library data.',
+        );
+      } finally {
+        if (isMounted) {
+          setIsLoadingLibrary(false);
+        }
+      }
+    };
+
+    void loadLibraryPayload();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeScope.id, packetFilter]);
+
+  const visiblePackets = libraryPayload?.packets ?? [];
+
+  function formatFilterLabel(filter: PacketFilter): string {
+    if (filter === 'all') {
+      return 'All packets';
+    }
+
+    return filter;
+  }
 
   return (
     <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-      <View className="gap-6 px-4 py-6 lg:px-8 lg:py-8">
+      <View className={appearance.pageContainerClass}>
         <NexusSectionHeader
           eyebrow="Packet library"
           title={`${activeScope.shortLabel} durable packet layer`}
@@ -68,7 +110,7 @@ export default function NexusLibraryPage() {
               return (
                 <NexusActionButton
                   key={filter}
-                  label={filter === 'all' ? 'All packets' : filter}
+                  label={formatFilterLabel(filter)}
                   onPress={() => setPacketFilter(filter)}
                   variant={isActive ? 'primary' : 'secondary'}
                 />
@@ -77,22 +119,36 @@ export default function NexusLibraryPage() {
           </View>
         </NexusCard>
 
+        {isLoadingLibrary ? (
+          <NexusCard>
+            <Text className={appearance.itemBodyClass}>
+              Loading packet-backed library cards...
+            </Text>
+          </NexusCard>
+        ) : null}
+
+        {loadError ? (
+          <NexusCard>
+            <Text className="text-sm leading-6 text-nexus-rose">{loadError}</Text>
+          </NexusCard>
+        ) : null}
+
         <View className="gap-4">
           {visiblePackets.map((packet) => (
-            <NexusCard key={packet.id} className="gap-4">
+            <NexusCard key={packet.packet.packet_id} className="gap-4">
               <View className="gap-2 lg:flex-row lg:items-start lg:justify-between">
                 <View className="flex-1 gap-2">
                   <View className="flex-row flex-wrap items-center gap-2">
-                    <Text className="text-2xl font-bold text-nexus-text">
+                    <Text className={appearance.surfaceTitleClass}>
                       {packet.title}
                     </Text>
-                    <NexusBadge label={packet.type} tone="sky" />
+                    <NexusBadge label={packet.family} tone="sky" />
                   </View>
-                  <Text className="text-sm leading-7 text-nexus-muted">
-                    {packet.summary}
+                  <Text className={appearance.sectionBodyClass}>
+                    {packet.summary ?? 'No packet summary available.'}
                   </Text>
-                  <Text className="text-xs uppercase tracking-[2px] text-nexus-muted">
-                    {packet.lineage}
+                  <Text className={appearance.itemMetaClass}>
+                    {packet.status ?? packet.label}
                   </Text>
                 </View>
 

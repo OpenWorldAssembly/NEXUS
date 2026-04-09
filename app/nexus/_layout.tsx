@@ -2,25 +2,32 @@
  * File: _layout.tsx
  * Description: Provides the dedicated shell and nested stack for all nexus routes.
  */
+import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 
 import NexusShell from '@/components/nexus/nexus-shell';
-import { NexusShellProvider } from '@/components/nexus/nexus-shell-context';
+import {
+  NexusShellProvider,
+  useNexusShell,
+} from '@/components/nexus/nexus-shell-context';
 
 /**
  * Inputs: none.
- * Output: the nested nexus route stack wrapped in the shared nexus shell.
+ * Output: the themed Nexus stack and shell using the current Nexus shell preferences.
  */
-export default function NexusLayout() {
+function NexusLayoutContent() {
+  const { themeMode } = useNexusShell();
+  const stackBackgroundColor = themeMode === 'dark' ? '#06111a' : '#f1f5f9';
+
   return (
-    <NexusShellProvider>
+    <ThemeProvider value={themeMode === 'dark' ? DarkTheme : DefaultTheme}>
       <NexusShell>
         <Stack
           screenOptions={{
             headerShown: false,
             animation: 'none',
             contentStyle: {
-              backgroundColor: 'transparent',
+              backgroundColor: stackBackgroundColor,
             },
           }}
         >
@@ -32,6 +39,18 @@ export default function NexusLayout() {
           <Stack.Screen name="account" />
         </Stack>
       </NexusShell>
+    </ThemeProvider>
+  );
+}
+
+/**
+ * Inputs: none.
+ * Output: the nested nexus route stack wrapped in the shared nexus shell.
+ */
+export default function NexusLayout() {
+  return (
+    <NexusShellProvider>
+      <NexusLayoutContent />
     </NexusShellProvider>
   );
 }

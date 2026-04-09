@@ -3,16 +3,13 @@
  * Description: Shares the nexus shell state across all `/nexus/*` routes.
  */
 import type { PropsWithChildren } from 'react';
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'expo-router';
 
 import {
-  nexusDefaultExpandedScopeIds,
-  nexusDefaultScopeId,
-  nexusFollowedScopeIds,
-  nexusGuestCapabilities,
-  nexusScopeSummaries,
-} from '@/data/nexus/mock-nexus-data';
+  NEXUS_GUEST_CAPABILITIES,
+} from '@/lib/nexus/nexus-content';
+import { fetchNexusShellPayload } from '@/lib/nexus/nexus-query-api';
 import {
   buildNexusBranchNodes,
   getNexusAncestorIds,
@@ -23,6 +20,8 @@ import {
   type NexusScopeSummary,
   type NexusSection,
   type NexusShellState,
+  type NexusThemeMode,
+  type NexusUiDensity,
 } from '@/lib/nexus/nexus-shell';
 
 type NexusShellContextValue = NexusShellState & {
@@ -30,12 +29,16 @@ type NexusShellContextValue = NexusShellState & {
   branchNodes: NexusScopeBranchNode[];
   followedScopes: NexusScopeSummary[];
   scopeSummaries: NexusScopeSummary[];
+  isPreferencesDrawerOpen: boolean;
   isPrimaryRailCollapsed: boolean;
   isSecondaryRailCollapsed: boolean;
   setNavigationMode: (mode: NexusNavMode) => void;
+  setThemeMode: (mode: NexusThemeMode) => void;
+  setUiDensity: (density: NexusUiDensity) => void;
   setActiveScopeId: (scopeId: string) => void;
   toggleScopeExpansion: (scopeId: string) => void;
   setActiveSection: (section: NexusSection) => void;
+  togglePreferencesDrawer: () => void;
   togglePrimaryRailCollapsed: () => void;
   toggleSecondaryRailCollapsed: () => void;
   collapseOuterRail: () => void;
@@ -43,6 +46,27 @@ type NexusShellContextValue = NexusShellState & {
 };
 
 const NexusShellContext = createContext<NexusShellContextValue | null>(null);
+const FALLBACK_SCOPE_SUMMARY: NexusScopeSummary = {
+  id: 'global-commons',
+  name: 'Global Commons',
+  shortLabel: 'Global',
+  level: 'global',
+  description:
+    'Packet-backed scope data is loading. This temporary context keeps the shell stable.',
+  localityLabel: 'Global',
+  badge: 'Guest default',
+  relationshipLabel: 'Root assembly scope',
+  childIds: [],
+  followedScopeIds: [],
+  publicLobbyLabel: 'Global visitor lobby',
+  stats: {
+    members: 0,
+    activeVotes: 0,
+    hotDiscussions: 0,
+    missions: 0,
+    guestLobbyOpen: true,
+  },
+};
 
 /**
  * Inputs: nexus route children.
@@ -51,33 +75,92 @@ const NexusShellContext = createContext<NexusShellContextValue | null>(null);
 export function NexusShellProvider({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const router = useRouter();
-  const [navigationMode, setNavigationMode] = useState<NexusNavMode>('function');
-  const [activeScopeId, setActiveScopeIdState] = useState(nexusDefaultScopeId);
-  const [expandedScopeIds, setExpandedScopeIds] = useState(
-    nexusDefaultExpandedScopeIds,
+  const [scopeSummaries, setScopeSummaries] = useState<NexusScopeSummary[]>([
+    FALLBACK_SCOPE_SUMMARY,
+  ]);
+  const [followedScopeIds, setFollowedScopeIds] = useState<string[]>([]);
+  const [guestCapabilities, setGuestCapabilities] = useState(
+    NEXUS_GUEST_CAPABILITIES,
   );
+  const [navigationMode, setNavigationMode] = useState<NexusNavMode>('function');
+  const [themeMode, setThemeMode] = useState<NexusThemeMode>('dark');
+  const [uiDensity, setUiDensity] = useState<NexusUiDensity>('small');
+  const [activeScopeId, setActiveScopeIdState] = useState(
+    FALLBACK_SCOPE_SUMMARY.id,
+  );
+  const [expandedScopeIds, setExpandedScopeIds] = useState(
+    [FALLBACK_SCOPE_SUMMARY.id],
+  );
+  const [isPreferencesDrawerOpen, setIsPreferencesDrawerOpen] = useState(false);
   const [isPrimaryRailCollapsed, setIsPrimaryRailCollapsed] = useState(false);
   const [isSecondaryRailCollapsed, setIsSecondaryRailCollapsed] = useState(false);
 
   const activeSection = getNexusSectionFromPathname(pathname);
   const activeScope =
-    nexusScopeSummaries.find((scope) => scope.id === activeScopeId) ??
-    nexusScopeSummaries[0];
+    scopeSummaries.find((scope) => scope.id === activeScopeId) ??
+    scopeSummaries[0];
   const branchNodes = buildNexusBranchNodes(
-    nexusScopeSummaries,
+    scopeSummaries,
     activeScope.id,
     expandedScopeIds,
   );
-  const followedScopes = nexusScopeSummaries.filter((scope) =>
-    nexusFollowedScopeIds.includes(scope.id),
+  const followedScopes = scopeSummaries.filter((scope) =>
+    followedScopeIds.includes(scope.id),
   );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadShellPayload = async () => {
+      try {
+        const shellPayload = await fetchNexusShellPayload();
+
+        if (!isMounted || shellPayload.scope_summaries.length === 0) {
+          return;
+        }
+
+        setScopeSummaries(shellPayload.scope_summaries);
+        setFollowedScopeIds(shellPayload.followed_scope_ids);
+        setGuestCapabilities(shellPayload.guest_capabilities);
+        setActiveScopeIdState((currentScopeId) =>
+          shellPayload.scope_summaries.some(
+            (scopeSummary) => scopeSummary.id === currentScopeId,
+          )
+            ? currentScopeId
+            : shellPayload.default_scope_id,
+        );
+        setExpandedScopeIds((currentExpandedScopeIds) => {
+          const currentScopeIds = currentExpandedScopeIds.filter((scopeId) =>
+            shellPayload.scope_summaries.some(
+              (scopeSummary) => scopeSummary.id === scopeId,
+            ),
+          );
+
+          return Array.from(
+            new Set([
+              ...shellPayload.default_expanded_scope_ids,
+              ...currentScopeIds,
+            ]),
+          );
+        });
+      } catch {
+        // Keep the fallback scope model when the shell API is unavailable.
+      }
+    };
+
+    void loadShellPayload();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   /**
    * Inputs: a new scope id.
    * Output: updates the active scope and ensures the scope lineage remains expanded.
    */
   const setActiveScopeId = (scopeId: string) => {
-    const lineageIds = getNexusAncestorIds(nexusScopeSummaries, scopeId);
+    const lineageIds = getNexusAncestorIds(scopeSummaries, scopeId);
 
     setActiveScopeIdState(scopeId);
     setExpandedScopeIds((currentIds) =>
@@ -103,6 +186,14 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
    */
   const setActiveSection = (section: NexusSection) => {
     router.push(getNexusSectionHref(section));
+  };
+
+  /**
+   * Inputs: none.
+   * Output: toggles the guest preference drawer open state.
+   */
+  const togglePreferencesDrawer = () => {
+    setIsPreferencesDrawerOpen((currentValue) => !currentValue);
   };
 
   /**
@@ -155,20 +246,26 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
     <NexusShellContext.Provider
       value={{
         navigationMode,
+        themeMode,
+        uiDensity,
         activeScopeId: activeScope.id,
         expandedScopeIds,
         activeSection,
-        guestCapabilities: nexusGuestCapabilities,
+        guestCapabilities,
         activeScope,
         branchNodes,
         followedScopes,
-        scopeSummaries: nexusScopeSummaries,
+        scopeSummaries,
+        isPreferencesDrawerOpen,
         isPrimaryRailCollapsed,
         isSecondaryRailCollapsed,
         setNavigationMode,
+        setThemeMode,
+        setUiDensity,
         setActiveScopeId,
         toggleScopeExpansion,
         setActiveSection,
+        togglePreferencesDrawer,
         togglePrimaryRailCollapsed,
         toggleSecondaryRailCollapsed,
         collapseOuterRail,

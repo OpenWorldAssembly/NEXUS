@@ -14,6 +14,10 @@ import {
 
 import { useNexusShell } from '@/components/nexus/nexus-shell-context';
 import NexusSidebar from '@/components/nexus/nexus-sidebar';
+import {
+  getNexusRailWidth,
+  NEXUS_COLLAPSED_RAIL_WIDTH,
+} from '@/lib/nexus/nexus-shell';
 
 /**
  * Inputs: nested nexus route content.
@@ -23,6 +27,8 @@ export default function NexusShell({ children }: PropsWithChildren) {
   const {
     activeScope,
     navigationMode,
+    themeMode,
+    uiDensity,
     collapseOuterRail,
     expandInnerRail,
     isPrimaryRailCollapsed,
@@ -31,6 +37,28 @@ export default function NexusShell({ children }: PropsWithChildren) {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1100;
   const [isSidebarOpen, setIsSidebarOpen] = useState(isDesktop);
+  const railWidth = getNexusRailWidth(uiDensity);
+  const desktopSidebarWidth =
+    (isPrimaryRailCollapsed ? NEXUS_COLLAPSED_RAIL_WIDTH : railWidth) +
+    (isSecondaryRailCollapsed ? NEXUS_COLLAPSED_RAIL_WIDTH : railWidth);
+  const shellCanvasClass =
+    themeMode === 'dark' ? 'bg-nexus-canvas' : 'bg-slate-100';
+  const mobileBarClass =
+    themeMode === 'dark'
+      ? 'border-nexus-line bg-nexus-ink'
+      : 'border-slate-300 bg-white';
+  const mobileHeadingClass =
+    themeMode === 'dark' ? 'text-nexus-text' : 'text-slate-900';
+  const mobileMetaClass =
+    themeMode === 'dark' ? 'text-nexus-muted' : 'text-slate-600';
+  const mobileButtonClass =
+    themeMode === 'dark'
+      ? 'border-nexus-line bg-white/5'
+      : 'border-slate-300 bg-slate-100';
+  const sidebarBorderClass =
+    themeMode === 'dark' ? 'border-nexus-line' : 'border-slate-300';
+  const overlayBackdropClass =
+    themeMode === 'dark' ? 'bg-slate-950/60' : 'bg-slate-500/25';
 
   useEffect(() => {
     setIsSidebarOpen(isDesktop);
@@ -56,21 +84,29 @@ export default function NexusShell({ children }: PropsWithChildren) {
   );
 
   return (
-    <View className="flex-1 bg-nexus-canvas">
-      <View className="absolute -left-20 top-0 h-72 w-72 rounded-full bg-nexus-sky/10" />
-      <View className="absolute right-0 top-28 h-80 w-80 rounded-full bg-nexus-mint/10" />
+    <View className={`flex-1 ${shellCanvasClass}`}>
+      <View
+        className={`absolute -left-20 top-0 h-72 w-72 rounded-full ${
+          themeMode === 'dark' ? 'bg-nexus-sky/10' : 'bg-sky-200/60'
+        }`}
+      />
+      <View
+        className={`absolute right-0 top-28 h-80 w-80 rounded-full ${
+          themeMode === 'dark' ? 'bg-nexus-mint/10' : 'bg-emerald-200/40'
+        }`}
+      />
 
       {!isDesktop ? (
-        <View className="border-b border-nexus-line bg-nexus-ink px-4 pb-4 pt-5">
+        <View className={`border-b px-4 pb-4 pt-5 ${mobileBarClass}`}>
           <View className="flex-row items-center justify-between">
             <View className="gap-1">
               <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
                 Nexus shell
               </Text>
-              <Text className="text-xl font-bold text-nexus-text">
+              <Text className={`text-xl font-bold ${mobileHeadingClass}`}>
                 {activeScope.name}
               </Text>
-              <Text className="text-sm text-nexus-muted">
+              <Text className={`text-sm ${mobileMetaClass}`}>
                 {navigationMode === 'function'
                   ? 'Function-first view'
                   : 'Scope-first view'}
@@ -79,10 +115,10 @@ export default function NexusShell({ children }: PropsWithChildren) {
 
             <Pressable
               accessibilityRole="button"
-              className="rounded-full border border-nexus-line bg-white/5 px-4 py-3"
+              className={`rounded-full border px-4 py-3 ${mobileButtonClass}`}
               onPress={() => setIsSidebarOpen(true)}
             >
-              <Text className="text-sm font-semibold text-nexus-text">
+              <Text className={`text-sm font-semibold ${mobileHeadingClass}`}>
                 Open shell
               </Text>
             </Pressable>
@@ -93,15 +129,8 @@ export default function NexusShell({ children }: PropsWithChildren) {
       <View className="flex-1 lg:flex-row">
         {isDesktop ? (
           <View
-            className={`border-r border-nexus-line ${
-              isPrimaryRailCollapsed && isSecondaryRailCollapsed
-                ? 'w-[56px]'
-                : isPrimaryRailCollapsed
-                  ? 'w-[416px]'
-                  : isSecondaryRailCollapsed
-                    ? 'w-[288px]'
-                    : 'w-[676px]'
-            }`}
+            className={`border-r ${sidebarBorderClass}`}
+            style={{ width: desktopSidebarWidth }}
             {...sidebarPanResponder.panHandlers}
           >
             <NexusSidebar
@@ -117,7 +146,7 @@ export default function NexusShell({ children }: PropsWithChildren) {
       {!isDesktop && isSidebarOpen ? (
         <View className="absolute inset-0 z-20 flex-row">
           <View
-            className="w-[96%] max-w-[760px] border-r border-nexus-line bg-nexus-ink"
+            className={`w-[96%] max-w-[760px] border-r ${sidebarBorderClass}`}
             {...sidebarPanResponder.panHandlers}
           >
             <NexusSidebar
@@ -128,7 +157,7 @@ export default function NexusShell({ children }: PropsWithChildren) {
 
           <Pressable
             accessibilityRole="button"
-            className="flex-1 bg-slate-950/60"
+            className={`flex-1 ${overlayBackdropClass}`}
             onPress={() => setIsSidebarOpen(false)}
           />
         </View>

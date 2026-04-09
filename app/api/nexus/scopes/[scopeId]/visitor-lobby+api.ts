@@ -4,7 +4,7 @@
  */
 import type { RequestHandler } from 'expo-router/server';
 
-import { visitorLobbyRepository } from '@/lib/nexus/server/visitor-lobby-file-store';
+import { visitorLobbyRepository } from '@/lib/nexus/server/visitor-lobby-packet-repository';
 
 /**
  * Inputs: a JSON-serializable response body and optional status code.

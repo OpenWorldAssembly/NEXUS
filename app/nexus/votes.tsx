@@ -2,6 +2,7 @@
  * File: votes.tsx
  * Description: Renders the vote floor surface with pipeline stages and proposal previews.
  */
+import { useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
 import { useNexusShell } from '@/components/nexus/nexus-shell-context';
@@ -9,14 +10,14 @@ import {
   NexusActionButton,
   NexusBadge,
   NexusCard,
+  useNexusAppearance,
   NexusSectionHeader,
 } from '@/components/nexus/nexus-ui';
 import {
-  nexusProposalPreviews,
-  nexusVoteMechanics,
-  nexusVoteStages,
-} from '@/data/nexus/mock-nexus-data';
-import { matchesScope } from '@/lib/nexus/nexus-shell';
+  NEXUS_VOTE_MECHANICS,
+} from '@/lib/nexus/nexus-content';
+import type { NexusVotesPayload } from '@/lib/nexus/nexus-api-types';
+import { fetchNexusVotesPayload } from '@/lib/nexus/nexus-query-api';
 
 /**
  * Inputs: none.
@@ -24,16 +25,57 @@ import { matchesScope } from '@/lib/nexus/nexus-shell';
  */
 export default function NexusVotesPage() {
   const { activeScope } = useNexusShell();
-  const visibleStages = nexusVoteStages.filter((stage) =>
-    matchesScope(stage.scopeIds, activeScope.id),
-  );
-  const visibleProposals = nexusProposalPreviews.filter((proposal) =>
-    matchesScope(proposal.scopeIds, activeScope.id),
-  );
+  const appearance = useNexusAppearance();
+  const [votesPayload, setVotesPayload] = useState<NexusVotesPayload | null>(null);
+  const [isLoadingVotes, setIsLoadingVotes] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadVotes = async () => {
+      setIsLoadingVotes(true);
+      setLoadError(null);
+
+      try {
+        const nextVotesPayload = await fetchNexusVotesPayload(activeScope.id);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setVotesPayload(nextVotesPayload);
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        setLoadError(
+          error instanceof Error
+            ? error.message
+            : 'Unable to load packet-backed vote data.',
+        );
+      } finally {
+        if (isMounted) {
+          setIsLoadingVotes(false);
+        }
+      }
+    };
+
+    void loadVotes();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeScope.id]);
+
+  const stageCards = votesPayload?.stage_cards ?? [];
+  const voteCards = votesPayload?.vote_cards ?? [];
+  const voteMechanics = votesPayload?.mechanics ?? NEXUS_VOTE_MECHANICS;
 
   return (
     <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-      <View className="gap-6 px-4 py-6 lg:px-8 lg:py-8">
+      <View className={appearance.pageContainerClass}>
         <NexusSectionHeader
           eyebrow="Vote floor"
           title={`${activeScope.shortLabel} civic voting lane`}
@@ -47,44 +89,60 @@ export default function NexusVotesPage() {
         />
 
         <View className="flex-row flex-wrap gap-4">
-          {visibleStages.map((stage) => (
+          {stageCards.map((stage) => (
             <NexusCard
               key={stage.id}
               className="min-w-[220px] flex-1"
               tone={stage.tone}
             >
-              <Text className="text-sm font-semibold uppercase tracking-[2px] text-nexus-muted">
-                {stage.title}
-              </Text>
-              <Text className="mt-3 text-4xl font-bold text-nexus-text">
-                {stage.count}
-              </Text>
-              <Text className="mt-3 text-sm leading-6 text-nexus-muted">
-                {stage.detail}
-              </Text>
+              <Text className={appearance.metricLabelClass}>{stage.title}</Text>
+              <Text className={appearance.metricValueClass}>{stage.count}</Text>
+              <Text className={appearance.itemBodyClass}>{stage.detail}</Text>
             </NexusCard>
           ))}
         </View>
 
         <View className="gap-4 xl:flex-row">
           <View className="flex-1 gap-4">
-            {visibleProposals.map((proposal) => (
-              <NexusCard key={proposal.id} className="gap-4">
+            {isLoadingVotes ? (
+              <NexusCard>
+                <Text className={appearance.itemBodyClass}>
+                  Loading packet-backed vote lanes...
+                </Text>
+              </NexusCard>
+            ) : null}
+
+            {loadError ? (
+              <NexusCard className="gap-3">
+                <Text className="text-sm leading-6 text-nexus-rose">
+                  {loadError}
+                </Text>
+              </NexusCard>
+            ) : null}
+
+            {voteCards.map((voteCard) => (
+              <NexusCard key={voteCard.packet.packet_id} className="gap-4">
                 <View className="gap-2">
                   <View className="flex-row flex-wrap items-center gap-2">
-                    <Text className="text-2xl font-bold text-nexus-text">
-                      {proposal.title}
-                    </Text>
-                    <NexusBadge label={proposal.stage} tone="gold" />
+                    <Text className={appearance.surfaceTitleClass}>{voteCard.title}</Text>
+                    <NexusBadge
+                      label={voteCard.status ?? voteCard.family}
+                      tone="gold"
+                    />
                   </View>
-                  <Text className="text-sm leading-7 text-nexus-muted">
-                    {proposal.summary}
+                  <Text className={appearance.sectionBodyClass}>
+                    {voteCard.summary ?? 'No packet summary available.'}
                   </Text>
                 </View>
 
                 <View className="flex-row flex-wrap gap-3">
-                  <NexusBadge label={proposal.votingWindow} tone="rose" />
-                  <NexusBadge label={proposal.lineage} tone="default" />
+                  <NexusBadge label={voteCard.label} tone="rose" />
+                  <NexusBadge
+                    label={voteCard.packet.packet_id}
+                    tone="default"
+                    className="max-w-full rounded-[18px] self-start"
+                    textClassName="leading-4"
+                  />
                 </View>
 
                 <View className="flex-row flex-wrap gap-3">
@@ -102,15 +160,13 @@ export default function NexusVotesPage() {
                 Governance mechanics in view
               </Text>
               <View className="gap-3">
-                {nexusVoteMechanics.map((mechanic) => (
+                {voteMechanics.map((mechanic) => (
                   <NexusCard
                     key={mechanic}
-                    className="gap-2 bg-white/5 p-4"
+                    className={`gap-2 p-4 ${appearance.cardInsetClass}`}
                     tone="default"
                   >
-                    <Text className="text-sm leading-6 text-nexus-muted">
-                      {mechanic}
-                    </Text>
+                    <Text className={appearance.itemBodyClass}>{mechanic}</Text>
                   </NexusCard>
                 ))}
               </View>
@@ -120,7 +176,7 @@ export default function NexusVotesPage() {
               <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
                 Downstream effects
               </Text>
-              <Text className="text-sm leading-7 text-nexus-muted">
+              <Text className={appearance.sectionBodyClass}>
                 Proposal detail pages in later slices should link directly into
                 related discussions, mission implications, amendment history,
                 objections, and scope propagation. This slice blocks those ideas in

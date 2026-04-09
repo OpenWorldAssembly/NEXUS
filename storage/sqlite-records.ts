@@ -1,6 +1,6 @@
 /**
  * File: sqlite-records.ts
- * Description: Projects packet envelopes into SQLite-oriented rows for packets, revisions, edges, and search indices.
+ * Description: Projects packet envelopes into SQLite rows for packets, revisions, edges, and query indices.
  */
 
 import {
@@ -86,6 +86,10 @@ function stringify(value: unknown): string {
   return JSON.stringify(value);
 }
 
+/**
+ * Inputs: a packet envelope plus optional packet-head overrides.
+ * Output: a normalized row for the mutable `packets` head table.
+ */
 export function projectPacketRecord(
   packet: PacketEnvelope,
   options?: PacketRecordOptions
@@ -93,7 +97,8 @@ export function projectPacketRecord(
   return {
     packet_id: packet.header.packet_id,
     family: packet.header.family,
-    preferred_revision_id: options?.preferred_revision_id ?? packet.header.revision_id,
+    preferred_revision_id:
+      options?.preferred_revision_id ?? packet.header.revision_id,
     head_revision_ids_json: stringify(
       options?.head_revision_ids ?? [packet.header.revision_id]
     ),
@@ -107,6 +112,10 @@ export function projectPacketRecord(
   };
 }
 
+/**
+ * Inputs: a canonical packet envelope.
+ * Output: a normalized row for the immutable `packet_revisions` table.
+ */
 export function projectPacketRevisionRecord(
   packet: PacketEnvelope
 ): PacketRevisionRecord {
@@ -134,6 +143,10 @@ export function projectPacketRevisionRecord(
   };
 }
 
+/**
+ * Inputs: a canonical packet envelope.
+ * Output: one normalized edge row per header edge.
+ */
 export function projectPacketEdgeRecords(
   packet: PacketEnvelope
 ): PacketEdgeRecord[] {
@@ -148,6 +161,10 @@ export function projectPacketEdgeRecords(
   }));
 }
 
+/**
+ * Inputs: a canonical packet envelope.
+ * Output: a flattened search/index row for scope and family queries.
+ */
 export function projectPacketSearchIndexRecord(
   packet: PacketEnvelope
 ): PacketSearchIndexRecord {
@@ -167,3 +184,4 @@ export function projectPacketSearchIndexRecord(
     created_at: packet.header.created_at,
   };
 }
+

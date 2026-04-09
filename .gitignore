@@ -36,6 +36,11 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# local nexus runtime artifacts
+data/nexus/*.db
+data/nexus/*.db-shm
+data/nexus/*.db-wal
+
 app-example
 
 # generated native folders

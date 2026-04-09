@@ -3,6 +3,8 @@
  * Description: Defines nexus shell types and helpers for route, scope, and guest state.
  */
 export type NexusNavMode = 'function' | 'scope';
+export type NexusThemeMode = 'dark' | 'light';
+export type NexusUiDensity = 'small' | 'large';
 
 export type NexusSection =
   | 'dashboard'
@@ -55,10 +57,19 @@ export type NexusScopeBranchNode = {
 
 export type NexusShellState = {
   navigationMode: NexusNavMode;
+  themeMode: NexusThemeMode;
+  uiDensity: NexusUiDensity;
   activeScopeId: string;
   expandedScopeIds: string[];
   activeSection: NexusSection;
   guestCapabilities: NexusGuestCapability[];
+};
+
+export const NEXUS_COLLAPSED_RAIL_WIDTH = 28;
+
+export const NEXUS_RAIL_WIDTHS: Record<NexusUiDensity, number> = {
+  small: 304,
+  large: 352,
 };
 
 export const NEXUS_SECTION_ORDER: NexusSection[] = [
@@ -97,6 +108,14 @@ export function getNexusSectionFromPathname(pathname: string): NexusSection {
  */
 export function getNexusSectionHref(section: NexusSection): `/nexus/${NexusSection}` {
   return `/nexus/${section}`;
+}
+
+/**
+ * Inputs: a nexus UI density.
+ * Output: the consistent width used by each open sidebar rail for that density.
+ */
+export function getNexusRailWidth(uiDensity: NexusUiDensity): number {
+  return NEXUS_RAIL_WIDTHS[uiDensity];
 }
 
 /**

@@ -135,7 +135,7 @@ Implemented routes in this slice:
 Implemented shell behavior in this slice:
 
 - dedicated nexus layout separate from the public header/footer shell
-- left-heavy desktop shell with a compact guest header, a home link, an embedded preference switch, a primary rail, and a secondary rail
+- left-heavy desktop shell with a compact guest header, anonymous guest avatar, auth actions, a home link beneath auth, a bottom-mounted preference drawer tab, a primary rail, and a secondary rail
 - responsive mobile overlay for the same left-side shell, still opening from the left edge
 - function-first vs scope-first as a shell preference rather than separate route systems
 - the scope menu uses a full visible scope map instead of an indented tree, so deeper scopes do not lose width as the branch descends and the user does not have to drill into path-only views
@@ -144,15 +144,16 @@ Implemented shell behavior in this slice:
 - secondary rail can remain open while the primary rail is collapsed
 - `Global Guest` as the default nexus entry state
 - visitor-lobby posting as the only enabled guest write interaction
-- visitor-lobby posts now flow through local API routes into a shared file-backed bundle of canonical discussion packets with session-scoped anonymous guest labels
+- visitor-lobby posts now flow through local API routes into a local SQLite-backed packet store with session-scoped anonymous guest labels preserved through packet external refs
+- local web runs now use Expo `web.output = "server"` so the visitor-lobby API routes can actually execute
 
 Current implementation boundary:
 
-- most nexus content is still mock data for UI blocking and navigation feel
-- a packet foundation now exists under `domain/schema`, `domain/core`, `domain/storage`, and `domain/projections`
-- the current codebase now includes a canonical `PacketEnvelope = { header, body }` model, Zod packet-family parsers, packet-store/query-service interfaces, packet label projections, and a first SQLite schema in `data/schemas/packet-store.sql`
-- the first persistence adapter is a local file-backed visitor-lobby packet bundle rather than SQL or the full packet store
-- packet detail routes, SQL persistence, auth, trust mechanics, and protected spaces remain later phases
+- nexus shell scopes, dashboard cards, vote lanes, discussion forums, and library cards are now loaded from packet-backed API projections instead of local mock arrays
+- a packet foundation now exists under `domain/schema`, `domain/core`, `domain/packets`, and `domain/projections`, with a separate top-level `storage` boundary for persistence
+- the current codebase now includes a canonical `PacketEnvelope = { header, body }` model, Zod packet-family parsers, packet-store/query-service interfaces, packet label projections, shared browser/nexus query-service implementations, a packet-store schema constant under `storage`, an Expo `SQLitePacketStore`, and a server-side `NodeSQLitePacketStore`
+- the visitor-lobby repository, shell payload route, and scope query routes now share one Node SQLite packet-store bootstrap that seeds the personal scope tree and imports the old JSON bundle only as legacy data
+- packet detail routes, auth, trust mechanics, and protected spaces remain later phases
 
 ## Core entities and data model
 
@@ -582,6 +583,102 @@ Examples of decisions worth logging early:
 - Why: it creates a real read/write loop now, exercises a repository seam the later SQL adapter can replace, and avoids blocking the UI on unfinished infrastructure.
 - Consequences / follow-ups: only the visitor lobby uses live persistence in this slice, the bundle path remains local-dev oriented, later SQL work should swap the repository implementation without changing the discussions UI contract, and anonymous guests can later gain real `Element(kind: "person")` packets without changing the discussion packet family itself.
 
+### 2026-04-08 - Simplify discussions into one active forum workspace
+
+- Context: once the visitor-lobby persistence path existed, the discussions page still felt crowded because the lobby composer, forum list, and read-only thread preview examples all competed for width inside the nexus shell.
+- Options considered: keep the split-column preview-heavy layout, move previews elsewhere, or simplify the surface around one active forum at a time with a switchable forum menu.
+- Decision: make `app/nexus/discussions.tsx` a single active-forum workspace with horizontal forum tabs, keep only the selected forum visible beneath it, remove the read-only thread preview cards, and back the selected tab with the `forum` query parameter instead of creating separate route files.
+- Why: it keeps the visitor lobby readable when both shell menus are open, preserves visibility into the planned forum structure, and reduces filler while leaving a stable layout for future packet-backed discussion spaces.
+- Consequences / follow-ups: the visitor lobby remains the only writable forum in the MVP, non-lobby forums still need real packet/thread integrations later, the active tab is deep-linkable without fragmenting the route tree, the base discussions route now falls back locally instead of issuing a mount-time router redirect, and richer forum pages can later graduate into dedicated nested routes if they truly diverge.
+
+### 2026-04-08 - Consolidate packet storage code under `storage`
+
+- Context: packet storage artifacts were split awkwardly between `domain/*` code and a raw SQL schema file under `data/schemas`, which blurred the line between runtime content and canonical storage logic.
+- Options considered: keep the mixed layout, move everything storage-related into `data/*`, or treat packet storage as part of the domain layer and keep `data/*` for mock/runtime content only.
+- Decision: move the packet-store schema into a dedicated top-level `storage` boundary, keep row projections and the `SQLitePacketStore` implementation in the same boundary, and reserve `data/*` for UI mock content plus runtime bundle files.
+- Why: packet storage is business logic, not content. Keeping schema, projections, and store implementation together reduces drift and makes the later SQLite-backed runtime easier to reason about.
+- Consequences / follow-ups: docs and future code should treat `storage/*` as the packet persistence boundary, while `data/nexus` remains a temporary runtime/content area until active routes fully read from the packet store.
+
+### 2026-04-08 - Add `SQLitePacketStore` on Expo SQLite
+
+- Context: the packet contract and schema already existed, but we needed a real SQL-backed implementation before additional packet-backed features started inventing one-off repositories.
+- Options considered: wait until the visitor-lobby repository is replaced, build a Node-only SQLite adapter, or implement the canonical packet store directly on Expo SQLite so it can serve app/runtime use cases.
+- Decision: install `expo-sqlite`, fix the Expo plugin configuration, and add `SQLitePacketStore` under `storage` with schema initialization, revision writes, preferred-head tracking, edge queries, and JSON bundle import/export.
+
+### 2026-04-08 - Keep storage as a separate boundary from domain logic
+
+- Context: the repo briefly treated storage implementation as part of the `domain/*` tree, which blurred the line between business rules and infrastructure.
+- Options considered: leave storage inside `domain/*`, move storage back into `data/*`, or create a dedicated top-level storage boundary.
+- Decision: keep packet schemas, packet builders, and service interfaces in `domain/*`, but move the concrete persistence layer to top-level `storage/*`.
+- Why: this preserves the original UI / business / storage separation more faithfully while still keeping the codebase small and navigable.
+- Consequences / follow-ups: imports should treat `storage/*` as infrastructure, `domain/index.ts` should no longer re-export storage, and future non-SQL persistence adapters should live beside SQLite under the same storage boundary.
+- Why: this gives the repo one canonical packet persistence implementation that matches the current Expo stack and can later replace specialized temporary stores instead of competing with them.
+- Consequences / follow-ups: active routes still need wiring before the packet store becomes user-visible, visitor-lobby persistence should eventually delegate to the packet store, and browser/nexus query services can now be implemented over the same SQLite backing layer.
+
+### 2026-04-08 - Move the live visitor-lobby backend onto the packet store
+
+- Context: the discussion UI and packet foundations were ready, but the live visitor-lobby backend still wrote to a standalone JSON bundle instead of the canonical packet store.
+- Options considered: keep the file bundle longer, route the API through Expo SQLite, or add a dedicated server-side SQLite packet-store adapter for Expo Router API routes.
+- Decision: add `NodeSQLitePacketStore` under `storage/*`, wire the visitor-lobby repository to that store, seed public lobby threads there, and import the older `data/nexus/visitor-lobby-bundle.json` only as a one-time legacy migration source.
+- Why: it keeps the UI contract stable while finally making the live discussion backend use the same packet/revision/edge model as the rest of the system, and it avoids depending on Expo SQLite inside the server route runtime.
+- Consequences / follow-ups: the visitor-lobby bundle file is no longer the active write path, the local canonical database now lives at `data/nexus/owa-packets.db`, anonymous guests still remain session-labeled external refs until low-trust guest elements arrive, and future forum surfaces should build on the same packet-store boundary instead of inventing custom repositories.
+
+### 2026-04-09 - Enable server web output for local forum API routes
+
+- Context: the discussion backend had been wired to Expo Router API routes, but the app config still used `web.output = "static"`, which prevented the local web runtime from executing those routes.
+- Options considered: keep static output and move persistence client-side, add a separate external backend just for the forum MVP, or switch the Expo web runtime to server output so the existing API routes can run locally.
+- Decision: set `expo.web.output` to `server` in `app.json` and treat local forum persistence as a server-runtime feature.
+- Why: the current visitor-lobby MVP already depends on local API routes and Node-backed SQLite, so server output is the minimal change that lets the existing backend actually run.
+- Consequences / follow-ups: local web development needs a restarted dev server after the config change, API-route-backed persistence is now available in local web runs, and any future static-only export plan will need a different backend story instead of assuming the visitor-lobby server routes still exist.
+
+### 2026-04-09 - Implement shared browser and nexus query services over SQLite search rows
+
+- Context: the packet store could write, read, and merge packets, but the repo still lacked a concrete query layer that could drive packet browser views or replace nexus mock cards.
+- Options considered: add list/search methods directly to `PacketStore`, build one-off route-specific repositories, or keep `PacketStore` focused on persistence while implementing dedicated browser/nexus query services over the packet search index.
+- Decision: implement shared `PacketStoreBrowserQueryService` and `PacketStoreNexusQueryService` in `storage/query-services.ts`, then add Node and Expo SQLite adapters that load `packet_search_index` rows from the same database as the packet store.
+- Why: this keeps persistence and projection concerns separate, preserves the clean domain/storage boundary, and gives both server and app runtimes one packet-native query surface.
+- Consequences / follow-ups: browser queries now support packet lookup, link traversal, revision-head inspection, and field-level revision comparison; nexus queries now support scope-aware dashboard, discussion, vote, and library card lists; and the next UI integration pass can start replacing `data/nexus/mock-nexus-data.ts` with packet-backed projections.
+
+### 2026-04-09 - Replace active nexus mock arrays with packet-backed shell and scope query routes
+
+- Context: query services existed, but the active `/nexus/*` screens and shell context were still reading from `data/nexus/mock-nexus-data.ts`, which left packet logic disconnected from the visible app.
+- Options considered: keep mock UI data while only visitor-lobby stayed live, wire each screen directly to storage classes, or add explicit packet-backed API routes and switch shell/screens over route-by-route.
+- Decision: add packet-backed API routes (`/api/nexus/shell` and scoped dashboard/discussions/votes/library routes), bootstrap all of them through one shared server packet-service singleton, remove `mock-nexus-data.ts` from active imports, and move surviving static copy into `lib/nexus/nexus-content.ts`.
+- Why: this preserves the UI/business/storage separation while making the visible nexus experience run on real packet projections from the canonical SQLite store.
+- Consequences / follow-ups: scope trees now come from `Element(kind: "assembly")` packets, page cards come from `NexusQueryService`, the visitor-lobby repository shares the same seeded packet store, and any remaining placeholder behavior should now be treated as packet projection gaps instead of mock-data debt.
+
+### 2026-04-09 - Use route-safe scope ids and fix packet write ordering for SQLite FK integrity
+
+- Context: scoped API routes were receiving packet ids like `nexus:element/global-commons` in URL params, which made route matching brittle, and first writes of new packets could fail with SQLite foreign-key errors because revision rows were inserted before packet-head rows.
+- Options considered: keep packet ids in route params and patch URL handling ad hoc, relax foreign keys, or separate route ids from packet refs while enforcing packet-head-first writes.
+- Decision: project assembly scopes to route-safe ids (for example `global-commons`) for shell and scoped API URLs while mapping them back to packet refs server-side, and insert an initial `packets` row before inserting `packet_revisions` when creating a new packet.
+- Why: this keeps API routing predictable and preserves strict SQLite FK guarantees without weakening schema constraints.
+- Consequences / follow-ups: active scope URLs remain human-readable, scope lenses still use canonical packet refs internally, visitor-lobby post creation now succeeds for first-write packets in a fresh database, and the server bootstrap now backfills any missing seed packets instead of skipping seeding once any element exists.
+
+### 2026-04-09 - Pass strict named-parameter subsets to Node SQLite updates
+
+- Context: Node SQLite rejects unknown named parameters by default, and packet update statements were receiving full records that included fields not referenced in their SQL.
+- Options considered: globally allow unknown named parameters, manually maintain query-specific parameter maps, or relax type safety around statements.
+- Decision: keep strict statement behavior and pass query-specific parameter subsets for packet update operations.
+- Why: this prevents runtime write failures such as `unknown named parameter 'created_at'` while preserving strict SQL binding semantics.
+- Consequences / follow-ups: packet writes now remain stable on clean databases and after resets without weakening SQLite parameter validation.
+
+### 2026-04-09 - Normalize discussion scope ids and dedupe forum tabs by thread kind
+
+- Context: discussion tabs were showing duplicate visitor-lobby surfaces across scopes, and visitor-lobby API requests could fail when route params arrived percent-encoded (for example `nexus%3Aelement%2Fglobal-commons`).
+- Options considered: leave tab duplication and rely on manual seed cleanup, hard-delete conflicting discussion threads, or normalize scope ids at the repository boundary and project one tab per discussion thread kind.
+- Decision: decode scope ids before packet resolution in the visitor-lobby repository, prefer an existing `visitor_lobby` thread for the current authority scope before auto-creating one, and build discussions tabs from `DiscussionThread` packets with one winner per `thread_kind`, preferring current-scope authority threads over inherited ancestors.
+- Why: this keeps URL-driven scope requests resilient, prevents accidental duplicate visitor-lobby threads from becoming user-facing tab clutter, and preserves intentional inheritance for non-local thread kinds without multiplying tabs.
+- Consequences / follow-ups: fallback shell scope ids should stay route-safe (for example `global-commons`), existing duplicate visitor-lobby threads remain in storage but no longer produce duplicate tabs, and future thread-kind additions should define their forum-id mapping/order in one place.
+
+### 2026-04-09 - Make discussion tab labels scope-aware while preserving inherited thread linkage
+
+- Context: after deduping forum tabs by thread kind, deeper scopes still displayed ancestor-owned read-only tab titles like `Global general`, which made the scope lens feel incorrect even though packet selection was working.
+- Options considered: keep ancestor titles, duplicate thread packets into every scope just for labels, or project scope-local tab titles while preserving references to the selected canonical thread packet.
+- Decision: keep thread selection/ownership logic unchanged, but render forum tab titles from active scope name + normalized forum kind for known kinds (`visitor_lobby`, `general`, `proposals`, `reports`).
+- Why: this improves user comprehension in scope-first browsing without creating fake packet copies or breaking thread packet linkage.
+- Consequences / follow-ups: unknown/custom thread kinds still use their source packet titles, and if future localization/branding rules are added they should be centralized in the same forum-title projection helper.
+
 ### 2026-04-08 - Function-first and scope-first as one system
 
 - Context: the nexus needs to support both “go to a function then filter by scope” and “go to a scope then explore its surfaces.”
@@ -594,9 +691,25 @@ Examples of decisions worth logging early:
 
 - Context: the first nexus shell still felt like stacked cards rather than a true app navigation system.
 - Options considered: keep the scope tree and function controls in separate cards, move secondary navigation into the main surface, or split the left shell into primary and secondary columns.
-- Decision: place a compact guest header at the top, put the navigation preference toggle directly beneath it, then render a primary column and an adjacent secondary column within the left-side shell.
+- Decision: place a compact guest header at the top, keep shell preferences directly beneath it as one-line switch rows with fixed alignment, then render a primary column and an adjacent secondary column within the left-side shell.
 - Why: it makes the shell behavior legible. The chosen preference determines whether functions or scopes are primary, and the other menu becomes the secondary column immediately to the right.
 - Consequences / follow-ups: future nexus sections should plug into the same two-stage left-side navigation pattern, and responsive trays should continue to open from the left rather than flipping sides.
+
+### 2026-04-09 - Equal-width rails with shell-local appearance preferences
+
+- Context: the primary and secondary rails had drifted to different widths, and the guest header was becoming the natural place for shell-level preferences beyond function-first versus scope-first.
+- Options considered: keep asymmetric rail sizing, hard-code one new equal width, or derive both rails from one shared width setting and expose that through a Nexus-only UI-size preference while also staging a shell-scoped theme toggle.
+- Decision: make both open rails share the same width through `getNexusRailWidth`, add `themeMode` and `uiDensity` to the Nexus shell state, and expose compact inline controls for navigation mode, shell theme, and UI size inside the guest header.
+- Why: one shared rail width keeps the two-column navigator visually coherent, while shell-local preferences let the Nexus feel more like an app without touching the outer public website.
+- Consequences / follow-ups: the current light mode now reaches the shared Nexus shell primitives, the core `/nexus/*` route surfaces, the shell overlay/root container, and the nested Nexus navigator background, while the large UI preference now flows through a shared Nexus appearance layer for route spacing, typography, badges, buttons, and inputs instead of requiring per-screen redesign; the theme still stops at the public website boundary, and a future complete dark/light system should move more semantic color decisions into shared tokens instead of growing one-off conditional classes.
+
+### 2026-04-09 - Guest header becomes a compact identity panel with a preference drawer
+
+- Context: the guest header had accumulated the home link and all shell switches in a single always-open stack, which made the top of the primary rail feel more like utility clutter than a usable profile surface.
+- Options considered: keep every shell control exposed, move preferences out of the header entirely, or turn the guest header into a small identity panel with progressive disclosure for settings.
+- Decision: add an anonymous guest avatar between the `OWA Nexus` label and the guest name, move `Back to Home` beneath `Sign In` / `Sign Up`, and place the navigation/theme/size controls inside a bottom `Preferences` drawer that is toggled from the profile card.
+- Why: it keeps the rail visually cleaner while still preserving fast access to shell-level controls and making the identity strip feel more intentional.
+- Consequences / follow-ups: the preference drawer state now lives in the shared Nexus shell context so it survives route changes and shell remounts, the profile card now centers its brand line, auth actions, and drawer controls on the same axis as the avatar/name stack, and future profile-level controls should prefer the same drawer pattern instead of permanently expanding the guest header.
 
 ### 2026-04-08 - Rail collapse order and content ownership
 

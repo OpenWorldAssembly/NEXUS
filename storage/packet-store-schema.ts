@@ -1,6 +1,9 @@
--- File: packet-store.sql
--- Description: Defines the first OWA SQLite packet store using stable packets, immutable revisions, and normalized edges.
+/**
+ * File: packet-store-schema.ts
+ * Description: Defines the canonical SQLite schema used by the OWA packet store.
+ */
 
+export const PACKET_STORE_SCHEMA_SQL = `
 PRAGMA journal_mode = WAL;
 PRAGMA foreign_keys = ON;
 
@@ -91,3 +94,5 @@ CREATE INDEX IF NOT EXISTS idx_packet_search_family_title
 CREATE INDEX IF NOT EXISTS idx_packet_search_authority_scope
   ON packet_search_index(authority_scope_packet_id)
   WHERE authority_scope_packet_id IS NOT NULL;
+`;
+

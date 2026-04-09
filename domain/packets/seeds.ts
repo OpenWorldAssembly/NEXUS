@@ -14,6 +14,7 @@ import {
   createPersonPacket,
   createPolicyPacket,
   createProposalPacket,
+  createVotePacket,
 } from '@/domain/packets/builders';
 
 export const SEED_CREATED_AT = '2026-04-08T00:00:00.000Z';
@@ -29,10 +30,14 @@ export const PERSONAL_TREE_PACKET_IDS = {
   sunnymead_onboarding_proposal:
     'nexus:proposal/sunnymead-ranch-onboarding',
   global_visitor_lobby_thread: 'nexus:discussion-thread/global-visitor-lobby',
+  global_general_thread: 'nexus:discussion-thread/global-general',
+  global_proposals_thread: 'nexus:discussion-thread/global-proposals',
+  global_reports_thread: 'nexus:discussion-thread/global-reports',
   sunnymead_visitor_lobby_thread:
     'nexus:discussion-thread/sunnymead-ranch-visitor-lobby',
   global_welcome_post: 'nexus:discussion-post/global-welcome-post',
   sunnymead_welcome_post: 'nexus:discussion-post/sunnymead-ranch-welcome-post',
+  global_onboarding_vote: 'nexus:vote/sunnymead-ranch-onboarding',
 } as const;
 
 export const PERSONAL_TREE_REFS = {
@@ -51,8 +56,20 @@ export const PERSONAL_TREE_REFS = {
   global_visitor_lobby_thread: createPacketRef(
     PERSONAL_TREE_PACKET_IDS.global_visitor_lobby_thread
   ),
+  global_general_thread: createPacketRef(
+    PERSONAL_TREE_PACKET_IDS.global_general_thread
+  ),
+  global_proposals_thread: createPacketRef(
+    PERSONAL_TREE_PACKET_IDS.global_proposals_thread
+  ),
+  global_reports_thread: createPacketRef(
+    PERSONAL_TREE_PACKET_IDS.global_reports_thread
+  ),
   sunnymead_visitor_lobby_thread: createPacketRef(
     PERSONAL_TREE_PACKET_IDS.sunnymead_visitor_lobby_thread
+  ),
+  global_onboarding_vote: createPacketRef(
+    PERSONAL_TREE_PACKET_IDS.global_onboarding_vote
   ),
 } as const;
 
@@ -224,6 +241,56 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     status: 'open',
   });
 
+  const globalGeneralThreadPacket = createDiscussionThreadPacket({
+    packet_id: PERSONAL_TREE_PACKET_IDS.global_general_thread,
+    created_at: SEED_CREATED_AT,
+    authority_scope_ref: PERSONAL_TREE_REFS.global_commons,
+    applicable_scope_refs: globalApplicableScopeRefs,
+    title: 'Global general',
+    summary:
+      'Assembly-wide context, updates, and cross-scope orientation threads.',
+    thread_kind: 'general',
+    status: 'open',
+  });
+
+  const globalProposalsThreadPacket = createDiscussionThreadPacket({
+    packet_id: PERSONAL_TREE_PACKET_IDS.global_proposals_thread,
+    created_at: SEED_CREATED_AT,
+    authority_scope_ref: PERSONAL_TREE_REFS.global_commons,
+    applicable_scope_refs: globalApplicableScopeRefs,
+    related_refs: [PERSONAL_TREE_REFS.sunnymead_onboarding_proposal],
+    title: 'Global proposals',
+    summary:
+      'Discussion floor for proposal drafts, reviews, and amendment context.',
+    thread_kind: 'proposals',
+    status: 'open',
+  });
+
+  const globalReportsThreadPacket = createDiscussionThreadPacket({
+    packet_id: PERSONAL_TREE_PACKET_IDS.global_reports_thread,
+    created_at: SEED_CREATED_AT,
+    authority_scope_ref: PERSONAL_TREE_REFS.global_commons,
+    applicable_scope_refs: globalApplicableScopeRefs,
+    title: 'Global reports and AARs',
+    summary:
+      'Record and learning loop for mission reports, retrospectives, and improvements.',
+    thread_kind: 'reports',
+    status: 'open',
+  });
+
+  const globalOnboardingVotePacket = createVotePacket({
+    packet_id: PERSONAL_TREE_PACKET_IDS.global_onboarding_vote,
+    created_at: SEED_CREATED_AT,
+    authority_scope_ref: PERSONAL_TREE_REFS.sunnymead_ranch,
+    applicable_scope_refs: sunnymeadApplicableScopeRefs,
+    proposal_ref: PERSONAL_TREE_REFS.sunnymead_onboarding_proposal,
+    title: 'Vote: Sunnymead Ranch onboarding pilot',
+    vote_method: 'simple-majority',
+    status: 'up_for_vote',
+    opened_at: SEED_CREATED_AT,
+    closes_at: '2026-04-12T00:00:00.000Z',
+  });
+
   const sunnymeadVisitorLobbyThreadPacket = createDiscussionThreadPacket({
     packet_id: PERSONAL_TREE_PACKET_IDS.sunnymead_visitor_lobby_thread,
     created_at: SEED_CREATED_AT,
@@ -283,7 +350,11 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     aaronPacket,
     visitorLobbyPolicyPacket,
     sunnymeadOnboardingProposalPacket,
+    globalOnboardingVotePacket,
     globalVisitorLobbyThreadPacket,
+    globalGeneralThreadPacket,
+    globalProposalsThreadPacket,
+    globalReportsThreadPacket,
     sunnymeadVisitorLobbyThreadPacket,
     globalWelcomePostPacket,
     sunnymeadWelcomePostPacket,

@@ -2,6 +2,7 @@
  * File: dashboard.tsx
  * Description: Renders the guest dashboard with scope-aware civic queues, highlights, and recommendations.
  */
+import { useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
 import { useNexusShell } from '@/components/nexus/nexus-shell-context';
@@ -9,14 +10,11 @@ import {
   NexusActionButton,
   NexusBadge,
   NexusCard,
+  useNexusAppearance,
   NexusSectionHeader,
 } from '@/components/nexus/nexus-ui';
-import {
-  nexusDashboardMetrics,
-  nexusDashboardQueues,
-  nexusPacketPreviews,
-} from '@/data/nexus/mock-nexus-data';
-import { matchesScope } from '@/lib/nexus/nexus-shell';
+import type { NexusDashboardPayload } from '@/lib/nexus/nexus-api-types';
+import { fetchNexusDashboardPayload } from '@/lib/nexus/nexus-query-api';
 
 /**
  * Inputs: none.
@@ -24,19 +22,58 @@ import { matchesScope } from '@/lib/nexus/nexus-shell';
  */
 export default function NexusDashboardPage() {
   const { activeScope, navigationMode, setActiveSection } = useNexusShell();
-  const visibleMetrics = nexusDashboardMetrics.filter((metric) =>
-    matchesScope(metric.scopeIds, activeScope.id),
-  );
-  const visibleQueues = nexusDashboardQueues.filter((queue) =>
-    matchesScope(queue.scopeIds, activeScope.id),
-  );
-  const recommendedPackets = nexusPacketPreviews.filter((packet) =>
-    matchesScope(packet.scopeIds, activeScope.id),
-  );
+  const appearance = useNexusAppearance();
+  const [dashboardPayload, setDashboardPayload] =
+    useState<NexusDashboardPayload | null>(null);
+  const [isLoadingDashboard, setIsLoadingDashboard] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadDashboardPayload = async () => {
+      setIsLoadingDashboard(true);
+      setLoadError(null);
+
+      try {
+        const nextDashboardPayload = await fetchNexusDashboardPayload(activeScope.id);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setDashboardPayload(nextDashboardPayload);
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        setLoadError(
+          error instanceof Error
+            ? error.message
+            : 'Unable to load packet-backed dashboard data.',
+        );
+      } finally {
+        if (isMounted) {
+          setIsLoadingDashboard(false);
+        }
+      }
+    };
+
+    void loadDashboardPayload();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeScope.id]);
+
+  const visibleMetrics = dashboardPayload?.metrics ?? [];
+  const visibleQueues = dashboardPayload?.queue ?? [];
+  const recommendedPackets = dashboardPayload?.recommended_packets ?? [];
 
   return (
     <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-      <View className="gap-6 px-4 py-6 lg:px-8 lg:py-8">
+      <View className={appearance.pageContainerClass}>
         <NexusSectionHeader
           eyebrow="Global guest dashboard"
           title={`${activeScope.shortLabel} civic control panel`}
@@ -49,6 +86,20 @@ export default function NexusDashboardPage() {
           }
         />
 
+        {isLoadingDashboard ? (
+          <NexusCard>
+            <Text className={appearance.itemBodyClass}>
+              Loading packet-backed dashboard data...
+            </Text>
+          </NexusCard>
+        ) : null}
+
+        {loadError ? (
+          <NexusCard>
+            <Text className="text-sm leading-6 text-nexus-rose">{loadError}</Text>
+          </NexusCard>
+        ) : null}
+
         <View className="flex-row flex-wrap gap-4">
           {visibleMetrics.map((metric) => (
             <NexusCard
@@ -56,15 +107,9 @@ export default function NexusDashboardPage() {
               className="min-w-[220px] flex-1"
               tone={metric.tone}
             >
-              <Text className="text-sm font-semibold uppercase tracking-[2px] text-nexus-muted">
-                {metric.title}
-              </Text>
-              <Text className="mt-3 text-4xl font-bold text-nexus-text">
-                {metric.value}
-              </Text>
-              <Text className="mt-3 text-sm leading-6 text-nexus-muted">
-                {metric.detail}
-              </Text>
+              <Text className={appearance.metricLabelClass}>{metric.title}</Text>
+              <Text className={appearance.metricValueClass}>{metric.value}</Text>
+              <Text className={appearance.itemBodyClass}>{metric.detail}</Text>
             </NexusCard>
           ))}
         </View>
@@ -76,12 +121,8 @@ export default function NexusDashboardPage() {
                 <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
                   Current scope summary
                 </Text>
-                <Text className="text-2xl font-bold text-nexus-text">
-                  {activeScope.name}
-                </Text>
-                <Text className="text-sm leading-6 text-nexus-muted">
-                  {activeScope.description}
-                </Text>
+                <Text className={appearance.surfaceTitleClass}>{activeScope.name}</Text>
+                <Text className={appearance.itemBodyClass}>{activeScope.description}</Text>
               </View>
 
               <View className="flex-row flex-wrap gap-3">
@@ -111,17 +152,13 @@ export default function NexusDashboardPage() {
                 {visibleQueues.map((queue) => (
                   <NexusCard
                     key={queue.id}
-                    className="gap-2 bg-white/5 p-4"
+                    className={`gap-2 p-4 ${appearance.cardInsetClass}`}
                     tone={queue.tone}
                   >
                     <View className="flex-row items-start justify-between gap-4">
                       <View className="flex-1 gap-1">
-                        <Text className="text-base font-semibold text-nexus-text">
-                          {queue.title}
-                        </Text>
-                        <Text className="text-sm leading-6 text-nexus-muted">
-                          {queue.detail}
-                        </Text>
+                        <Text className={appearance.itemTitleClass}>{queue.title}</Text>
+                        <Text className={appearance.itemBodyClass}>{queue.detail}</Text>
                       </View>
                       <NexusBadge label={queue.stat} tone={queue.tone} />
                     </View>
@@ -138,18 +175,19 @@ export default function NexusDashboardPage() {
               </Text>
               <View className="gap-3">
                 {recommendedPackets.slice(0, 4).map((packet) => (
-                  <NexusCard key={packet.id} className="gap-2 bg-white/5 p-4">
+                  <NexusCard
+                    key={packet.packet.packet_id}
+                    className={`gap-2 p-4 ${appearance.cardInsetClass}`}
+                  >
                     <View className="flex-row items-center justify-between gap-3">
-                      <Text className="text-base font-semibold text-nexus-text">
-                        {packet.title}
-                      </Text>
-                      <NexusBadge label={packet.type} tone="default" />
+                      <Text className={appearance.itemTitleClass}>{packet.title}</Text>
+                      <NexusBadge label={packet.family} tone="default" />
                     </View>
-                    <Text className="text-sm leading-6 text-nexus-muted">
-                      {packet.summary}
+                    <Text className={appearance.itemBodyClass}>
+                      {packet.summary ?? 'No packet summary available.'}
                     </Text>
-                    <Text className="text-xs uppercase tracking-[2px] text-nexus-muted">
-                      {packet.lineage}
+                    <Text className={appearance.itemMetaClass}>
+                      {packet.status ?? packet.label}
                     </Text>
                   </NexusCard>
                 ))}
@@ -160,7 +198,7 @@ export default function NexusDashboardPage() {
               <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
                 Rollout boundary
               </Text>
-              <Text className="text-sm leading-7 text-nexus-muted">
+              <Text className={appearance.sectionBodyClass}>
                 This first nexus block focuses on dashboard, discussions, votes,
                 library, and account. Assemblies, map browsing, full chat, and
                 protected spaces remain visible in the shell as deferred surfaces.

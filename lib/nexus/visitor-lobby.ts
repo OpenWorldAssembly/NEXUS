@@ -195,12 +195,33 @@ export function createScopePacketId(scopeId: string): string {
   return `nexus:element/${scopeId}`;
 }
 
+function normalizeScopeSlug(scopeId: string): string {
+  const decodedScopeId = (() => {
+    try {
+      return decodeURIComponent(scopeId);
+    } catch {
+      return scopeId;
+    }
+  })();
+  const canonicalScopeId = decodedScopeId.startsWith('nexus:element/')
+    ? decodedScopeId.slice('nexus:element/'.length)
+    : decodedScopeId;
+
+  return canonicalScopeId.trim().toLowerCase();
+}
+
 /**
  * Inputs: a scope id.
  * Output: the stable visitor-lobby thread packet id for that scope.
  */
 export function createVisitorLobbyThreadPacketId(scopeId: string): string {
-  return `nexus:discussion-thread/${scopeId}-visitor-lobby`;
+  const scopeSlug = normalizeScopeSlug(scopeId);
+
+  if (scopeSlug === 'global-commons') {
+    return 'nexus:discussion-thread/global-visitor-lobby';
+  }
+
+  return `nexus:discussion-thread/${scopeSlug}-visitor-lobby`;
 }
 
 /**
@@ -213,8 +234,9 @@ export function createVisitorLobbyPostPacketId(
   suffix: string,
 ): string {
   const compactTimestamp = createdAt.replace(/[^0-9]/g, '').slice(0, 14);
+  const scopeSlug = normalizeScopeSlug(scopeId);
 
-  return `nexus:discussion-post/${scopeId}-${compactTimestamp}-${suffix}`;
+  return `nexus:discussion-post/${scopeSlug}-${compactTimestamp}-${suffix}`;
 }
 
 /**
