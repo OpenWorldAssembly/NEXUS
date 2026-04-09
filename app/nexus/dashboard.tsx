@@ -21,7 +21,7 @@ import { fetchNexusDashboardPayload } from '@/lib/nexus/nexus-query-api';
  * Output: the main nexus dashboard surface for the currently selected scope.
  */
 export default function NexusDashboardPage() {
-  const { activeScope, navigationMode, setActiveSection } = useNexusShell();
+  const { activeScope, setActiveSection } = useNexusShell();
   const appearance = useNexusAppearance();
   const [dashboardPayload, setDashboardPayload] =
     useState<NexusDashboardPayload | null>(null);
@@ -75,13 +75,12 @@ export default function NexusDashboardPage() {
     <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
       <View className={appearance.pageContainerClass}>
         <NexusSectionHeader
-          eyebrow="Global guest dashboard"
-          title={`${activeScope.shortLabel} civic control panel`}
-          description={`This first nexus slice keeps the same routes in both navigation modes. You are currently in ${navigationMode}-first view, looking through the ${activeScope.name} lens.`}
+          eyebrow="Dashboard"
+          title={`${activeScope.name} Dashboard`}
           trailing={
             <View className="flex-row flex-wrap gap-3">
-              <NexusBadge label={activeScope.badge} tone="sky" />
-              <NexusBadge label={activeScope.publicLobbyLabel} tone="mint" />
+              <NexusBadge label={`${visibleMetrics.length} metrics`} tone="sky" />
+              <NexusBadge label={`${visibleQueues.length} queues`} tone="mint" />
             </View>
           }
         />
@@ -119,10 +118,9 @@ export default function NexusDashboardPage() {
             <NexusCard className="gap-4">
               <View className="gap-2">
                 <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
-                  Current scope summary
+                  Scope summary
                 </Text>
                 <Text className={appearance.surfaceTitleClass}>{activeScope.name}</Text>
-                <Text className={appearance.itemBodyClass}>{activeScope.description}</Text>
               </View>
 
               <View className="flex-row flex-wrap gap-3">
@@ -171,7 +169,7 @@ export default function NexusDashboardPage() {
           <View className="flex-1 gap-4">
             <NexusCard className="gap-4">
               <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
-                Recommended packet review
+                Packet review
               </Text>
               <View className="gap-3">
                 {recommendedPackets.slice(0, 4).map((packet) => (
@@ -191,22 +189,6 @@ export default function NexusDashboardPage() {
                     </Text>
                   </NexusCard>
                 ))}
-              </View>
-            </NexusCard>
-
-            <NexusCard className="gap-4">
-              <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
-                Rollout boundary
-              </Text>
-              <Text className={appearance.sectionBodyClass}>
-                This first nexus block focuses on dashboard, discussions, votes,
-                library, and account. Assemblies, map browsing, full chat, and
-                protected spaces remain visible in the shell as deferred surfaces.
-              </Text>
-              <View className="flex-row flex-wrap gap-3">
-                <NexusBadge label="Guest-default nexus" tone="sky" />
-                <NexusBadge label="Visitor lobby posting only" tone="mint" />
-                <NexusBadge label="No auth yet" tone="gold" />
               </View>
             </NexusCard>
           </View>

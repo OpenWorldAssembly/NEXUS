@@ -13,6 +13,7 @@ const FAMILY_LABELS: Record<PacketEnvelope['header']['family'], string> = {
   Signal: 'signal packet',
   Proposal: 'proposal packet',
   Vote: 'vote packet',
+  PacketVote: 'packet vote',
   Decision: 'decision packet',
   Initiative: 'initiative packet',
   Program: 'program packet',
@@ -56,6 +57,8 @@ export function getPacketDisplayLabel(packet: PacketEnvelope): string {
       }
       return FAMILY_LABELS.DiscussionPost;
     }
+    case 'PacketVote':
+      return FAMILY_LABELS.PacketVote;
     case 'Artifact': {
       const body = packet.body as PacketBodyByType['Artifact'];
       return `${titleCase(body.artifact_kind)} artifact`;
@@ -71,6 +74,8 @@ export function getPacketTitle(packet: PacketEnvelope): string {
       const body = packet.body as PacketBodyByType['Element'];
       return body.name;
     }
+    case 'PacketVote':
+      return 'Packet vote';
     default:
       return (packet.body as { title: string }).title;
   }
@@ -83,6 +88,7 @@ export function getPacketSummary(packet: PacketEnvelope): string | null {
       return body.summary ?? null;
     }
     case 'Vote':
+    case 'PacketVote':
       return null;
     case 'MissionReport': {
       const body = packet.body as PacketBodyByType['MissionReport'];
@@ -106,6 +112,8 @@ export function getPacketStatus(packet: PacketEnvelope): string | null {
       return body.outcome;
     }
     case 'DiscussionPost':
+      return null;
+    case 'PacketVote':
       return null;
     case 'Minutes':
       return null;

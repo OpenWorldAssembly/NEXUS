@@ -4,13 +4,20 @@
  */
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import {
+  Animated,
+  Easing,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from 'react-native';
 
 import { useNexusShell } from '@/components/nexus/nexus-shell-context';
 import { NexusBadge, NexusCard } from '@/components/nexus/nexus-ui';
 import {
   NEXUS_COMING_SOON_SURFACES,
-  NEXUS_GUEST_PROFILE,
 } from '@/lib/nexus/nexus-content';
 import {
   NEXUS_SECTION_LABELS,
@@ -48,13 +55,16 @@ type NexusRailToggleProps = {
 };
 
 type NexusCurrentContextCardProps = {
-  scopeName: string;
+  scope: NexusScopeSummary;
   scopePath: string;
-  scopeDescription: string;
-  scopeBadge: string;
-  lobbyLabel: string;
+  activeSection: NexusSection;
   themeMode: NexusThemeMode;
   uiDensity: NexusUiDensity;
+};
+
+type NexusScopeSnapshotMetric = {
+  label: string;
+  value: string;
 };
 
 type NexusScopeMenuRowProps = {
@@ -78,11 +88,8 @@ type NexusFunctionMenuContentProps = {
 };
 
 type NexusScopeMenuContentProps = {
-  activeScope: NexusScopeSummary;
   activeScopeId: string;
-  currentScopePath: string;
   followedScopes: NexusScopeSummary[];
-  showCurrentContext: boolean;
   scopeMenuNodes: NexusScopeBranchNode[];
   scopeSummaries: NexusScopeSummary[];
   themeMode: NexusThemeMode;
@@ -143,6 +150,169 @@ function NexusGuestAvatar({
       </Text>
     </View>
   );
+}
+
+/**
+ * Inputs: whether the chevron points upward, plus theme and density.
+ * Output: a small chevron icon for collapsible guest-header controls.
+ */
+function NexusChevronIcon({
+  isOpen,
+  themeMode,
+  uiDensity,
+}: {
+  isOpen: boolean;
+  themeMode: NexusThemeMode;
+  uiDensity: NexusUiDensity;
+}) {
+  const lineClass =
+    themeMode === 'dark' ? 'bg-nexus-text' : 'bg-slate-900';
+  const sizeClass = uiDensity === 'large' ? 'w-2.5' : 'w-2';
+
+  return (
+    <View
+      className={joinClasses(
+        'h-4 w-4 items-center justify-center',
+        isOpen ? 'rotate-180' : '',
+      )}
+    >
+      <View className="flex-row items-center justify-center gap-[1px]">
+        <View className={joinClasses(sizeClass, 'h-[2px] rotate-45 rounded-full', lineClass)} />
+        <View
+          className={joinClasses(
+            sizeClass,
+            'h-[2px] -rotate-45 rounded-full',
+            lineClass,
+          )}
+        />
+      </View>
+    </View>
+  );
+}
+
+/**
+ * Inputs: a short label string.
+ * Output: a compact two-letter monogram for scope header avatars.
+ */
+function getScopeMonogram(shortLabel?: string): string {
+  const normalizedLabel = shortLabel?.trim() || 'Scope';
+
+  return normalizedLabel
+    .split(/[\s/.-]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('') || 'SC';
+}
+
+/**
+ * Inputs: raw scope copy plus a max length.
+ * Output: trimmed scope copy that will not overrun compact rail cards.
+ */
+function truncateScopeCopy(value: string | undefined, maxLength: number): string {
+  if (!value) {
+    return '';
+  }
+
+  if (value.length <= maxLength) {
+    return value;
+  }
+
+  return `${value.slice(0, maxLength - 1).trimEnd()}…`;
+}
+
+/**
+ * Inputs: the current scope stats.
+ * Output: a compact activity label for the scope snapshot card.
+ */
+function getScopeActivityLevel(scope: NexusScopeSummary): string {
+  const activityScore =
+    scope.stats.hotDiscussions + scope.stats.activeVotes + scope.stats.missions;
+
+  if (activityScore >= 16) {
+    return 'High';
+  }
+
+  if (activityScore >= 8) {
+    return 'Steady';
+  }
+
+  return 'Quiet';
+}
+
+/**
+ * Inputs: the current scope stats.
+ * Output: a mock trust score for the current scope snapshot card.
+ */
+function getScopeTrustScore(scope: NexusScopeSummary): number {
+  const trustScore =
+    42 +
+    Math.min(scope.stats.members, 180) / 3 +
+    scope.stats.activeVotes * 2 +
+    scope.stats.hotDiscussions;
+
+  return Math.max(48, Math.min(97, Math.round(trustScore)));
+}
+
+/**
+ * Inputs: the current scope and active function section.
+ * Output: three compact snapshot metrics tailored to the current section lens.
+ */
+function getScopeSnapshotMetrics(
+  scope: NexusScopeSummary,
+  activeSection: NexusSection,
+): NexusScopeSnapshotMetric[] {
+  const trustScore = getScopeTrustScore(scope);
+  const activityLevel = getScopeActivityLevel(scope);
+  const recentPostsEstimate = Math.max(1, scope.stats.hotDiscussions * 3);
+  const hotThreadsEstimate = Math.max(1, scope.stats.hotDiscussions);
+  const packetEstimate = Math.max(
+    6,
+    scope.stats.hotDiscussions * 2 +
+      scope.stats.activeVotes * 3 +
+      scope.stats.missions * 2 +
+      Math.round(scope.stats.members / 8),
+  );
+  const reportEstimate = Math.max(1, scope.stats.missions);
+  const quorumEstimate = Math.max(5, Math.round(scope.stats.members * 0.18));
+  const turnoutEstimate = Math.max(
+    1,
+    Math.min(scope.stats.members, scope.stats.activeVotes * 7),
+  );
+
+  switch (activeSection) {
+    case 'discussions':
+      return [
+        { label: 'Recent', value: String(recentPostsEstimate) },
+        { label: 'Threads', value: String(hotThreadsEstimate) },
+        { label: 'Lobby', value: scope.stats.guestLobbyOpen ? 'Open' : 'Quiet' },
+      ];
+    case 'votes':
+      return [
+        { label: 'Open', value: String(scope.stats.activeVotes) },
+        { label: 'Quorum', value: String(quorumEstimate) },
+        { label: 'Turnout', value: String(turnoutEstimate) },
+      ];
+    case 'library':
+      return [
+        { label: 'Packets', value: String(packetEstimate) },
+        { label: 'Reports', value: String(reportEstimate) },
+        { label: 'Threads', value: String(hotThreadsEstimate) },
+      ];
+    case 'account':
+      return [
+        { label: 'Your trust', value: 'Guest' },
+        { label: 'Assembly', value: String(trustScore) },
+        { label: 'Standing', value: 'Public' },
+      ];
+    case 'dashboard':
+    default:
+      return [
+        { label: 'Activity', value: activityLevel },
+        { label: 'Members', value: String(scope.stats.members) },
+        { label: 'Votes', value: String(scope.stats.activeVotes) },
+      ];
+  }
 }
 
 /**
@@ -263,18 +433,19 @@ function NexusPreferenceSwitch<TOption extends string>({
  * Output: a compact current-context card used by whichever rail is acting as the scope menu.
  */
 function NexusCurrentContextCard({
-  scopeName,
+  scope,
   scopePath,
-  scopeDescription,
-  scopeBadge,
-  lobbyLabel,
+  activeSection,
   themeMode,
   uiDensity,
 }: NexusCurrentContextCardProps) {
+  const snapshotMetrics = getScopeSnapshotMetrics(scope, activeSection);
+  const compactScopePath = truncateScopeCopy(scopePath, 36);
+
   return (
     <NexusCard
       className={joinClasses(
-        'gap-2',
+        'min-h-[228px] gap-4 overflow-hidden',
         themeMode === 'dark'
           ? 'bg-white/5'
           : 'border-slate-300 bg-slate-50',
@@ -283,44 +454,80 @@ function NexusCurrentContextCard({
     >
       <Text
         className={joinClasses(
-          'text-xs font-semibold uppercase tracking-[2px]',
+          'self-center text-center text-xs font-semibold uppercase tracking-[3px]',
           themeMode === 'dark' ? 'text-nexus-muted' : 'text-slate-600',
         )}
       >
-        Current context
+        Current Context
       </Text>
-      <Text
-        className={joinClasses(
-          uiDensity === 'large' ? 'text-xl font-semibold' : 'text-lg font-semibold',
-          themeMode === 'dark' ? 'text-nexus-text' : 'text-slate-900',
-        )}
-      >
-        {scopeName}
-      </Text>
-      <Text className="text-[11px] font-semibold uppercase tracking-[1px] text-nexus-sky">
-        {scopePath}
-      </Text>
-      <Text
-        className={joinClasses(
-          uiDensity === 'large' ? 'text-base leading-7' : 'text-sm leading-6',
-          themeMode === 'dark' ? 'text-nexus-muted' : 'text-slate-600',
-        )}
-      >
-        {scopeDescription}
-      </Text>
-      <View className="items-start gap-2">
-        <NexusBadge
-          className="max-w-full self-start rounded-[18px]"
-          label={scopeBadge}
-          textClassName="leading-4"
-          tone="sky"
-        />
-        <NexusBadge
-          className="max-w-full self-start rounded-[18px]"
-          label={lobbyLabel}
-          textClassName="leading-4"
-          tone="mint"
-        />
+
+      <View className="items-center gap-3">
+        <View
+          className={joinClasses(
+            'items-center justify-center rounded-full border',
+            uiDensity === 'large' ? 'h-16 w-16' : 'h-14 w-14',
+            themeMode === 'dark'
+              ? 'border-nexus-line bg-white/5'
+              : 'border-slate-300 bg-slate-100',
+          )}
+        >
+          <Text
+            className={joinClasses(
+              uiDensity === 'large'
+                ? 'text-xl font-bold uppercase'
+                : 'text-lg font-bold uppercase',
+              themeMode === 'dark' ? 'text-nexus-mint' : 'text-emerald-600',
+            )}
+          >
+            {getScopeMonogram(scope.shortLabel)}
+          </Text>
+        </View>
+
+        <Text
+          className={joinClasses(
+            'text-center font-bold',
+            uiDensity === 'large' ? 'text-2xl' : 'text-xl',
+            themeMode === 'dark' ? 'text-nexus-text' : 'text-slate-900',
+          )}
+          numberOfLines={2}
+        >
+          {scope.name}
+        </Text>
+
+        <Text
+          className="text-center text-[11px] font-semibold uppercase tracking-[1px] text-nexus-sky"
+          numberOfLines={1}
+        >
+          {compactScopePath}
+        </Text>
+      </View>
+
+      <View className="flex-row gap-1.5">
+        {snapshotMetrics.map((metric) => (
+          <View
+            key={metric.label}
+            className={joinClasses(
+              'flex-1 items-center rounded-[18px] border px-2 py-3',
+              themeMode === 'dark'
+                ? 'border-nexus-line bg-nexus-ink/40'
+                : 'border-slate-300 bg-white',
+            )}
+          >
+            <Text className="text-center text-[10px] font-semibold uppercase tracking-[1.4px] text-nexus-sky">
+              {metric.label}
+            </Text>
+            <Text
+              className={joinClasses(
+                'mt-2 text-center font-semibold',
+                uiDensity === 'large' ? 'text-base' : 'text-sm',
+                themeMode === 'dark' ? 'text-nexus-text' : 'text-slate-900',
+              )}
+              numberOfLines={1}
+            >
+              {metric.value}
+            </Text>
+          </View>
+        ))}
       </View>
     </NexusCard>
   );
@@ -575,11 +782,8 @@ function NexusFunctionMenuContent({
  * Output: the scope menu content with the current context pinned above the branch navigator.
  */
 function NexusScopeMenuContent({
-  activeScope,
   activeScopeId,
-  currentScopePath,
   followedScopes,
-  showCurrentContext,
   scopeMenuNodes,
   scopeSummaries,
   themeMode,
@@ -588,18 +792,6 @@ function NexusScopeMenuContent({
 }: NexusScopeMenuContentProps) {
   return (
     <>
-      {showCurrentContext ? (
-        <NexusCurrentContextCard
-          lobbyLabel={activeScope.publicLobbyLabel}
-          scopeBadge={activeScope.badge}
-          scopeDescription={activeScope.description}
-          scopeName={activeScope.name}
-          scopePath={currentScopePath}
-          themeMode={themeMode}
-          uiDensity={uiDensity}
-        />
-      ) : null}
-
       <View className="gap-2">
         <NexusMenuSectionLabel
           label="Scope map"
@@ -693,6 +885,8 @@ export default function NexusSidebar({
     activeScope,
     activeScopeId,
     activeSection,
+    anonymousSession,
+    availablePoints,
     followedScopes,
     navigationMode,
     scopeSummaries,
@@ -736,10 +930,6 @@ export default function NexusSidebar({
   const currentScopePath = branchPathScopes
     .map((scope) => scope.shortLabel)
     .join(' / ');
-  const showCurrentContextInPrimary =
-    !isFunctionMode && !isPrimaryRailCollapsed;
-  const showCurrentContextInSecondary =
-    isFunctionMode || (!isFunctionMode && isPrimaryRailCollapsed);
   const railBorderClass =
     themeMode === 'dark' ? 'border-nexus-line' : 'border-slate-300';
   const primaryRailClass =
@@ -770,6 +960,39 @@ export default function NexusSidebar({
     themeMode === 'dark'
       ? 'border-nexus-sky bg-nexus-sky'
       : 'border-sky-500 bg-sky-500';
+  const preferencesPanelClass =
+    themeMode === 'dark'
+      ? 'border-nexus-line bg-white/5'
+      : 'border-slate-300 bg-slate-50';
+  const preferencesButtonClass =
+    themeMode === 'dark'
+      ? 'border-nexus-line/80 bg-nexus-ink/40'
+      : 'border-slate-300 bg-slate-100';
+  const preferencesAnimation = useRef(
+    new Animated.Value(isPreferencesDrawerOpen ? 1 : 0),
+  ).current;
+
+  useEffect(() => {
+    Animated.timing(preferencesAnimation, {
+      toValue: isPreferencesDrawerOpen ? 1 : 0,
+      duration: 180,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [isPreferencesDrawerOpen, preferencesAnimation]);
+
+  const preferencesContentHeight = preferencesAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, isLargeUi ? 176 : 156],
+  });
+  const preferencesContentOpacity = preferencesAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1],
+  });
+  const preferencesContentTranslateY = preferencesAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-10, 0],
+  });
 
   /**
    * Inputs: a nexus section key.
@@ -832,7 +1055,16 @@ export default function NexusSidebar({
                     titleTextClass,
                   )}
                 >
-                  {NEXUS_GUEST_PROFILE.displayName}
+                  {anonymousSession.short_label}
+                </Text>
+                <Text
+                  className={joinClasses(
+                    isLargeUi ? 'text-base' : 'text-sm',
+                    'font-semibold',
+                    mutedTextClass,
+                  )}
+                >
+                  {availablePoints} points
                 </Text>
               </View>
 
@@ -902,86 +1134,91 @@ export default function NexusSidebar({
                 </Text>
               </Pressable>
 
-              {isPreferencesDrawerOpen ? (
-                <View
-                  className={joinClasses(
-                    'items-center gap-3 rounded-[22px] border',
-                    isLargeUi ? 'px-4 py-4' : 'px-3 py-3',
-                    themeMode === 'dark'
-                      ? 'border-nexus-line bg-white/5'
-                      : 'border-slate-300 bg-slate-50',
-                  )}
-                >
-                  <NexusPreferenceSwitch
-                    label="Navi"
-                    leftLabel="Functions"
-                    leftValue="function"
-                    onSelect={setNavigationMode}
-                    rightLabel="Scopes"
-                    rightValue="scope"
-                    selectedValue={navigationMode}
-                    themeMode={themeMode}
-                    uiDensity={uiDensity}
-                  />
-
-                  <NexusPreferenceSwitch
-                    label="Theme"
-                    leftLabel="Dark"
-                    leftValue="dark"
-                    onSelect={setThemeMode}
-                    rightLabel="Light"
-                    rightValue="light"
-                    selectedValue={themeMode}
-                    themeMode={themeMode}
-                    uiDensity={uiDensity}
-                  />
-
-                  <NexusPreferenceSwitch
-                    label="Size"
-                    leftLabel="Small"
-                    leftValue="small"
-                    onSelect={setUiDensity}
-                    rightLabel="Large"
-                    rightValue="large"
-                    selectedValue={uiDensity}
-                    themeMode={themeMode}
-                    uiDensity={uiDensity}
-                  />
-                </View>
-              ) : null}
-
-              <Pressable
-                accessibilityRole="button"
+              <View
                 className={joinClasses(
-                  'flex-row items-center justify-between rounded-full border',
-                  isLargeUi ? 'px-4 py-3' : 'px-3 py-2.5',
-                  themeMode === 'dark'
-                    ? 'border-nexus-line bg-white/5'
-                    : 'border-slate-300 bg-slate-100',
+                  'overflow-hidden rounded-[22px] border',
+                  preferencesPanelClass,
                 )}
-                onPress={togglePreferencesDrawer}
               >
-                <Text
-                  className={joinClasses(
-                    isLargeUi
-                      ? 'text-sm font-semibold uppercase tracking-[2px]'
-                      : 'text-xs font-semibold uppercase tracking-[2px]',
-                    themeMode === 'dark' ? 'text-nexus-muted' : 'text-slate-600',
-                  )}
+                <Animated.View
+                  style={{
+                    height: preferencesContentHeight,
+                    opacity: preferencesContentOpacity,
+                    transform: [{ translateY: preferencesContentTranslateY }],
+                  }}
                 >
-                  Preferences
-                </Text>
-                <Text
+                  <View
+                    className={joinClasses(
+                      'items-center gap-3',
+                      isLargeUi ? 'px-4 py-4' : 'px-3 py-3',
+                    )}
+                  >
+                    <NexusPreferenceSwitch
+                      label="Navi"
+                      leftLabel="Functions"
+                      leftValue="function"
+                      onSelect={setNavigationMode}
+                      rightLabel="Scopes"
+                      rightValue="scope"
+                      selectedValue={navigationMode}
+                      themeMode={themeMode}
+                      uiDensity={uiDensity}
+                    />
+
+                    <NexusPreferenceSwitch
+                      label="Theme"
+                      leftLabel="Dark"
+                      leftValue="dark"
+                      onSelect={setThemeMode}
+                      rightLabel="Light"
+                      rightValue="light"
+                      selectedValue={themeMode}
+                      themeMode={themeMode}
+                      uiDensity={uiDensity}
+                    />
+
+                    <NexusPreferenceSwitch
+                      label="Size"
+                      leftLabel="Small"
+                      leftValue="small"
+                      onSelect={setUiDensity}
+                      rightLabel="Large"
+                      rightValue="large"
+                      selectedValue={uiDensity}
+                      themeMode={themeMode}
+                      uiDensity={uiDensity}
+                    />
+                  </View>
+                </Animated.View>
+
+                <Pressable
+                  accessibilityRole="button"
                   className={joinClasses(
-                    isLargeUi
-                      ? 'text-sm font-semibold uppercase tracking-[2px]'
-                      : 'text-xs font-semibold uppercase tracking-[2px]',
-                    titleTextClass,
+                    'flex-row items-center justify-between border-t',
+                    isLargeUi ? 'px-4 py-3' : 'px-3 py-2.5',
+                    preferencesButtonClass,
                   )}
+                  onPress={togglePreferencesDrawer}
                 >
-                  {isPreferencesDrawerOpen ? 'Hide ^' : 'Open v'}
-                </Text>
-              </Pressable>
+                  <Text
+                    className={joinClasses(
+                      isLargeUi
+                        ? 'text-sm font-semibold uppercase tracking-[2px]'
+                        : 'text-xs font-semibold uppercase tracking-[2px]',
+                      themeMode === 'dark'
+                        ? 'text-nexus-muted'
+                        : 'text-slate-600',
+                    )}
+                  >
+                    Preferences
+                  </Text>
+                  <NexusChevronIcon
+                    isOpen={isPreferencesDrawerOpen}
+                    themeMode={themeMode}
+                    uiDensity={uiDensity}
+                  />
+                </Pressable>
+              </View>
             </NexusCard>
 
             <NexusCard
@@ -1015,14 +1252,11 @@ export default function NexusSidebar({
                   />
                 ) : (
                   <NexusScopeMenuContent
-                    activeScope={activeScope}
                     activeScopeId={activeScopeId}
-                    currentScopePath={currentScopePath}
                     followedScopes={followedScopes}
                     scopeMenuNodes={scopeMenuNodes}
                     scopeSummaries={scopeSummaries}
                     onScopePress={handleScopePress}
-                    showCurrentContext={showCurrentContextInPrimary}
                     themeMode={themeMode}
                     uiDensity={uiDensity}
                   />
@@ -1068,6 +1302,14 @@ export default function NexusSidebar({
             )}
             showsVerticalScrollIndicator={false}
           >
+            <NexusCurrentContextCard
+              scope={activeScope}
+              scopePath={currentScopePath}
+              activeSection={activeSection}
+              themeMode={themeMode}
+              uiDensity={uiDensity}
+            />
+
             <NexusCard
               className={joinClasses(
                 'gap-4',
@@ -1090,14 +1332,11 @@ export default function NexusSidebar({
               <View className="gap-3">
                 {isFunctionMode ? (
                   <NexusScopeMenuContent
-                    activeScope={activeScope}
                     activeScopeId={activeScopeId}
-                    currentScopePath={currentScopePath}
                     followedScopes={followedScopes}
                     scopeMenuNodes={scopeMenuNodes}
                     scopeSummaries={scopeSummaries}
                     onScopePress={handleScopePress}
-                    showCurrentContext={showCurrentContextInSecondary}
                     themeMode={themeMode}
                     uiDensity={uiDensity}
                   />

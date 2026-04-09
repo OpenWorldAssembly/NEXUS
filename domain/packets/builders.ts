@@ -8,14 +8,18 @@ import type { z } from 'zod';
 import {
   PACKET_BODY_SCHEMAS,
   createPacketEnvelope,
+  type DiscussionActorClass,
+  type DiscussionSort,
   type ElementKind,
   type PacketEdge,
   type PacketEnvelopeByType,
   type PacketFamily,
   type PacketHeader,
+  type PacketVoteKind,
   type PacketMergeStrategy,
   type PacketRef,
   type PacketRevisionRef,
+  type PacketVoteValue,
 } from '@/domain/schema/packet-schema';
 
 type PacketVisibility = PacketHeader['moderation']['visibility'];
@@ -68,6 +72,13 @@ export interface DiscussionThreadPacketInput extends PacketBuilderBaseInput {
   thread_kind: string;
   status?: string;
   related_refs?: PacketRef[];
+  participation_rules?: {
+    top_level_actor_classes?: DiscussionActorClass[];
+    reply_actor_classes?: DiscussionActorClass[];
+    reaction_actor_classes?: DiscussionActorClass[];
+    top_level_post_cost?: number;
+  };
+  default_sort?: DiscussionSort;
 }
 
 export interface DiscussionPostPacketInput extends PacketBuilderBaseInput {
@@ -103,6 +114,13 @@ export interface VotePacketInput extends PacketBuilderBaseInput {
   status: string;
   opened_at?: string | null;
   closes_at?: string | null;
+}
+
+export interface PacketVotePacketInput extends PacketBuilderBaseInput {
+  target_ref: PacketRef;
+  value: PacketVoteValue;
+  status?: 'active' | 'cleared';
+  vote_kind?: PacketVoteKind;
 }
 
 const DEFAULT_CREATED_AT = '2026-04-08T00:00:00.000Z';
@@ -318,6 +336,16 @@ export function createDiscussionThreadPacket(
       thread_kind: input.thread_kind,
       status: input.status ?? 'open',
       related_refs: relatedRefs,
+      participation_rules: {
+        top_level_actor_classes:
+          input.participation_rules?.top_level_actor_classes ?? [],
+        reply_actor_classes: input.participation_rules?.reply_actor_classes ?? [],
+        reaction_actor_classes:
+          input.participation_rules?.reaction_actor_classes ?? [],
+        top_level_post_cost:
+          input.participation_rules?.top_level_post_cost ?? 10,
+      },
+      default_sort: input.default_sort ?? 'new',
     },
   });
 }
@@ -442,6 +470,31 @@ export function createVotePacket(
       status: input.status,
       opened_at: input.opened_at ?? null,
       closes_at: input.closes_at ?? null,
+    },
+  });
+}
+
+/**
+ * Inputs: common packet header fields plus the universal packet-vote body data.
+ * Output: a packet vote tied to any packet target, with its target edge mirrored into graph links.
+ */
+export function createPacketVotePacket(
+  input: PacketVotePacketInput
+): PacketEnvelopeByType['PacketVote'] {
+  return createPacket({
+    ...input,
+    family: 'PacketVote',
+    edges: [
+      ...(input.edges ?? []),
+      createPacketEdge('votes_on', input.target_ref, {
+        source_field: 'target_ref',
+      }),
+    ],
+    body: {
+      target_ref: input.target_ref,
+      value: input.value,
+      status: input.status ?? 'active',
+      vote_kind: input.vote_kind ?? 'packet_signal',
     },
   });
 }

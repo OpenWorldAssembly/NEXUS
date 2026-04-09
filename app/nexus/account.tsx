@@ -14,8 +14,15 @@ import {
 } from '@/components/nexus/nexus-ui';
 import {
   NEXUS_GUEST_CHECKLIST,
-  NEXUS_GUEST_PROFILE,
 } from '@/lib/nexus/nexus-content';
+
+/**
+ * Inputs: a kebab-case guest capability id.
+ * Output: a readable label for the account surface.
+ */
+function formatGuestCapabilityLabel(capability: string): string {
+  return capability.replace(/-/g, ' ');
+}
 
 /**
  * Inputs: none.
@@ -24,6 +31,8 @@ import {
 export default function NexusAccountPage() {
   const {
     activeScope,
+    anonymousSession,
+    availablePoints,
     followedScopes,
     guestCapabilities,
   } = useNexusShell();
@@ -33,9 +42,14 @@ export default function NexusAccountPage() {
     <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
       <View className={appearance.pageContainerClass}>
         <NexusSectionHeader
-          eyebrow="Guest account"
-          title="Anonymous guest identity shell"
-          description="Account is a guest-facing identity surface in this slice, not a real authentication system. It shows how locality, trust, and future credentials can fit without forcing them yet."
+          eyebrow="Account"
+          title={`${activeScope.name} Account`}
+          trailing={
+            <View className="flex-row flex-wrap gap-3">
+              <NexusBadge label={anonymousSession.short_label} tone="mint" />
+              <NexusBadge label={`${availablePoints} points`} tone="sky" />
+            </View>
+          }
         />
 
         <View className="gap-4 xl:flex-row">
@@ -43,16 +57,17 @@ export default function NexusAccountPage() {
             <NexusCard className="gap-4">
               <View className="gap-2">
                 <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
-                  Current status
+                  Session
                 </Text>
-                <Text className={appearance.surfaceTitleClass}>{NEXUS_GUEST_PROFILE.displayName}</Text>
-                <Text className={appearance.sectionBodyClass}>{NEXUS_GUEST_PROFILE.note}</Text>
+                <Text className={appearance.surfaceTitleClass}>
+                  {anonymousSession.short_label}
+                </Text>
               </View>
 
               <View className="flex-row flex-wrap gap-3">
-                <NexusBadge label={NEXUS_GUEST_PROFILE.statusLabel} tone="sky" />
-                <NexusBadge label={NEXUS_GUEST_PROFILE.trustLabel} tone="gold" />
+                <NexusBadge label={`${availablePoints} points`} tone="sky" />
                 <NexusBadge label={`Browsing ${activeScope.shortLabel}`} tone="mint" />
+                <NexusBadge label="Guest standing" tone="gold" />
               </View>
 
               <View className="flex-row flex-wrap gap-3">
@@ -63,7 +78,7 @@ export default function NexusAccountPage() {
 
             <NexusCard className="gap-4">
               <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
-                Guest capabilities in this slice
+                Capabilities
               </Text>
               <View className="gap-3">
                 {guestCapabilities.map((capability) => (
@@ -71,7 +86,9 @@ export default function NexusAccountPage() {
                     key={capability}
                     className={`gap-2 p-4 ${appearance.cardInsetClass}`}
                   >
-                    <Text className={appearance.itemTitleClass}>{capability}</Text>
+                    <Text className={appearance.itemTitleClass}>
+                      {formatGuestCapabilityLabel(capability)}
+                    </Text>
                   </NexusCard>
                 ))}
               </View>
@@ -81,7 +98,7 @@ export default function NexusAccountPage() {
           <View className="flex-1 gap-4">
             <NexusCard className="gap-4">
               <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
-                Suggested next steps
+                Next steps
               </Text>
               <View className="gap-3">
                 {NEXUS_GUEST_CHECKLIST.map((item) => (
@@ -91,7 +108,6 @@ export default function NexusAccountPage() {
                     tone={item.tone}
                   >
                     <Text className={appearance.itemTitleClass}>{item.title}</Text>
-                    <Text className={appearance.itemBodyClass}>{item.detail}</Text>
                   </NexusCard>
                 ))}
               </View>
@@ -108,7 +124,7 @@ export default function NexusAccountPage() {
                     className={`gap-2 p-4 ${appearance.cardInsetClass}`}
                   >
                     <Text className={appearance.itemTitleClass}>{scope.name}</Text>
-                    <Text className={appearance.itemBodyClass}>{scope.description}</Text>
+                    <Text className={appearance.itemMetaClass}>{scope.relationshipLabel}</Text>
                   </NexusCard>
                 ))}
               </View>

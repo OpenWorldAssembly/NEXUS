@@ -8,6 +8,7 @@ import {
 } from '@/lib/nexus/visitor-lobby';
 
 const ANONYMOUS_SESSION_STORAGE_KEY = 'owa-nexus-anonymous-session';
+export const ANONYMOUS_ACTOR_KEY_PREFIX = 'anonymous-session:';
 
 let inMemoryAnonymousSession: AnonymousSession | null = null;
 
@@ -69,6 +70,14 @@ function getBrowserSessionStorage(): Storage | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Inputs: an anonymous session id string.
+ * Output: the canonical actor key used for guest voting, points, and discussion eligibility.
+ */
+export function createAnonymousActorKey(sessionId: string): string {
+  return `${ANONYMOUS_ACTOR_KEY_PREFIX}${sessionId}`;
 }
 
 /**

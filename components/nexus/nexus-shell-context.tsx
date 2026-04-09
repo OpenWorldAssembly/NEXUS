@@ -6,10 +6,12 @@ import type { PropsWithChildren } from 'react';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'expo-router';
 
+import { getOrCreateAnonymousSession } from '@/lib/nexus/anonymous-session';
 import {
   NEXUS_GUEST_CAPABILITIES,
 } from '@/lib/nexus/nexus-content';
-import { fetchNexusShellPayload } from '@/lib/nexus/nexus-query-api';
+import { fetchNexusDiscussionsPayload, fetchNexusShellPayload } from '@/lib/nexus/nexus-query-api';
+import type { AnonymousSession } from '@/lib/nexus/visitor-lobby';
 import {
   buildNexusBranchNodes,
   getNexusAncestorIds,
@@ -26,6 +28,8 @@ import {
 
 type NexusShellContextValue = NexusShellState & {
   activeScope: NexusScopeSummary;
+  anonymousSession: AnonymousSession;
+  availablePoints: number;
   branchNodes: NexusScopeBranchNode[];
   followedScopes: NexusScopeSummary[];
   scopeSummaries: NexusScopeSummary[];
@@ -75,9 +79,13 @@ const FALLBACK_SCOPE_SUMMARY: NexusScopeSummary = {
 export function NexusShellProvider({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const router = useRouter();
+  const [anonymousSession] = useState<AnonymousSession>(() =>
+    getOrCreateAnonymousSession(),
+  );
   const [scopeSummaries, setScopeSummaries] = useState<NexusScopeSummary[]>([
     FALLBACK_SCOPE_SUMMARY,
   ]);
+  const [availablePoints, setAvailablePoints] = useState(0);
   const [followedScopeIds, setFollowedScopeIds] = useState<string[]>([]);
   const [guestCapabilities, setGuestCapabilities] = useState(
     NEXUS_GUEST_CAPABILITIES,
@@ -154,6 +162,37 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadViewerPoints = async () => {
+      try {
+        const discussionsPayload = await fetchNexusDiscussionsPayload({
+          scopeId: activeScope.id,
+          viewerSessionId: anonymousSession.session_id,
+        });
+
+        if (!isMounted) {
+          return;
+        }
+
+        setAvailablePoints(discussionsPayload.viewer.available_points);
+      } catch {
+        if (!isMounted) {
+          return;
+        }
+
+        setAvailablePoints(0);
+      }
+    };
+
+    void loadViewerPoints();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeScope.id, anonymousSession.session_id]);
 
   /**
    * Inputs: a new scope id.
@@ -253,6 +292,8 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
         activeSection,
         guestCapabilities,
         activeScope,
+        anonymousSession,
+        availablePoints,
         branchNodes,
         followedScopes,
         scopeSummaries,

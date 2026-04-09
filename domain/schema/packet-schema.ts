@@ -10,6 +10,7 @@ export const PACKET_FAMILIES = [
   'Signal',
   'Proposal',
   'Vote',
+  'PacketVote',
   'Decision',
   'Initiative',
   'Program',
@@ -39,6 +40,34 @@ export const MISSION_PARTICIPATION_MODES = [
   'independent',
   'hybrid',
 ] as const;
+
+export const DISCUSSION_ACTOR_CLASSES = [
+  'anonymous_guest',
+  'scope_member',
+  'trusted_member',
+  'steward',
+] as const;
+
+export const DISCUSSION_SORTS = [
+  'hot',
+  'new',
+  'top',
+  'controversial',
+  'active',
+  'old',
+  'most_downvoted',
+] as const;
+
+export const DISCUSSION_REPLY_SORTS = [
+  'new',
+  'top',
+  'controversial',
+  'old',
+] as const;
+
+export const PACKET_VOTE_VALUES = [1, -1] as const;
+export const PACKET_VOTE_STATUSES = ['active', 'cleared'] as const;
+export const PACKET_VOTE_KINDS = ['packet_signal'] as const;
 
 export const CORE_EDGE_TYPES = [
   'authority_scope',
@@ -81,13 +110,25 @@ export const ElementKindSchema = z.enum(ELEMENT_KINDS);
 export const MissionParticipationModeSchema = z.enum(
   MISSION_PARTICIPATION_MODES
 );
+export const DiscussionActorClassSchema = z.enum(DISCUSSION_ACTOR_CLASSES);
+export const DiscussionSortSchema = z.enum(DISCUSSION_SORTS);
+export const DiscussionReplySortSchema = z.enum(DISCUSSION_REPLY_SORTS);
+export const PacketVoteStatusSchema = z.enum(PACKET_VOTE_STATUSES);
+export const PacketVoteKindSchema = z.enum(PACKET_VOTE_KINDS);
 export const PacketRevisionStateSchema = z.enum(REVISION_STATES);
 export const PacketMergeStrategySchema = z.enum(MERGE_STRATEGIES);
+export const PacketVoteValueSchema = z.union([z.literal(1), z.literal(-1)]);
 
 export type PacketFamily = z.infer<typeof PacketFamilySchema>;
 export type ElementKind = z.infer<typeof ElementKindSchema>;
 export type PacketRevisionState = z.infer<typeof PacketRevisionStateSchema>;
 export type PacketMergeStrategy = z.infer<typeof PacketMergeStrategySchema>;
+export type DiscussionActorClass = z.infer<typeof DiscussionActorClassSchema>;
+export type DiscussionSort = z.infer<typeof DiscussionSortSchema>;
+export type DiscussionReplySort = z.infer<typeof DiscussionReplySortSchema>;
+export type PacketVoteValue = z.infer<typeof PacketVoteValueSchema>;
+export type PacketVoteStatus = z.infer<typeof PacketVoteStatusSchema>;
+export type PacketVoteKind = z.infer<typeof PacketVoteKindSchema>;
 
 export const PacketRefSchema = z
   .object({
@@ -261,6 +302,15 @@ export const VoteBodySchema = z
   })
   .strict();
 
+export const PacketVoteBodySchema = z
+  .object({
+    target_ref: PacketRefSchema,
+    value: PacketVoteValueSchema,
+    status: PacketVoteStatusSchema.default('active'),
+    vote_kind: PacketVoteKindSchema.default('packet_signal'),
+  })
+  .strict();
+
 export const DecisionBodySchema = z
   .object({
     title: z.string().min(1),
@@ -399,6 +449,26 @@ export const DiscussionThreadBodySchema = z
     thread_kind: z.string().min(1),
     status: z.string().min(1),
     related_refs: z.array(PacketRefSchema).default([]),
+    participation_rules: z
+      .object({
+        top_level_actor_classes: z
+          .array(DiscussionActorClassSchema)
+          .default([]),
+        reply_actor_classes: z
+          .array(DiscussionActorClassSchema)
+          .default([]),
+        reaction_actor_classes: z
+          .array(DiscussionActorClassSchema)
+          .default([]),
+        top_level_post_cost: z.number().int().nonnegative().default(10),
+      })
+      .default({
+        top_level_actor_classes: [],
+        reply_actor_classes: [],
+        reaction_actor_classes: [],
+        top_level_post_cost: 10,
+      }),
+    default_sort: DiscussionSortSchema.default('new'),
   })
   .strict();
 
@@ -438,6 +508,7 @@ export const PACKET_BODY_SCHEMAS = {
   Signal: SignalBodySchema,
   Proposal: ProposalBodySchema,
   Vote: VoteBodySchema,
+  PacketVote: PacketVoteBodySchema,
   Decision: DecisionBodySchema,
   Initiative: InitiativeBodySchema,
   Program: ProgramBodySchema,

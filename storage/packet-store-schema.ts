@@ -94,5 +94,61 @@ CREATE INDEX IF NOT EXISTS idx_packet_search_family_title
 CREATE INDEX IF NOT EXISTS idx_packet_search_authority_scope
   ON packet_search_index(authority_scope_packet_id)
   WHERE authority_scope_packet_id IS NOT NULL;
-`;
 
+CREATE TABLE IF NOT EXISTS packet_vote_index (
+  vote_packet_id TEXT PRIMARY KEY,
+  target_packet_id TEXT NOT NULL,
+  actor_key TEXT NOT NULL,
+  vote_kind TEXT NOT NULL,
+  value INTEGER NOT NULL,
+  status TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_packet_vote_target_actor
+  ON packet_vote_index(target_packet_id, actor_key);
+
+CREATE TABLE IF NOT EXISTS packet_vote_tally_index (
+  target_packet_id TEXT PRIMARY KEY,
+  upvote_count INTEGER NOT NULL,
+  downvote_count INTEGER NOT NULL,
+  net_score INTEGER NOT NULL,
+  total_votes INTEGER NOT NULL,
+  negative_ratio REAL NOT NULL,
+  auto_hidden INTEGER NOT NULL,
+  deprioritized INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_packet_vote_tally_net_score
+  ON packet_vote_tally_index(net_score DESC, total_votes DESC);
+
+CREATE TABLE IF NOT EXISTS discussion_post_index (
+  post_packet_id TEXT PRIMARY KEY,
+  thread_packet_id TEXT NOT NULL,
+  root_post_packet_id TEXT NOT NULL,
+  reply_to_packet_id TEXT,
+  depth INTEGER NOT NULL,
+  author_key TEXT,
+  created_at TEXT NOT NULL,
+  last_activity_at TEXT NOT NULL,
+  direct_reply_count INTEGER NOT NULL,
+  descendant_count INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_discussion_post_thread_created
+  ON discussion_post_index(thread_packet_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_discussion_post_root_activity
+  ON discussion_post_index(root_post_packet_id, last_activity_at DESC);
+
+CREATE TABLE IF NOT EXISTS discussion_actor_ledger (
+  actor_key TEXT PRIMARY KEY,
+  earned_reply_points INTEGER NOT NULL,
+  spent_top_level_points INTEGER NOT NULL,
+  available_points INTEGER NOT NULL,
+  negative_content_count INTEGER NOT NULL,
+  trust_signal_score INTEGER NOT NULL,
+  last_activity_at TEXT
+);
+`;

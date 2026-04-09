@@ -8,6 +8,7 @@ import { join } from 'node:path';
 
 import { PERSONAL_SEED_PACKETS } from '@/domain/packets/seeds';
 import { parsePacketEnvelope, type PacketEnvelope } from '@/domain/schema/packet-schema';
+import { SQLiteDiscussionService } from '@/lib/nexus/server/discussion-service';
 import { parseVisitorLobbyBundle } from '@/lib/nexus/visitor-lobby';
 import {
   createNodeSQLiteQueryServicesAsync,
@@ -21,7 +22,12 @@ const LEGACY_VISITOR_LOBBY_BUNDLE_PATH = join(
   'visitor-lobby-bundle.json'
 );
 
-let cachedServicesPromise: Promise<NodeSQLiteQueryServices> | null = null;
+export interface NexusPacketServices extends NodeSQLiteQueryServices {
+  discussionService: SQLiteDiscussionService;
+  packetVoteService: SQLiteDiscussionService;
+}
+
+let cachedServicesPromise: Promise<NexusPacketServices> | null = null;
 
 /**
  * Inputs: a canonical packet envelope.
@@ -81,15 +87,21 @@ async function importLegacyVisitorLobbyBundleIfPresent(
  * Inputs: none.
  * Output: shared packet services with deterministic seed and migration bootstrap.
  */
-export async function getNexusPacketServices(): Promise<NodeSQLiteQueryServices> {
+export async function getNexusPacketServices(): Promise<NexusPacketServices> {
   if (!cachedServicesPromise) {
     cachedServicesPromise = (async () => {
       const services = await createNodeSQLiteQueryServicesAsync();
+      const discussionService = new SQLiteDiscussionService(services.packetStore);
 
       await ensureSeedPackets(services);
       await importLegacyVisitorLobbyBundleIfPresent(services);
+      await discussionService.syncDerivedState();
 
-      return services;
+      return {
+        ...services,
+        discussionService,
+        packetVoteService: discussionService,
+      };
     })();
   }
 

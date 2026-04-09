@@ -141,11 +141,18 @@ Implemented shell behavior in this slice:
 - the scope menu uses a full visible scope map instead of an indented tree, so deeper scopes do not lose width as the branch descends and the user does not have to drill into path-only views
 - per-rail collapse handles and swipe gestures that collapse the outer-most rail first and expand the primary rail first
 - current-scope summary content lives with the active scope menu rather than staying fixed to one rail, it stays above the scope map when the scope menu is visible, and long badge labels are constrained to wrap inside the card
+- the current-scope summary is now a mirrored top card pinned to the secondary rail rather than a nested block inside the scope map card, and it has been tightened into a metrics-only scope lens whose three stat tiles change with the active Nexus section instead of repeating generic trust/status pills
 - secondary rail can remain open while the primary rail is collapsed
 - `Global Guest` as the default nexus entry state
 - visitor-lobby posting as the only enabled guest write interaction
 - visitor-lobby posts now flow through local API routes into a local SQLite-backed packet store with session-scoped anonymous guest labels preserved through packet external refs
 - local web runs now use Expo `web.output = "server"` so the visitor-lobby API routes can actually execute
+- all current `/nexus/*` routes now share one centered page-frame width through the common Nexus UI layer instead of mixing route-specific max-width wrappers
+- route headers have been tightened into a common scope-first pattern such as `Global Commons Library` or `United States Votes`, with optional compact trailing badges instead of the earlier title-plus-subtitle-plus-explanation blocks
+- placeholder rollout/explanatory cards have started being removed from the current route surfaces in favor of denser, more functional cards and lists
+- the account route now uses the live anonymous session label and current point balance at the page level instead of repeating the old static anonymous-guest profile copy
+- the discussions thread workspace has been simplified by removing the separate expandable thread picker; feed remains the primary thread-switching surface, and successful inline replies now collapse the composer and mark the newly created reply inside the thread
+- shared Nexus action buttons now opt into a compact self-sized footprint by default so standalone actions do not stretch full-width inside vertical card layouts
 
 Current implementation boundary:
 
@@ -679,6 +686,62 @@ Examples of decisions worth logging early:
 - Why: this improves user comprehension in scope-first browsing without creating fake packet copies or breaking thread packet linkage.
 - Consequences / follow-ups: unknown/custom thread kinds still use their source packet titles, and if future localization/branding rules are added they should be centralized in the same forum-title projection helper.
 
+### 2026-04-09 - Universal packet votes power the first real discussion engine
+
+- Context: the packet-backed visitor lobby was working, but discussions were still effectively a flat guest post list with no threaded replies, no reusable vote system, and no point/trust hooks for future moderation and anti-spam rules.
+- Options considered: keep bolting discussion-only reactions onto the visitor-lobby repository, reuse governance `Vote` packets for every `+1/-1` signal, or add a universal packet-vote family plus a dedicated discussion service over the canonical packet store.
+- Decision: add `PacketVote` as a first-class packet family for universal `+1/-1` signals, keep formal governance `Vote` packets separate, extend `DiscussionThread` packets with participation rules and default sort metadata, and move discussion reads/writes into one server-side `SQLiteDiscussionService` that projects threaded replies, vote tallies, actor ledgers, and moderation flags from canonical packets.
+- Why: this keeps the vote model reusable across the graph, preserves a clean distinction between support/quality signals and binding governance ballots, and gives the discussions UI one coherent backend instead of several visitor-lobby special cases.
+- Consequences / follow-ups: `/nexus/discussions` now uses packet-backed feed/detail APIs, anonymous guests start at `0` points, only replies can earn points, top-level posts cost `10`, negative discussion content can be deprioritized or hidden through derived vote thresholds, and the new SQLite derived tables (`packet_vote_index`, `packet_vote_tally_index`, `discussion_post_index`, `discussion_actor_ledger`) should stay in sync whenever future services write discussion or packet-vote revisions. `PacketVote` is the current reusable vote primitive for v1, and `body.vote_kind` remains the intended seam for specialized vote flows later so the repo can converge on one universal vote shape without moving vote logic into the UI.
+
+### 2026-04-09 - Keep packet ids out of dynamic route segments
+
+- Context: discussion thread-detail, reply, and packet-vote APIs were originally shaped around dynamic route params such as `[postId]` and `[packetId]`, but canonical packet ids contain `/`, which makes those APIs fragile even when ids are URL-encoded.
+- Options considered: keep dynamic packet-id route params, invent a separate transport-safe packet-id encoding, or move packet refs into query strings and request bodies while leaving canonical ids unchanged.
+- Decision: use query/body packet refs for discussion detail, reply, and packet-vote APIs (`post_packet_id`, `parent_post_packet_id`, `target_packet_id`) and keep packet ids out of path segments.
+- Why: it preserves canonical packet ids, avoids route-matching edge cases, and keeps packet transport concerns separate from UI routing concerns.
+- Consequences / follow-ups: `/nexus/discussions` now opens thread detail through a query-based API, reply/vote mutations no longer depend on dynamic packet-id routes, and future packet/browser APIs should prefer query/body refs over path params when packet ids may contain reserved URL characters.
+
+### 2026-04-09 - Temporary anonymous testing grant for discussions
+
+- Context: the new point-gated discussion rules were correct for the intended anti-spam flow, but they made it awkward to test top-level posting immediately while the forum surface is still under active development.
+- Options considered: keep true zero-start guests, temporarily reduce top-level post cost, or grant a temporary testing balance to anonymous guests.
+- Decision: keep the normal point ledger logic but give anonymous guests a temporary `10`-point starting balance in the discussion service for testing.
+- Why: it preserves the overall earned/spent point model while making the current UI testable without seed-only reply farming every session.
+- Consequences / follow-ups: guests can currently open one top-level thread immediately in testing, the grant lives in discussion service policy rather than in the canonical packet schema, and it should be removed or replaced with the real onboarding/trust rule once broader forum testing is complete.
+
+### 2026-04-09 - Keep packet mechanics portable and UI projections replaceable
+
+- Context: the first real discussion upgrade introduced many new files at once, which raised the risk of packet logic, route transport, and UI projection code drifting back into each other.
+- Options considered: let the screen own more ranking and mutation logic, collapse storage/query/projection layers together for speed, or keep packet mechanics, server-side projections, and UI rendering as separate seams.
+- Decision: keep canonical packet validation, revision writes, publish, import/export bundles, and merge behavior on the `PacketStore` plus server-service boundary, let `SQLiteDiscussionService` and query routes own scope-aware projections and ranking, and keep `app/nexus/discussions.tsx` as a client of those payloads rather than a second packet engine.
+- Why: this preserves the original UI / business / storage split, keeps packet mechanics portable to future adapters, and lets forum UX iterate without rewriting bundle/import/merge code.
+- Consequences / follow-ups: discussion packet ids now travel through query params or request bodies instead of route path segments, thread/post packets remain attached to scope `Element` packets through `authority_scope_ref`, `applicable_scope_refs`, `thread_ref`, and `reply_to_ref`, and future importer/merge work should extend `PacketStore` and server services rather than teaching route screens how to reconcile packets.
+
+### 2026-04-09 - Split discussions into feed, thread, and post workspaces
+
+- Context: once threaded replies and voting were working, the discussions page still stacked forum feed, top-level composer, and thread detail in one long surface, which made reply targeting feel vague and made nested replies harder to parse.
+- Options considered: keep the stacked layout, move everything into pop-out modals, or keep one route with explicit internal workspaces.
+- Decision: keep `/nexus/discussions` as one route, but split the page into `Feed`, `Thread`, and `Post` workspaces driven by route state, and render the reply composer inline beneath the exact root post or nested reply chosen as the target.
+- Why: this keeps the route model simple while making the forum behave more like a real threaded workspace, and it removes the misleading generic reply composer from the bottom of the page.
+- Consequences / follow-ups: `Open thread` now switches the page into the thread workspace, `Reply` sets both the active thread focus and the reply target, and anonymous guest continuity is now more legible in the UI because the same session-backed label is shown alongside the writer controls that already persist into post, reply, and packet-vote external refs.
+
+### 2026-04-09 - Make the discussions screen a connected forum shell instead of stacked cards
+
+- Context: after adding the `Feed`, `Thread`, and `Post` workspaces, the discussions page still felt visually fragmented because forum tabs, workspace tabs, sort controls, and content panels all rendered as separate stacked cards with too much duplicated labeling.
+- Options considered: keep polishing the stacked-card layout, move workspaces into modal/pop-out flows, or build one connected forum shell with tab rails physically attached to the active content surface.
+- Decision: render forum tabs as a connected rail above the active forum shell, render workspace tabs as a second connected rail inside that shell, move feed/thread sorting controls into their respective workspaces, add `New post` actions from the feed surface, and constrain the whole discussions content lane to a saner max width on large screens.
+- Why: this makes the page read like one coherent forum tool instead of several debugging panels, keeps the important metadata and actions away from the far right edge on desktop, and preserves the same route/query model across all scopes and discussion kinds.
+- Consequences / follow-ups: duplicated eyebrow/description text was removed from the active forum container, feed cards now surface reply counts and actions in a narrower readable lane, and future discussion polish should keep using the forum-shell pattern rather than introducing disconnected card stacks again.
+
+### 2026-04-09 - Treat feed cards as thread launch surfaces and keep thread selection inside the thread workspace
+
+- Context: the first connected-shell pass improved tab structure, but the discussions page still felt awkward because feed cards depended on extra `Open thread` / `Reply` buttons, the content lane had become too narrow on large screens, and the thread workspace had no in-place way to switch threads.
+- Options considered: keep separate feed-card action buttons, move thread opening into a pop-out, or make the feed cards themselves the primary thread-launch affordance while adding a lightweight in-workspace thread picker.
+- Decision: widen the discussions lane to a middle ground between full-width and over-centered, make each feed card itself open the selected thread when pressed, keep only vote controls inline on feed cards, open the thread picker by default when no thread is selected, and visually mark the root post as the `Original post` ahead of the reply tree.
+- Why: this reduces button clutter, makes the feed read more like a real forum index, lets users switch threads without leaving the thread workspace, and clarifies the hierarchy between the original post and its replies.
+- Consequences / follow-ups: the thread workspace now owns both reply sorting and thread selection, feed cards no longer expose redundant reply/open buttons, and future UI polish should keep reinforcing “tap card to inspect thread” rather than reintroducing detached action rows.
+
 ### 2026-04-08 - Function-first and scope-first as one system
 
 - Context: the nexus needs to support both “go to a function then filter by scope” and “go to a scope then explore its surfaces.”
@@ -709,7 +772,7 @@ Examples of decisions worth logging early:
 - Options considered: keep every shell control exposed, move preferences out of the header entirely, or turn the guest header into a small identity panel with progressive disclosure for settings.
 - Decision: add an anonymous guest avatar between the `OWA Nexus` label and the guest name, move `Back to Home` beneath `Sign In` / `Sign Up`, and place the navigation/theme/size controls inside a bottom `Preferences` drawer that is toggled from the profile card.
 - Why: it keeps the rail visually cleaner while still preserving fast access to shell-level controls and making the identity strip feel more intentional.
-- Consequences / follow-ups: the preference drawer state now lives in the shared Nexus shell context so it survives route changes and shell remounts, the profile card now centers its brand line, auth actions, and drawer controls on the same axis as the avatar/name stack, and future profile-level controls should prefer the same drawer pattern instead of permanently expanding the guest header.
+- Consequences / follow-ups: the preference drawer state now lives in the shared Nexus shell context so it survives route changes and shell remounts, the profile card now centers its brand line, auth actions, and drawer controls on the same axis as the avatar/name stack, the drawer trigger is now an attached footer row with a chevron and a short height/opacity animation instead of detached `open/hide` text, the profile card now uses the real session-scoped anonymous label plus the current available point balance from the discussion viewer context instead of a generic `Anonymous Guest` placeholder, and future profile-level controls should prefer the same drawer pattern instead of permanently expanding the guest header.
 
 ### 2026-04-08 - Rail collapse order and content ownership
 
@@ -725,7 +788,7 @@ Examples of decisions worth logging early:
 - Options considered: keep tuning the indented tree, move to a breadcrumb-only model, use a path-and-connections navigator, or replace the tree with a flatter full scope map.
 - Decision: keep the scope menu as a branch-oriented navigator with a current-context card first, then a full visible scope map with a fixed-width connector lane, followed by `Followed scopes`.
 - Why: this preserves hierarchy and branch relationships without stealing horizontal space from the lower rows, keeps every scope visible at once, and makes the active scope summary feel like part of the same menu.
-- Consequences / follow-ups: future scope affordances should prefer branch and connection patterns over deeper indentation, and both rails should keep the normalized `Function menu` and `Scope menu` naming.
+- Consequences / follow-ups: future scope affordances should prefer branch and connection patterns over deeper indentation, both rails should keep the normalized `Function menu` and `Scope menu` naming, and the scope summary now lives in its own mirrored card pinned to the top of the secondary rail with lightweight activity/member/trust stats rather than inside the map container or moving with the scope menu.
 
 ### 2026-04-08 - NativeWind as the nexus styling boundary
 
@@ -741,7 +804,7 @@ Examples of decisions worth logging early:
 - Options considered: leave the public site minimal, restyle the whole app including nexus, or upgrade only the non-nexus public pages and shell.
 - Decision: migrate the public header/footer plus `/`, `/about`, and `/docs` onto a dedicated NativeWind-based public visual system while keeping `/nexus/*` unchanged.
 - Why: it creates a more professional public front door, supports richer storytelling on the about page, and preserves the nexus as a separate application surface.
-- Consequences / follow-ups: `/docs` now functions as the charter destination route until the actual charter text is written; public header auth links were removed in favor of a single `Nexus` site entry; the landing page now uses a rotating multi-message hero with generated background artwork, slower eased horizontal carousel transitions between slides, and a dedicated control row below a clipped hero viewport so the CTA layout stays stable as slides change; and future public-site work should reuse the shared public tokens and content structures added in this pass.
+- Consequences / follow-ups: `/docs` now functions as the charter destination route until the actual charter text is written; public header auth links were removed in favor of a single `Nexus` site entry; the landing page now uses a rotating multi-message hero with generated background artwork, slower eased horizontal carousel transitions between slides, and a dedicated control row below a clipped hero viewport so the CTA layout stays stable as slides change; the public footer has been reduced back to a compact navigation strip instead of a large multi-column card block; and future public-site work should reuse the shared public tokens and content structures added in this pass.
 
 ### 2026-04-08 - About page sections grounded in canon and workspace language
 

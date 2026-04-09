@@ -1,17 +1,17 @@
 /**
- * File: discussions+api.ts
- * Description: Serves packet-backed forum/thread data for a specific Nexus scope lens.
+ * File: thread+api.ts
+ * Description: Serves one discussion root post and its nested replies for a specific Nexus scope using query-string packet refs.
  */
 
 import type { RequestHandler } from 'expo-router/server';
 
 import {
-  DISCUSSION_SORTS,
-  type DiscussionSort,
+  DISCUSSION_REPLY_SORTS,
+  type DiscussionReplySort,
 } from '@/domain/schema/packet-schema';
 import { createAnonymousActorKey } from '@/lib/nexus/anonymous-session';
 import {
-  getNexusDiscussionsPayload,
+  getNexusDiscussionThreadPayload,
   getNexusShellPayload,
   resolveScopeIdFromShell,
 } from '@/lib/nexus/server/nexus-query-data';
@@ -26,25 +26,30 @@ function createJsonResponse(body: unknown, status = 200): Response {
 }
 
 /**
- * Inputs: route scope id.
- * Output: discussions payload resolved to a valid packet-backed scope id.
+ * Inputs: route scope id plus packet-id-based query params.
+ * Output: the nested discussion thread payload resolved to a valid packet-backed scope id.
  */
-export const GET: RequestHandler = async (_request, params) => {
+export const GET: RequestHandler = async (request, params) => {
   try {
-    const requestUrl = new URL(_request.url);
-    const requestedForumId = requestUrl.searchParams.get('forum');
-    const requestedSort = requestUrl.searchParams.get('sort');
+    const requestUrl = new URL(request.url);
+    const postPacketId = requestUrl.searchParams.get('post_packet_id');
+    const requestedReplySort = requestUrl.searchParams.get('reply_sort');
     const requestedShowHidden = requestUrl.searchParams.get('show_hidden');
     const viewerSessionId = requestUrl.searchParams.get('viewer_session_id');
+
+    if (!postPacketId) {
+      return createJsonResponse({ error: 'Missing post_packet_id query parameter.' }, 400);
+    }
+
     const shellPayload = await getNexusShellPayload();
     const scopeId = resolveScopeIdFromShell(shellPayload, params.scopeId);
-    const discussionsPayload = await getNexusDiscussionsPayload({
+    const threadPayload = await getNexusDiscussionThreadPayload({
       scopeId,
-      forumId: requestedForumId,
-      sort:
-        requestedSort &&
-        (DISCUSSION_SORTS as readonly string[]).includes(requestedSort)
-          ? (requestedSort as DiscussionSort)
+      postPacketId,
+      replySort:
+        requestedReplySort &&
+        (DISCUSSION_REPLY_SORTS as readonly string[]).includes(requestedReplySort)
+          ? (requestedReplySort as DiscussionReplySort)
           : null,
       showHidden:
         requestedShowHidden === 'true' || requestedShowHidden === '1',
@@ -53,12 +58,12 @@ export const GET: RequestHandler = async (_request, params) => {
         : null,
     });
 
-    return createJsonResponse(discussionsPayload);
+    return createJsonResponse(threadPayload);
   } catch (error) {
     const message =
       error instanceof Error
         ? error.message
-        : 'Unable to load packet-backed discussions data.';
+        : 'Unable to load the discussion thread.';
 
     return createJsonResponse({ error: message }, 500);
   }

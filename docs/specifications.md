@@ -140,6 +140,7 @@ Role:
 
 - guest dashboard and civic control panel
 - shows current scope summary, aggregate queues, and recommended packet previews
+- uses the shared nexus page shell with a compact header titled as `<scope> Dashboard`
 
 Status:
 
@@ -152,19 +153,34 @@ Screen component: `NexusDiscussionsPage`
 
 Role:
 
-- Reddit-inspired discussion surface with horizontal forum tabs and one active forum workspace
-- includes the only enabled guest write affordance in the current nexus slice: the visitor lobby composer
-- loads and saves visitor-lobby posts through local Expo Router API routes backed by the local SQLite packet store
+- Reddit-inspired discussion surface with horizontal forum tabs plus three internal discussion workspaces: `Feed`, `Thread`, and `Post`
+- includes packet-backed forum feed state, thread detail state, inline targeted reply composition, nested replies, and universal packet vote controls for discussion posts
+- renders the active forum as one connected shell: top-level discussion tabs attach to the active forum container, and inner workspace tabs attach to the active feed/thread/post pane rather than floating as separate cards
+- uses local Expo Router API routes backed by the canonical SQLite packet store and derived discussion/vote indexes
 - requires local web server output so those API routes can execute during development
+- uses the same shared nexus page shell and compact scope-first header pattern as the other nexus routes
 
 Status:
 
 - **Provisional**
-- visitor-lobby posts persist as canonical `DiscussionThread` and `DiscussionPost` packets inside the local SQLite packet store for web development
-- forum tabs are packet-backed from `/api/nexus/scopes/[scopeId]/discussions`, can be deep-linked through the optional `forum` query parameter, and still fall back safely to visitor-lobby when no thread packets are available
+- discussion forums and top-level feeds are loaded from `/api/nexus/scopes/[scopeId]/discussions` with optional `forum`, `sort`, `show_hidden`, and `viewer_session_id` query parameters
+- discussion thread detail is loaded from `/api/nexus/scopes/[scopeId]/discussions/thread` with `post_packet_id` plus optional `reply_sort`, `show_hidden`, and `viewer_session_id` query parameters
+- local workspace state on `/nexus/discussions` is route-driven through `view` (`feed | thread | post`), `post`, `replyTo`, `sort`, `replySort`, and `showHidden` query parameters
 - discussion tabs now project one forum per thread kind and prefer authority threads from the active scope over inherited ancestor threads, which prevents duplicate visitor-lobby tabs
 - read-only forum tab labels are scope-aware (for example `Sunnymead Ranch general`) even when the backing thread packet is inherited from an ancestor scope
-- non-lobby discussion areas remain read-only placeholders even though their forum metadata is now packet-backed
+- guest writer identity is session-scoped and anonymous, top-level post creation is point-gated, replies are threaded, and the same universal `PacketVote` model powers `+1/-1` controls on posts and replies
+- the active anonymous guest session label is reused across posts, replies, and packet votes and is persisted through packet external refs plus the derived anonymous actor key
+- feed sorting controls now live inside the `Feed` workspace, reply sorting controls live inside the `Thread` workspace, and `New post` actions are available from both the feed and thread workspaces
+- feed cards themselves now act as the primary thread-open affordance, while the inline action row on feed cards is limited to vote controls
+- the `Thread` workspace includes its own thread picker so users can switch top-level threads without returning to the feed first
+- reply creation is written through `/api/nexus/scopes/[scopeId]/discussions/replies` using `parent_post_packet_id` in the request body, and packet votes are written through `/api/nexus/packets/vote` using `target_packet_id` in the request body
+- seeded visitor-lobby starter posts exist across the initial scope tree so zero-start anonymous guests can reply immediately and begin earning points
+- packet mechanics stay outside the screen layer: canonical writes, preferred-revision updates, vote tally refresh, reply-tree construction, and future bundle import/export or merge behavior remain on the packet-store plus server-service boundary, while the route screen consumes API projections
+- the thread detail surface now visually distinguishes the root `Original post` from the reply tree so nested replies read as derivative discussion
+- the discussions route now uses the same shared centered nexus page frame as the other routes rather than maintaining its own narrower inner width wrapper
+- after a reply is submitted, the inline reply composer closes and the thread remains in view with the newly created reply visually highlighted
+- the thread workspace no longer keeps a separate expandable thread picker above the thread; thread switching is routed back through the feed workspace instead
+- discussion action buttons now use the shared compact button footprint instead of stretching across the full content column
 
 ### `/nexus/votes`
 
@@ -174,6 +190,7 @@ Role:
 
 - dedicated vote floor surface
 - shows public pipeline stages, proposal previews, and governance visibility cues
+- uses the shared nexus page shell with a compact header titled as `<scope> Votes`
 
 Status:
 
@@ -189,6 +206,7 @@ Role:
 
 - basic packet browser surface
 - supports packet-type filtering and packet preview cards
+- uses the shared nexus page shell with a compact header titled as `<scope> Library`
 
 Status:
 
@@ -204,11 +222,13 @@ Role:
 
 - guest-facing identity and onboarding shell
 - shows anonymous guest status, capabilities, followed scopes, and locality/trust placeholders
+- uses the shared nexus page shell with a compact header titled as `<scope> Account`
 
 Status:
 
 - **Provisional**
-- no authentication, credential proofs, or persistent profile data is implemented
+- no authentication or credential proofs are implemented
+- the account page title now reflects the active scope, while the page content shows the current anonymous session label and points balance rather than a generic anonymous-guest placeholder
 
 ## Current navigation structure
 
@@ -235,7 +255,7 @@ Current public behavior:
 - the `OWA` brand label links to `/`
 - the public header no longer exposes auth routes
 - the nexus is reachable from both the home-page CTA and the `Nexus` header link
-- the public footer now uses a denser multi-column layout rather than repeating the header nav as simple pills
+- the public footer now uses a compact single-row layout with minimal brand copy, lightweight page links, and one `Nexus` action
 
 ### Nexus shell
 
@@ -246,23 +266,28 @@ Nexus shell composition:
 - two adjacent left-side navigation columns on desktop
 - mobile top bar with a toggle that opens the same left-side navigation tray from the left edge
 - main surface on the right for the active route
+- all nexus routes now use one shared centered page frame with consistent width, compact headers, and scope-first route titles such as `Global Commons Library`
 
 Left-side shell sections:
 
 - compact guest identity strip showing `Anonymous Guest`
 - anonymous guest avatar between the `OWA Nexus` label and guest display name
 - centered brand label, auth actions, and preference rows inside the guest identity strip
+- guest display name in the profile strip now uses the real session-scoped anonymous label, and the current point balance is shown directly beneath it
 - `Sign In` and `Sign Up` actions
 - public-site return link positioned beneath the auth actions inside the guest identity strip
 - a small `Preferences` tab at the bottom of the guest identity strip that expands a drawer for navigation mode, shell theme, and UI size controls
+- the preferences tab is visually attached to the drawer as its footer row, uses a chevron icon instead of `open/hide` text, and animates open or closed
 - compact one-line shell preference rows inside that drawer, with the setting label on the left, the switch centered, and the current mode label on the right
 - primary navigation column that switches between the function menu or scope menu
 - secondary navigation column that reveals the other menu immediately to the right
 - open primary and secondary rails use the same width, and the Nexus UI-size preference also adjusts shared route-surface spacing, typography, badges, buttons, and form controls through the Nexus appearance layer
 - the scope menu uses a full visible scope map with a fixed-width connector lane, so every scope stays visible without pushing lower labels to the right
+- the secondary rail now always pins a separate current-context snapshot card at its top, mirroring the guest profile card and exposing quick assembly stats such as activity level, member count, and trust score
+- the scope snapshot card is now a smaller metrics-only lens with no descriptive body copy or badges, and its three stat tiles change with the active Nexus section while keeping the same compact card shape
 - followed scopes stay with the scope menu column
 - deferred surfaces stay with the functions menu column
-- current-scope summary card stays with whichever column is currently acting as the scope menu and appears above the branch navigator
+- current-scope summary card is pinned to the top of the secondary rail regardless of whether the secondary rail is currently showing the scope menu or function menu, and it no longer shares a container with the scope map
 - current-context badges stay inside the card and wrap within the available width when labels run long
 - the shell theme preference affects the dedicated Nexus shell, the nested Nexus navigator background, and the current Nexus route surfaces without changing the public-site shell
 - secondary rail can remain open even when the primary rail is collapsed
@@ -333,22 +358,29 @@ Status:
 - **Provisional**
 - mode is a shell preference only; it does not change data shape or persistence
 
-### Visitor lobby posting workflow
+### Discussion posting workflow
 
 Implemented flow:
 
 1. guest opens `/nexus/discussions`
 2. guest receives a session-scoped anonymous guest label for the current browser session
-3. guest enters a title and/or body in the visitor lobby composer
-4. guest presses `Post to visitor lobby`
-5. the request is sent to a local API route, written into the local SQLite packet store as a canonical discussion packet, and returned to the UI
+3. guest loads a forum feed from `/api/nexus/scopes/[scopeId]/discussions`
+4. guest can switch between `Feed`, `Thread`, and `Post` workspaces without leaving the route
+5. guest can open a root post by pressing its feed card or by selecting it from the thread-workspace picker, reply to any post in that tree through an inline composer attached to the selected reply target, and vote `+1/-1` on visible discussion posts when the thread participation rules allow it
+6. feed sorting happens inside the `Feed` workspace, reply sorting happens inside the `Thread` workspace, and the feed/thread workspaces both provide direct navigation into the `Post` workspace for new top-level posts
+7. top-level posts are allowed only when the viewer has enough points for that thread's `top_level_post_cost`
+8. discussion writes are sent to the local API routes, written into the local SQLite packet store as canonical `DiscussionPost` or `PacketVote` packets, and then re-projected back into the feed/detail UI
+9. the anonymous guest session id and short label are preserved on those packets through external refs and the same actor key used for vote ownership and point ledgers
 
 Status:
 
 - **Provisional**
-- posts are persisted through the local SQLite packet store in `data/nexus/owa-packets.db`
+- discussion packets and packet votes are persisted through the local SQLite packet store in `data/nexus/owa-packets.db`
+- anonymous guests currently receive a temporary `10`-point testing grant, replies are free, top-level posts cost `10`, and only positively scored replies earn ongoing spendable points in the current implementation
+- discussion moderation is derived from raw packet votes: content is deprioritized at `total_votes >= 4 && net_score <= -2` and auto-hidden at `total_votes >= 6 && downvote_ratio >= 0.75`
 - visitor-lobby scope resolution accepts both route-safe scope ids and percent-encoded canonical packet refs
 - the older `data/nexus/visitor-lobby-bundle.json` file now serves only as a legacy import source during backend initialization
+- discussion packets do not stand alone: `DiscussionThread` packets attach to scope `Element` packets through `authority_scope_ref` and `applicable_scope_refs`, top-level and reply posts attach to their thread through `thread_ref`, and nested replies attach to parent posts through `reply_to_ref`
 
 ## Major entities and their roles
 
@@ -470,6 +502,7 @@ Important note:
 - server bootstrap backfills missing personal-tree seed packets on startup so partially-seeded local DBs recover automatically
 - Node SQLite writes use strict query-specific named-parameter bindings to avoid runtime binding errors during packet updates
 - local web forum persistence depends on `expo.web.output = "server"` in `app.json`
+- packet import/export bundles, revision publishing, and merge behavior remain defined by the `PacketStore` contract and storage/service layer rather than in route components
 
 ## Current naming patterns
 
@@ -545,7 +578,7 @@ What is implemented:
 - multi-parent revision ancestry for divergent branches and merge revisions
 - typed packet edges, scope refs, packet-store interfaces, a SQLite-backed packet-store implementation, and storage schema definitions
 - shared browser and nexus query-service implementations over the packet search index
-- a live visitor-lobby backend that stores canonical discussion packets in the local SQLite packet store and imports the old bundle only for migration
+- a packet-backed discussion engine that stores canonical discussion and packet-vote packets in the local SQLite packet store, projects derived reply/vote/ledger indexes, and imports the old visitor-lobby bundle only for migration
 - derived packet label helpers for future browser and nexus projections
 
 What remains unimplemented but is still referenced by docs or shell affordances:

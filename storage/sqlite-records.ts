@@ -74,6 +74,51 @@ export interface PacketSearchIndexRecord {
   created_at: string;
 }
 
+export interface PacketVoteIndexRecord {
+  vote_packet_id: string;
+  target_packet_id: string;
+  actor_key: string;
+  vote_kind: string;
+  value: number;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PacketVoteTallyIndexRecord {
+  target_packet_id: string;
+  upvote_count: number;
+  downvote_count: number;
+  net_score: number;
+  total_votes: number;
+  negative_ratio: number;
+  auto_hidden: number;
+  deprioritized: number;
+}
+
+export interface DiscussionPostIndexRecord {
+  post_packet_id: string;
+  thread_packet_id: string;
+  root_post_packet_id: string;
+  reply_to_packet_id: string | null;
+  depth: number;
+  author_key: string | null;
+  created_at: string;
+  last_activity_at: string;
+  direct_reply_count: number;
+  descendant_count: number;
+}
+
+export interface DiscussionActorLedgerRecord {
+  actor_key: string;
+  earned_reply_points: number;
+  spent_top_level_points: number;
+  available_points: number;
+  negative_content_count: number;
+  trust_signal_score: number;
+  last_activity_at: string | null;
+}
+
 export interface PacketRecordOptions {
   first_seen_at?: string;
   preferred_revision_id?: string | null;
@@ -184,4 +229,3 @@ export function projectPacketSearchIndexRecord(
     created_at: packet.header.created_at,
   };
 }
-

@@ -4,10 +4,18 @@
  */
 
 import type {
+  DiscussionFeedProjection,
+  DiscussionForumProjection,
+  DiscussionPostProjection,
+  DiscussionThreadDetailProjection,
+  DiscussionViewerContext,
   NexusPacketCardProjection,
   NexusScopeLens,
 } from '@/domain/core/contracts';
-import type { PacketFamily } from '@/domain/schema/packet-schema';
+import type {
+  PacketFamily,
+  PacketVoteValue,
+} from '@/domain/schema/packet-schema';
 import type {
   NexusGuestChecklistItem,
   NexusGuestProfile,
@@ -51,20 +59,32 @@ export interface NexusDashboardPayload {
   recommended_packets: NexusPacketCardProjection[];
 }
 
-export interface NexusDiscussionForum {
-  id: string;
-  title: string;
-  description: string;
-  cadence: string;
-  public_posting: boolean;
-  linked_packet_label: string;
-  thread_packet_id: string;
+export type NexusDiscussionForum = DiscussionForumProjection;
+export type NexusDiscussionPost = DiscussionPostProjection;
+
+export interface NexusDiscussionsPayload extends DiscussionFeedProjection {}
+
+export interface NexusDiscussionThreadPayload
+  extends DiscussionThreadDetailProjection {}
+
+export interface NexusVoteMutationPayload {
+  target_packet_id: string;
+  value: PacketVoteValue | 0;
+  summary: {
+    upvote_count: number;
+    downvote_count: number;
+    net_score: number;
+    total_votes: number;
+    negative_ratio: number;
+    viewer_value: PacketVoteValue | 0;
+    auto_hidden: boolean;
+    deprioritized: boolean;
+  };
 }
 
-export interface NexusDiscussionsPayload {
-  lens: NexusScopeLens;
-  forums: NexusDiscussionForum[];
-  latest_posts: NexusPacketCardProjection[];
+export interface NexusDiscussionPostMutationPayload {
+  viewer: DiscussionViewerContext;
+  post: DiscussionPostProjection;
 }
 
 export interface NexusVotesStage {
@@ -87,4 +107,3 @@ export interface NexusLibraryPayload {
   family_filter: PacketFamily | null;
   packets: NexusPacketCardProjection[];
 }
-

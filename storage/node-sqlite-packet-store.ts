@@ -198,6 +198,7 @@ function toNamedParameters(
  */
 export class NodeSQLitePacketStore implements PacketStore {
   private readonly database: DatabaseSync;
+  readonly databasePath: string;
 
   constructor(
     private readonly options: {
@@ -206,6 +207,7 @@ export class NodeSQLitePacketStore implements PacketStore {
   ) {
     const databasePath = options.databasePath ?? NODE_PACKET_STORE_DATABASE_PATH;
 
+    this.databasePath = databasePath;
     mkdirSync(dirname(databasePath), { recursive: true });
     this.database = new DatabaseSync(databasePath);
     this.database.exec(PACKET_STORE_SCHEMA_SQL);

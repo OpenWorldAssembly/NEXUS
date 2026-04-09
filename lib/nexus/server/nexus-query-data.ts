@@ -20,6 +20,7 @@ import {
 } from '@/lib/nexus/nexus-content';
 import type {
   NexusDashboardPayload,
+  NexusDiscussionThreadPayload,
   NexusDiscussionsPayload,
   NexusLibraryPayload,
   NexusShellPayload,
@@ -27,6 +28,10 @@ import type {
 } from '@/lib/nexus/nexus-api-types';
 import type { NexusScopeSummary } from '@/lib/nexus/nexus-shell';
 import { getNexusPacketServices } from '@/lib/nexus/server/nexus-packet-services';
+import type {
+  DiscussionReplySort,
+  DiscussionSort,
+} from '@/domain/schema/packet-schema';
 
 const DEFAULT_FOLLOWED_SCOPE_IDS = [
   'moreno-valley',
@@ -529,119 +534,47 @@ export async function getNexusDashboardPayload(
 }
 
 /**
- * Inputs: scope id.
- * Output: discussion forums and latest post cards for the scope lens.
+ * Inputs: discussion feed query settings.
+ * Output: discussion forums and top-level feed cards for the scope lens.
  */
-export async function getNexusDiscussionsPayload(
-  scopeId: string
-): Promise<NexusDiscussionsPayload> {
+export async function getNexusDiscussionsPayload(input: {
+  scopeId: string;
+  forumId?: string | null;
+  sort?: DiscussionSort | null;
+  showHidden?: boolean;
+  viewerActorKey?: string | null;
+}): Promise<NexusDiscussionsPayload> {
   const services = await getNexusPacketServices();
-  const scopeNodes = await listScopeNodes();
-  const scopeMap = new Map(
-    scopeNodes.map((scopeNode) => [scopeNode.routeId, scopeNode])
-  );
-  const scopeLens = buildScopeLens(scopeId, scopeMap);
-  const activeScopeName = scopeMap.get(scopeId)?.name ?? 'Scope';
-  const [discussionCards, discussionThreadPackets] = await Promise.all([
-    services.nexusQueryService.listDiscussions(scopeLens),
-    services.packetStore.listPreferredPacketsByFamily('DiscussionThread'),
-  ]);
-  const winningThreadByForumId = new Map<
-    string,
-    {
-      threadPacket: PacketEnvelopeByType['DiscussionThread'];
-      rank: number;
-    }
-  >();
 
-  for (const threadPacket of discussionThreadPackets) {
-    if (!matchesPacketScopeLens(threadPacket, scopeLens)) {
-      continue;
-    }
+  return services.discussionService.getForumFeed({
+    scope_id: input.scopeId,
+    forum_id: input.forumId ?? null,
+    sort: input.sort ?? null,
+    show_hidden: input.showHidden ?? false,
+    viewer_actor_key: input.viewerActorKey ?? null,
+  });
+}
 
-    const forumId = toDiscussionForumId(threadPacket.body.thread_kind);
-    const candidateRank = getThreadScopeRank(threadPacket, scopeLens);
-    const currentWinner = winningThreadByForumId.get(forumId);
+/**
+ * Inputs: discussion thread-detail query settings.
+ * Output: one root post plus its nested replies for the selected scope.
+ */
+export async function getNexusDiscussionThreadPayload(input: {
+  scopeId: string;
+  postPacketId: string;
+  replySort?: DiscussionReplySort | null;
+  showHidden?: boolean;
+  viewerActorKey?: string | null;
+}): Promise<NexusDiscussionThreadPayload> {
+  const services = await getNexusPacketServices();
 
-    if (!currentWinner) {
-      winningThreadByForumId.set(forumId, {
-        threadPacket,
-        rank: candidateRank,
-      });
-      continue;
-    }
-
-    if (candidateRank < currentWinner.rank) {
-      winningThreadByForumId.set(forumId, {
-        threadPacket,
-        rank: candidateRank,
-      });
-      continue;
-    }
-
-    if (candidateRank === currentWinner.rank) {
-      const packetCreatedAtComparison = threadPacket.header.created_at.localeCompare(
-        currentWinner.threadPacket.header.created_at
-      );
-
-      if (packetCreatedAtComparison < 0) {
-        winningThreadByForumId.set(forumId, {
-          threadPacket,
-          rank: candidateRank,
-        });
-        continue;
-      }
-
-      if (
-        packetCreatedAtComparison === 0 &&
-        threadPacket.header.packet_id.localeCompare(
-          currentWinner.threadPacket.header.packet_id
-        ) < 0
-      ) {
-        winningThreadByForumId.set(forumId, {
-          threadPacket,
-          rank: candidateRank,
-        });
-      }
-    }
-  }
-
-  const forums = Array.from(winningThreadByForumId.entries())
-    .sort((leftForum, rightForum) => {
-      const leftOrder = getDiscussionForumOrder(leftForum[0]);
-      const rightOrder = getDiscussionForumOrder(rightForum[0]);
-
-      if (leftOrder !== rightOrder) {
-        return leftOrder - rightOrder;
-      }
-
-      return leftForum[1].threadPacket.body.title.localeCompare(
-        rightForum[1].threadPacket.body.title
-      );
-    })
-    .map(([forumId, entry]) => ({
-      id: forumId,
-      title: getDiscussionForumDisplayTitle(
-        forumId,
-        activeScopeName,
-        entry.threadPacket.body.title
-      ),
-      description:
-        entry.threadPacket.body.summary ??
-        'Packet-backed discussion surface for this scope.',
-      cadence: entry.threadPacket.body.status,
-      public_posting: forumId === 'visitor-lobby',
-      linked_packet_label: `${entry.threadPacket.header.family} packet`,
-      thread_packet_id: entry.threadPacket.header.packet_id,
-    }));
-
-  return {
-    lens: scopeLens,
-    forums,
-    latest_posts: discussionCards
-      .filter((discussionCard) => discussionCard.family === 'DiscussionPost')
-      .slice(0, 12),
-  };
+  return services.discussionService.getThreadDetail({
+    scope_id: input.scopeId,
+    post_packet_id: input.postPacketId,
+    reply_sort: input.replySort ?? null,
+    show_hidden: input.showHidden ?? false,
+    viewer_actor_key: input.viewerActorKey ?? null,
+  });
 }
 
 /**

@@ -15,9 +15,9 @@ type NexusCardProps = PropsWithChildren<{
 }>;
 
 type NexusSectionHeaderProps = {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
-  description: string;
+  description?: string;
   trailing?: ReactNode;
 };
 
@@ -195,8 +195,8 @@ export function useNexusAppearance(): NexusAppearance {
     ),
     pageContainerClass:
       uiDensity === 'large'
-        ? 'gap-8 px-5 py-8 lg:px-12 lg:py-12'
-        : 'gap-6 px-4 py-6 lg:px-8 lg:py-8',
+        ? 'w-full max-w-[1680px] self-center gap-8 px-5 py-8 lg:px-12 lg:py-12'
+        : 'w-full max-w-[1600px] self-center gap-6 px-4 py-6 lg:px-8 lg:py-8',
     sectionBodyClass: joinClasses(
       uiDensity === 'large' ? 'text-lg leading-8' : 'text-sm leading-7',
       bodyTextClass,
@@ -242,7 +242,7 @@ export function NexusCard({
 }
 
 /**
- * Inputs: eyebrow, title, description, and optional trailing content.
+ * Inputs: eyebrow, title, optional description, and optional trailing content.
  * Output: a standard section header block for nexus screens.
  */
 export function NexusSectionHeader({
@@ -254,29 +254,33 @@ export function NexusSectionHeader({
   const { themeMode, uiDensity } = useNexusShell();
 
   return (
-    <View className="gap-4 lg:flex-row lg:items-end lg:justify-between">
-      <View className="max-w-3xl gap-2">
-        <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
-          {eyebrow}
-        </Text>
+    <View className="gap-3 lg:flex-row lg:items-end lg:justify-between">
+      <View className="min-w-0 flex-1 gap-2">
+        {eyebrow ? (
+          <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
+            {eyebrow}
+          </Text>
+        ) : null}
         <Text
           className={joinClasses(
-            uiDensity === 'large' ? 'text-4xl lg:text-6xl' : 'text-3xl lg:text-5xl',
+            uiDensity === 'large' ? 'text-4xl lg:text-5xl' : 'text-3xl lg:text-4xl',
             'font-bold',
             themeMode === 'dark' ? 'text-nexus-text' : 'text-slate-900',
           )}
         >
           {title}
         </Text>
-        <Text
-          className={joinClasses(
-            uiDensity === 'large' ? 'text-lg lg:text-xl' : 'text-base lg:text-lg',
-            'leading-7',
-            themeMode === 'dark' ? 'text-nexus-muted' : 'text-slate-600',
-          )}
-        >
-          {description}
-        </Text>
+        {description ? (
+          <Text
+            className={joinClasses(
+              uiDensity === 'large' ? 'text-lg lg:text-xl' : 'text-base lg:text-lg',
+              'leading-7',
+              themeMode === 'dark' ? 'text-nexus-muted' : 'text-slate-600',
+            )}
+          >
+            {description}
+          </Text>
+        ) : null}
       </View>
 
       {trailing ? <View className="shrink-0">{trailing}</View> : null}
@@ -351,8 +355,8 @@ export function NexusActionButton({
       accessibilityRole="button"
       className={joinClasses(
         uiDensity === 'large'
-          ? 'rounded-full border px-5 py-3.5'
-          : 'rounded-full border px-4 py-3',
+          ? 'self-start rounded-full border px-5 py-3.5'
+          : 'self-start rounded-full border px-4 py-3',
         variantClasses,
         disabled ? 'opacity-45' : '',
       )}

@@ -77,13 +77,12 @@ export default function NexusVotesPage() {
     <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
       <View className={appearance.pageContainerClass}>
         <NexusSectionHeader
-          eyebrow="Vote floor"
-          title={`${activeScope.shortLabel} civic voting lane`}
-          description="Votes live as their own surface instead of hiding inside discussion tags. Guests can inspect public ballots, packet lineages, and visible governance mechanics."
+          eyebrow="Votes"
+          title={`${activeScope.name} Votes`}
           trailing={
             <View className="flex-row flex-wrap gap-3">
-              <NexusBadge label="Quorum visible" tone="sky" />
-              <NexusBadge label="Guests cannot vote yet" tone="rose" />
+              <NexusBadge label={`${stageCards.length} stages`} tone="sky" />
+              <NexusBadge label={`${voteCards.length} packets`} tone="gold" />
             </View>
           }
         />
@@ -157,7 +156,7 @@ export default function NexusVotesPage() {
           <View className="flex-1 gap-4">
             <NexusCard className="gap-4">
               <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
-                Governance mechanics in view
+                Mechanics
               </Text>
               <View className="gap-3">
                 {voteMechanics.map((mechanic) => (
@@ -169,23 +168,6 @@ export default function NexusVotesPage() {
                     <Text className={appearance.itemBodyClass}>{mechanic}</Text>
                   </NexusCard>
                 ))}
-              </View>
-            </NexusCard>
-
-            <NexusCard className="gap-4">
-              <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
-                Downstream effects
-              </Text>
-              <Text className={appearance.sectionBodyClass}>
-                Proposal detail pages in later slices should link directly into
-                related discussions, mission implications, amendment history,
-                objections, and scope propagation. This slice blocks those ideas in
-                with visible placeholders rather than deep workflow logic.
-              </Text>
-              <View className="flex-row flex-wrap gap-3">
-                <NexusBadge label="Amendment history later" />
-                <NexusBadge label="Delegation later" />
-                <NexusBadge label="Propagation compare later" />
               </View>
             </NexusCard>
           </View>
