@@ -10,10 +10,14 @@ html,
 body,
 #root {
   min-height: 100%;
-  background: #06111a;
+  background:
+    radial-gradient(circle at top, rgba(109, 211, 255, 0.14), transparent 34%),
+    linear-gradient(180deg, #07111c 0%, #091522 45%, #07111c 100%);
 }
 
 body {
   margin: 0;
-  background: #06111a;
+  background:
+    radial-gradient(circle at top, rgba(109, 211, 255, 0.14), transparent 34%),
+    linear-gradient(180deg, #07111c 0%, #091522 45%, #07111c 100%);
 }
