@@ -20,6 +20,7 @@ import {
 } from '@/lib/nexus/nexus-content';
 import type {
   NexusDashboardPayload,
+  NexusDiscussionReplyChildrenPayload,
   NexusDiscussionThreadPayload,
   NexusDiscussionsPayload,
   NexusLibraryPayload,
@@ -543,6 +544,8 @@ export async function getNexusDiscussionsPayload(input: {
   sort?: DiscussionSort | null;
   showHidden?: boolean;
   viewerActorKey?: string | null;
+  cursor?: string | null;
+  limit?: number | null;
 }): Promise<NexusDiscussionsPayload> {
   const services = await getNexusPacketServices();
 
@@ -552,6 +555,8 @@ export async function getNexusDiscussionsPayload(input: {
     sort: input.sort ?? null,
     show_hidden: input.showHidden ?? false,
     viewer_actor_key: input.viewerActorKey ?? null,
+    cursor: input.cursor ?? null,
+    limit: input.limit ?? null,
   });
 }
 
@@ -565,6 +570,8 @@ export async function getNexusDiscussionThreadPayload(input: {
   replySort?: DiscussionReplySort | null;
   showHidden?: boolean;
   viewerActorKey?: string | null;
+  cursor?: string | null;
+  limit?: number | null;
 }): Promise<NexusDiscussionThreadPayload> {
   const services = await getNexusPacketServices();
 
@@ -574,6 +581,36 @@ export async function getNexusDiscussionThreadPayload(input: {
     reply_sort: input.replySort ?? null,
     show_hidden: input.showHidden ?? false,
     viewer_actor_key: input.viewerActorKey ?? null,
+    cursor: input.cursor ?? null,
+    limit: input.limit ?? null,
+  });
+}
+
+/**
+ * Inputs: a scope id, parent post id, and reply paging settings.
+ * Output: one page of direct child replies for that parent post.
+ */
+export async function getNexusDiscussionReplyChildrenPayload(input: {
+  scopeId: string;
+  threadPostPacketId: string;
+  parentPostPacketId: string;
+  replySort?: DiscussionReplySort | null;
+  showHidden?: boolean;
+  viewerActorKey?: string | null;
+  cursor?: string | null;
+  limit?: number | null;
+}): Promise<NexusDiscussionReplyChildrenPayload> {
+  const services = await getNexusPacketServices();
+
+  return services.discussionService.getReplyChildren({
+    scope_id: input.scopeId,
+    thread_post_packet_id: input.threadPostPacketId,
+    parent_post_packet_id: input.parentPostPacketId,
+    reply_sort: input.replySort ?? null,
+    show_hidden: input.showHidden ?? false,
+    viewer_actor_key: input.viewerActorKey ?? null,
+    cursor: input.cursor ?? null,
+    limit: input.limit ?? null,
   });
 }
 

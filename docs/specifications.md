@@ -159,28 +159,42 @@ Role:
 - uses local Expo Router API routes backed by the canonical SQLite packet store and derived discussion/vote indexes
 - requires local web server output so those API routes can execute during development
 - uses the same shared nexus page shell and compact scope-first header pattern as the other nexus routes
+- route title casing now follows normal title case, for example `Global Commons Discussions`
 
 Status:
 
 - **Provisional**
 - discussion forums and top-level feeds are loaded from `/api/nexus/scopes/[scopeId]/discussions` with optional `forum`, `sort`, `show_hidden`, and `viewer_session_id` query parameters
-- discussion thread detail is loaded from `/api/nexus/scopes/[scopeId]/discussions/thread` with `post_packet_id` plus optional `reply_sort`, `show_hidden`, and `viewer_session_id` query parameters
+- discussion forums and top-level feeds now support cursor paging through optional `cursor` and `limit` query parameters
+- discussion thread detail is loaded from `/api/nexus/scopes/[scopeId]/discussions/thread` with `post_packet_id` plus optional `reply_sort`, `show_hidden`, `viewer_session_id`, `cursor`, and `limit` query parameters
+- direct child replies for any post are loaded from `/api/nexus/scopes/[scopeId]/discussions/replies` with `thread_post_packet_id`, `parent_post_packet_id`, and optional `reply_sort`, `show_hidden`, `viewer_session_id`, `cursor`, and `limit` query parameters
 - local workspace state on `/nexus/discussions` is route-driven through `view` (`feed | thread | post`), `post`, `replyTo`, `sort`, `replySort`, and `showHidden` query parameters
 - discussion tabs now project one forum per thread kind and prefer authority threads from the active scope over inherited ancestor threads, which prevents duplicate visitor-lobby tabs
 - read-only forum tab labels are scope-aware (for example `Sunnymead Ranch general`) even when the backing thread packet is inherited from an ancestor scope
 - guest writer identity is session-scoped and anonymous, top-level post creation is point-gated, replies are threaded, and the same universal `PacketVote` model powers `+1/-1` controls on posts and replies
 - the active anonymous guest session label is reused across posts, replies, and packet votes and is persisted through packet external refs plus the derived anonymous actor key
 - feed sorting controls now live inside the `Feed` workspace, reply sorting controls live inside the `Thread` workspace, and `New post` actions are available from both the feed and thread workspaces
-- feed cards themselves now act as the primary thread-open affordance, while the inline action row on feed cards is limited to vote controls
-- the `Thread` workspace includes its own thread picker so users can switch top-level threads without returning to the feed first
+- feed and reply sort options now render as single segmented pills with the active sort highlighted; the visible options are currently `new`, `top`, `controversial`, and `old`, and both workspaces default to `new` sorting when no explicit query override is present
+- feed cards themselves now act as the primary thread-open affordance, while the inline action row on feed cards is limited to vote, descendant-total reply count, and moderation state
+- the `Thread` workspace auto-opens the current top feed item when no explicit thread is selected, and otherwise falls back to an empty-state guidance card when the active forum has no visible top-level posts
 - reply creation is written through `/api/nexus/scopes/[scopeId]/discussions/replies` using `parent_post_packet_id` in the request body, and packet votes are written through `/api/nexus/packets/vote` using `target_packet_id` in the request body
 - seeded visitor-lobby starter posts exist across the initial scope tree so zero-start anonymous guests can reply immediately and begin earning points
 - packet mechanics stay outside the screen layer: canonical writes, preferred-revision updates, vote tally refresh, reply-tree construction, and future bundle import/export or merge behavior remain on the packet-store plus server-service boundary, while the route screen consumes API projections
 - the thread detail surface now visually distinguishes the root `Original post` from the reply tree so nested replies read as derivative discussion
-- the discussions route now uses the same shared centered nexus page frame as the other routes rather than maintaining its own narrower inner width wrapper
+- replies at depth `0-4` render expanded by default, while depth `5+` branches default to collapsed `Continue thread` affordances until the user expands them
+- each reply card now exposes its collapse or expand control from a dedicated left-hand tree rail, collapsing a reply hides that reply card and its descendants together, and the rail shows a child-count bubble when that branch has replies
+- each reply rail now uses one combined arrow-plus-count marker, and that count reflects the entire branch hidden by that control (`the reply itself + all descendants`) rather than only direct children
+- collapsed replies keep only their plain author/timestamp meta row visible beside the rail; reply body content, pills, and child cards stay hidden until the branch is expanded again
+- the feed and thread workspaces both use taller internal scroll surfaces on larger screens while falling back to normal page scrolling on smaller screens
 - after a reply is submitted, the inline reply composer closes and the thread remains in view with the newly created reply visually highlighted
-- the thread workspace no longer keeps a separate expandable thread picker above the thread; thread switching is routed back through the feed workspace instead
+- reply composers now expose a `Cancel` action, and collapsing the targeted branch keeps the in-progress reply body as temporary front-end draft state instead of discarding it
 - discussion action buttons now use the shared compact button footprint instead of stretching across the full content column
+- the thread workspace uses `New reply` actions, at the top-right and bottom-left of the pane, to target the original post directly; nested replies still use `Reply here` on the relevant reply card
+- vote pills now show selected `+1` or `-1` state by segment highlighting instead of appending `set` text, and reply-count pills match the same height rhythm as the vote control
+- thread-side post cards no longer repeat inline reply-count pills; the root thread count is shown in the `REPLIES (n)` section heading instead
+- reply cards render as meta-plus-body only, without a duplicated reply-title treatment, and reply composers identify their target as `Replying to OP` or `Replying to {author} - {timestamp}`
+- discussion sort bars now stay on one line by default with adjacent action pills, while `Show moderated` is allowed to wrap only when the viewport becomes too narrow to keep the full control set visible
+- the top-right route header shows the session short label plus point balance and no longer repeats an `Anonymous Guest` status badge
 
 ### `/nexus/votes`
 
@@ -366,11 +380,12 @@ Implemented flow:
 2. guest receives a session-scoped anonymous guest label for the current browser session
 3. guest loads a forum feed from `/api/nexus/scopes/[scopeId]/discussions`
 4. guest can switch between `Feed`, `Thread`, and `Post` workspaces without leaving the route
-5. guest can open a root post by pressing its feed card or by selecting it from the thread-workspace picker, reply to any post in that tree through an inline composer attached to the selected reply target, and vote `+1/-1` on visible discussion posts when the thread participation rules allow it
+5. guest can open a root post by pressing its feed card, the `Thread` workspace auto-opens the current top feed item when no explicit post is selected, and the guest can reply to any post in that tree through an inline composer attached to the selected reply target while voting `+1/-1` on visible discussion posts when the thread participation rules allow it
 6. feed sorting happens inside the `Feed` workspace, reply sorting happens inside the `Thread` workspace, and the feed/thread workspaces both provide direct navigation into the `Post` workspace for new top-level posts
 7. top-level posts are allowed only when the viewer has enough points for that thread's `top_level_post_cost`
-8. discussion writes are sent to the local API routes, written into the local SQLite packet store as canonical `DiscussionPost` or `PacketVote` packets, and then re-projected back into the feed/detail UI
-9. the anonymous guest session id and short label are preserved on those packets through external refs and the same actor key used for vote ownership and point ledgers
+8. top-level feeds and reply branches are loaded incrementally through cursor-based API pages rather than returning the entire forum or thread tree in one payload
+9. discussion writes are sent to the local API routes, written into the local SQLite packet store as canonical `DiscussionPost` or `PacketVote` packets, and then re-projected back into the feed/detail UI
+10. the anonymous guest session id and short label are preserved on those packets through external refs and the same actor key used for vote ownership and point ledgers
 
 Status:
 

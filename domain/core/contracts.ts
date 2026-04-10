@@ -162,8 +162,15 @@ export interface DiscussionPostProjection {
   vote_summary: PacketVoteSummary;
 }
 
+export interface DiscussionPageInfo {
+  next_cursor: string | null;
+  has_more: boolean;
+}
+
 export interface DiscussionReplyProjection extends DiscussionPostProjection {
   replies: DiscussionReplyProjection[];
+  child_page: DiscussionPageInfo;
+  is_collapsed_by_default: boolean;
 }
 
 export interface DiscussionFeedProjection {
@@ -174,6 +181,8 @@ export interface DiscussionFeedProjection {
   show_hidden: boolean;
   viewer: DiscussionViewerContext;
   top_level_posts: DiscussionPostProjection[];
+  next_cursor: string | null;
+  has_more: boolean;
 }
 
 export interface DiscussionThreadDetailProjection {
@@ -184,6 +193,15 @@ export interface DiscussionThreadDetailProjection {
   viewer: DiscussionViewerContext;
   root_post: DiscussionPostProjection;
   replies: DiscussionReplyProjection[];
+  next_cursor: string | null;
+  has_more: boolean;
+}
+
+export interface DiscussionReplyChildrenProjection {
+  parent_post_packet_id: string;
+  replies: DiscussionReplyProjection[];
+  next_cursor: string | null;
+  has_more: boolean;
 }
 
 export interface DiscussionQueryService {
@@ -193,6 +211,8 @@ export interface DiscussionQueryService {
     sort: DiscussionSort | null;
     show_hidden: boolean;
     viewer_actor_key: string | null;
+    cursor?: string | null;
+    limit?: number | null;
   }): Promise<DiscussionFeedProjection>;
   getThreadDetail(input: {
     scope_id: string;
@@ -200,7 +220,19 @@ export interface DiscussionQueryService {
     reply_sort: DiscussionReplySort | null;
     show_hidden: boolean;
     viewer_actor_key: string | null;
+    cursor?: string | null;
+    limit?: number | null;
   }): Promise<DiscussionThreadDetailProjection>;
+  getReplyChildren(input: {
+    scope_id: string;
+    thread_post_packet_id: string;
+    parent_post_packet_id: string;
+    reply_sort: DiscussionReplySort | null;
+    show_hidden: boolean;
+    viewer_actor_key: string | null;
+    cursor?: string | null;
+    limit?: number | null;
+  }): Promise<DiscussionReplyChildrenProjection>;
 }
 
 export interface PacketVoteService {

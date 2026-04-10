@@ -7,6 +7,7 @@ import type { PacketFamily } from '@/domain/schema/packet-schema';
 import type {
   NexusDashboardPayload,
   NexusDiscussionPostMutationPayload,
+  NexusDiscussionReplyChildrenPayload,
   NexusDiscussionThreadPayload,
   NexusDiscussionsPayload,
   NexusLibraryPayload,
@@ -90,6 +91,8 @@ export function fetchNexusDiscussionsPayload(
     sort?: string | null;
     showHidden?: boolean;
     viewerSessionId?: string | null;
+    cursor?: string | null;
+    limit?: number | null;
   }
 ): Promise<NexusDiscussionsPayload> {
   const searchParams = new URLSearchParams();
@@ -108,6 +111,14 @@ export function fetchNexusDiscussionsPayload(
 
   if (input.viewerSessionId) {
     searchParams.set('viewer_session_id', input.viewerSessionId);
+  }
+
+  if (input.cursor) {
+    searchParams.set('cursor', input.cursor);
+  }
+
+  if (typeof input.limit === 'number' && Number.isFinite(input.limit)) {
+    searchParams.set('limit', String(input.limit));
   }
 
   const queryString = searchParams.toString();
@@ -129,6 +140,8 @@ export function fetchNexusDiscussionThreadPayload(input: {
   replySort?: string | null;
   showHidden?: boolean;
   viewerSessionId?: string | null;
+  cursor?: string | null;
+  limit?: number | null;
 }): Promise<NexusDiscussionThreadPayload> {
   const searchParams = new URLSearchParams();
 
@@ -143,6 +156,14 @@ export function fetchNexusDiscussionThreadPayload(input: {
   if (input.viewerSessionId) {
     searchParams.set('viewer_session_id', input.viewerSessionId);
   }
+
+  if (input.cursor) {
+    searchParams.set('cursor', input.cursor);
+  }
+
+  if (typeof input.limit === 'number' && Number.isFinite(input.limit)) {
+    searchParams.set('limit', String(input.limit));
+  }
   searchParams.set('post_packet_id', input.postPacketId);
 
   const queryString = searchParams.toString();
@@ -151,6 +172,50 @@ export function fetchNexusDiscussionThreadPayload(input: {
     `/api/nexus/scopes/${encodeURIComponent(input.scopeId)}/discussions/thread${
       queryString.length > 0 ? `?${queryString}` : ''
     }`
+  );
+}
+
+/**
+ * Inputs: a scope id, parent post id, and optional reply pagination settings.
+ * Output: one page of direct child replies for the selected parent post.
+ */
+export function fetchNexusDiscussionReplyChildrenPayload(input: {
+  scopeId: string;
+  threadPostPacketId: string;
+  parentPostPacketId: string;
+  replySort?: string | null;
+  showHidden?: boolean;
+  viewerSessionId?: string | null;
+  cursor?: string | null;
+  limit?: number | null;
+}): Promise<NexusDiscussionReplyChildrenPayload> {
+  const searchParams = new URLSearchParams();
+
+  searchParams.set('thread_post_packet_id', input.threadPostPacketId);
+  searchParams.set('parent_post_packet_id', input.parentPostPacketId);
+
+  if (input.replySort) {
+    searchParams.set('reply_sort', input.replySort);
+  }
+
+  if (input.showHidden) {
+    searchParams.set('show_hidden', 'true');
+  }
+
+  if (input.viewerSessionId) {
+    searchParams.set('viewer_session_id', input.viewerSessionId);
+  }
+
+  if (input.cursor) {
+    searchParams.set('cursor', input.cursor);
+  }
+
+  if (typeof input.limit === 'number' && Number.isFinite(input.limit)) {
+    searchParams.set('limit', String(input.limit));
+  }
+
+  return fetchJsonOrThrow<NexusDiscussionReplyChildrenPayload>(
+    `/api/nexus/scopes/${encodeURIComponent(input.scopeId)}/discussions/replies?${searchParams.toString()}`
   );
 }
 

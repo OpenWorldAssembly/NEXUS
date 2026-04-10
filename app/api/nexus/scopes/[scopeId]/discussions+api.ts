@@ -25,6 +25,20 @@ function createJsonResponse(body: unknown, status = 200): Response {
   });
 }
 
+function parsePositiveInteger(value: string | null): number | null {
+  if (!value) {
+    return null;
+  }
+
+  const parsedValue = Number.parseInt(value, 10);
+
+  if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
+    return null;
+  }
+
+  return parsedValue;
+}
+
 /**
  * Inputs: route scope id.
  * Output: discussions payload resolved to a valid packet-backed scope id.
@@ -36,6 +50,8 @@ export const GET: RequestHandler = async (_request, params) => {
     const requestedSort = requestUrl.searchParams.get('sort');
     const requestedShowHidden = requestUrl.searchParams.get('show_hidden');
     const viewerSessionId = requestUrl.searchParams.get('viewer_session_id');
+    const cursor = requestUrl.searchParams.get('cursor');
+    const limit = parsePositiveInteger(requestUrl.searchParams.get('limit'));
     const shellPayload = await getNexusShellPayload();
     const scopeId = resolveScopeIdFromShell(shellPayload, params.scopeId);
     const discussionsPayload = await getNexusDiscussionsPayload({
@@ -51,6 +67,8 @@ export const GET: RequestHandler = async (_request, params) => {
       viewerActorKey: viewerSessionId
         ? createAnonymousActorKey(viewerSessionId)
         : null,
+      cursor,
+      limit,
     });
 
     return createJsonResponse(discussionsPayload);

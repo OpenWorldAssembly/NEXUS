@@ -65,6 +65,11 @@ const DISCUSSION_FORUM_DISPLAY_ORDER = [
 const REDDIT_EPOCH_SECONDS = 1134028003;
 const HOT_SCORE_DECAY_SECONDS = 45000;
 const ANONYMOUS_TESTING_STARTING_POINTS = 10;
+const DEFAULT_FEED_PAGE_SIZE = 20;
+const DEFAULT_REPLY_PAGE_SIZE = 10;
+const MAX_FEED_PAGE_SIZE = 50;
+const MAX_REPLY_PAGE_SIZE = 25;
+const DEFAULT_COLLAPSED_REPLY_DEPTH = 5;
 
 type ScopeNode = {
   routeId: string;
@@ -735,6 +740,69 @@ function summarizePostTree(input: {
 }
 
 /**
+ * Inputs: an optional cursor string.
+ * Output: a safe zero-based offset into a sorted result set.
+ */
+function parseCursorOffset(cursor: string | null | undefined): number {
+  if (!cursor) {
+    return 0;
+  }
+
+  const parsedValue = Number.parseInt(cursor, 10);
+
+  if (!Number.isFinite(parsedValue) || parsedValue < 0) {
+    return 0;
+  }
+
+  return parsedValue;
+}
+
+/**
+ * Inputs: an optional requested limit plus defaults.
+ * Output: a safe bounded page size for discussion reads.
+ */
+function resolvePageSize(
+  requestedLimit: number | null | undefined,
+  defaultLimit: number,
+  maxLimit: number
+): number {
+  if (
+    typeof requestedLimit !== 'number' ||
+    !Number.isFinite(requestedLimit) ||
+    requestedLimit <= 0
+  ) {
+    return defaultLimit;
+  }
+
+  return Math.min(Math.trunc(requestedLimit), maxLimit);
+}
+
+/**
+ * Inputs: a sorted list, cursor offset, and page size.
+ * Output: one stable window plus cursor metadata for the next page.
+ */
+function paginateItems<T>(input: {
+  items: T[];
+  cursor: string | null | undefined;
+  limit: number;
+}): {
+  items: T[];
+  next_cursor: string | null;
+  has_more: boolean;
+} {
+  const offset = parseCursorOffset(input.cursor);
+  const pageItems = input.items.slice(offset, offset + input.limit);
+  const nextOffset = offset + pageItems.length;
+  const hasMore = nextOffset < input.items.length;
+
+  return {
+    items: pageItems,
+    next_cursor: hasMore ? String(nextOffset) : null,
+    has_more: hasMore,
+  };
+}
+
+/**
  * Inputs: packet store and post packet id.
  * Output: the preferred post packet when it exists and is a discussion post.
  */
@@ -1052,6 +1120,8 @@ export class SQLiteDiscussionService
     sort: DiscussionSort | null;
     show_hidden: boolean;
     viewer_actor_key: string | null;
+    cursor?: string | null;
+    limit?: number | null;
   }) {
     await this.syncDerivedState();
 
@@ -1084,6 +1154,8 @@ export class SQLiteDiscussionService
           can_vote: false,
         },
         top_level_posts: [],
+        next_cursor: null,
+        has_more: false,
       };
     }
 
@@ -1109,6 +1181,15 @@ export class SQLiteDiscussionService
       .sort((leftPost, rightPost) =>
         this.comparePosts(leftPost, rightPost, selectedSort)
       );
+    const pagedPosts = paginateItems({
+      items: topLevelPosts,
+      cursor: input.cursor ?? null,
+      limit: resolvePageSize(
+        input.limit ?? null,
+        DEFAULT_FEED_PAGE_SIZE,
+        MAX_FEED_PAGE_SIZE
+      ),
+    });
 
     return {
       lens: scopeLens,
@@ -1122,7 +1203,9 @@ export class SQLiteDiscussionService
       selected_sort: selectedSort,
       show_hidden: input.show_hidden,
       viewer,
-      top_level_posts: topLevelPosts,
+      top_level_posts: pagedPosts.items,
+      next_cursor: pagedPosts.next_cursor,
+      has_more: pagedPosts.has_more,
     };
   }
 
@@ -1136,6 +1219,8 @@ export class SQLiteDiscussionService
     reply_sort: DiscussionReplySort | null;
     show_hidden: boolean;
     viewer_actor_key: string | null;
+    cursor?: string | null;
+    limit?: number | null;
   }): Promise<DiscussionThreadDetailProjection> {
     await this.syncDerivedState();
 
@@ -1143,7 +1228,11 @@ export class SQLiteDiscussionService
       throw new Error('Discussion state is unavailable.');
     }
 
-    const rootPostPacket = this.state.postMap.get(input.post_packet_id);
+    const canonicalRootPostId = resolveRootPostId(
+      this.state.postMap,
+      input.post_packet_id
+    );
+    const rootPostPacket = this.state.postMap.get(canonicalRootPostId);
 
     if (!rootPostPacket) {
       throw new Error(`Unknown discussion post: ${input.post_packet_id}`);
@@ -1183,11 +1272,14 @@ export class SQLiteDiscussionService
       rootPostPacket,
       actorIdentity.actor_key
     );
-    const nestedReplies = this.buildReplyTree({
-      rootPostPacketId: rootPostPacket.header.packet_id,
-      replySort: selectedReplySort,
-      showHidden: input.show_hidden,
-      viewerActorKey: actorIdentity.actor_key,
+    const rootReplyPage = this.getReplyChildrenPage({
+      root_post_packet_id: rootPostPacket.header.packet_id,
+      parent_post_packet_id: rootPostPacket.header.packet_id,
+      reply_sort: selectedReplySort,
+      show_hidden: input.show_hidden,
+      viewer_actor_key: actorIdentity.actor_key,
+      cursor: input.cursor ?? null,
+      limit: input.limit ?? null,
     });
 
     return {
@@ -1200,8 +1292,37 @@ export class SQLiteDiscussionService
       show_hidden: input.show_hidden,
       viewer,
       root_post: rootPostProjection,
-      replies: nestedReplies,
+      replies: rootReplyPage.replies,
+      next_cursor: rootReplyPage.next_cursor,
+      has_more: rootReplyPage.has_more,
     };
+  }
+
+  /**
+   * Inputs: a thread root, parent post id, and reply paging settings.
+   * Output: one page of direct child replies for the selected parent post.
+   */
+  async getReplyChildren(input: {
+    scope_id: string;
+    thread_post_packet_id: string;
+    parent_post_packet_id: string;
+    reply_sort: DiscussionReplySort | null;
+    show_hidden: boolean;
+    viewer_actor_key: string | null;
+    cursor?: string | null;
+    limit?: number | null;
+  }) {
+    await this.syncDerivedState();
+
+    return this.getReplyChildrenPage({
+      root_post_packet_id: input.thread_post_packet_id,
+      parent_post_packet_id: input.parent_post_packet_id,
+      reply_sort: input.reply_sort ?? null,
+      show_hidden: input.show_hidden,
+      viewer_actor_key: input.viewer_actor_key,
+      cursor: input.cursor ?? null,
+      limit: input.limit ?? null,
+    });
   }
 
   /**
@@ -1797,40 +1918,96 @@ export class SQLiteDiscussionService
   }
 
   /**
-   * Inputs: a root post id and reply-tree settings.
-   * Output: nested reply projections sorted at each sibling level.
+   * Inputs: one reply post packet and optional viewer actor key.
+   * Output: the API projection for one reply node with lazy child-page metadata.
    */
-  private buildReplyTree(input: {
-    rootPostPacketId: string;
-    replySort: DiscussionReplySort;
-    showHidden: boolean;
-    viewerActorKey: string | null;
-  }): DiscussionReplyProjection[] {
+  private toDiscussionReplyProjection(
+    postPacket: PacketEnvelopeByType['DiscussionPost'],
+    viewerActorKey: string | null
+  ): DiscussionReplyProjection {
+    const postProjection = this.toDiscussionPostProjection(
+      postPacket,
+      viewerActorKey
+    );
+
+    return {
+      ...postProjection,
+      replies: [],
+      child_page: {
+        next_cursor: postProjection.reply_count > 0 ? '0' : null,
+        has_more: postProjection.reply_count > 0,
+      },
+      is_collapsed_by_default:
+        postProjection.depth >= DEFAULT_COLLAPSED_REPLY_DEPTH,
+    };
+  }
+
+  /**
+   * Inputs: a root post id, parent post id, and reply paging settings.
+   * Output: one direct-child reply page for that parent post.
+   */
+  private getReplyChildrenPage(input: {
+    root_post_packet_id: string;
+    parent_post_packet_id: string;
+    reply_sort: DiscussionReplySort | null;
+    show_hidden: boolean;
+    viewer_actor_key: string | null;
+    cursor?: string | null;
+    limit?: number | null;
+  }) {
     if (!this.state) {
-      return [];
+      throw new Error('Discussion state is unavailable.');
     }
 
+    const canonicalRootPostId = resolveRootPostId(
+      this.state.postMap,
+      input.root_post_packet_id
+    );
+    const parentPost = this.state.postMap.get(input.parent_post_packet_id);
+
+    if (!parentPost) {
+      throw new Error(`Unknown discussion post: ${input.parent_post_packet_id}`);
+    }
+
+    const parentRootPostId = resolveRootPostId(
+      this.state.postMap,
+      input.parent_post_packet_id
+    );
+
+    if (parentRootPostId !== canonicalRootPostId) {
+      throw new Error(
+        `Reply parent ${input.parent_post_packet_id} is outside thread ${canonicalRootPostId}.`
+      );
+    }
+
+    const selectedReplySort = input.reply_sort ?? 'top';
     const childPosts = Array.from(this.state.postMap.values()).filter(
-      (postPacket) => postPacket.body.reply_to_ref?.packet_id === input.rootPostPacketId
+      (postPacket) => postPacket.body.reply_to_ref?.packet_id === input.parent_post_packet_id
     );
     const sortedChildPosts = childPosts
       .map((postPacket) =>
-        this.toDiscussionPostProjection(postPacket, input.viewerActorKey)
+        this.toDiscussionReplyProjection(postPacket, input.viewer_actor_key)
       )
-      .filter((postProjection) => input.showHidden || !postProjection.is_hidden)
+      .filter((postProjection) => input.show_hidden || !postProjection.is_hidden)
       .sort((leftReply, rightReply) =>
-        this.compareReplies(leftReply, rightReply, input.replySort)
+        this.compareReplies(leftReply, rightReply, selectedReplySort)
       );
+    const pagedReplies = paginateItems({
+      items: sortedChildPosts,
+      cursor: input.cursor ?? null,
+      limit: resolvePageSize(
+        input.limit ?? null,
+        DEFAULT_REPLY_PAGE_SIZE,
+        MAX_REPLY_PAGE_SIZE
+      ),
+    });
 
-    return sortedChildPosts.map((replyProjection) => ({
-      ...replyProjection,
-      replies: this.buildReplyTree({
-        rootPostPacketId: replyProjection.packet.packet_id,
-        replySort: input.replySort,
-        showHidden: input.showHidden,
-        viewerActorKey: input.viewerActorKey,
-      }),
-    }));
+    return {
+      parent_post_packet_id: input.parent_post_packet_id,
+      replies: pagedReplies.items,
+      next_cursor: pagedReplies.next_cursor,
+      has_more: pagedReplies.has_more,
+    };
   }
 
   /**

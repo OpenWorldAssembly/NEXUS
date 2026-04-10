@@ -7,6 +7,8 @@ import type {
   DiscussionFeedProjection,
   DiscussionForumProjection,
   DiscussionPostProjection,
+  DiscussionReplyChildrenProjection,
+  DiscussionReplyProjection,
   DiscussionThreadDetailProjection,
   DiscussionViewerContext,
   NexusPacketCardProjection,
@@ -61,11 +63,15 @@ export interface NexusDashboardPayload {
 
 export type NexusDiscussionForum = DiscussionForumProjection;
 export type NexusDiscussionPost = DiscussionPostProjection;
+export type NexusDiscussionReply = DiscussionReplyProjection;
 
 export interface NexusDiscussionsPayload extends DiscussionFeedProjection {}
 
 export interface NexusDiscussionThreadPayload
   extends DiscussionThreadDetailProjection {}
+
+export interface NexusDiscussionReplyChildrenPayload
+  extends DiscussionReplyChildrenProjection {}
 
 export interface NexusVoteMutationPayload {
   target_packet_id: string;

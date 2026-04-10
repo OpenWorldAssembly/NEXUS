@@ -25,6 +25,20 @@ function createJsonResponse(body: unknown, status = 200): Response {
   });
 }
 
+function parsePositiveInteger(value: string | null): number | null {
+  if (!value) {
+    return null;
+  }
+
+  const parsedValue = Number.parseInt(value, 10);
+
+  if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
+    return null;
+  }
+
+  return parsedValue;
+}
+
 /**
  * Inputs: route scope id plus packet-id-based query params.
  * Output: the nested discussion thread payload resolved to a valid packet-backed scope id.
@@ -36,6 +50,8 @@ export const GET: RequestHandler = async (request, params) => {
     const requestedReplySort = requestUrl.searchParams.get('reply_sort');
     const requestedShowHidden = requestUrl.searchParams.get('show_hidden');
     const viewerSessionId = requestUrl.searchParams.get('viewer_session_id');
+    const cursor = requestUrl.searchParams.get('cursor');
+    const limit = parsePositiveInteger(requestUrl.searchParams.get('limit'));
 
     if (!postPacketId) {
       return createJsonResponse({ error: 'Missing post_packet_id query parameter.' }, 400);
@@ -56,6 +72,8 @@ export const GET: RequestHandler = async (request, params) => {
       viewerActorKey: viewerSessionId
         ? createAnonymousActorKey(viewerSessionId)
         : null,
+      cursor,
+      limit,
     });
 
     return createJsonResponse(threadPayload);

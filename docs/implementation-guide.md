@@ -742,6 +742,53 @@ Examples of decisions worth logging early:
 - Why: this reduces button clutter, makes the feed read more like a real forum index, lets users switch threads without leaving the thread workspace, and clarifies the hierarchy between the original post and its replies.
 - Consequences / follow-ups: the thread workspace now owns both reply sorting and thread selection, feed cards no longer expose redundant reply/open buttons, and future UI polish should keep reinforcing “tap card to inspect thread” rather than reintroducing detached action rows.
 
+### 2026-04-09 - Paginate discussion feeds and reply branches while simplifying thread selection
+
+- Context: the lighter feed-card design improved scanability, but the discussions route still loaded entire top-level feeds and reply trees at once, and the temporary thread picker added during the previous pass felt heavier than the surrounding tab workflow.
+- Options considered: keep loading entire discussion trees, add hard depth limits, keep a persistent thread picker in the thread workspace, or move to paged feed/reply reads with route-driven default thread selection.
+- Decision: add cursor-based paging to `/api/nexus/scopes/[scopeId]/discussions`, `/api/nexus/scopes/[scopeId]/discussions/thread`, and `/api/nexus/scopes/[scopeId]/discussions/replies`; paginate top-level posts and direct child replies separately; collapse reply branches by default at depth `5+`; and let the `Thread` workspace auto-open the current top feed item when no explicit thread is selected instead of rendering a persistent picker.
+- Why: this keeps the packet/service boundary clean, makes large discussions scale without teaching the UI to hold the whole tree in memory, and preserves a lighter route model where `Feed` remains the canonical thread-switching surface.
+- Consequences / follow-ups: discussion projections now expose `next_cursor` / `has_more` metadata for feeds and reply branches, the thread workspace keeps the root post pinned while child replies load incrementally, `Load more` fallbacks remain alongside near-bottom auto-loading, and future browser-grade forum work should continue extending the query service rather than moving pagination or merge logic into route components.
+
+### 2026-04-09 - Use segmented pills and left-rail branch toggles for discussion scanning
+
+- Context: after paging and auto-open thread selection were in place, discussion cards still took too much effort to scan because sort options were scattered as individual buttons, vote pills nested extra badges, and reply collapse controls lived inline with the action row instead of reading as tree structure.
+- Options considered: keep the existing button rows, move collapse controls into reply headers, or treat sort and vote controls as compact segmented pills while moving branch toggles into a dedicated reply rail.
+- Decision: capitalize the route title consistently, default both feed and reply sorting to `new`, render sort controls as one highlighted segmented pill per workspace, simplify vote pills to `(+1 / score / -1)` without a nested score badge, move reply collapse/expand controls into a left-hand rail beside each reply card, and extend the internal feed/thread scroll panes so they use more vertical room on large screens.
+- Why: this improves scanability, keeps important controls in one predictable place, and makes the reply tree read more like a connected conversation structure instead of a stack of detached cards.
+- Consequences / follow-ups: the thread workspace now exposes `New reply` actions that target the original post from both the top-right and bottom-left of the thread pane, reply cards keep their own inline `Reply here` action for targeted nested replies, and future visual polish should continue reinforcing the tree rail rather than reintroducing collapse controls into the main action row.
+
+### 2026-04-09 - Fully collapse reply branches down to rail-only markers
+
+- Context: the first left-rail tree pass made reply structure clearer, but collapsed replies still showed summary content, which reduced the value of collapse as a true reading aid.
+- Options considered: keep compact collapsed summaries, hide only the children, or hide the entire reply body and keep only the rail markers visible.
+- Decision: collapsing a reply now hides that reply card and its descendants entirely, leaving only the rail marker controls visible; the vote control leads the utility row, feed cards use descendant-total reply counts instead of direct-child counts, thread cards drop their inline reply-count pills, and each reply rail now shows one combined arrow-plus-count marker whose number is the whole hidden branch size (`self + descendants`).
+- Why: this makes collapse useful for actively pruning a long thread while reading downward, and it lets the left rail double as both the structural connector and the branch-depth cue.
+- Consequences / follow-ups: the reply tree heading now shows `REPLIES (count)` based on the root post descendant-total count, selected `+1/-1` state is conveyed through highlighted segments instead of `set` text, and future thread polish should continue treating the rail as the primary branch-control surface.
+
+### 2026-04-09 - Treat replies as body-only cards with meta-preserving collapsed state
+
+- Context: once branch counts and collapse markers were working, reply cards still looked like titled posts because they rendered a duplicated title/body pattern, and the reply composer still echoed reply text instead of showing the actual target identity.
+- Options considered: keep reply titles in case they become useful later, render a compact synthetic title, or treat replies as body-first records while keeping only author/time context visible when collapsed.
+- Decision: reply cards now render their meta row plus body only, collapsed replies keep the same plain author/timestamp text visible beside the rail without a special summary container, and reply composers now label targets as `Replying to OP` or `Replying to {author} - {timestamp}` instead of reusing reply body text.
+- Why: this keeps replies visually distinct from top-level threads, reduces duplicated content, and makes reply targeting much clearer in deep nested conversations.
+- Consequences / follow-ups: future reply-level enhancements should continue using author/time context rather than inventing synthetic reply titles, and collapsed branches should remain lightweight so readers can prune long trees without losing orientation.
+
+### 2026-04-09 - Simplify visible sort controls and preserve reply drafts on cancel or collapse
+
+- Context: after the previous UI passes, the segmented sort controls plus `Show moderated` button could still overflow smaller widths, and open reply composers had no clean cancel path while collapse behavior depended too much on the open composer state.
+- Options considered: keep every sort option visible, move sort/filter controls into a dropdown, or trim the visible sort set and let moderation/filter actions wrap beneath the sort pill while preserving draft text locally.
+- Decision: keep the visible sort controls to `new`, `top`, `controversial`, and `old` for both feed and thread workspaces, move `Show moderated` onto the next wrapped control row, add a `Cancel` action to reply composers, stop clearing reply draft text whenever the target changes, and allow a targeted reply branch to collapse while keeping its draft in front-end state until reopened or submitted.
+- Why: this keeps the controls readable on narrow layouts without introducing a new dropdown pattern, and it makes reply composition feel safer because users can back out or collapse a branch without losing their in-progress text.
+- Consequences / follow-ups: the backend still supports richer sort modes if we want to surface them later in another control pattern, and future composer work should continue treating draft preservation as UI state rather than pushing partial replies into the packet layer.
+
+### 2026-04-09 - Keep discussion control bars single-line by default and trim redundant guest status
+
+- Context: after the simplified sort pass, the discussion control bars became safer on narrow widths but no longer held the intended one-line layout on normal desktop widths, and the top-right route header still repeated `Anonymous Guest` even though the short label and point balance already made the session state clear.
+- Decision: keep the segmented sort control and adjacent action pills on one wrapping row by default so `Show moderated` only falls beneath the sort pill when the viewport truly gets tight, and remove the redundant `Anonymous Guest` status badge from the route header trailing cluster.
+- Why: this preserves the cleaner one-line desktop rhythm while still degrading gracefully on smaller widths, and it keeps the top-right identity strip focused on the two pieces of information that matter during forum testing: who the session is and how many points it has.
+- Consequences / follow-ups: if we add richer account state later, it should return to the shared shell/header through more meaningful identity or trust cues rather than a repeated guest label.
+
 ### 2026-04-08 - Function-first and scope-first as one system
 
 - Context: the nexus needs to support both “go to a function then filter by scope” and “go to a scope then explore its surfaces.”
