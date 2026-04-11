@@ -35,6 +35,17 @@ type NexusActionButtonProps = {
   variant?: 'primary' | 'secondary' | 'ghost';
 };
 
+type NexusSegmentedPillProps = {
+  options: {
+    id: string;
+    label: string;
+  }[];
+  activeId: string;
+  onSelect: (optionId: string) => void;
+  disabled?: boolean;
+  compact?: boolean;
+};
+
 type NexusAppearance = {
   bodyTextClass: string;
   cardInsetClass: string;
@@ -367,5 +378,67 @@ export function NexusActionButton({
         {label}
       </Text>
     </Pressable>
+  );
+}
+
+export function NexusSegmentedPill({
+  options,
+  activeId,
+  onSelect,
+  disabled = false,
+  compact = false,
+}: NexusSegmentedPillProps) {
+  const { themeMode, uiDensity } = useNexusShell();
+  const containerClass =
+    themeMode === 'dark'
+      ? 'border-nexus-line bg-white/5'
+      : 'border-slate-300 bg-slate-100';
+  const activeSegmentClass =
+    themeMode === 'dark' ? 'bg-nexus-sky/14' : 'bg-sky-100';
+  const activeTextClass =
+    themeMode === 'dark' ? 'text-nexus-sky' : 'text-sky-700';
+  const inactiveTextClass =
+    themeMode === 'dark' ? 'text-nexus-text' : 'text-slate-900';
+  const segmentSizeClass =
+    compact || uiDensity === 'small' ? 'px-3 py-2' : 'px-4 py-2.5';
+
+  return (
+    <View
+      className={joinClasses(
+        'flex-row self-start overflow-hidden rounded-full border',
+        containerClass,
+        disabled ? 'opacity-45' : '',
+      )}
+    >
+      {options.map((option, optionIndex) => {
+        const isActive = option.id === activeId;
+
+        return (
+          <Pressable
+            key={option.id}
+            accessibilityRole="button"
+            className={joinClasses(
+              segmentSizeClass,
+              optionIndex > 0 ? 'border-l' : '',
+              themeMode === 'dark' ? 'border-nexus-line/70' : 'border-slate-300',
+              isActive ? activeSegmentClass : '',
+            )}
+            disabled={disabled}
+            onPress={() => onSelect(option.id)}
+          >
+            <Text
+              className={joinClasses(
+                compact || uiDensity === 'small'
+                  ? 'text-xs font-semibold uppercase tracking-[2px]'
+                  : 'text-sm font-semibold uppercase tracking-[2px]',
+                isActive ? activeTextClass : inactiveTextClass,
+              )}
+            >
+              {option.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
   );
 }

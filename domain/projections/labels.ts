@@ -13,7 +13,7 @@ const FAMILY_LABELS: Record<PacketEnvelope['header']['family'], string> = {
   Signal: 'signal packet',
   Proposal: 'proposal packet',
   Vote: 'vote packet',
-  PacketVote: 'packet vote',
+  Attestation: 'attestation',
   Decision: 'decision packet',
   Initiative: 'initiative packet',
   Program: 'program packet',
@@ -23,8 +23,11 @@ const FAMILY_LABELS: Record<PacketEnvelope['header']['family'], string> = {
   MissionReport: 'mission report',
   Module: 'module packet',
   Policy: 'policy packet',
+  DiscussionSpace: 'discussion space',
+  DiscussionForum: 'discussion forum',
   DiscussionThread: 'discussion thread',
   DiscussionPost: 'discussion post',
+  DiscussionReply: 'discussion reply',
   Minutes: 'minutes packet',
   Artifact: 'artifact packet',
 };
@@ -50,15 +53,24 @@ export function getPacketDisplayLabel(packet: PacketEnvelope): string {
       }
       return FAMILY_LABELS.Policy;
     }
+    case 'DiscussionForum': {
+      const body = packet.body as PacketBodyByType['DiscussionForum'];
+      if (body.forum_kind === 'visitor_lobby') {
+        return 'visitor lobby';
+      }
+      return FAMILY_LABELS.DiscussionForum;
+    }
     case 'DiscussionPost': {
       const body = packet.body as PacketBodyByType['DiscussionPost'];
       if (body.post_kind === 'forum_post') {
-        return 'forum post';
+        return 'thread root post';
       }
       return FAMILY_LABELS.DiscussionPost;
     }
-    case 'PacketVote':
-      return FAMILY_LABELS.PacketVote;
+    case 'DiscussionReply':
+      return FAMILY_LABELS.DiscussionReply;
+    case 'Attestation':
+      return FAMILY_LABELS.Attestation;
     case 'Artifact': {
       const body = packet.body as PacketBodyByType['Artifact'];
       return `${titleCase(body.artifact_kind)} artifact`;
@@ -74,8 +86,10 @@ export function getPacketTitle(packet: PacketEnvelope): string {
       const body = packet.body as PacketBodyByType['Element'];
       return body.name;
     }
-    case 'PacketVote':
-      return 'Packet vote';
+    case 'Attestation':
+      return 'Attestation';
+    case 'DiscussionReply':
+      return 'Reply';
     default:
       return (packet.body as { title: string }).title;
   }
@@ -88,7 +102,7 @@ export function getPacketSummary(packet: PacketEnvelope): string | null {
       return body.summary ?? null;
     }
     case 'Vote':
-    case 'PacketVote':
+    case 'Attestation':
       return null;
     case 'MissionReport': {
       const body = packet.body as PacketBodyByType['MissionReport'];
@@ -96,6 +110,14 @@ export function getPacketSummary(packet: PacketEnvelope): string | null {
     }
     case 'Policy': {
       const body = packet.body as PacketBodyByType['Policy'];
+      return body.summary ?? null;
+    }
+    case 'DiscussionForum': {
+      const body = packet.body as PacketBodyByType['DiscussionForum'];
+      return body.summary ?? null;
+    }
+    case 'DiscussionSpace': {
+      const body = packet.body as PacketBodyByType['DiscussionSpace'];
       return body.summary ?? null;
     }
     default:
@@ -112,8 +134,9 @@ export function getPacketStatus(packet: PacketEnvelope): string | null {
       return body.outcome;
     }
     case 'DiscussionPost':
+    case 'DiscussionReply':
       return null;
-    case 'PacketVote':
+    case 'Attestation':
       return null;
     case 'Minutes':
       return null;

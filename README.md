@@ -1,50 +1,66 @@
-# Welcome to your Expo app 👋
+# OWA
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+OWA is an Expo Router application with a public website shell, a dedicated `/nexus/*` workspace, local packet-backed API routes, and a Node SQLite runtime for the current web deployment path.
 
-## Get started
+## Local development
 
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+Install dependencies:
 
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Run the normal Expo development server:
 
-## Learn more
+```bash
+npm run web
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+This remains the primary local iteration flow for UI and route work. The current local SQLite runtime data defaults to `data/nexus`.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Local production-parity server
 
-## Join the community
+Export the production web bundle:
 
-Join our community of developers creating universal apps.
+```bash
+npm run export:web
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Serve the exported bundle with the same Node entry used for Railway:
+
+```bash
+npm run serve:web
+```
+
+The production-parity server listens on `PORT` when provided and falls back to `3000`. It serves client assets from `dist/client`, forwards dynamic pages and `app/api/**` requests to the Expo server build in `dist/server`, and exposes a lightweight `/health` endpoint for Railway healthchecks.
+
+## Runtime data
+
+The Node SQLite runtime uses `NEXUS_DATA_DIR` when set. If it is not set, the app stores runtime data in:
+
+```text
+data/nexus
+```
+
+Files currently written there:
+
+- `owa-packets.db`
+- `discussion-seed-version.txt`
+
+For Railway, mount a persistent volume and point `NEXUS_DATA_DIR` at that mount path.
+
+## Railway deployment
+
+The repo includes `railway.toml` for the Railway build and start commands:
+
+- build: `npm run railway:build`
+- start: `npm run railway:start`
+- healthcheck: `/health`
+
+Recommended Railway settings for this pass:
+
+- use Node `24.x`
+- mount a persistent volume and set `NEXUS_DATA_DIR`
+- run a single replica
+
+This pass intentionally keeps the current single-service Expo Router server shape and does not split the backend or migrate away from SQLite.

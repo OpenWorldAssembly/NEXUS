@@ -10,7 +10,7 @@ export const PACKET_FAMILIES = [
   'Signal',
   'Proposal',
   'Vote',
-  'PacketVote',
+  'Attestation',
   'Decision',
   'Initiative',
   'Program',
@@ -20,8 +20,11 @@ export const PACKET_FAMILIES = [
   'MissionReport',
   'Module',
   'Policy',
+  'DiscussionSpace',
+  'DiscussionForum',
   'DiscussionThread',
   'DiscussionPost',
+  'DiscussionReply',
   'Minutes',
   'Artifact',
 ] as const;
@@ -34,6 +37,14 @@ export const ELEMENT_KINDS = [
   'organization',
   'service',
 ] as const;
+
+export const PERSON_CLAIM_STATUSES = [
+  'ephemeral_guest',
+  'persistent_guest',
+  'claimed',
+] as const;
+
+export const PERSON_KEY_STATUSES = ['active', 'revoked'] as const;
 
 export const MISSION_PARTICIPATION_MODES = [
   'integrated',
@@ -65,9 +76,18 @@ export const DISCUSSION_REPLY_SORTS = [
   'old',
 ] as const;
 
-export const PACKET_VOTE_VALUES = [1, -1] as const;
-export const PACKET_VOTE_STATUSES = ['active', 'cleared'] as const;
-export const PACKET_VOTE_KINDS = ['packet_signal'] as const;
+export const ATTESTATION_VALUES = [1, -1] as const;
+export const ATTESTATION_STATUSES = ['active', 'cleared'] as const;
+export const ATTESTATION_KINDS = [
+  'packet_signal',
+  'proposal_support',
+  'proposal_oppose',
+  'attendance_vouch',
+  'identity_attest',
+  'assembly_association_claim',
+  'packet_confirm',
+  'packet_dispute',
+] as const;
 
 export const CORE_EDGE_TYPES = [
   'authority_scope',
@@ -107,28 +127,38 @@ export const DEFAULT_SCHEMA_VERSION = '1.0.0';
 
 export const PacketFamilySchema = z.enum(PACKET_FAMILIES);
 export const ElementKindSchema = z.enum(ELEMENT_KINDS);
+export const PersonClaimStatusSchema = z.enum(PERSON_CLAIM_STATUSES);
+export const PersonKeyStatusSchema = z.enum(PERSON_KEY_STATUSES);
 export const MissionParticipationModeSchema = z.enum(
   MISSION_PARTICIPATION_MODES
 );
 export const DiscussionActorClassSchema = z.enum(DISCUSSION_ACTOR_CLASSES);
 export const DiscussionSortSchema = z.enum(DISCUSSION_SORTS);
 export const DiscussionReplySortSchema = z.enum(DISCUSSION_REPLY_SORTS);
-export const PacketVoteStatusSchema = z.enum(PACKET_VOTE_STATUSES);
-export const PacketVoteKindSchema = z.enum(PACKET_VOTE_KINDS);
+export const AttestationStatusSchema = z.enum(ATTESTATION_STATUSES);
+export const AttestationKindSchema = z.enum(ATTESTATION_KINDS);
 export const PacketRevisionStateSchema = z.enum(REVISION_STATES);
 export const PacketMergeStrategySchema = z.enum(MERGE_STRATEGIES);
-export const PacketVoteValueSchema = z.union([z.literal(1), z.literal(-1)]);
+export const AttestationValueSchema = z.union([z.literal(1), z.literal(-1)]);
 
 export type PacketFamily = z.infer<typeof PacketFamilySchema>;
 export type ElementKind = z.infer<typeof ElementKindSchema>;
+export type PersonClaimStatus = z.infer<typeof PersonClaimStatusSchema>;
+export type PersonKeyStatus = z.infer<typeof PersonKeyStatusSchema>;
 export type PacketRevisionState = z.infer<typeof PacketRevisionStateSchema>;
 export type PacketMergeStrategy = z.infer<typeof PacketMergeStrategySchema>;
 export type DiscussionActorClass = z.infer<typeof DiscussionActorClassSchema>;
 export type DiscussionSort = z.infer<typeof DiscussionSortSchema>;
 export type DiscussionReplySort = z.infer<typeof DiscussionReplySortSchema>;
-export type PacketVoteValue = z.infer<typeof PacketVoteValueSchema>;
-export type PacketVoteStatus = z.infer<typeof PacketVoteStatusSchema>;
-export type PacketVoteKind = z.infer<typeof PacketVoteKindSchema>;
+export type AttestationValue = z.infer<typeof AttestationValueSchema>;
+export type AttestationStatus = z.infer<typeof AttestationStatusSchema>;
+export type AttestationKind = z.infer<typeof AttestationKindSchema>;
+export type PacketVoteValue = AttestationValue;
+export type PacketVoteStatus = AttestationStatus;
+export type PacketVoteKind = AttestationKind;
+export const PacketVoteValueSchema = AttestationValueSchema;
+export const PacketVoteStatusSchema = AttestationStatusSchema;
+export const PacketVoteKindSchema = AttestationKindSchema;
 
 export const PacketRefSchema = z
   .object({
@@ -175,11 +205,22 @@ export const PacketProvenanceSchema = z
   })
   .strict();
 
+export const PacketEmbeddedSignatureSchema = z
+  .object({
+    kid: z.string().min(1),
+    signer_packet_ref: PacketRefSchema,
+    alg: z.string().min(1),
+    signature: z.string().min(1),
+    signed_at: z.string().min(1),
+  })
+  .strict();
+
 export const PacketIntegritySchema = z
   .object({
     canonicalization: z.string().min(1).default('RFC8785'),
     hash_alg: z.string().min(1).default('sha-256'),
     digest: z.string().min(1).nullable().default(null),
+    embedded_signatures: z.array(PacketEmbeddedSignatureSchema).default([]),
     signature_refs: z.array(PacketRevisionRefSchema).default([]),
   })
   .strict();
@@ -221,6 +262,7 @@ export const PacketHeaderSchema = z
       canonicalization: 'RFC8785',
       hash_alg: 'sha-256',
       digest: null,
+      embedded_signatures: [],
       signature_refs: [],
     }),
     moderation: PacketModerationSchema.default({
@@ -266,6 +308,38 @@ export const ElementBodySchema = z
     subtype: z.string().min(1).nullable().optional(),
     summary: z.string().min(1).nullable().optional(),
     locality_label: z.string().min(1).nullable().optional(),
+    identity: z
+      .object({
+        alias: z.string().min(1),
+        claim_status: PersonClaimStatusSchema.default('ephemeral_guest'),
+        location_disclosure: z
+          .object({
+            scope: z.string().min(1),
+            value: z.string().min(1),
+          })
+          .strict()
+          .nullable()
+          .default(null),
+        public_key_bindings: z
+          .array(
+            z
+              .object({
+                kid: z.string().min(1),
+                alg: z.string().min(1),
+                kty: z.string().min(1),
+                crv: z.string().min(1).nullable().default(null),
+                public_jwk: z.record(z.string(), z.unknown()),
+                status: PersonKeyStatusSchema.default('active'),
+                added_at: z.string().min(1),
+                revoked_at: z.string().min(1).nullable().default(null),
+              })
+              .strict()
+          )
+          .default([]),
+      })
+      .strict()
+      .nullable()
+      .default(null),
     tags: z.array(z.string().min(1)).default([]),
   })
   .strict();
@@ -302,12 +376,16 @@ export const VoteBodySchema = z
   })
   .strict();
 
-export const PacketVoteBodySchema = z
+export const AttestationBodySchema = z
   .object({
     target_ref: PacketRefSchema,
-    value: PacketVoteValueSchema,
-    status: PacketVoteStatusSchema.default('active'),
-    vote_kind: PacketVoteKindSchema.default('packet_signal'),
+    value: AttestationValueSchema,
+    status: AttestationStatusSchema.default('active'),
+    attestation_kind: AttestationKindSchema.default('packet_signal'),
+    context_ref: PacketRefSchema.nullable().default(null),
+    supporting_refs: z.array(PacketRefSchema).default([]),
+    note: z.string().min(1).nullable().default(null),
+    supersedes_ref: PacketRefSchema.nullable().default(null),
   })
   .strict();
 
@@ -446,6 +524,7 @@ export const DiscussionThreadBodySchema = z
   .object({
     title: z.string().min(1),
     summary: z.string().min(1).nullable().optional(),
+    forum_ref: PacketRefSchema,
     thread_kind: z.string().min(1),
     status: z.string().min(1),
     related_refs: z.array(PacketRefSchema).default([]),
@@ -460,13 +539,52 @@ export const DiscussionThreadBodySchema = z
         reaction_actor_classes: z
           .array(DiscussionActorClassSchema)
           .default([]),
-        top_level_post_cost: z.number().int().nonnegative().default(10),
+        top_level_post_cost: z.number().int().nonnegative().default(0),
       })
       .default({
         top_level_actor_classes: [],
         reply_actor_classes: [],
         reaction_actor_classes: [],
-        top_level_post_cost: 10,
+        top_level_post_cost: 0,
+      }),
+    default_sort: DiscussionSortSchema.default('new'),
+  })
+  .strict();
+
+export const DiscussionSpaceBodySchema = z
+  .object({
+    title: z.string().min(1),
+    summary: z.string().min(1).nullable().optional(),
+    scope_ref: PacketRefSchema,
+    status: z.string().min(1),
+  })
+  .strict();
+
+export const DiscussionForumBodySchema = z
+  .object({
+    title: z.string().min(1),
+    summary: z.string().min(1).nullable().optional(),
+    discussion_space_ref: PacketRefSchema,
+    forum_kind: z.string().min(1),
+    status: z.string().min(1),
+    participation_rules: z
+      .object({
+        top_level_actor_classes: z
+          .array(DiscussionActorClassSchema)
+          .default([]),
+        reply_actor_classes: z
+          .array(DiscussionActorClassSchema)
+          .default([]),
+        reaction_actor_classes: z
+          .array(DiscussionActorClassSchema)
+          .default([]),
+        top_level_post_cost: z.number().int().nonnegative().default(0),
+      })
+      .default({
+        top_level_actor_classes: [],
+        reply_actor_classes: [],
+        reaction_actor_classes: [],
+        top_level_post_cost: 0,
       }),
     default_sort: DiscussionSortSchema.default('new'),
   })
@@ -479,6 +597,16 @@ export const DiscussionPostBodySchema = z
     post_kind: z.string().min(1),
     content_markdown: z.string().min(1),
     reply_to_ref: PacketRefSchema.nullable().optional(),
+  })
+  .strict();
+
+export const DiscussionReplyBodySchema = z
+  .object({
+    title: z.string().min(1),
+    thread_ref: PacketRefSchema,
+    root_post_ref: PacketRefSchema,
+    reply_to_ref: PacketRefSchema,
+    content_markdown: z.string().min(1),
   })
   .strict();
 
@@ -508,7 +636,7 @@ export const PACKET_BODY_SCHEMAS = {
   Signal: SignalBodySchema,
   Proposal: ProposalBodySchema,
   Vote: VoteBodySchema,
-  PacketVote: PacketVoteBodySchema,
+  Attestation: AttestationBodySchema,
   Decision: DecisionBodySchema,
   Initiative: InitiativeBodySchema,
   Program: ProgramBodySchema,
@@ -518,8 +646,11 @@ export const PACKET_BODY_SCHEMAS = {
   MissionReport: MissionReportBodySchema,
   Module: ModuleBodySchema,
   Policy: PolicyBodySchema,
+  DiscussionSpace: DiscussionSpaceBodySchema,
+  DiscussionForum: DiscussionForumBodySchema,
   DiscussionThread: DiscussionThreadBodySchema,
   DiscussionPost: DiscussionPostBodySchema,
+  DiscussionReply: DiscussionReplyBodySchema,
   Minutes: MinutesBodySchema,
   Artifact: ArtifactBodySchema,
 } satisfies Record<PacketFamily, z.ZodTypeAny>;

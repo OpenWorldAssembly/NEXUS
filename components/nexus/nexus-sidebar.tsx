@@ -15,7 +15,9 @@ import {
 } from 'react-native';
 
 import { useNexusShell } from '@/components/nexus/nexus-shell-context';
-import { NexusBadge, NexusCard } from '@/components/nexus/nexus-ui';
+import { useIdentityShell } from '@/components/nexus/identity-shell-context';
+import { NexusBadge, NexusCard, NexusSegmentedPill } from '@/components/nexus/nexus-ui';
+import type { NexusSecurityMode } from '@/lib/nexus/nexus-api-types';
 import {
   NEXUS_COMING_SOON_SURFACES,
 } from '@/lib/nexus/nexus-content';
@@ -885,8 +887,8 @@ export default function NexusSidebar({
     activeScope,
     activeScopeId,
     activeSection,
-    anonymousSession,
-    availablePoints,
+    currentActorLabel,
+    currentIdentityMode,
     followedScopes,
     navigationMode,
     scopeSummaries,
@@ -904,6 +906,13 @@ export default function NexusSidebar({
     togglePrimaryRailCollapsed,
     toggleSecondaryRailCollapsed,
   } = useNexusShell();
+  const {
+    isAuthenticated,
+    rememberClaimedSessions,
+    securityMode,
+    setRememberClaimedSessions,
+    setSecurityMode,
+  } = useIdentityShell();
 
   const isFunctionMode = navigationMode === 'function';
   const isLargeUi = uiDensity === 'large';
@@ -983,7 +992,7 @@ export default function NexusSidebar({
 
   const preferencesContentHeight = preferencesAnimation.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, isLargeUi ? 176 : 156],
+    outputRange: [0, isLargeUi ? 348 : 320],
   });
   const preferencesContentOpacity = preferencesAnimation.interpolate({
     inputRange: [0, 1],
@@ -1055,7 +1064,7 @@ export default function NexusSidebar({
                     titleTextClass,
                   )}
                 >
-                  {anonymousSession.short_label}
+                  {currentActorLabel}
                 </Text>
                 <Text
                   className={joinClasses(
@@ -1064,7 +1073,9 @@ export default function NexusSidebar({
                     mutedTextClass,
                   )}
                 >
-                  {availablePoints} points
+                  {currentIdentityMode === 'claimed'
+                    ? 'claimed identity'
+                    : 'guest identity'}
                 </Text>
               </View>
 
@@ -1077,7 +1088,13 @@ export default function NexusSidebar({
                       : 'rounded-full border px-3 py-2',
                     signInButtonClass,
                   )}
-                  onPress={() => router.push('/login')}
+                  onPress={() =>
+                    router.push(
+                      currentIdentityMode === 'claimed'
+                        ? '/nexus/identity/security'
+                        : '/nexus/identity/sign-in'
+                    )
+                  }
                 >
                   <Text
                     className={joinClasses(
@@ -1087,7 +1104,7 @@ export default function NexusSidebar({
                       titleTextClass,
                     )}
                   >
-                    Sign In
+                    {currentIdentityMode === 'claimed' ? 'Security' : 'Sign In'}
                   </Text>
                 </Pressable>
                 <Pressable
@@ -1098,7 +1115,13 @@ export default function NexusSidebar({
                       : 'rounded-full border px-3 py-2',
                     signUpButtonClass,
                   )}
-                  onPress={() => router.push('/signup')}
+                  onPress={() =>
+                    router.push(
+                      currentIdentityMode === 'claimed'
+                        ? '/nexus/account'
+                        : '/nexus/identity/claim'
+                    )
+                  }
                 >
                   <Text
                     className={joinClasses(
@@ -1108,7 +1131,7 @@ export default function NexusSidebar({
                       'text-nexus-canvas',
                     )}
                   >
-                    Sign Up
+                    {currentIdentityMode === 'claimed' ? 'Account' : 'Claim'}
                   </Text>
                 </Pressable>
               </View>
@@ -1188,6 +1211,60 @@ export default function NexusSidebar({
                       themeMode={themeMode}
                       uiDensity={uiDensity}
                     />
+
+                    <View className="items-center gap-2">
+                      <Text
+                        className={joinClasses(
+                          isLargeUi
+                            ? 'text-[13px] font-semibold uppercase tracking-[2px]'
+                            : 'text-[11px] font-semibold uppercase tracking-[2px]',
+                          themeMode === 'dark' ? 'text-nexus-muted' : 'text-slate-600',
+                        )}
+                      >
+                        Session
+                      </Text>
+                      <NexusSegmentedPill
+                        compact
+                        options={[
+                          { id: 'temp', label: 'TEMP' },
+                          { id: 'save', label: 'SAVE' },
+                        ]}
+                        activeId={rememberClaimedSessions ? 'save' : 'temp'}
+                        onSelect={(value) => {
+                          void setRememberClaimedSessions(value === 'save').catch(
+                            () => undefined
+                          );
+                        }}
+                      />
+                    </View>
+
+                    <View className="items-center gap-2">
+                      <Text
+                        className={joinClasses(
+                          isLargeUi
+                            ? 'text-[13px] font-semibold uppercase tracking-[2px]'
+                            : 'text-[11px] font-semibold uppercase tracking-[2px]',
+                          themeMode === 'dark' ? 'text-nexus-muted' : 'text-slate-600',
+                        )}
+                      >
+                        Write approval
+                      </Text>
+                      <NexusSegmentedPill
+                        compact
+                        options={[
+                          { id: 'standard', label: 'OFF' },
+                          { id: 'guarded', label: 'MED' },
+                          { id: 'every_write', label: 'MAX' },
+                        ]}
+                        activeId={securityMode ?? 'guarded'}
+                        onSelect={(value) => {
+                          void setSecurityMode(value as NexusSecurityMode).catch(
+                            () => undefined
+                          );
+                        }}
+                        disabled={!isAuthenticated || currentIdentityMode !== 'claimed'}
+                      />
+                    </View>
                   </View>
                 </Animated.View>
 

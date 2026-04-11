@@ -74,18 +74,20 @@ export interface PacketSearchIndexRecord {
   created_at: string;
 }
 
-export interface PacketVoteIndexRecord {
-  vote_packet_id: string;
+export interface AttestationIndexRecord {
+  attestation_packet_id: string;
   target_packet_id: string;
   actor_key: string;
-  vote_kind: string;
+  attestation_kind: string;
   value: number;
   status: string;
+  context_packet_id: string | null;
+  note: string | null;
   created_at: string;
   updated_at: string;
 }
 
-export interface PacketVoteTallyIndexRecord {
+export interface AttestationTallyIndexRecord {
   target_packet_id: string;
   upvote_count: number;
   downvote_count: number;

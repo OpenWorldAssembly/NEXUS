@@ -5,12 +5,17 @@
 
 import type { PacketFamily } from '@/domain/schema/packet-schema';
 import type {
+  NexusAssemblyClaimMutationPayload,
+  NexusAssemblyClaimsPayload,
+  NexusCreateAssemblyPayload,
   NexusDashboardPayload,
   NexusDiscussionPostMutationPayload,
   NexusDiscussionReplyChildrenPayload,
   NexusDiscussionThreadPayload,
   NexusDiscussionsPayload,
+  NexusIdentitySearchPayload,
   NexusLibraryPayload,
+  NexusLocationSearchPayload,
   NexusShellPayload,
   NexusVoteMutationPayload,
   NexusVotesPayload,
@@ -69,6 +74,32 @@ export function fetchNexusShellPayload(): Promise<NexusShellPayload> {
 }
 
 /**
+ * Inputs: a location query string.
+ * Output: canonical location matches for identity disclosure selection.
+ */
+export function fetchNexusLocationSearchPayload(
+  query: string
+): Promise<NexusLocationSearchPayload> {
+  return fetchJsonOrThrow<NexusLocationSearchPayload>(
+    `/api/nexus/location-search?query=${encodeURIComponent(query)}`
+  );
+}
+
+export function fetchNexusIdentitySearchPayload(input: {
+  query: string;
+  savedActorPacketIds: string[];
+}): Promise<NexusIdentitySearchPayload> {
+  return fetchMutationJsonOrThrow<NexusIdentitySearchPayload>({
+    path: '/api/nexus/identity-search',
+    method: 'POST',
+    body: {
+      query: input.query,
+      saved_actor_packet_ids: input.savedActorPacketIds,
+    },
+  });
+}
+
+/**
  * Inputs: a scope id.
  * Output: packet-backed dashboard payload for that scope lens.
  */
@@ -90,7 +121,7 @@ export function fetchNexusDiscussionsPayload(
     forumId?: string | null;
     sort?: string | null;
     showHidden?: boolean;
-    viewerSessionId?: string | null;
+    viewerActorPacketId?: string | null;
     cursor?: string | null;
     limit?: number | null;
   }
@@ -109,8 +140,8 @@ export function fetchNexusDiscussionsPayload(
     searchParams.set('show_hidden', 'true');
   }
 
-  if (input.viewerSessionId) {
-    searchParams.set('viewer_session_id', input.viewerSessionId);
+  if (input.viewerActorPacketId) {
+    searchParams.set('viewer_actor_packet_id', input.viewerActorPacketId);
   }
 
   if (input.cursor) {
@@ -139,7 +170,7 @@ export function fetchNexusDiscussionThreadPayload(input: {
   postPacketId: string;
   replySort?: string | null;
   showHidden?: boolean;
-  viewerSessionId?: string | null;
+  viewerActorPacketId?: string | null;
   cursor?: string | null;
   limit?: number | null;
 }): Promise<NexusDiscussionThreadPayload> {
@@ -153,8 +184,8 @@ export function fetchNexusDiscussionThreadPayload(input: {
     searchParams.set('show_hidden', 'true');
   }
 
-  if (input.viewerSessionId) {
-    searchParams.set('viewer_session_id', input.viewerSessionId);
+  if (input.viewerActorPacketId) {
+    searchParams.set('viewer_actor_packet_id', input.viewerActorPacketId);
   }
 
   if (input.cursor) {
@@ -185,7 +216,7 @@ export function fetchNexusDiscussionReplyChildrenPayload(input: {
   parentPostPacketId: string;
   replySort?: string | null;
   showHidden?: boolean;
-  viewerSessionId?: string | null;
+  viewerActorPacketId?: string | null;
   cursor?: string | null;
   limit?: number | null;
 }): Promise<NexusDiscussionReplyChildrenPayload> {
@@ -202,8 +233,8 @@ export function fetchNexusDiscussionReplyChildrenPayload(input: {
     searchParams.set('show_hidden', 'true');
   }
 
-  if (input.viewerSessionId) {
-    searchParams.set('viewer_session_id', input.viewerSessionId);
+  if (input.viewerActorPacketId) {
+    searchParams.set('viewer_actor_packet_id', input.viewerActorPacketId);
   }
 
   if (input.cursor) {
@@ -225,22 +256,12 @@ export function fetchNexusDiscussionReplyChildrenPayload(input: {
  */
 export function createNexusDiscussionPost(input: {
   scopeId: string;
-  threadPacketId: string;
-  sessionId: string;
-  shortLabel: string;
-  title: string;
-  body: string;
+  requestBody: Record<string, unknown>;
 }): Promise<NexusDiscussionPostMutationPayload> {
   return fetchMutationJsonOrThrow<NexusDiscussionPostMutationPayload>({
     path: `/api/nexus/scopes/${encodeURIComponent(input.scopeId)}/discussions/posts`,
     method: 'POST',
-    body: {
-      session_id: input.sessionId,
-      short_label: input.shortLabel,
-      thread_packet_id: input.threadPacketId,
-      title: input.title,
-      body: input.body,
-    },
+    body: input.requestBody,
   });
 }
 
@@ -250,20 +271,12 @@ export function createNexusDiscussionPost(input: {
  */
 export function createNexusDiscussionReply(input: {
   scopeId: string;
-  postPacketId: string;
-  sessionId: string;
-  shortLabel: string;
-  body: string;
+  requestBody: Record<string, unknown>;
 }): Promise<NexusDiscussionPostMutationPayload> {
   return fetchMutationJsonOrThrow<NexusDiscussionPostMutationPayload>({
     path: `/api/nexus/scopes/${encodeURIComponent(input.scopeId)}/discussions/replies`,
     method: 'POST',
-    body: {
-      session_id: input.sessionId,
-      short_label: input.shortLabel,
-      parent_post_packet_id: input.postPacketId,
-      body: input.body,
-    },
+    body: input.requestBody,
   });
 }
 
@@ -272,22 +285,46 @@ export function createNexusDiscussionReply(input: {
  * Output: the refreshed vote summary for that packet.
  */
 export function setNexusPacketVote(input: {
-  packetId: string;
-  scopeId: string;
-  sessionId: string;
-  shortLabel: string;
-  value: -1 | 0 | 1;
+  requestBody: Record<string, unknown>;
 }): Promise<NexusVoteMutationPayload> {
   return fetchMutationJsonOrThrow<NexusVoteMutationPayload>({
     path: '/api/nexus/packets/vote',
     method: 'PUT',
-    body: {
-      target_packet_id: input.packetId,
-      session_id: input.sessionId,
-      short_label: input.shortLabel,
-      scope_id: input.scopeId,
-      value: input.value,
-    },
+    body: input.requestBody,
+  });
+}
+
+export function setNexusAttestation(input: {
+  requestBody: Record<string, unknown>;
+}): Promise<NexusVoteMutationPayload> {
+  return setNexusPacketVote(input);
+}
+
+export function fetchNexusAssemblyClaims(input: {
+  actorPacketId: string;
+}): Promise<NexusAssemblyClaimsPayload> {
+  return fetchJsonOrThrow<NexusAssemblyClaimsPayload>(
+    `/api/nexus/assemblies/claims?actor_packet_id=${encodeURIComponent(input.actorPacketId)}`
+  );
+}
+
+export function setNexusAssemblyAssociationClaim(input: {
+  requestBody: Record<string, unknown>;
+}): Promise<NexusAssemblyClaimMutationPayload> {
+  return fetchMutationJsonOrThrow<NexusAssemblyClaimMutationPayload>({
+    path: '/api/nexus/assemblies/claims',
+    method: 'PUT',
+    body: input.requestBody,
+  });
+}
+
+export function createNexusAssembly(input: {
+  requestBody: Record<string, unknown>;
+}): Promise<NexusCreateAssemblyPayload> {
+  return fetchMutationJsonOrThrow<NexusCreateAssemblyPayload>({
+    path: '/api/nexus/assemblies',
+    method: 'POST',
+    body: input.requestBody,
   });
 }
 

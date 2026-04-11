@@ -21,7 +21,13 @@ import {
   NexusSectionHeader,
   useNexusAppearance,
 } from '@/components/nexus/nexus-ui';
-import { getOrCreateAnonymousSession } from '@/lib/nexus/anonymous-session';
+import { useIdentityShell } from '@/components/nexus/identity-shell-context';
+import {
+  buildDiscussionReplyPacket,
+  buildDiscussionRootPostPacket,
+  buildDiscussionThreadPacket,
+  buildPacketSignalAttestationPacket,
+} from '@/lib/nexus/discussion-packets';
 import type {
   NexusDiscussionPost,
   NexusDiscussionReply,
@@ -34,7 +40,7 @@ import {
   fetchNexusDiscussionReplyChildrenPayload,
   fetchNexusDiscussionThreadPayload,
   fetchNexusDiscussionsPayload,
-  setNexusPacketVote,
+  setNexusAttestation,
 } from '@/lib/nexus/nexus-query-api';
 
 const DISCUSSION_WORKSPACE_VIEWS = ['feed', 'thread', 'post'] as const;
@@ -286,6 +292,43 @@ function findLoadedReplyById(
   }
 
   return null;
+}
+
+function mapReplyTree(
+  replies: NexusDiscussionReply[],
+  mapReply: (reply: NexusDiscussionReply) => NexusDiscussionReply
+): NexusDiscussionReply[] {
+  return replies.map((reply) => {
+    const nextReply = mapReply(reply);
+    const nextChildren =
+      nextReply.replies.length > 0 ? mapReplyTree(nextReply.replies, mapReply) : nextReply.replies;
+
+    return nextChildren === nextReply.replies
+      ? nextReply
+      : {
+          ...nextReply,
+          replies: nextChildren,
+        };
+  });
+}
+
+function updateReplyProjectionCollections(
+  updateReply: (reply: NexusDiscussionReply) => NexusDiscussionReply,
+  rootReplies: NexusDiscussionReply[],
+  branchStates: ReplyBranchStateMap
+) {
+  return {
+    nextRootReplies: mapReplyTree(rootReplies, updateReply),
+    nextBranchStates: Object.fromEntries(
+      Object.entries(branchStates).map(([parentPacketId, branchState]) => [
+        parentPacketId,
+        {
+          ...branchState,
+          replies: mapReplyTree(branchState.replies, updateReply),
+        },
+      ])
+    ) as ReplyBranchStateMap,
+  };
 }
 
 /**
@@ -634,9 +677,14 @@ function ReplyNode({
 
       <View className="min-w-0 flex-1 gap-3">
         {!isExpanded ? (
-          <Text className={`${appearance.itemMetaClass} mt-5`}>
-            {reply.author_label} - {formatTimestamp(reply.created_at)}
-          </Text>
+          <View className="mt-4 min-h-[52px] justify-center gap-1">
+            <Text className={appearance.itemMetaClass}>
+              {reply.author_label} - {formatTimestamp(reply.created_at)}
+            </Text>
+            <Text className={appearance.itemBodyClass} numberOfLines={2}>
+              {reply.content_markdown}
+            </Text>
+          </View>
         ) : null}
 
         {isExpanded ? (
@@ -666,10 +714,6 @@ function ReplyNode({
               />
               {isHighlighted ? <NexusBadge label="just posted" tone="mint" /> : null}
               {isReplyTarget ? <NexusBadge label="reply target" tone="sky" /> : null}
-              {reply.vote_summary.deprioritized ? (
-                <NexusBadge label="deprioritized" tone="gold" />
-              ) : null}
-              {reply.is_hidden ? <NexusBadge label="hidden" tone="rose" /> : null}
               <NexusActionButton
                 label={isReplyTarget ? 'Reply target' : 'Reply here'}
                 onPress={() => onReply(reply.packet.packet_id)}
@@ -753,8 +797,17 @@ export default function NexusDiscussionsPage() {
     showHidden?: string | string[];
   }>();
   const { activeScope, themeMode } = useNexusShell();
+  const {
+    createVerifiedRequestBody,
+    currentActorPacketId,
+    currentIdentity,
+    currentLabel,
+    currentMode,
+    isAuthenticated,
+    isCurrentIdentityUnlocked,
+    signCurrentIdentityPacket,
+  } = useIdentityShell();
   const appearance = useNexusAppearance();
-  const anonymousSession = getOrCreateAnonymousSession();
   const requestedForumId = normalizeQueryValue(localParams.forum);
   const requestedPostId = normalizeQueryValue(localParams.post);
   const requestedWorkspaceView = normalizeWorkspaceView(
@@ -808,15 +861,20 @@ export default function NexusDiscussionsPage() {
   const selectedReplySort = (threadPayload?.selected_reply_sort ?? 'new') as ReplySort;
   const selectedViewer = threadPayload?.viewer ?? feedPayload?.viewer ?? null;
   const activeForumId = feedPayload?.selected_forum_id ?? requestedForumId;
+  const claimedSessionNeedsUnlock =
+    currentMode === 'claimed' && isAuthenticated && !isCurrentIdentityUnlocked;
+  const canCreateTopLevel = selectedViewer?.can_create_top_level ?? false;
+  const canReply = selectedViewer?.can_reply ?? false;
+  const canVote = selectedViewer?.can_vote ?? false;
   const topLevelPostingLocked =
-    selectedViewer && !selectedViewer.can_create_top_level;
+    Boolean(selectedViewer) && !canCreateTopLevel;
   const isFeedWorkspace = requestedWorkspaceView === 'feed';
   const isThreadWorkspace = requestedWorkspaceView === 'thread';
   const isPostWorkspace = requestedWorkspaceView === 'post';
   const forumTabs = (feedPayload?.forums ?? []).map((forum) => ({
     id: forum.id,
     title: forum.title,
-    detail: forum.public_posting ? 'Guest replies open' : 'Read only',
+    detail: forum.public_posting ? 'Signed guest posting' : 'Membership posting',
   }));
   const workspaceTabs = [
     {
@@ -905,7 +963,7 @@ export default function NexusDiscussionsPage() {
           forumId: requestedForumId,
           sort: requestedSort ?? 'new',
           showHidden: requestedShowHidden,
-          viewerSessionId: anonymousSession.session_id,
+          viewerActorPacketId: currentActorPacketId,
           cursor: input?.cursor ?? null,
           limit: FEED_PAGE_LIMIT,
         });
@@ -941,7 +999,7 @@ export default function NexusDiscussionsPage() {
     },
     [
       activeScope.id,
-      anonymousSession.session_id,
+      currentActorPacketId,
       requestedForumId,
       requestedShowHidden,
       requestedSort,
@@ -972,7 +1030,7 @@ export default function NexusDiscussionsPage() {
         postPacketId: requestedPostId,
         replySort: requestedReplySort ?? 'new',
         showHidden: requestedShowHidden,
-        viewerSessionId: anonymousSession.session_id,
+        viewerActorPacketId: currentActorPacketId,
         limit: REPLY_PAGE_LIMIT,
       });
 
@@ -995,7 +1053,7 @@ export default function NexusDiscussionsPage() {
     }
   }, [
     activeScope.id,
-    anonymousSession.session_id,
+    currentActorPacketId,
     requestedPostId,
     requestedReplySort,
     requestedShowHidden,
@@ -1031,7 +1089,7 @@ export default function NexusDiscussionsPage() {
           parentPostPacketId: input.parentPostPacketId,
           replySort: selectedReplySort ?? 'new',
           showHidden: requestedShowHidden,
-          viewerSessionId: anonymousSession.session_id,
+          viewerActorPacketId: currentActorPacketId,
           cursor: input.cursor ?? null,
           limit: REPLY_PAGE_LIMIT,
         });
@@ -1066,7 +1124,7 @@ export default function NexusDiscussionsPage() {
     },
     [
       activeScope.id,
-      anonymousSession.session_id,
+      currentActorPacketId,
       requestedPostId,
       requestedShowHidden,
       selectedReplySort,
@@ -1173,17 +1231,50 @@ export default function NexusDiscussionsPage() {
    */
   const handleVote = useCallback(
     async (post: NexusDiscussionPost, value: -1 | 1) => {
+      if (!currentIdentity) {
+        setVoteError('There is no active identity available for this request.');
+        return;
+      }
+
       setPendingVotePacketId(post.packet.packet_id);
       setVoteError(null);
 
       try {
-        const voteResult = await setNexusPacketVote({
-          packetId: post.packet.packet_id,
+        const attestationPacket = buildPacketSignalAttestationPacket({
           scopeId: activeScope.id,
-          sessionId: anonymousSession.session_id,
-          shortLabel: anonymousSession.short_label,
+          actorPacket: currentIdentity.actorPacket,
+          targetPost: post,
           value: post.vote_summary.viewer_value === value ? 0 : value,
         });
+
+        if (!attestationPacket) {
+          return;
+        }
+
+        const signedAttestationPacket =
+          await signCurrentIdentityPacket(attestationPacket);
+        const requestBody = await createVerifiedRequestBody(
+          '/api/nexus/packets/vote',
+          'PUT',
+          {
+            attestation_packet: signedAttestationPacket,
+          }
+        );
+        const voteResult = await setNexusAttestation({
+          requestBody,
+        });
+        const updateReplySummary = (currentReply: NexusDiscussionReply) =>
+          currentReply.packet.packet_id === post.packet.packet_id
+            ? {
+                ...currentReply,
+                vote_summary: voteResult.summary,
+              }
+            : currentReply;
+        const { nextRootReplies, nextBranchStates } = updateReplyProjectionCollections(
+          updateReplySummary,
+          rootReplies,
+          replyBranchStates
+        );
 
         setFeedPosts((currentPosts) =>
           currentPosts.map((currentPost) =>
@@ -1191,10 +1282,6 @@ export default function NexusDiscussionsPage() {
               ? {
                   ...currentPost,
                   vote_summary: voteResult.summary,
-                  is_hidden: voteResult.summary.auto_hidden,
-                  hidden_reason: voteResult.summary.auto_hidden
-                    ? 'Hidden by the current negative-vote moderation threshold.'
-                    : null,
                 }
               : currentPost
           )
@@ -1207,50 +1294,12 @@ export default function NexusDiscussionsPage() {
                 root_post: {
                   ...currentPayload.root_post,
                   vote_summary: voteResult.summary,
-                  is_hidden: voteResult.summary.auto_hidden,
-                  hidden_reason: voteResult.summary.auto_hidden
-                    ? 'Hidden by the current negative-vote moderation threshold.'
-                    : null,
                 },
               }
             : currentPayload
         );
-        setRootReplies((currentReplies) =>
-          currentReplies.map((currentReply) =>
-            currentReply.packet.packet_id === post.packet.packet_id
-              ? {
-                  ...currentReply,
-                  vote_summary: voteResult.summary,
-                  is_hidden: voteResult.summary.auto_hidden,
-                  hidden_reason: voteResult.summary.auto_hidden
-                    ? 'Hidden by the current negative-vote moderation threshold.'
-                    : null,
-                }
-              : currentReply
-          )
-        );
-        setReplyBranchStates((currentState) =>
-          Object.fromEntries(
-            Object.entries(currentState).map(([parentPacketId, branchState]) => [
-              parentPacketId,
-              {
-                ...branchState,
-                replies: branchState.replies.map((currentReply) =>
-                  currentReply.packet.packet_id === post.packet.packet_id
-                    ? {
-                        ...currentReply,
-                        vote_summary: voteResult.summary,
-                        is_hidden: voteResult.summary.auto_hidden,
-                        hidden_reason: voteResult.summary.auto_hidden
-                          ? 'Hidden by the current negative-vote moderation threshold.'
-                          : null,
-                      }
-                    : currentReply
-                ),
-              },
-            ])
-          )
-        );
+        setRootReplies(nextRootReplies);
+        setReplyBranchStates(nextBranchStates);
       } catch (error) {
         setVoteError(
           error instanceof Error ? error.message : 'Unable to update that vote.'
@@ -1259,7 +1308,14 @@ export default function NexusDiscussionsPage() {
         setPendingVotePacketId(null);
       }
     },
-    [activeScope.id, anonymousSession.session_id, anonymousSession.short_label]
+    [
+      activeScope.id,
+      createVerifiedRequestBody,
+      currentIdentity,
+      replyBranchStates,
+      rootReplies,
+      signCurrentIdentityPacket,
+    ]
   );
 
   /**
@@ -1267,7 +1323,7 @@ export default function NexusDiscussionsPage() {
    * Output: writes a new top-level post and opens it in the thread workspace.
    */
   const handleCreatePost = useCallback(async () => {
-    if (!selectedForum) {
+    if (!selectedForum || !currentIdentity) {
       return;
     }
 
@@ -1275,13 +1331,37 @@ export default function NexusDiscussionsPage() {
     setSubmitError(null);
 
     try {
-      const result = await createNexusDiscussionPost({
+      const threadPacket = buildDiscussionThreadPacket({
         scopeId: activeScope.id,
-        threadPacketId: selectedForum.thread_packet_id,
-        sessionId: anonymousSession.session_id,
-        shortLabel: anonymousSession.short_label,
+        forum: selectedForum,
+        actorPacket: currentIdentity.actorPacket,
         title: draftTitle,
         body: draftBody,
+      });
+      const postPacket = buildDiscussionRootPostPacket({
+        scopeId: activeScope.id,
+        forum: selectedForum,
+        actorPacket: currentIdentity.actorPacket,
+        threadPacket,
+        body: draftBody,
+        createdAt: threadPacket.header.created_at,
+      });
+      const signedThreadPacket = await signCurrentIdentityPacket(threadPacket);
+      const signedPostPacket = await signCurrentIdentityPacket(postPacket);
+      const requestBody = await createVerifiedRequestBody(
+        '/api/nexus/scopes/[scopeId]/discussions/posts',
+        'POST',
+        {
+          thread_packet: signedThreadPacket,
+          post_packet: signedPostPacket,
+        },
+        {
+          writeRisk: 'high_impact',
+        }
+      );
+      const result = await createNexusDiscussionPost({
+        scopeId: activeScope.id,
+        requestBody,
       });
 
       setDraftTitle('');
@@ -1308,8 +1388,8 @@ export default function NexusDiscussionsPage() {
     }
   }, [
     activeScope.id,
-    anonymousSession.session_id,
-    anonymousSession.short_label,
+    createVerifiedRequestBody,
+    currentIdentity,
     draftBody,
     draftTitle,
     loadFeed,
@@ -1318,6 +1398,7 @@ export default function NexusDiscussionsPage() {
     selectedFeedSort,
     selectedForum,
     selectedReplySort,
+    signCurrentIdentityPacket,
   ]);
 
   /**
@@ -1325,7 +1406,7 @@ export default function NexusDiscussionsPage() {
    * Output: writes a nested reply and refreshes the visible thread state.
    */
   const handleCreateReply = useCallback(async () => {
-    if (!requestedReplyTargetId) {
+    if (!requestedReplyTargetId || !threadPayload || !currentIdentity) {
       return;
     }
 
@@ -1333,12 +1414,39 @@ export default function NexusDiscussionsPage() {
     setReplyError(null);
 
     try {
+      const parentPost =
+        requestedReplyTargetId === threadPayload.root_post.packet.packet_id
+          ? threadPayload.root_post
+          : findLoadedReplyById(
+              rootReplies,
+              replyBranchStates,
+              requestedReplyTargetId
+            );
+
+      if (!parentPost) {
+        throw new Error('Unable to resolve the reply target for this thread.');
+      }
+
+      const replyPacket = buildDiscussionReplyPacket({
+        scopeId: activeScope.id,
+        forum: threadPayload.forum,
+        actorPacket: currentIdentity.actorPacket,
+        parentPost,
+        rootPostPacketId: threadPayload.root_post.packet.packet_id,
+        body: replyBody,
+      });
+      const signedReplyPacket = await signCurrentIdentityPacket(replyPacket);
+      const requestBody = await createVerifiedRequestBody(
+        '/api/nexus/scopes/[scopeId]/discussions/replies',
+        'POST',
+        {
+          parent_post_packet_id: requestedReplyTargetId,
+          reply_packet: signedReplyPacket,
+        }
+      );
       const result = await createNexusDiscussionReply({
         scopeId: activeScope.id,
-        postPacketId: requestedReplyTargetId,
-        sessionId: anonymousSession.session_id,
-        shortLabel: anonymousSession.short_label,
-        body: replyBody,
+        requestBody,
       });
 
       setReplyBody('');
@@ -1380,18 +1488,22 @@ export default function NexusDiscussionsPage() {
   }, [
     activeForumId,
     activeScope.id,
-    anonymousSession.session_id,
-    anonymousSession.short_label,
+    createVerifiedRequestBody,
+    currentIdentity,
     loadFeed,
     loadReplyChildren,
     loadThread,
+    replyBranchStates,
     replyBody,
+    rootReplies,
     requestedPostId,
     requestedReplyTargetId,
     requestedShowHidden,
     router,
     selectedFeedSort,
     selectedReplySort,
+    signCurrentIdentityPacket,
+    threadPayload,
     threadPayload?.root_post.packet.packet_id,
   ]);
 
@@ -1423,7 +1535,7 @@ export default function NexusDiscussionsPage() {
       parentPostPacketId: threadPayload.root_post.packet.packet_id,
       replySort: selectedReplySort,
       showHidden: requestedShowHidden,
-      viewerSessionId: anonymousSession.session_id,
+      viewerActorPacketId: currentActorPacketId,
       cursor: rootRepliesNextCursor,
       limit: REPLY_PAGE_LIMIT,
     })
@@ -1446,7 +1558,7 @@ export default function NexusDiscussionsPage() {
       });
   }, [
     activeScope.id,
-    anonymousSession.session_id,
+    currentActorPacketId,
     isLoadingMoreRootReplies,
     requestedShowHidden,
     rootRepliesHasMore,
@@ -1538,14 +1650,8 @@ export default function NexusDiscussionsPage() {
               selectedViewer ? (
                 <View className="flex-row flex-wrap items-center gap-2">
                   <NexusBadge
-                    label={
-                      anonymousSession.short_label ?? selectedViewer.actor_key ?? 'guest'
-                    }
+                    label={currentLabel ?? selectedViewer.actor_key ?? 'guest'}
                     tone="mint"
-                  />
-                  <NexusBadge
-                    label={`${selectedViewer.available_points} points`}
-                    tone="sky"
                   />
                 </View>
               ) : null
@@ -1561,6 +1667,20 @@ export default function NexusDiscussionsPage() {
           {voteError ? (
             <NexusCard tone="rose">
               <Text className={appearance.itemBodyClass}>{voteError}</Text>
+            </NexusCard>
+          ) : null}
+
+          {claimedSessionNeedsUnlock ? (
+            <NexusCard tone="gold">
+              <View className="gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <Text className={appearance.itemBodyClass}>
+                  Your claimed session is active, but the local signing bundle is still locked. You can keep browsing normally, and writes will ask you to unlock before Nexus signs packets locally.
+                </Text>
+                <NexusActionButton
+                  label="Unlock bundle"
+                  onPress={() => router.push('/nexus/identity/sign-in')}
+                />
+              </View>
             </NexusCard>
           ) : null}
 
@@ -1591,14 +1711,10 @@ export default function NexusDiscussionsPage() {
 
                   <View className="flex-row flex-wrap gap-2">
                     {selectedForum?.public_posting ? (
-                      <NexusBadge label="Guest path visible" tone="mint" />
+                      <NexusBadge label="Guest posting open" tone="mint" />
                     ) : (
-                      <NexusBadge label="Read only" tone="default" />
+                      <NexusBadge label="Membership required" tone="default" />
                     )}
-                    <NexusBadge
-                      label={`${selectedForum?.top_level_post_cost ?? 0} points to post`}
-                      tone="gold"
-                    />
                   </View>
                 </View>
 
@@ -1648,23 +1764,6 @@ export default function NexusDiscussionsPage() {
                             }}
                           />
                           <View className="flex-row flex-wrap items-center gap-3">
-                            <NexusActionButton
-                              label={
-                                requestedShowHidden
-                                  ? 'Hide moderated'
-                                  : 'Show moderated'
-                              }
-                              onPress={() => {
-                                router.replace(
-                                  getDiscussionHref({
-                                    forumId: activeForumId,
-                                    sort: selectedFeedSort,
-                                    view: 'feed',
-                                    showHidden: !requestedShowHidden,
-                                  })
-                                );
-                              }}
-                            />
                             <NexusActionButton
                               label="New post"
                               onPress={() => {
@@ -1739,7 +1838,7 @@ export default function NexusDiscussionsPage() {
                                       viewerValue={
                                         post.vote_summary.viewer_value
                                       }
-                                      canVote={selectedViewer?.can_vote ?? false}
+                                      canVote={canVote}
                                       disabled={
                                         pendingVotePacketId ===
                                         post.packet.packet_id
@@ -1754,18 +1853,6 @@ export default function NexusDiscussionsPage() {
                                         post.descendant_count
                                       )}
                                     />
-                                    {post.is_hidden ? (
-                                      <NexusBadge
-                                        label="hidden"
-                                        tone="rose"
-                                      />
-                                    ) : null}
-                                    {post.vote_summary.deprioritized ? (
-                                      <NexusBadge
-                                        label="deprioritized"
-                                        tone="gold"
-                                      />
-                                    ) : null}
                                   </View>
                                 </NexusCard>
                               </Pressable>
@@ -1826,25 +1913,6 @@ export default function NexusDiscussionsPage() {
                             disabled={!requestedPostId}
                           />
                           <View className="flex-row flex-wrap items-center gap-3">
-                            <NexusActionButton
-                              label={
-                                requestedShowHidden
-                                  ? 'Hide moderated'
-                                  : 'Show moderated'
-                              }
-                              onPress={() => {
-                                router.replace(
-                                  getDiscussionHref({
-                                    forumId: activeForumId,
-                                    sort: selectedFeedSort,
-                                    view: 'thread',
-                                    postId: requestedPostId,
-                                    replySort: selectedReplySort,
-                                    showHidden: !requestedShowHidden,
-                                  })
-                                );
-                              }}
-                            />
                             <View className="flex-row flex-wrap items-center gap-2">
                               <NexusActionButton
                                 label="Back to feed"
@@ -1871,7 +1939,7 @@ export default function NexusDiscussionsPage() {
                                     threadPayload.root_post.packet.packet_id
                                   );
                                 }}
-                                disabled={!threadPayload || !selectedViewer?.can_reply}
+                                disabled={!threadPayload || !canReply}
                               />
                             </View>
                           </View>
@@ -1996,7 +2064,7 @@ export default function NexusDiscussionsPage() {
                                       threadPayload.root_post.vote_summary
                                         .viewer_value
                                     }
-                                    canVote={selectedViewer?.can_vote ?? false}
+                                    canVote={canVote}
                                     disabled={
                                       pendingVotePacketId ===
                                       threadPayload.root_post.packet.packet_id
@@ -2009,19 +2077,6 @@ export default function NexusDiscussionsPage() {
                                       );
                                     }}
                                   />
-                                  {threadPayload.root_post.vote_summary
-                                    .deprioritized ? (
-                                    <NexusBadge
-                                      label="deprioritized"
-                                      tone="gold"
-                                    />
-                                  ) : null}
-                                  {threadPayload.root_post.is_hidden ? (
-                                    <NexusBadge
-                                      label="hidden"
-                                      tone="rose"
-                                    />
-                                  ) : null}
                                   <NexusActionButton
                                     label={
                                       requestedReplyTargetId ===
@@ -2035,7 +2090,7 @@ export default function NexusDiscussionsPage() {
                                         threadPayload.root_post.packet.packet_id
                                       )
                                     }
-                                    disabled={!selectedViewer?.can_reply}
+                                    disabled={!canReply}
                                   />
                                 </View>
 
@@ -2045,15 +2100,14 @@ export default function NexusDiscussionsPage() {
                                     appearance={appearance}
                                     targetLabel="Replying to OP"
                                     viewerLabel={
-                                      anonymousSession.short_label ??
-                                      'anonymous guest'
+                                      currentLabel ?? 'guest'
                                     }
                                     value={replyBody}
                                     error={replyError}
                                     disabled={
                                       !replyBody.trim() ||
                                       isSubmittingReply ||
-                                      !(selectedViewer?.can_reply ?? false)
+                                      !canReply
                                     }
                                     isSubmitting={isSubmittingReply}
                                     onChangeText={setReplyBody}
@@ -2086,11 +2140,10 @@ export default function NexusDiscussionsPage() {
                                     appearance={appearance}
                                     highlightedPostId={highlightedPostId}
                                     replyTargetPacketId={requestedReplyTargetId}
-                                    canVote={selectedViewer?.can_vote ?? false}
-                                    canReply={selectedViewer?.can_reply ?? false}
+                                    canVote={canVote}
+                                    canReply={canReply}
                                     viewerLabel={
-                                      anonymousSession.short_label ??
-                                      'anonymous guest'
+                                      currentLabel ?? 'guest'
                                     }
                                     replyBody={replyBody}
                                     replyError={replyError}
@@ -2148,7 +2201,7 @@ export default function NexusDiscussionsPage() {
                                       threadPayload.root_post.packet.packet_id
                                     );
                                   }}
-                                  disabled={!selectedViewer?.can_reply}
+                                  disabled={!canReply}
                                 />
                                 {rootRepliesHasMore ? (
                                   <NexusActionButton
@@ -2168,12 +2221,8 @@ export default function NexusDiscussionsPage() {
                         <View className="flex-row flex-wrap items-center justify-between gap-3">
                           <View className="flex-row flex-wrap items-center gap-2">
                             <NexusBadge
-                              label={`posting as ${anonymousSession.short_label}`}
+                              label={`posting as ${currentLabel}`}
                               tone="sky"
-                            />
-                            <NexusBadge
-                              label={`${selectedViewer?.available_points ?? 0} available points`}
-                              tone="mint"
                             />
                           </View>
 
@@ -2195,9 +2244,10 @@ export default function NexusDiscussionsPage() {
                         {topLevelPostingLocked ? (
                           <NexusCard tone="gold">
                             <Text className={appearance.itemBodyClass}>
-                              Top-level posting is currently locked. You need{' '}
-                              {selectedForum?.top_level_post_cost ?? 0} points
-                              to open a new thread in this forum.
+                              Top-level posting is not open to this actor in
+                              the current forum. Visitor lobbies accept any
+                              signed actor, while the other forums currently
+                              require an active assembly membership attestation.
                             </Text>
                           </NexusCard>
                         ) : null}

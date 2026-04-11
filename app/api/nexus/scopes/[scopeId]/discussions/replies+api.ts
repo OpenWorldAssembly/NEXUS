@@ -1,6 +1,6 @@
 /**
  * File: replies+api.ts
- * Description: Accepts new nested discussion replies for a Nexus scope using packet ids in the request body.
+ * Description: Accepts new nested discussion replies for a Nexus scope using verified cryptographic actor assertions.
  */
 
 import type { RequestHandler } from 'expo-router/server';
@@ -8,10 +8,9 @@ import { z } from 'zod';
 
 import {
   DISCUSSION_REPLY_SORTS,
+  parsePacketEnvelope,
   type DiscussionReplySort,
 } from '@/domain/schema/packet-schema';
-import { createAnonymousActorKey } from '@/lib/nexus/anonymous-session';
-import { AnonymousSessionSchema } from '@/lib/nexus/visitor-lobby';
 import {
   getNexusDiscussionReplyChildrenPayload,
   getNexusShellPayload,
@@ -19,12 +18,26 @@ import {
 } from '@/lib/nexus/server/nexus-query-data';
 import { getNexusPacketServices } from '@/lib/nexus/server/nexus-packet-services';
 
+const ActorAssertionSchema = z
+  .object({
+    actor_packet_id: z.string().min(1),
+    kid: z.string().min(1),
+    method: z.string().min(1),
+    path: z.string().min(1),
+    body_digest: z.string().min(1),
+    issued_at: z.string().min(1),
+    signature: z.string().min(1),
+  })
+  .strict();
+
 const DiscussionReplyInputSchema = z
   .object({
-    session_id: z.string().min(1),
-    short_label: z.string().min(1),
+    actor_packet: z.unknown(),
+    actor_assertion: ActorAssertionSchema,
+    csrf_token: z.string().min(1).optional().nullable().default(null),
+    reauth_token: z.string().min(1).optional().nullable().default(null),
     parent_post_packet_id: z.string().min(1),
-    body: z.string().trim().min(1).max(4000),
+    reply_packet: z.unknown(),
   })
   .strict();
 
@@ -51,10 +64,6 @@ function parsePositiveInteger(value: string | null): number | null {
   return parsedValue;
 }
 
-/**
- * Inputs: route scope id plus reply-window query params.
- * Output: one page of direct child replies for the selected parent post.
- */
 export const GET: RequestHandler = async (request, params) => {
   try {
     const requestUrl = new URL(request.url);
@@ -62,7 +71,7 @@ export const GET: RequestHandler = async (request, params) => {
     const parentPostPacketId = requestUrl.searchParams.get('parent_post_packet_id');
     const requestedReplySort = requestUrl.searchParams.get('reply_sort');
     const requestedShowHidden = requestUrl.searchParams.get('show_hidden');
-    const viewerSessionId = requestUrl.searchParams.get('viewer_session_id');
+    const viewerActorPacketId = requestUrl.searchParams.get('viewer_actor_packet_id');
     const cursor = requestUrl.searchParams.get('cursor');
     const limit = parsePositiveInteger(requestUrl.searchParams.get('limit'));
 
@@ -89,8 +98,8 @@ export const GET: RequestHandler = async (request, params) => {
           : null,
       showHidden:
         requestedShowHidden === 'true' || requestedShowHidden === '1',
-      viewerActorKey: viewerSessionId
-        ? createAnonymousActorKey(viewerSessionId)
+      viewerActorKey: viewerActorPacketId
+        ? `element:${viewerActorPacketId}`
         : null,
       cursor,
       limit,
@@ -105,24 +114,42 @@ export const GET: RequestHandler = async (request, params) => {
   }
 };
 
-/**
- * Inputs: the incoming request body and route scope id.
- * Output: the saved reply projection plus refreshed viewer state.
- */
 export const POST: RequestHandler = async (request, params) => {
   try {
     const parsedBody = DiscussionReplyInputSchema.parse(await request.json());
-    const session = AnonymousSessionSchema.parse({
-      session_id: parsedBody.session_id,
-      short_label: parsedBody.short_label,
-      started_at: new Date().toISOString(),
-    });
     const services = await getNexusPacketServices();
+    const actorContext = await services.authService.verifyActorMutation({
+      request,
+      actorPacket: parsedBody.actor_packet,
+      actorAssertion: parsedBody.actor_assertion,
+      method: 'POST',
+      path: '/api/nexus/scopes/[scopeId]/discussions/replies',
+      body: {
+        actor_packet: parsedBody.actor_packet,
+        csrf_token: parsedBody.csrf_token,
+        reauth_token: parsedBody.reauth_token,
+        parent_post_packet_id: parsedBody.parent_post_packet_id,
+        reply_packet: parsedBody.reply_packet,
+      },
+      csrfToken: parsedBody.csrf_token,
+      reauthToken: parsedBody.reauth_token,
+    });
+    const replyPacket = parsePacketEnvelope(parsedBody.reply_packet);
+
+    if (replyPacket.header.family !== 'DiscussionReply') {
+      return createJsonResponse(
+        { error: 'reply_packet must be a DiscussionReply packet.' },
+        400
+      );
+    }
+
     const result = await services.discussionService.createReply({
       scope_id: params.scopeId,
+      actor_key: actorContext.actorKey,
+      actor_class: actorContext.actorClass,
+      actor_packet: actorContext.actorPacket,
       parent_post_packet_id: parsedBody.parent_post_packet_id,
-      body: parsedBody.body,
-      session,
+      reply_packet: replyPacket,
     });
 
     return createJsonResponse(result, 201);
@@ -133,7 +160,9 @@ export const POST: RequestHandler = async (request, params) => {
       ? 403
       : message.includes('Unknown')
         ? 404
-        : message.includes('String must contain at least 1 character')
+        : message.includes('Actor assertion') ||
+            message.includes('signature') ||
+            message.includes('String must contain')
           ? 400
           : 500;
 

@@ -6,12 +6,11 @@ import type { PropsWithChildren } from 'react';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'expo-router';
 
-import { getOrCreateAnonymousSession } from '@/lib/nexus/anonymous-session';
+import { useIdentityShell } from '@/components/nexus/identity-shell-context';
 import {
   NEXUS_GUEST_CAPABILITIES,
 } from '@/lib/nexus/nexus-content';
-import { fetchNexusDiscussionsPayload, fetchNexusShellPayload } from '@/lib/nexus/nexus-query-api';
-import type { AnonymousSession } from '@/lib/nexus/visitor-lobby';
+import { fetchNexusShellPayload } from '@/lib/nexus/nexus-query-api';
 import {
   buildNexusBranchNodes,
   getNexusAncestorIds,
@@ -28,8 +27,9 @@ import {
 
 type NexusShellContextValue = NexusShellState & {
   activeScope: NexusScopeSummary;
-  anonymousSession: AnonymousSession;
-  availablePoints: number;
+  currentActorLabel: string;
+  currentActorPacketId: string | null;
+  currentIdentityMode: 'ephemeral_guest' | 'persistent_guest' | 'claimed' | null;
   branchNodes: NexusScopeBranchNode[];
   followedScopes: NexusScopeSummary[];
   scopeSummaries: NexusScopeSummary[];
@@ -42,6 +42,7 @@ type NexusShellContextValue = NexusShellState & {
   setActiveScopeId: (scopeId: string) => void;
   toggleScopeExpansion: (scopeId: string) => void;
   setActiveSection: (section: NexusSection) => void;
+  refreshShellData: () => Promise<void>;
   togglePreferencesDrawer: () => void;
   togglePrimaryRailCollapsed: () => void;
   toggleSecondaryRailCollapsed: () => void;
@@ -79,13 +80,14 @@ const FALLBACK_SCOPE_SUMMARY: NexusScopeSummary = {
 export function NexusShellProvider({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const router = useRouter();
-  const [anonymousSession] = useState<AnonymousSession>(() =>
-    getOrCreateAnonymousSession(),
-  );
+  const {
+    currentActorPacketId,
+    currentLabel,
+    currentMode,
+  } = useIdentityShell();
   const [scopeSummaries, setScopeSummaries] = useState<NexusScopeSummary[]>([
     FALLBACK_SCOPE_SUMMARY,
   ]);
-  const [availablePoints, setAvailablePoints] = useState(0);
   const [followedScopeIds, setFollowedScopeIds] = useState<string[]>([]);
   const [guestCapabilities, setGuestCapabilities] = useState(
     NEXUS_GUEST_CAPABILITIES,
@@ -116,41 +118,49 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
     followedScopeIds.includes(scope.id),
   );
 
+  const refreshShellData = async () => {
+    const shellPayload = await fetchNexusShellPayload();
+
+    if (shellPayload.scope_summaries.length === 0) {
+      return;
+    }
+
+    setScopeSummaries(shellPayload.scope_summaries);
+    setFollowedScopeIds(shellPayload.followed_scope_ids);
+    setGuestCapabilities(shellPayload.guest_capabilities);
+    setActiveScopeIdState((currentScopeId) =>
+      shellPayload.scope_summaries.some(
+        (scopeSummary) => scopeSummary.id === currentScopeId,
+      )
+        ? currentScopeId
+        : shellPayload.default_scope_id,
+    );
+    setExpandedScopeIds((currentExpandedScopeIds) => {
+      const currentScopeIds = currentExpandedScopeIds.filter((scopeId) =>
+        shellPayload.scope_summaries.some(
+          (scopeSummary) => scopeSummary.id === scopeId,
+        ),
+      );
+
+      return Array.from(
+        new Set([
+          ...shellPayload.default_expanded_scope_ids,
+          ...currentScopeIds,
+        ]),
+      );
+    });
+  };
+
   useEffect(() => {
     let isMounted = true;
 
     const loadShellPayload = async () => {
       try {
-        const shellPayload = await fetchNexusShellPayload();
+        await refreshShellData();
 
-        if (!isMounted || shellPayload.scope_summaries.length === 0) {
+        if (!isMounted) {
           return;
         }
-
-        setScopeSummaries(shellPayload.scope_summaries);
-        setFollowedScopeIds(shellPayload.followed_scope_ids);
-        setGuestCapabilities(shellPayload.guest_capabilities);
-        setActiveScopeIdState((currentScopeId) =>
-          shellPayload.scope_summaries.some(
-            (scopeSummary) => scopeSummary.id === currentScopeId,
-          )
-            ? currentScopeId
-            : shellPayload.default_scope_id,
-        );
-        setExpandedScopeIds((currentExpandedScopeIds) => {
-          const currentScopeIds = currentExpandedScopeIds.filter((scopeId) =>
-            shellPayload.scope_summaries.some(
-              (scopeSummary) => scopeSummary.id === scopeId,
-            ),
-          );
-
-          return Array.from(
-            new Set([
-              ...shellPayload.default_expanded_scope_ids,
-              ...currentScopeIds,
-            ]),
-          );
-        });
       } catch {
         // Keep the fallback scope model when the shell API is unavailable.
       }
@@ -162,37 +172,6 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
       isMounted = false;
     };
   }, []);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadViewerPoints = async () => {
-      try {
-        const discussionsPayload = await fetchNexusDiscussionsPayload({
-          scopeId: activeScope.id,
-          viewerSessionId: anonymousSession.session_id,
-        });
-
-        if (!isMounted) {
-          return;
-        }
-
-        setAvailablePoints(discussionsPayload.viewer.available_points);
-      } catch {
-        if (!isMounted) {
-          return;
-        }
-
-        setAvailablePoints(0);
-      }
-    };
-
-    void loadViewerPoints();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [activeScope.id, anonymousSession.session_id]);
 
   /**
    * Inputs: a new scope id.
@@ -292,8 +271,9 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
         activeSection,
         guestCapabilities,
         activeScope,
-        anonymousSession,
-        availablePoints,
+        currentActorLabel: currentLabel,
+        currentActorPacketId,
+        currentIdentityMode: currentMode,
         branchNodes,
         followedScopes,
         scopeSummaries,
@@ -306,6 +286,7 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
         setActiveScopeId,
         toggleScopeExpansion,
         setActiveSection,
+        refreshShellData,
         togglePreferencesDrawer,
         togglePrimaryRailCollapsed,
         toggleSecondaryRailCollapsed,

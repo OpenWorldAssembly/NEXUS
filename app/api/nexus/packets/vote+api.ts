@@ -6,18 +6,28 @@
 import type { RequestHandler } from 'expo-router/server';
 import { z } from 'zod';
 
-import { PacketVoteValueSchema } from '@/domain/schema/packet-schema';
-import { createAnonymousActorKey } from '@/lib/nexus/anonymous-session';
+import { parsePacketEnvelope } from '@/domain/schema/packet-schema';
 import { getNexusPacketServices } from '@/lib/nexus/server/nexus-packet-services';
-import { AnonymousSessionSchema } from '@/lib/nexus/visitor-lobby';
+
+const ActorAssertionSchema = z
+  .object({
+    actor_packet_id: z.string().min(1),
+    kid: z.string().min(1),
+    method: z.string().min(1),
+    path: z.string().min(1),
+    body_digest: z.string().min(1),
+    issued_at: z.string().min(1),
+    signature: z.string().min(1),
+  })
+  .strict();
 
 const PacketVoteMutationSchema = z
   .object({
-    target_packet_id: z.string().min(1),
-    session_id: z.string().min(1),
-    short_label: z.string().min(1),
-    scope_id: z.string().min(1).optional().nullable().default(null),
-    value: z.union([PacketVoteValueSchema, z.literal(0)]),
+    actor_packet: z.unknown(),
+    actor_assertion: ActorAssertionSchema,
+    csrf_token: z.string().min(1).optional().nullable().default(null),
+    reauth_token: z.string().min(1).optional().nullable().default(null),
+    attestation_packet: z.unknown(),
   })
   .strict();
 
@@ -37,25 +47,44 @@ function createJsonResponse(body: unknown, status = 200): Response {
 export const PUT: RequestHandler = async (request) => {
   try {
     const parsedBody = PacketVoteMutationSchema.parse(await request.json());
-    const session = AnonymousSessionSchema.parse({
-      session_id: parsedBody.session_id,
-      short_label: parsedBody.short_label,
-      started_at: new Date().toISOString(),
-    });
     const services = await getNexusPacketServices();
-    const summary = await services.packetVoteService.setPacketVote({
-      target_packet_id: parsedBody.target_packet_id,
-      actor_key: createAnonymousActorKey(parsedBody.session_id),
-      actor_class: 'anonymous_guest',
-      authority_scope_id: parsedBody.scope_id,
-      value: parsedBody.value,
-      session,
+    const actorContext = await services.authService.verifyActorMutation({
+      request,
+      actorPacket: parsedBody.actor_packet,
+      actorAssertion: parsedBody.actor_assertion,
+      method: 'PUT',
+      path: '/api/nexus/packets/vote',
+      body: {
+        actor_packet: parsedBody.actor_packet,
+        csrf_token: parsedBody.csrf_token,
+        reauth_token: parsedBody.reauth_token,
+        attestation_packet: parsedBody.attestation_packet,
+      },
+      csrfToken: parsedBody.csrf_token,
+      reauthToken: parsedBody.reauth_token,
     });
+    const attestationPacket = parsePacketEnvelope(parsedBody.attestation_packet);
+
+    if (attestationPacket.header.family !== 'Attestation') {
+      return createJsonResponse(
+        { error: 'attestation_packet must be an Attestation packet.' },
+        400
+      );
+    }
+
+    const summary = await services.packetVoteService.persistSignedAttestation({
+      attestation_packet: attestationPacket,
+      actor_packet: actorContext.actorPacket,
+      actor_key: actorContext.actorKey,
+      actor_class: actorContext.actorClass,
+    });
+    const responseValue =
+      attestationPacket.body.status === 'cleared' ? 0 : attestationPacket.body.value;
 
     return createJsonResponse(
       {
-        target_packet_id: parsedBody.target_packet_id,
-        value: parsedBody.value,
+        target_packet_id: attestationPacket.body.target_ref.packet_id,
+        value: responseValue,
         summary,
       },
       200

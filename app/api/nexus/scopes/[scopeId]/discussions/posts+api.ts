@@ -1,21 +1,34 @@
 /**
  * File: posts+api.ts
- * Description: Accepts new top-level discussion post writes for a Nexus scope.
+ * Description: Accepts new top-level discussion post writes for a Nexus scope using verified cryptographic actor assertions.
  */
 
 import type { RequestHandler } from 'expo-router/server';
 import { z } from 'zod';
 
-import { AnonymousSessionSchema } from '@/lib/nexus/visitor-lobby';
+import { parsePacketEnvelope } from '@/domain/schema/packet-schema';
 import { getNexusPacketServices } from '@/lib/nexus/server/nexus-packet-services';
+
+const ActorAssertionSchema = z
+  .object({
+    actor_packet_id: z.string().min(1),
+    kid: z.string().min(1),
+    method: z.string().min(1),
+    path: z.string().min(1),
+    body_digest: z.string().min(1),
+    issued_at: z.string().min(1),
+    signature: z.string().min(1),
+  })
+  .strict();
 
 const DiscussionPostInputSchema = z
   .object({
-    session_id: z.string().min(1),
-    short_label: z.string().min(1),
-    thread_packet_id: z.string().min(1),
-    title: z.string().trim().max(160).optional().default(''),
-    body: z.string().trim().min(1).max(4000),
+    actor_packet: z.unknown(),
+    actor_assertion: ActorAssertionSchema,
+    csrf_token: z.string().min(1).optional().nullable().default(null),
+    reauth_token: z.string().min(1).optional().nullable().default(null),
+    thread_packet: z.unknown(),
+    post_packet: z.unknown(),
   })
   .strict();
 
@@ -28,36 +41,64 @@ function createJsonResponse(body: unknown, status = 200): Response {
   });
 }
 
-/**
- * Inputs: the incoming request body and route scope id.
- * Output: the saved top-level discussion post projection plus refreshed viewer state.
- */
 export const POST: RequestHandler = async (request, params) => {
   try {
     const parsedBody = DiscussionPostInputSchema.parse(await request.json());
-    const session = AnonymousSessionSchema.parse({
-      session_id: parsedBody.session_id,
-      short_label: parsedBody.short_label,
-      started_at: new Date().toISOString(),
-    });
     const services = await getNexusPacketServices();
+    const actorContext = await services.authService.verifyActorMutation({
+      request,
+      actorPacket: parsedBody.actor_packet,
+      actorAssertion: parsedBody.actor_assertion,
+      method: 'POST',
+      path: '/api/nexus/scopes/[scopeId]/discussions/posts',
+      body: {
+        actor_packet: parsedBody.actor_packet,
+        csrf_token: parsedBody.csrf_token,
+        reauth_token: parsedBody.reauth_token,
+        thread_packet: parsedBody.thread_packet,
+        post_packet: parsedBody.post_packet,
+      },
+      csrfToken: parsedBody.csrf_token,
+      reauthToken: parsedBody.reauth_token,
+      writeRisk: 'high_impact',
+    });
+    const threadPacket = parsePacketEnvelope(parsedBody.thread_packet);
+    const postPacket = parsePacketEnvelope(parsedBody.post_packet);
+
+    if (threadPacket.header.family !== 'DiscussionThread') {
+      return createJsonResponse(
+        { error: 'thread_packet must be a DiscussionThread packet.' },
+        400
+      );
+    }
+
+    if (postPacket.header.family !== 'DiscussionPost') {
+      return createJsonResponse(
+        { error: 'post_packet must be a DiscussionPost packet.' },
+        400
+      );
+    }
+
     const result = await services.discussionService.createPost({
       scope_id: params.scopeId,
-      thread_packet_id: parsedBody.thread_packet_id,
-      title: parsedBody.title,
-      body: parsedBody.body,
-      session,
+      actor_key: actorContext.actorKey,
+      actor_class: actorContext.actorClass,
+      actor_packet: actorContext.actorPacket,
+      thread_packet: threadPacket,
+      post_packet: postPacket,
     });
 
     return createJsonResponse(result, 201);
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Unable to save the discussion post.';
-    const status = message.includes('need')
+    const status = message.includes('not open')
       ? 403
       : message.includes('Unknown')
         ? 404
-        : message.includes('String must contain at least 1 character')
+        : message.includes('Actor assertion') ||
+            message.includes('signature') ||
+            message.includes('String must contain')
           ? 400
           : 500;
 

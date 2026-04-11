@@ -1,13 +1,21 @@
 /**
  * File: seeds.ts
- * Description: Defines the first reusable seed packet dataset for OWA assembly and forum fixtures.
+ * Description: Defines the reusable OWA packet seed dataset for scope trees, discussion spaces, forums, threads, root posts, and replies.
  */
 
-import type { PacketEnvelope, PacketRef } from '@/domain/schema/packet-schema';
+import type {
+  DiscussionActorClass,
+  PacketEnvelope,
+  PacketRef,
+} from '@/domain/schema/packet-schema';
 
 import {
+  createAttestationPacket,
   createAssemblyPacket,
+  createDiscussionForumPacket,
   createDiscussionPostPacket,
+  createDiscussionReplyPacket,
+  createDiscussionSpacePacket,
   createDiscussionThreadPacket,
   createPacketEdge,
   createPacketRef,
@@ -18,6 +26,7 @@ import {
 } from '@/domain/packets/builders';
 
 export const SEED_CREATED_AT = '2026-04-08T00:00:00.000Z';
+export const DISCUSSION_SEED_VERSION = '2026-04-11-discussions-membership-v1';
 
 export const PERSONAL_TREE_PACKET_IDS = {
   global_commons: 'nexus:element/global-commons',
@@ -29,25 +38,6 @@ export const PERSONAL_TREE_PACKET_IDS = {
   visitor_lobby_policy: 'nexus:policy/visitor-lobby-baseline',
   sunnymead_onboarding_proposal:
     'nexus:proposal/sunnymead-ranch-onboarding',
-  global_visitor_lobby_thread: 'nexus:discussion-thread/global-visitor-lobby',
-  global_general_thread: 'nexus:discussion-thread/global-general',
-  global_proposals_thread: 'nexus:discussion-thread/global-proposals',
-  global_reports_thread: 'nexus:discussion-thread/global-reports',
-  united_states_visitor_lobby_thread:
-    'nexus:discussion-thread/united-states-visitor-lobby',
-  california_visitor_lobby_thread:
-    'nexus:discussion-thread/california-visitor-lobby',
-  moreno_valley_visitor_lobby_thread:
-    'nexus:discussion-thread/moreno-valley-visitor-lobby',
-  sunnymead_visitor_lobby_thread:
-    'nexus:discussion-thread/sunnymead-ranch-visitor-lobby',
-  global_welcome_post: 'nexus:discussion-post/global-welcome-post',
-  united_states_welcome_post:
-    'nexus:discussion-post/united-states-welcome-post',
-  california_welcome_post: 'nexus:discussion-post/california-welcome-post',
-  moreno_valley_welcome_post:
-    'nexus:discussion-post/moreno-valley-welcome-post',
-  sunnymead_welcome_post: 'nexus:discussion-post/sunnymead-ranch-welcome-post',
   global_onboarding_vote: 'nexus:vote/sunnymead-ranch-onboarding',
 } as const;
 
@@ -64,47 +54,441 @@ export const PERSONAL_TREE_REFS = {
   sunnymead_onboarding_proposal: createPacketRef(
     PERSONAL_TREE_PACKET_IDS.sunnymead_onboarding_proposal
   ),
-  global_visitor_lobby_thread: createPacketRef(
-    PERSONAL_TREE_PACKET_IDS.global_visitor_lobby_thread
-  ),
-  global_general_thread: createPacketRef(
-    PERSONAL_TREE_PACKET_IDS.global_general_thread
-  ),
-  global_proposals_thread: createPacketRef(
-    PERSONAL_TREE_PACKET_IDS.global_proposals_thread
-  ),
-  global_reports_thread: createPacketRef(
-    PERSONAL_TREE_PACKET_IDS.global_reports_thread
-  ),
-  united_states_visitor_lobby_thread: createPacketRef(
-    PERSONAL_TREE_PACKET_IDS.united_states_visitor_lobby_thread
-  ),
-  california_visitor_lobby_thread: createPacketRef(
-    PERSONAL_TREE_PACKET_IDS.california_visitor_lobby_thread
-  ),
-  moreno_valley_visitor_lobby_thread: createPacketRef(
-    PERSONAL_TREE_PACKET_IDS.moreno_valley_visitor_lobby_thread
-  ),
-  sunnymead_visitor_lobby_thread: createPacketRef(
-    PERSONAL_TREE_PACKET_IDS.sunnymead_visitor_lobby_thread
-  ),
   global_onboarding_vote: createPacketRef(
     PERSONAL_TREE_PACKET_IDS.global_onboarding_vote
   ),
 } as const;
 
-/**
- * Inputs: a list of packet refs that define a scope chain from local to broad.
- * Output: the same refs in the order expected by scope-aware packet headers.
- */
+type ScopeSeedConfig = {
+  packetRef: PacketRef;
+  applicableScopeRefs: PacketRef[];
+  scopeName: string;
+  authorRef: PacketRef;
+};
+
+type StarterThreadConfig = {
+  forumKind: 'visitor_lobby' | 'general' | 'proposals' | 'reports';
+  suffix: string;
+  title: string;
+  body: string;
+  relatedRefs?: PacketRef[];
+};
+
 function createApplicableScopeRefs(scopeChain: PacketRef[]): PacketRef[] {
   return [...scopeChain];
 }
 
-/**
- * Inputs: none.
- * Output: the first OWA packet seed dataset covering one personal assembly tree and forum-linked packets.
- */
+function getScopeSlug(scopePacketId: string): string {
+  return scopePacketId.startsWith('nexus:element/')
+    ? scopePacketId.slice('nexus:element/'.length)
+    : scopePacketId.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+}
+
+function createDiscussionSpaceId(scopePacketId: string): string {
+  return `nexus:discussion-space/${getScopeSlug(scopePacketId)}`;
+}
+
+function createDiscussionForumId(
+  scopePacketId: string,
+  forumKind: string
+): string {
+  return `nexus:discussion-forum/${getScopeSlug(scopePacketId)}-${forumKind.replace(
+    /_/g,
+    '-'
+  )}`;
+}
+
+function createDiscussionThreadId(
+  scopePacketId: string,
+  forumKind: string,
+  suffix: string
+): string {
+  return `nexus:discussion-thread/${getScopeSlug(scopePacketId)}-${forumKind.replace(
+    /_/g,
+    '-'
+  )}-${suffix}`;
+}
+
+function createDiscussionPostId(
+  scopePacketId: string,
+  forumKind: string,
+  suffix: string
+): string {
+  return `nexus:discussion-post/${getScopeSlug(scopePacketId)}-${forumKind.replace(
+    /_/g,
+    '-'
+  )}-${suffix}`;
+}
+
+function createDiscussionReplyId(
+  scopePacketId: string,
+  forumKind: string,
+  suffix: string
+): string {
+  return `nexus:discussion-reply/${getScopeSlug(scopePacketId)}-${forumKind.replace(
+    /_/g,
+    '-'
+  )}-${suffix}`;
+}
+
+function createDiscussionForumTitle(
+  scopeName: string,
+  forumKind: StarterThreadConfig['forumKind']
+): string {
+  if (forumKind === 'visitor_lobby') {
+    return `${scopeName} visitor lobby`;
+  }
+
+  if (forumKind === 'general') {
+    return `${scopeName} general`;
+  }
+
+  if (forumKind === 'proposals') {
+    return `${scopeName} proposals`;
+  }
+
+  return `${scopeName} reports and AARs`;
+}
+
+function createForumParticipationRules(
+  forumKind: StarterThreadConfig['forumKind']
+): {
+  top_level_actor_classes: DiscussionActorClass[];
+  reply_actor_classes: DiscussionActorClass[];
+  reaction_actor_classes: DiscussionActorClass[];
+  top_level_post_cost: number;
+} {
+  if (forumKind === 'visitor_lobby') {
+    return {
+      top_level_actor_classes: [
+        'anonymous_guest',
+        'scope_member',
+        'trusted_member',
+        'steward',
+      ],
+      reply_actor_classes: [
+        'anonymous_guest',
+        'scope_member',
+        'trusted_member',
+        'steward',
+      ],
+      reaction_actor_classes: [
+        'anonymous_guest',
+        'scope_member',
+        'trusted_member',
+        'steward',
+      ],
+      top_level_post_cost: 0,
+    };
+  }
+
+  return {
+    top_level_actor_classes: ['scope_member', 'trusted_member', 'steward'],
+    reply_actor_classes: ['scope_member', 'trusted_member', 'steward'],
+    reaction_actor_classes: ['scope_member', 'trusted_member', 'steward'],
+    top_level_post_cost: 0,
+  };
+}
+
+function createScopeDiscussionPackets(input: ScopeSeedConfig): PacketEnvelope[] {
+  const discussionSpaceRef = createPacketRef(
+    createDiscussionSpaceId(input.packetRef.packet_id)
+  );
+  const visitorLobbyForumRef = createPacketRef(
+    createDiscussionForumId(input.packetRef.packet_id, 'visitor_lobby')
+  );
+  const generalForumRef = createPacketRef(
+    createDiscussionForumId(input.packetRef.packet_id, 'general')
+  );
+  const proposalsForumRef = createPacketRef(
+    createDiscussionForumId(input.packetRef.packet_id, 'proposals')
+  );
+  const reportsForumRef = createPacketRef(
+    createDiscussionForumId(input.packetRef.packet_id, 'reports')
+  );
+  const forums = [
+    {
+      packetRef: visitorLobbyForumRef,
+      forumKind: 'visitor_lobby' as const,
+      summary:
+        'Public newcomer space for orientation, introductions, and locality routing.',
+      defaultSort: 'new' as const,
+    },
+    {
+      packetRef: generalForumRef,
+      forumKind: 'general' as const,
+      summary:
+        'Open assembly discussion for context, updates, and broad questions.',
+      defaultSort: 'hot' as const,
+    },
+    {
+      packetRef: proposalsForumRef,
+      forumKind: 'proposals' as const,
+      summary:
+        'Proposal review space for drafts, amendments, and governance context.',
+      defaultSort: 'hot' as const,
+    },
+    {
+      packetRef: reportsForumRef,
+      forumKind: 'reports' as const,
+      summary:
+        'Record and after-action reporting space for outcomes and learning.',
+      defaultSort: 'hot' as const,
+    },
+  ];
+
+  const packets: PacketEnvelope[] = [
+    createDiscussionSpacePacket({
+      packet_id: discussionSpaceRef.packet_id,
+      created_at: SEED_CREATED_AT,
+      authority_scope_ref: input.packetRef,
+      applicable_scope_refs: input.applicableScopeRefs,
+      title: `${input.scopeName} discussions`,
+      summary: `Packet-backed discussion surface for ${input.scopeName}.`,
+      scope_ref: input.packetRef,
+      status: 'open',
+      metadata_tags: ['discussion-space', 'scope-discussions'],
+    }),
+    ...forums.map((forum) =>
+      createDiscussionForumPacket({
+        packet_id: forum.packetRef.packet_id,
+        created_at: SEED_CREATED_AT,
+        authority_scope_ref: input.packetRef,
+        applicable_scope_refs: input.applicableScopeRefs,
+        title: createDiscussionForumTitle(input.scopeName, forum.forumKind),
+        summary: forum.summary,
+        discussion_space_ref: discussionSpaceRef,
+        forum_kind: forum.forumKind,
+        status: 'open',
+        participation_rules: createForumParticipationRules(forum.forumKind),
+        default_sort: forum.defaultSort,
+        metadata_tags: ['discussion-forum', forum.forumKind.replace(/_/g, '-')],
+      })
+    ),
+  ];
+
+  const starterThreads: StarterThreadConfig[] = [
+    {
+      forumKind: 'visitor_lobby',
+      suffix: 'welcome',
+      title:
+        input.scopeName === 'Global Commons'
+          ? 'Start here if you do not know your locality yet'
+          : `${input.scopeName} newcomer thread`,
+      body:
+        input.scopeName === 'Global Commons'
+          ? [
+              'Guests can browse first, ask questions here, and narrow down to a local assembly later.',
+              '',
+              'If you already know your general area, mention it and we can point you toward the right branch.',
+            ].join('\n\n')
+          : [
+              `This is the public newcomer thread for ${input.scopeName}.`,
+              '',
+              'Reply here with your question, area, or intent and we can help route you to the right next step.',
+            ].join('\n\n'),
+      relatedRefs: [PERSONAL_TREE_REFS.visitor_lobby_policy],
+    },
+  ];
+
+  if (input.packetRef.packet_id === PERSONAL_TREE_PACKET_IDS.global_commons) {
+    starterThreads.push(
+      {
+        forumKind: 'general',
+        suffix: 'commons-priorities',
+        title: 'What should the public commons page show first?',
+        body: [
+          'This starter thread exists to exercise general discussion routing in the reset discussion model.',
+          '',
+          'Use it to test broad, low-stakes discussion outside the visitor lobby.',
+        ].join('\n\n'),
+      },
+      {
+        forumKind: 'proposals',
+        suffix: 'onboarding-pilot',
+        title: 'Pilot Sunnymead Ranch guest onboarding flow',
+        body: [
+          'This thread anchors proposal discussion around the Sunnymead Ranch onboarding pilot.',
+          '',
+          'It is meant to test proposal-context discussion under the new forum hierarchy.',
+        ].join('\n\n'),
+        relatedRefs: [PERSONAL_TREE_REFS.sunnymead_onboarding_proposal],
+      },
+      {
+        forumKind: 'reports',
+        suffix: 'seed-reset-aar',
+        title: 'Discussion reset seed note',
+        body: [
+          'This starter report thread exists so the reports tab is not empty after reseed.',
+          '',
+          'It also gives us one canonical place to test report-style discussion cards.',
+        ].join('\n\n'),
+      }
+    );
+  }
+
+  if (input.packetRef.packet_id === PERSONAL_TREE_PACKET_IDS.sunnymead_ranch) {
+    starterThreads.push({
+      forumKind: 'proposals',
+      suffix: 'local-onboarding',
+      title: 'How should Sunnymead Ranch welcome new guests?',
+      body: [
+        'Use this thread to sketch the local newcomer flow before we wire it into anything trust-sensitive.',
+        '',
+        'This is intentionally lightweight and public so we can test the discussion hierarchy with a local proposal thread.',
+      ].join('\n\n'),
+      relatedRefs: [PERSONAL_TREE_REFS.sunnymead_onboarding_proposal],
+    });
+  }
+
+  for (const starterThread of starterThreads) {
+    const forumRef = createPacketRef(
+      createDiscussionForumId(input.packetRef.packet_id, starterThread.forumKind)
+    );
+    const threadRef = createPacketRef(
+      createDiscussionThreadId(
+        input.packetRef.packet_id,
+        starterThread.forumKind,
+        starterThread.suffix
+      )
+    );
+    const rootPostRef = createPacketRef(
+      createDiscussionPostId(
+        input.packetRef.packet_id,
+        starterThread.forumKind,
+        starterThread.suffix
+      )
+    );
+
+    packets.push(
+      createDiscussionThreadPacket({
+        packet_id: threadRef.packet_id,
+        created_at: SEED_CREATED_AT,
+        authority_scope_ref: input.packetRef,
+        applicable_scope_refs: input.applicableScopeRefs,
+        forum_ref: forumRef,
+        title: starterThread.title,
+        summary: starterThread.title,
+        thread_kind: starterThread.forumKind,
+        status: 'open',
+        related_refs: starterThread.relatedRefs ?? [],
+        participation_rules: createForumParticipationRules(starterThread.forumKind),
+        default_sort:
+          starterThread.forumKind === 'visitor_lobby' ? 'new' : 'hot',
+        metadata_tags: ['discussion-thread', starterThread.forumKind.replace(/_/g, '-')],
+      }),
+      createDiscussionPostPacket({
+        packet_id: rootPostRef.packet_id,
+        created_at: SEED_CREATED_AT,
+        authority_scope_ref: input.packetRef,
+        applicable_scope_refs: input.applicableScopeRefs,
+        created_by: input.authorRef,
+        thread_ref: threadRef,
+        title: starterThread.title,
+        content_markdown: starterThread.body,
+        reference_refs: starterThread.relatedRefs ?? [],
+        metadata_tags: ['discussion-post', 'thread-root', starterThread.forumKind.replace(/_/g, '-')],
+      })
+    );
+  }
+
+  if (input.packetRef.packet_id === PERSONAL_TREE_PACKET_IDS.global_commons) {
+    const rootPostRef = createPacketRef(
+      createDiscussionPostId(input.packetRef.packet_id, 'visitor_lobby', 'welcome')
+    );
+    const threadRef = createPacketRef(
+      createDiscussionThreadId(input.packetRef.packet_id, 'visitor_lobby', 'welcome')
+    );
+    const firstReplyRef = createPacketRef(
+      createDiscussionReplyId(input.packetRef.packet_id, 'visitor_lobby', 'welcome-routing')
+    );
+
+    packets.push(
+      createDiscussionReplyPacket({
+        packet_id: firstReplyRef.packet_id,
+        created_at: SEED_CREATED_AT,
+        authority_scope_ref: input.packetRef,
+        applicable_scope_refs: input.applicableScopeRefs,
+        created_by: PERSONAL_TREE_REFS.aaron,
+        thread_ref: threadRef,
+        root_post_ref: rootPostRef,
+        reply_to_ref: rootPostRef,
+        title: 'Routing note',
+        content_markdown: [
+          'A good first reply asks where someone is roughly located and what they want to do.',
+          '',
+          'That gives us enough to route them without demanding too much up front.',
+        ].join('\n\n'),
+        metadata_tags: ['discussion-reply', 'seed-reply'],
+      }),
+      createDiscussionReplyPacket({
+        packet_id: createDiscussionReplyId(
+          input.packetRef.packet_id,
+          'visitor_lobby',
+          'welcome-routing-followup'
+        ),
+        created_at: SEED_CREATED_AT,
+        authority_scope_ref: input.packetRef,
+        applicable_scope_refs: input.applicableScopeRefs,
+        created_by: PERSONAL_TREE_REFS.global_commons,
+        thread_ref: threadRef,
+        root_post_ref: rootPostRef,
+        reply_to_ref: firstReplyRef,
+        title: 'Routing follow-up',
+        content_markdown: [
+          'This second-level reply exists so the initial seed includes a real nested branch.',
+          '',
+          'It should make the collapse and child-loading behavior easier to verify after reset.',
+        ].join('\n\n'),
+        metadata_tags: ['discussion-reply', 'seed-reply'],
+      })
+    );
+  }
+
+  if (input.packetRef.packet_id === PERSONAL_TREE_PACKET_IDS.sunnymead_ranch) {
+    const rootPostRef = createPacketRef(
+      createDiscussionPostId(
+        input.packetRef.packet_id,
+        'visitor_lobby',
+        'welcome'
+      )
+    );
+    const threadRef = createPacketRef(
+      createDiscussionThreadId(
+        input.packetRef.packet_id,
+        'visitor_lobby',
+        'welcome'
+      )
+    );
+
+    packets.push(
+      createDiscussionReplyPacket({
+        packet_id: createDiscussionReplyId(
+          input.packetRef.packet_id,
+          'visitor_lobby',
+          'welcome-local-note'
+        ),
+        created_at: SEED_CREATED_AT,
+        authority_scope_ref: input.packetRef,
+        applicable_scope_refs: input.applicableScopeRefs,
+        created_by: PERSONAL_TREE_REFS.aaron,
+        thread_ref: threadRef,
+        root_post_ref: rootPostRef,
+        reply_to_ref: rootPostRef,
+        title: 'Local note',
+        content_markdown: [
+          'This local seed reply gives the neighborhood visitor lobby one non-root reply for point and reply-tree testing.',
+          '',
+          'It also makes the lower scopes feel less empty right after reseed.',
+        ].join('\n\n'),
+        metadata_tags: ['discussion-reply', 'seed-reply'],
+      })
+    );
+  }
+
+  return packets;
+}
+
 export function createPersonalSeedPackets(): PacketEnvelope[] {
   const globalApplicableScopeRefs = createApplicableScopeRefs([
     PERSONAL_TREE_REFS.global_commons,
@@ -248,84 +632,6 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     related_policy_refs: [PERSONAL_TREE_REFS.visitor_lobby_policy],
   });
 
-  const globalVisitorLobbyThreadPacket = createDiscussionThreadPacket({
-    packet_id: PERSONAL_TREE_PACKET_IDS.global_visitor_lobby_thread,
-    created_at: SEED_CREATED_AT,
-    authority_scope_ref: PERSONAL_TREE_REFS.global_commons,
-    applicable_scope_refs: globalApplicableScopeRefs,
-    related_refs: [PERSONAL_TREE_REFS.visitor_lobby_policy],
-    title: 'Global visitor lobby',
-    summary:
-      'The broadest public thread for introductions, routing, and guest orientation.',
-    thread_kind: 'visitor_lobby',
-    status: 'open',
-    participation_rules: {
-      top_level_actor_classes: ['anonymous_guest'],
-      reply_actor_classes: ['anonymous_guest'],
-      reaction_actor_classes: ['anonymous_guest'],
-      top_level_post_cost: 10,
-    },
-    default_sort: 'new',
-  });
-
-  const globalGeneralThreadPacket = createDiscussionThreadPacket({
-    packet_id: PERSONAL_TREE_PACKET_IDS.global_general_thread,
-    created_at: SEED_CREATED_AT,
-    authority_scope_ref: PERSONAL_TREE_REFS.global_commons,
-    applicable_scope_refs: globalApplicableScopeRefs,
-    title: 'Global general',
-    summary:
-      'Assembly-wide context, updates, and cross-scope orientation threads.',
-    thread_kind: 'general',
-    status: 'open',
-    participation_rules: {
-      top_level_actor_classes: ['scope_member', 'trusted_member', 'steward'],
-      reply_actor_classes: ['scope_member', 'trusted_member', 'steward'],
-      reaction_actor_classes: ['scope_member', 'trusted_member', 'steward'],
-      top_level_post_cost: 10,
-    },
-    default_sort: 'hot',
-  });
-
-  const globalProposalsThreadPacket = createDiscussionThreadPacket({
-    packet_id: PERSONAL_TREE_PACKET_IDS.global_proposals_thread,
-    created_at: SEED_CREATED_AT,
-    authority_scope_ref: PERSONAL_TREE_REFS.global_commons,
-    applicable_scope_refs: globalApplicableScopeRefs,
-    related_refs: [PERSONAL_TREE_REFS.sunnymead_onboarding_proposal],
-    title: 'Global proposals',
-    summary:
-      'Discussion floor for proposal drafts, reviews, and amendment context.',
-    thread_kind: 'proposals',
-    status: 'open',
-    participation_rules: {
-      top_level_actor_classes: ['scope_member', 'trusted_member', 'steward'],
-      reply_actor_classes: ['scope_member', 'trusted_member', 'steward'],
-      reaction_actor_classes: ['scope_member', 'trusted_member', 'steward'],
-      top_level_post_cost: 10,
-    },
-    default_sort: 'hot',
-  });
-
-  const globalReportsThreadPacket = createDiscussionThreadPacket({
-    packet_id: PERSONAL_TREE_PACKET_IDS.global_reports_thread,
-    created_at: SEED_CREATED_AT,
-    authority_scope_ref: PERSONAL_TREE_REFS.global_commons,
-    applicable_scope_refs: globalApplicableScopeRefs,
-    title: 'Global reports and AARs',
-    summary:
-      'Record and learning loop for mission reports, retrospectives, and improvements.',
-    thread_kind: 'reports',
-    status: 'open',
-    participation_rules: {
-      top_level_actor_classes: ['scope_member', 'trusted_member', 'steward'],
-      reply_actor_classes: ['scope_member', 'trusted_member', 'steward'],
-      reaction_actor_classes: ['scope_member', 'trusted_member', 'steward'],
-      top_level_post_cost: 10,
-    },
-    default_sort: 'hot',
-  });
-
   const globalOnboardingVotePacket = createVotePacket({
     packet_id: PERSONAL_TREE_PACKET_IDS.global_onboarding_vote,
     created_at: SEED_CREATED_AT,
@@ -338,173 +644,16 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     opened_at: SEED_CREATED_AT,
     closes_at: '2026-04-12T00:00:00.000Z',
   });
-
-  const unitedStatesVisitorLobbyThreadPacket = createDiscussionThreadPacket({
-    packet_id: PERSONAL_TREE_PACKET_IDS.united_states_visitor_lobby_thread,
-    created_at: SEED_CREATED_AT,
-    authority_scope_ref: PERSONAL_TREE_REFS.united_states,
-    applicable_scope_refs: unitedStatesApplicableScopeRefs,
-    related_refs: [PERSONAL_TREE_REFS.visitor_lobby_policy],
-    title: 'United States visitor lobby',
-    summary:
-      'National newcomer thread for introductions, routing, and first-stop public questions.',
-    thread_kind: 'visitor_lobby',
-    status: 'open',
-    participation_rules: {
-      top_level_actor_classes: ['anonymous_guest'],
-      reply_actor_classes: ['anonymous_guest'],
-      reaction_actor_classes: ['anonymous_guest'],
-      top_level_post_cost: 10,
-    },
-    default_sort: 'new',
-  });
-
-  const californiaVisitorLobbyThreadPacket = createDiscussionThreadPacket({
-    packet_id: PERSONAL_TREE_PACKET_IDS.california_visitor_lobby_thread,
-    created_at: SEED_CREATED_AT,
-    authority_scope_ref: PERSONAL_TREE_REFS.california,
-    applicable_scope_refs: californiaApplicableScopeRefs,
-    related_refs: [PERSONAL_TREE_REFS.visitor_lobby_policy],
-    title: 'California visitor lobby',
-    summary:
-      'State-level newcomer thread for introductions, locality narrowing, and public orientation.',
-    thread_kind: 'visitor_lobby',
-    status: 'open',
-    participation_rules: {
-      top_level_actor_classes: ['anonymous_guest'],
-      reply_actor_classes: ['anonymous_guest'],
-      reaction_actor_classes: ['anonymous_guest'],
-      top_level_post_cost: 10,
-    },
-    default_sort: 'new',
-  });
-
-  const morenoValleyVisitorLobbyThreadPacket = createDiscussionThreadPacket({
-    packet_id: PERSONAL_TREE_PACKET_IDS.moreno_valley_visitor_lobby_thread,
-    created_at: SEED_CREATED_AT,
-    authority_scope_ref: PERSONAL_TREE_REFS.moreno_valley,
-    applicable_scope_refs: morenoValleyApplicableScopeRefs,
-    related_refs: [PERSONAL_TREE_REFS.visitor_lobby_policy],
-    title: 'Moreno Valley visitor lobby',
-    summary:
-      'City-level newcomer thread for Moreno Valley orientation and routing into neighborhood assemblies.',
-    thread_kind: 'visitor_lobby',
-    status: 'open',
-    participation_rules: {
-      top_level_actor_classes: ['anonymous_guest'],
-      reply_actor_classes: ['anonymous_guest'],
-      reaction_actor_classes: ['anonymous_guest'],
-      top_level_post_cost: 10,
-    },
-    default_sort: 'new',
-  });
-
-  const sunnymeadVisitorLobbyThreadPacket = createDiscussionThreadPacket({
-    packet_id: PERSONAL_TREE_PACKET_IDS.sunnymead_visitor_lobby_thread,
-    created_at: SEED_CREATED_AT,
-    authority_scope_ref: PERSONAL_TREE_REFS.sunnymead_ranch,
-    applicable_scope_refs: sunnymeadApplicableScopeRefs,
-    related_refs: [
-      PERSONAL_TREE_REFS.visitor_lobby_policy,
-      PERSONAL_TREE_REFS.sunnymead_onboarding_proposal,
-    ],
-    title: 'Sunnymead Ranch visitor lobby',
-    summary:
-      'Public neighborhood thread for introductions, local questions, and assembly onboarding context.',
-    thread_kind: 'visitor_lobby',
-    status: 'open',
-    participation_rules: {
-      top_level_actor_classes: ['anonymous_guest'],
-      reply_actor_classes: ['anonymous_guest'],
-      reaction_actor_classes: ['anonymous_guest'],
-      top_level_post_cost: 10,
-    },
-    default_sort: 'new',
-  });
-
-  const globalWelcomePostPacket = createDiscussionPostPacket({
-    packet_id: PERSONAL_TREE_PACKET_IDS.global_welcome_post,
-    created_at: SEED_CREATED_AT,
-    authority_scope_ref: PERSONAL_TREE_REFS.global_commons,
-    applicable_scope_refs: globalApplicableScopeRefs,
-    created_by: PERSONAL_TREE_REFS.global_commons,
-    thread_ref: PERSONAL_TREE_REFS.global_visitor_lobby_thread,
-    post_kind: 'forum_post',
-    title: 'Start here if you do not know your locality yet',
-    content_markdown: [
-      'Guests can browse first, ask questions here, and narrow down to a local assembly later.',
-      '',
-      'If you already know your general area, mention it and we can point you toward the right branch.',
-    ].join('\n\n'),
-    reference_refs: [PERSONAL_TREE_REFS.visitor_lobby_policy],
-  });
-
-  const unitedStatesWelcomePostPacket = createDiscussionPostPacket({
-    packet_id: PERSONAL_TREE_PACKET_IDS.united_states_welcome_post,
-    created_at: SEED_CREATED_AT,
-    authority_scope_ref: PERSONAL_TREE_REFS.united_states,
-    applicable_scope_refs: unitedStatesApplicableScopeRefs,
-    created_by: PERSONAL_TREE_REFS.global_commons,
-    thread_ref: PERSONAL_TREE_REFS.united_states_visitor_lobby_thread,
-    post_kind: 'forum_post',
-    title: 'United States newcomer thread',
-    content_markdown: [
-      'Start here if you already know you are somewhere in the U.S. but have not narrowed down to your state or city assembly yet.',
-      '',
-      'Reply with your general area and we can help route you to the right locality branch.',
-    ].join('\n\n'),
-    reference_refs: [PERSONAL_TREE_REFS.visitor_lobby_policy],
-  });
-
-  const californiaWelcomePostPacket = createDiscussionPostPacket({
-    packet_id: PERSONAL_TREE_PACKET_IDS.california_welcome_post,
-    created_at: SEED_CREATED_AT,
-    authority_scope_ref: PERSONAL_TREE_REFS.california,
-    applicable_scope_refs: californiaApplicableScopeRefs,
-    created_by: PERSONAL_TREE_REFS.global_commons,
-    thread_ref: PERSONAL_TREE_REFS.california_visitor_lobby_thread,
-    post_kind: 'forum_post',
-    title: 'California newcomer thread',
-    content_markdown: [
-      'Use this thread if you know you are in California and want help finding the right local branch next.',
-      '',
-      'Replies here are the first chance to earn posting points before opening a new top-level visitor thread.',
-    ].join('\n\n'),
-    reference_refs: [PERSONAL_TREE_REFS.visitor_lobby_policy],
-  });
-
-  const morenoValleyWelcomePostPacket = createDiscussionPostPacket({
-    packet_id: PERSONAL_TREE_PACKET_IDS.moreno_valley_welcome_post,
-    created_at: SEED_CREATED_AT,
-    authority_scope_ref: PERSONAL_TREE_REFS.moreno_valley,
-    applicable_scope_refs: morenoValleyApplicableScopeRefs,
-    created_by: PERSONAL_TREE_REFS.aaron,
-    thread_ref: PERSONAL_TREE_REFS.moreno_valley_visitor_lobby_thread,
-    post_kind: 'forum_post',
-    title: 'Moreno Valley newcomer thread',
-    content_markdown: [
-      'This is the city-level entry point for Moreno Valley guests who have not narrowed down to a neighborhood assembly yet.',
-      '',
-      'Reply here with your area or question and we can point you toward the right local branch.',
-    ].join('\n\n'),
-    reference_refs: [PERSONAL_TREE_REFS.visitor_lobby_policy],
-  });
-
-  const sunnymeadWelcomePostPacket = createDiscussionPostPacket({
-    packet_id: PERSONAL_TREE_PACKET_IDS.sunnymead_welcome_post,
+  const aaronSunnymeadClaimPacket = createAttestationPacket({
+    packet_id: 'nexus:attestation/aaron-sunnymead-ranch-claim',
     created_at: SEED_CREATED_AT,
     authority_scope_ref: PERSONAL_TREE_REFS.sunnymead_ranch,
     applicable_scope_refs: sunnymeadApplicableScopeRefs,
     created_by: PERSONAL_TREE_REFS.aaron,
-    thread_ref: PERSONAL_TREE_REFS.sunnymead_visitor_lobby_thread,
-    post_kind: 'forum_post',
-    title: 'Sunnymead Ranch newcomer thread',
-    content_markdown: [
-      'This thread is the neighborhood-level starting point for Sunnymead Ranch guests.',
-      '',
-      'We can use it to refine the local onboarding flow before wiring it into the broader forum surface.',
-    ].join('\n\n'),
-    reference_refs: [PERSONAL_TREE_REFS.sunnymead_onboarding_proposal],
+    target_ref: PERSONAL_TREE_REFS.sunnymead_ranch,
+    value: 1,
+    attestation_kind: 'assembly_association_claim',
+    note: 'Resident and active local participant.',
   });
 
   return [
@@ -517,19 +666,37 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     visitorLobbyPolicyPacket,
     sunnymeadOnboardingProposalPacket,
     globalOnboardingVotePacket,
-    globalVisitorLobbyThreadPacket,
-    globalGeneralThreadPacket,
-    globalProposalsThreadPacket,
-    globalReportsThreadPacket,
-    unitedStatesVisitorLobbyThreadPacket,
-    californiaVisitorLobbyThreadPacket,
-    morenoValleyVisitorLobbyThreadPacket,
-    sunnymeadVisitorLobbyThreadPacket,
-    globalWelcomePostPacket,
-    unitedStatesWelcomePostPacket,
-    californiaWelcomePostPacket,
-    morenoValleyWelcomePostPacket,
-    sunnymeadWelcomePostPacket,
+    aaronSunnymeadClaimPacket,
+    ...createScopeDiscussionPackets({
+      packetRef: PERSONAL_TREE_REFS.global_commons,
+      applicableScopeRefs: globalApplicableScopeRefs,
+      scopeName: 'Global Commons',
+      authorRef: PERSONAL_TREE_REFS.global_commons,
+    }),
+    ...createScopeDiscussionPackets({
+      packetRef: PERSONAL_TREE_REFS.united_states,
+      applicableScopeRefs: unitedStatesApplicableScopeRefs,
+      scopeName: 'United States',
+      authorRef: PERSONAL_TREE_REFS.global_commons,
+    }),
+    ...createScopeDiscussionPackets({
+      packetRef: PERSONAL_TREE_REFS.california,
+      applicableScopeRefs: californiaApplicableScopeRefs,
+      scopeName: 'California',
+      authorRef: PERSONAL_TREE_REFS.global_commons,
+    }),
+    ...createScopeDiscussionPackets({
+      packetRef: PERSONAL_TREE_REFS.moreno_valley,
+      applicableScopeRefs: morenoValleyApplicableScopeRefs,
+      scopeName: 'Moreno Valley',
+      authorRef: PERSONAL_TREE_REFS.aaron,
+    }),
+    ...createScopeDiscussionPackets({
+      packetRef: PERSONAL_TREE_REFS.sunnymead_ranch,
+      applicableScopeRefs: sunnymeadApplicableScopeRefs,
+      scopeName: 'Sunnymead Ranch',
+      authorRef: PERSONAL_TREE_REFS.aaron,
+    }),
   ];
 }
 

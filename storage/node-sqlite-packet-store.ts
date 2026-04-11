@@ -4,7 +4,7 @@
  */
 
 import { mkdirSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname } from 'node:path';
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 
 import type {
@@ -30,13 +30,7 @@ import {
   projectPacketSearchIndexRecord,
   type PacketSearchIndexRecord,
 } from '@/storage/sqlite-records';
-
-export const NODE_PACKET_STORE_DATABASE_PATH = join(
-  process.cwd(),
-  'data',
-  'nexus',
-  'owa-packets.db'
-);
+import { NODE_PACKET_STORE_DATABASE_PATH } from '@/storage/node-runtime-paths';
 
 interface PacketRow {
   packet_id: string;

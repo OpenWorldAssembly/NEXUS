@@ -286,7 +286,12 @@ export class PacketStoreNexusQueryService implements NexusQueryService {
   async listDiscussions(
     lens: NexusScopeLens
   ): Promise<NexusPacketCardProjection[]> {
-    return this.listCardsByFamilies(lens, ['DiscussionThread', 'DiscussionPost']);
+    return this.listCardsByFamilies(lens, [
+      'DiscussionForum',
+      'DiscussionThread',
+      'DiscussionPost',
+      'DiscussionReply',
+    ]);
   }
 
   async listLibraryPackets(

@@ -37,6 +37,11 @@ function NexusLayoutContent() {
           <Stack.Screen name="votes" />
           <Stack.Screen name="library" />
           <Stack.Screen name="account" />
+          <Stack.Screen name="identity/sign-in" />
+          <Stack.Screen name="identity/create" />
+          <Stack.Screen name="identity/claim" />
+          <Stack.Screen name="identity/restore" />
+          <Stack.Screen name="identity/security" />
         </Stack>
       </NexusShell>
     </ThemeProvider>

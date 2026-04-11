@@ -398,9 +398,9 @@ export async function getNexusShellPayload(): Promise<NexusShellPayload> {
     const childIds = scopeNodes
       .filter((candidateNode) => candidateNode.parentRouteId === scopeNode.routeId)
       .map((childNode) => childNode.routeId);
-    const hasVisitorLobbyThread = discussionCards.some(
+    const hasVisitorLobbyForum = discussionCards.some(
       (discussionCard) =>
-        discussionCard.family === 'DiscussionThread' &&
+        discussionCard.family === 'DiscussionForum' &&
         discussionCard.title.toLowerCase().includes('visitor lobby')
     );
 
@@ -429,7 +429,7 @@ export async function getNexusShellPayload(): Promise<NexusShellPayload> {
           .length,
         hotDiscussions: discussionCards.length,
         missions: missionCards.length,
-        guestLobbyOpen: hasVisitorLobbyThread,
+        guestLobbyOpen: hasVisitorLobbyForum,
       },
     });
   }
@@ -483,8 +483,10 @@ export async function getNexusDashboardPayload(
     services.nexusQueryService.listDiscussions(scopeLens),
     services.nexusQueryService.listLibraryPackets(scopeLens),
   ]);
-  const visitorLobbyThreadCount = discussionCards.filter((discussionCard) =>
-    discussionCard.title.toLowerCase().includes('visitor lobby')
+  const visitorLobbyForumCount = discussionCards.filter(
+    (discussionCard) =>
+      discussionCard.family === 'DiscussionForum' &&
+      discussionCard.title.toLowerCase().includes('visitor lobby')
   ).length;
 
   return {
@@ -513,9 +515,9 @@ export async function getNexusDashboardPayload(
       },
       {
         id: 'visitor-lobbies',
-        title: 'Visitor lobby threads',
-        value: visitorLobbyThreadCount.toString(),
-        detail: 'Public visitor-lobby discussion threads currently discoverable.',
+        title: 'Visitor lobby forums',
+        value: visitorLobbyForumCount.toString(),
+        detail: 'Public visitor-lobby discussion forums currently discoverable.',
         tone: 'gold',
       },
     ],

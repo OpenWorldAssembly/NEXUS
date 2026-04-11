@@ -4,6 +4,7 @@
  */
 
 import type {
+  AttestationValue,
   DiscussionActorClass,
   DiscussionReplySort,
   DiscussionSort,
@@ -14,7 +15,6 @@ import type {
   PacketRevisionState,
   PacketRef,
   PacketRevisionRef,
-  PacketVoteValue,
 } from '@/domain/schema/packet-schema';
 
 export interface PacketEdgeQuery {
@@ -114,39 +114,72 @@ export interface NexusQueryService {
 export interface DiscussionViewerContext {
   actor_key: string | null;
   actor_class: DiscussionActorClass;
-  available_points: number;
   can_create_top_level: boolean;
   can_reply: boolean;
   can_vote: boolean;
 }
 
-export interface PacketVoteSummary {
+export interface AttestationSummary {
   upvote_count: number;
   downvote_count: number;
   net_score: number;
   total_votes: number;
   negative_ratio: number;
-  viewer_value: PacketVoteValue | 0;
+  viewer_value: AttestationValue | 0;
   auto_hidden: boolean;
   deprioritized: boolean;
 }
 
+export interface AttestationEdgeProjection {
+  packet: PacketRef;
+  revision: PacketRevisionRef;
+  source_actor_key: string;
+  source_actor_packet_id: string | null;
+  target_ref: PacketRef;
+  attestation_kind: string;
+  value: AttestationValue;
+  status: 'active' | 'cleared';
+  context_ref: PacketRef | null;
+  supporting_refs: PacketRef[];
+  note: string | null;
+  supersedes_ref: PacketRef | null;
+  created_at: string;
+}
+
+export interface AssemblyAssociationClaimProjection {
+  assembly_packet_id: string;
+  assembly_name: string;
+  claim_packet_id: string;
+  status: 'active' | 'cleared';
+  note: string | null;
+  created_at: string;
+  supported_by_other_count: number;
+  is_self_issued_only: boolean;
+  is_current: boolean;
+}
+
 export interface DiscussionForumProjection {
   id: string;
+  forum_kind: string;
   title: string;
   description: string;
   cadence: string;
   public_posting: boolean;
   linked_packet_label: string;
+  discussion_space_packet_id: string;
+  forum_packet_id: string;
   thread_packet_id: string;
+  authority_scope_packet_id: string | null;
+  applicable_scope_packet_ids: string[];
   default_sort: DiscussionSort;
-  top_level_post_cost: number;
 }
 
 export interface DiscussionPostProjection {
   packet: PacketRef;
   revision: PacketRevisionRef;
   thread_ref: PacketRef;
+  authority_scope_packet_id: string | null;
+  applicable_scope_packet_ids: string[];
   title: string;
   content_markdown: string | null;
   excerpt: string | null;
@@ -159,7 +192,7 @@ export interface DiscussionPostProjection {
   depth: number;
   is_hidden: boolean;
   hidden_reason: string | null;
-  vote_summary: PacketVoteSummary;
+  vote_summary: AttestationSummary;
 }
 
 export interface DiscussionPageInfo {
@@ -235,12 +268,39 @@ export interface DiscussionQueryService {
   }): Promise<DiscussionReplyChildrenProjection>;
 }
 
-export interface PacketVoteService {
-  setPacketVote(input: {
+export interface AttestationService {
+  syncDerivedState(): Promise<void>;
+  setAttestation(input: {
     target_packet_id: string;
     actor_key: string;
     actor_class: DiscussionActorClass;
     authority_scope_id: string | null;
-    value: PacketVoteValue | 0;
-  }): Promise<PacketVoteSummary>;
+    value: AttestationValue | 0;
+    attestation_kind?: string;
+    context_packet_id?: string | null;
+    supporting_packet_ids?: string[];
+    note?: string | null;
+  }): Promise<AttestationSummary>;
+  getTargetSummary(input: {
+    target_packet_id: string;
+    viewer_actor_key: string | null;
+  }): Promise<AttestationSummary>;
+  listTargetAttestations(input: {
+    target_packet_id: string;
+    attestation_kind?: string | null;
+    context_packet_id?: string | null;
+    active_only?: boolean;
+  }): Promise<AttestationEdgeProjection[]>;
+  listActorAttestations(input: {
+    actor_key: string;
+    attestation_kind?: string | null;
+    active_only?: boolean;
+  }): Promise<AttestationEdgeProjection[]>;
+  listAssemblyAssociationClaimsForActor(
+    actor_packet_id: string
+  ): Promise<AssemblyAssociationClaimProjection[]>;
+  hasActiveAssemblyAssociationClaim(input: {
+    actor_packet_id: string;
+    assembly_packet_id: string;
+  }): Promise<boolean>;
 }

@@ -95,21 +95,23 @@ CREATE INDEX IF NOT EXISTS idx_packet_search_authority_scope
   ON packet_search_index(authority_scope_packet_id)
   WHERE authority_scope_packet_id IS NOT NULL;
 
-CREATE TABLE IF NOT EXISTS packet_vote_index (
-  vote_packet_id TEXT PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS attestation_index (
+  attestation_packet_id TEXT PRIMARY KEY,
   target_packet_id TEXT NOT NULL,
   actor_key TEXT NOT NULL,
-  vote_kind TEXT NOT NULL,
+  attestation_kind TEXT NOT NULL,
   value INTEGER NOT NULL,
   status TEXT NOT NULL,
+  context_packet_id TEXT,
+  note TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_packet_vote_target_actor
-  ON packet_vote_index(target_packet_id, actor_key);
+CREATE INDEX IF NOT EXISTS idx_attestation_target_actor
+  ON attestation_index(target_packet_id, actor_key);
 
-CREATE TABLE IF NOT EXISTS packet_vote_tally_index (
+CREATE TABLE IF NOT EXISTS attestation_tally_index (
   target_packet_id TEXT PRIMARY KEY,
   upvote_count INTEGER NOT NULL,
   downvote_count INTEGER NOT NULL,
@@ -120,8 +122,8 @@ CREATE TABLE IF NOT EXISTS packet_vote_tally_index (
   deprioritized INTEGER NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_packet_vote_tally_net_score
-  ON packet_vote_tally_index(net_score DESC, total_votes DESC);
+CREATE INDEX IF NOT EXISTS idx_attestation_tally_net_score
+  ON attestation_tally_index(net_score DESC, total_votes DESC);
 
 CREATE TABLE IF NOT EXISTS discussion_post_index (
   post_packet_id TEXT PRIMARY KEY,
@@ -150,5 +152,111 @@ CREATE TABLE IF NOT EXISTS discussion_actor_ledger (
   negative_content_count INTEGER NOT NULL,
   trust_signal_score INTEGER NOT NULL,
   last_activity_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS auth_sign_in_challenges (
+  challenge_id TEXT PRIMARY KEY,
+  actor_packet_id TEXT NOT NULL,
+  nonce TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  used_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_auth_sign_in_challenges_actor
+  ON auth_sign_in_challenges(actor_packet_id, expires_at DESC);
+
+CREATE TABLE IF NOT EXISTS auth_sessions (
+  session_id TEXT PRIMARY KEY,
+  actor_packet_id TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  last_seen_at TEXT NOT NULL,
+  revoked_at TEXT,
+  persistent_login INTEGER NOT NULL,
+  device_label TEXT NOT NULL DEFAULT 'Current device',
+  auth_method TEXT NOT NULL DEFAULT 'bundle',
+  csrf_token TEXT NOT NULL DEFAULT '',
+  requires_passkey_upgrade INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_auth_sessions_actor
+  ON auth_sessions(actor_packet_id, expires_at DESC);
+
+CREATE TABLE IF NOT EXISTS auth_refresh_tokens (
+  refresh_token_id TEXT PRIMARY KEY,
+  session_id TEXT NOT NULL,
+  actor_packet_id TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  revoked_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_auth_refresh_tokens_actor
+  ON auth_refresh_tokens(actor_packet_id, expires_at DESC);
+
+CREATE TABLE IF NOT EXISTS auth_passkeys (
+  credential_id TEXT PRIMARY KEY,
+  actor_packet_id TEXT NOT NULL,
+  public_key_spki TEXT NOT NULL,
+  sign_count INTEGER NOT NULL,
+  transports_json TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  last_used_at TEXT,
+  revoked_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_auth_passkeys_actor
+  ON auth_passkeys(actor_packet_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS auth_identity_security (
+  actor_packet_id TEXT PRIMARY KEY,
+  security_mode TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS auth_webauthn_challenges (
+  challenge_id TEXT PRIMARY KEY,
+  actor_packet_id TEXT,
+  session_id TEXT,
+  purpose TEXT NOT NULL,
+  challenge TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  used_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_auth_webauthn_challenges_actor
+  ON auth_webauthn_challenges(actor_packet_id, expires_at DESC);
+
+CREATE TABLE IF NOT EXISTS auth_reauth_tokens (
+  reauth_token_id TEXT PRIMARY KEY,
+  actor_packet_id TEXT NOT NULL,
+  session_id TEXT NOT NULL,
+  purpose TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  used_at TEXT,
+  revoked_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_auth_reauth_tokens_actor
+  ON auth_reauth_tokens(actor_packet_id, expires_at DESC);
+
+CREATE TABLE IF NOT EXISTS auth_rate_limit_buckets (
+  bucket_key TEXT PRIMARY KEY,
+  window_started_at TEXT NOT NULL,
+  hit_count INTEGER NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS auth_event_log (
+  event_id TEXT PRIMARY KEY,
+  actor_packet_id TEXT,
+  session_id TEXT,
+  credential_id TEXT,
+  event_type TEXT NOT NULL,
+  event_metadata_json TEXT NOT NULL,
+  created_at TEXT NOT NULL
 );
 `;

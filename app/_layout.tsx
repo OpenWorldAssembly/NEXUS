@@ -11,6 +11,7 @@ import { StyleSheet, View } from 'react-native';
 import 'react-native-reanimated';
 
 import Footer from '@/components/layout/footer';
+import { IdentityShellProvider } from '@/components/nexus/identity-shell-context';
 import Header from '@/components/layout/header';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -43,19 +44,21 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      {isNexusRoute ? (
-        <View style={styles.nexusRoot}>{stack}</View>
-      ) : (
-        <View style={styles.appShell}>
-          <Header />
+      <IdentityShellProvider>
+        {isNexusRoute ? (
+          <View style={styles.nexusRoot}>{stack}</View>
+        ) : (
+          <View style={styles.appShell}>
+            <Header />
 
-          <View style={styles.mainContent}>{stack}</View>
+            <View style={styles.mainContent}>{stack}</View>
 
-          <Footer />
-        </View>
-      )}
+            <Footer />
+          </View>
+        )}
 
-      <StatusBar style="light" />
+        <StatusBar style="light" />
+      </IdentityShellProvider>
     </ThemeProvider>
   );
 }

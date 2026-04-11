@@ -9,7 +9,6 @@ import {
   DISCUSSION_SORTS,
   type DiscussionSort,
 } from '@/domain/schema/packet-schema';
-import { createAnonymousActorKey } from '@/lib/nexus/anonymous-session';
 import {
   getNexusDiscussionsPayload,
   getNexusShellPayload,
@@ -49,7 +48,7 @@ export const GET: RequestHandler = async (_request, params) => {
     const requestedForumId = requestUrl.searchParams.get('forum');
     const requestedSort = requestUrl.searchParams.get('sort');
     const requestedShowHidden = requestUrl.searchParams.get('show_hidden');
-    const viewerSessionId = requestUrl.searchParams.get('viewer_session_id');
+    const viewerActorPacketId = requestUrl.searchParams.get('viewer_actor_packet_id');
     const cursor = requestUrl.searchParams.get('cursor');
     const limit = parsePositiveInteger(requestUrl.searchParams.get('limit'));
     const shellPayload = await getNexusShellPayload();
@@ -64,8 +63,8 @@ export const GET: RequestHandler = async (_request, params) => {
           : null,
       showHidden:
         requestedShowHidden === 'true' || requestedShowHidden === '1',
-      viewerActorKey: viewerSessionId
-        ? createAnonymousActorKey(viewerSessionId)
+      viewerActorKey: viewerActorPacketId
+        ? `element:${viewerActorPacketId}`
         : null,
       cursor,
       limit,

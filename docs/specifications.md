@@ -19,7 +19,7 @@ Implemented scope today:
 
 - a shared public shell with persistent `Header` and `Footer`
 - redesigned public landing, about, and charter destination pages using NativeWind styling
-- placeholder public auth destination pages
+- Nexus-shell cryptographic identity entry pages for sign-in, sign-up, guest claim, identity restore, and identity security
 - a dedicated nexus layout for `/nexus/*`
 - nexus routes for `Dashboard`, `Discussions`, `Votes`, `Library`, and `Account`
 - nexus shell state for scope selection, section selection, guest capabilities, and function-first vs scope-first mode
@@ -28,7 +28,6 @@ Implemented scope today:
 
 Not implemented today:
 
-- authenticated user state
 - persistent form submission or saved nexus actions
 - remote multi-node sync beyond the local SQLite packet store
 - real packet detail routes
@@ -93,31 +92,27 @@ Status:
 
 ### `/login`
 
-Screen component: `LoginPage`
+Screen component: `LoginRedirectPage`
 
 Role:
 
-- placeholder authentication entry point
+- compatibility redirect into the Nexus identity workspace
 
 Status:
 
-- **Provisional**
-- contains static placeholder copy only
-- no real auth flow, validation, or session handling is implemented
+- redirects to `/nexus/identity/sign-in`
 
 ### `/signup`
 
-Screen component: `SignupPage`
+Screen component: `SignupRedirectPage`
 
 Role:
 
-- placeholder account creation entry point
+- compatibility redirect into the Nexus identity workspace
 
 Status:
 
-- **Provisional**
-- contains static placeholder copy only
-- no account creation or onboarding workflow is implemented
+- redirects to `/nexus/identity/create`
 
 ## Nexus route tree
 
@@ -164,27 +159,28 @@ Role:
 Status:
 
 - **Provisional**
-- discussion forums and top-level feeds are loaded from `/api/nexus/scopes/[scopeId]/discussions` with optional `forum`, `sort`, `show_hidden`, and `viewer_session_id` query parameters
+- discussion forums and top-level feeds are loaded from `/api/nexus/scopes/[scopeId]/discussions` with optional `forum`, `sort`, `show_hidden`, and `viewer_actor_packet_id` query parameters
 - discussion forums and top-level feeds now support cursor paging through optional `cursor` and `limit` query parameters
-- discussion thread detail is loaded from `/api/nexus/scopes/[scopeId]/discussions/thread` with `post_packet_id` plus optional `reply_sort`, `show_hidden`, `viewer_session_id`, `cursor`, and `limit` query parameters
-- direct child replies for any post are loaded from `/api/nexus/scopes/[scopeId]/discussions/replies` with `thread_post_packet_id`, `parent_post_packet_id`, and optional `reply_sort`, `show_hidden`, `viewer_session_id`, `cursor`, and `limit` query parameters
+- discussion thread detail is loaded from `/api/nexus/scopes/[scopeId]/discussions/thread` with `post_packet_id` plus optional `reply_sort`, `show_hidden`, `viewer_actor_packet_id`, `cursor`, and `limit` query parameters
+- direct child replies for any post are loaded from `/api/nexus/scopes/[scopeId]/discussions/replies` with `thread_post_packet_id`, `parent_post_packet_id`, and optional `reply_sort`, `show_hidden`, `viewer_actor_packet_id`, `cursor`, and `limit` query parameters
 - local workspace state on `/nexus/discussions` is route-driven through `view` (`feed | thread | post`), `post`, `replyTo`, `sort`, `replySort`, and `showHidden` query parameters
-- discussion tabs now project one forum per thread kind and prefer authority threads from the active scope over inherited ancestor threads, which prevents duplicate visitor-lobby tabs
-- read-only forum tab labels are scope-aware (for example `Sunnymead Ranch general`) even when the backing thread packet is inherited from an ancestor scope
-- guest writer identity is session-scoped and anonymous, top-level post creation is point-gated, replies are threaded, and the same universal `PacketVote` model powers `+1/-1` controls on posts and replies
-- the active anonymous guest session label is reused across posts, replies, and packet votes and is persisted through packet external refs plus the derived anonymous actor key
+- discussion tabs now project one `DiscussionForum` per forum kind and prefer authority forums from the active scope over inherited ancestor forums, which prevents duplicate visitor-lobby tabs
+- read-only forum tab labels are scope-aware (for example `Sunnymead Ranch general`) even when the backing forum packet is inherited from an ancestor scope
+- discussion writers now act through cryptographic person elements, including memory-only temporary guests, session-only temporary guests, saved guests, and claimed identities; top-level post creation is still point-gated, replies stay threaded, and the same universal `Attestation(kind: "packet_signal")` model powers `+1/-1` controls on root posts and replies
+- discussion writes and attestation writes now require a signed actor assertion plus the actor packet, and the active repo no longer uses the legacy visitor-lobby or anonymous-session discussion bridge
+- discussion controls are not disabled purely because a claimed local bundle is locked; signing readiness is enforced by the deeper verified-write layer, while the route surfaces an unlock reminder banner
 - feed sorting controls now live inside the `Feed` workspace, reply sorting controls live inside the `Thread` workspace, and `New post` actions are available from both the feed and thread workspaces
 - feed and reply sort options now render as single segmented pills with the active sort highlighted; the visible options are currently `new`, `top`, `controversial`, and `old`, and both workspaces default to `new` sorting when no explicit query override is present
 - feed cards themselves now act as the primary thread-open affordance, while the inline action row on feed cards is limited to vote, descendant-total reply count, and moderation state
 - the `Thread` workspace auto-opens the current top feed item when no explicit thread is selected, and otherwise falls back to an empty-state guidance card when the active forum has no visible top-level posts
-- reply creation is written through `/api/nexus/scopes/[scopeId]/discussions/replies` using `parent_post_packet_id` in the request body, and packet votes are written through `/api/nexus/packets/vote` using `target_packet_id` in the request body
+- top-level thread creation is written through `/api/nexus/scopes/[scopeId]/discussions/posts` using `actor_packet`, `actor_assertion`, `forum_packet_id`, `title`, and `body`, reply creation is written through `/api/nexus/scopes/[scopeId]/discussions/replies` using `actor_packet`, `actor_assertion`, and `parent_post_packet_id`, and discussion reactions are written through `/api/nexus/packets/vote` as attestations using `actor_packet`, `actor_assertion`, and `target_packet_id`
 - seeded visitor-lobby starter posts exist across the initial scope tree so zero-start anonymous guests can reply immediately and begin earning points
 - packet mechanics stay outside the screen layer: canonical writes, preferred-revision updates, vote tally refresh, reply-tree construction, and future bundle import/export or merge behavior remain on the packet-store plus server-service boundary, while the route screen consumes API projections
 - the thread detail surface now visually distinguishes the root `Original post` from the reply tree so nested replies read as derivative discussion
 - replies at depth `0-4` render expanded by default, while depth `5+` branches default to collapsed `Continue thread` affordances until the user expands them
 - each reply card now exposes its collapse or expand control from a dedicated left-hand tree rail, collapsing a reply hides that reply card and its descendants together, and the rail shows a child-count bubble when that branch has replies
 - each reply rail now uses one combined arrow-plus-count marker, and that count reflects the entire branch hidden by that control (`the reply itself + all descendants`) rather than only direct children
-- collapsed replies keep only their plain author/timestamp meta row visible beside the rail; reply body content, pills, and child cards stay hidden until the branch is expanded again
+- collapsed replies keep a compact author/timestamp plus body-summary row visible beside the rail; action pills, full body, and child cards stay hidden until the branch is expanded again
 - the feed and thread workspaces both use taller internal scroll surfaces on larger screens while falling back to normal page scrolling on smaller screens
 - after a reply is submitted, the inline reply composer closes and the thread remains in view with the newly created reply visually highlighted
 - reply composers now expose a `Cancel` action, and collapsing the targeted branch keeps the in-progress reply body as temporary front-end draft state instead of discarding it
@@ -194,7 +190,8 @@ Status:
 - thread-side post cards no longer repeat inline reply-count pills; the root thread count is shown in the `REPLIES (n)` section heading instead
 - reply cards render as meta-plus-body only, without a duplicated reply-title treatment, and reply composers identify their target as `Replying to OP` or `Replying to {author} - {timestamp}`
 - discussion sort bars now stay on one line by default with adjacent action pills, while `Show moderated` is allowed to wrap only when the viewport becomes too narrow to keep the full control set visible
-- the top-right route header shows the session short label plus point balance and no longer repeats an `Anonymous Guest` status badge
+- the top-right route header shows the current actor label plus point balance and no longer repeats a redundant guest-status badge
+- when a claimed session is active but the local signing bundle is still locked, the discussions route shows an informational unlock prompt, but write controls stay clickable and rely on the shared auth/signing layer to surface unlock or re-approval failures consistently
 
 ### `/nexus/votes`
 
@@ -234,15 +231,107 @@ Screen component: `NexusAccountPage`
 
 Role:
 
-- guest-facing identity and onboarding shell
-- shows anonymous guest status, capabilities, followed scopes, and locality/trust placeholders
-- uses the shared nexus page shell with a compact header titled as `<scope> Account`
+- nexus account overview and local assembly continuity workspace
+- shows current actor state and routes users into the dedicated Nexus identity ceremony screens
+- keeps local assembly claims and lightweight assembly creation attached to the account workspace
 
 Status:
 
-- **Provisional**
-- no authentication or credential proofs are implemented
-- the account page title now reflects the active scope, while the page content shows the current anonymous session label and points balance rather than a generic anonymous-guest placeholder
+- packet-backed
+- shows the current actor packet id, identity mode, storage/cookie state, signing-key lock state, current remembered-session/write-approval posture, and passkey count
+- routes sign-in, create, claim, restore, and detailed security management to dedicated `/nexus/identity/*` screens
+- keeps assembly-association claims and start-local-assembly flow on the account surface
+- signing out from identity security immediately hands the shell back to a guest actor instead of leaving the signed-out claimed identity visually active in the profile card
+
+### `/nexus/identity/sign-in`
+
+Screen component: `NexusIdentitySignInPage`
+
+Role:
+
+- claimed-identity sign-in entry point inside the Nexus shell
+- one primary graph-backed identity-discovery and bundle-unlock sign-in path plus secondary passkey and import actions
+
+Status:
+
+- packet-backed
+- uses three internal sign-in modes: `LOCAL`, `PASSKEY`, and `IMPORT`
+- those modes render as one connected top-tab rail rather than as disconnected pills inside the page body
+- `LOCAL` is the default everyday sign-in path, searches the Nexus graph by display alias, packet id, and public-key-related matches, and still highlights identities already saved on this device
+- graph-only identity matches remain discoverable but cannot be unlocked with only a passphrase unless the encrypted bundle is already on-device
+- the current-actor summary emphasizes the active actor label rather than status pills, and the saved-local-identity picker collapses back to the selected identity once a local match is chosen
+- `PASSKEY` is a device/browser authenticator path and is described as Windows Hello / phone / security-key style presence proof rather than as pasted file input
+- passkeys are optional extra protection for claimed identities, not a hard prerequisite for creation, claiming, normal sign-in, or security-preference changes
+- when no passkeys are registered, passkey sign-in fails with a clear guidance error instead of implying it is the only valid auth path
+- `IMPORT` restores an encrypted identity bundle onto this device and then signs it in
+- continue-as-guest, claim-current-guest, and create-fresh paths remain visible as secondary actions beneath the sign-in modes
+- uses the remembered-session preference from the Nexus shell rather than asking for cookie persistence inline on the form
+
+### `/nexus/identity/create`
+
+Screen component: `NexusIdentityCreatePage`
+
+Role:
+
+- claimed-identity creation ceremony inside the Nexus shell
+
+Status:
+
+- packet-backed
+- creates a new claimed `Element(kind: "person")` with a client-generated `P-256` keypair
+- validates a mutable display alias, bundle passphrase, and optional canonical location disclosure before creation
+- separates passphrase copy from passkey copy
+- includes starting claimed-session preferences for remembered sign-in and write approval, with the same options still editable later from the sidebar drawer and identity security route
+- the claim/create location picker now reduces the selected disclosure to packet-safe `scope + value` before identity packets are written
+- once a canonical place is selected in the create flow, the location result list collapses until the query changes again
+- successful creation routes into identity security, where Nexus reminds the user to export the encrypted bundle and store it safely
+
+### `/nexus/identity/claim`
+
+Screen component: `NexusIdentityClaimPage`
+
+Role:
+
+- guest-to-claimed continuity ceremony inside the Nexus shell
+
+Status:
+
+- packet-backed
+- preserves the current guest actor while revising it into a claimed identity
+- treats alias as a mutable display alias rather than a permanent username
+- includes starting claimed-session preferences for remembered sign-in and write approval, with the same options still editable later from the sidebar drawer and identity security route
+- uses the same canonical location picker and packet-safe disclosure shaping as the create flow
+- once a canonical place is selected in the claim flow, the location result list collapses until the query changes again
+- successful claim routes into identity security, where Nexus reminds the user to export the encrypted bundle and store it safely
+
+### `/nexus/identity/restore`
+
+Screen component: `NexusIdentityRestorePage`
+
+Role:
+
+- encrypted bundle restore ceremony inside the Nexus shell
+
+Status:
+
+- packet-backed
+- validates bundle JSON and bundle passphrase before restore
+- restores a claimed identity onto the current device and then hands off to the security surface
+
+### `/nexus/identity/security`
+
+Screen component: `NexusIdentitySecurityPage`
+
+Role:
+
+- detailed session, passkey, remembered-session, write-approval, and export workspace for the active identity
+
+Status:
+
+- packet-backed
+- manages remembered-session preference and `standard` / `guarded` / `every_write` write approval inside the Nexus shell, while presenting those controls as compact `TEMP/SAVE` and `OFF/MED/MAX` segmented pills
+- shows active device sessions, passkeys, and encrypted bundle export
+- shows an export reminder when entered directly from a successful create or claim ceremony
 
 ## Current navigation structure
 
@@ -284,13 +373,14 @@ Nexus shell composition:
 
 Left-side shell sections:
 
-- compact guest identity strip showing `Anonymous Guest`
+- compact identity strip showing the current actor label and mode
+- auth actions now route into `/nexus/identity/*` instead of public-site auth pages
 - anonymous guest avatar between the `OWA Nexus` label and guest display name
 - centered brand label, auth actions, and preference rows inside the guest identity strip
-- guest display name in the profile strip now uses the real session-scoped anonymous label, and the current point balance is shown directly beneath it
-- `Sign In` and `Sign Up` actions
+- the profile strip now uses the real current actor label, and the current point balance is shown directly beneath it
+- guest mode surfaces `Sign In` and `Claim`, while claimed mode surfaces `Security` and `Account`
 - public-site return link positioned beneath the auth actions inside the guest identity strip
-- a small `Preferences` tab at the bottom of the guest identity strip that expands a drawer for navigation mode, shell theme, and UI size controls
+- a small `Preferences` tab at the bottom of the guest identity strip that expands a drawer for navigation mode, shell theme, UI size controls, remembered-session preference, and write-approval quick controls
 - the preferences tab is visually attached to the drawer as its footer row, uses a chevron icon instead of `open/hide` text, and animates open or closed
 - compact one-line shell preference rows inside that drawer, with the setting label on the left, the switch centered, and the current mode label on the right
 - primary navigation column that switches between the function menu or scope menu
@@ -377,25 +467,26 @@ Status:
 Implemented flow:
 
 1. guest opens `/nexus/discussions`
-2. guest receives a session-scoped anonymous guest label for the current browser session
+2. the app creates or restores a cryptographic person element for the current actor, defaulting to an ephemeral guest identity when no saved or claimed identity is active
 3. guest loads a forum feed from `/api/nexus/scopes/[scopeId]/discussions`
 4. guest can switch between `Feed`, `Thread`, and `Post` workspaces without leaving the route
 5. guest can open a root post by pressing its feed card, the `Thread` workspace auto-opens the current top feed item when no explicit post is selected, and the guest can reply to any post in that tree through an inline composer attached to the selected reply target while voting `+1/-1` on visible discussion posts when the thread participation rules allow it
 6. feed sorting happens inside the `Feed` workspace, reply sorting happens inside the `Thread` workspace, and the feed/thread workspaces both provide direct navigation into the `Post` workspace for new top-level posts
 7. top-level posts are allowed only when the viewer has enough points for that thread's `top_level_post_cost`
 8. top-level feeds and reply branches are loaded incrementally through cursor-based API pages rather than returning the entire forum or thread tree in one payload
-9. discussion writes are sent to the local API routes, written into the local SQLite packet store as canonical `DiscussionPost` or `PacketVote` packets, and then re-projected back into the feed/detail UI
-10. the anonymous guest session id and short label are preserved on those packets through external refs and the same actor key used for vote ownership and point ledgers
+9. discussion writes are sent to the local API routes, written into the local SQLite packet store as canonical `DiscussionThread + DiscussionPost`, `DiscussionReply`, or `Attestation` packets, and then re-projected back into the feed/detail UI
+10. discussion writes derive actor ownership from the verified actor packet, store `provenance.created_by` as that person element, and do not depend on the removed anonymous-session visitor-lobby bridge
 
 Status:
 
 - **Provisional**
-- discussion packets and packet votes are persisted through the local SQLite packet store in `data/nexus/owa-packets.db`
+- discussion packets and attestations are persisted through the local SQLite packet store at `NEXUS_DATA_DIR/owa-packets.db`, defaulting to `data/nexus/owa-packets.db` when `NEXUS_DATA_DIR` is unset
 - anonymous guests currently receive a temporary `10`-point testing grant, replies are free, top-level posts cost `10`, and only positively scored replies earn ongoing spendable points in the current implementation
-- discussion moderation is derived from raw packet votes: content is deprioritized at `total_votes >= 4 && net_score <= -2` and auto-hidden at `total_votes >= 6 && downvote_ratio >= 0.75`
-- visitor-lobby scope resolution accepts both route-safe scope ids and percent-encoded canonical packet refs
-- the older `data/nexus/visitor-lobby-bundle.json` file now serves only as a legacy import source during backend initialization
-- discussion packets do not stand alone: `DiscussionThread` packets attach to scope `Element` packets through `authority_scope_ref` and `applicable_scope_refs`, top-level and reply posts attach to their thread through `thread_ref`, and nested replies attach to parent posts through `reply_to_ref`
+- discussion moderation is derived from raw `Attestation(kind: "packet_signal")` reactions: content is deprioritized at `total_votes >= 4 && net_score <= -2` and auto-hidden at `total_votes >= 6 && downvote_ratio >= 0.75`
+- discussion packets use a discussion-seed-version marker in the same runtime data directory, and destructive reseeds are now limited to local development or an explicit `NEXUS_ALLOW_DISCUSSION_RESET` override instead of running automatically in every hosted boot
+- discussion packets do not stand alone: `DiscussionSpace` packets attach to scope `Element` packets, `DiscussionForum` packets attach to a discussion space, `DiscussionThread` packets attach to a forum, root `DiscussionPost` packets attach to their thread, and `DiscussionReply` packets attach to their thread, root post, and immediate parent reply-or-post
+- raw trust visibility is now packet-first but still pre-weighting: `/api/nexus/attestations/target`, `/api/nexus/attestations/actor`, and `/api/nexus/assemblies/claims` expose inspectable attestation edges without any trust score math
+- a person can now claim association with an assembly through `Attestation(kind: "assembly_association_claim")`, and account flow can create a new lightweight local assembly packet plus starter discussion space/forums under the active scope
 
 ## Major entities and their roles
 
@@ -517,7 +608,10 @@ Important note:
 - server bootstrap backfills missing personal-tree seed packets on startup so partially-seeded local DBs recover automatically
 - Node SQLite writes use strict query-specific named-parameter bindings to avoid runtime binding errors during packet updates
 - local web forum persistence depends on `expo.web.output = "server"` in `app.json`
+- the repo now also includes a production-parity Node web server entry at `server.cjs`, which serves `dist/client`, forwards dynamic routes and `app/api/**` requests into the exported Expo server build in `dist/server`, and exposes `/health` for hosted healthchecks
 - packet import/export bundles, revision publishing, and merge behavior remain defined by the `PacketStore` contract and storage/service layer rather than in route components
+- claimed Nexus auth now uses required passkeys plus the existing encrypted local signing bundle
+- claimed sessions now expose CSRF tokens, rotating refresh sessions, passkey-upgrade state, device/session listings, explicit cookie-backed remembered-login choice, and `standard` / `guarded` / `every_write` write-approval preferences
 
 ## Current naming patterns
 
@@ -533,7 +627,6 @@ Examples:
 - `app/nexus/discussions.tsx`
 - `app/api/nexus/shell+api.ts`
 - `app/api/nexus/scopes/[scopeId]/dashboard+api.ts`
-- `app/api/nexus/scopes/[scopeId]/visitor-lobby+api.ts`
 
 ### Component naming
 
@@ -586,19 +679,19 @@ What is implemented:
 - redesigned public splash, about, and charter destination pages
 - dedicated nexus shell under `/nexus/*`
 - first-slice nexus surfaces for dashboard, discussions, votes, library, and account
-- guest-only interaction policy with visitor-lobby posting as the only enabled write affordance
+- cryptographic identity continuity across guest, saved-guest, and claimed nexus actors
+- passkey-required claimed-session authentication with passkey sign-in, passkey registration, short-lived single-use passkey re-auth tokens, rotating refresh cookies, and server-side device/session revocation
 - packet-backed shell and scope query routes feeding active nexus surfaces
 - canonical packet schema definitions with nested `header/body` envelopes
 - stable `packet_id` plus immutable `revision_id` packet identity rules
 - multi-parent revision ancestry for divergent branches and merge revisions
 - typed packet edges, scope refs, packet-store interfaces, a SQLite-backed packet-store implementation, and storage schema definitions
 - shared browser and nexus query-service implementations over the packet search index
-- a packet-backed discussion engine that stores canonical discussion and packet-vote packets in the local SQLite packet store, projects derived reply/vote/ledger indexes, and imports the old visitor-lobby bundle only for migration
+- a packet-backed discussion and attestation engine that stores canonical `DiscussionSpace`, `DiscussionForum`, `DiscussionThread`, `DiscussionPost`, `DiscussionReply`, and `Attestation` packets in the local SQLite packet store, projects derived reply/attestation/ledger indexes, and reseeds local dev discussion data deterministically by seed version
 - derived packet label helpers for future browser and nexus projections
 
 What remains unimplemented but is still referenced by docs or shell affordances:
 
-- real authentication and identity continuity
 - persistent packets and packet detail pages
 - map / nexus browser
 - missions surface
@@ -612,7 +705,7 @@ What remains unimplemented but is still referenced by docs or shell affordances:
 
 The following areas should still be treated as provisional:
 
-- guest posting behavior beyond the local visitor-lobby packet-store implementation
+- guest posting behavior beyond the current packet-backed discussion rules and temporary point grant
 - the exact final ontology for assemblies, scopes, and overlays
 - how locality claiming, join/start flows, and trust progression will work
 - vote execution, delegation, and propagation semantics

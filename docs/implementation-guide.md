@@ -131,6 +131,8 @@ Implemented routes in this slice:
 - `/nexus/votes`
 - `/nexus/library`
 - `/nexus/account`
+- `/login`
+- `/signup`
 
 Implemented shell behavior in this slice:
 
@@ -145,22 +147,27 @@ Implemented shell behavior in this slice:
 - secondary rail can remain open while the primary rail is collapsed
 - `Global Guest` as the default nexus entry state
 - visitor-lobby posting as the only enabled guest write interaction
-- visitor-lobby posts now flow through local API routes into a local SQLite-backed packet store with session-scoped anonymous guest labels preserved through packet external refs
+- discussion writes now flow through local API routes into a local SQLite-backed packet store with cryptographic person-actor provenance, and the active discussion model now uses `DiscussionSpace -> DiscussionForum -> DiscussionThread -> DiscussionPost -> DiscussionReply`
 - local web runs now use Expo `web.output = "server"` so the visitor-lobby API routes can actually execute
 - all current `/nexus/*` routes now share one centered page-frame width through the common Nexus UI layer instead of mixing route-specific max-width wrappers
 - route headers have been tightened into a common scope-first pattern such as `Global Commons Library` or `United States Votes`, with optional compact trailing badges instead of the earlier title-plus-subtitle-plus-explanation blocks
 - placeholder rollout/explanatory cards have started being removed from the current route surfaces in favor of denser, more functional cards and lists
-- the account route now uses the live anonymous session label and current point balance at the page level instead of repeating the old static anonymous-guest profile copy
+- the account route now uses the live cryptographic identity shell, including memory-only temporary guests, session-only guests, saved guests, and claimed identity flows with export, restore, claim, sign-in, sign-out, and local lock-state messaging
+- signing out of a claimed session now restores a preserved guest actor when possible, otherwise Nexus immediately generates a fresh temporary guest so the shell never keeps showing the signed-out claimed identity as the active actor
 - the discussions thread workspace has been simplified by removing the separate expandable thread picker; feed remains the primary thread-switching surface, and successful inline replies now collapse the composer and mark the newly created reply inside the thread
 - shared Nexus action buttons now opt into a compact self-sized footprint by default so standalone actions do not stretch full-width inside vertical card layouts
+- every nexus actor that touches the graph is now a real `Element(kind: "person")`, including ephemeral guests and device-saved guests
+- claimed sign-in now uses client-generated `P-256` keys, a signed challenge-response flow, encrypted local identity bundles, and optional persistent auth cookies that stay separate from packet-signing truth
+- passkeys are now optional extra protection instead of a hard requirement for claimed use, and protected security actions can re-approve through either passkey or signed-key re-auth from the unlocked local bundle
+- the shell sign-in workspace now uses graph-backed identity discovery and graph-backed location discovery from the packet graph itself, while keeping private signing-key custody strictly local unless the user imports a bundle or uses passkey sign-in
 
 Current implementation boundary:
 
 - nexus shell scopes, dashboard cards, vote lanes, discussion forums, and library cards are now loaded from packet-backed API projections instead of local mock arrays
 - a packet foundation now exists under `domain/schema`, `domain/core`, `domain/packets`, and `domain/projections`, with a separate top-level `storage` boundary for persistence
 - the current codebase now includes a canonical `PacketEnvelope = { header, body }` model, Zod packet-family parsers, packet-store/query-service interfaces, packet label projections, shared browser/nexus query-service implementations, a packet-store schema constant under `storage`, an Expo `SQLitePacketStore`, and a server-side `NodeSQLitePacketStore`
-- the visitor-lobby repository, shell payload route, and scope query routes now share one Node SQLite packet-store bootstrap that seeds the personal scope tree and imports the old JSON bundle only as legacy data
-- packet detail routes, auth, trust mechanics, and protected spaces remain later phases
+- the shared server bootstrap now seeds the personal scope tree, resets discussion packets by seed version in local dev, and reseeds per-scope discussion spaces, forum tabs, starter threads, root posts, and nested replies
+- packet detail routes, trust mechanics, and protected spaces remain later phases
 
 ## Core entities and data model
 
@@ -502,6 +509,22 @@ This is the implementation guide’s anti-entropy system.
 
 Every major decision gets a short entry:
 
+### 2026-04-10 - Identity continuity uses cryptographic person elements for every actor
+
+- Context: the earlier nexus slice still treated guest participation as an anonymous session label layered beside the packet graph, which would have forced a separate identity model once claim/sign-in work arrived.
+- Options considered: keep anonymous sessions until “real auth” exists, add cryptography only for claimed users, or make every graph actor a real `Element(kind: "person")` and let lifecycle determine authority.
+- Decision: every nexus actor that can write to the graph is now a cryptographic person element. The implemented lifecycle is `ephemeral_guest` (memory/session only), `persistent_guest` (device-local opt-in), and `claimed` (backed by an encrypted local identity bundle plus optional web sign-in).
+- Why: one actor model keeps provenance, signing, verification, packet authorship, and future trust work consistent from day one. It also avoids a later migration from fake guest actors to real packet identities.
+- Consequences / follow-ups: discussion and packet-vote writes now resolve `provenance.created_by` from a verified actor packet, legacy `anonymous-session:*` refs remain readable for older discussion content, and trust weighting or assembly authority rules remain intentionally deferred.
+
+### 2026-04-10 - Claimed auth uses local keys plus server challenge sessions
+
+- Context: the repo needed secure sign-up/sign-in and “keep me logged in” behavior without making browser cookies the source of identity truth.
+- Options considered: traditional password-only server auth, passkey-first auth before the packet flow exists, or local key custody with a server-issued session wrapper.
+- Decision: claimed identities now generate `P-256` keypairs client-side, store encrypted identity bundles locally with a passphrase, sign server-issued challenges to create auth sessions, and optionally receive persistent refresh-backed cookies for `keep me logged in`.
+- Why: this keeps identity truth attached to packet-verifiable key control while still giving the web app an industry-standard `HttpOnly`/`Secure`/`SameSite=Lax` session layer for UX.
+- Consequences / follow-ups: guests receive no auth cookie by default, memory-only guests now exist without browser storage unless the user explicitly chooses session-only or device-local persistence, claimed identities can remain selected but locally locked after reload until the user re-enters the passphrase, and future passkey or key-rotation work should extend the same person-element plus challenge-response model rather than replacing it.
+
 - decision
 - date
 - context
@@ -686,13 +709,21 @@ Examples of decisions worth logging early:
 - Why: this improves user comprehension in scope-first browsing without creating fake packet copies or breaking thread packet linkage.
 - Consequences / follow-ups: unknown/custom thread kinds still use their source packet titles, and if future localization/branding rules are added they should be centralized in the same forum-title projection helper.
 
+### 2026-04-10 - Attestations replace packet votes as the reusable trust edge
+
+- Context: the repo had a working `PacketVote` discussion reaction primitive, but the next trust milestone needed one shared signed relationship packet that could cover discussion reactions, proposal support, attendance vouches, identity attestations, and person-to-assembly locality claims without inventing separate packet families for each.
+- Options considered: keep `PacketVote` and overload its meaning further, add a second trust packet family beside it, or rename and generalize the existing primitive into one canonical `Attestation` family while keeping discussion `+1/-1` behavior stable.
+- Decision: rename the reusable trust primitive from `PacketVote` to `Attestation`, expand its body with `attestation_kind`, optional `context_ref`, optional `supporting_refs`, optional `note`, and optional `supersedes_ref`, and move attestation indexing and mutation logic into a dedicated `SQLiteAttestationService`.
+- Why: this keeps one signed edge primitive for the graph, gives locality and trust flows a first-class home outside the discussion service, and still lets the existing discussion UI consume the same `vote_summary` shape while the product vocabulary moves toward attestations.
+- Consequences / follow-ups: discussion `+1/-1` reactions now flow through `Attestation(kind: "packet_signal")`, derived attestation rows now live in `attestation_index` and `attestation_tally_index`, `/api/nexus/packets/vote` remains behavior-compatible as the current discussion reaction transport, and the first non-discussion attestation workflow is now `assembly_association_claim` on assembly `Element` packets.
+
 ### 2026-04-09 - Universal packet votes power the first real discussion engine
 
 - Context: the packet-backed visitor lobby was working, but discussions were still effectively a flat guest post list with no threaded replies, no reusable vote system, and no point/trust hooks for future moderation and anti-spam rules.
 - Options considered: keep bolting discussion-only reactions onto the visitor-lobby repository, reuse governance `Vote` packets for every `+1/-1` signal, or add a universal packet-vote family plus a dedicated discussion service over the canonical packet store.
 - Decision: add `PacketVote` as a first-class packet family for universal `+1/-1` signals, keep formal governance `Vote` packets separate, extend `DiscussionThread` packets with participation rules and default sort metadata, and move discussion reads/writes into one server-side `SQLiteDiscussionService` that projects threaded replies, vote tallies, actor ledgers, and moderation flags from canonical packets.
 - Why: this keeps the vote model reusable across the graph, preserves a clean distinction between support/quality signals and binding governance ballots, and gives the discussions UI one coherent backend instead of several visitor-lobby special cases.
-- Consequences / follow-ups: `/nexus/discussions` now uses packet-backed feed/detail APIs, anonymous guests start at `0` points, only replies can earn points, top-level posts cost `10`, negative discussion content can be deprioritized or hidden through derived vote thresholds, and the new SQLite derived tables (`packet_vote_index`, `packet_vote_tally_index`, `discussion_post_index`, `discussion_actor_ledger`) should stay in sync whenever future services write discussion or packet-vote revisions. `PacketVote` is the current reusable vote primitive for v1, and `body.vote_kind` remains the intended seam for specialized vote flows later so the repo can converge on one universal vote shape without moving vote logic into the UI.
+- Consequences / follow-ups: `/nexus/discussions` now uses packet-backed feed/detail APIs, anonymous guests start at `0` points, only replies can earn points, top-level posts cost `10`, negative discussion content can be deprioritized or hidden through derived vote thresholds, and the discussion engine still projects `discussion_post_index` plus `discussion_actor_ledger` from canonical packets while raw attestation tallies now live in the dedicated attestation service.
 
 ### 2026-04-09 - Keep packet ids out of dynamic route segments
 
@@ -789,6 +820,14 @@ Examples of decisions worth logging early:
 - Why: this preserves the cleaner one-line desktop rhythm while still degrading gracefully on smaller widths, and it keeps the top-right identity strip focused on the two pieces of information that matter during forum testing: who the session is and how many points it has.
 - Consequences / follow-ups: if we add richer account state later, it should return to the shared shell/header through more meaningful identity or trust cues rather than a repeated guest label.
 
+### 2026-04-10 - Reset discussions onto space, forum, thread, root-post, and reply packets
+
+- Context: the discussion engine had outgrown the old `DiscussionThread`-as-forum model and the legacy visitor-lobby bridge, and adding real forum tabs plus dedicated reply packets was cheaper to do during a dev-data reset than after more content accumulated.
+- Options considered: keep patching the inherited thread-kind model, add forum packets but keep replies as `DiscussionPost`, or reset local discussion data and mirror the UI structure directly in the packet hierarchy.
+- Decision: reset local discussion data, add `DiscussionSpace` packets attached to scope elements, add one `DiscussionForum` packet per visible tab, keep `DiscussionThread` for a real thread inside a forum, keep `DiscussionPost` only for thread root posts, and add `DiscussionReply` as the dedicated nested reply family. Top-level discussion creation now writes `DiscussionThread + DiscussionPost`, nested replies now write `DiscussionReply`, and the legacy visitor-lobby repository and anonymous-session bridge were removed from the active repo path.
+- Why: the packet graph now matches the discussions UI directly, forum discovery comes from real forum packets instead of thread-kind inference, reply-tree traversal is explicit, and the local dev database can be rebuilt deterministically against one seed version instead of carrying transitional discussion baggage.
+- Consequences / follow-ups: server bootstrap now performs a discussion-seed-version reset before reseeding discussion packets, every seeded scope now gets a `DiscussionSpace`, four seeded forum tabs, starter threads, root posts, and nested replies, `/nexus/discussions` keeps the same user-facing surface while reading from the new hierarchy, and future trust/voucher work can attach to this cleaner discussion graph without another schema split.
+
 ### 2026-04-08 - Function-first and scope-first as one system
 
 - Context: the nexus needs to support both “go to a function then filter by scope” and “go to a scope then explore its surfaces.”
@@ -860,6 +899,62 @@ Examples of decisions worth logging early:
 - Decision: restructure the public about page around canon/workspace-derived themes and present them as scroll-focused sections with per-section background imagery.
 - Why: it keeps the public explanation closer to the project’s actual principles while making the page easier to scan, more visual, and less placeholder-like.
 - Consequences / follow-ups: future about-page revisions should continue to source their section set from public-facing canon/workspace language, and the page now behaves like a set of large scroll chapters whose card height, detail density, and parallax treatment are all driven from one measured midpoint focus line rather than a stack of separate assumptions; the page also now uses an explicit section navigator, measured in-layout viewport height so both active-state logic and animation timing stay centered within the public shell rather than drifting toward the full browser window midpoint, a widened focus band with a short center hold so section motion starts earlier and stays open longer through the scroll, a slower detail reveal so the inner highlight blocks fade and expand in with the same shared progress curve instead of popping in abruptly, and stronger blurred edge strips plus increased spacing between chapters rather than a true mask effect so the public page gets softer image boundaries without adding a heavier graphics dependency.
+
+### 2026-04-10 - Claimed Nexus auth now requires passkeys, rotating sessions, and explicit write-approval modes
+
+- Context: the initial cryptographic identity loop already supported guest, saved-guest, and claimed person elements with signed challenge-response sign-in, but it still relied on memory-only rate limits, static refresh tokens, and a thinner claimed-session model than we wanted before packettrust work.
+- Options considered: leave claimed sign-in bundle-only, make passkeys optional, or keep the packet-signing bundle while requiring passkeys for app-auth and sensitive-session hardening.
+- Decision: keep the current cryptographic person packet and encrypted local signing bundle model, add passkey sign-in and passkey re-auth flows as optional extra protection, rotate refresh tokens on refresh, store session/device metadata server-side, keep remembered login as a separate session convenience, and rename claimed write approval to `standard`, `guarded`, and `every_write`.
+- Why: it keeps Nexus identity continuity anchored in the existing signed person packet while moving browser/session auth closer to professional security practice without treating cookies as identity truth. Passkeys strengthen claimed-session access and sensitive account operations when available, while the encrypted local bundle plus passphrase remains enough for normal claimed use and still protects the actual packet-signing key.
+- Consequences / follow-ups: claimed graph writes still require a valid claimed session plus CSRF protection, but security-preference changes and other protected actions can now re-approve through passkey or signed-key re-auth depending on what the user has available; `every_write` now means fresh explicit approval per write through the shared auth/signing layer rather than a route-local disabled state; temporary guests are memory-only by default and only survive reloads when the user explicitly chooses session-only browser storage; the auth service now owns passkey records, WebAuthn challenges, single-use re-auth tokens, rotating refresh tokens, DB-backed rate limits, session/device listings, and audit-event rows; and future packettrust or role work should build on these claimed-session guarantees rather than reopening the identity/session model again.
+
+### 2026-04-10 - Identity ceremonies now live inside the Nexus shell
+
+- Context: after the cryptographic identity and passkey/session work landed, the UX still presented sign-in and sign-up like top-level public-site account pages, while the `/nexus/account` surface had become an overloaded catch-all for sign-in, create, claim, restore, export, and security management.
+- Options considered: keep public `/login` and `/signup` as the primary entrypoints, move only labels/copy while leaving the route structure alone, or move the ceremonies fully into the Nexus shell and turn the public routes into compatibility redirects.
+- Decision: identity creation, sign-in, guest claim, restore, and security management now live under `/nexus/identity/*`, while `/login` and `/signup` only redirect into those Nexus-shell routes. The sidebar profile card now routes into those Nexus identity pages, and the account page is reduced to an overview plus local assembly continuity workspace.
+- Why: the underlying model is a Nexus-native cryptographic actor lifecycle, not a public-site account ritual, so the workspace should present those flows inside the same shell and language as the rest of Nexus.
+- Consequences / follow-ups: `keep me logged in` is no longer an inline create/sign-in field and instead lives as a remembered-session preference in the sidebar/security surfaces; the sidebar preference drawer now exposes remembered-session preference, write-approval quick controls, and storage/cookie visibility; alias is treated as a mutable display alias backed by the cryptographic actor rather than a permanent username; create/claim forms now validate alias normalization, stronger bundle passphrases, passphrase confirmation, and optional structured location disclosure; and location lookup now goes through a provider-style Nexus search interface backed by canonical scope results so a real geocoder can be swapped in later without rewriting the auth UX.
+
+### 2026-04-10 - Identity cleanup aligns sign-in, shell preferences, and discussion write readiness
+
+- Context: after the shell-route pass, the UX still repeated an `Identity paths` card across multiple routes, the main sign-in ceremony was split across overlapping cards, sidebar preference controls used inconsistent widgets, and the discussions surface let claimed users click vote/reply actions even when their claimed session was authenticated but the local signing bundle stayed locked.
+- Options considered: keep the backend behavior and only tweak copy, polish each page independently, or consolidate identity UX around one primary ceremony per route plus one shared preference vocabulary across the shell.
+- Decision: the sign-in route now centers one primary bundle sign-in card with Enter-to-submit behavior and moves passkey, guest continuation, claim, create, and restore into a smaller secondary paths card; create and claim now include explicit starting claimed-session preferences at the bottom of the ceremony; the sidebar and identity security page now share the same compact `TEMP/SAVE` and `OFF/MED/MAX` preference controls; and discussions now treat `claimed session active but signing bundle locked` as a first-class blocked-write state with an explicit unlock prompt.
+- Why: this makes the identity system read like one coherent Nexus tool, keeps session persistence and write approval legible in the same language everywhere, and stops discussion writes from feeling broken when the real problem is local signing readiness rather than server authentication.
+- Consequences / follow-ups: the sidebar no longer shows overflow-prone storage/cookie pills, the strongest write-approval setting is still `every_write` under the hood but is presented as the shell-facing `MAX` option, create/claim can seed non-default write approval after the new claimed session is established, quick restore is no longer duplicated on the sign-in screen, and collapsed discussion replies now render a cleaner meta-plus-body summary instead of a misaligned metadata stub.
+
+### 2026-04-10 - Sign-in now distinguishes saved local identities, passkeys, and bundle import
+
+- Context: the first cleanup pass simplified the route structure, but the sign-in screen still made encrypted-bundle restore feel like the default everyday login path and did not explain passkeys in a way normal users could map to Windows Hello, phones, or security keys.
+- Options considered: keep one blended sign-in card with more explanatory copy, split local/passkey/import into separate pages, or keep one route while presenting the three modes as a small internal tab set.
+- Decision: `/nexus/identity/sign-in` now uses one connected top-tab rail for `Saved / Find identity`, `Passkey`, and `Import bundle`. The main tab searches the packet graph by alias, packet id, and public-key-related matches while still highlighting identities already saved on this device, `Passkey` explains device/browser authenticators as presence proof rather than file input, and `Import bundle` stays the explicit encrypted-bundle recovery path.
+- Why: this matches the intended mental model better: restore/import is recovery, not the normal login path; passkeys are device authenticators, not pasted files; and graph-backed identity discovery belongs inside the same Nexus shell where the rest of the actor lifecycle already lives.
+- Consequences / follow-ups: graph-only matches remain discoverable but cannot be unlocked with a passphrase unless the encrypted bundle is already on-device, the location disclosure picker now strips presentation-only fields before writing identity packets so claim/create no longer fail server validation on `label`/`description`, disclosure copy now says `Reveal location as`, and both identity search and location search now use the same collapsible selected-result pattern.
+
+### 2026-04-10 - Sign-out, identity discovery, and optional passkeys now align with the cryptographic actor model
+
+- Context: after the UX cleanup, several auth mismatches still remained: signing out could leave the old claimed identity visible in the sidebar, passkeys still behaved like a hard gate in parts of the security model, and identity discovery only searched local saved bundles instead of the Nexus packet graph.
+- Options considered: leave those mismatches in place until a later trust/location pass, patch only the visible UI symptoms, or finish the auth model now by making sign-out restore guest continuity, making passkeys optional everywhere, and moving identity discovery onto the graph while keeping private-key custody local.
+- Decision: signing out now tears down the claimed session and immediately restores a preserved guest actor or creates a fresh temporary guest; passkeys are now optional extra protection rather than a mandatory prerequisite for claimed use; protected security actions can re-approve through passkey or signed-key re-auth from the unlocked bundle; WebAuthn challenges now use proper base64url challenges with platform-authenticator preference; and identity search plus location search now read from graph-backed services rather than shell-summary-only state.
+- Why: this keeps the web shell aligned with the original architecture. Sessions are still convenience wrappers, the person packet plus signing key remains the identity truth, the encrypted bundle remains the private-key custody boundary, and graph discovery helps users find actors or places without pretending the server can fetch their private keys.
+- Consequences / follow-ups: the sign-in screen can now show saved-on-device versus graph-only identities clearly, graph-only matches must flow into bundle import or passkey sign-in rather than passphrase-only unlock, passkey sign-in now fails fast with a clear error when there are no registered passkeys yet, and future discussion/trust/location work can rely on one shared auth/signing layer instead of reintroducing route-local auth gates.
+
+### 2026-04-10 - Final auth cleanup syncs creation choices, selector UX, and deeper discussion enforcement
+
+- Context: after the route and sign-in cleanup, several smaller mismatches remained: the current-actor card still overused status pills, selected locations did not collapse their result list, the selected security mode from create/claim could fail to appear immediately in the security surfaces, and discussions were disabling write actions in the screen instead of letting the deeper verified-write layer enforce signing readiness.
+- Options considered: leave the route-level gating in place and only clarify copy, patch each surface independently without changing write gating, or finish the cleanup by making the identity selectors behave like selectors while moving discussion write enforcement back down into shared auth/signing logic.
+- Decision: create and claim now refresh the claimed session before applying the selected write-approval mode, successful create/claim flows land on identity security with an export reminder, the sign-in current-actor summary now emphasizes the actor label and collapses saved-identity search back to a selected card, canonical place selection now hides the remaining location results until the query changes again, and discussions no longer disable vote/reply/post controls solely because a claimed local bundle is locked.
+- Why: this keeps the UX aligned with the model. The actor label is the thing that matters, selected values should read as chosen state rather than open dropdowns, and packet-write blocking belongs in the shared verified-write path instead of in a route component's disabled-state logic.
+- Consequences / follow-ups: users now get an explicit reminder to export and safely store the encrypted bundle after create/claim, selected write-approval choices carry through more reliably to the new claimed session, and discussion write attempts may now surface deeper signing/auth errors instead of appearing inert when the local signing bundle is still locked.
+
+### 2026-04-10 - Railway cutover keeps the Expo server app intact and adds a local production-parity Node server
+
+- Context: the repo had been running through Expo's server features, but the Railway move needed a real exported-server runtime, a persistent SQLite path that works outside the repo root, and a safer bootstrap rule that would not destructively reseed hosted data.
+- Options considered: split a separate backend immediately, keep using `expo start` as the hosted runtime, or preserve the existing Expo Router server app and add a thin Node host around the exported build.
+- Decision: keep `web.output = "server"` and the current `app/api/**` architecture, add a dedicated Node server entry that serves `dist/client` and forwards dynamic requests into the Expo server build, pin the runtime to Node `24.x`, move the SQLite DB plus discussion seed marker onto an env-driven `NEXUS_DATA_DIR`, and restrict destructive discussion reseeds to explicit local/dev conditions instead of every non-matching boot.
+- Why: this makes the Railway cutover a hosting/runtime correction instead of a second backend rewrite, preserves the current auth and query contracts, keeps normal Expo local development intact, and adds a production-parity local server path that matches what Railway will actually run.
+- Consequences / follow-ups: local development still uses `expo start --web`, local production-parity validation now uses `npm run export:web` plus `npm run serve:web`, Railway can mount a persistent volume without changing app code, and future production hardening can build on the same server entry and env-based storage path without reopening the app shape decision.
 
 ## Major tradeoffs
 
