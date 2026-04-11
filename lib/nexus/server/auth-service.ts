@@ -1157,7 +1157,7 @@ export class NexusAuthService {
     return userAgent.slice(0, 120);
   }
 
-  private async verifyAndPersistIdentityPacket(
+  private async verifyIdentityPacket(
     actorPacketInput: unknown
   ): Promise<PacketEnvelopeByType['Element']> {
     const packet = parsePacketEnvelope(actorPacketInput);
@@ -1186,6 +1186,12 @@ export class NexusAuthService {
 
     validateIdentityPacketMetadata(actorPacket);
 
+    return actorPacket;
+  }
+
+  private async persistVerifiedIdentityPacket(
+    actorPacket: PacketEnvelopeByType['Element']
+  ): Promise<PacketEnvelopeByType['Element']> {
     try {
       await this.packetStore.writeRevision(actorPacket);
     } catch (error) {
@@ -1203,10 +1209,31 @@ export class NexusAuthService {
     return actorPacket;
   }
 
+  private async verifyAndPersistIdentityPacket(input: {
+    actorPacket: unknown;
+    ancestorPackets?: unknown[];
+  }): Promise<PacketEnvelopeByType['Element']> {
+    const actorPacket = await this.verifyIdentityPacket(input.actorPacket);
+
+    for (const ancestorPacketInput of input.ancestorPackets ?? []) {
+      const ancestorPacket = await this.verifyIdentityPacket(ancestorPacketInput);
+
+      if (ancestorPacket.header.packet_id !== actorPacket.header.packet_id) {
+        throw new Error('Identity ancestor packet id does not match the current actor.');
+      }
+
+      await this.persistVerifiedIdentityPacket(ancestorPacket);
+    }
+
+    return this.persistVerifiedIdentityPacket(actorPacket);
+  }
+
   async createIdentity(input: {
     actorPacket: unknown;
   }): Promise<PacketEnvelopeByType['Element']> {
-    const actorPacket = await this.verifyAndPersistIdentityPacket(input.actorPacket);
+    const actorPacket = await this.verifyAndPersistIdentityPacket({
+      actorPacket: input.actorPacket,
+    });
 
     if (actorPacket.body.identity?.claim_status !== 'claimed') {
       throw new Error('Create identity requires a claimed person element.');
@@ -1222,8 +1249,12 @@ export class NexusAuthService {
 
   async claimIdentity(input: {
     actorPacket: unknown;
+    previousActorPacket?: unknown;
   }): Promise<PacketEnvelopeByType['Element']> {
-    const actorPacket = await this.verifyAndPersistIdentityPacket(input.actorPacket);
+    const actorPacket = await this.verifyAndPersistIdentityPacket({
+      actorPacket: input.actorPacket,
+      ancestorPackets: input.previousActorPacket ? [input.previousActorPacket] : [],
+    });
 
     if (actorPacket.body.identity?.claim_status !== 'claimed') {
       throw new Error('Claim identity requires a claimed person element revision.');
@@ -1240,7 +1271,9 @@ export class NexusAuthService {
   async restoreIdentity(input: {
     actorPacket: unknown;
   }): Promise<PacketEnvelopeByType['Element']> {
-    const actorPacket = await this.verifyAndPersistIdentityPacket(input.actorPacket);
+    const actorPacket = await this.verifyAndPersistIdentityPacket({
+      actorPacket: input.actorPacket,
+    });
 
     this.writeAuthEvent({
       actorPacketId: actorPacket.header.packet_id,
@@ -1267,7 +1300,9 @@ export class NexusAuthService {
   }> {
     assertRecentAssertion(input.actorAssertion.issued_at);
 
-    const actorPacket = await this.verifyAndPersistIdentityPacket(input.actorPacket);
+    const actorPacket = await this.verifyAndPersistIdentityPacket({
+      actorPacket: input.actorPacket,
+    });
     const activeKeyBinding = actorPacket.body.identity?.public_key_bindings.find(
       (binding) =>
         binding.kid === input.actorAssertion.kid && binding.status === 'active'
@@ -1975,7 +2010,9 @@ export class NexusAuthService {
   }): Promise<NexusReauthVerifyPayload> {
     assertRecentAssertion(input.actorAssertion.issued_at);
 
-    const actorPacket = await this.verifyAndPersistIdentityPacket(input.actorPacket);
+    const actorPacket = await this.verifyAndPersistIdentityPacket({
+      actorPacket: input.actorPacket,
+    });
     const sessionRecord = this.requireAuthenticatedSession({
       request: input.request,
       actorPacketId: actorPacket.header.packet_id,

@@ -6,7 +6,10 @@
 import type { RequestHandler } from 'expo-router/server';
 import { z } from 'zod';
 
-import { parsePacketEnvelope } from '@/domain/schema/packet-schema';
+import {
+  parsePacketEnvelope,
+  type PacketEnvelopeByType,
+} from '@/domain/schema/packet-schema';
 import { getNexusPacketServices } from '@/lib/nexus/server/nexus-packet-services';
 
 const ActorAssertionSchema = z
@@ -63,14 +66,19 @@ export const PUT: RequestHandler = async (request) => {
       csrfToken: parsedBody.csrf_token,
       reauthToken: parsedBody.reauth_token,
     });
-    const attestationPacket = parsePacketEnvelope(parsedBody.attestation_packet);
+    const parsedAttestationPacket = parsePacketEnvelope(
+      parsedBody.attestation_packet
+    );
 
-    if (attestationPacket.header.family !== 'Attestation') {
+    if (parsedAttestationPacket.header.family !== 'Attestation') {
       return createJsonResponse(
         { error: 'attestation_packet must be an Attestation packet.' },
         400
       );
     }
+
+    const attestationPacket =
+      parsedAttestationPacket as PacketEnvelopeByType['Attestation'];
 
     const summary = await services.packetVoteService.persistSignedAttestation({
       attestation_packet: attestationPacket,

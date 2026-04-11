@@ -1504,7 +1504,6 @@ export default function NexusDiscussionsPage() {
     selectedReplySort,
     signCurrentIdentityPacket,
     threadPayload,
-    threadPayload?.root_post.packet.packet_id,
   ]);
 
   const handleLoadMoreFeed = useCallback(() => {

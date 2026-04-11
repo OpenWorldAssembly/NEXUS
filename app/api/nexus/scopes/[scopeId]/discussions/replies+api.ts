@@ -9,6 +9,7 @@ import { z } from 'zod';
 import {
   DISCUSSION_REPLY_SORTS,
   parsePacketEnvelope,
+  type PacketEnvelopeByType,
   type DiscussionReplySort,
 } from '@/domain/schema/packet-schema';
 import {
@@ -134,14 +135,17 @@ export const POST: RequestHandler = async (request, params) => {
       csrfToken: parsedBody.csrf_token,
       reauthToken: parsedBody.reauth_token,
     });
-    const replyPacket = parsePacketEnvelope(parsedBody.reply_packet);
+    const parsedReplyPacket = parsePacketEnvelope(parsedBody.reply_packet);
 
-    if (replyPacket.header.family !== 'DiscussionReply') {
+    if (parsedReplyPacket.header.family !== 'DiscussionReply') {
       return createJsonResponse(
         { error: 'reply_packet must be a DiscussionReply packet.' },
         400
       );
     }
+
+    const replyPacket =
+      parsedReplyPacket as PacketEnvelopeByType['DiscussionReply'];
 
     const result = await services.discussionService.createReply({
       scope_id: params.scopeId,

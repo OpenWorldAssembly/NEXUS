@@ -114,6 +114,7 @@ export default function NexusIdentitySignInPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState<'bundle' | 'passkey' | 'import' | null>(null);
   const normalizedIdentityQuery = identityQuery.trim().toLowerCase();
+  const hasActiveClaimedSession = currentMode === 'claimed' && isAuthenticated;
   const signedOut =
     typeof params.signed_out === 'string'
       ? params.signed_out === 'true'
@@ -185,26 +186,37 @@ export default function NexusIdentitySignInPage() {
 
     return identityResults;
   }, [claimedIdentities, identityResults, normalizedIdentityQuery]);
+  const selectableIdentityMap = useMemo(() => {
+    const nextMap = new Map<string, NexusIdentitySearchResultPayload>();
+
+    claimedIdentities.forEach((identity) => {
+      nextMap.set(identity.actor_packet_id, {
+        actor_packet_id: identity.actor_packet_id,
+        display_alias: identity.alias,
+        claim_status: identity.claim_status,
+        saved_on_device: true,
+        match_source: 'alias',
+      });
+    });
+    identityResults.forEach((identity) => {
+      nextMap.set(identity.actor_packet_id, identity);
+    });
+
+    return nextMap;
+  }, [claimedIdentities, identityResults]);
 
   useEffect(() => {
-    if (
-      visibleIdentities.length > 0 &&
-      !visibleIdentities.some(
-        (identity) => identity.actor_packet_id === selectedIdentityId
-      )
-    ) {
+    if (visibleIdentities.length > 0 && selectedIdentityId.length === 0) {
       setSelectedIdentityId(visibleIdentities[0]?.actor_packet_id ?? '');
       return;
     }
 
-    if (visibleIdentities.length === 0) {
+    if (visibleIdentities.length === 0 && normalizedIdentityQuery.length === 0) {
       setSelectedIdentityId('');
     }
-  }, [selectedIdentityId, visibleIdentities]);
+  }, [normalizedIdentityQuery.length, selectedIdentityId, visibleIdentities]);
 
-  const selectedIdentity =
-    visibleIdentities.find((identity) => identity.actor_packet_id === selectedIdentityId) ??
-    null;
+  const selectedIdentity = selectableIdentityMap.get(selectedIdentityId) ?? null;
   const showIdentityResults =
     visibleIdentities.length > 0 &&
     (!selectedIdentity ||
@@ -301,9 +313,11 @@ export default function NexusIdentitySignInPage() {
           <Text className={appearance.surfaceTitleClass}>Current actor</Text>
           <Text className="text-2xl font-bold text-nexus-text">{currentLabel}</Text>
           <Text className={appearance.itemBodyClass}>
-            {currentMode === 'claimed'
-              ? `${isAuthenticated ? 'Claimed session active.' : 'Claimed actor selected locally.'} ${getStorageModeCopy(currentStorageMode)}.`
-              : `Guest actor active. ${getStorageModeCopy(currentStorageMode)}.`}
+            {hasActiveClaimedSession
+              ? `Claimed session active. ${getStorageModeCopy(currentStorageMode)}.`
+              : currentMode === 'claimed'
+                ? 'A claimed identity is saved locally, but Nexus has fallen back to guest until you sign in again.'
+                : `Guest actor active. ${getStorageModeCopy(currentStorageMode)}.`}
           </Text>
         </View>
       </NexusCard>
@@ -380,7 +394,7 @@ export default function NexusIdentitySignInPage() {
                       }`}
                       onPress={() => {
                         setSelectedIdentityId(identity.actor_packet_id);
-                        setIdentityQuery(identity.display_alias);
+                        setIdentityQuery(identity.display_alias ?? '');
                       }}
                     >
                       <Text className={appearance.itemTitleClass}>

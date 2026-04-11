@@ -907,12 +907,23 @@ export default function NexusSidebar({
     toggleSecondaryRailCollapsed,
   } = useNexusShell();
   const {
+    currentStorageMode,
     isAuthenticated,
     rememberClaimedSessions,
     securityMode,
     setRememberClaimedSessions,
     setSecurityMode,
   } = useIdentityShell();
+  const hasActiveClaimedSession =
+    currentIdentityMode === 'claimed' && isAuthenticated;
+  const sessionPreferenceActiveId =
+    currentIdentityMode === 'claimed'
+      ? rememberClaimedSessions
+        ? 'save'
+        : 'temp'
+      : currentStorageMode === 'none'
+        ? 'temp'
+        : 'save';
 
   const isFunctionMode = navigationMode === 'function';
   const isLargeUi = uiDensity === 'large';
@@ -1090,7 +1101,7 @@ export default function NexusSidebar({
                   )}
                   onPress={() =>
                     router.push(
-                      currentIdentityMode === 'claimed'
+                      hasActiveClaimedSession
                         ? '/nexus/identity/security'
                         : '/nexus/identity/sign-in'
                     )
@@ -1104,7 +1115,7 @@ export default function NexusSidebar({
                       titleTextClass,
                     )}
                   >
-                    {currentIdentityMode === 'claimed' ? 'Security' : 'Sign In'}
+                    {hasActiveClaimedSession ? 'Security' : 'Sign In'}
                   </Text>
                 </Pressable>
                 <Pressable
@@ -1117,7 +1128,7 @@ export default function NexusSidebar({
                   )}
                   onPress={() =>
                     router.push(
-                      currentIdentityMode === 'claimed'
+                      hasActiveClaimedSession
                         ? '/nexus/account'
                         : '/nexus/identity/claim'
                     )
@@ -1131,7 +1142,7 @@ export default function NexusSidebar({
                       'text-nexus-canvas',
                     )}
                   >
-                    {currentIdentityMode === 'claimed' ? 'Account' : 'Claim'}
+                    {hasActiveClaimedSession ? 'Account' : 'Claim'}
                   </Text>
                 </Pressable>
               </View>
@@ -1229,7 +1240,7 @@ export default function NexusSidebar({
                           { id: 'temp', label: 'TEMP' },
                           { id: 'save', label: 'SAVE' },
                         ]}
-                        activeId={rememberClaimedSessions ? 'save' : 'temp'}
+                        activeId={sessionPreferenceActiveId}
                         onSelect={(value) => {
                           void setRememberClaimedSessions(value === 'save').catch(
                             () => undefined
@@ -1262,7 +1273,7 @@ export default function NexusSidebar({
                             () => undefined
                           );
                         }}
-                        disabled={!isAuthenticated || currentIdentityMode !== 'claimed'}
+                        disabled={!hasActiveClaimedSession}
                       />
                     </View>
                   </View>

@@ -166,15 +166,16 @@ Status:
 - local workspace state on `/nexus/discussions` is route-driven through `view` (`feed | thread | post`), `post`, `replyTo`, `sort`, `replySort`, and `showHidden` query parameters
 - discussion tabs now project one `DiscussionForum` per forum kind and prefer authority forums from the active scope over inherited ancestor forums, which prevents duplicate visitor-lobby tabs
 - read-only forum tab labels are scope-aware (for example `Sunnymead Ranch general`) even when the backing forum packet is inherited from an ancestor scope
-- discussion writers now act through cryptographic person elements, including memory-only temporary guests, session-only temporary guests, saved guests, and claimed identities; top-level post creation is still point-gated, replies stay threaded, and the same universal `Attestation(kind: "packet_signal")` model powers `+1/-1` controls on root posts and replies
+- discussion writers now act through cryptographic person elements, including memory-only temporary guests, session-only temporary guests, saved guests, and claimed identities; top-level posting is no longer point-gated, visitor lobbies accept any signed actor, non-lobby forums require an active `Attestation(kind: "assembly_association_claim")`, and the same universal `Attestation(kind: "packet_signal")` model powers `+1/-1` controls on root posts and replies
 - discussion writes and attestation writes now require a signed actor assertion plus the actor packet, and the active repo no longer uses the legacy visitor-lobby or anonymous-session discussion bridge
 - discussion controls are not disabled purely because a claimed local bundle is locked; signing readiness is enforced by the deeper verified-write layer, while the route surfaces an unlock reminder banner
 - feed sorting controls now live inside the `Feed` workspace, reply sorting controls live inside the `Thread` workspace, and `New post` actions are available from both the feed and thread workspaces
 - feed and reply sort options now render as single segmented pills with the active sort highlighted; the visible options are currently `new`, `top`, `controversial`, and `old`, and both workspaces default to `new` sorting when no explicit query override is present
 - feed cards themselves now act as the primary thread-open affordance, while the inline action row on feed cards is limited to vote, descendant-total reply count, and moderation state
 - the `Thread` workspace auto-opens the current top feed item when no explicit thread is selected, and otherwise falls back to an empty-state guidance card when the active forum has no visible top-level posts
-- top-level thread creation is written through `/api/nexus/scopes/[scopeId]/discussions/posts` using `actor_packet`, `actor_assertion`, `forum_packet_id`, `title`, and `body`, reply creation is written through `/api/nexus/scopes/[scopeId]/discussions/replies` using `actor_packet`, `actor_assertion`, and `parent_post_packet_id`, and discussion reactions are written through `/api/nexus/packets/vote` as attestations using `actor_packet`, `actor_assertion`, and `target_packet_id`
-- seeded visitor-lobby starter posts exist across the initial scope tree so zero-start anonymous guests can reply immediately and begin earning points
+- top-level thread creation is written through `/api/nexus/scopes/[scopeId]/discussions/posts` using signed `thread_packet + post_packet`, reply creation is written through `/api/nexus/scopes/[scopeId]/discussions/replies` using `parent_post_packet_id + signed reply_packet`, and discussion reactions are written through `/api/nexus/packets/vote` using a signed attestation packet
+- seeded visitor-lobby starter posts exist across the initial scope tree so signed guests can test full thread, reply, and vote behavior immediately
+- the current discussions cleanup intentionally preserves the existing forum-shell layout and styling; this pass changes wiring, auth truthfulness, and copy rather than redesigning the page
 - packet mechanics stay outside the screen layer: canonical writes, preferred-revision updates, vote tally refresh, reply-tree construction, and future bundle import/export or merge behavior remain on the packet-store plus server-service boundary, while the route screen consumes API projections
 - the thread detail surface now visually distinguishes the root `Original post` from the reply tree so nested replies read as derivative discussion
 - replies at depth `0-4` render expanded by default, while depth `5+` branches default to collapsed `Continue thread` affordances until the user expands them
@@ -259,7 +260,8 @@ Status:
 - those modes render as one connected top-tab rail rather than as disconnected pills inside the page body
 - `LOCAL` is the default everyday sign-in path, searches the Nexus graph by display alias, packet id, and public-key-related matches, and still highlights identities already saved on this device
 - graph-only identity matches remain discoverable but cannot be unlocked with only a passphrase unless the encrypted bundle is already on-device
-- the current-actor summary emphasizes the active actor label rather than status pills, and the saved-local-identity picker collapses back to the selected identity once a local match is chosen
+- the current-actor summary emphasizes the active actor label rather than status pills, and the saved-local-identity picker collapses back to the selected identity once a local match is chosen without auto-jumping to the first new search result
+- saved claimed bundles stay discoverable here, but Nexus falls back to a guest actor unless a claimed session actually restores
 - `PASSKEY` is a device/browser authenticator path and is described as Windows Hello / phone / security-key style presence proof rather than as pasted file input
 - passkeys are optional extra protection for claimed identities, not a hard prerequisite for creation, claiming, normal sign-in, or security-preference changes
 - when no passkeys are registered, passkey sign-in fails with a clear guidance error instead of implying it is the only valid auth path
@@ -298,6 +300,7 @@ Status:
 
 - packet-backed
 - preserves the current guest actor while revising it into a claimed identity
+- claim writes send the current guest packet plus the claimed revision so the packet store preserves the revision chain instead of receiving an orphaned later revision
 - treats alias as a mutable display alias rather than a permanent username
 - includes starting claimed-session preferences for remembered sign-in and write approval, with the same options still editable later from the sidebar drawer and identity security route
 - uses the same canonical location picker and packet-safe disclosure shaping as the create flow
@@ -330,6 +333,8 @@ Status:
 
 - packet-backed
 - manages remembered-session preference and `standard` / `guarded` / `every_write` write approval inside the Nexus shell, while presenting those controls as compact `TEMP/SAVE` and `OFF/MED/MAX` segmented pills
+- the shared `TEMP/SAVE` control now applies to the current actor immediately: for guests it creates or clears browser persistence right away, and for claimed identities it remains the default for future claimed sign-ins
+- when no claimed session is active, the route still stays accessible but the write-approval and passkey-management actions remain tied to a real claimed session rather than to a merely saved local bundle
 - shows active device sessions, passkeys, and encrypted bundle export
 - shows an export reminder when entered directly from a successful create or claim ceremony
 
@@ -472,7 +477,7 @@ Implemented flow:
 4. guest can switch between `Feed`, `Thread`, and `Post` workspaces without leaving the route
 5. guest can open a root post by pressing its feed card, the `Thread` workspace auto-opens the current top feed item when no explicit post is selected, and the guest can reply to any post in that tree through an inline composer attached to the selected reply target while voting `+1/-1` on visible discussion posts when the thread participation rules allow it
 6. feed sorting happens inside the `Feed` workspace, reply sorting happens inside the `Thread` workspace, and the feed/thread workspaces both provide direct navigation into the `Post` workspace for new top-level posts
-7. top-level posts are allowed only when the viewer has enough points for that thread's `top_level_post_cost`
+7. top-level posts are allowed whenever the active actor satisfies the forum participation rule: any signed actor in `visitor_lobby`, or an actor with an active `assembly_association_claim` in the other forums
 8. top-level feeds and reply branches are loaded incrementally through cursor-based API pages rather than returning the entire forum or thread tree in one payload
 9. discussion writes are sent to the local API routes, written into the local SQLite packet store as canonical `DiscussionThread + DiscussionPost`, `DiscussionReply`, or `Attestation` packets, and then re-projected back into the feed/detail UI
 10. discussion writes derive actor ownership from the verified actor packet, store `provenance.created_by` as that person element, and do not depend on the removed anonymous-session visitor-lobby bridge
@@ -481,8 +486,8 @@ Status:
 
 - **Provisional**
 - discussion packets and attestations are persisted through the local SQLite packet store at `NEXUS_DATA_DIR/owa-packets.db`, defaulting to `data/nexus/owa-packets.db` when `NEXUS_DATA_DIR` is unset
-- anonymous guests currently receive a temporary `10`-point testing grant, replies are free, top-level posts cost `10`, and only positively scored replies earn ongoing spendable points in the current implementation
-- discussion moderation is derived from raw `Attestation(kind: "packet_signal")` reactions: content is deprioritized at `total_votes >= 4 && net_score <= -2` and auto-hidden at `total_votes >= 6 && downvote_ratio >= 0.75`
+- discussion point balances, top-level post costs, and point-earned reply loops are currently disabled
+- discussion reactions still use raw `Attestation(kind: "packet_signal")` packets, but vote-derived deprioritization and auto-hide behavior are currently disabled
 - discussion packets use a discussion-seed-version marker in the same runtime data directory, and destructive reseeds are now limited to local development or an explicit `NEXUS_ALLOW_DISCUSSION_RESET` override instead of running automatically in every hosted boot
 - discussion packets do not stand alone: `DiscussionSpace` packets attach to scope `Element` packets, `DiscussionForum` packets attach to a discussion space, `DiscussionThread` packets attach to a forum, root `DiscussionPost` packets attach to their thread, and `DiscussionReply` packets attach to their thread, root post, and immediate parent reply-or-post
 - raw trust visibility is now packet-first but still pre-weighting: `/api/nexus/attestations/target`, `/api/nexus/attestations/actor`, and `/api/nexus/assemblies/claims` expose inspectable attestation edges without any trust score math

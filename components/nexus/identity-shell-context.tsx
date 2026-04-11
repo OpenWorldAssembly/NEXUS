@@ -32,7 +32,6 @@ import type {
 import {
   createClaimedIdentityRevision,
   createGuestAlias,
-  createIdentityStatusRevision,
   createIdentityLabel,
   createPersonIdentityPacket,
   type IdentityBundleRecord,
@@ -488,6 +487,12 @@ function clearPreservedGuestIdentity(): void {
   sessionStorage.removeItem(PRESERVED_GUEST_IDENTITY_STORAGE_KEY);
 }
 
+function normalizeGuestClaimStatus(
+  claimStatus: NexusIdentityMode
+): 'ephemeral_guest' {
+  return claimStatus === 'claimed' ? 'ephemeral_guest' : 'ephemeral_guest';
+}
+
 async function createSignedIdentityBundle(input: {
   alias: string;
   claimStatus: NexusIdentityMode;
@@ -579,6 +584,119 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
     setStoredIdentityPreviews(records.map(toStoredIdentityPreview));
   };
 
+  const resolveGuestFallbackIdentity = async (input?: {
+    storedRecords?: StoredIdentityRecord[];
+    preferredActorPacketId?: string | null;
+  }): Promise<ActiveIdentityState> => {
+    const storedRecords = input?.storedRecords ?? (await readStoredIdentityRecords());
+    const preferredActorPacketId =
+      input?.preferredActorPacketId ?? (await readCurrentIdentityPreference());
+    const sessionGuest = readSessionGuestIdentity();
+
+    if (sessionGuest) {
+      return {
+        actorPacket: sessionGuest.actorPacket,
+        publicJwk: sessionGuest.publicJwk,
+        privateJwk: sessionGuest.privateJwk,
+        claimStatus: sessionGuest.claimStatus,
+        storedKind: null,
+      };
+    }
+
+    if (preferredActorPacketId) {
+      const preferredGuestRecord = storedRecords.find(
+        (record) =>
+          record.actor_packet_id === preferredActorPacketId &&
+          record.stored_kind === 'persistent_guest' &&
+          Boolean(record.private_jwk)
+      );
+
+      if (preferredGuestRecord) {
+        const preferredGuest = toActiveIdentityState(preferredGuestRecord);
+
+        if (preferredGuest) {
+          return preferredGuest;
+        }
+      }
+    }
+
+    const persistentGuestRecord = storedRecords.find(
+      (record) =>
+        record.stored_kind === 'persistent_guest' && Boolean(record.private_jwk)
+    );
+
+    if (persistentGuestRecord) {
+      const persistentGuest = toActiveIdentityState(persistentGuestRecord);
+
+      if (persistentGuest) {
+        return persistentGuest;
+      }
+    }
+
+    const nextIdentity = await createSignedIdentityBundle({
+      alias: createGuestAlias(),
+      claimStatus: 'ephemeral_guest',
+    });
+
+    return {
+      actorPacket: nextIdentity.actorPacket,
+      publicJwk: nextIdentity.publicJwk,
+      privateJwk: nextIdentity.privateJwk,
+      claimStatus: 'ephemeral_guest',
+      storedKind: null,
+    };
+  };
+
+  const clearCurrentGuestDeviceSave = async (actorPacketId: string) => {
+    await deleteObjectStoreValue(IDENTITY_STORE_NAME, actorPacketId).catch(() => undefined);
+    await clearCurrentIdentityPreference();
+    await refreshStoredIdentities();
+  };
+
+  const setCurrentGuestBrowserPersistence = async (shouldPersist: boolean) => {
+    if (!currentIdentity || currentIdentity.claimStatus === 'claimed') {
+      return;
+    }
+
+    if (currentIdentity.storedKind === 'persistent_guest' && !shouldPersist) {
+      await clearCurrentGuestDeviceSave(currentIdentity.actorPacket.header.packet_id);
+    } else {
+      await clearCurrentIdentityPreference();
+    }
+
+    clearSessionGuestIdentity();
+
+    if (shouldPersist) {
+      storeSessionGuestIdentity({
+        actorPacket: currentIdentity.actorPacket,
+        publicJwk: currentIdentity.publicJwk,
+        privateJwk: currentIdentity.privateJwk ?? (() => {
+          throw new Error('The current guest identity is locked.');
+        })(),
+        claimStatus: normalizeGuestClaimStatus(currentIdentity.claimStatus),
+      });
+    }
+
+    setCurrentIdentity((currentValue) => {
+      if (
+        !currentValue ||
+        currentValue.actorPacket.header.packet_id !==
+          currentIdentity.actorPacket.header.packet_id
+      ) {
+        return currentValue;
+      }
+
+      return {
+        ...currentValue,
+        claimStatus: normalizeGuestClaimStatus(currentValue.claimStatus),
+        storedKind:
+          currentValue.storedKind === 'persistent_guest' && !shouldPersist
+            ? null
+            : currentValue.storedKind,
+      };
+    });
+  };
+
   const refreshAuthSession = async () => {
     const nextSession = await fetchJsonOrThrow<NexusAuthSessionPayload>(
       '/api/nexus/auth/session'
@@ -589,6 +707,13 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
     await refreshPasskeySummaries(nextSession.csrf_token);
 
     if (!nextSession.actor_packet) {
+      if (currentIdentity?.claimStatus === 'claimed') {
+        await clearCurrentIdentityPreference();
+        const fallbackIdentity = await resolveGuestFallbackIdentity();
+
+        setCurrentIdentity(fallbackIdentity);
+      }
+
       return nextSession;
     }
 
@@ -700,9 +825,6 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
     const loadIdentityShell = async () => {
       let storedRecords: StoredIdentityRecord[] = [];
       let currentPreference: string | null = null;
-      let ephemeralIdentity: (IdentityBundleRecord & {
-        claimStatus: NexusIdentityMode;
-      }) | null = null;
       let nextSession: NexusAuthSessionPayload | null = null;
 
       try {
@@ -718,8 +840,6 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
         storedRecords = [];
         currentPreference = null;
       }
-
-      ephemeralIdentity = readSessionGuestIdentity();
 
       try {
         nextSession = await fetchJsonOrThrow<NexusAuthSessionPayload>(
@@ -742,17 +862,7 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
 
       let resolvedIdentity: ActiveIdentityState | null = null;
 
-      if (currentPreference) {
-        const preferredRecord = storedRecords.find(
-          (record) => record.actor_packet_id === currentPreference
-        );
-
-        if (preferredRecord) {
-          resolvedIdentity = toActiveIdentityState(preferredRecord);
-        }
-      }
-
-      if (!resolvedIdentity && nextSession?.actor_packet_id) {
+      if (nextSession?.actor_packet_id) {
         const authenticatedRecord = storedRecords.find(
           (record) => record.actor_packet_id === nextSession?.actor_packet_id
         );
@@ -766,44 +876,11 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
         }
       }
 
-      if (!resolvedIdentity && ephemeralIdentity) {
-        resolvedIdentity = {
-          actorPacket: ephemeralIdentity.actorPacket,
-          publicJwk: ephemeralIdentity.publicJwk,
-          privateJwk: ephemeralIdentity.privateJwk,
-          claimStatus: ephemeralIdentity.claimStatus,
-          storedKind: null,
-        };
-      }
-
       if (!resolvedIdentity) {
-        const persistentGuest = storedRecords.find(
-          (record) =>
-            record.stored_kind === 'persistent_guest' && Boolean(record.private_jwk)
-        );
-
-        if (persistentGuest) {
-          resolvedIdentity = toActiveIdentityState(persistentGuest);
-        }
-      }
-
-      if (!resolvedIdentity) {
-        const nextIdentity = await createSignedIdentityBundle({
-          alias: createGuestAlias(),
-          claimStatus: 'ephemeral_guest',
+        resolvedIdentity = await resolveGuestFallbackIdentity({
+          storedRecords,
+          preferredActorPacketId: currentPreference,
         });
-
-        if (!isMounted) {
-          return;
-        }
-
-        resolvedIdentity = {
-          actorPacket: nextIdentity.actorPacket,
-          publicJwk: nextIdentity.publicJwk,
-          privateJwk: nextIdentity.privateJwk,
-          claimStatus: 'ephemeral_guest',
-          storedKind: null,
-        };
       }
 
       setCurrentIdentity(resolvedIdentity);
@@ -843,6 +920,25 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
   };
 
   const continueAsSessionGuest = async () => {
+    if (currentIdentity && currentIdentity.claimStatus !== 'claimed') {
+      await clearCurrentIdentityPreference();
+      clearSessionGuestIdentity();
+      storeSessionGuestIdentity({
+        actorPacket: currentIdentity.actorPacket,
+        publicJwk: currentIdentity.publicJwk,
+        privateJwk: currentIdentity.privateJwk ?? (() => {
+          throw new Error('The current guest identity is locked.');
+        })(),
+        claimStatus: normalizeGuestClaimStatus(currentIdentity.claimStatus),
+      });
+      setCurrentIdentity({
+        ...currentIdentity,
+        claimStatus: normalizeGuestClaimStatus(currentIdentity.claimStatus),
+        storedKind: null,
+      });
+      return;
+    }
+
     const nextIdentity = await createSignedIdentityBundle({
       alias: createGuestAlias(),
       claimStatus: 'ephemeral_guest',
@@ -900,41 +996,20 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
   };
 
   const saveGuestOnDevice = async () => {
-    if (!currentIdentity || currentIdentity.claimStatus !== 'ephemeral_guest') {
-      throw new Error('Only the current ephemeral guest can be saved on this device.');
+    if (!currentIdentity || currentIdentity.claimStatus === 'claimed') {
+      throw new Error('Only the current guest identity can be saved on this device.');
     }
 
-    const privateKey = await importPrivateKeyFromJwk(
-      currentIdentity.privateJwk ?? (() => {
-        throw new Error('The current guest identity is locked.');
-      })()
-    );
-    const keyBinding = currentIdentity.actorPacket.body.identity?.public_key_bindings[0];
-
-    if (!keyBinding) {
-      throw new Error('The current guest identity is missing its active key binding.');
+    if (!currentIdentity.privateJwk) {
+      throw new Error('The current guest identity is locked.');
     }
-
-    const revisedPacket = createIdentityStatusRevision({
-      actorPacket: currentIdentity.actorPacket,
-      alias: createIdentityLabel(currentIdentity.actorPacket),
-      claimStatus: 'persistent_guest',
-      locationDisclosure:
-        currentIdentity.actorPacket.body.identity?.location_disclosure ?? null,
-    });
-    const signedPacket = await signPacketWithIdentity({
-      packet: revisedPacket,
-      signerPacketId: revisedPacket.header.packet_id,
-      kid: keyBinding.kid,
-      privateKey,
-    });
 
     const record: StoredIdentityRecord = {
-      actor_packet_id: signedPacket.header.packet_id,
-      alias: createIdentityLabel(signedPacket),
-      claim_status: 'persistent_guest',
+      actor_packet_id: currentIdentity.actorPacket.header.packet_id,
+      alias: createIdentityLabel(currentIdentity.actorPacket),
+      claim_status: normalizeGuestClaimStatus(currentIdentity.claimStatus),
       stored_kind: 'persistent_guest',
-      actor_packet: signedPacket,
+      actor_packet: currentIdentity.actorPacket,
       public_jwk: currentIdentity.publicJwk,
       private_jwk: currentIdentity.privateJwk,
       encrypted_bundle_json: null,
@@ -946,10 +1021,8 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
     await refreshStoredIdentities();
     clearSessionGuestIdentity();
     setCurrentIdentity({
-      actorPacket: record.actor_packet,
-      publicJwk: record.public_jwk,
-      privateJwk: record.private_jwk ?? currentIdentity.privateJwk,
-      claimStatus: 'persistent_guest',
+      ...currentIdentity,
+      claimStatus: normalizeGuestClaimStatus(currentIdentity.claimStatus),
       storedKind: 'persistent_guest',
     });
   };
@@ -997,74 +1070,104 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
       throw new Error('Sign in with the claimed identity before approving this action.');
     }
 
-    if (effectiveSession.has_passkey && isPasskeyPlatformSupported) {
-      const optionsPayload = await fetchJsonOrThrow<{
-        challenge_id: string;
-        purpose: 'sensitive' | 'interaction';
-        public_key: NexusPasskeyRequestOptionsPayload['public_key'];
-      }>('/api/nexus/auth/reauth/options', {
+    const csrfToken = effectiveSession.csrf_token;
+
+    const performSignedReauth = async () => {
+      const unlockedIdentity = requireUnlockedCurrentIdentity();
+
+      if (
+        effectiveSession.actor_packet_id &&
+        unlockedIdentity.actorPacket.header.packet_id !==
+          effectiveSession.actor_packet_id
+      ) {
+        throw new Error(
+          'Unlock the claimed identity that owns this session before approving this action.'
+        );
+      }
+
+      const privateKey = await importPrivateKeyFromJwk(unlockedIdentity.privateJwk);
+      const actorAssertion = await createActorAssertion({
+        actorPacketId: unlockedIdentity.actorPacket.header.packet_id,
+        kid:
+          unlockedIdentity.actorPacket.body.identity?.public_key_bindings[0]?.kid ??
+          (() => {
+            throw new Error('The active identity is missing its key binding.');
+          })(),
+        privateKey,
         method: 'POST',
-        headers: {
-          'x-csrf-token': effectiveSession.csrf_token,
-        },
+        path: '/api/nexus/auth/reauth/signed',
         body: {
           purpose,
         },
-      });
-      const assertionPayload = await completePasskeyAssertion({
-        challenge_id: optionsPayload.challenge_id,
-        public_key: optionsPayload.public_key,
       });
       const verifyPayload = await fetchJsonOrThrow<{
         reauth_token: string;
         expires_at: string;
-      }>('/api/nexus/auth/reauth/verify', {
+      }>('/api/nexus/auth/reauth/signed', {
         method: 'POST',
         headers: {
-          'x-csrf-token': effectiveSession.csrf_token,
+          'x-csrf-token': csrfToken,
         },
         body: {
-          challenge_id: assertionPayload.challenge_id,
           purpose,
-          credential: assertionPayload.credential,
+          actor_packet: unlockedIdentity.actorPacket,
+          actor_assertion: actorAssertion,
         },
       });
 
       return verifyPayload.reauth_token;
+    };
+
+    if (effectiveSession.has_passkey && isPasskeyPlatformSupported) {
+      try {
+        const optionsPayload = await fetchJsonOrThrow<{
+          challenge_id: string;
+          purpose: 'sensitive' | 'interaction';
+          public_key: NexusPasskeyRequestOptionsPayload['public_key'];
+        }>('/api/nexus/auth/reauth/options', {
+          method: 'POST',
+          headers: {
+            'x-csrf-token': csrfToken,
+          },
+          body: {
+            purpose,
+          },
+        });
+        const assertionPayload = await completePasskeyAssertion({
+          challenge_id: optionsPayload.challenge_id,
+          public_key: optionsPayload.public_key,
+        });
+        const verifyPayload = await fetchJsonOrThrow<{
+          reauth_token: string;
+          expires_at: string;
+        }>('/api/nexus/auth/reauth/verify', {
+          method: 'POST',
+          headers: {
+            'x-csrf-token': effectiveSession.csrf_token,
+          },
+          body: {
+            challenge_id: assertionPayload.challenge_id,
+            purpose,
+            credential: assertionPayload.credential,
+          },
+        });
+
+        return verifyPayload.reauth_token;
+      } catch (error) {
+        try {
+          return await performSignedReauth();
+        } catch {
+          const message =
+            error instanceof Error ? error.message : 'Passkey approval failed.';
+
+          throw new Error(
+            `Passkey approval failed, and no unlocked local bundle was available for fallback: ${message}`
+          );
+        }
+      }
     }
 
-    const unlockedIdentity = requireUnlockedCurrentIdentity();
-    const privateKey = await importPrivateKeyFromJwk(unlockedIdentity.privateJwk);
-    const actorAssertion = await createActorAssertion({
-      actorPacketId: unlockedIdentity.actorPacket.header.packet_id,
-      kid:
-        unlockedIdentity.actorPacket.body.identity?.public_key_bindings[0]?.kid ??
-        (() => {
-          throw new Error('The active identity is missing its key binding.');
-        })(),
-      privateKey,
-      method: 'POST',
-      path: '/api/nexus/auth/reauth/signed',
-      body: {
-        purpose,
-      },
-    });
-    const verifyPayload = await fetchJsonOrThrow<{
-      reauth_token: string;
-      expires_at: string;
-    }>('/api/nexus/auth/reauth/signed', {
-      method: 'POST',
-      headers: {
-        'x-csrf-token': effectiveSession.csrf_token,
-      },
-      body: {
-        purpose,
-        actor_packet: unlockedIdentity.actorPacket,
-        actor_assertion: actorAssertion,
-      },
-    });
-
-    return verifyPayload.reauth_token;
+    return performSignedReauth();
   };
 
   const registerCurrentPasskey = async (
@@ -1289,6 +1392,7 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
       method: 'POST',
       body: {
         actor_packet: signedClaimedPacket,
+        previous_actor_packet: currentIdentity.actorPacket,
       },
     });
 
@@ -1617,6 +1721,10 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
   const setRememberClaimedSessions = async (nextRememberClaimedSessions: boolean) => {
     await writeRememberClaimedSessionPreference(nextRememberClaimedSessions);
     setRememberClaimedSessionsState(nextRememberClaimedSessions);
+
+    if (currentIdentity?.claimStatus !== 'claimed') {
+      await setCurrentGuestBrowserPersistence(nextRememberClaimedSessions);
+    }
   };
 
   const createVerifiedRequestBody = async <

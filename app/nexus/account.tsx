@@ -109,6 +109,8 @@ export default function NexusAccountPage() {
     setErrorMessage(error instanceof Error ? error.message : fallback);
     setStatusMessage(null);
   };
+  const hasActiveClaimedSession =
+    currentIdentityMode === 'claimed' && isAuthenticated;
 
   return (
     <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
@@ -159,13 +161,29 @@ export default function NexusAccountPage() {
                 <NexusBadge label={isUsingSessionCookies ? 'Cookies active' : 'No auth cookies'} />
               </View>
               <Text className={appearance.itemBodyClass}>
-                Remembered claimed sign-ins are currently {rememberClaimedSessions ? 'enabled' : 'disabled'}, and write approval is set to {securityMode ?? 'guest-only'}.
+                {hasActiveClaimedSession
+                  ? `Remembered claimed sign-ins are currently ${
+                      rememberClaimedSessions ? 'enabled' : 'disabled'
+                    }, and write approval is set to ${securityMode ?? 'guest-only'}.`
+                  : currentIdentityMode === 'claimed'
+                    ? 'This claimed identity is saved locally, but no claimed session is active yet. Sign in again to manage passkeys or write approval.'
+                    : `Current guest persistence is ${
+                        currentStorageMode === 'none' ? 'temporary' : 'saved'
+                      }, and remembered claimed sign-ins are currently ${
+                        rememberClaimedSessions ? 'enabled' : 'disabled'
+                      }.`}
               </Text>
               <View className="flex-row flex-wrap gap-3">
                 <NexusActionButton
-                  label="Identity security"
+                  label={hasActiveClaimedSession ? 'Identity security' : 'Sign in'}
                   variant="primary"
-                  onPress={() => router.push('/nexus/identity/security')}
+                  onPress={() =>
+                    router.push(
+                      hasActiveClaimedSession
+                        ? '/nexus/identity/security'
+                        : '/nexus/identity/sign-in'
+                    )
+                  }
                 />
                 {currentIdentityMode !== 'claimed' ? (
                   <NexusActionButton
@@ -174,10 +192,10 @@ export default function NexusAccountPage() {
                   />
                 ) : null}
                 <NexusActionButton
-                  label={currentIdentityMode === 'claimed' ? 'Sign in another identity' : 'Create fresh identity'}
+                  label={hasActiveClaimedSession ? 'Sign in another identity' : 'Create fresh identity'}
                   onPress={() =>
                     router.push(
-                      currentIdentityMode === 'claimed'
+                      hasActiveClaimedSession
                         ? '/nexus/identity/sign-in'
                         : '/nexus/identity/create'
                     )

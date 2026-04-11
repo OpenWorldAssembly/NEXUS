@@ -6,7 +6,10 @@
 import type { RequestHandler } from 'expo-router/server';
 import { z } from 'zod';
 
-import { parsePacketEnvelope } from '@/domain/schema/packet-schema';
+import {
+  parsePacketEnvelope,
+  type PacketEnvelopeByType,
+} from '@/domain/schema/packet-schema';
 import { getNexusPacketServices } from '@/lib/nexus/server/nexus-packet-services';
 
 const ActorAssertionSchema = z
@@ -62,22 +65,27 @@ export const POST: RequestHandler = async (request, params) => {
       reauthToken: parsedBody.reauth_token,
       writeRisk: 'high_impact',
     });
-    const threadPacket = parsePacketEnvelope(parsedBody.thread_packet);
-    const postPacket = parsePacketEnvelope(parsedBody.post_packet);
+    const parsedThreadPacket = parsePacketEnvelope(parsedBody.thread_packet);
+    const parsedPostPacket = parsePacketEnvelope(parsedBody.post_packet);
 
-    if (threadPacket.header.family !== 'DiscussionThread') {
+    if (parsedThreadPacket.header.family !== 'DiscussionThread') {
       return createJsonResponse(
         { error: 'thread_packet must be a DiscussionThread packet.' },
         400
       );
     }
 
-    if (postPacket.header.family !== 'DiscussionPost') {
+    if (parsedPostPacket.header.family !== 'DiscussionPost') {
       return createJsonResponse(
         { error: 'post_packet must be a DiscussionPost packet.' },
         400
       );
     }
+
+    const threadPacket =
+      parsedThreadPacket as PacketEnvelopeByType['DiscussionThread'];
+    const postPacket =
+      parsedPostPacket as PacketEnvelopeByType['DiscussionPost'];
 
     const result = await services.discussionService.createPost({
       scope_id: params.scopeId,

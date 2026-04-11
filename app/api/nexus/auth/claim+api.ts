@@ -11,6 +11,7 @@ import { getNexusPacketServices } from '@/lib/nexus/server/nexus-packet-services
 const ClaimIdentityRequestSchema = z
   .object({
     actor_packet: z.unknown(),
+    previous_actor_packet: z.unknown().optional(),
   })
   .strict();
 
@@ -29,6 +30,7 @@ export const POST: RequestHandler = async (request) => {
     const services = await getNexusPacketServices();
     const actorPacket = await services.authService.claimIdentity({
       actorPacket: parsedBody.actor_packet,
+      previousActorPacket: parsedBody.previous_actor_packet,
     });
 
     return createJsonResponse({ actor_packet: actorPacket }, 200);

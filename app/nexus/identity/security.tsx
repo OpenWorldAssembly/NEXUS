@@ -63,6 +63,7 @@ export default function NexusIdentitySecurityPage() {
     sessionSummaries,
     setRememberClaimedSessions,
     setSecurityMode,
+    saveGuestOnDevice,
     signOut,
   } = useIdentityShell();
   const [exportPassphrase, setExportPassphrase] = useState('');
@@ -85,6 +86,15 @@ export default function NexusIdentitySecurityPage() {
     exportPassphraseConfirmation.length > 0
       ? validatePassphraseConfirmation(exportPassphrase, exportPassphraseConfirmation)
       : 'Confirm the export passphrase.';
+  const hasActiveClaimedSession = currentMode === 'claimed' && isAuthenticated;
+  const sessionPreferenceActiveId =
+    currentMode === 'claimed'
+      ? rememberClaimedSessions
+        ? 'save'
+        : 'temp'
+      : currentStorageMode === 'none'
+        ? 'temp'
+        : 'save';
 
   const handleAction = async (action: () => Promise<void>, successMessage: string) => {
     setErrorMessage(null);
@@ -138,33 +148,54 @@ export default function NexusIdentitySecurityPage() {
               {currentMode !== 'claimed' ? (
                 <NexusActionButton label="Claim this guest" variant="primary" onPress={() => router.push('/nexus/identity/claim')} />
               ) : null}
+              {currentMode !== 'claimed' && currentStorageMode !== 'saved_on_device' ? (
+                <NexusActionButton
+                  label="Save on this device"
+                  onPress={() => {
+                    void handleAction(
+                      () => saveGuestOnDevice(),
+                      'Saved this guest on the current device.'
+                    );
+                  }}
+                />
+              ) : null}
             </View>
           </NexusCard>
 
           <NexusCard className="gap-4">
             <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">Session preferences</Text>
             <View className="gap-3">
-              <Text className={appearance.itemTitleClass}>Remember future claimed sign-ins</Text>
+              <Text className={appearance.itemTitleClass}>
+                {currentMode === 'claimed'
+                  ? 'Remember future claimed sign-ins'
+                  : 'Current guest persistence'}
+              </Text>
               <NexusSegmentedPill
                 options={[
                   { id: 'temp', label: 'TEMP' },
                   { id: 'save', label: 'SAVE' },
                 ]}
-                activeId={rememberClaimedSessions ? 'save' : 'temp'}
+                activeId={sessionPreferenceActiveId}
                 onSelect={(optionId) => {
                   const nextRememberedValue = optionId === 'save';
 
                   void handleAction(
                     () => setRememberClaimedSessions(nextRememberedValue),
-                    nextRememberedValue
-                      ? 'Future claimed sign-ins will request remembered sessions.'
-                      : 'Future claimed sign-ins will stay non-remembered by default.'
+                    currentMode === 'claimed'
+                      ? nextRememberedValue
+                        ? 'Future claimed sign-ins will request remembered sessions.'
+                        : 'Future claimed sign-ins will stay non-remembered by default.'
+                      : nextRememberedValue
+                        ? 'This guest now persists in browser storage immediately.'
+                        : 'This guest is now temporary and browser persistence was cleared.'
                   );
                 }}
               />
             </View>
             <Text className={appearance.itemMetaClass}>
-              This preference applies to future claimed sign-ins and never creates cookies for guests.
+              {currentMode === 'claimed'
+                ? 'This preference applies to future claimed sign-ins by default.'
+                : 'TEMP keeps the current guest temporary. SAVE keeps the current guest across refreshes in this browser session right away.'}
             </Text>
             <View className="gap-3">
               <Text className={appearance.itemTitleClass}>Write approval</Text>
@@ -179,14 +210,14 @@ export default function NexusIdentitySecurityPage() {
                   const nextMode = optionId as 'standard' | 'guarded' | 'every_write';
                   const successMessage =
                     nextMode === 'every_write'
-                      ? 'Every write now requires fresh passkey approval.'
+                      ? 'Every write now requires fresh approval.'
                       : nextMode === 'guarded'
                         ? 'Guarded write approval is active.'
                         : 'Standard write approval is active.';
 
                   void handleAction(() => setSecurityMode(nextMode), successMessage);
                 }}
-                disabled={!isAuthenticated || currentMode !== 'claimed'}
+                disabled={!hasActiveClaimedSession}
               />
             </View>
             <Text className={appearance.itemMetaClass}>
@@ -209,7 +240,7 @@ export default function NexusIdentitySecurityPage() {
               onPress={() => {
                 void handleAction(() => registerCurrentPasskey(), 'Registered a new passkey.');
               }}
-              disabled={!isAuthenticated || currentMode !== 'claimed' || !isPasskeySupported}
+              disabled={!hasActiveClaimedSession || !isPasskeySupported}
             />
             <View className="gap-3">
               {passkeySummaries.map((passkey) => (
@@ -238,8 +269,8 @@ export default function NexusIdentitySecurityPage() {
                   await signOut();
                   router.replace('/nexus/identity/sign-in?signed_out=true');
                 }, 'Signed out the claimed session.');
-              }} disabled={!isAuthenticated} />
-              <NexusActionButton label="Sign out other devices" onPress={() => { void handleAction(() => revokeOtherSessions(), 'Revoked all other active sessions.'); }} disabled={!isAuthenticated || sessionSummaries.length <= 1} />
+              }} disabled={!hasActiveClaimedSession} />
+              <NexusActionButton label="Sign out other devices" onPress={() => { void handleAction(() => revokeOtherSessions(), 'Revoked all other active sessions.'); }} disabled={!hasActiveClaimedSession || sessionSummaries.length <= 1} />
             </View>
             <View className="gap-3">
               {sessionSummaries.map((sessionSummary) => (
