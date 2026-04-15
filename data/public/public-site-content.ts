@@ -17,9 +17,14 @@ export type PublicHeroSlide = {
   backgroundImageUri: string;
 };
 
+import type { Href } from 'expo-router';
+
 export type AboutHighlight = {
   title: string;
   body: string;
+  href?: Href;
+  cta?: string;
+  color?: 'sand' | 'cyan' | 'accent';
 };
 
 export type AboutSection = {
@@ -90,12 +95,6 @@ function buildHeroBackgroundImageUri(palette: HeroPalette) {
         <circle cx="1290" cy="220" r="88" />
         <circle cx="1190" cy="730" r="156" />
       </g>
-
-      <g opacity="0.74" fill="${palette.accent}">
-        <rect x="970" y="180" width="360" height="14" rx="7" />
-        <rect x="1020" y="246" width="250" height="14" rx="7" />
-        <rect x="1085" y="312" width="170" height="14" rx="7" />
-      </g>
     </svg>
   `;
 
@@ -106,20 +105,21 @@ function buildHeroBackgroundImageUri(palette: HeroPalette) {
  * Inputs: a color palette for the generated about-section background artwork.
  * Output: a data URI pointing to an abstract SVG image for a single about section.
  */
-function buildAboutBackgroundImageUri(palette: AboutPalette) {
+function buildAboutBackgroundImageUri(palette: AboutPalette) {  
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 980">
       <defs>
         <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="${palette.base}" />
-          <stop offset="100%" stop-color="#07111c" />
+          <stop offset="0%" stop-color="${palette.base}" stop-opacity="0.58" />
+          <stop offset="55%" stop-color="#02070c" stop-opacity="0.5" />
+          <stop offset="100%" stop-color="#000000" />
         </linearGradient>
-        <radialGradient id="glowA" cx="20%" cy="18%" r="52%">
-          <stop offset="0%" stop-color="${palette.glow}" stop-opacity="0.7" />
+        <radialGradient id="glowA" cx="24%" cy="22%" r="24%">
+          <stop offset="0%" stop-color="${palette.glow}" stop-opacity="0.16" />
           <stop offset="100%" stop-color="${palette.glow}" stop-opacity="0" />
         </radialGradient>
-        <radialGradient id="glowB" cx="82%" cy="24%" r="44%">
-          <stop offset="0%" stop-color="${palette.accentSoft}" stop-opacity="0.4" />
+        <radialGradient id="glowB" cx="78%" cy="30%" r="18%">
+          <stop offset="0%" stop-color="${palette.accentSoft}" stop-opacity="0.12" />
           <stop offset="100%" stop-color="${palette.accentSoft}" stop-opacity="0" />
         </radialGradient>
       </defs>
@@ -128,25 +128,16 @@ function buildAboutBackgroundImageUri(palette: AboutPalette) {
       <rect width="1600" height="980" fill="url(#glowA)" />
       <rect width="1600" height="980" fill="url(#glowB)" />
 
-      <g opacity="0.22" fill="none" stroke="${palette.accent}" stroke-width="2">
-        <path d="M-80 640 C 220 460, 430 720, 760 560 S 1260 420, 1700 620" />
-        <path d="M-60 760 C 220 560, 520 860, 860 700 S 1360 560, 1710 760" />
+      <g opacity="0.12" fill="none" stroke="${palette.accent}" stroke-width="2">
+        <path d="M-80 250 C 180 210, 360 340, 560 410 C 700 458, 820 472, 960 452 C 1140 426, 1320 318, 1700 260" />
+        <path d="M-60 340 C 190 300, 390 398, 580 458 C 730 504, 860 514, 1010 494 C 1190 468, 1370 390, 1710 330" />
+        <path d="M-40 700 C 220 740, 400 646, 610 584 C 760 540, 880 526, 1020 544 C 1200 566, 1380 660, 1710 720" />
+        <path d="M-80 810 C 180 844, 380 750, 590 684 C 760 630, 900 614, 1060 636 C 1240 662, 1420 748, 1700 800" />
       </g>
 
-      <g opacity="0.36" fill="${palette.ridge}">
-        <path d="M0 780 C180 740 320 660 480 670 C650 680 760 760 930 750 C1110 740 1260 630 1440 660 C1515 672 1568 694 1600 710 L1600 980 L0 980 Z" />
-        <path d="M0 860 C200 820 350 760 520 770 C700 782 830 848 1010 838 C1168 830 1340 758 1520 780 C1552 784 1580 790 1600 798 L1600 980 L0 980 Z" />
-      </g>
-
-      <g opacity="0.2" fill="${palette.accentSoft}">
-        <circle cx="1220" cy="260" r="122" />
-        <circle cx="360" cy="220" r="84" />
-      </g>
-
-      <g opacity="0.78" fill="${palette.accent}">
-        <rect x="970" y="210" width="320" height="14" rx="7" />
-        <rect x="1015" y="280" width="240" height="14" rx="7" />
-        <rect x="1080" y="350" width="170" height="14" rx="7" />
+      <g opacity="0.06" fill="none" stroke="${palette.accentSoft}" stroke-width="1.5">
+        <path d="M-40 430 C 220 418, 430 470, 650 490 C 820 505, 980 498, 1170 474 C 1360 450, 1510 430, 1700 438" />
+        <path d="M-20 548 C 220 560, 430 516, 650 498 C 830 484, 980 490, 1170 516 C 1380 544, 1530 560, 1700 554" />
       </g>
     </svg>
   `;
@@ -216,151 +207,278 @@ export const publicPrinciples: PublicPrinciple[] = [
 
 export const aboutSections: AboutSection[] = [
   {
-    id: 'what-is-owa',
-    title: 'What OWA Is',
-    eyebrow: 'The basic proposition',
-    headline: 'A parallel democratic layer for coordination at any scale.',
-    summary:
-      'Open World Assembly is a decentralized, fractal system of direct democracy built so people can coordinate, deliberate, and make decisions together from local communities to planetary alignment without centralized control.',
-    highlights: [
-      {
-        title: 'Direct by default',
-        body: 'Participation stays open and direct as the baseline, without requiring a permanent political intermediary to carry a person’s voice.',
-      },
-      {
-        title: 'Consent made visible',
-        body: 'Shared direction emerges from public participation and visible consent rather than command, coercion, or opaque bargaining.',
-      },
-      {
-        title: 'Lawful and nonviolent',
-        body: 'The project is framed as peaceful, adaptive cooperation that expands representation without relying on destabilizing force.',
-      },
-    ],
-    backgroundImageUri: buildAboutBackgroundImageUri({
-      base: '#102233',
-      accent: '#6dd3ff',
-      accentSoft: '#d7ffbf',
-      glow: '#245d7d',
-      ridge: '#16354d',
-    }),
+  id: 'what-it-is',
+  title: 'What It Is',
+  eyebrow: 'Civilizational Backchannel',
+  headline: 'What It Is',
+  summary:
+    'Open World Assembly is a decentralized system that lets people coordinate and make decisions together at any scale, locally to globally, without centralized control, creating a shared layer of direct participation that can align humanity toward peace, freedom, and fair representation.',
+  highlights: [
+    {
+      title: 'OPEN',
+      body: 'Anyone can participate directly. The system is designed to be accessible by default, without requiring permission or infrastructure.',
+    },
+    {
+      title: 'WORLD',
+      body: 'OWA is fractal, extending from local communities to cities, nations, and the planet as a whole, allowing coordination to scale without losing local context.',
+    },
+    {
+      title: 'ASSEMBLY',
+      body: 'Participants can deliberate, vote, take action, and affect change together through open assemblies rooted in real communities.',
+    },
+  ],
+  backgroundImageUri: buildAboutBackgroundImageUri({
+    base: '#102233',
+    accent: '#6dd3ff',
+    accentSoft: '#d7ffbf',
+    glow: '#245d7d',
+    ridge: '#16354d',
+  }),
+},
+{
+  id: 'why-now',
+  title: 'Why Now',
+  eyebrow: 'Our Moment in History',
+  headline: 'Why Now',
+  summary:
+    'Humanity is at a critical point in history where accelerating technology, failing representation, and rising global tension are converging. The trajectory of our civilization, and possibly our long-term survival, now depends on our ability to coordinate as a species.',
+  highlights: [
+    {
+      title: 'ACCELERATING TECHNOLOGY',
+      body: 'Technology is advancing at an exponential pace and can either be used to enslave humanity or to set it free, and that decision is ours to make.',
+    },
+    {
+      title: 'BREAKDOWN OF REPRESENTATION',
+      body: 'Traditional systems are increasingly unresponsive to the will of their people. Trust is eroding, and true representation is becoming harder to find.',
+    },
+    {
+      title: 'ESCALATING GLOBAL RISK',
+      body: 'Geopolitical tensions continue to rise worldwide, driven by generations of Cold War propaganda and decades of deep-state military posturing.',
+    },
+  ],
+  backgroundImageUri: buildAboutBackgroundImageUri({
+    base: '#1a1f2e',
+    accent: '#ff9b6a',
+    accentSoft: '#ffd6bf',
+    glow: '#6a3f2f',
+    ridge: '#2a2f44',
+  }),
   },
   {
-    id: 'substrate',
-    title: 'Substrate, Not Sovereignty',
-    eyebrow: 'What OWA is not',
-    headline: 'It coordinates people without becoming a new ruling center.',
-    summary:
-      'OWA is not a shadow government, a centralized command hierarchy, or a replacement superstate. It is designed as a civic substrate that strengthens what works, exposes misalignment, and supports reform through clarity rather than confrontation.',
-    highlights: [
-      {
-        title: 'Not a shadow government',
-        body: 'The system does not seize authority or depend on existing institutions granting it permission to exist.',
-      },
-      {
-        title: 'Works alongside institutions',
-        body: 'It is meant to add democratic visibility and coordination capacity while preserving continuity in the broader civic landscape.',
-      },
-      {
-        title: 'Coordination without command',
-        body: 'Its influence is intended to come from legitimacy, alignment, and usefulness rather than enforcement power.',
-      },
-    ],
-    backgroundImageUri: buildAboutBackgroundImageUri({
-      base: '#1b2233',
-      accent: '#f7d995',
-      accentSoft: '#6dd3ff',
-      glow: '#6a5b2f',
-      ridge: '#2d3044',
-    }),
-  },
-  {
-    id: 'assemblies',
-    title: 'Fractal Assemblies',
-    eyebrow: 'The structural pattern',
-    headline: 'The same democratic grammar repeats from neighborhood to world.',
-    summary:
-      'Assemblies are geographic-first and structurally consistent across scale, so local legitimacy can connect into larger coordination without being overridden by it.',
-    highlights: [
-      {
-        title: 'Geographic-first legitimacy',
-        body: 'Real people in real places remain the grounding layer from which wider coordination becomes credible and resilient.',
-      },
-      {
-        title: 'Autonomous but compatible',
-        body: 'Each assembly can function meaningfully on its own while still connecting into broader patterns of alignment.',
-      },
-      {
-        title: 'Overlays remain secondary',
-        body: 'Teams, nodes, and other abstract groupings can coordinate work, but they do not replace assembly legitimacy.',
-      },
-    ],
-    backgroundImageUri: buildAboutBackgroundImageUri({
-      base: '#162734',
-      accent: '#9fe870',
-      accentSoft: '#f7d995',
-      glow: '#395f3a',
-      ridge: '#1d3a35',
-    }),
-  },
-  {
-    id: 'alignment',
-    title: 'Local Voice, Global Alignment',
-    eyebrow: 'How scale works',
-    headline: 'Local decisions can contribute to wider coordination without losing context.',
-    summary:
-      'OWA is designed around a local expression of consent that can propagate across relevant scales. Delegation, where used, is optional, revocable, and subordinate to direct participation.',
-    highlights: [
-      {
-        title: 'One signal across scales',
-        body: 'The system is built so local participation can inform broader coordination without forcing duplicate political machinery at every level.',
-      },
-      {
-        title: 'Revocable delegation',
-        body: 'Delegation is a bandwidth tool, not a permanent transfer of sovereignty, and it remains optional wherever it exists.',
-      },
-      {
-        title: 'Human-scale alignment',
-        body: 'The goal is to keep decisions as local as possible while still making larger-scale coordination structurally possible.',
-      },
-    ],
-    backgroundImageUri: buildAboutBackgroundImageUri({
-      base: '#202033',
-      accent: '#6dd3ff',
-      accentSoft: '#f7d995',
-      glow: '#473f75',
-      ridge: '#2f3150',
-    }),
-  },
-  {
-    id: 'action',
-    title: 'Action, Memory, Adaptation',
-    eyebrow: 'What the system does',
-    headline: 'Discussion should lead to proposals, action, records, and learning.',
-    summary:
-      'OWA follows a recurring loop of sense, think, act, learn, and adapt. Public memory and iterative improvement make the model stronger as more people participate in it.',
-    highlights: [
-      {
-        title: 'From signal to follow-through',
-        body: 'The point is not endless discussion but a visible path from collective reasoning into proposals, decisions, missions, and reform.',
-      },
-      {
-        title: 'Durable civic memory',
-        body: 'Decisions, votes, and records are meant to stay auditable and legible so communities can build on what they have learned.',
-      },
-      {
-        title: 'Antifragile by participation',
-        body: 'The system is designed to gain clarity through use, adapting to context and strengthening as more assemblies engage.',
-      },
-    ],
-    backgroundImageUri: buildAboutBackgroundImageUri({
-      base: '#241f2f',
-      accent: '#f7d995',
-      accentSoft: '#9fe870',
-      glow: '#704f7d',
-      ridge: '#3a3043',
-    }),
-  },
+  id: 'vision',
+  title: 'The Vision',
+  eyebrow: 'A Future Worth Building',
+  headline: 'The Vision',
+  summary:
+    'The goal is to improve existing systems peacefully from within while building the capacity to evolve beyond them. As coordination strengthens, every person can gain a meaningful democratic voice, and humanity can begin to cooperate as a species without centralized control.',
+  highlights: [
+    {
+      title: 'RENEWAL FROM WITHIN',
+      body: 'Communities can use open coordination to restore representation, reduce corruption, and make systems accountable to the will of their people.',
+    },
+    {
+      title: 'ALIGNMENT OF NATIONS',
+      body: 'Nations can begin to align around the shared principles and coordination of their people, reducing conflict and enabling cooperation at a global scale.',
+    },
+    {
+      title: 'CONTINUED EVOLUTION',
+      body: 'Over time, more effective forms of coordination can reduce reliance on legacy structures, allowing new systems to emerge through natural transition.',
+    },
+  ],
+  backgroundImageUri: buildAboutBackgroundImageUri({
+    base: '#241f2f',
+    accent: '#f7d995',
+    accentSoft: '#9fe870',
+    glow: '#704f7d',
+    ridge: '#3a3043',
+  }),
+},
+{
+  id: 'how-it-works',
+  title: 'Structure',
+  eyebrow: 'What Makes It Work',
+  headline: 'Structure',
+  summary:
+    'OWA combines a fractal coordination framework, a decentralized data system, and open community assemblies to enable alignment, communication, and action at any scale. Together, these layers allow people to coordinate across environments without relying on centralized control.',
+  highlights: [
+    {
+      title: 'COORDINATION',
+      body: 'A fractal coordination framework enables groups to make decisions, align, and synchronize actions across scales without forcing uniformity or central authority.',
+    },
+    {
+      title: 'RESILIENCE',
+      body: 'A decentralized data system ensures that information can be stored, shared, and synchronized across environments, including low-connectivity and hostile conditions.',
+    },
+    {
+      title: 'COMMUNITIES',
+      body: 'OWA provides open geographic assemblies, allowing anyone to instantly join and participate in their local, regional, national, and international communities.',
+    },
+  ],
+  backgroundImageUri: buildAboutBackgroundImageUri({
+    base: '#1a2333',
+    accent: '#9fe870',
+    accentSoft: '#f7d995',
+    glow: '#4d6931',
+    ridge: '#2d3044',
+  }),
+},
+{
+  id: 'fcf',
+  title: 'Coordination',
+  eyebrow: 'Fractal Alignment',
+  headline: 'Coordination',
+  summary:
+    'OWA uses a fractal framework to enable alignment without uniformity and coordination without control at any scale. Groups can make fair, ethical, and practical decisions, take effective action, learn and adapt, and synchronize across boundaries without losing local autonomy.',
+  highlights: [
+    {
+      title: 'FAIR DECISIONS',
+      body: 'Communities make decisions through open participation, supported by balanced processes that integrate practical needs, ethical considerations, and collective voice.',
+    },
+    {
+      title: 'EFFECTIVE ACTION',
+      body: 'Ideas become structured work through shared planning and coordination, allowing groups to move from discussion to real-world execution without chaos.',
+    },
+    {
+      title: 'SCALABLE ALIGNMENT',
+      body: 'Independent groups can align on specific issues across regions and contexts without central control, allowing coordination to expand without forcing uniformity.',
+    },
+  ],
+  backgroundImageUri: buildAboutBackgroundImageUri({
+    base: '#162734',
+    accent: '#9fe870',
+    accentSoft: '#f7d995',
+    glow: '#395f3a',
+    ridge: '#1d3a35',
+  }),
+},
+{
+  id: 'nexus',
+  title: 'Resilience',
+  eyebrow: 'Antifragile Systems',
+  headline: 'Resilience',
+  summary:
+    'OWA uses a decentralized data system to enable antifragile coordination in a wide range of conditions, including low-connectivity and hostile environments. Information can be stored, shared, and synchronized without relying on a central platform or stable infrastructure.',
+  highlights: [
+    {
+      title: 'PORTABLE DATA',
+      body: 'All coordination is stored as structured data packet bundles that can be shared, inspected, and reused across independent systems instead of being locked into a single platform.',
+    },
+    {
+      title: 'LOCAL FIRST',
+      body: 'Each system node can operate independently, storing data locally and synchronizing with others when possible, rather than depending on connectivity with other nodes.',
+    },
+    {
+      title: 'ADAPTIVE NETWORK',
+      body: 'The system is designed to function across high bandwidth, low bandwidth, intermittent connectivity, and offline environments without losing coordination capability.',
+    },
+  ],
+  backgroundImageUri: buildAboutBackgroundImageUri({
+    base: '#202033',
+    accent: '#6dd3ff',
+    accentSoft: '#f7d995',
+    glow: '#473f75',
+    ridge: '#2f3150',
+  }),
+},
+{
+  id: 'communities',
+  title: 'Communities',
+  eyebrow: 'Multi-Level Participation',
+  headline: 'Communities',
+  summary:
+    'OWA enables a continuous cycle of discussion, decision, and action across a global network of communities, allowing people to participate directly at every level. Local activity contributes to broader alignment, making coordination visible, scalable, and grounded in real-world participation.',
+  highlights: [
+    {
+      title: 'OPEN ASSEMBLIES',
+      body: 'People engage through their local, regional, national, and global assemblies, discussing issues, proposing ideas, and participating in decisions that affect their shared environments.',
+    },
+    {
+      title: 'SHARED SIGNALS',
+      body: 'Signals flow across scopes, geographies, and initiatives, allowing local decisions to contribute to a broader shared understanding and enabling alignment to emerge organically.',
+    },
+    {
+      title: 'SYNCHRONIZED ACTION',
+      body: 'Aligned communities can act in parallel, where many small, local efforts converge into larger coordinated outcomes, multiplying impact across regions and scales.',
+    },
+  ],
+  backgroundImageUri: buildAboutBackgroundImageUri({
+    base: '#1f2a2f',
+    accent: '#6dd3ff',
+    accentSoft: '#9fe870',
+    glow: '#3f6f75',
+    ridge: '#2a3f44',
+  }),
+},
+{
+  id: 'roadmap',
+  title: 'Roadmap',
+  eyebrow: 'Implementation Priorities',
+  headline: 'Roadmap',
+  summary:
+  'OWA is being developed and distributed in stages, with a focus on proving the system in practice and expanding it through open collaboration. As adoption grows across communities and environments, coordination can scale until it reaches a critical mass capable of reshaping how humanity organizes and acts.',
+  highlights: [
+    {
+      title: 'BETA TESTING',
+      body: 'The immediate focus is building toward a public open beta, where the system can be tested in real conditions and refined through active use. Estimated release: July 4, 2026',
+    },
+    {
+      title: 'OPEN DEVELOPMENT',
+      body: 'The system will be open-source, enabling contributions, independent deployments, and decentralized adoption across different communities and use cases.',
+    },
+    {
+      title: 'DISTRIBUTED ADOPTION',
+      body: 'As usage grows, the system can spread across platforms and environments. By the time it becomes a target, it is already distributed, allowing coordination to persist and expand.',
+    },
+  ],
+  backgroundImageUri: buildAboutBackgroundImageUri({
+    base: '#1f2a2f',
+    accent: '#f7d995',
+    accentSoft: '#6dd3ff',
+    glow: '#5a6f7a',
+    ridge: '#2f3f44',
+  }),
+},
+{
+  id: 'onboarding',
+  title: 'Onboarding',
+  eyebrow: 'Getting Started',
+  headline: 'Onboarding',
+  summary:
+    'OWA is entering a phase of early access, open development, and distributed adoption. These entry points allow you to understand the system, explore it directly, or help accelerate its development.',
+  highlights: [
+    {
+      title: 'FOUNDING CHARTER',
+      body: 'The charter defines the principles, structure, and intent behind OWA, serving as a concise and durable foundation for the system.',
+      href: '/docs',
+      cta: 'Read',
+      color: 'sand',
+    },
+    {
+      title: 'EARLY ACCESS NEXUS',
+      body: 'The Nexus is the live participation layer where assemblies, proposals, and coordination take shape in real environments.',
+      href: '/nexus/dashboard',
+      cta: 'Explore',
+      color: 'cyan',
+    },
+    {
+      title: 'SUPPORT DEVELOPMENT',
+      body: 'Support helps accelerate infrastructure, design, and deployment, enabling the system to grow and reach real-world scale faster.',
+      href: '/docs',
+      cta: 'Accelerate',
+      color: 'accent',
+    },
+  ],
+  backgroundImageUri: buildAboutBackgroundImageUri({
+    base: '#1f2a2f',
+    accent: '#6dd3ff',
+    accentSoft: '#9fe870',
+    glow: '#3f6f75',
+    ridge: '#2a3f44',
+  }),
+},
 ];
+
+
 
 export const charterResources: CharterResource[] = [
   {

@@ -2,10 +2,11 @@
  * File: public-about-section.tsx
  * Description: Renders a single about-page section as a midpoint-driven chapter with smooth synchronized expansion.
  */
+import type { AboutHighlight, AboutSection } from '@/data/public/public-site-content';
 import { Image } from 'expo-image';
+import { Link } from 'expo-router';
+import { useRef } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
-
-import type { AboutSection } from '@/data/public/public-site-content';
 
 type PublicAboutSectionProps = {
   isActive: boolean;
@@ -22,6 +23,173 @@ type PublicAboutSectionProps = {
   };
   viewportHeight: number;
 };
+
+type HighlightTileProps = {
+  highlight: AboutHighlight;
+};
+
+/**
+ * Inputs: one highlight record.
+ * Output: a static or linked subsection tile with subtle hover animation for linked items.
+ */
+function HighlightTile({ highlight }: HighlightTileProps) {
+  const hover = useRef(new Animated.Value(0)).current;
+  const isLink = !!highlight.href;
+
+  const ctaColor =
+    highlight.color === 'sand'
+      ? '#f7d995'
+      : highlight.color === 'cyan'
+        ? '#6dd3ff'
+        : highlight.color === 'accent'
+          ? '#9fe870'
+          : '#cfd8e3';
+
+  const animatedTileStyle = isLink
+    ? {
+        transform: [
+          {
+            scale: hover.interpolate({
+              inputRange: [0, 1],
+              outputRange: [1, 1.018],
+            }),
+          },
+          {
+            translateY: hover.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, -3],
+            }),
+          },
+        ],
+      }
+    : undefined;
+
+  const animatedCtaStyle = isLink
+    ? {
+        opacity: hover.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0.82, 1],
+        }),
+        transform: [
+          {
+            translateY: hover.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, -1],
+            }),
+          },
+        ],
+      }
+    : undefined;
+
+  const animatedGlowStyle = isLink
+    ? {
+        opacity: hover.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0.04, 0.16],
+        }),
+      }
+    : undefined;
+
+  const sheenStyle = isLink
+    ? {
+        opacity: hover.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, 0.18],
+        }),
+        transform: [
+          {
+            translateX: hover.interpolate({
+              inputRange: [0, 1],
+              outputRange: [-140, 220],
+            }),
+          },
+          { rotate: '-18deg' as const },
+        ],
+      }
+    : undefined;
+
+    const content = (
+      <Animated.View
+        style={animatedTileStyle}
+        className="min-w-[220px] flex-1 overflow-hidden rounded-[1.25rem] bg-public-shell/78 p-5"
+      >
+        {isLink ? (
+          <>
+            <Animated.View
+              pointerEvents="none"
+              style={[styles.highlightGlow, animatedGlowStyle]}
+            />
+            <Animated.View
+              pointerEvents="none"
+              style={[styles.highlightSheen, sheenStyle]}
+            />
+          </>
+        ) : null}
+
+        <View className="flex-1 items-center justify-between">
+          <Text className="text-center text-sm font-bold uppercase tracking-[0.18em] text-public-sand">
+            {highlight.title}
+          </Text>
+          <Text className="mt-3 text-center text-sm leading-6 text-public-muted">
+            {highlight.body}
+          </Text>
+
+          {highlight.cta ? (
+            <View style={styles.highlightCtaWrap}>
+              <Animated.Text
+                className="text-center text-sm font-semibold"
+                style={[{ color: ctaColor, alignSelf: 'center' }, animatedCtaStyle]}
+              >
+                → {highlight.cta}
+              </Animated.Text>
+            </View>
+          ) : null}
+        </View>
+      </Animated.View>
+    );
+
+  if (!isLink) {
+    return (
+      <View key={highlight.title} style={styles.highlightOuter}>
+        {content}
+      </View>
+    );
+  }
+
+  const href = highlight.href;
+
+  if (!href) {
+    return (
+      <View key={highlight.title} style={styles.highlightOuter}>
+        {content}
+      </View>
+    );
+  }
+
+  return (
+    <Link key={highlight.title} href={href} asChild>
+      <Pressable
+        style={styles.highlightOuter}
+        onHoverIn={() => {
+          Animated.timing(hover, {
+            toValue: 1,
+            duration: 170,
+            useNativeDriver: true,
+          }).start();
+        }}
+        onHoverOut={() => {
+          Animated.timing(hover, {
+            toValue: 0,
+            duration: 170,
+            useNativeDriver: true,
+          }).start();
+        }}
+      >
+        {content}
+      </Pressable>
+    </Link>
+  );
+}
 
 /**
  * Inputs: the scroll driver, target section measurements, and the shared focus geometry.
@@ -98,7 +266,7 @@ export default function PublicAboutSection({
       ? 0
       : progress.interpolate({
           inputRange: [0, 0.35, 0.7, 1],
-          outputRange: [84, 40, 12, 0],
+          outputRange: [32, 18, 8, 0],
           extrapolate: 'clamp',
         });
   const cardScale =
@@ -149,14 +317,6 @@ export default function PublicAboutSection({
           outputRange: [0, expandedHeight * 0.1, expandedHeight * 0.34, expandedHeight * 0.5],
           extrapolate: 'clamp',
         });
-  const overlayOpacity =
-    typeof progress === 'number'
-      ? 0.74
-      : progress.interpolate({
-          inputRange: [0, 1],
-          outputRange: [0.74, 0.4],
-          extrapolate: 'clamp',
-        });
 
   return (
     <View style={[styles.chapter, { height: chapterHeight }]}>
@@ -169,7 +329,7 @@ export default function PublicAboutSection({
           },
         ]}
         className={[
-          'overflow-hidden rounded-[1.9rem] border bg-public-panel/45',
+          'overflow-hidden border bg-public-panel/45',
           isActive ? 'border-public-accent/80 shadow-public' : 'border-public-line/70',
         ].join(' ')}
       >
@@ -184,86 +344,20 @@ export default function PublicAboutSection({
           />
         </Animated.View>
 
-        <Animated.View
-          pointerEvents="none"
-          style={[StyleSheet.absoluteFillObject, { opacity: overlayOpacity }]}
-          className="bg-public-canvas"
-        />
-
-        <View pointerEvents="none" style={styles.edgeBlurLayer}>
-          <View style={[styles.edgeBlurStrip, styles.edgeBlurTop]}>
-            <Animated.View
-              style={[styles.parallaxLayer, { transform: [{ translateY: backgroundTranslateY }] }]}
-            >
-              <Image
-                source={{ uri: section.backgroundImageUri }}
-                blurRadius={42}
-                contentFit="cover"
-                style={styles.parallaxImage}
-              />
-            </Animated.View>
-          </View>
-
-          <View style={[styles.edgeBlurStrip, styles.edgeBlurBottom]}>
-            <Animated.View
-              style={[styles.parallaxLayer, { transform: [{ translateY: backgroundTranslateY }] }]}
-            >
-              <Image
-                source={{ uri: section.backgroundImageUri }}
-                blurRadius={42}
-                contentFit="cover"
-                style={styles.parallaxImage}
-              />
-            </Animated.View>
-          </View>
-
-          <View style={[styles.edgeBlurStrip, styles.edgeBlurLeft]}>
-            <Animated.View
-              style={[styles.parallaxLayer, { transform: [{ translateY: backgroundTranslateY }] }]}
-            >
-              <Image
-                source={{ uri: section.backgroundImageUri }}
-                blurRadius={42}
-                contentFit="cover"
-                style={styles.parallaxImage}
-              />
-            </Animated.View>
-          </View>
-
-          <View style={[styles.edgeBlurStrip, styles.edgeBlurRight]}>
-            <Animated.View
-              style={[styles.parallaxLayer, { transform: [{ translateY: backgroundTranslateY }] }]}
-            >
-              <Image
-                source={{ uri: section.backgroundImageUri }}
-                blurRadius={42}
-                contentFit="cover"
-                style={styles.parallaxImage}
-              />
-            </Animated.View>
-          </View>
-        </View>
-
         <Pressable className="flex-1 px-7 py-8 md:px-9 md:py-9" onPress={onPress}>
-          <View className="flex-row items-start justify-between gap-4">
-            <View className="flex-1 gap-2">
-              <Text className="text-xs font-bold uppercase tracking-[0.28em] text-public-accentSoft">
-                {section.eyebrow}
-              </Text>
-              <Text className="text-[1.8rem] font-bold leading-tight text-public-text md:text-[2.3rem]">
-                {section.headline}
-              </Text>
-            </View>
-
-            <Text className="pt-1 text-xs font-bold uppercase tracking-[0.18em] text-public-cyan">
-              {isActive ? 'In focus' : 'Scroll to open'}
+          <View className="items-center gap-3">
+            <Text className="text-xs font-bold uppercase tracking-[0.28em] text-public-accentSoft">
+              {section.eyebrow}
+            </Text>
+            <Text className="max-w-5xl text-center text-[1.8rem] font-bold leading-tight text-public-text md:text-[2.3rem]">
+              {section.headline}
             </Text>
           </View>
 
           <Animated.View
             style={{ opacity: bodyOpacity, transform: [{ translateY: bodyTranslateY }] }}
           >
-            <Text className="mt-5 max-w-4xl text-base leading-7 text-public-muted">
+            <Text className="mt-6 max-w-4xl text-center text-base leading-7 text-public-muted">
               {section.summary}
             </Text>
           </Animated.View>
@@ -281,17 +375,7 @@ export default function PublicAboutSection({
           >
             <View className="flex-row flex-wrap gap-3">
               {section.highlights.map((highlight) => (
-                <View
-                  key={highlight.title}
-                  className="min-w-[220px] flex-1 rounded-[1.25rem] border border-public-line/70 bg-public-shell/78 p-4"
-                >
-                  <Text className="text-sm font-bold uppercase tracking-[0.18em] text-public-sand">
-                    {highlight.title}
-                  </Text>
-                  <Text className="mt-3 text-sm leading-6 text-public-muted">
-                    {highlight.body}
-                  </Text>
-                </View>
+                <HighlightTile key={highlight.title} highlight={highlight} />
               ))}
             </View>
           </Animated.View>
@@ -305,51 +389,21 @@ const styles = StyleSheet.create({
   chapter: {
     justifyContent: 'center',
     width: '100%',
+    paddingHorizontal: 4,
+    marginBottom: 10,
   },
   detailsArea: {
-    marginTop: 24,
+    marginTop: 59,
     overflow: 'hidden',
-  },
-  edgeBlurBottom: {
-    bottom: 0,
-    height: 86,
-    left: 0,
-    right: 0,
-  },
-  edgeBlurLayer: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  edgeBlurLeft: {
-    bottom: 0,
-    left: 0,
-    top: 0,
-    width: 76,
-  },
-  edgeBlurRight: {
-    bottom: 0,
-    right: 0,
-    top: 0,
-    width: 76,
-  },
-  edgeBlurStrip: {
-    opacity: 0.72,
-    overflow: 'hidden',
-    position: 'absolute',
-  },
-  edgeBlurTop: {
-    height: 86,
-    left: 0,
-    right: 0,
-    top: 0,
   },
   parallaxImage: {
-    height: '132%',
+    height: '112%',
     width: '100%',
   },
   parallaxLayer: {
     ...StyleSheet.absoluteFillObject,
-    top: -24,
-    bottom: -24,
+    top: -8,
+    bottom: -8,
   },
   shell: {
     shadowColor: '#07121d',
@@ -359,6 +413,31 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.22,
     shadowRadius: 26,
+    width: '100%',
+    borderRadius: 30,
+    overflow: 'hidden',
+  },
+  highlightOuter: {
+    minWidth: 220,
+    flex: 1,
+    alignSelf: 'stretch',
+  },
+  highlightGlow: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 20,
+  },
+  highlightSheen: {
+    position: 'absolute',
+    top: -40,
+    bottom: -40,
+    width: 90,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderRadius: 999,
+  },
+  highlightCtaWrap: {
+    marginTop: 28,
+    alignItems: 'center',
     width: '100%',
   },
 });

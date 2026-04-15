@@ -2,19 +2,18 @@
  * File: about.tsx
  * Description: Renders the public OWA about page with a midpoint-focused chapter scroll experience.
  */
-import { Link } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
-    Animated,
-    type LayoutChangeEvent,
-    type NativeScrollEvent,
-    type NativeSyntheticEvent,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
-    useWindowDimensions,
+  Animated,
+  type LayoutChangeEvent,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions
 } from 'react-native';
 
 import PublicAboutSection from '@/components/layout/public-about-section';
@@ -25,24 +24,10 @@ type SectionLayout = {
   height: number;
 };
 
-const aboutActionCards = [
-  {
-    eyebrow: 'Read next',
-    title: 'Follow the charter path',
-    body: 'The charter page is where OWA will condense its public commitments into the shortest durable statement of the model and its principles.',
-    href: '/docs' as const,
-    label: 'Read the Charter',
-  },
-  {
-    eyebrow: 'See the interface',
-    title: 'Explore the Nexus as a civic browser',
-    body: 'The Nexus is the browsing and participation layer for assemblies, proposals, votes, records, and the wider coordination surfaces that sit behind the public explanation site.',
-    href: '/nexus/dashboard' as const,
-    label: 'Browse the Nexus',
-  },
-] as const;
-
-const SECTION_FOCUS_LINE_RATIO = 0.10;
+const SECTION_FOCUS_LINE_RATIO = 0.2;
+const SECTION_RAIL_BREAKPOINT = 1100;
+const SECTION_RAIL_WIDTH = 200;
+const PUBLIC_CONTENT_MAX_WIDTH = 1152;
 
 /**
  * Inputs: the section layout map, current scroll offset, and viewport height.
@@ -87,12 +72,21 @@ export default function AboutPage() {
   const scrollViewRef = useRef<ScrollView | null>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
   const sectionLayoutsRef = useRef<Record<string, SectionLayout>>({});
-  const { height: windowHeight } = useWindowDimensions();
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const viewportHeight = scrollViewportHeight || windowHeight;
-  const expandedHeight = Math.min(Math.max(viewportHeight * 0.68, 460), 640);
-  const collapsedHeight = Math.min(Math.max(viewportHeight * 0.34, 228), 280);
-  const chapterHeight = expandedHeight;
-  const bottomRunway = Math.max(180, viewportHeight * 0.28);
+  const expandedHeight = Math.min(Math.max(viewportHeight * 0.64, 440), 600);
+  const collapsedHeight = Math.min(Math.max(viewportHeight * 0.28, 210), 252);
+  const chapterHeight = Math.round(expandedHeight * 0.88);
+  const bottomRunway = Math.max(220, viewportHeight * 0.34);
+  const showSectionRail = windowWidth >= SECTION_RAIL_BREAKPOINT;
+  const railAwareContentPaddingRight = showSectionRail ? SECTION_RAIL_WIDTH * 0.8: 0;
+  const railShellHeight = Math.min(Math.max(viewportHeight * 0.68, 600), 1200);
+  const outerSideSpace = Math.max(0, (windowWidth - PUBLIC_CONTENT_MAX_WIDTH) / 2);
+  const railRightOffset = Math.min(140, Math.max(28, Math.round(outerSideSpace * 0.42)));
+  const activeSectionIndex = useMemo(
+    () => Math.max(0, aboutSections.findIndex((section) => section.id === activeSectionId)),
+    [activeSectionId]
+  );
 
   /**
    * Inputs: the visible layout event for the scroll viewport.
@@ -169,6 +163,122 @@ export default function AboutPage() {
     });
   }
 
+  /**
+   * Inputs: a section id.
+   * Output: returns animated styles for the side rail item based on distance from the focus line.
+   */
+  function getRailAnimatedState(sectionId: string) {
+    const layout = sectionLayouts[sectionId];
+
+    if (!layout) {
+      return {
+        containerAnimatedStyle: undefined,
+        dotAnimatedStyle: undefined,
+        titleAnimatedStyle: undefined,
+        subtitleAnimatedStyle: undefined,
+      };
+    }
+
+    const focusY = layout.y + layout.height / 2 - viewportHeight * SECTION_FOCUS_LINE_RATIO;
+    const itemRange = viewportHeight * 0.9;
+
+    const distanceProgress = scrollY.interpolate({
+      inputRange: [focusY - itemRange, focusY, focusY + itemRange],
+      outputRange: [0, 1, 0],
+      extrapolate: 'clamp',
+    });
+
+    const plateWidth = distanceProgress.interpolate({
+      inputRange: [0, 1],
+      outputRange: [SECTION_RAIL_WIDTH - 58, SECTION_RAIL_WIDTH - 12],
+      extrapolate: 'clamp',
+    });
+
+    const opacity = distanceProgress.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0.78, 1],
+      extrapolate: 'clamp',
+    });
+
+    const borderColor = distanceProgress.interpolate({
+      inputRange: [0, 1],
+      outputRange: ['rgba(137, 183, 255, 0.12)', 'rgba(198, 214, 112, 0.82)'],
+      extrapolate: 'clamp',
+    });
+
+    const backgroundColor = distanceProgress.interpolate({
+      inputRange: [0, 1],
+      outputRange: ['rgba(255,255,255,0.025)', 'rgba(198, 214, 112, 0.18)'],
+      extrapolate: 'clamp',
+    });
+
+    const dotScale = distanceProgress.interpolate({
+      inputRange: [0, 1],
+      outputRange: [1, 1.08],
+      extrapolate: 'clamp',
+    });
+
+    const dotColor = distanceProgress.interpolate({
+      inputRange: [0, 1],
+      outputRange: ['rgba(142, 202, 230, 0.38)', 'rgba(198, 214, 112, 0.85)'],
+      extrapolate: 'clamp',
+    });
+
+    const titleColor = distanceProgress.interpolate({
+      inputRange: [0, 1],
+      outputRange: ['rgba(232, 238, 246, 0.72)', '#f7f4ea'],
+      extrapolate: 'clamp',
+    });
+
+    const subtitleOpacity = distanceProgress.interpolate({
+      inputRange: [0, 0.55, 1],
+      outputRange: [0, 0.18, 1],
+      extrapolate: 'clamp',
+    });
+
+    const subtitleTranslateY = distanceProgress.interpolate({
+      inputRange: [0, 1],
+      outputRange: [4, 0],
+      extrapolate: 'clamp',
+    });
+
+    const subtitleColor = distanceProgress.interpolate({
+      inputRange: [0, 1],
+      outputRange: ['rgba(142, 202, 230, 0.35)', 'rgba(243, 196, 92, 0.92)'],
+      extrapolate: 'clamp',
+    });
+
+    return {
+      plateAnimatedStyle: {
+        width: plateWidth,
+        opacity,
+        borderColor,
+        backgroundColor,
+      },
+      dotAnimatedStyle: {
+        backgroundColor: dotColor,
+        transform: [{ scale: dotScale }],
+      },
+      titleAnimatedStyle: {
+        color: titleColor,
+      },
+      subtitleAnimatedStyle: {
+        opacity: subtitleOpacity,
+        transform: [{ translateY: subtitleTranslateY }],
+        color: subtitleColor,
+      },
+    };
+  }
+
+  /**
+   * Inputs: a section id.
+   * Output: true when the section is close enough to the focus line to show its subtitle.
+   */
+  function shouldShowRailSubtitle(sectionId: string) {
+    const index = aboutSections.findIndex((section) => section.id === sectionId);
+    return Math.abs(index - activeSectionIndex) <= 1;
+  }
+
   return (
     <View style={styles.page} onLayout={handleViewportLayout}>
       <Animated.ScrollView
@@ -184,62 +294,26 @@ export default function AboutPage() {
         scrollEventThrottle={16}
         style={styles.scrollView}
       >
-        <View className="mx-auto w-full max-w-6xl px-5 py-8">
-          <View className="overflow-hidden rounded-[2rem] border border-public-line/70 bg-public-shell/70 px-6 py-10 shadow-public md:px-10">
-            <View className="absolute left-8 top-8 h-36 w-36 rounded-full bg-public-accent/10 blur-3xl" />
-            <View className="absolute right-8 top-20 h-44 w-44 rounded-full bg-public-cyan/15 blur-3xl" />
+            <View
+              className="mx-auto w-full max-w-6xl px-5 py-8"
+              style={showSectionRail ? { paddingRight: railAwareContentPaddingRight } : undefined}
+            >          
+            <View className="overflow-hidden rounded-[2rem] border border-public-line/0 bg-public-shell/70 px-6 py-4 shadow-public md:px-10 md:py-4">
+              <View className="absolute left-8 top-8 h-36 w-36 rounded-full bg-public-accent/10 blur-3xl" />
+              <View className="absolute right-8 top-20 h-44 w-44 rounded-full bg-public-cyan/15 blur-3xl" />
 
-            <Text className="text-sm font-bold uppercase tracking-[0.35em] text-public-cyan">
-              About OWA
-            </Text>
-            <Text className="mt-4 max-w-4xl text-4xl font-black leading-tight text-public-text md:text-6xl">
-              How the system works in public terms.
-            </Text>
-            <Text className="mt-5 max-w-3xl text-lg leading-8 text-public-muted">
-              These sections translate the core public principles and features of Open World Assembly into a quick, scannable overview. As you scroll, the section in focus opens to show more detail.
-            </Text>
-
-            <View className="mt-8 gap-3 rounded-[1.5rem] border border-public-line/70 bg-public-panel/45 p-4">
-              <View className="flex-row flex-wrap items-center justify-between gap-3">
-                <Text className="text-xs font-bold uppercase tracking-[0.28em] text-public-sand">
-                  Section navigator
+              <View className="items-center">
+                <Text className="mt-2 text-center text-3xl font-black leading-[1.02] text-public-text md:text-5xl">
+                  About Open World Assembly
                 </Text>
-                <Text className="text-sm text-public-muted">
-                  Tap a chapter to center it in view.
-                </Text>
-              </View>
 
-              <View className="flex-row flex-wrap gap-3">
-                {aboutSections.map((section) => {
-                  const isActive = section.id === activeSectionId;
+                <View className="my-5 h-0.5 w-full bg-public-line/40" />
 
-                  return (
-                    <Pressable
-                      key={section.id}
-                      className={[
-                        'rounded-full border px-4 py-2.5',
-                        isActive
-                          ? 'border-public-accent bg-public-accent'
-                          : 'border-public-line bg-public-shell/70',
-                      ].join(' ')}
-                      onPress={() => handleSectionPress(section.id)}
-                    >
-                      <Text
-                        className={[
-                          'text-sm font-bold uppercase tracking-[0.18em]',
-                          isActive ? 'text-public-canvas' : 'text-public-text',
-                        ].join(' ')}
-                      >
-                        {section.title}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
+
               </View>
             </View>
-          </View>
 
-          <View className="mt-10 gap-10 md:gap-12">
+          <View className="mt-12 gap-0 md:gap-0">
             {aboutSections.map((section) => (
               <View
                 key={section.id}
@@ -260,35 +334,70 @@ export default function AboutPage() {
               </View>
             ))}
           </View>
-
-          <View className="mt-14 flex-row flex-wrap gap-4">
-            {aboutActionCards.map((card) => (
-              <View
-                key={card.title}
-                className="min-w-[280px] flex-1 rounded-[1.75rem] border border-public-line/70 bg-public-panel/55 p-6"
-              >
-                <Text className="text-xs font-bold uppercase tracking-[0.28em] text-public-cyan">
-                  {card.eyebrow}
-                </Text>
-                <Text className="mt-3 text-2xl font-bold text-public-text">
-                  {card.title}
-                </Text>
-                <Text className="mt-3 text-base leading-7 text-public-muted">
-                  {card.body}
-                </Text>
-
-                <Link href={card.href} asChild>
-                  <Pressable className="mt-5 w-fit rounded-full bg-public-accent px-5 py-3">
-                    <Text className="text-sm font-extrabold uppercase tracking-[0.18em] text-public-canvas">
-                      {card.label}
-                    </Text>
-                  </Pressable>
-                </Link>
-              </View>
-            ))}
-          </View>
         </View>
       </Animated.ScrollView>
+            {showSectionRail ? (
+        <View
+          pointerEvents="box-none"
+          style={[styles.railViewportOverlay, { right: railRightOffset }]}
+        >
+          <View style={[styles.railShell, { height: railShellHeight }]}>
+          <View style={styles.railHeader}>
+            <Text style={styles.railEyebrow}>About OWA</Text>
+            <Text style={styles.railEyebrowSubtext}>Open - Local - Global</Text>
+          </View>
+
+          <View style={styles.railStack}>
+              {aboutSections.map((section) => {
+                const isActive = section.id === activeSectionId;
+                const animatedState = getRailAnimatedState(section.id);
+
+                return (
+                  <Pressable
+                    key={section.id}
+                    onPress={() => handleSectionPress(section.id)}
+                    style={styles.railItemPressable}
+                  >
+                    <View style={styles.railItemBase}>
+                      <Animated.View
+                        pointerEvents="none"
+                        style={[styles.railItemPlate, animatedState.plateAnimatedStyle]}
+                      />
+
+                      <View style={styles.railItemContent}>
+                        <Animated.View
+                          style={[styles.railDotBase, animatedState.dotAnimatedStyle]}
+                        />
+
+                        <View style={styles.railTextWrap}>
+                          <Animated.Text
+                            numberOfLines={1}
+                            ellipsizeMode="tail"
+                            style={[styles.railTitleBase, animatedState.titleAnimatedStyle]}
+                          >
+                            {section.title}
+                          </Animated.Text>
+
+                          <Animated.Text
+                            numberOfLines={1}
+                            style={[
+                              styles.railSubtitleBase,
+                              animatedState.subtitleAnimatedStyle,
+                              !shouldShowRailSubtitle(section.id) && styles.railSubtitleHidden,
+                            ]}
+                          >
+                            {section.eyebrow}
+                          </Animated.Text>
+                        </View>
+                      </View>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -302,5 +411,148 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingBottom: 64,
+  },
+
+
+  railShell: {
+    width: SECTION_RAIL_WIDTH,
+    backgroundColor: 'rgba(10, 18, 30, 0.72)',
+    borderRadius: 26,
+    paddingHorizontal: 14,
+    paddingTop: 16,
+    paddingBottom: 16,
+  },
+
+  railHeader: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+    marginBottom: 8,
+  },
+
+  railEyebrow: {
+    color: '#8ecae6',
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: 2.2,
+    textTransform: 'uppercase',
+    textAlign: 'center',
+    width: '100%',
+  },
+
+  railEyebrowSubtext: {
+    marginTop: 4,
+    color: 'rgba(232, 238, 246, 0.62)',
+    fontSize: 10,
+    lineHeight: 11,
+    fontWeight: '700',
+    letterSpacing: 0.45,
+    textTransform: 'uppercase',
+    textAlign: 'center',
+    maxWidth: 144,
+  },
+
+  railStack: {
+    flex: 1,
+    justifyContent: 'space-evenly',
+  },
+
+  railItemPressable: {
+    width: SECTION_RAIL_WIDTH - 12,
+    alignSelf: 'center',
+  },
+
+  railItemBase: {
+    minHeight: 64,
+    width: SECTION_RAIL_WIDTH - 28,
+    alignSelf: 'center',
+    justifyContent: 'center',
+  },
+
+  railItemPlate: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    borderRadius: 18,
+    borderWidth: 0,
+  },
+
+  railItemContent: {
+    minHeight: 58,
+    width: SECTION_RAIL_WIDTH - 28,
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+
+  railDotBase: {
+    width: 8,
+    height: 8,
+    borderRadius: 999,
+    marginBottom: 6,
+    flexShrink: 0,
+  },
+
+  railTextWrap: {
+    width: '100%',
+    minWidth: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  railTitleBase: {
+    fontSize: 12,
+    lineHeight: 14,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.9,
+    textAlign: 'center',
+    width: '100%',
+  },
+
+  railSubtitleBase: {
+    marginTop: 1,
+    fontSize: 8,
+    lineHeight: 10,
+    fontWeight: '700',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    textAlign: 'center',
+    width: '100%',
+  },
+
+  railSubtitleHidden: {
+    opacity: 0,
+  },
+  
+  railViewportOverlay: {
+    position: 'absolute',
+    top: 0,
+    right: 60,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+    pointerEvents: 'box-none',
+  },
+  actionCardPressable: {
+    minWidth: 220,
+    flexGrow: 1,
+    flexBasis: 0,
+  },
+
+  actionCardAnimatedShell: {
+    width: '100%',
+  },
+
+  actionCardSheen: {
+    position: 'absolute',
+    top: -40,
+    bottom: -40,
+    width: 120,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderRadius: 999,
   },
 });
