@@ -5,11 +5,9 @@
 import { Link } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
-const footerLinks = [
-  { href: '/' as const, label: 'Home' },
-  { href: '/about' as const, label: 'About' },
-  { href: '/docs' as const, label: 'Charter' },
-];
+import { PUBLIC_FOOTER_NAV, PUBLIC_PRIMARY_NAV, getPublicNavHref } from '@/data/public/navigation';
+
+const nexusLink = PUBLIC_PRIMARY_NAV.find((item) => item.href === '/nexus/dashboard');
 
 /**
  * Inputs: none.
@@ -30,23 +28,23 @@ export default function Footer() {
           </View>
 
           <View className="flex-row flex-wrap items-center gap-4">
-            {footerLinks.map((link) => (
-              <Link key={link.href} href={link.href} asChild>
+            {PUBLIC_FOOTER_NAV.map((item) => (
+              <Link key={item.href} href={getPublicNavHref(item)} asChild>
                 <Pressable>
-                  <Text className="text-sm font-semibold text-public-text">
-                    {link.label}
-                  </Text>
+                  <Text className="text-sm font-semibold text-public-text">{item.label}</Text>
                 </Pressable>
               </Link>
             ))}
 
-            <Link href="/nexus/dashboard" asChild>
-              <Pressable className="rounded-full border border-public-line bg-public-panel/65 px-4 py-2">
-                <Text className="text-sm font-bold uppercase tracking-[0.18em] text-public-text">
-                  Nexus
-                </Text>
-              </Pressable>
-            </Link>
+            {nexusLink ? (
+              <Link href={getPublicNavHref(nexusLink)} asChild>
+                <Pressable className="rounded-full border border-public-line bg-public-panel/65 px-4 py-2">
+                  <Text className="text-sm font-bold uppercase tracking-[0.18em] text-public-text">
+                    {nexusLink.label}
+                  </Text>
+                </Pressable>
+              </Link>
+            ) : null}
           </View>
         </View>
       </View>

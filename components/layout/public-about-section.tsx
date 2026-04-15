@@ -2,10 +2,10 @@
  * File: public-about-section.tsx
  * Description: Renders a single about-page section as a midpoint-driven chapter with smooth synchronized expansion.
  */
-import type { AboutHighlight, AboutSection } from '@/data/public/public-site-content';
+import AboutHighlightTile from '@/components/layout/about/about-highlight-tile';
+import { getSectionProgress, type SectionLayout } from '@/components/layout/about/about-section-motion';
+import type { AboutHighlight, AboutSection } from '@/data/public/content-types';
 import { Image } from 'expo-image';
-import { Link } from 'expo-router';
-import { useRef } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 
 type PublicAboutSectionProps = {
@@ -17,211 +17,9 @@ type PublicAboutSectionProps = {
   chapterHeight: number;
   collapsedHeight: number;
   expandedHeight: number;
-  sectionLayout?: {
-    y: number;
-    height: number;
-  };
+  sectionLayout?: SectionLayout;
   viewportHeight: number;
 };
-
-type HighlightTileProps = {
-  highlight: AboutHighlight;
-};
-
-/**
- * Inputs: one highlight record.
- * Output: a static or linked subsection tile with subtle hover animation for linked items.
- */
-function HighlightTile({ highlight }: HighlightTileProps) {
-  const hover = useRef(new Animated.Value(0)).current;
-  const isLink = !!highlight.href;
-
-  const ctaColor =
-    highlight.color === 'sand'
-      ? '#f7d995'
-      : highlight.color === 'cyan'
-        ? '#6dd3ff'
-        : highlight.color === 'accent'
-          ? '#9fe870'
-          : '#cfd8e3';
-
-  const animatedTileStyle = isLink
-    ? {
-        transform: [
-          {
-            scale: hover.interpolate({
-              inputRange: [0, 1],
-              outputRange: [1, 1.018],
-            }),
-          },
-          {
-            translateY: hover.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0, -3],
-            }),
-          },
-        ],
-      }
-    : undefined;
-
-  const animatedCtaStyle = isLink
-    ? {
-        opacity: hover.interpolate({
-          inputRange: [0, 1],
-          outputRange: [0.82, 1],
-        }),
-        transform: [
-          {
-            translateY: hover.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0, -1],
-            }),
-          },
-        ],
-      }
-    : undefined;
-
-  const animatedGlowStyle = isLink
-    ? {
-        opacity: hover.interpolate({
-          inputRange: [0, 1],
-          outputRange: [0.04, 0.16],
-        }),
-      }
-    : undefined;
-
-  const sheenStyle = isLink
-    ? {
-        opacity: hover.interpolate({
-          inputRange: [0, 1],
-          outputRange: [0, 0.18],
-        }),
-        transform: [
-          {
-            translateX: hover.interpolate({
-              inputRange: [0, 1],
-              outputRange: [-140, 220],
-            }),
-          },
-          { rotate: '-18deg' as const },
-        ],
-      }
-    : undefined;
-
-    const content = (
-      <Animated.View
-        style={animatedTileStyle}
-        className="min-w-[220px] flex-1 overflow-hidden rounded-[1.25rem] bg-public-shell/78 p-5"
-      >
-        {isLink ? (
-          <>
-            <Animated.View
-              pointerEvents="none"
-              style={[styles.highlightGlow, animatedGlowStyle]}
-            />
-            <Animated.View
-              pointerEvents="none"
-              style={[styles.highlightSheen, sheenStyle]}
-            />
-          </>
-        ) : null}
-
-        <View className="flex-1 items-center justify-between">
-          <Text className="text-center text-sm font-bold uppercase tracking-[0.18em] text-public-sand">
-            {highlight.title}
-          </Text>
-          <Text className="mt-3 text-center text-sm leading-6 text-public-muted">
-            {highlight.body}
-          </Text>
-
-          {highlight.cta ? (
-            <View style={styles.highlightCtaWrap}>
-              <Animated.Text
-                className="text-center text-sm font-semibold"
-                style={[{ color: ctaColor, alignSelf: 'center' }, animatedCtaStyle]}
-              >
-                → {highlight.cta}
-              </Animated.Text>
-            </View>
-          ) : null}
-        </View>
-      </Animated.View>
-    );
-
-  if (!isLink) {
-    return (
-      <View key={highlight.title} style={styles.highlightOuter}>
-        {content}
-      </View>
-    );
-  }
-
-  const href = highlight.href;
-
-  if (!href) {
-    return (
-      <View key={highlight.title} style={styles.highlightOuter}>
-        {content}
-      </View>
-    );
-  }
-
-  return (
-    <Link key={highlight.title} href={href} asChild>
-      <Pressable
-        style={styles.highlightOuter}
-        onHoverIn={() => {
-          Animated.timing(hover, {
-            toValue: 1,
-            duration: 170,
-            useNativeDriver: true,
-          }).start();
-        }}
-        onHoverOut={() => {
-          Animated.timing(hover, {
-            toValue: 0,
-            duration: 170,
-            useNativeDriver: true,
-          }).start();
-        }}
-      >
-        {content}
-      </Pressable>
-    </Link>
-  );
-}
-
-/**
- * Inputs: the scroll driver, target section measurements, and the shared focus geometry.
- * Output: a normalized 0-1 progress value that ramps in early, holds through focus, and eases back out.
- */
-function getSectionProgress(
-  scrollY: Animated.Value,
-  sectionLayout: { y: number; height: number } | undefined,
-  viewportHeight: number,
-  focusLineRatio: number
-) {
-  if (!sectionLayout) {
-    return 0;
-  }
-
-  const focusLineOffset = viewportHeight * focusLineRatio;
-  const sectionCenter = sectionLayout.y + sectionLayout.height / 2;
-  const centeredScrollOffset = Math.max(0, sectionCenter - focusLineOffset);
-  const outerRange = Math.max(sectionLayout.height * 0.9, viewportHeight * 0.54, 260);
-  const holdRange = Math.max(sectionLayout.height * 0.18, viewportHeight * 0.1, 56);
-
-  return scrollY.interpolate({
-    inputRange: [
-      centeredScrollOffset - outerRange,
-      centeredScrollOffset - holdRange,
-      centeredScrollOffset + holdRange,
-      centeredScrollOffset + outerRange,
-    ],
-    outputRange: [0, 1, 1, 0],
-    extrapolate: 'clamp',
-  });
-}
 
 /**
  * Inputs: the section copy, scroll driver, height targets, and viewport/layout measurements.
@@ -354,9 +152,7 @@ export default function PublicAboutSection({
             </Text>
           </View>
 
-          <Animated.View
-            style={{ opacity: bodyOpacity, transform: [{ translateY: bodyTranslateY }] }}
-          >
+          <Animated.View style={{ opacity: bodyOpacity, transform: [{ translateY: bodyTranslateY }] }}>
             <Text className="mt-6 max-w-4xl text-center text-base leading-7 text-public-muted">
               {section.summary}
             </Text>
@@ -374,8 +170,8 @@ export default function PublicAboutSection({
             ]}
           >
             <View className="flex-row flex-wrap gap-3">
-              {section.highlights.map((highlight) => (
-                <HighlightTile key={highlight.title} highlight={highlight} />
+              {section.highlights.map((highlight: AboutHighlight) => (
+                <AboutHighlightTile key={highlight.title} highlight={highlight} />
               ))}
             </View>
           </Animated.View>
@@ -416,28 +212,5 @@ const styles = StyleSheet.create({
     width: '100%',
     borderRadius: 30,
     overflow: 'hidden',
-  },
-  highlightOuter: {
-    minWidth: 220,
-    flex: 1,
-    alignSelf: 'stretch',
-  },
-  highlightGlow: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 20,
-  },
-  highlightSheen: {
-    position: 'absolute',
-    top: -40,
-    bottom: -40,
-    width: 90,
-    backgroundColor: 'rgba(255,255,255,0.14)',
-    borderRadius: 999,
-  },
-  highlightCtaWrap: {
-    marginTop: 28,
-    alignItems: 'center',
-    width: '100%',
   },
 });

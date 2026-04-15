@@ -17,14 +17,16 @@ import {
 } from 'react-native';
 
 import PublicAboutSection from '@/components/layout/public-about-section';
-import { aboutSections } from '@/data/public/public-site-content';
+import { aboutPageContent } from '@/data/public/about-content';
+
+const sections = aboutPageContent.sections;
 
 type SectionLayout = {
   y: number;
   height: number;
 };
 
-const SECTION_FOCUS_LINE_RATIO = 0.2;
+const SECTION_FOCUS_LINE_RATIO = 0.3;
 const SECTION_RAIL_BREAKPOINT = 1100;
 const SECTION_RAIL_WIDTH = 200;
 const PUBLIC_CONTENT_MAX_WIDTH = 1152;
@@ -39,10 +41,10 @@ function getFocusedSectionId(
   viewportHeight: number
 ) {
   const viewportFocusLine = scrollOffsetY + viewportHeight * SECTION_FOCUS_LINE_RATIO;
-  let nextFocusedSectionId = aboutSections[0]?.id ?? '';
+  let nextFocusedSectionId = sections[0]?.id ?? '';
   let closestDistance = Number.POSITIVE_INFINITY;
 
-  for (const section of aboutSections) {
+  for (const section of sections) {
     const layout = sectionLayouts[section.id];
 
     if (!layout) {
@@ -66,7 +68,7 @@ function getFocusedSectionId(
  * Output: the public about page with midpoint-based section focus and synchronized chapter animation.
  */
 export default function AboutPage() {
-  const [activeSectionId, setActiveSectionId] = useState(aboutSections[0]?.id ?? '');
+  const [activeSectionId, setActiveSectionId] = useState(sections[0]?.id ?? '');
   const [sectionLayouts, setSectionLayouts] = useState<Record<string, SectionLayout>>({});
   const [scrollViewportHeight, setScrollViewportHeight] = useState(0);
   const scrollViewRef = useRef<ScrollView | null>(null);
@@ -84,7 +86,7 @@ export default function AboutPage() {
   const outerSideSpace = Math.max(0, (windowWidth - PUBLIC_CONTENT_MAX_WIDTH) / 2);
   const railRightOffset = Math.min(140, Math.max(28, Math.round(outerSideSpace * 0.42)));
   const activeSectionIndex = useMemo(
-    () => Math.max(0, aboutSections.findIndex((section) => section.id === activeSectionId)),
+    () => Math.max(0, sections.findIndex((section) => section.id === activeSectionId)),
     [activeSectionId]
   );
 
@@ -275,7 +277,7 @@ export default function AboutPage() {
    * Output: true when the section is close enough to the focus line to show its subtitle.
    */
   function shouldShowRailSubtitle(sectionId: string) {
-    const index = aboutSections.findIndex((section) => section.id === sectionId);
+    const index = sections.findIndex((section) => section.id === sectionId);
     return Math.abs(index - activeSectionIndex) <= 1;
   }
 
@@ -301,20 +303,10 @@ export default function AboutPage() {
             <View className="overflow-hidden rounded-[2rem] border border-public-line/0 bg-public-shell/70 px-6 py-4 shadow-public md:px-10 md:py-4">
               <View className="absolute left-8 top-8 h-36 w-36 rounded-full bg-public-accent/10 blur-3xl" />
               <View className="absolute right-8 top-20 h-44 w-44 rounded-full bg-public-cyan/15 blur-3xl" />
-
-              <View className="items-center">
-                <Text className="mt-2 text-center text-3xl font-black leading-[1.02] text-public-text md:text-5xl">
-                  About Open World Assembly
-                </Text>
-
-                <View className="my-5 h-0.5 w-full bg-public-line/40" />
-
-
-              </View>
             </View>
 
           <View className="mt-12 gap-0 md:gap-0">
-            {aboutSections.map((section) => (
+            {sections.map((section) => (
               <View
                 key={section.id}
                 onLayout={(event) => handleSectionLayout(section.id, event)}
@@ -343,12 +335,12 @@ export default function AboutPage() {
         >
           <View style={[styles.railShell, { height: railShellHeight }]}>
           <View style={styles.railHeader}>
-            <Text style={styles.railEyebrow}>About OWA</Text>
-            <Text style={styles.railEyebrowSubtext}>Open - Local - Global</Text>
+            <Text style={styles.railEyebrow}>{aboutPageContent.railTitle}</Text>
+            <Text style={styles.railEyebrowSubtext}>{aboutPageContent.railSubtitle}</Text>
           </View>
 
           <View style={styles.railStack}>
-              {aboutSections.map((section) => {
+              {sections.map((section) => {
                 const isActive = section.id === activeSectionId;
                 const animatedState = getRailAnimatedState(section.id);
 
@@ -375,7 +367,7 @@ export default function AboutPage() {
                             ellipsizeMode="tail"
                             style={[styles.railTitleBase, animatedState.titleAnimatedStyle]}
                           >
-                            {section.title}
+                            {section.id}
                           </Animated.Text>
 
                           <Animated.Text

@@ -17,11 +17,8 @@ import {
   useWindowDimensions,
 } from 'react-native';
 
-import {
-  publicHeroSlides,
-  publicPrinciples,
-  type PublicHeroSlide,
-} from '@/data/public/public-site-content';
+import { homePageContent } from '@/data/public/home-content';
+import type { PublicHeroSlide } from '@/data/public/content-types';
 
 type HeroSlideLayerProps = {
   slide: PublicHeroSlide;
@@ -121,9 +118,9 @@ export default function HomePage() {
   const isTransitioningRef = useRef(false);
   const { width: windowWidth } = useWindowDimensions();
   const measuredHeroWidth = heroWidth || Math.max(windowWidth - 40, 320);
-  const activeSlide = publicHeroSlides[activeSlideIndex];
+  const activeSlide = homePageContent.heroSlides[activeSlideIndex];
   const incomingSlide =
-    incomingSlideIndex === null ? null : publicHeroSlides[incomingSlideIndex];
+    incomingSlideIndex === null ? null : homePageContent.heroSlides[incomingSlideIndex];
   const highlightedSlideIndex =
     incomingSlideIndex === null ? activeSlideIndex : incomingSlideIndex;
   const incomingStartOffset = transitionDirection * measuredHeroWidth;
@@ -155,7 +152,7 @@ export default function HomePage() {
         nextIndex === activeSlideIndex ||
         isTransitioningRef.current ||
         nextIndex < 0 ||
-        nextIndex >= publicHeroSlides.length
+        nextIndex >= homePageContent.heroSlides.length
       ) {
         return;
       }
@@ -163,7 +160,7 @@ export default function HomePage() {
       isTransitioningRef.current = true;
       setTransitionDirection(
         directionOverride ??
-          getSlideDirection(activeSlideIndex, nextIndex, publicHeroSlides.length)
+          getSlideDirection(activeSlideIndex, nextIndex, homePageContent.heroSlides.length)
       );
       setIncomingSlideIndex(nextIndex);
       heroTransition.setValue(0);
@@ -203,7 +200,7 @@ export default function HomePage() {
    * Output: advances the hero slider to the next slide.
    */
   function showNextSlide() {
-    showSlide(getWrappedSlideIndex(activeSlideIndex, 1, publicHeroSlides.length), 1);
+    showSlide(getWrappedSlideIndex(activeSlideIndex, 1, homePageContent.heroSlides.length), 1);
   }
 
   /**
@@ -211,7 +208,7 @@ export default function HomePage() {
    * Output: moves the hero slider to the previous slide.
    */
   function showPreviousSlide() {
-    showSlide(getWrappedSlideIndex(activeSlideIndex, -1, publicHeroSlides.length), -1);
+    showSlide(getWrappedSlideIndex(activeSlideIndex, -1, homePageContent.heroSlides.length), -1);
   }
 
   /**
@@ -224,7 +221,7 @@ export default function HomePage() {
         return;
       }
 
-      showSlide(getWrappedSlideIndex(activeSlideIndex, 1, publicHeroSlides.length), 1);
+      showSlide(getWrappedSlideIndex(activeSlideIndex, 1, homePageContent.heroSlides.length), 1);
     }, 6500);
 
     return () => clearInterval(intervalId);
@@ -248,29 +245,23 @@ export default function HomePage() {
           <View className="border-t border-public-line/70 bg-public-panel/55 px-6 py-5 md:px-10">
             <View className="flex-row flex-wrap items-center justify-between gap-4">
               <View className="flex-row flex-wrap gap-3">
-                <Link href="/about" asChild>
-                  <Pressable className="rounded-full bg-public-accent px-6 py-3">
-                    <Text className="text-sm font-extrabold uppercase tracking-[0.18em] text-public-canvas">
-                      Learn More
-                    </Text>
-                  </Pressable>
-                </Link>
+                {homePageContent.heroActions.map((action) => {
+                  const isPrimary = action.variant === 'primary';
 
-                <Link href="/docs" asChild>
-                  <Pressable className="rounded-full border border-public-line bg-public-shell/75 px-6 py-3">
-                    <Text className="text-sm font-bold uppercase tracking-[0.18em] text-public-text">
-                      Read the Charter
-                    </Text>
-                  </Pressable>
-                </Link>
-
-                <Link href="/nexus/dashboard" asChild>
-                  <Pressable className="rounded-full border border-public-line bg-public-shell/75 px-6 py-3">
-                    <Text className="text-sm font-bold uppercase tracking-[0.18em] text-public-text">
-                      Browse the Nexus
-                    </Text>
-                  </Pressable>
-                </Link>
+                  return (
+                    <Link key={action.label} href={action.href} asChild>
+                      <Pressable
+                        className={`rounded-full px-6 py-3 ${isPrimary ? 'bg-public-accent' : 'border border-public-line bg-public-shell/75'}`}
+                      >
+                        <Text
+                          className={`text-sm uppercase tracking-[0.18em] ${isPrimary ? 'font-extrabold text-public-canvas' : 'font-bold text-public-text'}`}
+                        >
+                          {action.label}
+                        </Text>
+                      </Pressable>
+                    </Link>
+                  );
+                })}
               </View>
 
               <View className="flex-row items-center gap-3">
@@ -284,7 +275,7 @@ export default function HomePage() {
                 </Pressable>
 
                 <View className="flex-row items-center gap-2">
-                  {publicHeroSlides.map((slide, slideIndex) => (
+                  {homePageContent.heroSlides.map((slide, slideIndex) => (
                     <Pressable
                       key={slide.title}
                       className={[
@@ -313,10 +304,10 @@ export default function HomePage() {
 
         <View className="mt-10 gap-4">
           <Text className="text-sm font-bold uppercase tracking-[0.3em] text-public-cyan">
-            Antifragile direct democracy
+            {homePageContent.principlesEyebrow}
           </Text>
           <View className="flex-row flex-wrap gap-4">
-            {publicPrinciples.map((principle) => (
+            {homePageContent.principles.map((principle) => (
               <View
                 key={principle.title}
                 className="min-w-[280px] flex-1 rounded-[1.75rem] border border-public-line/70 bg-public-panel/55 p-6"
@@ -333,29 +324,18 @@ export default function HomePage() {
         </View>
 
         <View className="mt-10 flex-row flex-wrap gap-4">
-          <View className="min-w-[280px] flex-1 rounded-[1.75rem] border border-public-line/70 bg-public-panel/55 p-6">
-            <Text className="mb-3 text-xs font-bold uppercase tracking-[0.28em] text-public-sand">
-              Built for real communities
-            </Text>
-            <Text className="text-2xl font-bold text-public-text">
-              Local legitimacy can grow into wider coordination
-            </Text>
-            <Text className="mt-3 text-base leading-7 text-public-muted">
-              OWA starts where people already live and work. Neighborhoods, cities, regions, and larger scales can all use the same democratic pattern without handing power to a permanent center.
-            </Text>
-          </View>
-
-          <View className="min-w-[280px] flex-1 rounded-[1.75rem] border border-public-line/70 bg-public-panel/55 p-6">
-            <Text className="mb-3 text-xs font-bold uppercase tracking-[0.28em] text-public-sand">
-              More than discussion
-            </Text>
-            <Text className="text-2xl font-bold text-public-text">
-              Deliberation, decisions, action, and memory stay connected
-            </Text>
-            <Text className="mt-3 text-base leading-7 text-public-muted">
-              The aim is not another feed or petition tool. It is a durable democratic process that can carry shared intent from public reasoning into visible commitments and real-world follow-through.
-            </Text>
-          </View>
+          {homePageContent.supportingCards.map((card) => (
+            <View
+              key={card.title}
+              className="min-w-[280px] flex-1 rounded-[1.75rem] border border-public-line/70 bg-public-panel/55 p-6"
+            >
+              <Text className="mb-3 text-xs font-bold uppercase tracking-[0.28em] text-public-sand">
+                {card.eyebrow}
+              </Text>
+              <Text className="text-2xl font-bold text-public-text">{card.title}</Text>
+              <Text className="mt-3 text-base leading-7 text-public-muted">{card.body}</Text>
+            </View>
+          ))}
         </View>
       </View>
     </ScrollView>
