@@ -26,7 +26,7 @@ export default function Header() {
     <View className="w-full border-b border-public-line/70 bg-public-shell/80">
       <View className="mx-auto flex w-full max-w-6xl flex-row items-center justify-between px-5 py-4">
         <Link href={'/' as Href} asChild>
-          <Pressable className="rounded-full border border-public-line/70 bg-public-panel/50 px-4 py-2">
+          <Pressable className="rounded-full border border-public-line/0 bg-public-panel/50 px-4 py-2">
             <Text className="text-base font-extrabold uppercase tracking-[0.35em] text-public-accentSoft">
               Open World Assembly
             </Text>
