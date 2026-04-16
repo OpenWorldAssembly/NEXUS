@@ -19,6 +19,7 @@ type PublicAboutSectionProps = {
   expandedHeight: number;
   sectionLayout?: SectionLayout;
   viewportHeight: number;
+  sectionIndex: number;
 };
 
 /**
@@ -36,6 +37,7 @@ export default function PublicAboutSection({
   expandedHeight,
   sectionLayout,
   viewportHeight,
+  sectionIndex,
 }: PublicAboutSectionProps) {
   const rawProgress = getSectionProgress(
     scrollY,

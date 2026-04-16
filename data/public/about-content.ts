@@ -10,6 +10,7 @@ export type AboutPageContent = {
   railTitle: string;
   railSubtitle: string;
   sections: AboutSection[];
+  header: string;
 };
 
 export const aboutSections: AboutSection[] = [
@@ -281,4 +282,5 @@ export const aboutPageContent: AboutPageContent = {
   railSubtitle:
     'Open - Local - Global',
   sections: aboutSections,
+  header: ''
 };
