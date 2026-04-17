@@ -2,6 +2,13 @@
 
 OWA is an Expo Router application with a public website shell, a dedicated `/nexus/*` workspace, local packet-backed API routes, and a Node SQLite runtime for the current web deployment path.
 
+Source layout:
+
+- `core/*` for portable packet and schema logic
+- `runtime/*` for storage and runtime services
+- `app/*` for application-layer UI/content/support code
+- `src/app/*` for the Expo Router route shell
+
 ## Local development
 
 Install dependencies:

@@ -1,0 +1,2316 @@
+/**
+ * File: discussions.tsx
+ * Description: Renders the packet-backed Nexus discussions surface with chunked forum feeds, collapsible reply trees, and universal packet voting.
+ */
+
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { Href } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import type {
+  GestureResponderEvent,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+} from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+
+import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
+import {
+  NexusActionButton,
+  NexusBadge,
+  NexusCard,
+  NexusSectionHeader,
+  useNexusAppearance,
+} from '@app/components/nexus/nexus-ui';
+import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
+import {
+  buildDiscussionReplyPacket,
+  buildDiscussionRootPostPacket,
+  buildDiscussionThreadPacket,
+  buildPacketSignalAttestationPacket,
+} from '@runtime/nexus/discussion-packets';
+import type {
+  NexusDiscussionPost,
+  NexusDiscussionReply,
+  NexusDiscussionThreadPayload,
+  NexusDiscussionsPayload,
+} from '@runtime/nexus/nexus-api-types';
+import {
+  createNexusDiscussionPost,
+  createNexusDiscussionReply,
+  fetchNexusDiscussionReplyChildrenPayload,
+  fetchNexusDiscussionThreadPayload,
+  fetchNexusDiscussionsPayload,
+  setNexusAttestation,
+} from '@runtime/nexus/nexus-query-api';
+
+const DISCUSSION_WORKSPACE_VIEWS = ['feed', 'thread', 'post'] as const;
+const FEED_SORT_OPTIONS = ['new', 'top', 'controversial', 'old'] as const;
+const REPLY_SORT_OPTIONS = ['new', 'top', 'controversial', 'old'] as const;
+const FEED_PAGE_LIMIT = 20;
+const REPLY_PAGE_LIMIT = 10;
+const AUTO_LOAD_THRESHOLD = 180;
+
+type DiscussionWorkspaceView = (typeof DISCUSSION_WORKSPACE_VIEWS)[number];
+type FeedSort = (typeof FEED_SORT_OPTIONS)[number];
+type ReplySort = (typeof REPLY_SORT_OPTIONS)[number];
+
+type InlineReplyComposerProps = {
+  appearance: ReturnType<typeof useNexusAppearance>;
+  targetLabel: string;
+  viewerLabel: string;
+  value: string;
+  error: string | null;
+  disabled: boolean;
+  isSubmitting: boolean;
+  onChangeText: (nextValue: string) => void;
+  onCancel: () => void;
+  onSubmit: () => void;
+};
+
+type ConnectedTabRailProps = {
+  tabs: {
+    id: string;
+    title: string;
+    detail: string;
+  }[];
+  activeId: string | null;
+  compact?: boolean;
+  onSelect: (tabId: string) => void;
+};
+
+type DiscussionVotePillProps = {
+  score: number;
+  viewerValue: -1 | 0 | 1;
+  canVote: boolean;
+  disabled: boolean;
+  onVote: (event: GestureResponderEvent, value: -1 | 1) => void;
+};
+
+type SegmentedControlProps = {
+  options: {
+    id: string;
+    label: string;
+  }[];
+  activeId: string;
+  onSelect: (optionId: string) => void;
+  disabled?: boolean;
+};
+
+type ReplyBranchState = {
+  replies: NexusDiscussionReply[];
+  nextCursor: string | null;
+  hasMore: boolean;
+};
+
+type ReplyBranchStateMap = Record<string, ReplyBranchState>;
+type ReplyLoadingStateMap = Record<string, boolean>;
+type ReplyExpansionState = Record<string, boolean>;
+
+type ReplyNodeProps = {
+  reply: NexusDiscussionReply;
+  appearance: ReturnType<typeof useNexusAppearance>;
+  highlightedPostId: string | null;
+  replyTargetPacketId: string | null;
+  canVote: boolean;
+  canReply: boolean;
+  viewerLabel: string;
+  replyBody: string;
+  replyError: string | null;
+  isSubmittingReply: boolean;
+  pendingVotePacketId: string | null;
+  branchStates: ReplyBranchStateMap;
+  branchLoadingStates: ReplyLoadingStateMap;
+  replyExpansionState: ReplyExpansionState;
+  onToggleReplyExpansion: (reply: NexusDiscussionReply) => void;
+  onEnsureReplyChildren: (reply: NexusDiscussionReply) => void;
+  onLoadMoreReplyChildren: (reply: NexusDiscussionReply) => void;
+  onReply: (postId: string) => void;
+  onVote: (post: NexusDiscussionPost, value: -1 | 1) => void;
+  onChangeReplyBody: (nextValue: string) => void;
+  onSubmitReply: () => void;
+};
+
+type ReplyTreeProps = Omit<ReplyNodeProps, 'reply'> & {
+  replies: NexusDiscussionReply[];
+};
+
+function normalizeQueryValue(
+  value: string | string[] | undefined
+): string | null {
+  if (typeof value === 'string' && value.trim().length > 0) {
+    return value;
+  }
+
+  if (Array.isArray(value) && value[0]?.trim().length) {
+    return value[0];
+  }
+
+  return null;
+}
+
+function normalizeBooleanQueryValue(
+  value: string | string[] | undefined
+): boolean {
+  return normalizeQueryValue(value) === 'true';
+}
+
+/**
+ * Inputs: a raw workspace query value and whether a thread is selected.
+ * Output: the normalized discussions workspace tab that should be visible.
+ */
+function normalizeWorkspaceView(
+  value: string | string[] | undefined,
+  hasSelectedThread: boolean
+): DiscussionWorkspaceView {
+  const normalizedValue = normalizeQueryValue(value);
+
+  if (
+    normalizedValue &&
+    (DISCUSSION_WORKSPACE_VIEWS as readonly string[]).includes(normalizedValue)
+  ) {
+    return normalizedValue as DiscussionWorkspaceView;
+  }
+
+  return hasSelectedThread ? 'thread' : 'feed';
+}
+
+function getDiscussionHref(input: {
+  forumId: string | null;
+  sort: string | null;
+  view?: DiscussionWorkspaceView | null;
+  postId?: string | null;
+  replyTargetId?: string | null;
+  replySort?: string | null;
+  showHidden?: boolean;
+}): Href {
+  const searchParams = new URLSearchParams();
+
+  if (input.forumId) {
+    searchParams.set('forum', input.forumId);
+  }
+
+  if (input.sort) {
+    searchParams.set('sort', input.sort);
+  }
+
+  if (input.view) {
+    searchParams.set('view', input.view);
+  }
+
+  if (input.postId) {
+    searchParams.set('post', input.postId);
+  }
+
+  if (input.replyTargetId) {
+    searchParams.set('replyTo', input.replyTargetId);
+  }
+
+  if (input.replySort) {
+    searchParams.set('replySort', input.replySort);
+  }
+
+  if (input.showHidden) {
+    searchParams.set('showHidden', 'true');
+  }
+
+  const queryString = searchParams.toString();
+
+  return `/nexus/discussions${queryString.length > 0 ? `?${queryString}` : ''}` as Href;
+}
+
+function formatTimestamp(isoTimestamp: string): string {
+  return new Date(isoTimestamp).toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+/**
+ * Inputs: a scroll event.
+ * Output: whether the scroll position is close enough to the bottom to auto-load more content.
+ */
+function shouldAutoLoadMore(
+  event: NativeSyntheticEvent<NativeScrollEvent>
+): boolean {
+  const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+
+  return (
+    contentOffset.y + layoutMeasurement.height >=
+    contentSize.height - AUTO_LOAD_THRESHOLD
+  );
+}
+
+/**
+ * Inputs: already-loaded items plus one incoming page.
+ * Output: one deduplicated array that preserves existing order and appends new items.
+ */
+function mergePagedPosts<T extends { packet: { packet_id: string } }>(
+  currentItems: T[],
+  nextItems: T[]
+): T[] {
+  const seenPacketIds = new Set(currentItems.map((item) => item.packet.packet_id));
+  const mergedItems = [...currentItems];
+
+  for (const nextItem of nextItems) {
+    if (seenPacketIds.has(nextItem.packet.packet_id)) {
+      continue;
+    }
+
+    seenPacketIds.add(nextItem.packet.packet_id);
+    mergedItems.push(nextItem);
+  }
+
+  return mergedItems;
+}
+
+/**
+ * Inputs: loaded replies, branch state map, and a target packet id.
+ * Output: the first loaded reply that matches that id.
+ */
+function findLoadedReplyById(
+  replies: NexusDiscussionReply[],
+  branchStates: ReplyBranchStateMap,
+  targetPacketId: string
+): NexusDiscussionReply | null {
+  for (const reply of replies) {
+    if (reply.packet.packet_id === targetPacketId) {
+      return reply;
+    }
+
+    const childReplies = branchStates[reply.packet.packet_id]?.replies ?? reply.replies;
+    const matchingChildReply = findLoadedReplyById(
+      childReplies,
+      branchStates,
+      targetPacketId
+    );
+
+    if (matchingChildReply) {
+      return matchingChildReply;
+    }
+  }
+
+  return null;
+}
+
+function mapReplyTree(
+  replies: NexusDiscussionReply[],
+  mapReply: (reply: NexusDiscussionReply) => NexusDiscussionReply
+): NexusDiscussionReply[] {
+  return replies.map((reply) => {
+    const nextReply = mapReply(reply);
+    const nextChildren =
+      nextReply.replies.length > 0 ? mapReplyTree(nextReply.replies, mapReply) : nextReply.replies;
+
+    return nextChildren === nextReply.replies
+      ? nextReply
+      : {
+          ...nextReply,
+          replies: nextChildren,
+        };
+  });
+}
+
+function updateReplyProjectionCollections(
+  updateReply: (reply: NexusDiscussionReply) => NexusDiscussionReply,
+  rootReplies: NexusDiscussionReply[],
+  branchStates: ReplyBranchStateMap
+) {
+  return {
+    nextRootReplies: mapReplyTree(rootReplies, updateReply),
+    nextBranchStates: Object.fromEntries(
+      Object.entries(branchStates).map(([parentPacketId, branchState]) => [
+        parentPacketId,
+        {
+          ...branchState,
+          replies: mapReplyTree(branchState.replies, updateReply),
+        },
+      ])
+    ) as ReplyBranchStateMap,
+  };
+}
+
+/**
+ * Inputs: a reply count.
+ * Output: a human-scannable reply label.
+ */
+function formatReplyLabel(replyCount: number): string {
+  return `${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`;
+}
+
+/**
+ * Inputs: none.
+ * Output: shared classes for the combined vote pill.
+ */
+function useVotePillClasses() {
+  const { themeMode } = useNexusShell();
+
+  return {
+    containerClass:
+      themeMode === 'dark'
+        ? 'border-nexus-line/70 bg-white/5'
+        : 'border-slate-300 bg-slate-100',
+    dividerClass:
+      themeMode === 'dark' ? 'border-nexus-line/70' : 'border-slate-300',
+    buttonClass:
+      themeMode === 'dark' ? 'text-nexus-text' : 'text-slate-900',
+  };
+}
+
+function InlineReplyComposer({
+  appearance,
+  targetLabel,
+  viewerLabel,
+  value,
+  error,
+  disabled,
+  isSubmitting,
+  onChangeText,
+  onCancel,
+  onSubmit,
+}: InlineReplyComposerProps) {
+  return (
+    <NexusCard className="gap-4 border-nexus-sky/60 p-4">
+      <View className="gap-2">
+        <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
+          Reply composer
+        </Text>
+        <Text className={appearance.sectionBodyClass}>{targetLabel}</Text>
+      </View>
+
+      <View className="flex-row flex-wrap gap-2">
+        <NexusBadge label={`posting as ${viewerLabel}`} tone="sky" />
+        <NexusBadge label="nested reply" tone="default" />
+      </View>
+
+      <TextInput
+        className={`min-h-[120px] rounded-[24px] border px-4 py-4 ${appearance.textInputClass}`}
+        multiline
+        onChangeText={onChangeText}
+        placeholder="Write a reply."
+        placeholderTextColor={appearance.textInputPlaceholderColor}
+        textAlignVertical="top"
+        value={value}
+      />
+
+      {error ? (
+        <Text className="text-sm leading-6 text-nexus-rose">{error}</Text>
+      ) : null}
+
+      <View className="flex-row flex-wrap items-center gap-2">
+        <NexusActionButton
+          label="Cancel"
+          onPress={onCancel}
+        />
+        <NexusActionButton
+          label={isSubmitting ? 'Replying...' : 'Post reply'}
+          onPress={onSubmit}
+          disabled={disabled}
+          variant="primary"
+        />
+      </View>
+    </NexusCard>
+  );
+}
+
+function ConnectedTabRail({
+  tabs,
+  activeId,
+  compact = false,
+  onSelect,
+}: ConnectedTabRailProps) {
+  const { themeMode } = useNexusShell();
+  const appearance = useNexusAppearance();
+  const inactiveTabClass =
+    themeMode === 'dark'
+      ? 'border-nexus-line/70 bg-white/5'
+      : 'border-slate-300 bg-slate-100';
+  const activeTabClass =
+    themeMode === 'dark'
+      ? 'border-nexus-line/70 border-b-nexus-panel bg-nexus-panel'
+      : 'border-slate-300 border-b-white bg-white';
+
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      className="flex-grow-0"
+    >
+      <View className="flex-row items-end gap-2">
+        {tabs.map((tab) => {
+          const isActive = tab.id === activeId;
+
+          return (
+            <Pressable
+              key={tab.id}
+              className={`min-w-[150px] border px-4 ${
+                compact
+                  ? 'rounded-t-[18px] py-2.5'
+                  : 'rounded-t-[20px] py-3'
+              } ${isActive ? `${activeTabClass} -mb-px` : inactiveTabClass}`}
+              onPress={() => onSelect(tab.id)}
+            >
+              <Text className={appearance.itemTitleClass}>{tab.title}</Text>
+              <Text className={appearance.itemMetaClass}>{tab.detail}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </ScrollView>
+  );
+}
+
+function DiscussionVotePill({
+  score,
+  viewerValue,
+  canVote,
+  disabled,
+  onVote,
+}: DiscussionVotePillProps) {
+  const { containerClass, dividerClass, buttonClass } = useVotePillClasses();
+  const { themeMode } = useNexusShell();
+  const scoreClass =
+    score < 0
+      ? 'text-nexus-rose'
+      : score > 0
+        ? 'text-nexus-mint'
+        : buttonClass;
+  const activeVoteSegmentClass =
+    themeMode === 'dark'
+      ? 'bg-nexus-sky/12 text-nexus-sky'
+      : 'bg-sky-100 text-sky-700';
+
+  return (
+    <View className={`flex-row items-center overflow-hidden rounded-full border ${containerClass}`}>
+        <Pressable
+          accessibilityRole="button"
+          className={`px-4 py-2.5 ${viewerValue === 1 ? activeVoteSegmentClass : ''}`}
+          disabled={!canVote || disabled}
+          onPress={(event) => onVote(event, 1)}
+        >
+          <Text
+            className={`text-sm font-semibold ${
+              viewerValue === 1 ? '' : buttonClass
+            }`}
+          >
+            +1
+          </Text>
+        </Pressable>
+        <View className={`border-l px-4 py-2.5 ${dividerClass}`}>
+          <Text className={`text-sm font-semibold ${scoreClass}`}>{score}</Text>
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          className={`border-l px-4 py-2.5 ${dividerClass} ${
+            viewerValue === -1 ? activeVoteSegmentClass : ''
+          }`}
+          disabled={!canVote || disabled}
+          onPress={(event) => onVote(event, -1)}
+        >
+          <Text
+            className={`text-sm font-semibold ${
+              viewerValue === -1 ? '' : buttonClass
+            }`}
+          >
+            -1
+          </Text>
+        </Pressable>
+    </View>
+  );
+}
+
+function ReplyCountPill({ replyLabel }: { replyLabel: string }) {
+  const { containerClass } = useVotePillClasses();
+  const { themeMode } = useNexusShell();
+  const textClass =
+    themeMode === 'dark' ? 'text-nexus-text' : 'text-slate-900';
+
+  return (
+    <View className={`rounded-full border px-4 py-2.5 ${containerClass}`}>
+      <Text className={`text-sm font-semibold ${textClass}`}>{replyLabel}</Text>
+    </View>
+  );
+}
+
+function SegmentedControl({
+  options,
+  activeId,
+  onSelect,
+  disabled = false,
+}: SegmentedControlProps) {
+  const { containerClass, dividerClass, buttonClass } = useVotePillClasses();
+  const { themeMode } = useNexusShell();
+  const activeSegmentClass =
+    themeMode === 'dark'
+      ? 'bg-nexus-sky/12 text-nexus-sky'
+      : 'bg-sky-100 text-sky-700';
+
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-grow-0">
+      <View className={`flex-row items-center overflow-hidden rounded-full border ${containerClass}`}>
+        {options.map((option, index) => {
+          const isActive = option.id === activeId;
+
+          return (
+            <Pressable
+              key={option.id}
+              accessibilityRole="button"
+              className={`${index > 0 ? `border-l ${dividerClass}` : ''} px-4 py-2.5 ${
+                isActive ? activeSegmentClass : ''
+              }`}
+              disabled={disabled}
+              onPress={() => onSelect(option.id)}
+            >
+              <Text
+                className={`text-sm font-semibold ${
+                  isActive ? '' : buttonClass
+                }`}
+              >
+                {option.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </ScrollView>
+  );
+}
+
+function ReplyTree({
+  replies,
+  ...props
+}: ReplyTreeProps) {
+  return (
+    <View className="gap-3">
+      {replies.map((reply) => (
+        <ReplyNode key={reply.packet.packet_id} reply={reply} {...props} />
+      ))}
+    </View>
+  );
+}
+
+function ReplyNode({
+  reply,
+  appearance,
+  highlightedPostId,
+  replyTargetPacketId,
+  canVote,
+  canReply,
+  viewerLabel,
+  replyBody,
+  replyError,
+  isSubmittingReply,
+  pendingVotePacketId,
+  branchStates,
+  branchLoadingStates,
+  replyExpansionState,
+  onToggleReplyExpansion,
+  onEnsureReplyChildren,
+  onLoadMoreReplyChildren,
+  onReply,
+  onVote,
+  onChangeReplyBody,
+  onSubmitReply,
+}: ReplyNodeProps) {
+  const { themeMode } = useNexusShell();
+  const isHighlighted = reply.packet.packet_id === highlightedPostId;
+  const isReplyTarget = reply.packet.packet_id === replyTargetPacketId;
+  const childBranchState = branchStates[reply.packet.packet_id];
+  const childReplies = childBranchState?.replies ?? reply.replies;
+  const childHasMore = childBranchState?.hasMore ?? reply.child_page.has_more;
+  const isLoadingChildren =
+    branchLoadingStates[reply.packet.packet_id] ?? false;
+  const collapsedBranchCount = reply.descendant_count + 1;
+  const isExpanded =
+    replyExpansionState[reply.packet.packet_id] === true ||
+    (replyExpansionState[reply.packet.packet_id] !== false &&
+      !reply.is_collapsed_by_default);
+  const canLoadChildren = reply.reply_count > 0;
+  const railButtonClass =
+    themeMode === 'dark'
+      ? 'border-nexus-line/70 bg-white/5'
+      : 'border-slate-300 bg-slate-100';
+  const railLineClass = themeMode === 'dark' ? 'bg-nexus-line/60' : 'bg-slate-300';
+  const railBubbleTextClass =
+    themeMode === 'dark' ? 'text-nexus-text' : 'text-slate-900';
+
+  useEffect(() => {
+    if (
+      !isExpanded ||
+      !canLoadChildren ||
+      childReplies.length > 0 ||
+      isLoadingChildren
+    ) {
+      return;
+    }
+
+    onEnsureReplyChildren(reply);
+  }, [
+    canLoadChildren,
+    childReplies.length,
+    isExpanded,
+    isLoadingChildren,
+    onEnsureReplyChildren,
+    reply,
+  ]);
+
+  return (
+    <View className="flex-row items-stretch gap-3">
+      <View className="w-8 items-center">
+        <View className="mt-4 gap-2">
+          <Pressable
+            accessibilityRole="button"
+            className={`h-10 w-10 flex-row items-center justify-center gap-0.5 rounded-full border ${railButtonClass}`}
+            onPress={() => onToggleReplyExpansion(reply)}
+          >
+            <Text className={`text-[10px] font-semibold ${railBubbleTextClass}`}>
+              {isExpanded ? '<' : '>'}
+            </Text>
+            <Text className={`text-[10px] font-semibold ${railBubbleTextClass}`}>
+              {collapsedBranchCount}
+            </Text>
+          </Pressable>
+        </View>
+        <View className={`mt-2 w-px flex-1 ${railLineClass}`} />
+      </View>
+
+      <View className="min-w-0 flex-1 gap-3">
+        {!isExpanded ? (
+          <View className="mt-4 min-h-[52px] justify-center gap-1">
+            <Text className={appearance.itemMetaClass}>
+              {reply.author_label} - {formatTimestamp(reply.created_at)}
+            </Text>
+            <Text className={appearance.itemBodyClass} numberOfLines={2}>
+              {reply.content_markdown}
+            </Text>
+          </View>
+        ) : null}
+
+        {isExpanded ? (
+          <NexusCard
+            className={`gap-3 p-4 ${
+              isReplyTarget || isHighlighted ? 'border-nexus-sky/70 bg-nexus-panel' : ''
+            }`}
+          >
+            <Text className={appearance.itemMetaClass}>
+              {reply.author_label} - {formatTimestamp(reply.created_at)}
+            </Text>
+
+            <Text className={appearance.itemBodyClass}>
+              {reply.content_markdown}
+            </Text>
+
+            <View className="flex-row flex-wrap items-center gap-2">
+              <DiscussionVotePill
+                score={reply.vote_summary.net_score}
+                viewerValue={reply.vote_summary.viewer_value}
+                canVote={canVote}
+                disabled={pendingVotePacketId === reply.packet.packet_id}
+                onVote={(event, value) => {
+                  event.stopPropagation?.();
+                  onVote(reply, value);
+                }}
+              />
+              {isHighlighted ? <NexusBadge label="just posted" tone="mint" /> : null}
+              {isReplyTarget ? <NexusBadge label="reply target" tone="sky" /> : null}
+              <NexusActionButton
+                label={isReplyTarget ? 'Reply target' : 'Reply here'}
+                onPress={() => onReply(reply.packet.packet_id)}
+                disabled={!canReply}
+              />
+            </View>
+
+            {isReplyTarget ? (
+            <InlineReplyComposer
+              appearance={appearance}
+              targetLabel={`Replying to ${reply.author_label} - ${formatTimestamp(
+                reply.created_at
+              )}`}
+                viewerLabel={viewerLabel}
+                value={replyBody}
+              error={replyError}
+              disabled={!replyBody.trim() || isSubmittingReply || !canReply}
+              isSubmitting={isSubmittingReply}
+              onChangeText={onChangeReplyBody}
+              onCancel={() => onReply('')}
+              onSubmit={onSubmitReply}
+            />
+          ) : null}
+          </NexusCard>
+        ) : null}
+
+        {isExpanded ? (
+          <View className="gap-3">
+            {childReplies.length > 0 ? (
+              <ReplyTree
+                replies={childReplies}
+                appearance={appearance}
+                highlightedPostId={highlightedPostId}
+                replyTargetPacketId={replyTargetPacketId}
+                canVote={canVote}
+                canReply={canReply}
+                viewerLabel={viewerLabel}
+                replyBody={replyBody}
+                replyError={replyError}
+                isSubmittingReply={isSubmittingReply}
+                pendingVotePacketId={pendingVotePacketId}
+                branchStates={branchStates}
+                branchLoadingStates={branchLoadingStates}
+                replyExpansionState={replyExpansionState}
+                onToggleReplyExpansion={onToggleReplyExpansion}
+                onEnsureReplyChildren={onEnsureReplyChildren}
+                onLoadMoreReplyChildren={onLoadMoreReplyChildren}
+                onReply={onReply}
+                onVote={onVote}
+                onChangeReplyBody={onChangeReplyBody}
+                onSubmitReply={onSubmitReply}
+              />
+            ) : null}
+
+            {isLoadingChildren ? (
+              <Text className={appearance.itemMetaClass}>Loading replies...</Text>
+            ) : null}
+
+            {childHasMore ? (
+              <NexusActionButton
+                label="Load more replies"
+                onPress={() => onLoadMoreReplyChildren(reply)}
+              />
+            ) : null}
+          </View>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+export default function NexusDiscussionsPage() {
+  const router = useRouter();
+  const localParams = useLocalSearchParams<{
+    forum?: string | string[];
+    sort?: string | string[];
+    view?: string | string[];
+    post?: string | string[];
+    replyTo?: string | string[];
+    replySort?: string | string[];
+    showHidden?: string | string[];
+  }>();
+  const { activeScope, themeMode } = useNexusShell();
+  const {
+    createVerifiedRequestBody,
+    currentActorPacketId,
+    currentIdentity,
+    currentLabel,
+    currentMode,
+    isAuthenticated,
+    isCurrentIdentityUnlocked,
+    signCurrentIdentityPacket,
+  } = useIdentityShell();
+  const appearance = useNexusAppearance();
+  const requestedForumId = normalizeQueryValue(localParams.forum);
+  const requestedPostId = normalizeQueryValue(localParams.post);
+  const requestedWorkspaceView = normalizeWorkspaceView(
+    localParams.view,
+    Boolean(requestedPostId)
+  );
+  const requestedReplyTargetId = normalizeQueryValue(localParams.replyTo);
+  const requestedSort = normalizeQueryValue(localParams.sort);
+  const requestedReplySort = normalizeQueryValue(localParams.replySort);
+  const requestedShowHidden = normalizeBooleanQueryValue(localParams.showHidden);
+
+  const [feedPayload, setFeedPayload] = useState<NexusDiscussionsPayload | null>(null);
+  const [threadPayload, setThreadPayload] =
+    useState<NexusDiscussionThreadPayload | null>(null);
+  const [feedPosts, setFeedPosts] = useState<NexusDiscussionPost[]>([]);
+  const [feedNextCursor, setFeedNextCursor] = useState<string | null>(null);
+  const [feedHasMore, setFeedHasMore] = useState(false);
+  const [rootReplies, setRootReplies] = useState<NexusDiscussionReply[]>([]);
+  const [rootRepliesNextCursor, setRootRepliesNextCursor] = useState<string | null>(
+    null
+  );
+  const [rootRepliesHasMore, setRootRepliesHasMore] = useState(false);
+  const [replyBranchStates, setReplyBranchStates] = useState<ReplyBranchStateMap>(
+    {}
+  );
+  const [replyBranchLoadingStates, setReplyBranchLoadingStates] =
+    useState<ReplyLoadingStateMap>({});
+  const [replyExpansionState, setReplyExpansionState] =
+    useState<ReplyExpansionState>({});
+  const [isLoadingFeed, setIsLoadingFeed] = useState(true);
+  const [isLoadingMoreFeed, setIsLoadingMoreFeed] = useState(false);
+  const [isLoadingThread, setIsLoadingThread] = useState(false);
+  const [isLoadingMoreRootReplies, setIsLoadingMoreRootReplies] = useState(false);
+  const [feedError, setFeedError] = useState<string | null>(null);
+  const [threadError, setThreadError] = useState<string | null>(null);
+  const [draftTitle, setDraftTitle] = useState('');
+  const [draftBody, setDraftBody] = useState('');
+  const [replyBody, setReplyBody] = useState('');
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [replyError, setReplyError] = useState<string | null>(null);
+  const [voteError, setVoteError] = useState<string | null>(null);
+  const [isSubmittingPost, setIsSubmittingPost] = useState(false);
+  const [isSubmittingReply, setIsSubmittingReply] = useState(false);
+  const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null);
+  const [pendingVotePacketId, setPendingVotePacketId] = useState<string | null>(null);
+
+  const selectedForum =
+    feedPayload?.forums.find((forum) => forum.id === feedPayload.selected_forum_id) ??
+    null;
+  const selectedFeedSort = (feedPayload?.selected_sort ?? 'new') as FeedSort;
+  const selectedReplySort = (threadPayload?.selected_reply_sort ?? 'new') as ReplySort;
+  const selectedViewer = threadPayload?.viewer ?? feedPayload?.viewer ?? null;
+  const activeForumId = feedPayload?.selected_forum_id ?? requestedForumId;
+  const claimedSessionNeedsUnlock =
+    currentMode === 'claimed' && isAuthenticated && !isCurrentIdentityUnlocked;
+  const canCreateTopLevel = selectedViewer?.can_create_top_level ?? false;
+  const canReply = selectedViewer?.can_reply ?? false;
+  const canVote = selectedViewer?.can_vote ?? false;
+  const topLevelPostingLocked =
+    Boolean(selectedViewer) && !canCreateTopLevel;
+  const isFeedWorkspace = requestedWorkspaceView === 'feed';
+  const isThreadWorkspace = requestedWorkspaceView === 'thread';
+  const isPostWorkspace = requestedWorkspaceView === 'post';
+  const forumTabs = (feedPayload?.forums ?? []).map((forum) => ({
+    id: forum.id,
+    title: forum.title,
+    detail: forum.public_posting ? 'Signed guest posting' : 'Membership posting',
+  }));
+  const workspaceTabs = [
+    {
+      id: 'feed',
+      title: 'Feed',
+      detail: `${feedPosts.length} loaded threads`,
+    },
+    {
+      id: 'thread',
+      title: 'Thread',
+      detail: requestedPostId ? 'selected thread' : 'auto top thread',
+    },
+    {
+      id: 'post',
+      title: 'Post',
+      detail: 'start a top-level thread',
+    },
+  ] satisfies ConnectedTabRailProps['tabs'];
+  const forumShellClass =
+    themeMode === 'dark'
+      ? 'border-nexus-line/70 bg-nexus-panel'
+      : 'border-slate-300 bg-white';
+  const workspacePanelClass =
+    themeMode === 'dark'
+      ? 'border-nexus-line/70 bg-nexus-canvas/70'
+      : 'border-slate-300 bg-slate-50';
+  const feedListClass =
+    themeMode === 'dark'
+      ? 'rounded-[24px] border border-nexus-line/50 bg-transparent lg:max-h-[980px]'
+      : 'rounded-[24px] border border-slate-300 bg-transparent lg:max-h-[980px]';
+  const threadListClass =
+    themeMode === 'dark'
+      ? 'rounded-[24px] border border-nexus-line/50 bg-transparent lg:max-h-[1020px]'
+      : 'rounded-[24px] border border-slate-300 bg-transparent lg:max-h-[1020px]';
+  const metaRowClass =
+    themeMode === 'dark' ? 'text-nexus-muted' : 'text-slate-600';
+  const cardTitleClass =
+    themeMode === 'dark'
+      ? 'text-xl font-semibold text-nexus-text'
+      : 'text-xl font-semibold text-slate-900';
+  const rootTitleClass =
+    themeMode === 'dark'
+      ? 'text-2xl font-semibold text-nexus-text'
+      : 'text-2xl font-semibold text-slate-900';
+
+  const replyTargetLabel = useMemo(() => {
+    if (!requestedReplyTargetId) {
+      return null;
+    }
+
+    if (threadPayload?.root_post.packet.packet_id === requestedReplyTargetId) {
+      return 'Replying to OP';
+    }
+
+    const targetReply = findLoadedReplyById(
+      rootReplies,
+      replyBranchStates,
+      requestedReplyTargetId
+    );
+
+    return targetReply
+      ? `Replying to ${targetReply.author_label} - ${formatTimestamp(
+          targetReply.created_at
+        )}`
+      : null;
+  }, [replyBranchStates, requestedReplyTargetId, rootReplies, threadPayload]);
+
+  /**
+   * Inputs: append flag and optional cursor.
+   * Output: refreshes the current feed page window.
+   */
+  const loadFeed = useCallback(
+    async (input?: { cursor?: string | null; append?: boolean }) => {
+      const shouldAppend = input?.append === true;
+
+      if (shouldAppend) {
+        setIsLoadingMoreFeed(true);
+      } else {
+        setIsLoadingFeed(true);
+        setFeedError(null);
+      }
+
+      try {
+        const nextFeedPayload = await fetchNexusDiscussionsPayload({
+          scopeId: activeScope.id,
+          forumId: requestedForumId,
+          sort: requestedSort ?? 'new',
+          showHidden: requestedShowHidden,
+          viewerActorPacketId: currentActorPacketId,
+          cursor: input?.cursor ?? null,
+          limit: FEED_PAGE_LIMIT,
+        });
+
+        setFeedPayload(nextFeedPayload);
+        setFeedPosts((currentPosts) =>
+          shouldAppend
+            ? mergePagedPosts(currentPosts, nextFeedPayload.top_level_posts)
+            : nextFeedPayload.top_level_posts
+        );
+        setFeedNextCursor(nextFeedPayload.next_cursor);
+        setFeedHasMore(nextFeedPayload.has_more);
+      } catch (error) {
+        setFeedError(
+          error instanceof Error
+            ? error.message
+            : 'Unable to load the discussion feed.'
+        );
+
+        if (!shouldAppend) {
+          setFeedPayload(null);
+          setFeedPosts([]);
+          setFeedNextCursor(null);
+          setFeedHasMore(false);
+        }
+      } finally {
+        if (shouldAppend) {
+          setIsLoadingMoreFeed(false);
+        } else {
+          setIsLoadingFeed(false);
+        }
+      }
+    },
+    [
+      activeScope.id,
+      currentActorPacketId,
+      requestedForumId,
+      requestedShowHidden,
+      requestedSort,
+    ]
+  );
+
+  /**
+   * Inputs: none.
+   * Output: refreshes the selected thread root plus its first reply page.
+   */
+  const loadThread = useCallback(async () => {
+    if (!requestedPostId) {
+      setThreadPayload(null);
+      setThreadError(null);
+      setRootReplies([]);
+      setRootRepliesNextCursor(null);
+      setRootRepliesHasMore(false);
+      setIsLoadingThread(false);
+      return;
+    }
+
+    setIsLoadingThread(true);
+    setThreadError(null);
+
+    try {
+      const nextThreadPayload = await fetchNexusDiscussionThreadPayload({
+        scopeId: activeScope.id,
+        postPacketId: requestedPostId,
+        replySort: requestedReplySort ?? 'new',
+        showHidden: requestedShowHidden,
+        viewerActorPacketId: currentActorPacketId,
+        limit: REPLY_PAGE_LIMIT,
+      });
+
+      setThreadPayload(nextThreadPayload);
+      setRootReplies(nextThreadPayload.replies);
+      setRootRepliesNextCursor(nextThreadPayload.next_cursor);
+      setRootRepliesHasMore(nextThreadPayload.has_more);
+    } catch (error) {
+      setThreadError(
+        error instanceof Error
+          ? error.message
+          : 'Unable to load the discussion thread.'
+      );
+      setThreadPayload(null);
+      setRootReplies([]);
+      setRootRepliesNextCursor(null);
+      setRootRepliesHasMore(false);
+    } finally {
+      setIsLoadingThread(false);
+    }
+  }, [
+    activeScope.id,
+    currentActorPacketId,
+    requestedPostId,
+    requestedReplySort,
+    requestedShowHidden,
+  ]);
+
+  /**
+   * Inputs: a reply node plus paging mode.
+   * Output: refreshes one branch of direct child replies.
+   */
+  const loadReplyChildren = useCallback(
+    async (input: {
+      parentPostPacketId: string;
+      cursor?: string | null;
+      append?: boolean;
+    }) => {
+      const rootThreadPacketId =
+        threadPayload?.root_post.packet.packet_id ?? requestedPostId;
+
+      if (!rootThreadPacketId) {
+        return;
+      }
+
+      const shouldAppend = input.append === true;
+      setReplyBranchLoadingStates((currentState) => ({
+        ...currentState,
+        [input.parentPostPacketId]: true,
+      }));
+
+      try {
+        const nextReplyPage = await fetchNexusDiscussionReplyChildrenPayload({
+          scopeId: activeScope.id,
+          threadPostPacketId: rootThreadPacketId,
+          parentPostPacketId: input.parentPostPacketId,
+          replySort: selectedReplySort ?? 'new',
+          showHidden: requestedShowHidden,
+          viewerActorPacketId: currentActorPacketId,
+          cursor: input.cursor ?? null,
+          limit: REPLY_PAGE_LIMIT,
+        });
+
+        setReplyBranchStates((currentState) => {
+          const currentBranch = currentState[input.parentPostPacketId];
+
+          return {
+            ...currentState,
+            [input.parentPostPacketId]: {
+              replies:
+                shouldAppend && currentBranch
+                  ? mergePagedPosts(currentBranch.replies, nextReplyPage.replies)
+                  : nextReplyPage.replies,
+              nextCursor: nextReplyPage.next_cursor,
+              hasMore: nextReplyPage.has_more,
+            },
+          };
+        });
+      } catch (error) {
+        setReplyError(
+          error instanceof Error
+            ? error.message
+            : 'Unable to load more replies.'
+        );
+      } finally {
+        setReplyBranchLoadingStates((currentState) => ({
+          ...currentState,
+          [input.parentPostPacketId]: false,
+        }));
+      }
+    },
+    [
+      activeScope.id,
+      currentActorPacketId,
+      requestedPostId,
+      requestedShowHidden,
+      selectedReplySort,
+      threadPayload?.root_post.packet.packet_id,
+    ]
+  );
+
+  useEffect(() => {
+    setSubmitError(null);
+    setReplyError(null);
+    setVoteError(null);
+    void loadFeed();
+  }, [loadFeed]);
+
+  useEffect(() => {
+    void loadThread();
+  }, [loadThread]);
+
+  useEffect(() => {
+    setReplyError(null);
+  }, [requestedReplyTargetId]);
+
+  useEffect(() => {
+    setHighlightedPostId(null);
+    setReplyBranchStates({});
+    setReplyBranchLoadingStates({});
+    setReplyExpansionState({});
+  }, [activeForumId, requestedPostId, requestedReplySort]);
+
+  useEffect(() => {
+    if (!requestedReplyTargetId) {
+      return;
+    }
+
+    setReplyExpansionState((currentState) => ({
+      ...currentState,
+      [requestedReplyTargetId]: true,
+    }));
+  }, [requestedReplyTargetId]);
+
+  useEffect(() => {
+    if (
+      !isThreadWorkspace ||
+      requestedPostId ||
+      isLoadingFeed ||
+      feedPosts.length === 0 ||
+      !selectedForum
+    ) {
+      return;
+    }
+
+    router.replace(
+      getDiscussionHref({
+        forumId: selectedForum.id,
+        sort: selectedFeedSort,
+        view: 'thread',
+        postId: feedPosts[0]?.packet.packet_id ?? null,
+        replySort: requestedReplySort ?? null,
+        showHidden: requestedShowHidden,
+      })
+    );
+  }, [
+    feedPosts,
+    isLoadingFeed,
+    isThreadWorkspace,
+    requestedPostId,
+    requestedReplySort,
+    requestedShowHidden,
+    router,
+    selectedFeedSort,
+    selectedForum,
+  ]);
+
+  /**
+   * Inputs: a root post id and optional reply target.
+   * Output: switches the current route into the thread workspace.
+   */
+  const openThreadWorkspace = useCallback(
+    (postId: string, replyTargetId: string | null = null) => {
+      router.replace(
+        getDiscussionHref({
+          forumId: activeForumId,
+          sort: selectedFeedSort,
+          view: 'thread',
+          postId,
+          replyTargetId,
+          replySort: selectedReplySort,
+          showHidden: requestedShowHidden,
+        })
+      );
+    },
+    [
+      activeForumId,
+      requestedShowHidden,
+      router,
+      selectedFeedSort,
+      selectedReplySort,
+    ]
+  );
+
+  /**
+   * Inputs: one vote target plus a vote value.
+   * Output: writes the vote and updates any loaded local projections for that post.
+   */
+  const handleVote = useCallback(
+    async (post: NexusDiscussionPost, value: -1 | 1) => {
+      if (!currentIdentity) {
+        setVoteError('There is no active identity available for this request.');
+        return;
+      }
+
+      setPendingVotePacketId(post.packet.packet_id);
+      setVoteError(null);
+
+      try {
+        const attestationPacket = buildPacketSignalAttestationPacket({
+          scopeId: activeScope.id,
+          actorPacket: currentIdentity.actorPacket,
+          targetPost: post,
+          value: post.vote_summary.viewer_value === value ? 0 : value,
+        });
+
+        if (!attestationPacket) {
+          return;
+        }
+
+        const signedAttestationPacket =
+          await signCurrentIdentityPacket(attestationPacket);
+        const requestBody = await createVerifiedRequestBody(
+          '/api/nexus/packets/vote',
+          'PUT',
+          {
+            attestation_packet: signedAttestationPacket,
+          }
+        );
+        const voteResult = await setNexusAttestation({
+          requestBody,
+        });
+        const updateReplySummary = (currentReply: NexusDiscussionReply) =>
+          currentReply.packet.packet_id === post.packet.packet_id
+            ? {
+                ...currentReply,
+                vote_summary: voteResult.summary,
+              }
+            : currentReply;
+        const { nextRootReplies, nextBranchStates } = updateReplyProjectionCollections(
+          updateReplySummary,
+          rootReplies,
+          replyBranchStates
+        );
+
+        setFeedPosts((currentPosts) =>
+          currentPosts.map((currentPost) =>
+            currentPost.packet.packet_id === post.packet.packet_id
+              ? {
+                  ...currentPost,
+                  vote_summary: voteResult.summary,
+                }
+              : currentPost
+          )
+        );
+        setThreadPayload((currentPayload) =>
+          currentPayload &&
+          currentPayload.root_post.packet.packet_id === post.packet.packet_id
+            ? {
+                ...currentPayload,
+                root_post: {
+                  ...currentPayload.root_post,
+                  vote_summary: voteResult.summary,
+                },
+              }
+            : currentPayload
+        );
+        setRootReplies(nextRootReplies);
+        setReplyBranchStates(nextBranchStates);
+      } catch (error) {
+        setVoteError(
+          error instanceof Error ? error.message : 'Unable to update that vote.'
+        );
+      } finally {
+        setPendingVotePacketId(null);
+      }
+    },
+    [
+      activeScope.id,
+      createVerifiedRequestBody,
+      currentIdentity,
+      replyBranchStates,
+      rootReplies,
+      signCurrentIdentityPacket,
+    ]
+  );
+
+  /**
+   * Inputs: none.
+   * Output: writes a new top-level post and opens it in the thread workspace.
+   */
+  const handleCreatePost = useCallback(async () => {
+    if (!selectedForum || !currentIdentity) {
+      return;
+    }
+
+    setIsSubmittingPost(true);
+    setSubmitError(null);
+
+    try {
+      const threadPacket = buildDiscussionThreadPacket({
+        scopeId: activeScope.id,
+        forum: selectedForum,
+        actorPacket: currentIdentity.actorPacket,
+        title: draftTitle,
+        body: draftBody,
+      });
+      const postPacket = buildDiscussionRootPostPacket({
+        scopeId: activeScope.id,
+        forum: selectedForum,
+        actorPacket: currentIdentity.actorPacket,
+        threadPacket,
+        body: draftBody,
+        createdAt: threadPacket.header.created_at,
+      });
+      const signedThreadPacket = await signCurrentIdentityPacket(threadPacket);
+      const signedPostPacket = await signCurrentIdentityPacket(postPacket);
+      const requestBody = await createVerifiedRequestBody(
+        '/api/nexus/scopes/[scopeId]/discussions/posts',
+        'POST',
+        {
+          thread_packet: signedThreadPacket,
+          post_packet: signedPostPacket,
+        },
+        {
+          writeRisk: 'high_impact',
+        }
+      );
+      const result = await createNexusDiscussionPost({
+        scopeId: activeScope.id,
+        requestBody,
+      });
+
+      setDraftTitle('');
+      setDraftBody('');
+      await loadFeed();
+      router.replace(
+        getDiscussionHref({
+          forumId: selectedForum.id,
+          sort: selectedFeedSort,
+          view: 'thread',
+          postId: result.post.packet.packet_id,
+          replySort: selectedReplySort,
+          showHidden: requestedShowHidden,
+        })
+      );
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : 'Unable to save the discussion post.'
+      );
+    } finally {
+      setIsSubmittingPost(false);
+    }
+  }, [
+    activeScope.id,
+    createVerifiedRequestBody,
+    currentIdentity,
+    draftBody,
+    draftTitle,
+    loadFeed,
+    requestedShowHidden,
+    router,
+    selectedFeedSort,
+    selectedForum,
+    selectedReplySort,
+    signCurrentIdentityPacket,
+  ]);
+
+  /**
+   * Inputs: none.
+   * Output: writes a nested reply and refreshes the visible thread state.
+   */
+  const handleCreateReply = useCallback(async () => {
+    if (!requestedReplyTargetId || !threadPayload || !currentIdentity) {
+      return;
+    }
+
+    setIsSubmittingReply(true);
+    setReplyError(null);
+
+    try {
+      const parentPost =
+        requestedReplyTargetId === threadPayload.root_post.packet.packet_id
+          ? threadPayload.root_post
+          : findLoadedReplyById(
+              rootReplies,
+              replyBranchStates,
+              requestedReplyTargetId
+            );
+
+      if (!parentPost) {
+        throw new Error('Unable to resolve the reply target for this thread.');
+      }
+
+      const replyPacket = buildDiscussionReplyPacket({
+        scopeId: activeScope.id,
+        forum: threadPayload.forum,
+        actorPacket: currentIdentity.actorPacket,
+        parentPost,
+        rootPostPacketId: threadPayload.root_post.packet.packet_id,
+        body: replyBody,
+      });
+      const signedReplyPacket = await signCurrentIdentityPacket(replyPacket);
+      const requestBody = await createVerifiedRequestBody(
+        '/api/nexus/scopes/[scopeId]/discussions/replies',
+        'POST',
+        {
+          parent_post_packet_id: requestedReplyTargetId,
+          reply_packet: signedReplyPacket,
+        }
+      );
+      const result = await createNexusDiscussionReply({
+        scopeId: activeScope.id,
+        requestBody,
+      });
+
+      setReplyBody('');
+      setHighlightedPostId(result.post.packet.packet_id);
+      await loadFeed();
+      await loadThread();
+
+      if (
+        requestedReplyTargetId &&
+        threadPayload?.root_post.packet.packet_id &&
+        requestedReplyTargetId !== threadPayload.root_post.packet.packet_id
+      ) {
+        setReplyExpansionState((currentState) => ({
+          ...currentState,
+          [requestedReplyTargetId]: true,
+        }));
+        await loadReplyChildren({
+          parentPostPacketId: requestedReplyTargetId,
+        });
+      }
+
+      router.replace(
+        getDiscussionHref({
+          forumId: activeForumId,
+          sort: selectedFeedSort,
+          view: 'thread',
+          postId: requestedPostId,
+          replySort: selectedReplySort,
+          showHidden: requestedShowHidden,
+        })
+      );
+    } catch (error) {
+      setReplyError(
+        error instanceof Error ? error.message : 'Unable to save the reply.'
+      );
+    } finally {
+      setIsSubmittingReply(false);
+    }
+  }, [
+    activeForumId,
+    activeScope.id,
+    createVerifiedRequestBody,
+    currentIdentity,
+    loadFeed,
+    loadReplyChildren,
+    loadThread,
+    replyBranchStates,
+    replyBody,
+    rootReplies,
+    requestedPostId,
+    requestedReplyTargetId,
+    requestedShowHidden,
+    router,
+    selectedFeedSort,
+    selectedReplySort,
+    signCurrentIdentityPacket,
+    threadPayload,
+  ]);
+
+  const handleLoadMoreFeed = useCallback(() => {
+    if (!feedHasMore || isLoadingMoreFeed || !feedNextCursor) {
+      return;
+    }
+
+    void loadFeed({
+      cursor: feedNextCursor,
+      append: true,
+    });
+  }, [feedHasMore, feedNextCursor, isLoadingMoreFeed, loadFeed]);
+
+  const handleLoadMoreRootReplies = useCallback(() => {
+    if (
+      !threadPayload?.root_post.packet.packet_id ||
+      !rootRepliesHasMore ||
+      isLoadingMoreRootReplies ||
+      !rootRepliesNextCursor
+    ) {
+      return;
+    }
+
+    setIsLoadingMoreRootReplies(true);
+    void fetchNexusDiscussionReplyChildrenPayload({
+      scopeId: activeScope.id,
+      threadPostPacketId: threadPayload.root_post.packet.packet_id,
+      parentPostPacketId: threadPayload.root_post.packet.packet_id,
+      replySort: selectedReplySort,
+      showHidden: requestedShowHidden,
+      viewerActorPacketId: currentActorPacketId,
+      cursor: rootRepliesNextCursor,
+      limit: REPLY_PAGE_LIMIT,
+    })
+      .then((nextReplyPage) => {
+        setRootReplies((currentReplies) =>
+          mergePagedPosts(currentReplies, nextReplyPage.replies)
+        );
+        setRootRepliesNextCursor(nextReplyPage.next_cursor);
+        setRootRepliesHasMore(nextReplyPage.has_more);
+      })
+      .catch((error) => {
+        setReplyError(
+          error instanceof Error
+            ? error.message
+            : 'Unable to load more replies.'
+        );
+      })
+      .finally(() => {
+        setIsLoadingMoreRootReplies(false);
+      });
+  }, [
+    activeScope.id,
+    currentActorPacketId,
+    isLoadingMoreRootReplies,
+    requestedShowHidden,
+    rootRepliesHasMore,
+    rootRepliesNextCursor,
+    selectedReplySort,
+    threadPayload?.root_post.packet.packet_id,
+  ]);
+
+  const handleToggleReplyExpansion = useCallback((reply: NexusDiscussionReply) => {
+    setReplyExpansionState((currentState) => {
+      const currentValue =
+        currentState[reply.packet.packet_id] ?? !reply.is_collapsed_by_default;
+
+      return {
+        ...currentState,
+        [reply.packet.packet_id]: !currentValue,
+      };
+    });
+  }, []);
+
+  const handleEnsureReplyChildren = useCallback(
+    (reply: NexusDiscussionReply) => {
+      const currentBranchState = replyBranchStates[reply.packet.packet_id];
+      const currentHasMore =
+        currentBranchState?.hasMore ?? reply.child_page.has_more;
+      const currentReplies = currentBranchState?.replies ?? reply.replies;
+
+      if (
+        currentReplies.length > 0 ||
+        !currentHasMore ||
+        replyBranchLoadingStates[reply.packet.packet_id]
+      ) {
+        return;
+      }
+
+      void loadReplyChildren({
+        parentPostPacketId: reply.packet.packet_id,
+      });
+    },
+    [loadReplyChildren, replyBranchLoadingStates, replyBranchStates]
+  );
+
+  const handleLoadMoreReplyChildren = useCallback(
+    (reply: NexusDiscussionReply) => {
+      const currentBranchState = replyBranchStates[reply.packet.packet_id];
+      const nextCursor =
+        currentBranchState?.nextCursor ?? reply.child_page.next_cursor;
+      const hasMore = currentBranchState?.hasMore ?? reply.child_page.has_more;
+
+      if (!nextCursor || !hasMore) {
+        return;
+      }
+
+      void loadReplyChildren({
+        parentPostPacketId: reply.packet.packet_id,
+        cursor: nextCursor,
+        append: true,
+      });
+    },
+    [loadReplyChildren, replyBranchStates]
+  );
+
+  const handleFeedScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (shouldAutoLoadMore(event)) {
+        handleLoadMoreFeed();
+      }
+    },
+    [handleLoadMoreFeed]
+  );
+
+  const handleThreadScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (shouldAutoLoadMore(event)) {
+        handleLoadMoreRootReplies();
+      }
+    },
+    [handleLoadMoreRootReplies]
+  );
+
+  return (
+    <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+      <View className={appearance.pageContainerClass}>
+        <View className="mx-auto w-full max-w-[1500px] gap-5">
+          <NexusSectionHeader
+            eyebrow="Discussions"
+            title={`${activeScope.name} Discussions`}
+            trailing={
+              selectedViewer ? (
+                <View className="flex-row flex-wrap items-center gap-2">
+                  <NexusBadge
+                    label={currentLabel ?? selectedViewer.actor_key ?? 'guest'}
+                    tone="mint"
+                  />
+                </View>
+              ) : null
+            }
+          />
+
+          {feedError ? (
+            <NexusCard tone="rose">
+              <Text className={appearance.itemBodyClass}>{feedError}</Text>
+            </NexusCard>
+          ) : null}
+
+          {voteError ? (
+            <NexusCard tone="rose">
+              <Text className={appearance.itemBodyClass}>{voteError}</Text>
+            </NexusCard>
+          ) : null}
+
+          {claimedSessionNeedsUnlock ? (
+            <NexusCard tone="gold">
+              <View className="gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <Text className={appearance.itemBodyClass}>
+                  Your claimed session is active, but the local signing bundle is still locked. You can keep browsing normally, and writes will ask you to unlock before Nexus signs packets locally.
+                </Text>
+                <NexusActionButton
+                  label="Unlock bundle"
+                  onPress={() => router.push('/nexus/identity/sign-in')}
+                />
+              </View>
+            </NexusCard>
+          ) : null}
+
+          {forumTabs.length > 0 ? (
+            <View className="gap-0">
+              <ConnectedTabRail
+                tabs={forumTabs}
+                activeId={activeForumId}
+                onSelect={(forumId) => {
+                  router.replace(
+                    getDiscussionHref({
+                      forumId,
+                      sort: selectedFeedSort,
+                      view: 'feed',
+                      showHidden: requestedShowHidden,
+                    })
+                  );
+                }}
+              />
+
+              <NexusCard
+                className={`gap-5 rounded-t-none border-t-0 ${forumShellClass}`}
+              >
+                <View className="flex-row flex-wrap items-start justify-between gap-3">
+                  <Text className={appearance.surfaceTitleClass}>
+                    {selectedForum?.title ?? 'Discussion forum'}
+                  </Text>
+
+                  <View className="flex-row flex-wrap gap-2">
+                    {selectedForum?.public_posting ? (
+                      <NexusBadge label="Guest posting open" tone="mint" />
+                    ) : (
+                      <NexusBadge label="Membership required" tone="default" />
+                    )}
+                  </View>
+                </View>
+
+                <View className="gap-0">
+                  <ConnectedTabRail
+                    tabs={workspaceTabs}
+                    activeId={requestedWorkspaceView}
+                    compact
+                    onSelect={(workspaceId) => {
+                      const nextView = workspaceId as DiscussionWorkspaceView;
+                      router.replace(
+                        getDiscussionHref({
+                          forumId: activeForumId,
+                          sort: selectedFeedSort,
+                          view: nextView,
+                          postId:
+                            nextView === 'thread' ? requestedPostId : null,
+                          replySort:
+                            nextView === 'thread' ? selectedReplySort : null,
+                          showHidden: requestedShowHidden,
+                        })
+                      );
+                    }}
+                  />
+
+                  <View
+                    className={`-mt-px gap-4 rounded-[24px] rounded-tl-none border p-4 ${workspacePanelClass}`}
+                  >
+                    {isFeedWorkspace ? (
+                      <View className="gap-4">
+                        <View className="flex-row flex-wrap items-center justify-between gap-3">
+                          <SegmentedControl
+                            options={FEED_SORT_OPTIONS.map((sortOption) => ({
+                              id: sortOption,
+                              label: sortOption.replace(/_/g, ' '),
+                            }))}
+                            activeId={selectedFeedSort}
+                            onSelect={(sortOption) => {
+                              router.replace(
+                                getDiscussionHref({
+                                  forumId: activeForumId,
+                                  sort: sortOption,
+                                  view: 'feed',
+                                  showHidden: requestedShowHidden,
+                                })
+                              );
+                            }}
+                          />
+                          <View className="flex-row flex-wrap items-center gap-3">
+                            <NexusActionButton
+                              label="New post"
+                              onPress={() => {
+                                router.replace(
+                                  getDiscussionHref({
+                                    forumId: activeForumId,
+                                    sort: selectedFeedSort,
+                                    view: 'post',
+                                    showHidden: requestedShowHidden,
+                                  })
+                                );
+                              }}
+                            />
+                          </View>
+                        </View>
+
+                        <ScrollView
+                          nestedScrollEnabled
+                          showsVerticalScrollIndicator={false}
+                          keyboardShouldPersistTaps="handled"
+                          className={feedListClass}
+                          onScroll={handleFeedScroll}
+                          scrollEventThrottle={16}
+                        >
+                          <View className="gap-3 p-3">
+                            {isLoadingFeed && feedPosts.length === 0 ? (
+                              <Text className={appearance.itemBodyClass}>
+                                Loading discussion feed...
+                              </Text>
+                            ) : null}
+
+                            {!isLoadingFeed && feedPosts.length === 0 ? (
+                              <NexusCard tone="default">
+                                <Text className={appearance.itemBodyClass}>
+                                  No top-level threads are visible in this forum
+                                  yet. Use the post tab to start one.
+                                </Text>
+                              </NexusCard>
+                            ) : null}
+
+                            {feedPosts.map((post) => (
+                              <Pressable
+                                key={post.packet.packet_id}
+                                onPress={() =>
+                                  openThreadWorkspace(post.packet.packet_id)
+                                }
+                              >
+                                <NexusCard
+                                  className={`gap-3 ${
+                                    requestedPostId === post.packet.packet_id
+                                      ? 'border-nexus-sky/70'
+                                      : ''
+                                  }`}
+                                >
+                                  <View className="gap-1">
+                                    <Text className={metaRowClass}>
+                                      {post.author_label} -{' '}
+                                      {formatTimestamp(post.created_at)}
+                                    </Text>
+                                    <Text className={cardTitleClass}>
+                                      {post.title}
+                                    </Text>
+                                  </View>
+
+                                  <Text className={appearance.itemBodyClass}>
+                                    {post.excerpt ?? post.content_markdown ?? ''}
+                                  </Text>
+
+                                  <View className="flex-row flex-wrap items-center gap-2">
+                                    <DiscussionVotePill
+                                      score={post.vote_summary.net_score}
+                                      viewerValue={
+                                        post.vote_summary.viewer_value
+                                      }
+                                      canVote={canVote}
+                                      disabled={
+                                        pendingVotePacketId ===
+                                        post.packet.packet_id
+                                      }
+                                      onVote={(event, value) => {
+                                        event.stopPropagation?.();
+                                        void handleVote(post, value);
+                                      }}
+                                    />
+                                    <ReplyCountPill
+                                      replyLabel={formatReplyLabel(
+                                        post.descendant_count
+                                      )}
+                                    />
+                                  </View>
+                                </NexusCard>
+                              </Pressable>
+                            ))}
+
+                            {isLoadingMoreFeed ? (
+                              <Text className={appearance.itemMetaClass}>
+                                Loading more threads...
+                              </Text>
+                            ) : null}
+
+                            {feedHasMore ? (
+                              <NexusActionButton
+                                label="Load more threads"
+                                onPress={handleLoadMoreFeed}
+                              />
+                            ) : null}
+
+                            <NexusActionButton
+                              label="New post"
+                              onPress={() => {
+                                router.replace(
+                                  getDiscussionHref({
+                                    forumId: activeForumId,
+                                    sort: selectedFeedSort,
+                                    view: 'post',
+                                    showHidden: requestedShowHidden,
+                                  })
+                                );
+                              }}
+                            />
+                          </View>
+                        </ScrollView>
+                      </View>
+                    ) : null}
+
+                    {isThreadWorkspace ? (
+                      <View className="gap-4">
+                        <View className="flex-row flex-wrap items-center justify-between gap-3">
+                          <SegmentedControl
+                            options={REPLY_SORT_OPTIONS.map((sortOption) => ({
+                              id: sortOption,
+                              label: sortOption,
+                            }))}
+                            activeId={selectedReplySort}
+                            onSelect={(sortOption) => {
+                              router.replace(
+                                getDiscussionHref({
+                                  forumId: activeForumId,
+                                  sort: selectedFeedSort,
+                                  view: 'thread',
+                                  postId: requestedPostId,
+                                  replySort: sortOption,
+                                  showHidden: requestedShowHidden,
+                                })
+                              );
+                            }}
+                            disabled={!requestedPostId}
+                          />
+                          <View className="flex-row flex-wrap items-center gap-3">
+                            <View className="flex-row flex-wrap items-center gap-2">
+                              <NexusActionButton
+                                label="Back to feed"
+                                onPress={() => {
+                                  router.replace(
+                                    getDiscussionHref({
+                                      forumId: activeForumId,
+                                      sort: selectedFeedSort,
+                                      view: 'feed',
+                                      showHidden: requestedShowHidden,
+                                    })
+                                  );
+                                }}
+                              />
+                              <NexusActionButton
+                                label="New reply"
+                                onPress={() => {
+                                  if (!threadPayload) {
+                                    return;
+                                  }
+
+                                  openThreadWorkspace(
+                                    threadPayload.root_post.packet.packet_id,
+                                    threadPayload.root_post.packet.packet_id
+                                  );
+                                }}
+                                disabled={!threadPayload || !canReply}
+                              />
+                            </View>
+                          </View>
+                        </View>
+
+                        {!requestedPostId && isLoadingFeed ? (
+                          <Text className={appearance.itemBodyClass}>
+                            Loading the top thread...
+                          </Text>
+                        ) : null}
+
+                        {!requestedPostId && !isLoadingFeed && feedPosts.length === 0 ? (
+                          <NexusCard>
+                            <Text className={appearance.itemBodyClass}>
+                              No thread is selected yet because this forum does
+                              not have any visible top-level threads.
+                            </Text>
+                            <View className="mt-3 flex-row flex-wrap gap-2">
+                              <NexusActionButton
+                                label="Go to feed"
+                                onPress={() => {
+                                  router.replace(
+                                    getDiscussionHref({
+                                      forumId: activeForumId,
+                                      sort: selectedFeedSort,
+                                      view: 'feed',
+                                      showHidden: requestedShowHidden,
+                                    })
+                                  );
+                                }}
+                              />
+                              <NexusActionButton
+                                label="Open post tab"
+                                onPress={() => {
+                                  router.replace(
+                                    getDiscussionHref({
+                                      forumId: activeForumId,
+                                      sort: selectedFeedSort,
+                                      view: 'post',
+                                      showHidden: requestedShowHidden,
+                                    })
+                                  );
+                                }}
+                              />
+                            </View>
+                          </NexusCard>
+                        ) : null}
+
+                        {requestedPostId && isLoadingThread && !threadPayload ? (
+                          <Text className={appearance.itemBodyClass}>
+                            Loading thread...
+                          </Text>
+                        ) : null}
+
+                        {threadError ? (
+                          <NexusCard tone="rose">
+                            <Text className={appearance.itemBodyClass}>
+                              {threadError}
+                            </Text>
+                          </NexusCard>
+                        ) : null}
+
+                        {requestedPostId && threadPayload ? (
+                          <ScrollView
+                            nestedScrollEnabled
+                            showsVerticalScrollIndicator={false}
+                            keyboardShouldPersistTaps="handled"
+                            className={threadListClass}
+                            onScroll={handleThreadScroll}
+                            scrollEventThrottle={16}
+                          >
+                            <View className="gap-4 p-3">
+                              <NexusCard className="gap-4 border-nexus-sky/70 bg-nexus-strong">
+                                <View className="gap-2">
+                                  <View className="flex-row flex-wrap items-center gap-2">
+                                    <NexusBadge
+                                      label="Original post"
+                                      tone="sky"
+                                    />
+                                    {replyTargetLabel &&
+                                    requestedReplyTargetId &&
+                                    requestedReplyTargetId !==
+                                      threadPayload.root_post.packet.packet_id ? (
+                                      <NexusBadge
+                                        label={`replying to ${replyTargetLabel}`}
+                                        tone="default"
+                                      />
+                                    ) : null}
+                                    {highlightedPostId ===
+                                    threadPayload.root_post.packet.packet_id ? (
+                                      <NexusBadge
+                                        label="just posted"
+                                        tone="mint"
+                                      />
+                                    ) : null}
+                                  </View>
+
+                                  <Text className={metaRowClass}>
+                                    {threadPayload.root_post.author_label} -{' '}
+                                    {formatTimestamp(
+                                      threadPayload.root_post.created_at
+                                    )}
+                                  </Text>
+                                  <Text className={rootTitleClass}>
+                                    {threadPayload.root_post.title}
+                                  </Text>
+                                </View>
+
+                                <Text className={appearance.sectionBodyClass}>
+                                  {threadPayload.root_post.content_markdown ??
+                                    threadPayload.root_post.excerpt ??
+                                    ''}
+                                </Text>
+
+                                <View className="flex-row flex-wrap items-center gap-2">
+                                  <DiscussionVotePill
+                                    score={
+                                      threadPayload.root_post.vote_summary
+                                        .net_score
+                                    }
+                                    viewerValue={
+                                      threadPayload.root_post.vote_summary
+                                        .viewer_value
+                                    }
+                                    canVote={canVote}
+                                    disabled={
+                                      pendingVotePacketId ===
+                                      threadPayload.root_post.packet.packet_id
+                                    }
+                                    onVote={(event, value) => {
+                                      event.stopPropagation?.();
+                                      void handleVote(
+                                        threadPayload.root_post,
+                                        value
+                                      );
+                                    }}
+                                  />
+                                  <NexusActionButton
+                                    label={
+                                      requestedReplyTargetId ===
+                                      threadPayload.root_post.packet.packet_id
+                                        ? 'Reply target'
+                                        : 'Reply to OP'
+                                    }
+                                    onPress={() =>
+                                      openThreadWorkspace(
+                                        threadPayload.root_post.packet.packet_id,
+                                        threadPayload.root_post.packet.packet_id
+                                      )
+                                    }
+                                    disabled={!canReply}
+                                  />
+                                </View>
+
+                                {requestedReplyTargetId ===
+                                threadPayload.root_post.packet.packet_id ? (
+                                  <InlineReplyComposer
+                                    appearance={appearance}
+                                    targetLabel="Replying to OP"
+                                    viewerLabel={
+                                      currentLabel ?? 'guest'
+                                    }
+                                    value={replyBody}
+                                    error={replyError}
+                                    disabled={
+                                      !replyBody.trim() ||
+                                      isSubmittingReply ||
+                                      !canReply
+                                    }
+                                    isSubmitting={isSubmittingReply}
+                                    onChangeText={setReplyBody}
+                                    onCancel={() => {
+                                      router.replace(
+                                        getDiscussionHref({
+                                          forumId: activeForumId,
+                                          sort: selectedFeedSort,
+                                          view: 'thread',
+                                          postId: threadPayload.root_post.packet.packet_id,
+                                          replySort: selectedReplySort,
+                                          showHidden: requestedShowHidden,
+                                        })
+                                      );
+                                    }}
+                                    onSubmit={() => {
+                                      void handleCreateReply();
+                                    }}
+                                  />
+                                ) : null}
+                              </NexusCard>
+
+                              <View className="gap-2">
+                                <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
+                                  {`Replies (${threadPayload.root_post.descendant_count})`}
+                                </Text>
+                                {rootReplies.length > 0 ? (
+                                  <ReplyTree
+                                    replies={rootReplies}
+                                    appearance={appearance}
+                                    highlightedPostId={highlightedPostId}
+                                    replyTargetPacketId={requestedReplyTargetId}
+                                    canVote={canVote}
+                                    canReply={canReply}
+                                    viewerLabel={
+                                      currentLabel ?? 'guest'
+                                    }
+                                    replyBody={replyBody}
+                                    replyError={replyError}
+                                    isSubmittingReply={isSubmittingReply}
+                                    pendingVotePacketId={pendingVotePacketId}
+                                    branchStates={replyBranchStates}
+                                    branchLoadingStates={
+                                      replyBranchLoadingStates
+                                    }
+                                    replyExpansionState={replyExpansionState}
+                                    onToggleReplyExpansion={
+                                      handleToggleReplyExpansion
+                                    }
+                                    onEnsureReplyChildren={
+                                      handleEnsureReplyChildren
+                                    }
+                                    onLoadMoreReplyChildren={
+                                      handleLoadMoreReplyChildren
+                                    }
+                                    onReply={(postId) =>
+                                      openThreadWorkspace(
+                                        threadPayload.root_post.packet.packet_id,
+                                        postId
+                                      )
+                                    }
+                                    onVote={(post, value) => {
+                                      void handleVote(post, value);
+                                    }}
+                                    onChangeReplyBody={setReplyBody}
+                                    onSubmitReply={() => {
+                                      void handleCreateReply();
+                                    }}
+                                  />
+                                ) : (
+                                  <NexusCard>
+                                    <Text className={appearance.itemBodyClass}>
+                                      No replies are visible yet.
+                                    </Text>
+                                  </NexusCard>
+                                )}
+                              </View>
+
+                              {isLoadingMoreRootReplies ? (
+                                <Text className={appearance.itemMetaClass}>
+                                  Loading more replies...
+                                </Text>
+                              ) : null}
+
+                              <View className="flex-row flex-wrap items-center gap-2">
+                                <NexusActionButton
+                                  label="New reply"
+                                  onPress={() => {
+                                    openThreadWorkspace(
+                                      threadPayload.root_post.packet.packet_id,
+                                      threadPayload.root_post.packet.packet_id
+                                    );
+                                  }}
+                                  disabled={!canReply}
+                                />
+                                {rootRepliesHasMore ? (
+                                  <NexusActionButton
+                                    label="Load more replies"
+                                    onPress={handleLoadMoreRootReplies}
+                                  />
+                                ) : null}
+                              </View>
+                            </View>
+                          </ScrollView>
+                        ) : null}
+                      </View>
+                    ) : null}
+
+                    {isPostWorkspace ? (
+                      <View className="gap-4">
+                        <View className="flex-row flex-wrap items-center justify-between gap-3">
+                          <View className="flex-row flex-wrap items-center gap-2">
+                            <NexusBadge
+                              label={`posting as ${currentLabel}`}
+                              tone="sky"
+                            />
+                          </View>
+
+                          <NexusActionButton
+                            label="Back to feed"
+                            onPress={() => {
+                              router.replace(
+                                getDiscussionHref({
+                                  forumId: activeForumId,
+                                  sort: selectedFeedSort,
+                                  view: 'feed',
+                                  showHidden: requestedShowHidden,
+                                })
+                              );
+                            }}
+                          />
+                        </View>
+
+                        {topLevelPostingLocked ? (
+                          <NexusCard tone="gold">
+                            <Text className={appearance.itemBodyClass}>
+                              Top-level posting is not open to this actor in
+                              the current forum. Visitor lobbies accept any
+                              signed actor, while the other forums currently
+                              require an active assembly membership attestation.
+                            </Text>
+                          </NexusCard>
+                        ) : null}
+
+                        {submitError ? (
+                          <NexusCard tone="rose">
+                            <Text className={appearance.itemBodyClass}>
+                              {submitError}
+                            </Text>
+                          </NexusCard>
+                        ) : null}
+
+                        <NexusCard className="gap-4">
+                          <TextInput
+                            className={`rounded-[22px] border px-4 py-3 ${appearance.textInputClass}`}
+                            onChangeText={setDraftTitle}
+                            placeholder="Thread title"
+                            placeholderTextColor={
+                              appearance.textInputPlaceholderColor
+                            }
+                            value={draftTitle}
+                          />
+                          <TextInput
+                            className={`min-h-[180px] rounded-[24px] border px-4 py-4 ${appearance.textInputClass}`}
+                            multiline
+                            onChangeText={setDraftBody}
+                            placeholder="Write your top-level thread."
+                            placeholderTextColor={
+                              appearance.textInputPlaceholderColor
+                            }
+                            textAlignVertical="top"
+                            value={draftBody}
+                          />
+                          <NexusActionButton
+                            label={
+                              isSubmittingPost ? 'Posting...' : 'Post thread'
+                            }
+                            onPress={() => {
+                              void handleCreatePost();
+                            }}
+                            disabled={
+                              isSubmittingPost ||
+                              Boolean(topLevelPostingLocked) ||
+                              !draftTitle.trim() ||
+                              !draftBody.trim()
+                            }
+                            variant="primary"
+                          />
+                        </NexusCard>
+                      </View>
+                    ) : null}
+                  </View>
+                </View>
+              </NexusCard>
+            </View>
+          ) : (
+            <NexusCard>
+              <Text className={appearance.itemBodyClass}>
+                Loading discussion forums...
+              </Text>
+            </NexusCard>
+          )}
+        </View>
+      </View>
+    </ScrollView>
+  );
+}

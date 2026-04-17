@@ -1,0 +1,205 @@
+/**
+ * File: nexus-api-types.auth.ts
+ * Description: Identity, auth, passkey, security, and local-search payloads shared across Nexus routes and clients.
+ */
+
+import type { PacketEnvelopeByType } from '@core/schema/packet-schema';
+import type {
+  ActorAssertion,
+  EncryptedIdentityBundle,
+} from '@runtime/nexus/identity-crypto';
+import type {
+  NexusLocationDisclosureOption,
+  NexusLocationSearchResult,
+} from '@runtime/nexus/location-search';
+
+export type NexusSecurityMode =
+  | 'standard'
+  | 'guarded'
+  | 'every_write';
+
+export interface NexusAuthSessionPayload {
+  is_authenticated: boolean;
+  session_id: string | null;
+  actor_packet_id: string | null;
+  actor_packet: PacketEnvelopeByType['Element'] | null;
+  session_expires_at: string | null;
+  refresh_expires_at: string | null;
+  csrf_token: string | null;
+  auth_method: 'bundle' | 'passkey' | 'refresh' | null;
+  security_mode: NexusSecurityMode | null;
+  has_passkey: boolean;
+  requires_passkey_upgrade: boolean;
+  reauth_expires_at: string | null;
+}
+
+export interface NexusCreateIdentityPayload {
+  actor_packet: PacketEnvelopeByType['Element'];
+}
+
+export interface NexusClaimIdentityPayload {
+  actor_packet: PacketEnvelopeByType['Element'];
+}
+
+export interface NexusRestoreIdentityPayload {
+  actor_packet: PacketEnvelopeByType['Element'];
+}
+
+export interface NexusSignInChallengePayload {
+  challenge_id: string;
+  nonce: string;
+  expires_at: string;
+}
+
+export interface NexusSignInVerifyPayload {
+  session: NexusAuthSessionPayload;
+}
+
+export interface NexusPasskeyDescriptorPayload {
+  id: string;
+  type: 'public-key';
+}
+
+export interface NexusPasskeyRegistrationOptionsPayload {
+  challenge_id: string;
+  public_key: {
+    challenge: string;
+    rp: {
+      id: string;
+      name: string;
+    };
+    user: {
+      id: string;
+      name: string;
+      displayName: string;
+    };
+    pubKeyCredParams: Array<{
+      type: 'public-key';
+      alg: number;
+    }>;
+    timeout: number;
+    attestation: 'none';
+    authenticatorSelection: {
+      residentKey: 'preferred';
+      userVerification: 'required';
+    };
+    excludeCredentials: NexusPasskeyDescriptorPayload[];
+  };
+}
+
+export interface NexusPasskeyRequestOptionsPayload {
+  challenge_id: string;
+  public_key: {
+    challenge: string;
+    timeout: number;
+    rpId: string;
+    userVerification: 'required';
+    allowCredentials: NexusPasskeyDescriptorPayload[];
+  };
+}
+
+export interface NexusPasskeyRegistrationCredentialPayload {
+  challenge_id: string;
+  credential: {
+    credential_id: string;
+    raw_id: string;
+    client_data_json: string;
+    authenticator_data: string;
+    public_key_spki: string;
+    algorithm: number;
+    transports: string[];
+  };
+}
+
+export interface NexusPasskeyAssertionCredentialPayload {
+  challenge_id: string;
+  credential: {
+    credential_id: string;
+    raw_id: string;
+    client_data_json: string;
+    authenticator_data: string;
+    signature: string;
+    user_handle: string | null;
+  };
+}
+
+export interface NexusPasskeySummaryPayload {
+  credential_id: string;
+  created_at: string;
+  last_used_at: string | null;
+  transports: string[];
+  revoked_at: string | null;
+}
+
+export interface NexusPasskeyListPayload {
+  passkeys: NexusPasskeySummaryPayload[];
+}
+
+export interface NexusPasskeyVerifyPayload {
+  session: NexusAuthSessionPayload;
+  passkey: NexusPasskeySummaryPayload;
+}
+
+export interface NexusSessionSummaryPayload {
+  session_id: string;
+  actor_packet_id: string;
+  device_label: string;
+  auth_method: 'bundle' | 'passkey' | 'refresh';
+  created_at: string;
+  expires_at: string;
+  last_seen_at: string;
+  persistent_login: boolean;
+  revoked_at: string | null;
+  is_current: boolean;
+}
+
+export interface NexusSessionListPayload {
+  sessions: NexusSessionSummaryPayload[];
+}
+
+export interface NexusSecurityPreferencesPayload {
+  security_mode: NexusSecurityMode;
+}
+
+export interface NexusLocationSearchPayload {
+  query: string;
+  results: NexusLocationSearchResult[];
+}
+
+export interface NexusIdentitySearchResultPayload {
+  actor_packet_id: string;
+  display_alias: string;
+  claim_status: 'ephemeral_guest' | 'persistent_guest' | 'claimed';
+  saved_on_device: boolean;
+  match_source: 'alias' | 'packet_id' | 'public_key';
+}
+
+export interface NexusIdentitySearchPayload {
+  query: string;
+  results: NexusIdentitySearchResultPayload[];
+}
+
+export type NexusLocationDisclosureOptionPayload = NexusLocationDisclosureOption;
+
+export interface NexusReauthVerifyPayload {
+  reauth_token: string;
+  expires_at: string;
+}
+
+export interface NexusLocalIdentityPreview {
+  actor_packet_id: string;
+  alias: string;
+  claim_status: 'ephemeral_guest' | 'persistent_guest' | 'claimed';
+  stored_kind: 'persistent_guest' | 'claimed';
+  updated_at: string;
+}
+
+export interface NexusIdentityMutationEnvelope {
+  actor_packet: PacketEnvelopeByType['Element'];
+  actor_assertion: ActorAssertion;
+}
+
+export interface NexusIdentityExportPayload {
+  actor_packet: PacketEnvelopeByType['Element'];
+  encrypted_bundle: EncryptedIdentityBundle;
+}

@@ -26,6 +26,25 @@ Implemented scope today:
 - packet-backed shell and scope query APIs feeding dashboard, discussions, votes, and library surfaces
 - NativeWind-based styling for the nexus layer
 
+Current split rule in active implementation:
+
+- `core/*` holds portable packet logic, schemas, builders, contracts, and pure projections
+- `runtime/*` holds persistence, runtime services, and API glue
+- `app/*` holds application-layer components, hooks, constants, public content, and shared UI/state
+- `src/app/*` holds the Expo Router route shell and API entrypoints
+
+This refactor pass preserves current route paths, current payload shapes, and current public naming.
+
+Current extracted split seams now in code:
+
+- portable identity packet builders in `core/packets/identity.ts`
+- portable discussion packet builders in `core/packets/discussion.ts`
+- browser identity persistence helpers in `runtime/nexus/identity-storage.ts`
+- split auth runtime helpers under `runtime/nexus/server/auth-service.*`
+- split packet-service bootstrap/registry helpers under `runtime/nexus/server/nexus-packet-service-*`
+- split discussion scope/pagination helpers under `runtime/nexus/server/discussion-service.*`
+- surface-specific API type and query helper barrels under `runtime/nexus/nexus-api-types.*` and `runtime/nexus/nexus-query-api.*`
+
 Not implemented today:
 
 - persistent form submission or saved nexus actions
@@ -37,7 +56,7 @@ Not implemented today:
 
 ## Current routes and screens
 
-The route tree is file-based and defined by the `app` directory.
+The route tree is file-based and defined by `src/app`, while top-level `app/*` now holds the broader application-layer source files used by those routes.
 
 ### `/`
 

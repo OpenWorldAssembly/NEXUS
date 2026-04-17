@@ -43,15 +43,14 @@ UI layers are adapters.
 
 The key design stance: **data is the system; platforms are adapters.** The app is not “the platform,” it is one adapter onto a portable dataset.
 
-Architecturally, a single repository can still host multiple packages:
+Architecturally, the repository now uses three real source roots plus one framework entry root:
 
-- `core` (engine)
-- `schema` (packet types + validators)
-- `storage` (SQLite, file/bundle I/O, indexing)
-- `sync` (bundle exchange, merge, replication protocols)
-- `ui` (Expo app)
-- `adapters` (if we keep optional Discord/CLI later)
-- `docs` (this guide + canon + RFCs)
+- `core/*` = portable engine, schemas, packets, projections, and contracts
+- `runtime/*` = storage, runtime orchestration, Node services, and API-facing glue
+- `app/*` = application-layer UI, content, hooks, constants, and shared screens/components
+- `src/app/*` = Expo Router entry shell for routes and API entrypoints
+
+This split is behavior-preserving. It keeps public routes, workspace labels, and payload shapes stable while making the ownership boundary explicit. Deferred naming and product work such as `Account -> Trust`, `Mission -> Action`, `Library`/`Packet Explorer`, and `You` scope still remain separate from the structural split.
 
 ## Route tree and navigation model
 
@@ -516,6 +515,22 @@ Every major decision gets a short entry:
 - Decision: every nexus actor that can write to the graph is now a cryptographic person element. The implemented lifecycle is `ephemeral_guest` (memory/session only), `persistent_guest` (device-local opt-in), and `claimed` (backed by an encrypted local identity bundle plus optional web sign-in).
 - Why: one actor model keeps provenance, signing, verification, packet authorship, and future trust work consistent from day one. It also avoids a later migration from fake guest actors to real packet identities.
 - Consequences / follow-ups: discussion and packet-vote writes now resolve `provenance.created_by` from a verified actor packet, legacy `anonymous-session:*` refs remain readable for older discussion content, and trust weighting or assembly authority rules remain intentionally deferred.
+
+### 2026-04-17 - Migration-ready split keeps existing roots but tightens ownership boundaries
+
+- Context: the repo already had real `domain/*` and `storage/*` seams, but large auth, identity, and discussion files were still concentrating runtime, orchestration, and reusable logic together.
+- Options considered: rename the repo into new `core/runtime/interface` roots immediately, keep shipping features without tightening ownership, or preserve the current roots while extracting responsibility by subsystem first.
+- Decision: keep the existing top-level folders for now, but treat `domain/*` as portable logic, `storage/*` as persistence/query adapters, `lib/nexus/server/*` as runtime/API orchestration, `lib/nexus/*` as client/runtime helpers, and `app/*` plus `components/*` as UI orchestration only.
+- Why: this gives the repo a migration-ready split without paying the extra churn cost of immediate package/root renames, and it lets later moves into explicit `core/runtime/interface` namespaces stay mechanical.
+- Consequences / follow-ups: visible naming stays stable during this refactor, the first landed seams now include `domain/packets/identity.ts`, `domain/packets/discussion.ts`, `lib/nexus/identity-storage.ts`, `lib/nexus/server/auth-service.*`, `lib/nexus/server/nexus-packet-service-*`, `lib/nexus/server/discussion-service.scope.ts`, `lib/nexus/server/discussion-service.pagination.ts`, and split `lib/nexus/nexus-api-types.*` / `lib/nexus/nexus-query-api.*` barrels, and tests should attach to those extracted subsystem helpers so later boundary moves stay safer.
+
+### 2026-04-17 - Final source roots are `core`, `runtime`, and `app`
+
+- Context: after the subsystem extractions landed, the remaining ambiguity was no longer responsibility ownership inside the code; it was the top-level folder model itself.
+- Options considered: stop at the transitional roots, rename everything directly into `core/runtime/app` while risking Expo Router conflicts, or use `src/app` as the framework route shell so top-level `app/*` could become the full application layer safely.
+- Decision: rename `domain/*` to `core/*`, move `storage/*` and `lib/nexus/*` under `runtime/*`, move application-layer UI/content/support code under top-level `app/*`, and relocate the Expo Router tree to `src/app/*`.
+- Why: this gives the repo real architectural roots without turning shared UI files into accidental routes, and it keeps the route surface thin while still letting `app/*` represent the whole application layer.
+- Consequences / follow-ups: old `domain`, `storage`, and `lib/nexus` roots are gone, imports now resolve through `@core/*`, `@runtime/*`, and `@app/*`, and future file-size cleanup can happen incrementally inside the new roots instead of being blocked on another structural rename.
 
 ### 2026-04-10 - Claimed auth uses local keys plus server challenge sessions
 
