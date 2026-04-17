@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import type {
   PublicSecondaryNavAnimatedState,
@@ -46,18 +46,26 @@ export function PublicSecondaryNavTopbar({
   const resolvedActiveId = activeId ?? activeItemId ?? null;
   const resolvedOnPress = onItemPress ?? onSectionPress ?? (() => undefined);
   const resolvedAnimatedState = getItemAnimatedState ?? getItemAnimatedStyle;
+  const { width } = useWindowDimensions();
+  const isCompactTopbar = width < 680;
 
-  const itemStyles = useMemo(() => buildTopbarItemStyles(), []);
-  const textStyles = useMemo(() => buildTopbarTextStyles(), []);
+  const itemStyles = useMemo(() => buildTopbarItemStyles(isCompactTopbar), [isCompactTopbar]);
+  const textStyles = useMemo(() => buildTopbarTextStyles(isCompactTopbar), [isCompactTopbar]);
 
   return (
-    <View style={[styles.container, topbarShellHeight ? { minHeight: topbarShellHeight } : null]}>
-      <View style={styles.titleWrap}>
+    <View
+      style={[
+        styles.container,
+        isCompactTopbar ? styles.containerCompact : null,
+        topbarShellHeight ? { minHeight: topbarShellHeight } : null,
+      ]}
+    >
+      <View style={[styles.titleWrap, isCompactTopbar ? styles.titleWrapCompact : null]}>
         <Text style={styles.title}>{title ?? 'Sections'}</Text>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
 
-      <View style={styles.navList}>
+      <View style={[styles.navList, isCompactTopbar ? styles.navListCompact : null]}>
         {resolvedItems.map((item) => {
           const isActive = item.id === resolvedActiveId;
           const animatedState = resolvedAnimatedState?.(item.id);
@@ -96,14 +104,14 @@ export function PublicSecondaryNavTopbar({
   );
 }
 
-function buildTopbarItemStyles() {
+function buildTopbarItemStyles(isCompactTopbar: boolean) {
   return StyleSheet.create({
     shell: {
       width: TOPBAR_PILL_WIDTH,
-      height: TOPBAR_PILL_HEIGHT,
+      height: isCompactTopbar ? 32 : TOPBAR_PILL_HEIGHT,
       flexShrink: 0,
-      marginHorizontal: TOPBAR_PILL_GAP / 2,
-      marginVertical: TOPBAR_PILL_ROW_GAP / 2,
+      marginHorizontal: (isCompactTopbar ? 6 : TOPBAR_PILL_GAP) / 2,
+      marginVertical: (isCompactTopbar ? 4 : TOPBAR_PILL_ROW_GAP) / 2,
       zIndex: TOPBAR_HIGHLIGHT_Z_INDEX,
     },
     plate: {
@@ -117,14 +125,14 @@ function buildTopbarItemStyles() {
   });
 }
 
-function buildTopbarTextStyles() {
+function buildTopbarTextStyles(isCompactTopbar: boolean) {
   return StyleSheet.create({
     title: {
       color: '#f4f7fb',
       fontSize: TOPBAR_TITLE_FONT_SIZE,
       fontWeight: '800',
       letterSpacing: 0.45,
-      lineHeight: 12,
+      lineHeight: isCompactTopbar ? 10 : 12,
       textAlign: 'center',
       textTransform: 'uppercase',
     },
@@ -133,7 +141,7 @@ function buildTopbarTextStyles() {
       fontSize: TOPBAR_SUBTITLE_FONT_SIZE,
       fontWeight: '700',
       letterSpacing: 0.5,
-      lineHeight: 7,
+      lineHeight: isCompactTopbar ? 5 : 7,
       textAlign: 'center',
       textTransform: 'uppercase',
     },
@@ -155,11 +163,19 @@ const styles = StyleSheet.create({
     zIndex: 40,
     backgroundColor: 'rgba(2, 13, 38, 0.96)',
   },
+  containerCompact: {
+    paddingTop: 6,
+    paddingBottom: 2,
+  },
   titleWrap: {
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
     minHeight: 36,
+  },
+  titleWrapCompact: {
+    marginBottom: 4,
+    minHeight: 24,
   },
   title: {
     color: '#8ec5ff',
@@ -188,6 +204,10 @@ const styles = StyleSheet.create({
     marginHorizontal: -(TOPBAR_PILL_GAP / 2),
     marginVertical: -(TOPBAR_PILL_ROW_GAP / 2),
   },
+  navListCompact: {
+    marginHorizontal: -3,
+    marginVertical: -2,
+  },
   pressable: {
     width: '100%',
     height: '100%',
@@ -200,12 +220,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 8,
-    paddingTop: 6,
-    paddingBottom: 5,
+    paddingTop: 4,
+    paddingBottom: 2,
   },
   subtitleSlot: {
-    minHeight: 8,
-    marginTop: 3,
+    minHeight: 5,
+    marginTop: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },

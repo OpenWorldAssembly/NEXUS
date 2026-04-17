@@ -6,7 +6,7 @@ import AboutHighlightTile from '@/components/layout/about/about-highlight-tile';
 import { getSectionProgress, type SectionLayout } from '@/components/layout/about/about-section-motion';
 import type { AboutHighlight, AboutSection } from '@/data/public/content-types';
 import { Image } from 'expo-image';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 type PublicAboutSectionProps = {
   isActive: boolean;
@@ -39,6 +39,9 @@ export default function PublicAboutSection({
   viewportHeight,
   sectionIndex,
 }: PublicAboutSectionProps) {
+  const { width } = useWindowDimensions();
+  const isContentDrivenMobile = width <= 720;
+
   const rawProgress = getSectionProgress(
     scrollY,
     sectionLayout,
@@ -54,13 +57,15 @@ export default function PublicAboutSection({
           extrapolate: 'clamp',
         });
   const cardHeight =
-    typeof progress === 'number'
-      ? collapsedHeight
-      : progress.interpolate({
-          inputRange: [0, 1],
-          outputRange: [collapsedHeight, expandedHeight],
-          extrapolate: 'clamp',
-        });
+    isContentDrivenMobile
+      ? undefined
+      : typeof progress === 'number'
+        ? collapsedHeight
+        : progress.interpolate({
+            inputRange: [0, 1],
+            outputRange: [collapsedHeight, expandedHeight],
+            extrapolate: 'clamp',
+          });
   const backgroundTranslateY =
     typeof progress === 'number'
       ? 0
@@ -110,20 +115,28 @@ export default function PublicAboutSection({
           extrapolate: 'clamp',
         });
   const detailMaxHeight =
-    typeof progress === 'number'
-      ? 0
-      : progress.interpolate({
-          inputRange: [0.08, 0.34, 0.7, 1],
-          outputRange: [0, expandedHeight * 0.1, expandedHeight * 0.34, expandedHeight * 0.5],
-          extrapolate: 'clamp',
-        });
+    isContentDrivenMobile
+      ? undefined
+      : typeof progress === 'number'
+        ? 0
+        : progress.interpolate({
+            inputRange: [0.08, 0.34, 0.7, 1],
+            outputRange: [0, expandedHeight * 0.1, expandedHeight * 0.34, expandedHeight * 0.5],
+            extrapolate: 'clamp',
+          });
 
   return (
-    <View style={[styles.chapter, { height: chapterHeight }]}>
+    <View
+      style={[
+        styles.chapter,
+        isContentDrivenMobile ? styles.chapterMobile : { height: chapterHeight },
+      ]}
+    >
       <Animated.View
         style={[
           styles.shell,
           {
+            minHeight: isContentDrivenMobile ? undefined : collapsedHeight,
             height: cardHeight,
             transform: [{ scale: cardScale }],
           },
@@ -149,7 +162,7 @@ export default function PublicAboutSection({
             <Text className="text-xs font-bold uppercase tracking-[0.28em] text-public-accentSoft">
               {section.eyebrow}
             </Text>
-            <Text className="max-w-5xl text-center text-[1.8rem] font-bold leading-tight text-public-text md:text-[2.3rem]">
+            <Text className="max-w-5xl text-center text-[1.8rem] font-bold leading-tight text-[#8ec5ff] md:text-[2.3rem]">
               {section.headline}
             </Text>
           </View>
@@ -190,6 +203,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     marginBottom: 10,
   },
+  chapterMobile: {
+    justifyContent: 'flex-start',
+    paddingVertical: 0,
+  },
   detailsArea: {
     marginTop: 59,
     overflow: 'hidden',
@@ -215,4 +232,7 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     overflow: 'hidden',
   },
+  headline: {
+  color: '#58A6FF',
+}
 });

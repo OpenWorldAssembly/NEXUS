@@ -30,7 +30,6 @@ export default function AboutPage() {
     scrollY,
     sectionLayouts,
     secondaryNavLayoutMode,
-    topbarContentPaddingTop,
     topbarShellHeight,
     viewportHeight,
     getRailAnimatedState,
@@ -49,6 +48,22 @@ export default function AboutPage() {
 
   return (
     <View style={{ flex: 1 }} onLayout={handleViewportLayout}>
+      {secondaryNavLayoutMode === 'topbar' ? (
+        <View style={{ height: topbarShellHeight, position: 'relative' }}>
+          <AboutSectionRail
+            activeSectionId={activeSectionId}
+            content={aboutPageContent}
+            getItemAnimatedState={sectionNavAnimatedState}
+            layoutMode={secondaryNavLayoutMode}
+            onSectionPress={handleSectionPress}
+            railRightOffset={railRightOffset}
+            railShellHeight={railShellHeight}
+            shouldShowItemSubtitle={shouldShowSectionNavSubtitle}
+            topbarShellHeight={topbarShellHeight}
+          />
+        </View>
+      ) : null}
+
       <Animated.ScrollView
         ref={scrollViewRef}
         contentContainerStyle={{ paddingBottom: bottomRunway }}
@@ -61,7 +76,6 @@ export default function AboutPage() {
           className="mx-auto w-full max-w-6xl px-5 py-8"
           style={[
             secondaryNavLayoutMode === 'rail' ? { paddingRight: railAwareContentPaddingRight } : null,
-            secondaryNavLayoutMode === 'topbar' ? { paddingTop: topbarContentPaddingTop } : null,
           ]}
         >
           <View className="gap-0 md:gap-0">
@@ -86,17 +100,19 @@ export default function AboutPage() {
         </View>
       </Animated.ScrollView>
 
-      <AboutSectionRail
-        activeSectionId={activeSectionId}
-        content={aboutPageContent}
-        getItemAnimatedState={sectionNavAnimatedState}
-        layoutMode={secondaryNavLayoutMode}
-        onSectionPress={handleSectionPress}
-        railRightOffset={railRightOffset}
-        railShellHeight={railShellHeight}
-        shouldShowItemSubtitle={shouldShowSectionNavSubtitle}
-        topbarShellHeight={topbarShellHeight}
-      />
+      {secondaryNavLayoutMode === 'rail' ? (
+        <AboutSectionRail
+          activeSectionId={activeSectionId}
+          content={aboutPageContent}
+          getItemAnimatedState={sectionNavAnimatedState}
+          layoutMode={secondaryNavLayoutMode}
+          onSectionPress={handleSectionPress}
+          railRightOffset={railRightOffset}
+          railShellHeight={railShellHeight}
+          shouldShowItemSubtitle={shouldShowSectionNavSubtitle}
+          topbarShellHeight={topbarShellHeight}
+        />
+      ) : null}
     </View>
   );
 }

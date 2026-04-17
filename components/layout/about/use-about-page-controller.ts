@@ -171,19 +171,24 @@ export function useAboutPageController({ sections }: UseAboutPageControllerArgs)
   const showSectionRail = secondaryNavLayoutMode === 'rail';
   const railAwareContentPaddingRight = showSectionRail ? SECTION_RAIL_WIDTH * 0.8 : 0;
   const railShellHeight = Math.min(Math.max(viewportHeight * 0.68, 600), 1200);
+  const isCompactTopbar = windowWidth < 680;
+  const topbarBaseHeight = isCompactTopbar ? 54 : SECTION_TOPBAR_BASE_HEIGHT;
+  const topbarPillHeight = isCompactTopbar ? 32 : SECTION_TOPBAR_PILL_HEIGHT;
+  const topbarPillGap = isCompactTopbar ? 6 : SECTION_TOPBAR_PILL_GAP;
+  const topbarPillRowGap = isCompactTopbar ? 4 : SECTION_TOPBAR_PILL_ROW_GAP;
   const topbarAvailableWidth = Math.max(windowWidth - 24, SECTION_TOPBAR_PILL_WIDTH);
   const topbarItemsPerRow = Math.max(
     1,
     Math.floor(
-      (topbarAvailableWidth + SECTION_TOPBAR_PILL_GAP) /
-        (SECTION_TOPBAR_PILL_WIDTH + SECTION_TOPBAR_PILL_GAP),
+      (topbarAvailableWidth + topbarPillGap) /
+        (SECTION_TOPBAR_PILL_WIDTH + topbarPillGap),
     ),
   );
   const topbarRowCount = Math.max(1, Math.ceil(sections.length / topbarItemsPerRow));
   const topbarShellHeight =
-    SECTION_TOPBAR_BASE_HEIGHT +
-    topbarRowCount * SECTION_TOPBAR_PILL_HEIGHT +
-    Math.max(0, topbarRowCount - 1) * SECTION_TOPBAR_PILL_ROW_GAP;
+    topbarBaseHeight +
+    topbarRowCount * topbarPillHeight +
+    Math.max(0, topbarRowCount - 1) * topbarPillRowGap;
   const topbarContentPaddingTop = secondaryNavLayoutMode === 'topbar'
     ? topbarShellHeight + SECTION_TOPBAR_CONTENT_OFFSET
     : 0;
