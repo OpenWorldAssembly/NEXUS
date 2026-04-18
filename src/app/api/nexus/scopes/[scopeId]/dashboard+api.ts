@@ -27,8 +27,17 @@ function createJsonResponse(body: unknown, status = 200): Response {
 export const GET: RequestHandler = async (_request, params) => {
   try {
     const shellPayload = await getNexusShellPayload();
-    const scopeId = resolveScopeIdFromShell(shellPayload, params.scopeId);
-    const dashboardPayload = await getNexusDashboardPayload(scopeId);
+    const requestUrl = new URL(_request.url);
+    const actorPacketId = requestUrl.searchParams.get('actor_packet_id');
+    const scopeId = resolveScopeIdFromShell(
+      shellPayload,
+      params.scopeId,
+      actorPacketId
+    );
+    const dashboardPayload = await getNexusDashboardPayload(
+      scopeId,
+      actorPacketId
+    );
 
     return createJsonResponse(dashboardPayload);
   } catch (error) {
@@ -40,4 +49,3 @@ export const GET: RequestHandler = async (_request, params) => {
     return createJsonResponse({ error: message }, 500);
   }
 };
-

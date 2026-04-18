@@ -18,6 +18,7 @@ import {
   type PacketFamily,
   type PacketHeader,
   type PacketMergeStrategy,
+  type TrustStage,
   type PacketRef,
   type PacketRevisionRef,
   type AttestationValue,
@@ -31,6 +32,8 @@ type PacketExternalRef = PacketHeader['external_refs'][number];
 export interface PacketBuilderBaseInput {
   packet_id: string;
   revision_id?: string;
+  schema_version?: string;
+  protocol_version?: string;
   created_at?: string;
   parent_revision_refs?: PacketRevisionRef[];
   merge_strategy?: PacketMergeStrategy | null;
@@ -83,6 +86,15 @@ export interface ElementPacketInput extends PacketBuilderBaseInput {
     }>;
   } | null;
   tags?: string[];
+  claimed_role_refs?: PacketRef[];
+}
+
+export interface RolePacketInput extends PacketBuilderBaseInput {
+  title: string;
+  summary?: string | null;
+  role_kind: string;
+  status: string;
+  responsibility_markdown?: string | null;
 }
 
 export interface DiscussionThreadPacketInput extends PacketBuilderBaseInput {
@@ -155,6 +167,13 @@ export interface PolicyPacketInput extends PacketBuilderBaseInput {
   policy_kind: string;
   body_markdown: string;
   status: string;
+  trust_policy?: {
+    association_support_threshold?: number;
+    role_support_threshold?: number;
+    posting_gate?: TrustStage;
+    voting_gate?: TrustStage;
+    review_gate?: TrustStage;
+  } | null;
 }
 
 export interface VotePacketInput extends PacketBuilderBaseInput {
@@ -282,6 +301,8 @@ export function createPacket<TFamily extends PacketFamily>(
       revision_id:
         input.revision_id ?? createInitialRevisionId(input.packet_id),
       family: input.family,
+      schema_version: input.schema_version,
+      protocol_version: input.protocol_version,
       created_at: createdAt,
       parent_revision_refs: input.parent_revision_refs ?? [],
       merge_strategy: input.merge_strategy ?? null,
@@ -343,6 +364,28 @@ export function createElementPacket(
           }
         : null,
       tags: input.tags ?? [],
+      claimed_role_refs: input.claimed_role_refs ?? [],
+    },
+  });
+}
+
+/**
+ * Inputs: common packet header fields plus the role body data.
+ * Output: a validated role packet.
+ */
+export function createRolePacket(
+  input: RolePacketInput
+): PacketEnvelopeByType['Role'] {
+  return createPacket({
+    ...input,
+    family: 'Role',
+    metadata_summary: input.metadata_summary ?? input.summary ?? null,
+    body: {
+      title: input.title,
+      summary: input.summary ?? null,
+      role_kind: input.role_kind,
+      status: input.status,
+      responsibility_markdown: input.responsibility_markdown ?? null,
     },
   });
 }
@@ -609,6 +652,17 @@ export function createPolicyPacket(
       policy_kind: input.policy_kind,
       body_markdown: input.body_markdown,
       status: input.status,
+      trust_policy: input.trust_policy
+        ? {
+            association_support_threshold:
+              input.trust_policy.association_support_threshold ?? 1,
+            role_support_threshold:
+              input.trust_policy.role_support_threshold ?? 2,
+            posting_gate: input.trust_policy.posting_gate ?? 'emerging',
+            voting_gate: input.trust_policy.voting_gate ?? 'recognized',
+            review_gate: input.trust_policy.review_gate ?? 'role_eligible',
+          }
+        : null,
     },
   });
 }

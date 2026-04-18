@@ -87,8 +87,14 @@ function createEmptySummary(viewerValue: AttestationValue | 0): AttestationSumma
 }
 
 function toAttestationEdgeProjection(
-  attestationPacket: PacketEnvelopeByType['Attestation']
+  attestationPacket: PacketEnvelopeByType['Attestation'],
+  packetMap: Map<string, PacketEnvelope>
 ): AttestationEdgeProjection {
+  const sourceActorPacketId =
+    attestationPacket.header.provenance.created_by?.packet_id ?? null;
+  const sourceActorPacket =
+    sourceActorPacketId !== null ? packetMap.get(sourceActorPacketId) : null;
+
   return {
     packet: {
       packet_id: attestationPacket.header.packet_id,
@@ -98,8 +104,13 @@ function toAttestationEdgeProjection(
       revision_id: attestationPacket.header.revision_id,
     },
     source_actor_key: getActorKeyFromPacket(attestationPacket) ?? '',
-    source_actor_packet_id:
-      attestationPacket.header.provenance.created_by?.packet_id ?? null,
+    source_actor_packet_id: sourceActorPacketId,
+    source_actor_label:
+      sourceActorPacket?.header.family === 'Element'
+        ? (sourceActorPacket as PacketEnvelopeByType['Element']).body.name
+        : null,
+    authority_scope_packet_id:
+      attestationPacket.header.authority_scope_ref?.packet_id ?? null,
     target_ref: attestationPacket.body.target_ref,
     attestation_kind: attestationPacket.body.attestation_kind,
     value: attestationPacket.body.value,
@@ -617,7 +628,9 @@ export class SQLiteAttestationService implements AttestationService {
       .sort((leftPacket, rightPacket) =>
         rightPacket.header.created_at.localeCompare(leftPacket.header.created_at)
       )
-      .map(toAttestationEdgeProjection);
+      .map((attestationPacket) =>
+        toAttestationEdgeProjection(attestationPacket, this.state?.packetMap ?? new Map())
+      );
   }
 
   async listActorAttestations(input: {
@@ -646,7 +659,9 @@ export class SQLiteAttestationService implements AttestationService {
       .sort((leftPacket, rightPacket) =>
         rightPacket.header.created_at.localeCompare(leftPacket.header.created_at)
       )
-      .map(toAttestationEdgeProjection);
+      .map((attestationPacket) =>
+        toAttestationEdgeProjection(attestationPacket, this.state?.packetMap ?? new Map())
+      );
   }
 
   async listAssemblyAssociationClaimsForActor(

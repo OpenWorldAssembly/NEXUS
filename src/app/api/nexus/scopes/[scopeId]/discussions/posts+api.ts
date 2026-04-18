@@ -88,7 +88,10 @@ export const POST: RequestHandler = async (request, params) => {
       parsedPostPacket as PacketEnvelopeByType['DiscussionPost'];
 
     const result = await services.discussionService.createPost({
-      scope_id: params.scopeId,
+      scope_id:
+        params.scopeId === 'you'
+          ? actorContext.actorPacket.header.packet_id
+          : params.scopeId,
       actor_key: actorContext.actorKey,
       actor_class: actorContext.actorClass,
       actor_packet: actorContext.actorPacket,

@@ -20,9 +20,11 @@ function createJsonResponse(body: unknown, status = 200): Response {
  * Inputs: none.
  * Output: shell payload derived from packet-backed scope and projection data.
  */
-export const GET: RequestHandler = async () => {
+export const GET: RequestHandler = async (request) => {
   try {
-    const shellPayload = await getNexusShellPayload();
+    const requestUrl = new URL(request.url);
+    const actorPacketId = requestUrl.searchParams.get('actor_packet_id');
+    const shellPayload = await getNexusShellPayload(actorPacketId);
 
     return createJsonResponse(shellPayload);
   } catch (error) {
@@ -34,4 +36,3 @@ export const GET: RequestHandler = async () => {
     return createJsonResponse({ error: message }, 500);
   }
 };
-

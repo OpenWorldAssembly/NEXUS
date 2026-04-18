@@ -24,7 +24,7 @@ import { fetchNexusVotesPayload } from '@runtime/nexus/nexus-query-api';
  * Output: the vote floor surface for the active scope, with public ballot visibility and disabled action cues.
  */
 export default function NexusVotesPage() {
-  const { activeScope } = useNexusShell();
+  const { activeScope, currentActorPacketId } = useNexusShell();
   const appearance = useNexusAppearance();
   const [votesPayload, setVotesPayload] = useState<NexusVotesPayload | null>(null);
   const [isLoadingVotes, setIsLoadingVotes] = useState(true);
@@ -38,7 +38,10 @@ export default function NexusVotesPage() {
       setLoadError(null);
 
       try {
-        const nextVotesPayload = await fetchNexusVotesPayload(activeScope.id);
+        const nextVotesPayload = await fetchNexusVotesPayload(
+          activeScope.id,
+          currentActorPacketId
+        );
 
         if (!isMounted) {
           return;
@@ -67,7 +70,7 @@ export default function NexusVotesPage() {
     return () => {
       isMounted = false;
     };
-  }, [activeScope.id]);
+  }, [activeScope.id, currentActorPacketId]);
 
   const stageCards = votesPayload?.stage_cards ?? [];
   const voteCards = votesPayload?.vote_cards ?? [];

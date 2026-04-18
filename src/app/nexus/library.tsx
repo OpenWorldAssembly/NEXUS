@@ -29,7 +29,7 @@ const packetFilters: PacketFilter[] = [
  * Output: the packet library view for the current scope lens.
  */
 export default function NexusLibraryPage() {
-  const { activeScope } = useNexusShell();
+  const { activeScope, currentActorPacketId } = useNexusShell();
   const appearance = useNexusAppearance();
   const [packetFilter, setPacketFilter] = useState<PacketFilter>('all');
   const [libraryPayload, setLibraryPayload] = useState<NexusLibraryPayload | null>(
@@ -49,6 +49,7 @@ export default function NexusLibraryPage() {
         const nextLibraryPayload = await fetchNexusLibraryPayload({
           scopeId: activeScope.id,
           familyFilter: packetFilter === 'all' ? null : packetFilter,
+          actorPacketId: currentActorPacketId,
         });
 
         if (!isMounted) {
@@ -78,7 +79,7 @@ export default function NexusLibraryPage() {
     return () => {
       isMounted = false;
     };
-  }, [activeScope.id, packetFilter]);
+  }, [activeScope.id, currentActorPacketId, packetFilter]);
 
   const visiblePackets = libraryPayload?.packets ?? [];
 

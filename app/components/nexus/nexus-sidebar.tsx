@@ -295,17 +295,23 @@ function getScopeSnapshotMetrics(
         { label: 'Quorum', value: String(quorumEstimate) },
         { label: 'Turnout', value: String(turnoutEstimate) },
       ];
+    case 'roles':
+      return [
+        { label: 'Claims', value: String(Math.max(1, Math.round(scope.stats.members / 6))) },
+        { label: 'Standing', value: scope.level === 'personal' ? 'Personal' : 'Assembly' },
+        { label: 'Trust', value: String(trustScore) },
+      ];
     case 'library':
       return [
         { label: 'Packets', value: String(packetEstimate) },
         { label: 'Reports', value: String(reportEstimate) },
         { label: 'Threads', value: String(hotThreadsEstimate) },
       ];
-    case 'account':
+    case 'trust':
       return [
-        { label: 'Your trust', value: 'Guest' },
+        { label: 'Your trust', value: 'Inspect' },
         { label: 'Assembly', value: String(trustScore) },
-        { label: 'Standing', value: 'Public' },
+        { label: 'Standing', value: scope.level === 'personal' ? 'Personal' : 'Public' },
       ];
     case 'dashboard':
     default:
@@ -1142,7 +1148,7 @@ export default function NexusSidebar({
                       'text-nexus-canvas',
                     )}
                   >
-                    {hasActiveClaimedSession ? 'Account' : 'Claim'}
+                    {hasActiveClaimedSession ? 'Profile' : 'Claim'}
                   </Text>
                 </Pressable>
               </View>

@@ -52,7 +52,11 @@ export const GET: RequestHandler = async (_request, params) => {
     const cursor = requestUrl.searchParams.get('cursor');
     const limit = parsePositiveInteger(requestUrl.searchParams.get('limit'));
     const shellPayload = await getNexusShellPayload();
-    const scopeId = resolveScopeIdFromShell(shellPayload, params.scopeId);
+    const scopeId = resolveScopeIdFromShell(
+      shellPayload,
+      params.scopeId,
+      viewerActorPacketId
+    );
     const discussionsPayload = await getNexusDiscussionsPayload({
       scopeId,
       forumId: requestedForumId,

@@ -10,6 +10,7 @@ import type {
 
 const FAMILY_LABELS: Record<PacketEnvelope['header']['family'], string> = {
   Element: 'element packet',
+  Role: 'role packet',
   Signal: 'signal packet',
   Proposal: 'proposal packet',
   Vote: 'vote packet',
@@ -53,6 +54,10 @@ export function getPacketDisplayLabel(packet: PacketEnvelope): string {
       }
       return FAMILY_LABELS.Policy;
     }
+    case 'Role': {
+      const body = packet.body as PacketBodyByType['Role'];
+      return `${titleCase(body.role_kind)} role`;
+    }
     case 'DiscussionForum': {
       const body = packet.body as PacketBodyByType['DiscussionForum'];
       if (body.forum_kind === 'visitor_lobby') {
@@ -86,6 +91,10 @@ export function getPacketTitle(packet: PacketEnvelope): string {
       const body = packet.body as PacketBodyByType['Element'];
       return body.name;
     }
+    case 'Role': {
+      const body = packet.body as PacketBodyByType['Role'];
+      return body.title;
+    }
     case 'Attestation':
       return 'Attestation';
     case 'DiscussionReply':
@@ -110,6 +119,10 @@ export function getPacketSummary(packet: PacketEnvelope): string | null {
     }
     case 'Policy': {
       const body = packet.body as PacketBodyByType['Policy'];
+      return body.summary ?? null;
+    }
+    case 'Role': {
+      const body = packet.body as PacketBodyByType['Role'];
       return body.summary ?? null;
     }
     case 'DiscussionForum': {

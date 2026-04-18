@@ -21,7 +21,7 @@ import { fetchNexusDashboardPayload } from '@runtime/nexus/nexus-query-api';
  * Output: the main nexus dashboard surface for the currently selected scope.
  */
 export default function NexusDashboardPage() {
-  const { activeScope, setActiveSection } = useNexusShell();
+  const { activeScope, currentActorPacketId, setActiveSection } = useNexusShell();
   const appearance = useNexusAppearance();
   const [dashboardPayload, setDashboardPayload] =
     useState<NexusDashboardPayload | null>(null);
@@ -36,7 +36,10 @@ export default function NexusDashboardPage() {
       setLoadError(null);
 
       try {
-        const nextDashboardPayload = await fetchNexusDashboardPayload(activeScope.id);
+        const nextDashboardPayload = await fetchNexusDashboardPayload(
+          activeScope.id,
+          currentActorPacketId
+        );
 
         if (!isMounted) {
           return;
@@ -65,7 +68,7 @@ export default function NexusDashboardPage() {
     return () => {
       isMounted = false;
     };
-  }, [activeScope.id]);
+  }, [activeScope.id, currentActorPacketId]);
 
   const visibleMetrics = dashboardPayload?.metrics ?? [];
   const visibleQueues = dashboardPayload?.queue ?? [];

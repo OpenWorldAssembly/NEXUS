@@ -57,7 +57,11 @@ export const GET: RequestHandler = async (request, params) => {
     }
 
     const shellPayload = await getNexusShellPayload();
-    const scopeId = resolveScopeIdFromShell(shellPayload, params.scopeId);
+    const scopeId = resolveScopeIdFromShell(
+      shellPayload,
+      params.scopeId,
+      viewerActorPacketId
+    );
     const threadPayload = await getNexusDiscussionThreadPayload({
       scopeId,
       postPacketId,

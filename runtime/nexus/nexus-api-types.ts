@@ -6,5 +6,7 @@
 export * from '@runtime/nexus/nexus-api-types.assemblies';
 export * from '@runtime/nexus/nexus-api-types.auth';
 export * from '@runtime/nexus/nexus-api-types.discussions';
+export * from '@runtime/nexus/nexus-api-types.roles';
 export * from '@runtime/nexus/nexus-api-types.shell';
+export * from '@runtime/nexus/nexus-api-types.trust';
 export * from '@runtime/nexus/nexus-api-types.workspaces';

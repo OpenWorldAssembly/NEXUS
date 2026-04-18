@@ -22,6 +22,7 @@ import {
   createPersonPacket,
   createPolicyPacket,
   createProposalPacket,
+  createRolePacket,
   createVotePacket,
 } from '@core/packets/builders';
 
@@ -36,6 +37,10 @@ export const PERSONAL_TREE_PACKET_IDS = {
   sunnymead_ranch: 'nexus:element/sunnymead-ranch',
   aaron: 'nexus:element/aaron',
   visitor_lobby_policy: 'nexus:policy/visitor-lobby-baseline',
+  trust_baseline_policy: 'nexus:policy/global-trust-baseline',
+  facilitator_role: 'nexus:role/facilitator',
+  coordinator_role: 'nexus:role/coordinator',
+  councilor_role: 'nexus:role/councilor',
   sunnymead_onboarding_proposal:
     'nexus:proposal/sunnymead-ranch-onboarding',
   global_onboarding_vote: 'nexus:vote/sunnymead-ranch-onboarding',
@@ -51,6 +56,12 @@ export const PERSONAL_TREE_REFS = {
   visitor_lobby_policy: createPacketRef(
     PERSONAL_TREE_PACKET_IDS.visitor_lobby_policy
   ),
+  trust_baseline_policy: createPacketRef(
+    PERSONAL_TREE_PACKET_IDS.trust_baseline_policy
+  ),
+  facilitator_role: createPacketRef(PERSONAL_TREE_PACKET_IDS.facilitator_role),
+  coordinator_role: createPacketRef(PERSONAL_TREE_PACKET_IDS.coordinator_role),
+  councilor_role: createPacketRef(PERSONAL_TREE_PACKET_IDS.councilor_role),
   sunnymead_onboarding_proposal: createPacketRef(
     PERSONAL_TREE_PACKET_IDS.sunnymead_onboarding_proposal
   ),
@@ -618,6 +629,74 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     status: 'active',
   });
 
+  const trustBaselinePolicyPacket = createPolicyPacket({
+    packet_id: PERSONAL_TREE_PACKET_IDS.trust_baseline_policy,
+    created_at: SEED_CREATED_AT,
+    authority_scope_ref: PERSONAL_TREE_REFS.global_commons,
+    applicable_scope_refs: globalApplicableScopeRefs,
+    title: 'Global Trust Baseline Policy',
+    summary:
+      'Defines the initial legitimacy thresholds for association support, role claims, and trust-gated participation.',
+    policy_kind: 'trust_baseline',
+    body_markdown: [
+      '# Global Trust Baseline',
+      '',
+      '- Association claims begin as self-asserted and gain legitimacy through outside support.',
+      '- Role claims remain inspectable and require separate support evidence.',
+      '- Posting, voting, and review gates use explicit threshold stages rather than opaque scores.',
+    ].join('\n'),
+    status: 'active',
+    trust_policy: {
+      association_support_threshold: 1,
+      role_support_threshold: 2,
+      posting_gate: 'emerging',
+      voting_gate: 'recognized',
+      review_gate: 'role_eligible',
+    },
+  });
+
+  const facilitatorRolePacket = createRolePacket({
+    packet_id: PERSONAL_TREE_PACKET_IDS.facilitator_role,
+    created_at: SEED_CREATED_AT,
+    authority_scope_ref: PERSONAL_TREE_REFS.global_commons,
+    applicable_scope_refs: globalApplicableScopeRefs,
+    title: 'Facilitator',
+    summary:
+      'Supports discussion flow, meeting/process clarity, and procedural legibility.',
+    role_kind: 'facilitator',
+    status: 'active',
+    responsibility_markdown:
+      'Helps deliberation stay navigable, inclusive, and procedurally coherent.',
+  });
+
+  const coordinatorRolePacket = createRolePacket({
+    packet_id: PERSONAL_TREE_PACKET_IDS.coordinator_role,
+    created_at: SEED_CREATED_AT,
+    authority_scope_ref: PERSONAL_TREE_REFS.global_commons,
+    applicable_scope_refs: globalApplicableScopeRefs,
+    title: 'Coordinator',
+    summary:
+      'Coordinates execution, logistics, and follow-through for approved work.',
+    role_kind: 'coordinator',
+    status: 'active',
+    responsibility_markdown:
+      'Translates decisions into structured timing, logistics, and follow-up.',
+  });
+
+  const councilorRolePacket = createRolePacket({
+    packet_id: PERSONAL_TREE_PACKET_IDS.councilor_role,
+    created_at: SEED_CREATED_AT,
+    authority_scope_ref: PERSONAL_TREE_REFS.global_commons,
+    applicable_scope_refs: globalApplicableScopeRefs,
+    title: 'Councilor',
+    summary:
+      'Carries elevated review responsibility for policy, decisions, and legitimacy-sensitive questions.',
+    role_kind: 'councilor',
+    status: 'active',
+    responsibility_markdown:
+      'Provides review, objection handling, and legitimacy-sensitive oversight.',
+  });
+
   const sunnymeadOnboardingProposalPacket = createProposalPacket({
     packet_id: PERSONAL_TREE_PACKET_IDS.sunnymead_onboarding_proposal,
     created_at: SEED_CREATED_AT,
@@ -664,6 +743,10 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     sunnymeadRanchPacket,
     aaronPacket,
     visitorLobbyPolicyPacket,
+    trustBaselinePolicyPacket,
+    facilitatorRolePacket,
+    coordinatorRolePacket,
+    councilorRolePacket,
     sunnymeadOnboardingProposalPacket,
     globalOnboardingVotePacket,
     aaronSunnymeadClaimPacket,

@@ -1,14 +1,13 @@
 /**
- * File: library+api.ts
- * Description: Serves packet-backed library cards for a specific Nexus scope lens.
+ * File: roles+api.ts
+ * Description: Serves packet-backed role data for a specific Nexus scope lens.
  */
 
 import type { RequestHandler } from 'expo-router/server';
 
 import {
-  getNexusLibraryPayload,
+  getNexusRolesPayload,
   getNexusShellPayload,
-  parseFamilyFilter,
   resolveScopeIdFromShell,
 } from '@runtime/nexus/server/nexus-query-data';
 
@@ -21,33 +20,25 @@ function createJsonResponse(body: unknown, status = 200): Response {
   });
 }
 
-/**
- * Inputs: route scope id and optional `family` query parameter.
- * Output: library payload resolved to a valid packet-backed scope id.
- */
 export const GET: RequestHandler = async (request, params) => {
   try {
-    const shellPayload = await getNexusShellPayload();
     const requestUrl = new URL(request.url);
     const actorPacketId = requestUrl.searchParams.get('actor_packet_id');
+    const shellPayload = await getNexusShellPayload(actorPacketId);
     const scopeId = resolveScopeIdFromShell(
       shellPayload,
       params.scopeId,
       actorPacketId
     );
-    const familyFilter = parseFamilyFilter(requestUrl.searchParams.get('family'));
-    const libraryPayload = await getNexusLibraryPayload({
+    const rolesPayload = await getNexusRolesPayload({
       scopeId,
-      familyFilter,
       actorPacketId,
     });
 
-    return createJsonResponse(libraryPayload);
+    return createJsonResponse(rolesPayload);
   } catch (error) {
     const message =
-      error instanceof Error
-        ? error.message
-        : 'Unable to load packet-backed library data.';
+      error instanceof Error ? error.message : 'Unable to load scoped role data.';
 
     return createJsonResponse({ error: message }, 500);
   }

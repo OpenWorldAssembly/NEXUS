@@ -135,6 +135,8 @@ export interface AttestationEdgeProjection {
   revision: PacketRevisionRef;
   source_actor_key: string;
   source_actor_packet_id: string | null;
+  source_actor_label: string | null;
+  authority_scope_packet_id: string | null;
   target_ref: PacketRef;
   attestation_kind: string;
   value: AttestationValue;

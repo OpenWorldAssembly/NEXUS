@@ -7,6 +7,7 @@ import { z } from 'zod';
 
 export const PACKET_FAMILIES = [
   'Element',
+  'Role',
   'Signal',
   'Proposal',
   'Vote',
@@ -85,8 +86,23 @@ export const ATTESTATION_KINDS = [
   'attendance_vouch',
   'identity_attest',
   'assembly_association_claim',
+  'role_support',
+  'role_dispute',
   'packet_confirm',
   'packet_dispute',
+] as const;
+
+export const TRUST_STAGES = [
+  'self_claimed',
+  'emerging',
+  'recognized',
+  'role_eligible',
+] as const;
+
+export const PACKET_REVISION_MODES = [
+  'append_only',
+  'replaceable',
+  'mergeable',
 ] as const;
 
 export const CORE_EDGE_TYPES = [
@@ -140,6 +156,8 @@ export const AttestationKindSchema = z.enum(ATTESTATION_KINDS);
 export const PacketRevisionStateSchema = z.enum(REVISION_STATES);
 export const PacketMergeStrategySchema = z.enum(MERGE_STRATEGIES);
 export const AttestationValueSchema = z.union([z.literal(1), z.literal(-1)]);
+export const TrustStageSchema = z.enum(TRUST_STAGES);
+export const PacketRevisionModeSchema = z.enum(PACKET_REVISION_MODES);
 
 export type PacketFamily = z.infer<typeof PacketFamilySchema>;
 export type ElementKind = z.infer<typeof ElementKindSchema>;
@@ -153,6 +171,8 @@ export type DiscussionReplySort = z.infer<typeof DiscussionReplySortSchema>;
 export type AttestationValue = z.infer<typeof AttestationValueSchema>;
 export type AttestationStatus = z.infer<typeof AttestationStatusSchema>;
 export type AttestationKind = z.infer<typeof AttestationKindSchema>;
+export type TrustStage = z.infer<typeof TrustStageSchema>;
+export type PacketRevisionMode = z.infer<typeof PacketRevisionModeSchema>;
 export type PacketVoteValue = AttestationValue;
 export type PacketVoteStatus = AttestationStatus;
 export type PacketVoteKind = AttestationKind;
@@ -341,6 +361,17 @@ export const ElementBodySchema = z
       .nullable()
       .default(null),
     tags: z.array(z.string().min(1)).default([]),
+    claimed_role_refs: z.array(PacketRefSchema).default([]),
+  })
+  .strict();
+
+export const RoleBodySchema = z
+  .object({
+    title: z.string().min(1),
+    summary: z.string().min(1).nullable().optional(),
+    role_kind: z.string().min(1),
+    status: z.string().min(1),
+    responsibility_markdown: z.string().min(1).nullable().default(null),
   })
   .strict();
 
@@ -517,6 +548,17 @@ export const PolicyBodySchema = z
     policy_kind: z.string().min(1),
     body_markdown: z.string().min(1),
     status: z.string().min(1),
+    trust_policy: z
+      .object({
+        association_support_threshold: z.number().int().nonnegative().default(1),
+        role_support_threshold: z.number().int().nonnegative().default(2),
+        posting_gate: TrustStageSchema.default('emerging'),
+        voting_gate: TrustStageSchema.default('recognized'),
+        review_gate: TrustStageSchema.default('role_eligible'),
+      })
+      .strict()
+      .nullable()
+      .default(null),
   })
   .strict();
 
@@ -633,6 +675,7 @@ export const ArtifactBodySchema = z
 
 export const PACKET_BODY_SCHEMAS = {
   Element: ElementBodySchema,
+  Role: RoleBodySchema,
   Signal: SignalBodySchema,
   Proposal: ProposalBodySchema,
   Vote: VoteBodySchema,
@@ -672,6 +715,40 @@ export type PacketEnvelopeByType = {
 
 export type PacketEnvelope = PacketEnvelopeByType[PacketFamily];
 
+export const PACKET_FAMILY_REVISION_MODES = {
+  Element: 'replaceable',
+  Role: 'replaceable',
+  Signal: 'append_only',
+  Proposal: 'replaceable',
+  Vote: 'append_only',
+  Attestation: 'append_only',
+  Decision: 'append_only',
+  Initiative: 'replaceable',
+  Program: 'replaceable',
+  Campaign: 'replaceable',
+  MissionTemplate: 'replaceable',
+  MissionPlan: 'replaceable',
+  MissionReport: 'replaceable',
+  Module: 'replaceable',
+  Policy: 'replaceable',
+  DiscussionSpace: 'replaceable',
+  DiscussionForum: 'replaceable',
+  DiscussionThread: 'replaceable',
+  DiscussionPost: 'append_only',
+  DiscussionReply: 'append_only',
+  Minutes: 'append_only',
+  Artifact: 'append_only',
+} satisfies Record<PacketFamily, PacketRevisionMode>;
+
+type PacketCompatibilityEntry<TFamily extends PacketFamily> = {
+  current_schema_version: string;
+  revision_mode: PacketRevisionMode;
+  parseBody: (
+    schemaVersion: string,
+    body: unknown
+  ) => PacketBodyByType[TFamily];
+};
+
 const RESERVED_BODY_KEYS = new Set([
   'packet_id',
   'revision_id',
@@ -698,6 +775,121 @@ const EnvelopeInputSchema = z
     body: z.unknown(),
   })
   .strict();
+
+const LegacyElementBodySchema = ElementBodySchema.omit({
+  claimed_role_refs: true,
+}).extend({
+  claimed_role_refs: z.array(PacketRefSchema).optional(),
+});
+
+const LegacyPolicyBodySchema = PolicyBodySchema.omit({
+  trust_policy: true,
+}).extend({
+  trust_policy: z
+    .object({
+      association_support_threshold: z.number().int().nonnegative().default(1),
+      role_support_threshold: z.number().int().nonnegative().default(2),
+      posting_gate: TrustStageSchema.default('emerging'),
+      voting_gate: TrustStageSchema.default('recognized'),
+      review_gate: TrustStageSchema.default('role_eligible'),
+    })
+    .strict()
+    .nullable()
+    .optional(),
+});
+
+function createDefaultCompatibilityEntry<TFamily extends PacketFamily>(
+  family: TFamily
+): PacketCompatibilityEntry<TFamily> {
+  return {
+    current_schema_version: DEFAULT_SCHEMA_VERSION,
+    revision_mode: PACKET_FAMILY_REVISION_MODES[family],
+    parseBody: (schemaVersion, body) => {
+      if (schemaVersion !== DEFAULT_SCHEMA_VERSION) {
+        throw new Error(
+          `Unsupported schema version ${schemaVersion} for packet family ${family}.`
+        );
+      }
+
+      rejectHeaderBodyCollisions(body, family);
+
+      return getPacketBodySchema(family).parse(body) as PacketBodyByType[TFamily];
+    },
+  };
+}
+
+export const PACKET_COMPATIBILITY_REGISTRY = {
+  Element: {
+    current_schema_version: DEFAULT_SCHEMA_VERSION,
+    revision_mode: PACKET_FAMILY_REVISION_MODES.Element,
+    parseBody: (schemaVersion, body) => {
+      rejectHeaderBodyCollisions(body, 'Element');
+
+      if (schemaVersion === DEFAULT_SCHEMA_VERSION) {
+        return ElementBodySchema.parse(body);
+      }
+
+      if (schemaVersion === '0.9.0') {
+        const legacyBody = LegacyElementBodySchema.parse(body);
+
+        return ElementBodySchema.parse({
+          ...legacyBody,
+          claimed_role_refs: legacyBody.claimed_role_refs ?? [],
+        });
+      }
+
+      throw new Error(
+        `Unsupported schema version ${schemaVersion} for packet family Element.`
+      );
+    },
+  },
+  Role: createDefaultCompatibilityEntry('Role'),
+  Signal: createDefaultCompatibilityEntry('Signal'),
+  Proposal: createDefaultCompatibilityEntry('Proposal'),
+  Vote: createDefaultCompatibilityEntry('Vote'),
+  Attestation: createDefaultCompatibilityEntry('Attestation'),
+  Decision: createDefaultCompatibilityEntry('Decision'),
+  Initiative: createDefaultCompatibilityEntry('Initiative'),
+  Program: createDefaultCompatibilityEntry('Program'),
+  Campaign: createDefaultCompatibilityEntry('Campaign'),
+  MissionTemplate: createDefaultCompatibilityEntry('MissionTemplate'),
+  MissionPlan: createDefaultCompatibilityEntry('MissionPlan'),
+  MissionReport: createDefaultCompatibilityEntry('MissionReport'),
+  Module: createDefaultCompatibilityEntry('Module'),
+  Policy: {
+    current_schema_version: DEFAULT_SCHEMA_VERSION,
+    revision_mode: PACKET_FAMILY_REVISION_MODES.Policy,
+    parseBody: (schemaVersion, body) => {
+      rejectHeaderBodyCollisions(body, 'Policy');
+
+      if (schemaVersion === DEFAULT_SCHEMA_VERSION) {
+        return PolicyBodySchema.parse(body);
+      }
+
+      if (schemaVersion === '0.9.0') {
+        const legacyBody = LegacyPolicyBodySchema.parse(body);
+
+        return PolicyBodySchema.parse({
+          ...legacyBody,
+          trust_policy: legacyBody.trust_policy ?? null,
+        });
+      }
+
+      throw new Error(
+        `Unsupported schema version ${schemaVersion} for packet family Policy.`
+      );
+    },
+  },
+  DiscussionSpace: createDefaultCompatibilityEntry('DiscussionSpace'),
+  DiscussionForum: createDefaultCompatibilityEntry('DiscussionForum'),
+  DiscussionThread: createDefaultCompatibilityEntry('DiscussionThread'),
+  DiscussionPost: createDefaultCompatibilityEntry('DiscussionPost'),
+  DiscussionReply: createDefaultCompatibilityEntry('DiscussionReply'),
+  Minutes: createDefaultCompatibilityEntry('Minutes'),
+  Artifact: createDefaultCompatibilityEntry('Artifact'),
+} satisfies {
+  [TFamily in PacketFamily]: PacketCompatibilityEntry<TFamily>;
+};
 
 function rejectHeaderBodyCollisions(
   body: unknown,
@@ -726,17 +918,36 @@ export function getPacketBodySchema<TFamily extends PacketFamily>(
   return PACKET_BODY_SCHEMAS[family];
 }
 
+export function getPacketFamilyRevisionMode(
+  family: PacketFamily
+): PacketRevisionMode {
+  return PACKET_COMPATIBILITY_REGISTRY[family].revision_mode;
+}
+
+export function getPacketCurrentSchemaVersion(
+  family: PacketFamily
+): string {
+  return PACKET_COMPATIBILITY_REGISTRY[family].current_schema_version;
+}
+
 export function parsePacketBody<TFamily extends PacketFamily>(
   family: TFamily,
-  body: unknown
+  body: unknown,
+  schemaVersion = DEFAULT_SCHEMA_VERSION
 ): PacketBodyByType[TFamily] {
-  rejectHeaderBodyCollisions(body, family);
-  return getPacketBodySchema(family).parse(body) as PacketBodyByType[TFamily];
+  return PACKET_COMPATIBILITY_REGISTRY[family].parseBody(
+    schemaVersion,
+    body
+  ) as PacketBodyByType[TFamily];
 }
 
 export function parsePacketEnvelope(input: unknown): PacketEnvelope {
   const envelope = EnvelopeInputSchema.parse(input);
-  const parsedBody = parsePacketBody(envelope.header.family, envelope.body);
+  const parsedBody = parsePacketBody(
+    envelope.header.family,
+    envelope.body,
+    envelope.header.schema_version
+  );
 
   return {
     header: envelope.header,
@@ -749,7 +960,11 @@ export function createPacketEnvelope<TFamily extends PacketFamily>(input: {
   body: z.input<(typeof PACKET_BODY_SCHEMAS)[TFamily]>;
 }): PacketEnvelopeByType[TFamily] {
   const header = PacketHeaderSchema.parse(input.header);
-  const body = parsePacketBody(input.header.family, input.body);
+  const body = parsePacketBody(
+    input.header.family,
+    input.body,
+    header.schema_version
+  );
 
   return {
     header: header as PacketHeader & { family: TFamily },

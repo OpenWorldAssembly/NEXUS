@@ -8,6 +8,11 @@ It records the currently implemented product surface, route structure, layout be
 
 Sections marked **Provisional** reflect incomplete workflows or intentionally deferred systems.
 
+Planning note:
+
+- `docs/roadmap.md` captures planned future direction
+- this document stays limited to implemented behavior and current code structure
+
 ## Current product surface
 
 The app is an Expo Router application with two visible layers:
@@ -21,9 +26,10 @@ Implemented scope today:
 - redesigned public landing, about, and charter destination pages using NativeWind styling
 - Nexus-shell cryptographic identity entry pages for sign-in, sign-up, guest claim, identity restore, and identity security
 - a dedicated nexus layout for `/nexus/*`
-- nexus routes for `Dashboard`, `Discussions`, `Votes`, `Library`, and `Account`
+- nexus routes for `Dashboard`, `Discussions`, `Votes`, `Roles`, `Trust`, and `Library`
+- a hidden wrapper-level `/nexus/account` route for identity custody and local assembly continuity, reached from the profile area rather than the primary function navigation
 - nexus shell state for scope selection, section selection, guest capabilities, and function-first vs scope-first mode
-- packet-backed shell and scope query APIs feeding dashboard, discussions, votes, and library surfaces
+- packet-backed shell and scope query APIs feeding dashboard, discussions, votes, library, and trust surfaces
 - NativeWind-based styling for the nexus layer
 
 Current split rule in active implementation:
@@ -33,7 +39,7 @@ Current split rule in active implementation:
 - `app/*` holds application-layer components, hooks, constants, public content, and shared UI/state
 - `src/app/*` holds the Expo Router route shell and API entrypoints
 
-This refactor pass preserves current route paths, current payload shapes, and current public naming.
+This refactor pass preserves current auth payload shapes and current public route paths while making the current shell/function model explicit.
 
 Current extracted split seams now in code:
 
@@ -53,6 +59,7 @@ Not implemented today:
 - real-time chat
 - protected/private spaces
 - trust-weighted ranking, delegation, or moderation workflows
+- packet explorer/detail routes
 
 ## Current routes and screens
 
@@ -135,11 +142,11 @@ Status:
 
 ## Nexus route tree
 
-The nexus now has its own nested route layout under `app/nexus/_layout.tsx`.
+The nexus now has its own nested route layout under `src/app/nexus/_layout.tsx`.
 
 ### `/nexus`
 
-Route file: `app/nexus/index.tsx`
+Route file: `src/app/nexus/index.tsx`
 
 Role:
 
@@ -245,15 +252,52 @@ Status:
 - library cards load from `/api/nexus/scopes/[scopeId]/library` with optional family filtering
 - packet actions are visible as placeholders and remain disabled
 
+### `/nexus/trust`
+
+Screen component: `NexusTrustPage`
+
+Role:
+
+- trust posture surface for the active scope
+- shows scoped legitimacy stage, association evidence, role claims, role support/dispute evidence, and baseline trust gates
+- uses the same shared nexus page shell and compact scope-first header pattern as the other nexus routes
+
+Status:
+
+- packet-backed
+- trust data loads from `/api/nexus/scopes/[scopeId]/trust`
+- works with normal assembly scopes and the special `you` personal scope lens
+- shows threshold-based trust posture rather than a hidden numeric score
+- keeps role information actor-centric and summary-oriented; role claim/unclaim and scoped role review now live on the dedicated `Roles` route
+
+### `/nexus/roles`
+
+Screen component: `NexusRolesPage`
+
+Role:
+
+- scope-centric roles review surface
+- lets the current actor claim or unclaim existing roles from the active scope
+- shows scope-relevant claimants for each role, their scoped role trust stage, and support/dispute evidence
+
+Status:
+
+- packet-backed
+- roles data loads from `/api/nexus/scopes/[scopeId]/roles`
+- role claim and unclaim still write through the existing verified role-claim mutation path
+- role support, dispute, and clear actions write through `/api/nexus/scopes/[scopeId]/roles/attestations`
+- dispute attestations require a comment; support comments remain optional
+- evidence is currently inspected inline on the roles route rather than through a separate attestation browser
+
 ### `/nexus/account`
 
 Screen component: `NexusAccountPage`
 
 Role:
 
-- nexus account overview and local assembly continuity workspace
+- hidden wrapper-level account overview and local assembly continuity workspace
 - shows current actor state and routes users into the dedicated Nexus identity ceremony screens
-- keeps local assembly claims and lightweight assembly creation attached to the account workspace
+- keeps local assembly claims and lightweight assembly creation attached to the wrapper/account surface rather than to the primary function navigation
 
 Status:
 
@@ -359,7 +403,7 @@ Status:
 
 ## Current navigation structure
 
-Navigation is implemented with Expo Router using a top-level stack in `app/_layout.tsx` and a nested nexus stack in `app/nexus/_layout.tsx`.
+Navigation is implemented with Expo Router using a top-level stack in `src/app/_layout.tsx` and a nested nexus stack in `src/app/nexus/_layout.tsx`.
 
 ### Public shell
 
@@ -402,7 +446,7 @@ Left-side shell sections:
 - anonymous guest avatar between the `OWA Nexus` label and guest display name
 - centered brand label, auth actions, and preference rows inside the guest identity strip
 - the profile strip now uses the real current actor label, and the current point balance is shown directly beneath it
-- guest mode surfaces `Sign In` and `Claim`, while claimed mode surfaces `Security` and `Account`
+- guest mode surfaces `Sign In` and `Claim`, while claimed mode surfaces `Security` and `Profile`
 - public-site return link positioned beneath the auth actions inside the guest identity strip
 - a small `Preferences` tab at the bottom of the guest identity strip that expands a drawer for navigation mode, shell theme, UI size controls, remembered-session preference, and write-approval quick controls
 - the preferences tab is visually attached to the drawer as its footer row, uses a chevron icon instead of `open/hide` text, and animates open or closed
@@ -411,6 +455,7 @@ Left-side shell sections:
 - secondary navigation column that reveals the other menu immediately to the right
 - open primary and secondary rails use the same width, and the Nexus UI-size preference also adjusts shared route-surface spacing, typography, badges, buttons, and form controls through the Nexus appearance layer
 - the scope menu uses a full visible scope map with a fixed-width connector lane, so every scope stays visible without pushing lower labels to the right
+- the scope list now renders `You` as a personal-scope child leaf under the actor's local assembly branch instead of prepending it above the assembly tree
 - the secondary rail now always pins a separate current-context snapshot card at its top, mirroring the guest profile card and exposing quick assembly stats such as activity level, member count, and trust score
 - the scope snapshot card is now a smaller metrics-only lens with no descriptive body copy or badges, and its three stat tiles change with the active Nexus section while keeping the same compact card shape
 - followed scopes stay with the scope menu column
@@ -427,7 +472,12 @@ Nexus route list:
 - `/nexus/dashboard`
 - `/nexus/discussions`
 - `/nexus/votes`
+- `/nexus/roles`
 - `/nexus/library`
+- `/nexus/trust`
+
+Hidden wrapper/account route:
+
 - `/nexus/account`
 
 ## Existing workflows
@@ -464,12 +514,12 @@ Implemented flow:
 1. guest opens the scope menu branch navigator or followed scope chips
 2. guest chooses a scope
 3. the active scope updates in shared nexus shell state
-4. dashboard, discussion, vote, library, and account surfaces filter against that scope lens
+4. dashboard, discussion, vote, roles, trust, and library surfaces filter against that scope lens
 
 Status:
 
 - packet-backed
-- scope summaries are now loaded from `/api/nexus/shell` and derived from `Element(kind: "assembly")` packets
+- scope summaries are now loaded from `/api/nexus/shell` and derived from `Element(kind: "assembly")` packets plus one actor-backed `you` scope lens rendered beneath the actor's local assembly branch
 - shell scope ids are route-safe labels (for example `global-commons`) that map server-side to canonical packet refs
 
 ### Nexus mode workflow
@@ -510,7 +560,44 @@ Status:
 - discussion packets use a discussion-seed-version marker in the same runtime data directory, and destructive reseeds are now limited to local development or an explicit `NEXUS_ALLOW_DISCUSSION_RESET` override instead of running automatically in every hosted boot
 - discussion packets do not stand alone: `DiscussionSpace` packets attach to scope `Element` packets, `DiscussionForum` packets attach to a discussion space, `DiscussionThread` packets attach to a forum, root `DiscussionPost` packets attach to their thread, and `DiscussionReply` packets attach to their thread, root post, and immediate parent reply-or-post
 - raw trust visibility is now packet-first but still pre-weighting: `/api/nexus/attestations/target`, `/api/nexus/attestations/actor`, and `/api/nexus/assemblies/claims` expose inspectable attestation edges without any trust score math
-- a person can now claim association with an assembly through `Attestation(kind: "assembly_association_claim")`, and account flow can create a new lightweight local assembly packet plus starter discussion space/forums under the active scope
+- a person can now claim association with an assembly through `Attestation(kind: "assembly_association_claim")`, and the hidden account flow can create a new lightweight local assembly packet plus starter discussion space/forums under the active scope
+
+### Trust workflow
+
+Implemented flow:
+
+1. user opens `/nexus/trust`
+2. the app resolves the active scope, including `you` when selected
+3. the route loads scoped trust posture from `/api/nexus/scopes/[scopeId]/trust`
+4. the payload projects association evidence, claimed roles, role summary state, and baseline participation gates
+5. the route links outward to `Roles` for claim/unclaim and claimant-by-claimant role review
+
+Status:
+
+- **Provisional**
+- trust stages are explicit and threshold-based: `self_claimed`, `emerging`, `recognized`, `role_eligible`
+- trust is scope-local and policy-aware
+- role support/dispute currently reuses `Attestation` through role-scoped `context_ref`
+- trust-weighted ranking and broader moderation effects remain deferred
+
+### Roles workflow
+
+Implemented flow:
+
+1. user opens `/nexus/roles`
+2. the app resolves the active scope, including `you` when selected
+3. the route loads scope-relevant role cards and claimant lists from `/api/nexus/scopes/[scopeId]/roles`
+4. the current actor can claim or unclaim a role from that surface
+5. the current actor can support, dispute, or clear a claimant's role standing, with disputes requiring a comment
+6. role evidence can be expanded inline to inspect who has supported or disputed a claimant in that scope
+
+Status:
+
+- **Provisional**
+- role claims still live on `Element.claimed_role_refs`
+- claimant lists are scope-relevant rather than global
+- one viewer cannot hold both active support and active dispute for the same claimant-role pair in the same scope; writing one clears the opposite
+- role creation and editing remain deferred
 
 ## Major entities and their roles
 
@@ -518,7 +605,7 @@ Status:
 
 #### Root layout
 
-Defined by `app/_layout.tsx`.
+Defined by `src/app/_layout.tsx`.
 
 Role:
 
@@ -528,7 +615,7 @@ Role:
 
 #### Nexus layout
 
-Defined by `app/nexus/_layout.tsx`.
+Defined by `src/app/nexus/_layout.tsx`.
 
 Role:
 
@@ -538,7 +625,7 @@ Role:
 
 #### Nexus shell provider
 
-Defined by `components/nexus/nexus-shell-context.tsx`.
+Defined by `app/components/nexus/nexus-shell-context.tsx`.
 
 Role:
 
@@ -546,15 +633,16 @@ Role:
 - stores `activeScopeId`
 - stores `expandedScopeIds`
 - derives `activeSection` from the current pathname
+- prepends the actor-backed `you` personal scope
 - exposes guest capabilities and scope data to nexus screens
 
 #### Nexus sidebar and shell
 
-Defined by `components/nexus/nexus-shell.tsx` and `components/nexus/nexus-sidebar.tsx`.
+Defined by `app/components/nexus/nexus-shell.tsx` and `app/components/nexus/nexus-sidebar.tsx`.
 
 Role:
 
-- render a compact account header plus a two-stage left-side navigation system
+- render a compact profile header plus a two-stage left-side navigation system
 - keep either functions or scopes primary based on shell preference
 - render the complementary secondary menu in the adjacent column
 - render the scope menu as a full visible scope map rather than an indented nested tree
@@ -566,9 +654,9 @@ Role:
 
 Defined by:
 
-- `lib/nexus/server/nexus-query-data.ts`
-- `app/api/nexus/shell+api.ts`
-- `app/api/nexus/scopes/[scopeId]/*+api.ts`
+- `runtime/nexus/server/nexus-query-data.ts`
+- `src/app/api/nexus/shell+api.ts`
+- `src/app/api/nexus/scopes/[scopeId]/*+api.ts`
 
 Role:
 
@@ -581,14 +669,14 @@ Role:
 Status:
 
 - packet-backed
-- runtime packet-schema foundation under `domain/*` is now wired into active nexus surfaces through server query routes
-- there are now typed packet builders and an initial seed packet dataset under `domain/packets/*`
-- there are now Expo and Node SQLite-backed `PacketStore` implementations under `storage/*`, plus concrete browser/nexus query-service implementations that read from the same SQLite search index
+- runtime packet-schema foundation under `core/*` is now wired into active nexus surfaces through server query routes
+- there are now typed packet builders and an initial seed packet dataset under `core/packets/*`
+- there are now Expo and Node SQLite-backed `PacketStore` implementations under `runtime/storage/*`, plus concrete browser/nexus query-service implementations that read from the same SQLite search index
 
 Important note:
 
 - nexus content is packet-themed and type-labeled
-- packet, proposal, assembly, mission, and trust concepts now render from packet-backed API projections on the active nexus routes
+- packet, proposal, assembly, mission, role, and trust concepts now render from packet-backed API projections on the active nexus routes
 - seed packet data is now loaded into the local SQLite store through the shared server bootstrap when no assembly packets exist yet
 - query services remain the projection seam, while packet detail routes and deeper action workflows are still pending
 
@@ -597,8 +685,8 @@ Important note:
 ### Routing pattern
 
 - Expo Router file-based routing
-- top-level stack in `app/_layout.tsx`
-- nested nexus stack in `app/nexus/_layout.tsx`
+- top-level stack in `src/app/_layout.tsx`
+- nested nexus stack in `src/app/nexus/_layout.tsx`
 - `/nexus` redirects to `/nexus/dashboard`
 
 ### Layout pattern
@@ -611,7 +699,7 @@ Important note:
 
 - function components throughout
 - route screens use default exports
-- nexus layout logic is split into reusable components under `components/nexus`
+- nexus layout logic is split into reusable components under `app/components/nexus`
 
 ### Styling pattern
 
@@ -634,8 +722,9 @@ Important note:
 - local web forum persistence depends on `expo.web.output = "server"` in `app.json`
 - the repo now also includes a production-parity Node web server entry at `server.cjs`, which serves `dist/client`, forwards dynamic routes and `app/api/**` requests into the exported Expo server build in `dist/server`, and exposes `/health` for hosted healthchecks
 - packet import/export bundles, revision publishing, and merge behavior remain defined by the `PacketStore` contract and storage/service layer rather than in route components
-- claimed Nexus auth now uses required passkeys plus the existing encrypted local signing bundle
+- claimed Nexus auth now uses encrypted local signing bundles with optional passkeys as extra protection
 - claimed sessions now expose CSRF tokens, rotating refresh sessions, passkey-upgrade state, device/session listings, explicit cookie-backed remembered-login choice, and `standard` / `guarded` / `every_write` write-approval preferences
+- packet parsing now runs through family compatibility checks, explicit upcasters, and family `revision_mode` metadata instead of treating `schema_version` as a dormant header field
 
 ## Current naming patterns
 
@@ -646,11 +735,11 @@ Important note:
 
 Examples:
 
-- `app/index.tsx`
-- `app/nexus/dashboard.tsx`
-- `app/nexus/discussions.tsx`
-- `app/api/nexus/shell+api.ts`
-- `app/api/nexus/scopes/[scopeId]/dashboard+api.ts`
+- `src/app/index.tsx`
+- `src/app/nexus/dashboard.tsx`
+- `src/app/nexus/discussions.tsx`
+- `src/app/api/nexus/shell+api.ts`
+- `src/app/api/nexus/scopes/[scopeId]/dashboard+api.ts`
 
 ### Component naming
 
@@ -663,36 +752,28 @@ Examples:
 ### Active implementation areas
 
 - `app`
-  - public route files, root layout, and nexus route files
-- `components/layout`
-  - shared public header and footer
-- `components/nexus`
-    - nexus shell, sidebar, context, and UI primitives
+  - application-layer components, public content, hooks, constants, and shared UI/state
+- `src/app`
+  - public route files, root layout, nexus route files, and API entrypoints
 - `data/nexus`
   - runtime packet database files plus legacy migration artifacts such as the old visitor-lobby bundle
-- `domain`
-  - package-style packet foundation split into schema, core, packets, and projections
-- `storage`
-  - packet-store schema constant, SQLite row projections, shared query-service logic, and the Expo/Node SQLite-backed packet-store and query-service implementations
-- `lib/nexus`
-    - nexus route/scope helpers, packet-backed query API clients, and server projection/repository helpers
-- `hooks`
-  - color scheme helpers
-- `constants/theme.ts`
-  - shared theme constants and font mappings
+- `core`
+  - packet foundation split into schema, contracts, packets, and projections
+- `runtime`
+  - packet-store schema, SQLite row projections, query-service logic, auth/trust/discussion services, and API-facing helpers
 
 ### Present but not active in runtime behavior
 
-- `domain/schema`
+- `core/schema`
   - defines the canonical `PacketEnvelope`, packet-family Zod schemas, packet refs, revision refs, multi-parent revision ancestry, and parser entrypoints
-- `domain/core`
+- `core/contracts.ts`
   - defines `PacketStore`, `BrowserQueryService`, and `NexusQueryService` interfaces, including preferred-revision and revision-head contracts
-- `storage`
+- `runtime/storage`
   - defines the concrete persistence layer and query adapters, including SQLite-oriented record projections, schema initialization, Expo/native packet-store logic, Node/server packet-store logic, and shared browser/nexus query-service implementations
-- `domain/projections`
+- `core/projections`
   - derives display labels, titles, summaries, and statuses from canonical packet family plus subtype
-- `lib`
-  - now partially active through `lib/nexus`, but still not the canonical domain/data engine layer
+- `runtime/nexus`
+  - now actively holds the runtime API clients, trust/auth/discussion orchestration, and query payload contracts
 
 ## Implementation boundaries
 
@@ -702,16 +783,22 @@ What is implemented:
 - public header/footer shell
 - redesigned public splash, about, and charter destination pages
 - dedicated nexus shell under `/nexus/*`
-- first-slice nexus surfaces for dashboard, discussions, votes, library, and account
+- first-slice nexus surfaces for dashboard, discussions, votes, library, and trust
+- hidden wrapper-level account and identity/security flows separate from the primary function navigation
 - cryptographic identity continuity across guest, saved-guest, and claimed nexus actors
-- passkey-required claimed-session authentication with passkey sign-in, passkey registration, short-lived single-use passkey re-auth tokens, rotating refresh cookies, and server-side device/session revocation
-- packet-backed shell and scope query routes feeding active nexus surfaces
+- passkey-optional claimed-session authentication with passkey sign-in, passkey registration, short-lived single-use passkey re-auth tokens, rotating refresh cookies, and server-side device/session revocation
+- packet-backed shell and scope query routes feeding active nexus surfaces, including the actor-backed `you` personal scope
+- `You` now renders as a personal child leaf under the actor's local assembly branch instead of sitting above the scope tree
 - canonical packet schema definitions with nested `header/body` envelopes
 - stable `packet_id` plus immutable `revision_id` packet identity rules
 - multi-parent revision ancestry for divergent branches and merge revisions
+- schema compatibility upcasters and explicit family `revision_mode` metadata
+- `Role` as a packet family plus `claimed_role_refs` on `Element`
 - typed packet edges, scope refs, packet-store interfaces, a SQLite-backed packet-store implementation, and storage schema definitions
 - shared browser and nexus query-service implementations over the packet search index
 - a packet-backed discussion and attestation engine that stores canonical `DiscussionSpace`, `DiscussionForum`, `DiscussionThread`, `DiscussionPost`, `DiscussionReply`, and `Attestation` packets in the local SQLite packet store, projects derived reply/attestation/ledger indexes, and reseeds local dev discussion data deterministically by seed version
+- a first trust/runtime slice that projects scope-local trust stages, policy gates, role claims, and role evidence through `/api/nexus/scopes/[scopeId]/trust`
+- a first roles/runtime slice that projects scope-relevant role claimants, scoped role trust posture, inline evidence lists, and real support/dispute writes through `/api/nexus/scopes/[scopeId]/roles`
 - derived packet label helpers for future browser and nexus projections
 
 What remains unimplemented but is still referenced by docs or shell affordances:
@@ -731,7 +818,7 @@ The following areas should still be treated as provisional:
 
 - guest posting behavior beyond the current packet-backed discussion rules and temporary point grant
 - the exact final ontology for assemblies, scopes, and overlays
-- how locality claiming, join/start flows, and trust progression will work
+- deeper trust weighting, moderation consequences, and non-default policy engines
 - vote execution, delegation, and propagation semantics
 - packet actions that currently appear as disabled placeholders
 - any architecture in `docs/implementation-guide.md` beyond the new packet schema foundation that is not yet represented in executable code

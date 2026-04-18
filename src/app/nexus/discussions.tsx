@@ -807,6 +807,10 @@ export default function NexusDiscussionsPage() {
     isCurrentIdentityUnlocked,
     signCurrentIdentityPacket,
   } = useIdentityShell();
+  const writeScopeId =
+    activeScope.id === 'you' && currentActorPacketId
+      ? currentActorPacketId
+      : activeScope.id;
   const appearance = useNexusAppearance();
   const requestedForumId = normalizeQueryValue(localParams.forum);
   const requestedPostId = normalizeQueryValue(localParams.post);
@@ -1332,14 +1336,14 @@ export default function NexusDiscussionsPage() {
 
     try {
       const threadPacket = buildDiscussionThreadPacket({
-        scopeId: activeScope.id,
+        scopeId: writeScopeId,
         forum: selectedForum,
         actorPacket: currentIdentity.actorPacket,
         title: draftTitle,
         body: draftBody,
       });
       const postPacket = buildDiscussionRootPostPacket({
-        scopeId: activeScope.id,
+        scopeId: writeScopeId,
         forum: selectedForum,
         actorPacket: currentIdentity.actorPacket,
         threadPacket,
@@ -1399,6 +1403,7 @@ export default function NexusDiscussionsPage() {
     selectedForum,
     selectedReplySort,
     signCurrentIdentityPacket,
+    writeScopeId,
   ]);
 
   /**
@@ -1428,7 +1433,7 @@ export default function NexusDiscussionsPage() {
       }
 
       const replyPacket = buildDiscussionReplyPacket({
-        scopeId: activeScope.id,
+        scopeId: writeScopeId,
         forum: threadPayload.forum,
         actorPacket: currentIdentity.actorPacket,
         parentPost,
@@ -1504,6 +1509,7 @@ export default function NexusDiscussionsPage() {
     selectedReplySort,
     signCurrentIdentityPacket,
     threadPayload,
+    writeScopeId,
   ]);
 
   const handleLoadMoreFeed = useCallback(() => {

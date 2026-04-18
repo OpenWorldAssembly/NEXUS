@@ -6,9 +6,13 @@
 import {
   createInitialRevisionId,
   createPersonPacket,
+  createElementPacket,
   type ElementPacketInput,
 } from '@core/packets/builders';
-import type { PacketEnvelopeByType } from '@core/schema/packet-schema';
+import type {
+  PacketEnvelopeByType,
+  PacketRef,
+} from '@core/schema/packet-schema';
 
 export type NexusIdentityMode =
   | 'ephemeral_guest'
@@ -35,7 +39,10 @@ function createPacketId(alias: string): string {
   return `nexus:element/${slug}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function createNextRevisionId(packetId: string, currentRevisionId?: string): string {
+export function createNextRevisionId(
+  packetId: string,
+  currentRevisionId?: string
+): string {
   const match = currentRevisionId?.match(/@r(\d+)$/);
   const revisionNumber = match ? Number.parseInt(match[1], 10) + 1 : 1;
 
@@ -161,5 +168,55 @@ export function createIdentityStatusRevision(input: {
       public_key_bindings: currentIdentity.public_key_bindings,
     },
     tags: ['person', input.claimStatus],
+  });
+}
+
+/**
+ * Inputs: an element packet and the next claimed role refs for that same actor.
+ * Output: a new element revision that preserves existing identity and locality data.
+ */
+export function createElementRoleClaimsRevision(input: {
+  actorPacket: PacketEnvelopeByType['Element'];
+  claimedRoleRefs: PacketRef[];
+}): PacketEnvelopeByType['Element'] {
+  const actorPacket = input.actorPacket;
+
+  return createElementPacket({
+    packet_id: actorPacket.header.packet_id,
+    revision_id: createNextRevisionId(
+      actorPacket.header.packet_id,
+      actorPacket.header.revision_id
+    ),
+    created_at: new Date().toISOString(),
+    parent_revision_refs: [
+      {
+        packet_id: actorPacket.header.packet_id,
+        revision_id: actorPacket.header.revision_id,
+      },
+    ],
+    authority_scope_ref: actorPacket.header.authority_scope_ref,
+    applicable_scope_refs: actorPacket.header.applicable_scope_refs,
+    edges: actorPacket.header.edges,
+    created_by: actorPacket.header.provenance.created_by,
+    submitted_by: actorPacket.header.provenance.submitted_by,
+    recorded_at: actorPacket.header.provenance.recorded_at,
+    adapter: actorPacket.header.provenance.adapter,
+    app_version: actorPacket.header.producer.app_version,
+    visibility: actorPacket.header.moderation.visibility,
+    moderation_state: actorPacket.header.moderation.moderation_state,
+    policy_refs: actorPacket.header.moderation.policy_refs,
+    content_warning_ids: actorPacket.header.moderation.content_warning_ids,
+    external_refs: actorPacket.header.external_refs,
+    metadata_tags: actorPacket.header.metadata.tags,
+    metadata_language: actorPacket.header.metadata.language,
+    metadata_summary: actorPacket.header.metadata.summary,
+    kind: actorPacket.body.kind,
+    name: actorPacket.body.name,
+    subtype: actorPacket.body.subtype ?? null,
+    summary: actorPacket.body.summary ?? null,
+    locality_label: actorPacket.body.locality_label ?? null,
+    identity: actorPacket.body.identity,
+    tags: actorPacket.body.tags,
+    claimed_role_refs: input.claimedRoleRefs,
   });
 }

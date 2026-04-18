@@ -104,6 +104,17 @@ export default function NexusAccountPage() {
       ),
     [assemblyClaims]
   );
+  const assemblyScopes = useMemo(
+    () => scopeSummaries.filter((scope) => scope.level !== 'personal'),
+    [scopeSummaries]
+  );
+  const parentAssemblyScope = useMemo(
+    () =>
+      activeScope.level !== 'personal'
+        ? activeScope
+        : assemblyScopes[0] ?? null,
+    [activeScope, assemblyScopes]
+  );
 
   const handleError = (error: unknown, fallback: string) => {
     setErrorMessage(error instanceof Error ? error.message : fallback);
@@ -118,7 +129,7 @@ export default function NexusAccountPage() {
         <NexusSectionHeader
           eyebrow="Account"
           title={`${activeScope.name} Account`}
-          description="Identity creation, sign-in, restore, claim, and deeper security now live on dedicated Nexus identity routes. This page stays focused on your current actor state and local assembly continuity."
+          description="This wrapper-level account surface keeps identity custody, security state, and continuity tools separate from scoped trust and legitimacy."
           trailing={
             <View className="flex-row flex-wrap gap-3">
               <NexusBadge label={currentActorLabel} tone="mint" />
@@ -223,8 +234,8 @@ export default function NexusAccountPage() {
                 className={`rounded-[18px] border px-4 py-3 ${appearance.textInputClass}`}
               />
               <View className="gap-3">
-                {scopeSummaries.map((scope) => {
-                  const assemblyPacketId = `nexus:element/${scope.id}`;
+                {assemblyScopes.map((scope) => {
+                  const assemblyPacketId = scope.packetId;
 
                   return (
                     <NexusCard
@@ -336,9 +347,13 @@ export default function NexusAccountPage() {
                 className={`rounded-[18px] border px-4 py-3 ${appearance.textInputClass}`}
               />
               <NexusActionButton
-                label={`Start under ${activeScope.name}`}
+                label={`Start under ${parentAssemblyScope?.name ?? 'an assembly scope'}`}
                 variant="primary"
                 onPress={() => {
+                  if (!parentAssemblyScope) {
+                    return;
+                  }
+
                   void createVerifiedRequestBody('/api/nexus/assemblies', 'POST', {
                     name: newAssemblyName,
                     subtype: newAssemblySubtype.trim().length > 0 ? newAssemblySubtype : null,
@@ -347,7 +362,7 @@ export default function NexusAccountPage() {
                       newAssemblyLocalityLabel.trim().length > 0
                         ? newAssemblyLocalityLabel
                         : null,
-                    parent_scope_packet_id: `nexus:element/${activeScope.id}`,
+                    parent_scope_packet_id: parentAssemblyScope.packetId,
                     seed_discussions: true,
                     claim_association: true,
                     claim_note: assemblyClaimNote.trim().length > 0 ? assemblyClaimNote : null,
@@ -371,7 +386,10 @@ export default function NexusAccountPage() {
                       handleError(error, 'Unable to create the local assembly.')
                     );
                 }}
-                disabled={newAssemblyName.trim().length === 0}
+                disabled={
+                  newAssemblyName.trim().length === 0 ||
+                  parentAssemblyScope === null
+                }
               />
             </NexusCard>
 

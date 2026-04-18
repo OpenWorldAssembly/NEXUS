@@ -6,6 +6,12 @@ import type { PublicHref } from './public-routes';
 
 export type AboutHighlightTone = 'accent' | 'sand' | 'cyan' | 'muted';
 
+export type PublicHeroAction = {
+  href: PublicHref;
+  label: string;
+  variant?: 'primary' | 'secondary';
+};
+
 export type PublicHeroSlide = {
   eyebrow: string;
   title: string;
@@ -13,6 +19,7 @@ export type PublicHeroSlide = {
   kicker: string;
   detail: string;
   backgroundImageUri: string;
+  actions?: PublicHeroAction[];
 };
 
 export type PublicPrinciple = {

@@ -8,6 +8,11 @@ It is intentionally detailed and operational. It should be possible for someone 
 
 The product target is an Expo-based web app, with responsive layouts across desktop, tablet, and mobile, built atop a portable core engine and a local-first data model.
 
+Planning companion:
+
+- `docs/roadmap.md` holds forward-looking roadmap and sequencing work
+- this guide holds implementation rules, architecture decisions, and durable build guidance
+
 ## Product layers and system architecture
 
 The cleanest long-term architecture is a three-layer product stack, with strict boundaries:
@@ -50,7 +55,7 @@ Architecturally, the repository now uses three real source roots plus one framew
 - `app/*` = application-layer UI, content, hooks, constants, and shared screens/components
 - `src/app/*` = Expo Router entry shell for routes and API entrypoints
 
-This split is behavior-preserving. It keeps public routes, workspace labels, and payload shapes stable while making the ownership boundary explicit. Deferred naming and product work such as `Account -> Trust`, `Mission -> Action`, `Library`/`Packet Explorer`, and `You` scope still remain separate from the structural split.
+This split is behavior-preserving at the architecture level. Public route paths and existing auth payloads stay stable while ownership boundaries are explicit. Product work such as `Mission -> Action` and `Library`/`Packet Explorer` still remains separate from the structural split, but the `Trust` function swap and `You` scope lens are now active in the current Nexus slice.
 
 ## Route tree and navigation model
 
@@ -61,6 +66,7 @@ A good default is a three-axis navigation:
 ### Place / Scope axis (where)
 
 - World → Region → Nation → State/Province → County/Metro → City → Neighborhood → Venue/Local Node
+- Personal scope (`You`) as the actor-backed self lens that uses the same function grammar as other scopes
 - Actual granularity depends on adoption
 - Each scope is an Assembly context with identity, trust, decision history, active deliberations, and actions
 
@@ -108,14 +114,26 @@ Practically, this becomes a route tree like:
 - Incoming/outgoing links
 - Fork/reuse workflows
 
-### Account
+### Trust
 
-- Identity
-- Proof tiers
-- Privacy
-- Devices
-- Export keys
-- Safety modes
+- Trust posture by scope
+- Association legitimacy
+- Role claims and supporting evidence
+- Policy thresholds and participation gates
+
+### Roles
+
+- Role catalog by scope
+- Claim or unclaim a role from the active scope
+- Review who has claimed each role in that scope
+- Support or dispute those role claims with scoped evidence
+
+### Wrapper account/security
+
+- Identity ceremonies
+- Sessions and passkeys
+- Export keys and restore
+- Device and safety controls
 
 Layout rule: desktop can be multi-pane, with left for scope tree, center for content, and right for context/related graph. Tablet can be partially split. Phone can be stacked. The route tree stays stable; pane density adapts.
 
@@ -128,8 +146,10 @@ Implemented routes in this slice:
 - `/nexus/dashboard`
 - `/nexus/discussions`
 - `/nexus/votes`
+- `/nexus/roles`
 - `/nexus/library`
-- `/nexus/account`
+- `/nexus/trust`
+- `/nexus/account` as a hidden wrapper-level account/custody route reached from the profile link
 - `/login`
 - `/signup`
 
@@ -145,13 +165,15 @@ Implemented shell behavior in this slice:
 - the current-scope summary is now a mirrored top card pinned to the secondary rail rather than a nested block inside the scope map card, and it has been tightened into a metrics-only scope lens whose three stat tiles change with the active Nexus section instead of repeating generic trust/status pills
 - secondary rail can remain open while the primary rail is collapsed
 - `Global Guest` as the default nexus entry state
+- `You` as a first-class personal scope lens resolved from the active actor packet and rendered as a child leaf under the actor's local assembly branch
 - visitor-lobby posting as the only enabled guest write interaction
 - discussion writes now flow through local API routes into a local SQLite-backed packet store with cryptographic person-actor provenance, and the active discussion model now uses `DiscussionSpace -> DiscussionForum -> DiscussionThread -> DiscussionPost -> DiscussionReply`
 - local web runs now use Expo `web.output = "server"` so the visitor-lobby API routes can actually execute
 - all current `/nexus/*` routes now share one centered page-frame width through the common Nexus UI layer instead of mixing route-specific max-width wrappers
 - route headers have been tightened into a common scope-first pattern such as `Global Commons Library` or `United States Votes`, with optional compact trailing badges instead of the earlier title-plus-subtitle-plus-explanation blocks
 - placeholder rollout/explanatory cards have started being removed from the current route surfaces in favor of denser, more functional cards and lists
-- the account route now uses the live cryptographic identity shell, including memory-only temporary guests, session-only guests, saved guests, and claimed identity flows with export, restore, claim, sign-in, sign-out, and local lock-state messaging
+- the primary function surface now uses `Roles` and `Trust` instead of `Account`, while account/security custody stays accessible from the profile link and `/nexus/identity/*` routes
+- the hidden account route now acts as a wrapper-level custody and local-assembly continuity workspace, including memory-only temporary guests, session-only guests, saved guests, and claimed identity flows with export, restore, claim, sign-in, sign-out, and local lock-state messaging
 - signing out of a claimed session now restores a preserved guest actor when possible, otherwise Nexus immediately generates a fresh temporary guest so the shell never keeps showing the signed-out claimed identity as the active actor
 - the discussions thread workspace has been simplified by removing the separate expandable thread picker; feed remains the primary thread-switching surface, and successful inline replies now collapse the composer and mark the newly created reply inside the thread
 - shared Nexus action buttons now opt into a compact self-sized footprint by default so standalone actions do not stretch full-width inside vertical card layouts
@@ -159,14 +181,17 @@ Implemented shell behavior in this slice:
 - claimed sign-in now uses client-generated `P-256` keys, a signed challenge-response flow, encrypted local identity bundles, and optional persistent auth cookies that stay separate from packet-signing truth
 - passkeys are now optional extra protection instead of a hard requirement for claimed use, and protected security actions can re-approve through either passkey or signed-key re-auth from the unlocked local bundle
 - the shell sign-in workspace now uses graph-backed identity discovery and graph-backed location discovery from the packet graph itself, while keeping private signing-key custody strictly local unless the user imports a bundle or uses passkey sign-in
+- the trust route now projects scoped trust posture, association evidence, role claim summary, and baseline participation gates from policy defaults rather than showing a hidden reputation score
+- the roles route now projects the role catalog for the active scope, scope-relevant claimants, claimant trust stages for that role, and real support/dispute evidence with inline review actions
 
 Current implementation boundary:
 
 - nexus shell scopes, dashboard cards, vote lanes, discussion forums, and library cards are now loaded from packet-backed API projections instead of local mock arrays
-- a packet foundation now exists under `domain/schema`, `domain/core`, `domain/packets`, and `domain/projections`, with a separate top-level `storage` boundary for persistence
-- the current codebase now includes a canonical `PacketEnvelope = { header, body }` model, Zod packet-family parsers, packet-store/query-service interfaces, packet label projections, shared browser/nexus query-service implementations, a packet-store schema constant under `storage`, an Expo `SQLitePacketStore`, and a server-side `NodeSQLitePacketStore`
+- a packet foundation now exists under `core/schema`, `core/contracts`, `core/packets`, and `core/projections`, with runtime persistence and service orchestration under `runtime/*`
+- the current codebase now includes a canonical `PacketEnvelope = { header, body }` model, Zod packet-family parsers, per-family schema-compatibility upcasters, explicit family `revision_mode` metadata, packet-store/query-service interfaces, packet label projections, shared browser/nexus query-service implementations, an Expo `SQLitePacketStore`, and a server-side `NodeSQLitePacketStore`
 - the shared server bootstrap now seeds the personal scope tree, resets discussion packets by seed version in local dev, and reseeds per-scope discussion spaces, forum tabs, starter threads, root posts, and nested replies
-- packet detail routes, trust mechanics, and protected spaces remain later phases
+- a first trust-and-roles slice now exists through `Role` packets, `Element.claimed_role_refs`, scoped trust projections, role claimant projections, baseline trust policy defaults, and the `Trust` / `Roles` workspaces
+- packet detail routes, deeper trust weighting, and protected spaces remain later phases
 
 ## Core entities and data model
 
@@ -178,9 +203,11 @@ The current repo foundation should treat the packet envelope as:
 - `revision_id` = immutable exact revision reference
 - `parent_revision_refs` = exact revision ancestry, including merge revisions with multiple parents
 - `family` = canonical packet family
+- `schema_version` = family-shape compatibility, not content revision numbering
 - `edges` = the single typed relationship collection
 - `authority_scope_ref` plus `applicable_scope_refs` = ownership and applicability, separated
 - `parent_scope` = the explicit child-to-parent assembly edge for geographic scope trees
+- packet-family `revision_mode` = explicit write semantics (`append_only`, `replaceable`, reserved `mergeable`)
 
 The current repo foundation also now treats `Element` as the only identity-root family. Assemblies, teams, nodes, people, orgs, and services are `Element` kinds rather than separate top-level storage primitives.
 
@@ -210,6 +237,17 @@ Holds:
 A non-geographic coordination element.
 
 Linked to one or more assemblies but does not replace the assembly legitimacy anchor.
+
+### Role
+
+A reusable role definition packet that can be claimed by eligible actor elements and supported or disputed through attestations.
+
+Current implementation stance:
+
+- `Role` is its own packet family
+- claims are stored on `Element.claimed_role_refs`
+- support and dispute stay on `Attestation`, scoped through `context_ref`
+- trust posture is projected from evidence and policy thresholds rather than a hidden score
 
 ## Direction and intent
 
@@ -274,6 +312,12 @@ Modules can be reused across initiatives and missions.
 ### Policy
 
 Human-readable constraints and rules that can be referenced by missions, plans, and governance, and later validated automatically.
+
+Current implementation now also uses `Policy` for baseline trust defaults such as:
+
+- association support thresholds
+- role-claim support thresholds
+- posting/voting/review trust gates
 
 ## Documentation and memory
 
@@ -531,6 +575,30 @@ Every major decision gets a short entry:
 - Decision: rename `domain/*` to `core/*`, move `storage/*` and `lib/nexus/*` under `runtime/*`, move application-layer UI/content/support code under top-level `app/*`, and relocate the Expo Router tree to `src/app/*`.
 - Why: this gives the repo real architectural roots without turning shared UI files into accidental routes, and it keeps the route surface thin while still letting `app/*` represent the whole application layer.
 - Consequences / follow-ups: old `domain`, `storage`, and `lib/nexus` roots are gone, imports now resolve through `@core/*`, `@runtime/*`, and `@app/*`, and future file-size cleanup can happen incrementally inside the new roots instead of being blocked on another structural rename.
+
+### 2026-04-17 - Trust becomes the top-level function and `You` becomes a personal scope lens
+
+- Context: the shell still treated `Account` as a primary function workspace even though the next product phase needed scope-local legitimacy, role claims, and trust posture to work across every scope, including the current actor.
+- Options considered: keep `Account` as the main function until a later UI pass, collapse security controls directly into trust, or swap the function surface now while leaving wrapper-level identity custody separate.
+- Decision: replace the top-level `Account` function with `Trust`, keep `/nexus/account` as a hidden wrapper-level account/custody route reached through the profile link, and add `You` as a first-class personal scope lens resolved from the active actor packet.
+- Why: this matches the intended shell grammar better. `Trust` is a function that applies to any scope, while account/security is wrapper-level identity custody rather than a civic workspace peer beside dashboard, discussions, votes, or library.
+- Consequences / follow-ups: the shell section order is now `dashboard / discussions / votes / roles / trust / library`, `You` can be used with those same functions, trust payloads must stay scope-local and actor-aware, and future information architecture work can decide whether wrapper-level account tools should later be entered through `You` or remain profile-linked.
+
+### 2026-04-17 - Roles become a dedicated scope workspace and role evidence uses real attestations
+
+- Context: the first trust pass could project claimed roles for the current actor, but role review was still mixed into the trust surface and did not yet show scope-level claimant lists, real support/dispute actions, or inline evidence review.
+- Options considered: keep roles embedded in Trust longer, block in UI-only placeholders first, or add a dedicated `Roles` workspace backed by the existing role claim and attestation model.
+- Decision: add `/nexus/roles` as a top-level function, move role claim and unclaim actions onto that surface, project scope-relevant claimants per role, and use real `Attestation(kind: "role_support" | "role_dispute")` writes with `note` as the public comment field.
+- Why: this keeps `Trust` actor-centric while making `Roles` the scope-facing review surface. It also reuses the existing packet model instead of inventing a second role-voting subsystem.
+- Consequences / follow-ups: claimant lists are now scope-relevant rather than global, disputes require a comment, support and dispute are mutually exclusive per viewer/claimant/role/scope, evidence is inspected inline on the roles page for now, and later attestation-browser work should build on the same edge projections instead of replacing them.
+
+### 2026-04-17 - Packet schema compatibility, role packets, and baseline trust projections are now first-class
+
+- Context: packet revisions already existed, but schema evolution, trust semantics, and role legitimacy were still mostly planned concepts rather than enforceable structures in the runtime.
+- Options considered: keep using `schema_version` as a reserved placeholder, add a generic claim family first, or land the smallest compatibility-aware trust slice using the existing packet graph model.
+- Decision: add per-family schema compatibility handling with explicit upcasters and future-version rejection, add required family `revision_mode` metadata, introduce `Role` as a packet family, store role claims on `Element.claimed_role_refs`, extend `Attestation` with role support/dispute evidence kinds, and project trust through explicit stages plus baseline policy thresholds.
+- Why: this keeps packet history backward-compatible while making trust evidence inspectable and portable. It also avoids overbuilding a generic claim system before the simpler role-and-attestation model is proven.
+- Consequences / follow-ups: older `Element` and `Policy` bodies can upcast into the current internal shape without rewriting stored revisions, trust now has a real runtime/API slice instead of only conceptual docs, numeric trust scores remain deferred, and future governance or packet explorer work should build on the same family-compatibility and evidence-threshold rules rather than inventing separate trust state.
 
 ### 2026-04-10 - Claimed auth uses local keys plus server challenge sessions
 

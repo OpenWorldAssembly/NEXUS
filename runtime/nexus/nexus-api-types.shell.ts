@@ -18,6 +18,7 @@ export interface NexusShellPayload {
   default_scope_id: string;
   default_expanded_scope_ids: string[];
   followed_scope_ids: string[];
+  personal_parent_scope_id: string | null;
   guest_profile: NexusGuestProfile;
   guest_capabilities: NexusGuestCapability[];
   guest_checklist: NexusGuestChecklistItem[];

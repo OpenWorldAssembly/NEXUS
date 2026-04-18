@@ -87,7 +87,11 @@ export const GET: RequestHandler = async (request, params) => {
     }
 
     const shellPayload = await getNexusShellPayload();
-    const scopeId = resolveScopeIdFromShell(shellPayload, params.scopeId);
+    const scopeId = resolveScopeIdFromShell(
+      shellPayload,
+      params.scopeId,
+      viewerActorPacketId
+    );
     const repliesPayload = await getNexusDiscussionReplyChildrenPayload({
       scopeId,
       threadPostPacketId,
@@ -148,7 +152,10 @@ export const POST: RequestHandler = async (request, params) => {
       parsedReplyPacket as PacketEnvelopeByType['DiscussionReply'];
 
     const result = await services.discussionService.createReply({
-      scope_id: params.scopeId,
+      scope_id:
+        params.scopeId === 'you'
+          ? actorContext.actorPacket.header.packet_id
+          : params.scopeId,
       actor_key: actorContext.actorKey,
       actor_class: actorContext.actorClass,
       actor_packet: actorContext.actorPacket,

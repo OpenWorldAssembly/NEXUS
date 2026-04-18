@@ -4,12 +4,14 @@
  */
 
 import type {
+  AssemblyAssociationClaimProjection,
   NexusScopeLens,
 } from '@core/contracts';
 import {
   PACKET_FAMILIES,
   type PacketEnvelopeByType,
   type PacketFamily,
+  type PacketRef,
 } from '@core/schema/packet-schema';
 import {
   NEXUS_COMING_SOON_SURFACES,
@@ -24,11 +26,22 @@ import type {
   NexusDiscussionThreadPayload,
   NexusDiscussionsPayload,
   NexusLibraryPayload,
+  NexusRoleCardProjection,
+  NexusRoleClaimantProjection,
+  NexusRolesPayload,
   NexusShellPayload,
+  NexusTrustPayload,
+  NexusTrustRoleProjection,
   NexusVotesPayload,
 } from '@runtime/nexus/nexus-api-types';
 import type { NexusScopeSummary } from '@runtime/nexus/nexus-shell';
 import { getNexusPacketServices } from '@runtime/nexus/server/nexus-packet-services';
+import {
+  DEFAULT_TRUST_POLICY_SNAPSHOT,
+  deriveTrustStage,
+  meetsTrustGate,
+  type NexusTrustPolicySnapshot,
+} from '@runtime/nexus/server/trust-logic';
 import type {
   DiscussionReplySort,
   DiscussionSort,
@@ -53,6 +66,12 @@ type ScopeNode = {
   summary: string | null;
   localityLabel: string | null;
   parentRouteId: string | null;
+};
+
+type ScopeResolution = {
+  resolvedScopeId: string;
+  summary: NexusScopeSummary;
+  lens: NexusScopeLens;
 };
 
 /**
@@ -97,6 +116,36 @@ function toScopeLevel(scopeSubtype: string | null): NexusScopeSummary['level'] {
   }
 
   return 'district';
+}
+
+function buildPersonalScopeSummary(input: {
+  actorPacket: PacketEnvelopeByType['Element'];
+}): NexusScopeSummary {
+  return {
+    id: 'you',
+    packetId: input.actorPacket.header.packet_id,
+    name: 'You',
+    shortLabel: 'You',
+    level: 'personal',
+    description:
+      'Packet-backed personal scope lens anchored to the current actor element.',
+    localityLabel: input.actorPacket.body.locality_label ?? input.actorPacket.body.name,
+    badge:
+      input.actorPacket.body.identity?.claim_status === 'claimed'
+        ? 'Claimed actor'
+        : 'Guest actor',
+    relationshipLabel: 'Current actor scope',
+    childIds: [],
+    followedScopeIds: [],
+    publicLobbyLabel: 'Personal trust lens',
+    stats: {
+      members: 1,
+      activeVotes: 0,
+      hotDiscussions: 0,
+      missions: 0,
+      guestLobbyOpen: false,
+    },
+  };
 }
 
 /**
@@ -196,6 +245,24 @@ function buildScopeLens(
   };
 }
 
+function buildPersonalScopeLens(
+  actorPacket: PacketEnvelopeByType['Element']
+): NexusScopeLens {
+  const applicable_scope_refs: PacketRef[] =
+    actorPacket.header.applicable_scope_refs.length > 0
+      ? actorPacket.header.applicable_scope_refs
+      : actorPacket.header.authority_scope_ref
+        ? [actorPacket.header.authority_scope_ref]
+        : [{ packet_id: actorPacket.header.packet_id }];
+
+  return {
+    authority_scope_ref: {
+      packet_id: actorPacket.header.packet_id,
+    },
+    applicable_scope_refs,
+  };
+}
+
 /**
  * Inputs: scope summaries plus a requested scope id.
  * Output: the requested scope when present, otherwise the first scope as fallback.
@@ -208,6 +275,156 @@ function getScopeByIdOrDefault(
     scopeSummaries.find((scopeSummary) => scopeSummary.id === scopeId) ??
     scopeSummaries[0]
   );
+}
+
+async function getActorElementPacket(
+  actorPacketId: string | null | undefined
+): Promise<PacketEnvelopeByType['Element'] | null> {
+  if (!actorPacketId) {
+    return null;
+  }
+
+  const services = await getNexusPacketServices();
+  const actorPacket = await services.packetStore.fetchByPacket({
+    packet_id: actorPacketId,
+  });
+
+  if (!actorPacket || actorPacket.header.family !== 'Element') {
+    return null;
+  }
+
+  return actorPacket as PacketEnvelopeByType['Element'];
+}
+
+async function resolveScopeResolution(input: {
+  requestedScopeId: string;
+  actorPacketId?: string | null;
+}): Promise<ScopeResolution> {
+  const scopeNodes = await listScopeNodes();
+  const scopeMap = new Map(
+    scopeNodes.map((scopeNode) => [scopeNode.routeId, scopeNode])
+  );
+
+  if (input.requestedScopeId === 'you') {
+    const actorPacket = await getActorElementPacket(input.actorPacketId ?? null);
+
+    if (actorPacket) {
+      const summary = buildPersonalScopeSummary({
+        actorPacket,
+      });
+
+      return {
+        resolvedScopeId: 'you',
+        summary,
+        lens: buildPersonalScopeLens(actorPacket),
+      };
+    }
+  }
+
+  const scopeLens = buildScopeLens(input.requestedScopeId, scopeMap);
+  const scopeSummaries = scopeNodes.map((scopeNode) => ({
+    id: scopeNode.routeId,
+    packetId: scopeNode.packetId,
+    name: scopeNode.name,
+    shortLabel: toScopeShortLabel(scopeNode.name, scopeNode.subtype),
+    level: toScopeLevel(scopeNode.subtype),
+    description:
+      scopeNode.summary ??
+      `Packet-backed assembly scope for ${scopeNode.name}.`,
+    localityLabel:
+      scopeNode.localityLabel ?? `${scopeNode.name} assembly locality`,
+    badge: scopeNode.subtype === 'global' ? 'Guest default' : 'Assembly scope',
+    relationshipLabel:
+      scopeNode.parentRouteId === null
+        ? 'Root assembly scope'
+        : `Child of ${scopeMap.get(scopeNode.parentRouteId)?.name ?? 'parent scope'}`,
+    parentId: scopeNode.parentRouteId ?? undefined,
+    childIds: scopeNodes
+      .filter((candidateNode) => candidateNode.parentRouteId === scopeNode.routeId)
+      .map((childNode) => childNode.routeId),
+    followedScopeIds: DEFAULT_FOLLOWED_SCOPE_IDS,
+    publicLobbyLabel: `${scopeNode.name} visitor lobby`,
+    stats: {
+      members: 0,
+      activeVotes: 0,
+      hotDiscussions: 0,
+      missions: 0,
+      guestLobbyOpen: false,
+    },
+  })) satisfies NexusScopeSummary[];
+
+  const summary = getScopeByIdOrDefault(scopeSummaries, input.requestedScopeId);
+
+  return {
+    resolvedScopeId: summary.id,
+    summary,
+    lens: scopeLens,
+  };
+}
+
+function parseTrustPolicyFromPacket(
+  packet: PacketEnvelopeByType['Policy']
+): NexusTrustPolicySnapshot | null {
+  if (packet.body.policy_kind !== 'trust_baseline' || !packet.body.trust_policy) {
+    return null;
+  }
+
+  return {
+    association_support_threshold:
+      packet.body.trust_policy.association_support_threshold,
+    role_support_threshold: packet.body.trust_policy.role_support_threshold,
+    posting_gate: packet.body.trust_policy.posting_gate,
+    voting_gate: packet.body.trust_policy.voting_gate,
+    review_gate: packet.body.trust_policy.review_gate,
+  };
+}
+
+async function getTrustPolicyForScope(
+  scopeLens: NexusScopeLens
+): Promise<NexusTrustPolicySnapshot> {
+  const services = await getNexusPacketServices();
+  const policyPackets = await services.packetStore.listPreferredPacketsByFamily('Policy');
+  const applicableScopeIds = new Set(
+    [
+      scopeLens.authority_scope_ref?.packet_id ?? null,
+      ...scopeLens.applicable_scope_refs.map((scopeRef) => scopeRef.packet_id),
+    ].filter((packetId): packetId is string => typeof packetId === 'string')
+  );
+
+  return (
+    policyPackets
+      .filter((packet) =>
+        applicableScopeIds.has(packet.header.authority_scope_ref?.packet_id ?? '')
+      )
+      .map((packet) => parseTrustPolicyFromPacket(packet as PacketEnvelopeByType['Policy']))
+      .find((policy): policy is NexusTrustPolicySnapshot => policy !== null) ??
+    DEFAULT_TRUST_POLICY_SNAPSHOT
+  );
+}
+
+function getAssemblyPacketIdForScope(
+  scopeSummary: NexusScopeSummary,
+  actorPacket: PacketEnvelopeByType['Element'] | null
+): string | null {
+  return scopeSummary.level === 'personal'
+    ? actorPacket?.header.authority_scope_ref?.packet_id ?? null
+    : scopeSummary.packetId;
+}
+
+function getRoleClaimTrustStage(input: {
+  hasAssociationClaim: boolean;
+  associationSupportCount: number;
+  roleSupportCount: number;
+  thresholds: NexusTrustPolicySnapshot;
+}): ReturnType<typeof deriveTrustStage> {
+  return deriveTrustStage({
+    has_association_claim: input.hasAssociationClaim,
+    association_support_count: input.associationSupportCount,
+    claimed_role_count: 1,
+    supported_role_count:
+      input.roleSupportCount >= input.thresholds.role_support_threshold ? 1 : 0,
+    thresholds: input.thresholds,
+  });
 }
 
 /**
@@ -369,7 +586,9 @@ function getDiscussionForumDisplayTitle(
  * Inputs: none.
  * Output: builds the shell payload from assembly element packets and query-derived counts.
  */
-export async function getNexusShellPayload(): Promise<NexusShellPayload> {
+export async function getNexusShellPayload(
+  actorPacketId?: string | null
+): Promise<NexusShellPayload> {
   const services = await getNexusPacketServices();
   const scopeNodes = await listScopeNodes();
   const scopeMap = new Map(
@@ -406,6 +625,7 @@ export async function getNexusShellPayload(): Promise<NexusShellPayload> {
 
     scopeSummaries.push({
       id: scopeNode.routeId,
+      packetId: scopeNode.packetId,
       name: scopeNode.name,
       shortLabel: toScopeShortLabel(scopeNode.name, scopeNode.subtype),
       level: toScopeLevel(scopeNode.subtype),
@@ -443,6 +663,17 @@ export async function getNexusShellPayload(): Promise<NexusShellPayload> {
     scopeSummaries[0]?.id ??
     '';
   const defaultScope = getScopeByIdOrDefault(scopeSummaries, defaultScopeId);
+  const actorPacket =
+    actorPacketId !== null && actorPacketId !== undefined
+      ? await getActorElementPacket(actorPacketId)
+      : null;
+  const personalParentScopeId =
+    actorPacket?.header.authority_scope_ref?.packet_id
+      ? scopeNodes.find(
+          (scopeNode) =>
+            scopeNode.packetId === actorPacket.header.authority_scope_ref?.packet_id
+        )?.routeId ?? defaultScope.id
+      : defaultScope.id;
   const defaultExpandedScopeIds = [
     defaultScope.id,
     ...scopeSummaries
@@ -457,6 +688,7 @@ export async function getNexusShellPayload(): Promise<NexusShellPayload> {
     followed_scope_ids: DEFAULT_FOLLOWED_SCOPE_IDS.filter((scopeId) =>
       scopeSummaries.some((scopeSummary) => scopeSummary.id === scopeId)
     ),
+    personal_parent_scope_id: personalParentScopeId,
     guest_profile: NEXUS_GUEST_PROFILE,
     guest_capabilities: NEXUS_GUEST_CAPABILITIES,
     guest_checklist: NEXUS_GUEST_CHECKLIST,
@@ -469,14 +701,15 @@ export async function getNexusShellPayload(): Promise<NexusShellPayload> {
  * Output: dashboard metrics, queue cards, and recommended packets for that scope lens.
  */
 export async function getNexusDashboardPayload(
-  scopeId: string
+  scopeId: string,
+  actorPacketId?: string | null
 ): Promise<NexusDashboardPayload> {
   const services = await getNexusPacketServices();
-  const scopeNodes = await listScopeNodes();
-  const scopeMap = new Map(
-    scopeNodes.map((scopeNode) => [scopeNode.routeId, scopeNode])
-  );
-  const scopeLens = buildScopeLens(scopeId, scopeMap);
+  const scopeResolution = await resolveScopeResolution({
+    requestedScopeId: scopeId,
+    actorPacketId,
+  });
+  const scopeLens = scopeResolution.lens;
   const [queueCards, voteCards, discussionCards, libraryCards] = await Promise.all([
     services.nexusQueryService.getDashboardQueue(scopeLens),
     services.nexusQueryService.listVotes(scopeLens),
@@ -621,14 +854,15 @@ export async function getNexusDiscussionReplyChildrenPayload(input: {
  * Output: vote stage cards and vote packet projections for the scope lens.
  */
 export async function getNexusVotesPayload(
-  scopeId: string
+  scopeId: string,
+  actorPacketId?: string | null
 ): Promise<NexusVotesPayload> {
   const services = await getNexusPacketServices();
-  const scopeNodes = await listScopeNodes();
-  const scopeMap = new Map(
-    scopeNodes.map((scopeNode) => [scopeNode.routeId, scopeNode])
-  );
-  const scopeLens = buildScopeLens(scopeId, scopeMap);
+  const scopeResolution = await resolveScopeResolution({
+    requestedScopeId: scopeId,
+    actorPacketId,
+  });
+  const scopeLens = scopeResolution.lens;
   const voteCards = await services.nexusQueryService.listVotes(scopeLens);
   const stageCounts = {
     petitioning: 0,
@@ -685,13 +919,14 @@ export async function getNexusVotesPayload(
 export async function getNexusLibraryPayload(input: {
   scopeId: string;
   familyFilter: PacketFamily | null;
+  actorPacketId?: string | null;
 }): Promise<NexusLibraryPayload> {
   const services = await getNexusPacketServices();
-  const scopeNodes = await listScopeNodes();
-  const scopeMap = new Map(
-    scopeNodes.map((scopeNode) => [scopeNode.routeId, scopeNode])
-  );
-  const scopeLens = buildScopeLens(input.scopeId, scopeMap);
+  const scopeResolution = await resolveScopeResolution({
+    requestedScopeId: input.scopeId,
+    actorPacketId: input.actorPacketId,
+  });
+  const scopeLens = scopeResolution.lens;
   const packets = await services.nexusQueryService.listLibraryPackets(
     scopeLens,
     input.familyFilter ?? undefined
@@ -724,8 +959,13 @@ export function parseFamilyFilter(value: unknown): PacketFamily | null {
  */
 export function resolveScopeIdFromShell(
   shellPayload: NexusShellPayload,
-  requestedScopeId: string
+  requestedScopeId: string,
+  actorPacketId?: string | null
 ): string {
+  if (requestedScopeId === 'you' && actorPacketId) {
+    return 'you';
+  }
+
   const requestedScopeExists = shellPayload.scope_summaries.some(
     (scopeSummary) => scopeSummary.id === requestedScopeId
   );
@@ -743,4 +983,311 @@ export function resolveScopeIdFromShell(
  */
 export function getScopeIdFromLens(lens: NexusScopeLens): string {
   return getScopeFromLens(lens);
+}
+
+export async function getNexusTrustPayload(input: {
+  scopeId: string;
+  actorPacketId?: string | null;
+}): Promise<NexusTrustPayload> {
+  const services = await getNexusPacketServices();
+  const actorPacket = await getActorElementPacket(input.actorPacketId ?? null);
+  const scopeResolution = await resolveScopeResolution({
+    requestedScopeId: input.scopeId,
+    actorPacketId: input.actorPacketId,
+  });
+  const scopeLens = scopeResolution.lens;
+  const rolePackets = await services.packetStore.listPreferredPacketsByFamily('Role');
+  const trustPolicy = await getTrustPolicyForScope(scopeLens);
+  const assemblyPacketId = getAssemblyPacketIdForScope(
+    scopeResolution.summary,
+    actorPacket
+  );
+  const assemblyClaims =
+    actorPacket?.header.packet_id
+      ? await services.attestationService.listAssemblyAssociationClaimsForActor(
+          actorPacket.header.packet_id
+        )
+      : [];
+  const activeAssemblyClaim = assemblyPacketId
+    ? assemblyClaims.find(
+        (claim) =>
+          claim.assembly_packet_id === assemblyPacketId &&
+          claim.status === 'active'
+      ) ?? null
+    : null;
+  const claimedRoleRefIds = new Set(
+    actorPacket?.body.claimed_role_refs.map((roleRef) => roleRef.packet_id) ?? []
+  );
+  const roleCards: NexusTrustRoleProjection[] = [];
+
+  for (const rolePacket of rolePackets) {
+    const typedRolePacket = rolePacket as PacketEnvelopeByType['Role'];
+    const supportEdges =
+      actorPacket?.header.packet_id
+        ? await services.attestationService.listTargetAttestations({
+            target_packet_id: actorPacket.header.packet_id,
+            attestation_kind: 'role_support',
+            context_packet_id: typedRolePacket.header.packet_id,
+            active_only: true,
+          })
+        : [];
+    const disputeEdges =
+      actorPacket?.header.packet_id
+        ? await services.attestationService.listTargetAttestations({
+            target_packet_id: actorPacket.header.packet_id,
+            attestation_kind: 'role_dispute',
+            context_packet_id: typedRolePacket.header.packet_id,
+            active_only: true,
+          })
+        : [];
+    const scopedSupportEdges =
+      assemblyPacketId === null
+        ? supportEdges
+        : supportEdges.filter(
+            (edge) => edge.authority_scope_packet_id === assemblyPacketId
+          );
+    const scopedDisputeEdges =
+      assemblyPacketId === null
+        ? disputeEdges
+        : disputeEdges.filter(
+            (edge) => edge.authority_scope_packet_id === assemblyPacketId
+          );
+
+    roleCards.push({
+      role_packet_id: typedRolePacket.header.packet_id,
+      title: typedRolePacket.body.title,
+      role_kind: typedRolePacket.body.role_kind,
+      summary: typedRolePacket.body.summary ?? null,
+      responsibility_markdown: typedRolePacket.body.responsibility_markdown,
+      is_claimed: claimedRoleRefIds.has(typedRolePacket.header.packet_id),
+      support_count: scopedSupportEdges.length,
+      dispute_count: scopedDisputeEdges.length,
+      stage:
+        scopedSupportEdges.length >= trustPolicy.role_support_threshold
+          ? 'role_eligible'
+          : claimedRoleRefIds.has(typedRolePacket.header.packet_id)
+            ? 'emerging'
+            : 'self_claimed',
+      support_edges: scopedSupportEdges,
+      dispute_edges: scopedDisputeEdges,
+    });
+  }
+
+  const supportedRoleCount = roleCards.filter(
+    (roleCard) => roleCard.support_count >= trustPolicy.role_support_threshold
+  ).length;
+  const trustStage = deriveTrustStage({
+    has_association_claim: activeAssemblyClaim !== null,
+    association_support_count: activeAssemblyClaim?.supported_by_other_count ?? 0,
+    claimed_role_count: roleCards.filter((roleCard) => roleCard.is_claimed).length,
+    supported_role_count: supportedRoleCount,
+    thresholds: trustPolicy,
+  });
+
+  return {
+    lens: scopeLens,
+    scope: scopeResolution.summary,
+    actor_packet_id: actorPacket?.header.packet_id ?? null,
+    actor_label: actorPacket?.body.name ?? 'Anonymous Guest',
+    trust_stage: trustStage,
+    trust_score: null,
+    policy_snapshot: trustPolicy,
+    can_post: meetsTrustGate(trustStage, trustPolicy.posting_gate),
+    can_vote: meetsTrustGate(trustStage, trustPolicy.voting_gate),
+    can_review: meetsTrustGate(trustStage, trustPolicy.review_gate),
+    assembly_claims:
+      assemblyPacketId !== null
+        ? assemblyClaims.filter(
+            (claim) => claim.assembly_packet_id === assemblyPacketId
+          )
+        : assemblyClaims,
+    role_cards: roleCards,
+  };
+}
+
+export async function getNexusRolesPayload(input: {
+  scopeId: string;
+  actorPacketId?: string | null;
+}): Promise<NexusRolesPayload> {
+  const services = await getNexusPacketServices();
+  const actorPacket = await getActorElementPacket(input.actorPacketId ?? null);
+  const scopeResolution = await resolveScopeResolution({
+    requestedScopeId: input.scopeId,
+    actorPacketId: input.actorPacketId,
+  });
+  const scopeLens = scopeResolution.lens;
+  const trustPolicy = await getTrustPolicyForScope(scopeLens);
+  const assemblyPacketId = getAssemblyPacketIdForScope(
+    scopeResolution.summary,
+    actorPacket
+  );
+  const rolePackets = (
+    await services.packetStore.listPreferredPacketsByFamily('Role')
+  ) as PacketEnvelopeByType['Role'][];
+  const elementPackets = (
+    await services.packetStore.listPreferredPacketsByFamily('Element')
+  ) as PacketEnvelopeByType['Element'][];
+  const currentActorPacketId = actorPacket?.header.packet_id ?? null;
+  const eligibleClaimants = elementPackets.filter((packet) =>
+    ['person', 'assembly', 'team'].includes(packet.body.kind)
+  );
+  const assemblyClaimsByActor = new Map<
+    string,
+    AssemblyAssociationClaimProjection[]
+  >();
+
+  for (const claimantPacket of eligibleClaimants) {
+    if (claimantPacket.body.kind !== 'person') {
+      continue;
+    }
+
+    assemblyClaimsByActor.set(
+      claimantPacket.header.packet_id,
+      await services.attestationService.listAssemblyAssociationClaimsForActor(
+        claimantPacket.header.packet_id
+      )
+    );
+  }
+
+  const roleCards: NexusRoleCardProjection[] = [];
+
+  for (const rolePacket of rolePackets) {
+    const claimants: NexusRoleClaimantProjection[] = [];
+
+    for (const claimantPacket of eligibleClaimants) {
+      const hasClaimedRole = claimantPacket.body.claimed_role_refs.some(
+        (roleRef) => roleRef.packet_id === rolePacket.header.packet_id
+      );
+
+      if (!hasClaimedRole) {
+        continue;
+      }
+
+      const claimantAssemblyClaims =
+        assemblyClaimsByActor.get(claimantPacket.header.packet_id) ?? [];
+      const activeAssemblyClaim =
+        assemblyPacketId === null
+          ? claimantAssemblyClaims.find((claim) => claim.status === 'active') ?? null
+          : claimantAssemblyClaims.find(
+              (claim) =>
+                claim.assembly_packet_id === assemblyPacketId &&
+                claim.status === 'active'
+            ) ?? null;
+      const matchesAuthorityScope =
+        assemblyPacketId !== null &&
+        claimantPacket.header.authority_scope_ref?.packet_id === assemblyPacketId;
+      const isScopeRelevant =
+        scopeResolution.summary.level === 'personal'
+          ? claimantPacket.header.packet_id === currentActorPacketId
+          : assemblyPacketId === null
+            ? true
+            : matchesAuthorityScope || activeAssemblyClaim !== null;
+
+      if (!isScopeRelevant) {
+        continue;
+      }
+
+      const supportEdges = await services.attestationService.listTargetAttestations({
+        target_packet_id: claimantPacket.header.packet_id,
+        attestation_kind: 'role_support',
+        context_packet_id: rolePacket.header.packet_id,
+        active_only: true,
+      });
+      const disputeEdges = await services.attestationService.listTargetAttestations({
+        target_packet_id: claimantPacket.header.packet_id,
+        attestation_kind: 'role_dispute',
+        context_packet_id: rolePacket.header.packet_id,
+        active_only: true,
+      });
+      const scopedSupportEdges =
+        assemblyPacketId === null
+          ? supportEdges
+          : supportEdges.filter(
+              (edge) => edge.authority_scope_packet_id === assemblyPacketId
+            );
+      const scopedDisputeEdges =
+        assemblyPacketId === null
+          ? disputeEdges
+          : disputeEdges.filter(
+              (edge) => edge.authority_scope_packet_id === assemblyPacketId
+            );
+      const viewerAttestation =
+        scopedSupportEdges.some(
+          (edge) => edge.source_actor_packet_id === currentActorPacketId
+        )
+          ? 'support'
+          : scopedDisputeEdges.some(
+                (edge) => edge.source_actor_packet_id === currentActorPacketId
+              )
+            ? 'dispute'
+            : 'none';
+
+      claimants.push({
+        actor_packet_id: claimantPacket.header.packet_id,
+        actor_label: claimantPacket.body.name,
+        actor_kind: claimantPacket.body.kind,
+        is_current_actor: claimantPacket.header.packet_id === currentActorPacketId,
+        trust_stage: getRoleClaimTrustStage({
+          hasAssociationClaim: activeAssemblyClaim !== null || matchesAuthorityScope,
+          associationSupportCount: activeAssemblyClaim?.supported_by_other_count ?? 0,
+          roleSupportCount: scopedSupportEdges.length,
+          thresholds: trustPolicy,
+        }),
+        support_count: scopedSupportEdges.length,
+        dispute_count: scopedDisputeEdges.length,
+        viewer_attestation: viewerAttestation,
+        support_edges: scopedSupportEdges,
+        dispute_edges: scopedDisputeEdges,
+      });
+    }
+
+    claimants.sort((leftClaimant, rightClaimant) => {
+      if (leftClaimant.is_current_actor !== rightClaimant.is_current_actor) {
+        return leftClaimant.is_current_actor ? -1 : 1;
+      }
+
+      if (leftClaimant.support_count !== rightClaimant.support_count) {
+        return rightClaimant.support_count - leftClaimant.support_count;
+      }
+
+      if (leftClaimant.dispute_count !== rightClaimant.dispute_count) {
+        return leftClaimant.dispute_count - rightClaimant.dispute_count;
+      }
+
+      return leftClaimant.actor_label.localeCompare(rightClaimant.actor_label);
+    });
+
+    roleCards.push({
+      role_packet_id: rolePacket.header.packet_id,
+      title: rolePacket.body.title,
+      role_kind: rolePacket.body.role_kind,
+      summary: rolePacket.body.summary ?? null,
+      responsibility_markdown: rolePacket.body.responsibility_markdown ?? null,
+      is_claimed_by_current_actor:
+        currentActorPacketId === null
+          ? false
+          : claimants.some((claimant) => claimant.is_current_actor),
+      claimants,
+    });
+  }
+
+  roleCards.sort((leftRole, rightRole) => {
+    if (
+      leftRole.is_claimed_by_current_actor !==
+      rightRole.is_claimed_by_current_actor
+    ) {
+      return leftRole.is_claimed_by_current_actor ? -1 : 1;
+    }
+
+    return leftRole.title.localeCompare(rightRole.title);
+  });
+
+  return {
+    lens: scopeLens,
+    scope: scopeResolution.summary,
+    actor_packet_id: currentActorPacketId,
+    actor_label: actorPacket?.body.name ?? 'Anonymous Guest',
+    policy_snapshot: trustPolicy,
+    role_cards: roleCards,
+  };
 }

@@ -3,7 +3,8 @@
  * Description: Shares the nexus shell state across all `/nexus/*` routes.
  */
 import type { PropsWithChildren } from 'react';
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import type { Href } from 'expo-router';
 import { usePathname, useRouter } from 'expo-router';
 
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
@@ -53,6 +54,7 @@ type NexusShellContextValue = NexusShellState & {
 const NexusShellContext = createContext<NexusShellContextValue | null>(null);
 const FALLBACK_SCOPE_SUMMARY: NexusScopeSummary = {
   id: 'global-commons',
+  packetId: 'nexus:element/global-commons',
   name: 'Global Commons',
   shortLabel: 'Global',
   level: 'global',
@@ -72,6 +74,37 @@ const FALLBACK_SCOPE_SUMMARY: NexusScopeSummary = {
     guestLobbyOpen: true,
   },
 };
+
+function buildPersonalScopeSummary(input: {
+  actorPacketId: string;
+  currentLabel: string;
+  currentMode: 'ephemeral_guest' | 'persistent_guest' | 'claimed' | null;
+  parentScopeId?: string | null;
+}): NexusScopeSummary {
+  return {
+    id: 'you',
+    packetId: input.actorPacketId,
+    name: 'You',
+    shortLabel: 'You',
+    level: 'personal',
+    description:
+      'Personal scope lens anchored to the current actor packet and used across every Nexus function.',
+    localityLabel: input.currentLabel,
+    badge: input.currentMode === 'claimed' ? 'Claimed actor' : 'Guest actor',
+    relationshipLabel: 'Current actor scope',
+    parentId: input.parentScopeId ?? undefined,
+    childIds: [],
+    followedScopeIds: [],
+    publicLobbyLabel: 'Personal trust lens',
+    stats: {
+      members: 1,
+      activeVotes: 0,
+      hotDiscussions: 0,
+      missions: 0,
+      guestLobbyOpen: false,
+    },
+  };
+}
 
 /**
  * Inputs: nexus route children.
@@ -118,18 +151,49 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
     followedScopeIds.includes(scope.id),
   );
 
-  const refreshShellData = async () => {
-    const shellPayload = await fetchNexusShellPayload();
+  const refreshShellData = useCallback(async () => {
+    const shellPayload = await fetchNexusShellPayload({
+      actorPacketId: currentActorPacketId,
+    });
 
     if (shellPayload.scope_summaries.length === 0) {
       return;
     }
 
-    setScopeSummaries(shellPayload.scope_summaries);
+    const baseScopeSummaries = shellPayload.scope_summaries;
+    const nextScopeSummaries =
+      currentActorPacketId !== null
+        ? (() => {
+            const personalParentScopeId =
+              shellPayload.personal_parent_scope_id ?? shellPayload.default_scope_id;
+            const personalScopeSummary = buildPersonalScopeSummary({
+              actorPacketId: currentActorPacketId,
+              currentLabel,
+              currentMode,
+              parentScopeId: personalParentScopeId,
+            });
+
+            return [
+              ...baseScopeSummaries.map((scopeSummary) =>
+                scopeSummary.id === personalParentScopeId
+                  ? {
+                      ...scopeSummary,
+                      childIds: Array.from(
+                        new Set([...scopeSummary.childIds, personalScopeSummary.id])
+                      ),
+                    }
+                  : scopeSummary
+              ),
+              personalScopeSummary,
+            ];
+          })()
+        : baseScopeSummaries;
+
+    setScopeSummaries(nextScopeSummaries);
     setFollowedScopeIds(shellPayload.followed_scope_ids);
     setGuestCapabilities(shellPayload.guest_capabilities);
     setActiveScopeIdState((currentScopeId) =>
-      shellPayload.scope_summaries.some(
+      nextScopeSummaries.some(
         (scopeSummary) => scopeSummary.id === currentScopeId,
       )
         ? currentScopeId
@@ -137,7 +201,7 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
     );
     setExpandedScopeIds((currentExpandedScopeIds) => {
       const currentScopeIds = currentExpandedScopeIds.filter((scopeId) =>
-        shellPayload.scope_summaries.some(
+        nextScopeSummaries.some(
           (scopeSummary) => scopeSummary.id === scopeId,
         ),
       );
@@ -146,10 +210,11 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
         new Set([
           ...shellPayload.default_expanded_scope_ids,
           ...currentScopeIds,
+          ...(currentActorPacketId ? ['you'] : []),
         ]),
       );
     });
-  };
+  }, [currentActorPacketId, currentLabel, currentMode]);
 
   useEffect(() => {
     let isMounted = true;
@@ -171,7 +236,7 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [refreshShellData]);
 
   /**
    * Inputs: a new scope id.
@@ -203,7 +268,7 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
    * Output: pushes the route that corresponds to the requested section.
    */
   const setActiveSection = (section: NexusSection) => {
-    router.push(getNexusSectionHref(section));
+    router.push(getNexusSectionHref(section) as Href);
   };
 
   /**

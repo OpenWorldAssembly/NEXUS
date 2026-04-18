@@ -10,6 +10,8 @@ export type NexusSection =
   | 'dashboard'
   | 'discussions'
   | 'votes'
+  | 'roles'
+  | 'trust'
   | 'library'
   | 'account';
 
@@ -19,6 +21,7 @@ export type NexusGuestCapability =
   | 'post-visitor-lobby';
 
 export type NexusScopeRelationship =
+  | 'personal'
   | 'global'
   | 'parent'
   | 'current'
@@ -27,9 +30,10 @@ export type NexusScopeRelationship =
 
 export type NexusScopeSummary = {
   id: string;
+  packetId: string;
   name: string;
   shortLabel: string;
-  level: 'global' | 'nation' | 'region' | 'city' | 'district';
+  level: 'personal' | 'global' | 'nation' | 'region' | 'city' | 'district';
   description: string;
   localityLabel: string;
   badge: string;
@@ -76,14 +80,17 @@ export const NEXUS_SECTION_ORDER: NexusSection[] = [
   'dashboard',
   'discussions',
   'votes',
+  'roles',
+  'trust',
   'library',
-  'account',
 ];
 
 export const NEXUS_SECTION_LABELS: Record<NexusSection, string> = {
   dashboard: 'Dashboard',
   discussions: 'Discussions',
   votes: 'Votes',
+  roles: 'Roles',
+  trust: 'Trust',
   library: 'Library',
   account: 'Account',
 };
@@ -94,8 +101,9 @@ export const NEXUS_SECTION_LABELS: Record<NexusSection, string> = {
  */
 export function getNexusSectionFromPathname(pathname: string): NexusSection {
   const section = pathname.replace('/nexus/', '').split('/')[0];
+  const knownSections: NexusSection[] = [...NEXUS_SECTION_ORDER, 'account'];
 
-  if (NEXUS_SECTION_ORDER.includes(section as NexusSection)) {
+  if (knownSections.includes(section as NexusSection)) {
     return section as NexusSection;
   }
 
@@ -175,7 +183,9 @@ export function buildNexusBranchNodes(
 
     let relationship: NexusScopeRelationship = 'child';
 
-    if (depth === 0) {
+    if (scope.level === 'personal') {
+      relationship = 'personal';
+    } else if (depth === 0) {
       relationship = 'global';
     } else if (scopeId === activeScopeId) {
       relationship = 'current';
