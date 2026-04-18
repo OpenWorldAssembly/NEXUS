@@ -1,14 +1,19 @@
 /**
- * File: roles+api.ts
- * Description: Updates the current actor's claimed role refs through verified actor assertions.
+ * File: claims+api.ts
+ * Description: Creates or withdraws scoped role-association claims for the current actor.
  */
 
 import type { RequestHandler } from 'expo-router/server';
 import { z } from 'zod';
 
-import { createElementRoleClaimsRevision } from '@core/packets/identity';
-import type { PacketEnvelopeByType } from '@core/schema/packet-schema';
+import { createAssociationClaimPacket, createClaimPacketId } from '@core/packets/claims';
 import { getNexusPacketServices } from '@runtime/nexus/server/nexus-packet-services';
+import {
+  buildApplicableScopeRefsForSummary,
+  getNexusShellPayload,
+  getScopeSummaryByIdOrDefault,
+  resolveScopeIdFromShell,
+} from '@runtime/nexus/server/nexus-query-data';
 
 const ActorAssertionSchema = z
   .object({
@@ -42,7 +47,7 @@ function createJsonResponse(body: unknown, status = 200): Response {
   });
 }
 
-export const PUT: RequestHandler = async (request) => {
+export const PUT: RequestHandler = async (request, params) => {
   try {
     const parsedBody = RoleClaimMutationSchema.parse(await request.json());
     const services = await getNexusPacketServices();
@@ -51,7 +56,7 @@ export const PUT: RequestHandler = async (request) => {
       actorPacket: parsedBody.actor_packet,
       actorAssertion: parsedBody.actor_assertion,
       method: 'PUT',
-      path: '/api/nexus/trust/roles',
+      path: `/api/nexus/scopes/${params.scopeId}/roles/claims`,
       body: {
         actor_packet: parsedBody.actor_packet,
         csrf_token: parsedBody.csrf_token,
@@ -71,36 +76,55 @@ export const PUT: RequestHandler = async (request) => {
       return createJsonResponse({ error: 'Unknown role packet.' }, 404);
     }
 
-    const currentRoleRefs = new Set(
-      actorContext.actorPacket.body.claimed_role_refs.map(
-        (roleRef) => roleRef.packet_id
-      )
+    const shellPayload = await getNexusShellPayload(
+      actorContext.actorPacket.header.packet_id
     );
-
-    if (parsedBody.claimed) {
-      currentRoleRefs.add(parsedBody.role_packet_id);
-    } else {
-      currentRoleRefs.delete(parsedBody.role_packet_id);
-    }
-
-    const nextActorPacket = createElementRoleClaimsRevision({
-      actorPacket: actorContext.actorPacket as PacketEnvelopeByType['Element'],
-      claimedRoleRefs: Array.from(currentRoleRefs).map((packetId) => ({
-        packet_id: packetId,
-      })),
+    const resolvedScopeId = resolveScopeIdFromShell(
+      shellPayload,
+      params.scopeId,
+      actorContext.actorPacket.header.packet_id
+    );
+    const effectiveScopeId =
+      resolvedScopeId === 'you'
+        ? shellPayload.personal_parent_scope_id ?? shellPayload.default_scope_id
+        : resolvedScopeId;
+    const scopeSummary = getScopeSummaryByIdOrDefault(
+      shellPayload.scope_summaries,
+      effectiveScopeId
+    );
+    const claimPacketId = createClaimPacketId({
+      claimKind: 'role_association',
+      subjectPacketId: actorContext.actorPacket.header.packet_id,
+      targetPacketId: parsedBody.role_packet_id,
+      scopePacketId: scopeSummary.packetId,
+    });
+    const existingPreferredRevision = await services.packetStore.fetchPreferredRevision({
+      packet_id: claimPacketId,
+    });
+    const claimPacket = createAssociationClaimPacket({
+      claimKind: 'role_association',
+      subjectPacketId: actorContext.actorPacket.header.packet_id,
+      targetPacketId: parsedBody.role_packet_id,
+      scopePacketId: scopeSummary.packetId,
+      applicableScopeRefs: buildApplicableScopeRefsForSummary(
+        scopeSummary,
+        shellPayload.scope_summaries
+      ),
+      createdByPacketId: actorContext.actorPacket.header.packet_id,
+      status: parsedBody.claimed ? 'active' : 'withdrawn',
+      packetId: claimPacketId,
+      parentRevisionRefs: existingPreferredRevision ? [existingPreferredRevision] : [],
     });
 
-    await services.packetStore.writeRevision(nextActorPacket);
+    await services.packetStore.writeRevision(claimPacket);
     await services.packetStore.publishRevision({
-      packet_id: nextActorPacket.header.packet_id,
-      revision_id: nextActorPacket.header.revision_id,
+      packet_id: claimPacket.header.packet_id,
+      revision_id: claimPacket.header.revision_id,
     });
 
     return createJsonResponse({
-      actor_packet_id: nextActorPacket.header.packet_id,
-      claimed_role_refs: nextActorPacket.body.claimed_role_refs.map(
-        (roleRef) => roleRef.packet_id
-      ),
+      claim_packet_id: claimPacket.header.packet_id,
+      claim_status: claimPacket.body.status,
     });
   } catch (error) {
     const message =
@@ -108,8 +132,11 @@ export const PUT: RequestHandler = async (request) => {
     const status =
       message.includes('Actor assertion') || message.includes('Sign in')
         ? 400
-        : 500;
+        : message.includes('Unknown')
+          ? 404
+          : 500;
 
     return createJsonResponse({ error: message }, status);
   }
 };
+

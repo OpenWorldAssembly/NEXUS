@@ -170,7 +170,69 @@ Default direction:
 - do not collapse trust and security into the same concept
 - keep identity custody distinct from legitimacy, even if the eventual UI entry points overlap
 
-### 6. Packet Explorer and inspectability
+### 6. Location / home locality / mounted scope model
+
+Location needs its own first-class roadmap track rather than remaining a loose extension of identity metadata or assembly association.
+
+This track should define:
+
+- how `Global + You` behave as the default baseline for every actor
+- how one active deepest `home_locality` claim determines the mounted geographic chain
+- how home locality remains distinct from broader `assembly_association`
+- how followed scopes remain lightweight navigation choices rather than trust or locality claims
+- how the shell distinguishes mounted scopes from known/discoverable scopes
+- how locality search becomes a canonical directory with controlled creation instead of loose text matching
+- how geographic locality creation works without turning public scope creation into free-form text minting
+- how location verification rolls up without collapsing all broader assembly trust into simple residency posture
+- how every locality/assembly remains a cryptographic `Element` in the fractal coordination framework
+- how future shared assembly custody should live in a dedicated family rather than overloading person key bindings
+
+Default direction:
+
+- every actor gets `Global + You` by default
+- home locality becomes one active deepest geographic claim with inferred ancestors
+- ancestors are inferred; descendants are not
+- `follow` remains a lightweight bookmark/navigation behavior
+- `assembly_association` stays distinct from geographic home locality
+- remote scopes are followed or visited as guest spaces rather than casually treated as geographic association claims
+- locality search should become a canonical directory with controlled parent-path-based creation
+- no third-party geocoder is required for the first locality phases
+- shared assembly-key or custody work is architectural future work, not part of the early locality phases
+
+Planned phase sequence:
+
+1. Phase 1: home-locality semantics and mounted scopes
+   - add `home_locality` claim kind
+   - make `Global + You` the default baseline
+   - mount ancestors from the deepest active home locality
+   - distinguish mounted scopes from known/discoverable scopes
+2. Phase 2: canonical locality search and optional disclosure cleanup
+   - keep identity create/claim working without location
+   - stop using `identity.location_disclosure` as mounted-scope truth
+   - improve canonical locality search and no-result handling
+3. Phase 3: guided locality creation
+   - controlled creation under a confirmed parent path
+   - canonical uniqueness rules
+   - geographic-first locality creation flow
+4. Phase 4: locality verification and trust rollups
+   - distinguish direct home-locality claim from rolled-up descendant locality verification
+   - keep broader assembly trust separate from simple residency posture
+5. Phase 5: assembly custody foundation
+   - define a future dedicated assembly custody/key family such as `AssemblyKeyset`
+   - defer real shared-key operations and threshold signing until later
+
+Guardrails to preserve:
+
+- `identity.location_disclosure` remains optional profile or disclosure metadata rather than mounted-scope truth
+- one deepest home-locality chain is the canonical person-location model
+- follows mount only the chosen scope
+- assembly association should not be reused as a synonym for “I live here”
+- remote scopes remain follow or guest spaces by default
+- locality creation should be controlled and parent-path-based, not free-form public text minting
+- each locality or assembly remains a real cryptographic `Element`
+- shared assembly custody should eventually live in a dedicated family rather than overloading person key bindings
+
+### 7. Packet Explorer and inspectability
 
 The system needs a first-class packet inspection surface before governance gets much deeper.
 
@@ -189,7 +251,7 @@ Default direction:
 - keep `Packet Explorer` as the inspect-and-navigate surface
 - do not block this on graph visualization
 
-### 7. Governance loop
+### 8. Governance loop
 
 Governance should come after trust, policy, and inspectability are defined well enough to avoid immediate rewrites.
 
@@ -208,7 +270,7 @@ Default direction:
 - treat OWA governance as an app-layer implementation on top of Nexus primitives
 - keep revisions inspectable and tied to proposal history
 
-### 8. Actions, reports, and learning loops
+### 9. Actions, reports, and learning loops
 
 Longer term, OWA needs an honest action loop rather than stopping at proposals and votes.
 
@@ -232,9 +294,10 @@ To minimize breakage and avoid semantic churn, the recommended order is:
 3. role-claim model
 4. policy model
 5. `You / Trust / Account` IA decisions
-6. packet explorer
-7. first governance loop
-8. action-family evolution
+6. location / home-locality / mounted-scope model
+7. packet explorer
+8. first governance loop
+9. action-family evolution
 
 This is intentionally dependency-first. It avoids building governance, role UI, or terminology migrations on top of unresolved packet semantics.
 
@@ -280,6 +343,80 @@ Produce one design pass that settles:
 
 Only after those briefs are stable should implementation begin on the next major feature wave.
 
+## Recorded priorities from repo analysis
+
+The recent repo analysis and planning review sharpened several priorities that should stay visible in the roadmap until resolved.
+
+### Catch-up before widening
+
+The repo is currently broader than it is deep. Identity/auth and discussions are the two most coherent end-to-end verticals. Dashboard, trust, votes, roles, and library all exist, but much of that width is still blocked-in projection work or provisional semantics.
+
+That means the next serious system push should be a catch-up phase, not another ontology-expansion pass. Before adding policy-heavy workflows, modules, actions, or deeper governance, the current blocked-in surfaces need to be made semantically honest and operational.
+
+### Roles need a cleaner semantic center
+
+The claim-family refactor resolved the earlier mismatch between global actor-body role state and scope-local legitimacy, but a few future-extensibility guardrails should stay explicit:
+
+- scoped role and assembly assertions now live on `Claim` packets
+- support and dispute evidence stays on `Attestation`
+- role and trust posture should continue to be projection-derived rather than copied onto actor bodies
+
+Future guardrails to preserve now:
+
+- keep `claim_status` semantically extensible even though runtime currently only uses `active` and `withdrawn`
+- leave schema space for structured evidence beyond free-text `note`, such as packet-linked `evidence_refs`
+- explicitly decide later whether assembly association should allow one active association total, one per branch, or multiple simultaneous associations
+- treat `authority_scope_ref = scope_ref` as the current default for association claims, not a universal rule for every future claim kind
+
+Working direction:
+
+- keep scoped social assertions inspectable through `Claim`
+- keep `Attestation` for support, dispute, verification, and related evidence on those claims
+- prefer computed posture over duplicating social-state lists on actor or scope bodies
+- widen the `Claim` family only when a new claim kind has clear runtime and policy semantics, not just because a relationship exists
+
+### Scope and locality semantics still need to be locked
+
+The current shell still behaves like a globally exposed testing tree more than a true personal or locality-aware assembly map.
+
+The intended direction is:
+
+- automatic scopes: `Global` plus `You`
+- attached scopes: assemblies the actor is actually associated with
+- followed scopes: scopes the actor chooses to keep mounted
+- discoverable scopes: known but not automatically mounted
+
+Location and home-scope behavior should be designed only after the role/schema cleanup is stable enough that locality is not being layered onto muddy social primitives.
+
+### Library needs deliberate visibility modes
+
+The current library surface is using generic scope-lens visibility, which makes it feel like a whole-graph view instead of a true scoped library.
+
+Planned direction:
+
+- near term: make Library local to the active scope by default
+- longer term: distinguish between local, inherited, global, and all-visible modes instead of treating them as one flattened packet list
+
+## Immediate recorded defects and cleanup backlog
+
+These issues should be treated as active stabilization work, not as background wishes.
+
+- Scope-menu clicks, same-device remembered-session reuse, and default local-only Library behavior have now been stabilized in code; keep them recorded here only as regression-sensitive areas.
+- Role claiming can still error and should be treated as an active stabilization target even after the first roles workspace pass.
+- Location claiming is still incomplete and should be treated as a dedicated later subsystem, not assumed to be a simple bugfix.
+- Assembly creation exists but remains rough and under-tested.
+
+## Practical next-phase sequence
+
+For the next practical system phase, use this order:
+
+1. stabilize blocked-in surfaces and fix the known route/session/library/role issues
+2. lock scope visibility semantics and remove global-tree assumptions from the default shell behavior
+3. clean up role-claim semantics so scoped legitimacy is modeled honestly
+4. redesign location and assembly-association flow on top of the cleaned role/schema model
+5. redesign dashboard, trust, votes, roles, and library around their real workflows
+6. only then widen into policy-heavy modules, actions, and broader governance machinery
+
 ## Deferred or explicitly out of scope for the next system pass
 
 These remain important, but should not lead the next implementation cycle:
@@ -299,6 +436,10 @@ These questions are still live and should be answered in the next planning passe
 
 - Should `Account` remain a distinct wrapper-level surface, or become a security drawer/workspace entered from `You` and `Trust`?
 - Which role families are true OWA defaults versus policy-defined local choices?
+- How far should the `Claim` family generalize beyond `role_association` and `assembly_association`, and which future claim kinds deserve first-class support?
+- What uniqueness rule should govern active `assembly_association` claims: one total, one per branch, or multiple simultaneous associations?
+- When should structured claim evidence move beyond `note` into packet-linked evidence refs or other richer evidence payloads?
+- Which future claim statuses should become runtime-meaningful beyond `active` and `withdrawn`, and what transition rules should govern them?
 - Which packet families should remain append-only versus mergeable?
 - How should schema migration tooling work for long-lived bundles and offline nodes?
 - When `Mission -> Action` happens, should that be a compatibility alias, a formal family rename, or a new family generation with upcasters?

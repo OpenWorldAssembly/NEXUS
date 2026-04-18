@@ -3,8 +3,14 @@ import assert from 'node:assert/strict';
 
 import {
   buildNexusBranchNodes,
+  getNexusScopeDepthWidth,
+  getNexusScopeLevelLabel,
+  getNexusSectionMenuDetail,
+  getNexusSectionMenuTitle,
+  getNexusScopeSelectionHref,
   getNexusSectionFromPathname,
   NEXUS_SECTION_ORDER,
+  resolveNexusReturnPath,
   type NexusScopeSummary,
 } from './nexus-shell.ts';
 
@@ -86,6 +92,7 @@ test('roles is part of the visible section order and resolves from the pathname'
     'library',
   ]);
   assert.equal(getNexusSectionFromPathname('/nexus/roles'), 'roles');
+  assert.equal(getNexusSectionFromPathname('/nexus/identity/security'), 'account');
 });
 
 test('personal scope renders as a child leaf under the local assembly branch', () => {
@@ -102,4 +109,37 @@ test('personal scope renders as a child leaf under the local assembly branch', (
   assert.ok(localNode);
   assert.equal(personalNode?.depth, (localNode?.depth ?? 0) + 1);
   assert.equal(personalNode?.relationship, 'personal');
+});
+
+test('scope selection routes wrapper-level account and identity pages back to trust', () => {
+  assert.equal(getNexusScopeSelectionHref('/nexus/account'), '/nexus/trust');
+  assert.equal(
+    getNexusScopeSelectionHref('/nexus/identity/security'),
+    '/nexus/trust'
+  );
+  assert.equal(getNexusScopeSelectionHref('/nexus/library'), null);
+});
+
+test('personal scope uses personal function labels and branch metadata', () => {
+  assert.equal(getNexusSectionMenuTitle('dashboard', PERSONAL_SCOPE), 'Dashboard');
+  assert.equal(getNexusSectionMenuDetail('trust', PERSONAL_SCOPE), 'Personal trust.');
+  assert.equal(getNexusScopeLevelLabel('personal'), 'Personal branch');
+  assert.ok(
+    getNexusScopeDepthWidth('global') > getNexusScopeDepthWidth('district')
+  );
+  assert.ok(
+    getNexusScopeDepthWidth('district') > getNexusScopeDepthWidth('personal')
+  );
+});
+
+test('return destinations only accept in-app nexus paths', () => {
+  assert.equal(resolveNexusReturnPath('/nexus/roles', '/nexus/account'), '/nexus/roles');
+  assert.equal(
+    resolveNexusReturnPath('https://example.com', '/nexus/account'),
+    '/nexus/account'
+  );
+  assert.equal(
+    resolveNexusReturnPath(['', '/nexus/trust'], '/nexus/account'),
+    '/nexus/account'
+  );
 });

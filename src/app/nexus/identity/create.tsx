@@ -3,10 +3,12 @@
  * Description: Renders the Nexus-shell claimed-identity creation flow with explicit starting session and write-approval preferences.
  */
 
-import { useRouter } from 'expo-router';
+import type { Href } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 
+import { buildIdentityRouteHref, getIdentityReturnDestination } from '@app/components/nexus/nexus-route-utils';
 import {
   buildLocationDisclosure,
   IdentityField,
@@ -17,6 +19,7 @@ import {
   LocationLookupField,
 } from '@app/components/nexus/nexus-identity-ui';
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
+import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import { NexusActionButton, NexusCard } from '@app/components/nexus/nexus-ui';
 import type { NexusSecurityMode } from '@runtime/nexus/nexus-api-types';
 import {
@@ -29,7 +32,12 @@ import {
 } from '@runtime/nexus/identity-validation';
 
 export default function NexusIdentityCreatePage() {
+  const params = useLocalSearchParams<{
+    return_to?: string | string[];
+    return_scope_id?: string | string[];
+  }>();
   const router = useRouter();
+  const { setActiveScopeId } = useNexusShell();
   const {
     createClaimedIdentity,
     rememberClaimedSessions,
@@ -54,6 +62,19 @@ export default function NexusIdentityCreatePage() {
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { returnTo, returnScopeId } = getIdentityReturnDestination({
+    returnToParam: params.return_to,
+    returnScopeIdParam: params.return_scope_id,
+    fallback: '/nexus/identity/security?welcome=create',
+  });
+
+  const navigateAfterSuccess = () => {
+    if (returnScopeId) {
+      setActiveScopeId(returnScopeId);
+    }
+
+    router.replace(returnTo as Href);
+  };
 
   const locationDisclosure = buildLocationDisclosure(locationSelection);
   const aliasError =
@@ -86,7 +107,7 @@ export default function NexusIdentityCreatePage() {
         await setSecurityMode(selectedSecurityMode);
       }
 
-      router.replace('/nexus/identity/security?welcome=create');
+      navigateAfterSuccess();
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : 'Unable to create that claimed identity.'
@@ -165,6 +186,18 @@ export default function NexusIdentityCreatePage() {
         {errorMessage ? <Text className="text-sm text-nexus-rose">{errorMessage}</Text> : null}
 
         <View className="flex-row flex-wrap gap-3">
+          {returnTo !== '/nexus/identity/security?welcome=create' ? (
+            <NexusActionButton
+              label="Go back"
+              onPress={() => {
+                if (returnScopeId) {
+                  setActiveScopeId(returnScopeId);
+                }
+
+                router.push(returnTo as Href);
+              }}
+            />
+          ) : null}
           <NexusActionButton
             label={isSubmitting ? 'Creating claimed identity...' : 'Create claimed identity'}
             variant="primary"
@@ -181,11 +214,33 @@ export default function NexusIdentityCreatePage() {
           />
           <NexusActionButton
             label="Sign in instead"
-            onPress={() => router.push('/nexus/identity/sign-in')}
+            onPress={() =>
+              router.push(
+                buildIdentityRouteHref({
+                  pathname: '/nexus/identity/sign-in',
+                  returnTo:
+                    returnTo !== '/nexus/identity/security?welcome=create'
+                      ? returnTo
+                      : null,
+                  returnScopeId,
+                })
+              )
+            }
           />
           <NexusActionButton
             label="Restore bundle"
-            onPress={() => router.push('/nexus/identity/restore')}
+            onPress={() =>
+              router.push(
+                buildIdentityRouteHref({
+                  pathname: '/nexus/identity/restore',
+                  returnTo:
+                    returnTo !== '/nexus/identity/security?welcome=create'
+                      ? returnTo
+                      : null,
+                  returnScopeId,
+                })
+              )
+            }
           />
         </View>
       </NexusCard>

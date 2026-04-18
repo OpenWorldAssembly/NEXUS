@@ -3,10 +3,12 @@
  * Description: Renders the Nexus-shell guest-claim flow for continuing the current cryptographic actor as a claimed identity.
  */
 
-import { useRouter } from 'expo-router';
+import type { Href } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 
+import { buildIdentityRouteHref, getIdentityReturnDestination } from '@app/components/nexus/nexus-route-utils';
 import {
   buildLocationDisclosure,
   IdentityField,
@@ -17,6 +19,7 @@ import {
   LocationLookupField,
 } from '@app/components/nexus/nexus-identity-ui';
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
+import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import { NexusActionButton, NexusBadge, NexusCard, useNexusAppearance } from '@app/components/nexus/nexus-ui';
 import type { NexusSecurityMode } from '@runtime/nexus/nexus-api-types';
 import {
@@ -42,8 +45,13 @@ function getStorageModeCopy(
 }
 
 export default function NexusIdentityClaimPage() {
+  const params = useLocalSearchParams<{
+    return_to?: string | string[];
+    return_scope_id?: string | string[];
+  }>();
   const router = useRouter();
   const appearance = useNexusAppearance();
+  const { setActiveScopeId } = useNexusShell();
   const {
     claimCurrentGuest,
     currentLabel,
@@ -71,6 +79,19 @@ export default function NexusIdentityClaimPage() {
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { returnTo, returnScopeId } = getIdentityReturnDestination({
+    returnToParam: params.return_to,
+    returnScopeIdParam: params.return_scope_id,
+    fallback: '/nexus/identity/security?welcome=claim',
+  });
+
+  const navigateAfterSuccess = () => {
+    if (returnScopeId) {
+      setActiveScopeId(returnScopeId);
+    }
+
+    router.replace(returnTo as Href);
+  };
 
   const locationDisclosure = buildLocationDisclosure(locationSelection);
   const aliasError =
@@ -103,7 +124,7 @@ export default function NexusIdentityClaimPage() {
         await setSecurityMode(selectedSecurityMode);
       }
 
-      router.replace('/nexus/identity/security?welcome=claim');
+      navigateAfterSuccess();
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : 'Unable to claim this guest identity.'
@@ -236,12 +257,37 @@ export default function NexusIdentityClaimPage() {
             }
           />
           <NexusActionButton
-            label="Continue as guest"
-            onPress={() => router.push('/nexus/account')}
+            label={
+              returnTo !== '/nexus/identity/security?welcome=claim'
+                ? 'Go back'
+                : 'Continue as guest'
+            }
+            onPress={() => {
+              if (returnScopeId) {
+                setActiveScopeId(returnScopeId);
+              }
+
+              router.push(
+                returnTo !== '/nexus/identity/security?welcome=claim'
+                  ? (returnTo as Href)
+                  : '/nexus/account'
+              );
+            }}
           />
           <NexusActionButton
             label="Start fresh instead"
-            onPress={() => router.push('/nexus/identity/create')}
+            onPress={() =>
+              router.push(
+                buildIdentityRouteHref({
+                  pathname: '/nexus/identity/create',
+                  returnTo:
+                    returnTo !== '/nexus/identity/security?welcome=claim'
+                      ? returnTo
+                      : null,
+                  returnScopeId,
+                })
+              )
+            }
           />
         </View>
       </NexusCard>

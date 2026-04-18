@@ -1,11 +1,10 @@
 /**
  * File: account.tsx
- * Description: Renders the Nexus account overview, security summary, and local assembly claim workspace.
+ * Description: Renders the wrapper-level Nexus account overview for identity custody and security.
  */
 
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, Text, TextInput, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
@@ -16,14 +15,10 @@ import {
   NexusSectionHeader,
   useNexusAppearance,
 } from '@app/components/nexus/nexus-ui';
-import type { AssemblyAssociationClaimProjection } from '@core/contracts';
-import {
-  createNexusAssembly,
-  fetchNexusAssemblyClaims,
-  setNexusAssemblyAssociationClaim,
-} from '@runtime/nexus/nexus-query-api';
 
-function getStorageLabel(storageMode: 'none' | 'session_only' | 'saved_on_device' | null) {
+function getStorageLabel(
+  storageMode: 'none' | 'session_only' | 'saved_on_device' | null
+) {
   if (storageMode === 'saved_on_device') {
     return 'Saved on this device';
   }
@@ -38,16 +33,8 @@ function getStorageLabel(storageMode: 'none' | 'session_only' | 'saved_on_device
 export default function NexusAccountPage() {
   const router = useRouter();
   const appearance = useNexusAppearance();
+  const { currentActorLabel, currentIdentityMode, followedScopes } = useNexusShell();
   const {
-    activeScope,
-    currentActorLabel,
-    currentIdentityMode,
-    followedScopes,
-    refreshShellData,
-    scopeSummaries,
-  } = useNexusShell();
-  const {
-    createVerifiedRequestBody,
     currentActorPacketId,
     currentStorageMode,
     isAuthenticated,
@@ -57,96 +44,33 @@ export default function NexusAccountPage() {
     rememberClaimedSessions,
     securityMode,
   } = useIdentityShell();
-  const [assemblyClaims, setAssemblyClaims] = useState<AssemblyAssociationClaimProjection[]>([]);
-  const [assemblyClaimNote, setAssemblyClaimNote] = useState('');
-  const [newAssemblyName, setNewAssemblyName] = useState('');
-  const [newAssemblySubtype, setNewAssemblySubtype] = useState('');
-  const [newAssemblySummary, setNewAssemblySummary] = useState('');
-  const [newAssemblyLocalityLabel, setNewAssemblyLocalityLabel] = useState('');
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    if (!currentActorPacketId) {
-      setAssemblyClaims([]);
-      return () => {
-        isMounted = false;
-      };
-    }
-
-    void fetchNexusAssemblyClaims({
-      actorPacketId: currentActorPacketId,
-    })
-      .then((payload) => {
-        if (isMounted) {
-          setAssemblyClaims(payload.claims);
-        }
-      })
-      .catch(() => {
-        if (isMounted) {
-          setAssemblyClaims([]);
-        }
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [currentActorPacketId]);
-
-  const claimedAssemblyIds = useMemo(
-    () =>
-      new Set(
-        assemblyClaims
-          .filter((claim) => claim.status === 'active')
-          .map((claim) => claim.assembly_packet_id)
-      ),
-    [assemblyClaims]
-  );
-  const assemblyScopes = useMemo(
-    () => scopeSummaries.filter((scope) => scope.level !== 'personal'),
-    [scopeSummaries]
-  );
-  const parentAssemblyScope = useMemo(
-    () =>
-      activeScope.level !== 'personal'
-        ? activeScope
-        : assemblyScopes[0] ?? null,
-    [activeScope, assemblyScopes]
-  );
-
-  const handleError = (error: unknown, fallback: string) => {
-    setErrorMessage(error instanceof Error ? error.message : fallback);
-    setStatusMessage(null);
-  };
   const hasActiveClaimedSession =
     currentIdentityMode === 'claimed' && isAuthenticated;
+  const primaryIdentityActionLabel =
+    currentIdentityMode === 'claimed'
+      ? hasActiveClaimedSession
+        ? isCurrentIdentityUnlocked
+          ? 'Identity security'
+          : 'Unlock this identity'
+        : 'Resume this identity'
+      : 'Sign in';
+  const secondaryIdentityActionLabel =
+    currentIdentityMode === 'claimed' ? 'Switch identity' : 'Create fresh identity';
 
   return (
     <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
       <View className={appearance.pageContainerClass}>
         <NexusSectionHeader
           eyebrow="Account"
-          title={`${activeScope.name} Account`}
-          description="This wrapper-level account surface keeps identity custody, security state, and continuity tools separate from scoped trust and legitimacy."
+          title="Account"
+          description="Wrapper-level identity custody, session state, and security tooling stay here rather than in the scoped Trust and Roles workspaces."
           trailing={
             <View className="flex-row flex-wrap gap-3">
               <NexusBadge label={currentActorLabel} tone="mint" />
             </View>
           }
         />
-
-        {statusMessage ? (
-          <NexusCard tone="mint">
-            <Text className={appearance.itemBodyClass}>{statusMessage}</Text>
-          </NexusCard>
-        ) : null}
-        {errorMessage ? (
-          <NexusCard tone="rose">
-            <Text className={appearance.itemBodyClass}>{errorMessage}</Text>
-          </NexusCard>
-        ) : null}
 
         <View className="gap-4 xl:flex-row">
           <View className="flex-1 gap-4">
@@ -173,11 +97,13 @@ export default function NexusAccountPage() {
               </View>
               <Text className={appearance.itemBodyClass}>
                 {hasActiveClaimedSession
-                  ? `Remembered claimed sign-ins are currently ${
-                      rememberClaimedSessions ? 'enabled' : 'disabled'
-                    }, and write approval is set to ${securityMode ?? 'guest-only'}.`
+                  ? isCurrentIdentityUnlocked
+                    ? `Remembered claimed sign-ins are currently ${
+                        rememberClaimedSessions ? 'enabled' : 'disabled'
+                      }, and write approval is set to ${securityMode ?? 'guest-only'}.`
+                    : 'A claimed session is active, but the local identity bundle is locked. Unlock this identity to resume signed writes and identity security tools.'
                   : currentIdentityMode === 'claimed'
-                    ? 'This claimed identity is saved locally, but no claimed session is active yet. Sign in again to manage passkeys or write approval.'
+                    ? 'This claimed identity is saved locally, but no claimed session is active yet. Resume this identity to manage passkeys, sessions, and write approval.'
                     : `Current guest persistence is ${
                         currentStorageMode === 'none' ? 'temporary' : 'saved'
                       }, and remembered claimed sign-ins are currently ${
@@ -186,11 +112,11 @@ export default function NexusAccountPage() {
               </Text>
               <View className="flex-row flex-wrap gap-3">
                 <NexusActionButton
-                  label={hasActiveClaimedSession ? 'Identity security' : 'Sign in'}
+                  label={primaryIdentityActionLabel}
                   variant="primary"
                   onPress={() =>
                     router.push(
-                      hasActiveClaimedSession
+                      hasActiveClaimedSession && isCurrentIdentityUnlocked
                         ? '/nexus/identity/security'
                         : '/nexus/identity/sign-in'
                     )
@@ -203,10 +129,10 @@ export default function NexusAccountPage() {
                   />
                 ) : null}
                 <NexusActionButton
-                  label={hasActiveClaimedSession ? 'Sign in another identity' : 'Create fresh identity'}
+                  label={secondaryIdentityActionLabel}
                   onPress={() =>
                     router.push(
-                      hasActiveClaimedSession
+                      currentIdentityMode === 'claimed'
                         ? '/nexus/identity/sign-in'
                         : '/nexus/identity/create'
                     )
@@ -218,179 +144,26 @@ export default function NexusAccountPage() {
                 <NexusBadge label={currentActorPacketId ?? 'No actor packet id'} />
               </View>
             </NexusCard>
-
-            <NexusCard className="gap-4">
-              <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
-                Local assembly claims
-              </Text>
-              <Text className={appearance.itemBodyClass}>
-                These descriptive attestations say where this person claims association. They help route you into local assembly work without granting trust or authority on their own.
-              </Text>
-              <TextInput
-                value={assemblyClaimNote}
-                onChangeText={setAssemblyClaimNote}
-                placeholder="Optional note for a claim"
-                placeholderTextColor={appearance.textInputPlaceholderColor}
-                className={`rounded-[18px] border px-4 py-3 ${appearance.textInputClass}`}
-              />
-              <View className="gap-3">
-                {assemblyScopes.map((scope) => {
-                  const assemblyPacketId = scope.packetId;
-
-                  return (
-                    <NexusCard
-                      key={scope.id}
-                      className={`gap-3 p-4 ${appearance.cardInsetClass}`}
-                    >
-                      <Text className={appearance.itemTitleClass}>{scope.name}</Text>
-                      <Text className={appearance.itemMetaClass}>{scope.relationshipLabel}</Text>
-                      <View className="flex-row flex-wrap gap-3">
-                        <NexusBadge
-                          label={claimedAssemblyIds.has(assemblyPacketId) ? 'Claimed here' : 'Not claimed'}
-                          tone={claimedAssemblyIds.has(assemblyPacketId) ? 'mint' : 'default'}
-                        />
-                      </View>
-                      <View className="flex-row flex-wrap gap-3">
-                        <NexusActionButton
-                          label={claimedAssemblyIds.has(assemblyPacketId) ? 'Refresh claim' : 'Claim association'}
-                          onPress={() => {
-                            void createVerifiedRequestBody('/api/nexus/assemblies/claims', 'PUT', {
-                              assembly_packet_id: assemblyPacketId,
-                              scope_id: scope.id,
-                              note: assemblyClaimNote.trim().length > 0 ? assemblyClaimNote : null,
-                              value: 1,
-                            })
-                              .then((requestBody) =>
-                                setNexusAssemblyAssociationClaim({
-                                  requestBody,
-                                })
-                              )
-                              .then((payload) => {
-                                setAssemblyClaims(payload.claims);
-                                setStatusMessage(`Claimed association with ${scope.name}.`);
-                                setErrorMessage(null);
-                              })
-                              .catch((error) =>
-                                handleError(error, 'Unable to claim that assembly association.')
-                              );
-                          }}
-                        />
-                        <NexusActionButton
-                          label="Clear claim"
-                          onPress={() => {
-                            void createVerifiedRequestBody('/api/nexus/assemblies/claims', 'PUT', {
-                              assembly_packet_id: assemblyPacketId,
-                              scope_id: scope.id,
-                              note: null,
-                              value: 0,
-                            })
-                              .then((requestBody) =>
-                                setNexusAssemblyAssociationClaim({
-                                  requestBody,
-                                })
-                              )
-                              .then((payload) => {
-                                setAssemblyClaims(payload.claims);
-                                setStatusMessage(`Cleared the association claim for ${scope.name}.`);
-                                setErrorMessage(null);
-                              })
-                              .catch((error) =>
-                                handleError(error, 'Unable to clear that assembly claim.')
-                              );
-                          }}
-                          disabled={!claimedAssemblyIds.has(assemblyPacketId)}
-                        />
-                      </View>
-                    </NexusCard>
-                  );
-                })}
-              </View>
-            </NexusCard>
           </View>
 
           <View className="flex-1 gap-4">
             <NexusCard className="gap-4">
               <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
-                Start a local assembly
+                Scoped workspaces
               </Text>
               <Text className={appearance.itemBodyClass}>
-                If nothing nearby fits, you can start a lightweight assembly under the current scope. It gets starter discussions and your own association claim by default.
+                Association claims, role legitimacy, and other scoped participation tools now live in Trust and Roles instead of Account.
               </Text>
-              <TextInput
-                value={newAssemblyName}
-                onChangeText={setNewAssemblyName}
-                placeholder="Assembly name"
-                placeholderTextColor={appearance.textInputPlaceholderColor}
-                className={`rounded-[18px] border px-4 py-3 ${appearance.textInputClass}`}
-              />
-              <TextInput
-                value={newAssemblySubtype}
-                onChangeText={setNewAssemblySubtype}
-                placeholder="Subtype"
-                placeholderTextColor={appearance.textInputPlaceholderColor}
-                className={`rounded-[18px] border px-4 py-3 ${appearance.textInputClass}`}
-              />
-              <TextInput
-                value={newAssemblyLocalityLabel}
-                onChangeText={setNewAssemblyLocalityLabel}
-                placeholder="Locality label"
-                placeholderTextColor={appearance.textInputPlaceholderColor}
-                className={`rounded-[18px] border px-4 py-3 ${appearance.textInputClass}`}
-              />
-              <TextInput
-                value={newAssemblySummary}
-                onChangeText={setNewAssemblySummary}
-                placeholder="Optional summary"
-                placeholderTextColor={appearance.textInputPlaceholderColor}
-                multiline
-                style={{ textAlignVertical: 'top', minHeight: 120 }}
-                className={`rounded-[18px] border px-4 py-3 ${appearance.textInputClass}`}
-              />
-              <NexusActionButton
-                label={`Start under ${parentAssemblyScope?.name ?? 'an assembly scope'}`}
-                variant="primary"
-                onPress={() => {
-                  if (!parentAssemblyScope) {
-                    return;
-                  }
-
-                  void createVerifiedRequestBody('/api/nexus/assemblies', 'POST', {
-                    name: newAssemblyName,
-                    subtype: newAssemblySubtype.trim().length > 0 ? newAssemblySubtype : null,
-                    summary: newAssemblySummary.trim().length > 0 ? newAssemblySummary : null,
-                    locality_label:
-                      newAssemblyLocalityLabel.trim().length > 0
-                        ? newAssemblyLocalityLabel
-                        : null,
-                    parent_scope_packet_id: parentAssemblyScope.packetId,
-                    seed_discussions: true,
-                    claim_association: true,
-                    claim_note: assemblyClaimNote.trim().length > 0 ? assemblyClaimNote : null,
-                  })
-                    .then((requestBody) =>
-                      createNexusAssembly({
-                        requestBody,
-                      })
-                    )
-                    .then(async (payload) => {
-                      setAssemblyClaims(payload.claims);
-                      await refreshShellData();
-                      setStatusMessage(`Created ${payload.assembly_packet.body.name}.`);
-                      setErrorMessage(null);
-                      setNewAssemblyName('');
-                      setNewAssemblySubtype('');
-                      setNewAssemblySummary('');
-                      setNewAssemblyLocalityLabel('');
-                    })
-                    .catch((error) =>
-                      handleError(error, 'Unable to create the local assembly.')
-                    );
-                }}
-                disabled={
-                  newAssemblyName.trim().length === 0 ||
-                  parentAssemblyScope === null
-                }
-              />
+              <View className="flex-row flex-wrap gap-3">
+                <NexusActionButton
+                  label="Open Trust"
+                  onPress={() => router.push('/nexus/trust')}
+                />
+                <NexusActionButton
+                  label="Open Roles"
+                  onPress={() => router.push('/nexus/roles')}
+                />
+              </View>
             </NexusCard>
 
             <NexusCard className="gap-4">

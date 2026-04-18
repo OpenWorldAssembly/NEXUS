@@ -10,8 +10,8 @@ import type {
 } from '@core/schema/packet-schema';
 
 import {
-  createAttestationPacket,
   createAssemblyPacket,
+  createClaimPacket,
   createDiscussionForumPacket,
   createDiscussionPostPacket,
   createDiscussionReplyPacket,
@@ -723,15 +723,17 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     opened_at: SEED_CREATED_AT,
     closes_at: '2026-04-12T00:00:00.000Z',
   });
-  const aaronSunnymeadClaimPacket = createAttestationPacket({
-    packet_id: 'nexus:attestation/aaron-sunnymead-ranch-claim',
+  const aaronSunnymeadClaimPacket = createClaimPacket({
+    packet_id: 'nexus:claim/assembly-association/aaron-sunnymead-ranch',
     created_at: SEED_CREATED_AT,
     authority_scope_ref: PERSONAL_TREE_REFS.sunnymead_ranch,
     applicable_scope_refs: sunnymeadApplicableScopeRefs,
     created_by: PERSONAL_TREE_REFS.aaron,
+    claim_kind: 'assembly_association',
+    subject_ref: PERSONAL_TREE_REFS.aaron,
     target_ref: PERSONAL_TREE_REFS.sunnymead_ranch,
-    value: 1,
-    attestation_kind: 'assembly_association_claim',
+    scope_ref: PERSONAL_TREE_REFS.sunnymead_ranch,
+    status: 'active',
     note: 'Resident and active local participant.',
   });
 

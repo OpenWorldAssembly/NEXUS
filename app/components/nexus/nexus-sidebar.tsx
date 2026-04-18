@@ -22,9 +22,12 @@ import {
   NEXUS_COMING_SOON_SURFACES,
 } from '@runtime/nexus/nexus-content';
 import {
-  NEXUS_SECTION_LABELS,
   NEXUS_SECTION_ORDER,
   buildNexusBranchNodes,
+  getNexusScopeDepthWidth,
+  getNexusScopeLevelLabel,
+  getNexusSectionMenuDetail,
+  getNexusSectionMenuTitle,
   getNexusRailWidth,
   getNexusAncestorIds,
   NEXUS_COLLAPSED_RAIL_WIDTH,
@@ -73,6 +76,7 @@ type NexusScopeMenuRowProps = {
   depth: number;
   isActive: boolean;
   isLineage: boolean;
+  scopeLevel: NexusScopeSummary['level'];
   scopeMeta: string;
   scopeName: string;
   themeMode: NexusThemeMode;
@@ -542,27 +546,6 @@ function NexusCurrentContextCard({
 }
 
 /**
- * Inputs: a scope level string.
- * Output: a human-readable label for the scope row metadata line.
- */
-function getScopeLevelLabel(level: NexusScopeSummary['level']): string {
-  switch (level) {
-    case 'global':
-      return 'Global branch';
-    case 'nation':
-      return 'National branch';
-    case 'region':
-      return 'Regional branch';
-    case 'city':
-      return 'City branch';
-    case 'district':
-      return 'District branch';
-    default:
-      return 'Scope branch';
-  }
-}
-
-/**
  * Inputs: a possibly missing scope summary from a lookup.
  * Output: whether the lookup resolved to a real scope summary.
  */
@@ -659,35 +642,44 @@ function NexusScopeMenuRow({
   depth,
   isActive,
   isLineage,
+  scopeLevel,
   scopeMeta,
   scopeName,
   themeMode,
   uiDensity,
   onPress,
 }: NexusScopeMenuRowProps) {
-  const connectorOffset = 10 + depth * 6;
+  const depthWidth = getNexusScopeDepthWidth(scopeLevel);
+  const indicatorSize = Math.max(6, Math.round(depthWidth / 4));
+  const connectorStart = 8;
+  const connectorOffset = connectorStart + depthWidth;
 
   return (
     <View className="flex-row items-center gap-3">
-      <View className="relative h-12 w-11 justify-center">
+      <View className="relative h-12 w-16 justify-center">
         <View
-          className="absolute bottom-1 left-[10px] top-1 w-px rounded-full bg-nexus-line/20"
+          className="absolute bottom-1 left-[8px] top-1 w-px rounded-full bg-nexus-line/20"
         />
         <View
           className={`absolute top-1/2 h-px -translate-y-px rounded-full ${
             isLineage ? 'bg-nexus-sky/60' : 'bg-nexus-line/60'
           }`}
-          style={{ left: 10, width: depth * 6 + 10 }}
+          style={{ left: connectorStart, width: depthWidth }}
         />
         <View
-          className={`absolute top-1/2 h-2.5 w-2.5 -translate-y-[5px] rounded-full ${
+          className={`absolute top-1/2 rounded-full ${
             isActive
               ? 'bg-nexus-sky'
               : isLineage
                 ? 'bg-nexus-sky/60'
                 : 'bg-nexus-line'
           }`}
-          style={{ left: connectorOffset + 8 }}
+          style={{
+            left: connectorOffset,
+            width: indicatorSize,
+            height: indicatorSize,
+            transform: [{ translateY: -(indicatorSize / 2) }],
+          }}
         />
       </View>
 
@@ -759,10 +751,10 @@ function NexusFunctionMenuContent({
         {NEXUS_SECTION_ORDER.map((section) => (
           <NexusPrimaryNavItem
             key={section}
-            detail={`${NEXUS_SECTION_LABELS[section]} across ${activeScope.shortLabel}.`}
+            detail={getNexusSectionMenuDetail(section, activeScope)}
             isActive={activeSection === section}
             onPress={() => onSectionPress(section)}
-            title={NEXUS_SECTION_LABELS[section]}
+            title={getNexusSectionMenuTitle(section, activeScope)}
             themeMode={themeMode}
             uiDensity={uiDensity}
           />
@@ -827,7 +819,8 @@ function NexusScopeMenuContent({
                   node.relationship === 'current'
                 }
                 onPress={() => onScopePress(scope.id)}
-                scopeMeta={getScopeLevelLabel(scope.level)}
+                scopeLevel={scope.level}
+                scopeMeta={getNexusScopeLevelLabel(scope.level)}
                 scopeName={scope.name}
                 themeMode={themeMode}
                 uiDensity={uiDensity}

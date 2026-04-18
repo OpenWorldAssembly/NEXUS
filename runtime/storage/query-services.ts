@@ -6,6 +6,7 @@
 import type {
   BrowserPacketProjection,
   BrowserQueryService,
+  NexusLibraryQueryOptions,
   NexusPacketCardProjection,
   NexusQueryService,
   NexusScopeLens,
@@ -128,6 +129,19 @@ function matchesScopeLens(
   const applicableScopeIds = parseScopeIds(row.applicable_scope_ids_json);
 
   return applicableScopeIds.some((scopeId) => lensScopeIds.has(scopeId));
+}
+
+function matchesLocalAuthorityScope(
+  row: Pick<PacketSearchIndexRecord, 'authority_scope_packet_id'>,
+  lens: NexusScopeLens
+): boolean {
+  const authorityScopeId = lens.authority_scope_ref?.packet_id ?? null;
+
+  if (!authorityScopeId) {
+    return false;
+  }
+
+  return row.authority_scope_packet_id === authorityScopeId;
 }
 
 function collectChangedPaths(
@@ -296,13 +310,19 @@ export class PacketStoreNexusQueryService implements NexusQueryService {
 
   async listLibraryPackets(
     lens: NexusScopeLens,
-    family?: PacketFamily
+    family?: PacketFamily,
+    options?: NexusLibraryQueryOptions
   ): Promise<NexusPacketCardProjection[]> {
     const rows = await this.searchReader.listSearchRows();
+    const scopeMode = options?.scope_mode ?? 'lens';
 
     return rows
       .filter((row) => (family ? row.family === family : true))
-      .filter((row) => matchesScopeLens(row, lens))
+      .filter((row) =>
+        scopeMode === 'local'
+          ? matchesLocalAuthorityScope(row, lens)
+          : matchesScopeLens(row, lens)
+      )
       .sort((left, right) => right.created_at.localeCompare(left.created_at))
       .map(toNexusCardProjection);
   }

@@ -3,11 +3,12 @@
  * Description: Renders the scoped roles workspace, including role claims, claimant review, and scoped role evidence.
  */
 
-import { useRouter } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
+import { buildRoleActionReturnHref } from '@app/components/nexus/nexus-route-utils';
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import {
   NexusActionButton,
@@ -44,15 +45,26 @@ function formatEvidenceActor(
 
 export default function NexusRolesPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const appearance = useNexusAppearance();
   const { activeScope, currentActorPacketId, currentActorLabel } = useNexusShell();
-  const { createVerifiedRequestBody } = useIdentityShell();
+  const { createVerifiedRequestBody, currentMode, isAuthenticated } = useIdentityShell();
   const [rolesPayload, setRolesPayload] = useState<NexusRolesPayload | null>(null);
   const [isLoadingRoles, setIsLoadingRoles] = useState(true);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
   const [expandedEvidenceKeys, setExpandedEvidenceKeys] = useState<string[]>([]);
+  const [isGuestPromptOpen, setIsGuestPromptOpen] = useState(false);
+
+  const requiresClaimedSessionForRoleAction =
+    currentMode !== 'claimed' || !isAuthenticated;
+
+  const openGuestRolePrompt = () => {
+    setErrorMessage(null);
+    setStatusMessage(null);
+    setIsGuestPromptOpen(true);
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -95,18 +107,29 @@ export default function NexusRolesPage() {
   }, [activeScope.id, currentActorPacketId]);
 
   const refreshRolesPayload = async () => {
-    const nextRolesPayload = await fetchNexusRolesPayload({
-      scopeId: activeScope.id,
-      actorPacketId: currentActorPacketId,
-    });
+    setIsLoadingRoles(true);
 
-    setRolesPayload(nextRolesPayload);
+    try {
+      const nextRolesPayload = await fetchNexusRolesPayload({
+        scopeId: activeScope.id,
+        actorPacketId: currentActorPacketId,
+      });
+
+      setRolesPayload(nextRolesPayload);
+    } finally {
+      setIsLoadingRoles(false);
+    }
   };
 
   const handleRoleClaim = async (rolePacketId: string, claimed: boolean) => {
+    if (requiresClaimedSessionForRoleAction) {
+      openGuestRolePrompt();
+      return;
+    }
+
     try {
       const requestBody = await createVerifiedRequestBody(
-        '/api/nexus/trust/roles',
+        `/api/nexus/scopes/${activeScope.id}/roles/claims`,
         'PUT',
         {
           role_packet_id: rolePacketId,
@@ -114,7 +137,10 @@ export default function NexusRolesPage() {
         }
       );
 
-      await setNexusScopedRoleClaim({ requestBody });
+      await setNexusScopedRoleClaim({
+        scopeId: activeScope.id,
+        requestBody,
+      });
       await refreshRolesPayload();
       setStatusMessage(claimed ? 'Role claimed in this scope.' : 'Role claim removed.');
       setErrorMessage(null);
@@ -127,11 +153,15 @@ export default function NexusRolesPage() {
   };
 
   const handleRoleAttestation = async (input: {
-    rolePacketId: string;
-    claimantActorPacketId: string;
+    claimPacketId: string;
     mode: 'support' | 'dispute' | 'clear';
   }) => {
-    const draftKey = `${input.rolePacketId}:${input.claimantActorPacketId}`;
+    if (requiresClaimedSessionForRoleAction) {
+      openGuestRolePrompt();
+      return;
+    }
+
+    const draftKey = input.claimPacketId;
     const note = noteDrafts[draftKey]?.trim() ?? '';
 
     if (input.mode === 'dispute' && note.length === 0) {
@@ -143,8 +173,7 @@ export default function NexusRolesPage() {
     try {
       const requestPath = `/api/nexus/scopes/${activeScope.id}/roles/attestations`;
       const requestBody = await createVerifiedRequestBody(requestPath, 'PUT', {
-        claimant_actor_packet_id: input.claimantActorPacketId,
-        role_packet_id: input.rolePacketId,
+        claim_packet_id: input.claimPacketId,
         mode: input.mode,
         note: note.length > 0 ? note : null,
       });
@@ -195,8 +224,9 @@ export default function NexusRolesPage() {
   );
 
   return (
-    <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-      <View className={appearance.pageContainerClass}>
+    <View className="flex-1">
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        <View className={appearance.pageContainerClass}>
         <NexusSectionHeader
           eyebrow="Roles"
           title={`${activeScope.name} Roles`}
@@ -317,7 +347,7 @@ export default function NexusRolesPage() {
               ) : (
                 <View className="gap-3">
                   {roleCard.claimants.map((claimant) => {
-                    const evidenceKey = `${roleCard.role_packet_id}:${claimant.actor_packet_id}`;
+                    const evidenceKey = claimant.claim_packet_id;
                     const evidenceIsExpanded =
                       expandedEvidenceKeys.includes(evidenceKey);
 
@@ -348,6 +378,28 @@ export default function NexusRolesPage() {
                               ) : null}
                             </View>
                             <View className="flex-row flex-wrap gap-3">
+                              <NexusBadge
+                                label={`Scope: ${formatTrustStage(claimant.scope_trust_stage)}`}
+                                tone={
+                                  claimant.scope_trust_stage === 'recognized'
+                                    ? 'sky'
+                                    : claimant.scope_trust_stage === 'emerging'
+                                      ? 'mint'
+                                      : 'gold'
+                                }
+                              />
+                              <NexusBadge
+                                label={
+                                  claimant.has_scope_association
+                                    ? 'Associated in this scope'
+                                    : 'No direct scope association'
+                                }
+                                tone={claimant.has_scope_association ? 'mint' : 'default'}
+                              />
+                              <NexusBadge
+                                label={`${claimant.scope_association_support_count} association supports`}
+                                tone="sky"
+                              />
                               <NexusBadge
                                 label={`${claimant.support_count} supports`}
                                 tone="mint"
@@ -380,64 +432,69 @@ export default function NexusRolesPage() {
                           </View>
                         </View>
 
-                        <TextInput
-                          value={noteDrafts[evidenceKey] ?? ''}
-                          onChangeText={(value) =>
-                            setNoteDrafts((currentDrafts) => ({
-                              ...currentDrafts,
-                              [evidenceKey]: value,
-                            }))
-                          }
-                          placeholder="Optional support comment, required for disputes"
-                          placeholderTextColor={appearance.textInputPlaceholderColor}
-                          className={`min-h-[52px] rounded-2xl border px-4 py-3 ${appearance.textInputClass}`}
-                          multiline
-                          textAlignVertical="top"
-                        />
+                        {!claimant.is_current_actor ? (
+                          <>
+                            <TextInput
+                              value={noteDrafts[evidenceKey] ?? ''}
+                              onChangeText={(value) =>
+                                setNoteDrafts((currentDrafts) => ({
+                                  ...currentDrafts,
+                                  [evidenceKey]: value,
+                                }))
+                              }
+                              placeholder="Optional support comment, required for disputes"
+                              placeholderTextColor={appearance.textInputPlaceholderColor}
+                              className={`min-h-[52px] rounded-2xl border px-4 py-3 ${appearance.textInputClass}`}
+                              multiline
+                              textAlignVertical="top"
+                            />
 
-                        <View className="flex-row flex-wrap gap-3">
-                          <NexusActionButton
-                            label="Support"
-                            variant={
-                              claimant.viewer_attestation === 'support'
-                                ? 'primary'
-                                : 'secondary'
-                            }
-                            onPress={() =>
-                              void handleRoleAttestation({
-                                rolePacketId: roleCard.role_packet_id,
-                                claimantActorPacketId: claimant.actor_packet_id,
-                                mode: 'support',
-                              })
-                            }
-                          />
-                          <NexusActionButton
-                            label="Dispute"
-                            variant={
-                              claimant.viewer_attestation === 'dispute'
-                                ? 'primary'
-                                : 'secondary'
-                            }
-                            onPress={() =>
-                              void handleRoleAttestation({
-                                rolePacketId: roleCard.role_packet_id,
-                                claimantActorPacketId: claimant.actor_packet_id,
-                                mode: 'dispute',
-                              })
-                            }
-                          />
-                          <NexusActionButton
-                            label="Clear"
-                            variant="ghost"
-                            onPress={() =>
-                              void handleRoleAttestation({
-                                rolePacketId: roleCard.role_packet_id,
-                                claimantActorPacketId: claimant.actor_packet_id,
-                                mode: 'clear',
-                              })
-                            }
-                          />
-                        </View>
+                            <View className="flex-row flex-wrap gap-3">
+                              <NexusActionButton
+                                label="Support"
+                                variant={
+                                  claimant.viewer_attestation === 'support'
+                                    ? 'primary'
+                                    : 'secondary'
+                                }
+                                onPress={() =>
+                                  void handleRoleAttestation({
+                                    claimPacketId: claimant.claim_packet_id,
+                                    mode: 'support',
+                                  })
+                                }
+                              />
+                              <NexusActionButton
+                                label="Dispute"
+                                variant={
+                                  claimant.viewer_attestation === 'dispute'
+                                    ? 'primary'
+                                    : 'secondary'
+                                }
+                                onPress={() =>
+                                  void handleRoleAttestation({
+                                    claimPacketId: claimant.claim_packet_id,
+                                    mode: 'dispute',
+                                  })
+                                }
+                              />
+                              <NexusActionButton
+                                label="Clear"
+                                variant="ghost"
+                                onPress={() =>
+                                  void handleRoleAttestation({
+                                    claimPacketId: claimant.claim_packet_id,
+                                    mode: 'clear',
+                                  })
+                                }
+                              />
+                            </View>
+                          </>
+                        ) : (
+                          <Text className={appearance.itemBodyClass}>
+                            Claim or unclaim this role for yourself from the role card above. Support and dispute controls are only available for other listed claimants.
+                          </Text>
+                        )}
 
                         {evidenceIsExpanded ? (
                           <View className="gap-4">
@@ -516,7 +573,45 @@ export default function NexusRolesPage() {
             </NexusCard>
           ))}
         </View>
-      </View>
-    </ScrollView>
+        </View>
+      </ScrollView>
+
+      {isGuestPromptOpen ? (
+        <View className="absolute inset-0 items-center justify-center bg-black/55 px-5">
+          <Pressable
+            accessibilityRole="button"
+            className="absolute inset-0"
+            onPress={() => setIsGuestPromptOpen(false)}
+          />
+          <NexusCard tone="gold" className="z-10 w-full max-w-[560px] gap-4">
+            <Text className={appearance.surfaceTitleClass}>Sign in required</Text>
+            <Text className={appearance.itemBodyClass}>
+              Sign in to a claimed identity before claiming roles or leaving
+              scoped support and disputes in this workspace.
+            </Text>
+            <View className="flex-row flex-wrap gap-3">
+              <NexusActionButton
+                label="Sign in"
+                variant="primary"
+                onPress={() => {
+                  setIsGuestPromptOpen(false);
+                  router.push(
+                    buildRoleActionReturnHref({
+                      pathname,
+                      scopeId: activeScope.id,
+                    })
+                  );
+                }}
+              />
+              <NexusActionButton
+                label="Go back"
+                variant="secondary"
+                onPress={() => setIsGuestPromptOpen(false)}
+              />
+            </View>
+          </NexusCard>
+        </View>
+      ) : null}
+    </View>
   );
 }

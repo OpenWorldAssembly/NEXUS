@@ -14,6 +14,7 @@ import {
 import { fetchNexusShellPayload } from '@runtime/nexus/nexus-query-api';
 import {
   buildNexusBranchNodes,
+  getNexusScopeSelectionHref,
   getNexusAncestorIds,
   getNexusSectionFromPathname,
   getNexusSectionHref,
@@ -244,11 +245,16 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
    */
   const setActiveScopeId = (scopeId: string) => {
     const lineageIds = getNexusAncestorIds(scopeSummaries, scopeId);
+    const nextVisibleHref = getNexusScopeSelectionHref(pathname);
 
     setActiveScopeIdState(scopeId);
     setExpandedScopeIds((currentIds) =>
       Array.from(new Set([...currentIds, ...lineageIds, scopeId])),
     );
+
+    if (nextVisibleHref) {
+      router.push(nextVisibleHref as Href);
+    }
   };
 
   /**

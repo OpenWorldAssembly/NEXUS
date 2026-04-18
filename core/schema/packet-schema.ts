@@ -8,6 +8,7 @@ import { z } from 'zod';
 export const PACKET_FAMILIES = [
   'Element',
   'Role',
+  'Claim',
   'Signal',
   'Proposal',
   'Vote',
@@ -88,9 +89,18 @@ export const ATTESTATION_KINDS = [
   'assembly_association_claim',
   'role_support',
   'role_dispute',
+  'claim_support',
+  'claim_dispute',
   'packet_confirm',
   'packet_dispute',
 ] as const;
+
+export const CLAIM_KINDS = [
+  'role_association',
+  'assembly_association',
+] as const;
+
+export const CLAIM_STATUSES = ['active', 'withdrawn'] as const;
 
 export const TRUST_STAGES = [
   'self_claimed',
@@ -118,6 +128,7 @@ export const CORE_EDGE_TYPES = [
   'references',
   'implements',
   'governed_by',
+  'scoped_to',
   'reply_to',
   'belongs_to',
   'supports',
@@ -158,6 +169,8 @@ export const PacketMergeStrategySchema = z.enum(MERGE_STRATEGIES);
 export const AttestationValueSchema = z.union([z.literal(1), z.literal(-1)]);
 export const TrustStageSchema = z.enum(TRUST_STAGES);
 export const PacketRevisionModeSchema = z.enum(PACKET_REVISION_MODES);
+export const ClaimKindSchema = z.enum(CLAIM_KINDS);
+export const ClaimStatusSchema = z.enum(CLAIM_STATUSES);
 
 export type PacketFamily = z.infer<typeof PacketFamilySchema>;
 export type ElementKind = z.infer<typeof ElementKindSchema>;
@@ -173,6 +186,8 @@ export type AttestationStatus = z.infer<typeof AttestationStatusSchema>;
 export type AttestationKind = z.infer<typeof AttestationKindSchema>;
 export type TrustStage = z.infer<typeof TrustStageSchema>;
 export type PacketRevisionMode = z.infer<typeof PacketRevisionModeSchema>;
+export type ClaimKind = z.infer<typeof ClaimKindSchema>;
+export type ClaimStatus = z.infer<typeof ClaimStatusSchema>;
 export type PacketVoteValue = AttestationValue;
 export type PacketVoteStatus = AttestationStatus;
 export type PacketVoteKind = AttestationKind;
@@ -372,6 +387,17 @@ export const RoleBodySchema = z
     role_kind: z.string().min(1),
     status: z.string().min(1),
     responsibility_markdown: z.string().min(1).nullable().default(null),
+  })
+  .strict();
+
+export const ClaimBodySchema = z
+  .object({
+    claim_kind: ClaimKindSchema,
+    subject_ref: PacketRefSchema,
+    target_ref: PacketRefSchema,
+    scope_ref: PacketRefSchema,
+    status: ClaimStatusSchema.default('active'),
+    note: z.string().min(1).nullable().default(null),
   })
   .strict();
 
@@ -676,6 +702,7 @@ export const ArtifactBodySchema = z
 export const PACKET_BODY_SCHEMAS = {
   Element: ElementBodySchema,
   Role: RoleBodySchema,
+  Claim: ClaimBodySchema,
   Signal: SignalBodySchema,
   Proposal: ProposalBodySchema,
   Vote: VoteBodySchema,
@@ -718,6 +745,7 @@ export type PacketEnvelope = PacketEnvelopeByType[PacketFamily];
 export const PACKET_FAMILY_REVISION_MODES = {
   Element: 'replaceable',
   Role: 'replaceable',
+  Claim: 'replaceable',
   Signal: 'append_only',
   Proposal: 'replaceable',
   Vote: 'append_only',
@@ -798,6 +826,12 @@ const LegacyPolicyBodySchema = PolicyBodySchema.omit({
     .optional(),
 });
 
+const LegacyClaimBodySchema = ClaimBodySchema.omit({
+  note: true,
+}).extend({
+  note: z.string().min(1).nullable().optional(),
+});
+
 function createDefaultCompatibilityEntry<TFamily extends PacketFamily>(
   family: TFamily
 ): PacketCompatibilityEntry<TFamily> {
@@ -844,6 +878,30 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
     },
   },
   Role: createDefaultCompatibilityEntry('Role'),
+  Claim: {
+    current_schema_version: DEFAULT_SCHEMA_VERSION,
+    revision_mode: PACKET_FAMILY_REVISION_MODES.Claim,
+    parseBody: (schemaVersion, body) => {
+      rejectHeaderBodyCollisions(body, 'Claim');
+
+      if (schemaVersion === DEFAULT_SCHEMA_VERSION) {
+        return ClaimBodySchema.parse(body);
+      }
+
+      if (schemaVersion === '0.9.0') {
+        const legacyBody = LegacyClaimBodySchema.parse(body);
+
+        return ClaimBodySchema.parse({
+          ...legacyBody,
+          note: legacyBody.note ?? null,
+        });
+      }
+
+      throw new Error(
+        `Unsupported schema version ${schemaVersion} for packet family Claim.`
+      );
+    },
+  },
   Signal: createDefaultCompatibilityEntry('Signal'),
   Proposal: createDefaultCompatibilityEntry('Proposal'),
   Vote: createDefaultCompatibilityEntry('Vote'),

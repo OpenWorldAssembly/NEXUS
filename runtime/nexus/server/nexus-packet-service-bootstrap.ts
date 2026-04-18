@@ -7,10 +7,14 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 
 import {
+  createAssociationClaimPacket,
+  createClaimPacketId,
+} from '@core/packets/claims';
+import {
   DISCUSSION_SEED_VERSION,
   PERSONAL_SEED_PACKETS,
 } from '@core/packets/seeds';
-import type { PacketEnvelope } from '@core/schema/packet-schema';
+import type { PacketEnvelope, PacketEnvelopeByType, PacketRef } from '@core/schema/packet-schema';
 import type { NodeSQLiteQueryServices } from '@runtime/storage/node-sqlite-query-services';
 import {
   DISCUSSION_SEED_MARKER_PATH,
@@ -63,6 +67,143 @@ async function ensureSeedPackets(
 ): Promise<void> {
   for (const seedPacket of PERSONAL_SEED_PACKETS) {
     await writeRevisionIfMissing(services, seedPacket);
+  }
+}
+
+function buildApplicableScopeRefs(input: {
+  scopePacketId: string;
+  parentByPacketId: Map<string, string | null>;
+}): PacketRef[] {
+  const scopeRefs: PacketRef[] = [{ packet_id: input.scopePacketId }];
+  let currentParentPacketId = input.parentByPacketId.get(input.scopePacketId) ?? null;
+
+  while (currentParentPacketId) {
+    scopeRefs.push({ packet_id: currentParentPacketId });
+    currentParentPacketId = input.parentByPacketId.get(currentParentPacketId) ?? null;
+  }
+
+  return scopeRefs;
+}
+
+async function ensureLegacyClaimBackfill(
+  services: NodeSQLiteQueryServices
+): Promise<void> {
+  const [elementPackets, attestationPackets, claimPackets] = await Promise.all([
+    services.packetStore.listPreferredPacketsByFamily('Element'),
+    services.packetStore.listPreferredPacketsByFamily('Attestation'),
+    services.packetStore.listPreferredPacketsByFamily('Claim'),
+  ]);
+  const assemblyElements = elementPackets.filter(
+    (packet) => packet.body.kind === 'assembly'
+  ) as PacketEnvelopeByType['Element'][];
+  const parentByPacketId = new Map(
+    assemblyElements.map((packet) => [
+      packet.header.packet_id,
+      packet.header.edges.find((edge) => edge.edge_type === 'parent_scope')?.target
+        .packet_id ?? null,
+    ])
+  );
+  const existingClaimIds = new Set(
+    claimPackets.map((packet) => packet.header.packet_id)
+  );
+  const activeLegacyAssemblyClaims = attestationPackets.filter(
+    (packet) =>
+      packet.body.attestation_kind === 'assembly_association_claim' &&
+      packet.body.status === 'active'
+  ) as PacketEnvelopeByType['Attestation'][];
+
+  for (const legacyClaim of activeLegacyAssemblyClaims) {
+    const subjectPacketId = legacyClaim.header.provenance.created_by?.packet_id ?? null;
+    const scopePacketId = legacyClaim.body.target_ref.packet_id;
+
+    if (!subjectPacketId) {
+      continue;
+    }
+
+    const claimPacketId = createClaimPacketId({
+      claimKind: 'assembly_association',
+      subjectPacketId,
+      targetPacketId: legacyClaim.body.target_ref.packet_id,
+      scopePacketId,
+    });
+
+    if (existingClaimIds.has(claimPacketId)) {
+      continue;
+    }
+
+    const claimPacket = createAssociationClaimPacket({
+      claimKind: 'assembly_association',
+      subjectPacketId,
+      targetPacketId: legacyClaim.body.target_ref.packet_id,
+      scopePacketId,
+      applicableScopeRefs: buildApplicableScopeRefs({
+        scopePacketId,
+        parentByPacketId,
+      }),
+      createdByPacketId: subjectPacketId,
+      createdAt: legacyClaim.header.created_at,
+      note: legacyClaim.body.note,
+      status: 'active',
+      packetId: claimPacketId,
+    });
+
+    await writeRevisionIfMissing(services, claimPacket);
+    await services.packetStore.publishRevision({
+      packet_id: claimPacket.header.packet_id,
+      revision_id: claimPacket.header.revision_id,
+    });
+    existingClaimIds.add(claimPacketId);
+  }
+
+  for (const elementPacket of elementPackets as PacketEnvelopeByType['Element'][]) {
+    for (const roleRef of elementPacket.body.claimed_role_refs) {
+      const scopePacketId =
+        elementPacket.header.authority_scope_ref?.packet_id ??
+        (() => {
+          const activeClaims = activeLegacyAssemblyClaims.filter(
+            (packet) =>
+              packet.header.provenance.created_by?.packet_id ===
+                elementPacket.header.packet_id &&
+              packet.body.status === 'active'
+          );
+
+          return activeClaims.length === 1
+            ? activeClaims[0].body.target_ref.packet_id
+            : 'nexus:element/global-commons';
+        })();
+      const claimPacketId = createClaimPacketId({
+        claimKind: 'role_association',
+        subjectPacketId: elementPacket.header.packet_id,
+        targetPacketId: roleRef.packet_id,
+        scopePacketId,
+      });
+
+      if (existingClaimIds.has(claimPacketId)) {
+        continue;
+      }
+
+      const claimPacket = createAssociationClaimPacket({
+        claimKind: 'role_association',
+        subjectPacketId: elementPacket.header.packet_id,
+        targetPacketId: roleRef.packet_id,
+        scopePacketId,
+        applicableScopeRefs: buildApplicableScopeRefs({
+          scopePacketId,
+          parentByPacketId,
+        }),
+        createdByPacketId: elementPacket.header.packet_id,
+        createdAt: elementPacket.header.created_at,
+        status: 'active',
+        packetId: claimPacketId,
+      });
+
+      await writeRevisionIfMissing(services, claimPacket);
+      await services.packetStore.publishRevision({
+        packet_id: claimPacket.header.packet_id,
+        revision_id: claimPacket.header.revision_id,
+      });
+      existingClaimIds.add(claimPacketId);
+    }
   }
 }
 
@@ -168,4 +309,5 @@ export async function ensureNexusPacketBootstrap(
 ): Promise<void> {
   await ensureDiscussionSeedVersion(services);
   await ensureSeedPackets(services);
+  await ensureLegacyClaimBackfill(services);
 }

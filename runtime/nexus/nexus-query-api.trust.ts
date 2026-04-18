@@ -1,16 +1,10 @@
 /**
  * File: nexus-query-api.trust.ts
- * Description: Client-side query helpers for the trust workspace and role-claim mutations.
+ * Description: Client-side query helpers for the trust workspace.
  */
 
-import type {
-  NexusRoleClaimMutationPayload,
-  NexusTrustPayload,
-} from '@runtime/nexus/nexus-api-types';
-import {
-  fetchJsonOrThrow,
-  fetchMutationJsonOrThrow,
-} from '@runtime/nexus/nexus-query-api.shared';
+import type { NexusTrustPayload } from '@runtime/nexus/nexus-api-types';
+import { fetchJsonOrThrow } from '@runtime/nexus/nexus-query-api.shared';
 
 export function fetchNexusTrustPayload(input: {
   scopeId: string;
@@ -29,14 +23,4 @@ export function fetchNexusTrustPayload(input: {
       queryString.length > 0 ? `?${queryString}` : ''
     }`
   );
-}
-
-export function setNexusRoleClaim(input: {
-  requestBody: Record<string, unknown>;
-}): Promise<NexusRoleClaimMutationPayload> {
-  return fetchMutationJsonOrThrow<NexusRoleClaimMutationPayload>({
-    path: '/api/nexus/trust/roles',
-    method: 'PUT',
-    body: input.requestBody,
-  });
 }

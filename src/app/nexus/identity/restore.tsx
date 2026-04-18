@@ -3,16 +3,19 @@
  * Description: Renders the Nexus-shell encrypted identity bundle restore flow.
  */
 
-import { useRouter } from 'expo-router';
+import type { Href } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 
+import { buildIdentityRouteHref, getIdentityReturnDestination } from '@app/components/nexus/nexus-route-utils';
 import {
   IdentityField,
   IdentityInput,
   IdentityPageShell,
 } from '@app/components/nexus/nexus-identity-ui';
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
+import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import { NexusActionButton, NexusCard } from '@app/components/nexus/nexus-ui';
 import {
   validateEncryptedBundleJson,
@@ -20,12 +23,22 @@ import {
 } from '@runtime/nexus/identity-validation';
 
 export default function NexusIdentityRestorePage() {
+  const params = useLocalSearchParams<{
+    return_to?: string | string[];
+    return_scope_id?: string | string[];
+  }>();
   const router = useRouter();
+  const { setActiveScopeId } = useNexusShell();
   const { restoreIdentityFromBundle } = useIdentityShell();
   const [bundleJson, setBundleJson] = useState('');
   const [passphrase, setPassphrase] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { returnTo, returnScopeId } = getIdentityReturnDestination({
+    returnToParam: params.return_to,
+    returnScopeIdParam: params.return_scope_id,
+    fallback: '/nexus/identity/security',
+  });
 
   const bundleError =
     bundleJson.length > 0
@@ -43,7 +56,11 @@ export default function NexusIdentityRestorePage() {
         encryptedBundleJson: bundleJson,
         passphrase,
       });
-      router.replace('/nexus/identity/security');
+      if (returnScopeId) {
+        setActiveScopeId(returnScopeId);
+      }
+
+      router.replace(returnTo as Href);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Unable to restore that bundle.');
     } finally {
@@ -81,6 +98,18 @@ export default function NexusIdentityRestorePage() {
         </IdentityField>
         {errorMessage ? <Text className="text-sm text-nexus-rose">{errorMessage}</Text> : null}
         <View className="flex-row flex-wrap gap-3">
+          {returnTo !== '/nexus/identity/security' ? (
+            <NexusActionButton
+              label="Go back"
+              onPress={() => {
+                if (returnScopeId) {
+                  setActiveScopeId(returnScopeId);
+                }
+
+                router.push(returnTo as Href);
+              }}
+            />
+          ) : null}
           <NexusActionButton
             label={isSubmitting ? 'Restoring identity...' : 'Restore identity bundle'}
             variant="primary"
@@ -91,11 +120,29 @@ export default function NexusIdentityRestorePage() {
           />
           <NexusActionButton
             label="Sign in instead"
-            onPress={() => router.push('/nexus/identity/sign-in')}
+            onPress={() =>
+              router.push(
+                buildIdentityRouteHref({
+                  pathname: '/nexus/identity/sign-in',
+                  returnTo:
+                    returnTo !== '/nexus/identity/security' ? returnTo : null,
+                  returnScopeId,
+                })
+              )
+            }
           />
           <NexusActionButton
             label="Create new"
-            onPress={() => router.push('/nexus/identity/create')}
+            onPress={() =>
+              router.push(
+                buildIdentityRouteHref({
+                  pathname: '/nexus/identity/create',
+                  returnTo:
+                    returnTo !== '/nexus/identity/security' ? returnTo : null,
+                  returnScopeId,
+                })
+              )
+            }
           />
         </View>
       </NexusCard>

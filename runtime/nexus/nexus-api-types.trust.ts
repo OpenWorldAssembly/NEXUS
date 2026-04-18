@@ -12,6 +12,9 @@ import type { NexusScopeSummary } from '@runtime/nexus/nexus-shell';
 import type { NexusTrustPolicySnapshot, NexusTrustStageId } from '@runtime/nexus/server/trust-logic';
 
 export interface NexusTrustRoleProjection {
+  claim_packet_id: string | null;
+  claim_status: 'active' | 'withdrawn' | null;
+  claimed_scope_packet_id: string | null;
   role_packet_id: string;
   title: string;
   role_kind: string;
@@ -38,9 +41,4 @@ export interface NexusTrustPayload {
   can_review: boolean;
   assembly_claims: AssemblyAssociationClaimProjection[];
   role_cards: NexusTrustRoleProjection[];
-}
-
-export interface NexusRoleClaimMutationPayload {
-  actor_packet_id: string;
-  claimed_role_refs: string[];
 }

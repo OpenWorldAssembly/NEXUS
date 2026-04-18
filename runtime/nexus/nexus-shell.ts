@@ -96,10 +96,22 @@ export const NEXUS_SECTION_LABELS: Record<NexusSection, string> = {
 };
 
 /**
+ * Inputs: a nexus pathname.
+ * Output: whether the route is a wrapper-level account or identity surface.
+ */
+export function isWrapperLevelNexusPath(pathname: string): boolean {
+  return pathname === '/nexus/account' || pathname.startsWith('/nexus/identity');
+}
+
+/**
  * Inputs: a route pathname string.
  * Output: the active nexus section represented by the pathname.
  */
 export function getNexusSectionFromPathname(pathname: string): NexusSection {
+  if (isWrapperLevelNexusPath(pathname)) {
+    return 'account';
+  }
+
   const section = pathname.replace('/nexus/', '').split('/')[0];
   const knownSections: NexusSection[] = [...NEXUS_SECTION_ORDER, 'account'];
 
@@ -111,11 +123,134 @@ export function getNexusSectionFromPathname(pathname: string): NexusSection {
 }
 
 /**
+ * Inputs: the current pathname.
+ * Output: the visible function route that should be shown after a scope change.
+ */
+export function getNexusScopeSelectionHref(pathname: string): `/nexus/${NexusSection}` | null {
+  if (isWrapperLevelNexusPath(pathname)) {
+    return '/nexus/trust';
+  }
+
+  return null;
+}
+
+/**
  * Inputs: a nexus section key.
  * Output: the route path for the requested section.
  */
 export function getNexusSectionHref(section: NexusSection): `/nexus/${NexusSection}` {
   return `/nexus/${section}`;
+}
+
+/**
+ * Inputs: a possible query-param-style route value.
+ * Output: a normalized single string value or null when absent.
+ */
+export function normalizeNexusRouteParam(
+  value: string | string[] | null | undefined
+): string | null {
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
+  }
+
+  return null;
+}
+
+/**
+ * Inputs: a possible return path and a fallback nexus path.
+ * Output: a safe in-app Nexus path for post-auth navigation.
+ */
+export function resolveNexusReturnPath(
+  value: string | string[] | null | undefined,
+  fallback: string
+): string {
+  const normalizedValue = normalizeNexusRouteParam(value);
+
+  if (!normalizedValue || !normalizedValue.startsWith('/nexus/')) {
+    return fallback;
+  }
+
+  return normalizedValue;
+}
+
+/**
+ * Inputs: an active section and scope summary.
+ * Output: the function-menu title appropriate for that scope lens.
+ */
+export function getNexusSectionMenuTitle(
+  section: NexusSection,
+  scope: Pick<NexusScopeSummary, 'level'>
+): string {
+  return NEXUS_SECTION_LABELS[section];
+}
+
+/**
+ * Inputs: an active section and scope summary.
+ * Output: supporting function-menu copy for that scope lens.
+ */
+export function getNexusSectionMenuDetail(
+  section: NexusSection,
+  scope: Pick<NexusScopeSummary, 'level' | 'shortLabel'>
+): string {
+  if (scope.level === 'personal') {
+    return `Personal ${NEXUS_SECTION_LABELS[section].toLowerCase()}.`;
+  }
+
+  return `${NEXUS_SECTION_LABELS[section]} across ${scope.shortLabel}.`;
+}
+
+/**
+ * Inputs: a scope level string.
+ * Output: a human-readable label for the scope row metadata line.
+ */
+export function getNexusScopeLevelLabel(
+  level: NexusScopeSummary['level']
+): string {
+  switch (level) {
+    case 'personal':
+      return 'Personal branch';
+    case 'global':
+      return 'Global branch';
+    case 'nation':
+      return 'National branch';
+    case 'region':
+      return 'Regional branch';
+    case 'city':
+      return 'City branch';
+    case 'district':
+      return 'District branch';
+    default:
+      return 'Scope branch';
+  }
+}
+
+/**
+ * Inputs: a scope level string.
+ * Output: the semantic width used by scope-map depth graphics.
+ */
+export function getNexusScopeDepthWidth(
+  level: NexusScopeSummary['level']
+): number {
+  switch (level) {
+    case 'global':
+      return 34;
+    case 'nation':
+      return 28;
+    case 'region':
+      return 22;
+    case 'city':
+      return 16;
+    case 'district':
+      return 10;
+    case 'personal':
+      return 6;
+    default:
+      return 14;
+  }
 }
 
 /**

@@ -21,6 +21,10 @@ import type {
 } from '@core/schema/packet-schema';
 import { verifyPacketSignature } from '@runtime/nexus/identity-crypto';
 import {
+  filterClaimPackets,
+  listClaimPackets,
+} from '@runtime/nexus/server/claim-utils';
+import {
   createAttestationPacketId,
   resolveDiscussionScopePacketId,
 } from '@runtime/nexus/discussion-packets';
@@ -672,42 +676,45 @@ export class SQLiteAttestationService implements AttestationService {
     }
 
     const actorKey = `element:${actor_packet_id}`;
-    const actorClaims = await this.listActorAttestations({
-      actor_key: actorKey,
-      attestation_kind: 'assembly_association_claim',
-      active_only: false,
+    const associationClaims = filterClaimPackets({
+      claims: await listClaimPackets(this.packetStore),
+      claimKind: 'assembly_association',
+      subjectPacketId: actor_packet_id,
     });
 
-    return actorClaims
-      .map((claim) => {
-        const assemblyPacket = this.state?.packetMap.get(claim.target_ref.packet_id);
-        const supportingByOthers = (this.state?.attestationPackets ?? []).filter(
-          (attestationPacket) =>
-            attestationPacket.body.attestation_kind === 'identity_attest' &&
-            attestationPacket.body.target_ref.packet_id === actor_packet_id &&
-            attestationPacket.body.context_ref?.packet_id === claim.target_ref.packet_id &&
-            getActorKeyFromPacket(attestationPacket) !== actorKey &&
-            attestationPacket.body.status === 'active'
-        ).length;
+    return Promise.all(
+      associationClaims.map(async (claimPacket) => {
+        const assemblyPacket = this.state?.packetMap.get(
+          claimPacket.body.target_ref.packet_id
+        );
+        const supportingByOthers = (
+          await this.listTargetAttestations({
+            target_packet_id: claimPacket.header.packet_id,
+            attestation_kind: 'claim_support',
+            active_only: true,
+          })
+        ).filter((edge) => edge.source_actor_key !== actorKey).length;
 
         return {
-          assembly_packet_id: claim.target_ref.packet_id,
+          assembly_packet_id: claimPacket.body.target_ref.packet_id,
           assembly_name:
             assemblyPacket?.header.family === 'Element'
               ? (assemblyPacket as PacketEnvelopeByType['Element']).body.name
-              : claim.target_ref.packet_id,
-          claim_packet_id: claim.packet.packet_id,
-          status: claim.status,
-          note: claim.note,
-          created_at: claim.created_at,
+              : claimPacket.body.target_ref.packet_id,
+          claim_packet_id: claimPacket.header.packet_id,
+          status: claimPacket.body.status,
+          note: claimPacket.body.note,
+          created_at: claimPacket.header.created_at,
           supported_by_other_count: supportingByOthers,
           is_self_issued_only: supportingByOthers === 0,
-          is_current: claim.status === 'active',
+          is_current: claimPacket.body.status === 'active',
         } satisfies AssemblyAssociationClaimProjection;
       })
-      .sort((leftClaim, rightClaim) =>
+    ).then((claims) =>
+      claims.sort((leftClaim, rightClaim) =>
         rightClaim.created_at.localeCompare(leftClaim.created_at)
-      );
+      )
+    );
   }
 
   async hasActiveAssemblyAssociationClaim(input: {
@@ -718,14 +725,14 @@ export class SQLiteAttestationService implements AttestationService {
       await this.syncDerivedState();
     }
 
-    return (this.state?.attestationPackets ?? []).some(
-      (attestationPacket) =>
-        attestationPacket.body.attestation_kind === 'assembly_association_claim' &&
-        attestationPacket.body.target_ref.packet_id === input.assembly_packet_id &&
-        attestationPacket.body.status === 'active' &&
-        getActorKeyFromPacket(attestationPacket) ===
-          `element:${input.actor_packet_id}`
-    );
+    return filterClaimPackets({
+      claims: await listClaimPackets(this.packetStore),
+      claimKind: 'assembly_association',
+      subjectPacketId: input.actor_packet_id,
+      targetPacketId: input.assembly_packet_id,
+      scopePacketId: input.assembly_packet_id,
+      activeOnly: true,
+    }).length > 0;
   }
 
   private persistDerivedState(input: {

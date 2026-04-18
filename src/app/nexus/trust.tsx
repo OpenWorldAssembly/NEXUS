@@ -5,8 +5,8 @@
 
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ScrollView, Text, TextInput, View } from 'react-native';
 
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
@@ -18,7 +18,10 @@ import {
   useNexusAppearance,
 } from '@app/components/nexus/nexus-ui';
 import type { NexusTrustPayload } from '@runtime/nexus/nexus-api-types';
-import { fetchNexusTrustPayload } from '@runtime/nexus/nexus-query-api';
+import {
+  fetchNexusTrustPayload,
+  setNexusAssemblyAssociationClaim,
+} from '@runtime/nexus/nexus-query-api';
 
 function formatTrustStage(stage: NexusTrustPayload['trust_stage']): string {
   return stage.replace(/_/g, ' ');
@@ -28,10 +31,13 @@ export default function NexusTrustPage() {
   const router = useRouter();
   const appearance = useNexusAppearance();
   const { activeScope, currentActorPacketId, currentActorLabel } = useNexusShell();
-  const { currentMode, isAuthenticated } = useIdentityShell();
+  const { createVerifiedRequestBody, currentMode, isAuthenticated } =
+    useIdentityShell();
   const [trustPayload, setTrustPayload] = useState<NexusTrustPayload | null>(null);
   const [isLoadingTrust, setIsLoadingTrust] = useState(true);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [associationNote, setAssociationNote] = useState('');
 
   useEffect(() => {
     let isMounted = true;
@@ -74,8 +80,58 @@ export default function NexusTrustPage() {
   }, [activeScope.id, currentActorPacketId]);
 
   const roleCards = trustPayload?.role_cards ?? [];
+  const activeAssemblyClaim = useMemo(
+    () =>
+      (trustPayload?.assembly_claims ?? []).find(
+        (claim) =>
+          claim.assembly_packet_id === activeScope.packetId &&
+          claim.status === 'active'
+      ) ?? null,
+    [activeScope.packetId, trustPayload]
+  );
   const assemblyClaims = trustPayload?.assembly_claims ?? [];
   const isClaimedIdentity = currentMode === 'claimed' && isAuthenticated;
+
+  const handleAssemblyAssociationClaim = async (value: 1 | 0) => {
+    if (activeScope.level === 'personal') {
+      setErrorMessage('Open an assembly scope to update an association claim.');
+      setStatusMessage(null);
+      return;
+    }
+
+    try {
+      const requestBody = await createVerifiedRequestBody(
+        '/api/nexus/assemblies/claims',
+        'PUT',
+        {
+          assembly_packet_id: activeScope.packetId,
+          scope_id: activeScope.id,
+          note: value === 1 && associationNote.trim().length > 0 ? associationNote : null,
+          value,
+        }
+      );
+
+      await setNexusAssemblyAssociationClaim({ requestBody });
+      const nextTrustPayload = await fetchNexusTrustPayload({
+        scopeId: activeScope.id,
+        actorPacketId: currentActorPacketId,
+      });
+      setTrustPayload(nextTrustPayload);
+      setStatusMessage(
+        value === 1
+          ? `Claimed association with ${activeScope.name}.`
+          : `Withdrew association with ${activeScope.name}.`
+      );
+      setErrorMessage(null);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : 'Unable to update the assembly association.'
+      );
+      setStatusMessage(null);
+    }
+  };
 
   return (
     <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
@@ -98,6 +154,12 @@ export default function NexusTrustPage() {
             </View>
           }
         />
+
+        {statusMessage ? (
+          <NexusCard tone="mint">
+            <Text className={appearance.itemBodyClass}>{statusMessage}</Text>
+          </NexusCard>
+        ) : null}
 
         {errorMessage ? (
           <NexusCard tone="rose">
@@ -180,10 +242,6 @@ export default function NexusTrustPage() {
                   }
                 />
                 <NexusActionButton
-                  label="Open account tools"
-                  onPress={() => router.push('/nexus/account')}
-                />
-                <NexusActionButton
                   label="Open roles"
                   onPress={() => router.push('/nexus/roles' as Href)}
                 />
@@ -194,6 +252,33 @@ export default function NexusTrustPage() {
               <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
                 Assembly association evidence
               </Text>
+              {activeScope.level !== 'personal' ? (
+                <>
+                  <TextInput
+                    value={associationNote}
+                    onChangeText={setAssociationNote}
+                    placeholder="Optional note for this association"
+                    placeholderTextColor={appearance.textInputPlaceholderColor}
+                    className={`rounded-[18px] border px-4 py-3 ${appearance.textInputClass}`}
+                  />
+                  <View className="flex-row flex-wrap gap-3">
+                    <NexusActionButton
+                      label={activeAssemblyClaim ? 'Refresh association' : 'Claim association'}
+                      onPress={() => void handleAssemblyAssociationClaim(1)}
+                    />
+                    <NexusActionButton
+                      label="Withdraw association"
+                      variant="ghost"
+                      onPress={() => void handleAssemblyAssociationClaim(0)}
+                      disabled={!activeAssemblyClaim}
+                    />
+                  </View>
+                </>
+              ) : (
+                <Text className={appearance.itemBodyClass}>
+                  Personal scope summarizes your current association state. Open a specific assembly scope to claim or withdraw association there.
+                </Text>
+              )}
               {assemblyClaims.length === 0 ? (
                 <Text className={appearance.itemBodyClass}>
                   No assembly association claims are active in this scope yet.
@@ -210,7 +295,7 @@ export default function NexusTrustPage() {
                           {claim.assembly_name}
                         </Text>
                         <NexusBadge
-                          label={claim.status === 'active' ? 'Active claim' : 'Cleared'}
+                          label={claim.status === 'active' ? 'Active claim' : 'Withdrawn'}
                           tone={claim.status === 'active' ? 'mint' : 'default'}
                         />
                       </View>

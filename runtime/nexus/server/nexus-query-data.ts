@@ -46,6 +46,11 @@ import type {
   DiscussionReplySort,
   DiscussionSort,
 } from '@core/schema/packet-schema';
+import {
+  filterClaimPackets,
+  listClaimPackets,
+  type ClaimPacket,
+} from '@runtime/nexus/server/claim-utils';
 
 const DEFAULT_FOLLOWED_SCOPE_IDS = [
   'moreno-valley',
@@ -277,6 +282,40 @@ function getScopeByIdOrDefault(
   );
 }
 
+export function getScopeSummaryByIdOrDefault(
+  scopeSummaries: NexusScopeSummary[],
+  scopeId: string
+): NexusScopeSummary {
+  return getScopeByIdOrDefault(scopeSummaries, scopeId);
+}
+
+export function buildApplicableScopeRefsForSummary(
+  scopeSummary: NexusScopeSummary,
+  scopeSummaries: NexusScopeSummary[]
+): PacketRef[] {
+  const scopeRefs: PacketRef[] = [
+    {
+      packet_id: scopeSummary.packetId,
+    },
+  ];
+  let currentParentId = scopeSummary.parentId ?? null;
+
+  while (currentParentId) {
+    const parentScope = scopeSummaries.find((scope) => scope.id === currentParentId);
+
+    if (!parentScope) {
+      break;
+    }
+
+    scopeRefs.push({
+      packet_id: parentScope.packetId,
+    });
+    currentParentId = parentScope.parentId ?? null;
+  }
+
+  return scopeRefs;
+}
+
 async function getActorElementPacket(
   actorPacketId: string | null | undefined
 ): Promise<PacketEnvelopeByType['Element'] | null> {
@@ -409,6 +448,33 @@ function getAssemblyPacketIdForScope(
   return scopeSummary.level === 'personal'
     ? actorPacket?.header.authority_scope_ref?.packet_id ?? null
     : scopeSummary.packetId;
+}
+
+function getClaimAuthorityScopeId(input: {
+  scopeSummary: NexusScopeSummary;
+  actorPacket: PacketEnvelopeByType['Element'] | null;
+  shellPayload?: NexusShellPayload | null;
+}): string | null {
+  if (input.scopeSummary.level !== 'personal') {
+    return input.scopeSummary.packetId;
+  }
+
+  return (
+    input.actorPacket?.header.authority_scope_ref?.packet_id ??
+    input.shellPayload?.personal_parent_scope_id ??
+    null
+  );
+}
+
+function isClaimInExactScope(input: {
+  claimPacket: ClaimPacket;
+  scopePacketId: string | null;
+}): boolean {
+  if (!input.scopePacketId) {
+    return false;
+  }
+
+  return input.claimPacket.body.scope_ref.packet_id === input.scopePacketId;
 }
 
 function getRoleClaimTrustStage(input: {
@@ -929,7 +995,10 @@ export async function getNexusLibraryPayload(input: {
   const scopeLens = scopeResolution.lens;
   const packets = await services.nexusQueryService.listLibraryPackets(
     scopeLens,
-    input.familyFilter ?? undefined
+    input.familyFilter ?? undefined,
+    {
+      scope_mode: 'local',
+    }
   );
 
   return {
@@ -991,6 +1060,7 @@ export async function getNexusTrustPayload(input: {
 }): Promise<NexusTrustPayload> {
   const services = await getNexusPacketServices();
   const actorPacket = await getActorElementPacket(input.actorPacketId ?? null);
+  const shellPayload = await getNexusShellPayload(input.actorPacketId ?? null);
   const scopeResolution = await resolveScopeResolution({
     requestedScopeId: input.scopeId,
     actorPacketId: input.actorPacketId,
@@ -998,10 +1068,12 @@ export async function getNexusTrustPayload(input: {
   const scopeLens = scopeResolution.lens;
   const rolePackets = await services.packetStore.listPreferredPacketsByFamily('Role');
   const trustPolicy = await getTrustPolicyForScope(scopeLens);
-  const assemblyPacketId = getAssemblyPacketIdForScope(
-    scopeResolution.summary,
-    actorPacket
-  );
+  const assemblyPacketId = getClaimAuthorityScopeId({
+    scopeSummary: scopeResolution.summary,
+    actorPacket,
+    shellPayload,
+  });
+  const claimPackets = await listClaimPackets(services.packetStore);
   const assemblyClaims =
     actorPacket?.header.packet_id
       ? await services.attestationService.listAssemblyAssociationClaimsForActor(
@@ -1015,28 +1087,38 @@ export async function getNexusTrustPayload(input: {
           claim.status === 'active'
       ) ?? null
     : null;
-  const claimedRoleRefIds = new Set(
-    actorPacket?.body.claimed_role_refs.map((roleRef) => roleRef.packet_id) ?? []
-  );
+  const actorRoleClaims = filterClaimPackets({
+    claims: claimPackets,
+    claimKind: 'role_association',
+    subjectPacketId: actorPacket?.header.packet_id ?? null,
+    activeOnly: true,
+  });
   const roleCards: NexusTrustRoleProjection[] = [];
 
   for (const rolePacket of rolePackets) {
     const typedRolePacket = rolePacket as PacketEnvelopeByType['Role'];
+    const scopedClaim =
+      actorRoleClaims.find(
+        (claimPacket) =>
+          claimPacket.body.target_ref.packet_id === typedRolePacket.header.packet_id &&
+          isClaimInExactScope({
+            claimPacket,
+            scopePacketId: assemblyPacketId,
+          })
+      ) ?? null;
     const supportEdges =
-      actorPacket?.header.packet_id
+      scopedClaim
         ? await services.attestationService.listTargetAttestations({
-            target_packet_id: actorPacket.header.packet_id,
-            attestation_kind: 'role_support',
-            context_packet_id: typedRolePacket.header.packet_id,
+            target_packet_id: scopedClaim.header.packet_id,
+            attestation_kind: 'claim_support',
             active_only: true,
           })
         : [];
     const disputeEdges =
-      actorPacket?.header.packet_id
+      scopedClaim
         ? await services.attestationService.listTargetAttestations({
-            target_packet_id: actorPacket.header.packet_id,
-            attestation_kind: 'role_dispute',
-            context_packet_id: typedRolePacket.header.packet_id,
+            target_packet_id: scopedClaim.header.packet_id,
+            attestation_kind: 'claim_dispute',
             active_only: true,
           })
         : [];
@@ -1054,18 +1136,21 @@ export async function getNexusTrustPayload(input: {
           );
 
     roleCards.push({
+      claim_packet_id: scopedClaim?.header.packet_id ?? null,
+      claim_status: scopedClaim?.body.status ?? null,
+      claimed_scope_packet_id: scopedClaim?.body.scope_ref.packet_id ?? null,
       role_packet_id: typedRolePacket.header.packet_id,
       title: typedRolePacket.body.title,
       role_kind: typedRolePacket.body.role_kind,
       summary: typedRolePacket.body.summary ?? null,
       responsibility_markdown: typedRolePacket.body.responsibility_markdown,
-      is_claimed: claimedRoleRefIds.has(typedRolePacket.header.packet_id),
+      is_claimed: scopedClaim !== null,
       support_count: scopedSupportEdges.length,
       dispute_count: scopedDisputeEdges.length,
       stage:
         scopedSupportEdges.length >= trustPolicy.role_support_threshold
           ? 'role_eligible'
-          : claimedRoleRefIds.has(typedRolePacket.header.packet_id)
+          : scopedClaim !== null
             ? 'emerging'
             : 'self_claimed',
       support_edges: scopedSupportEdges,
@@ -1111,22 +1196,25 @@ export async function getNexusRolesPayload(input: {
 }): Promise<NexusRolesPayload> {
   const services = await getNexusPacketServices();
   const actorPacket = await getActorElementPacket(input.actorPacketId ?? null);
+  const shellPayload = await getNexusShellPayload(input.actorPacketId ?? null);
   const scopeResolution = await resolveScopeResolution({
     requestedScopeId: input.scopeId,
     actorPacketId: input.actorPacketId,
   });
   const scopeLens = scopeResolution.lens;
   const trustPolicy = await getTrustPolicyForScope(scopeLens);
-  const assemblyPacketId = getAssemblyPacketIdForScope(
-    scopeResolution.summary,
-    actorPacket
-  );
+  const assemblyPacketId = getClaimAuthorityScopeId({
+    scopeSummary: scopeResolution.summary,
+    actorPacket,
+    shellPayload,
+  });
   const rolePackets = (
     await services.packetStore.listPreferredPacketsByFamily('Role')
   ) as PacketEnvelopeByType['Role'][];
   const elementPackets = (
     await services.packetStore.listPreferredPacketsByFamily('Element')
   ) as PacketEnvelopeByType['Element'][];
+  const claimPackets = await listClaimPackets(services.packetStore);
   const currentActorPacketId = actorPacket?.header.packet_id ?? null;
   const eligibleClaimants = elementPackets.filter((packet) =>
     ['person', 'assembly', 'team'].includes(packet.body.kind)
@@ -1153,13 +1241,20 @@ export async function getNexusRolesPayload(input: {
 
   for (const rolePacket of rolePackets) {
     const claimants: NexusRoleClaimantProjection[] = [];
+    const roleClaims = filterClaimPackets({
+      claims: claimPackets,
+      claimKind: 'role_association',
+      targetPacketId: rolePacket.header.packet_id,
+      scopePacketId: assemblyPacketId,
+      activeOnly: true,
+    });
 
-    for (const claimantPacket of eligibleClaimants) {
-      const hasClaimedRole = claimantPacket.body.claimed_role_refs.some(
-        (roleRef) => roleRef.packet_id === rolePacket.header.packet_id
+    for (const claimPacket of roleClaims) {
+      const claimantPacket = eligibleClaimants.find(
+        (packet) => packet.header.packet_id === claimPacket.body.subject_ref.packet_id
       );
 
-      if (!hasClaimedRole) {
+      if (!claimantPacket) {
         continue;
       }
 
@@ -1176,27 +1271,21 @@ export async function getNexusRolesPayload(input: {
       const matchesAuthorityScope =
         assemblyPacketId !== null &&
         claimantPacket.header.authority_scope_ref?.packet_id === assemblyPacketId;
-      const isScopeRelevant =
-        scopeResolution.summary.level === 'personal'
-          ? claimantPacket.header.packet_id === currentActorPacketId
-          : assemblyPacketId === null
-            ? true
-            : matchesAuthorityScope || activeAssemblyClaim !== null;
-
-      if (!isScopeRelevant) {
-        continue;
-      }
+      const hasScopeAssociation =
+        assemblyPacketId === null
+          ? true
+          : matchesAuthorityScope || activeAssemblyClaim !== null;
+      const associationSupportCount =
+        activeAssemblyClaim?.supported_by_other_count ?? 0;
 
       const supportEdges = await services.attestationService.listTargetAttestations({
-        target_packet_id: claimantPacket.header.packet_id,
-        attestation_kind: 'role_support',
-        context_packet_id: rolePacket.header.packet_id,
+        target_packet_id: claimPacket.header.packet_id,
+        attestation_kind: 'claim_support',
         active_only: true,
       });
       const disputeEdges = await services.attestationService.listTargetAttestations({
-        target_packet_id: claimantPacket.header.packet_id,
-        attestation_kind: 'role_dispute',
-        context_packet_id: rolePacket.header.packet_id,
+        target_packet_id: claimPacket.header.packet_id,
+        attestation_kind: 'claim_dispute',
         active_only: true,
       });
       const scopedSupportEdges =
@@ -1221,18 +1310,31 @@ export async function getNexusRolesPayload(input: {
               )
             ? 'dispute'
             : 'none';
+      const roleTrustStage = getRoleClaimTrustStage({
+        hasAssociationClaim: hasScopeAssociation,
+        associationSupportCount,
+        roleSupportCount: scopedSupportEdges.length,
+        thresholds: trustPolicy,
+      });
+      const scopeTrustStage = deriveTrustStage({
+        has_association_claim: hasScopeAssociation,
+        association_support_count: associationSupportCount,
+        claimed_role_count: 0,
+        supported_role_count: 0,
+        thresholds: trustPolicy,
+      });
 
       claimants.push({
+        claim_packet_id: claimPacket.header.packet_id,
+        claim_status: claimPacket.body.status,
         actor_packet_id: claimantPacket.header.packet_id,
         actor_label: claimantPacket.body.name,
         actor_kind: claimantPacket.body.kind,
         is_current_actor: claimantPacket.header.packet_id === currentActorPacketId,
-        trust_stage: getRoleClaimTrustStage({
-          hasAssociationClaim: activeAssemblyClaim !== null || matchesAuthorityScope,
-          associationSupportCount: activeAssemblyClaim?.supported_by_other_count ?? 0,
-          roleSupportCount: scopedSupportEdges.length,
-          thresholds: trustPolicy,
-        }),
+        trust_stage: roleTrustStage,
+        scope_trust_stage: scopeTrustStage,
+        has_scope_association: hasScopeAssociation,
+        scope_association_support_count: associationSupportCount,
         support_count: scopedSupportEdges.length,
         dispute_count: scopedDisputeEdges.length,
         viewer_attestation: viewerAttestation,
@@ -1266,7 +1368,10 @@ export async function getNexusRolesPayload(input: {
       is_claimed_by_current_actor:
         currentActorPacketId === null
           ? false
-          : claimants.some((claimant) => claimant.is_current_actor),
+          : roleClaims.some(
+              (claimPacket) =>
+                claimPacket.body.subject_ref.packet_id === currentActorPacketId
+            ),
       claimants,
     });
   }

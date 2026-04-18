@@ -418,70 +418,272 @@ export class NexusAuthStore {
     sessionRecord: AuthSessionRecord;
     refreshRecord: RefreshTokenRecord | null;
     setCookieHeaders: string[];
+    reusedExistingPersistentSession: boolean;
   } {
     const now = new Date();
-    const sessionId = randomUUID();
-    const refreshTokenId = randomUUID();
     const csrfToken = randomUUID();
     const sessionExpiresAt = new Date(now.getTime() + AUTH_SESSION_TTL_MS).toISOString();
     const refreshExpiresAt = new Date(now.getTime() + AUTH_REFRESH_TTL_MS).toISOString();
+    let sessionRecord: AuthSessionRecord | null = null;
+    let refreshRecord: RefreshTokenRecord | null = null;
+    let reusedExistingPersistentSession = false;
 
     this.withDatabase((database) => {
       database.exec('BEGIN IMMEDIATE');
 
       try {
-        database
-          .prepare(
-            `
-              INSERT INTO auth_sessions (
-                session_id,
-                actor_packet_id,
-                created_at,
-                expires_at,
-                last_seen_at,
-                revoked_at,
-                persistent_login,
-                device_label,
-                auth_method,
-                csrf_token,
-                requires_passkey_upgrade
-              ) VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?)
-            `
-          )
-          .run(
-            sessionId,
-            input.actorPacketId,
-            now.toISOString(),
-            sessionExpiresAt,
-            now.toISOString(),
-            input.keepMeLoggedIn ? 1 : 0,
-            input.deviceLabel,
-            input.authMethod,
-            csrfToken,
-            input.requiresPasskeyUpgrade ? 1 : 0
-          );
-
         if (input.keepMeLoggedIn) {
+          const existingSession = database
+            .prepare(
+              `
+                SELECT session_id, actor_packet_id, created_at, expires_at, last_seen_at, revoked_at, persistent_login, device_label, auth_method, csrf_token, requires_passkey_upgrade
+                FROM auth_sessions
+                WHERE actor_packet_id = ?
+                  AND persistent_login = 1
+                  AND device_label = ?
+                  AND revoked_at IS NULL
+                ORDER BY last_seen_at DESC, created_at DESC
+                LIMIT 1
+              `
+            )
+            .get(input.actorPacketId, input.deviceLabel) as AuthSessionRecord | undefined;
+
+          if (existingSession) {
+            reusedExistingPersistentSession = true;
+
+            database
+              .prepare(
+                `
+                  UPDATE auth_sessions
+                  SET expires_at = ?,
+                      last_seen_at = ?,
+                      auth_method = ?,
+                      csrf_token = ?,
+                      requires_passkey_upgrade = ?,
+                      revoked_at = NULL
+                  WHERE session_id = ?
+                `
+              )
+              .run(
+                sessionExpiresAt,
+                now.toISOString(),
+                input.authMethod,
+                csrfToken,
+                input.requiresPasskeyUpgrade ? 1 : 0,
+                existingSession.session_id
+              );
+            database
+              .prepare(
+                `
+                  UPDATE auth_sessions
+                  SET revoked_at = ?
+                  WHERE actor_packet_id = ?
+                    AND persistent_login = 1
+                    AND device_label = ?
+                    AND session_id != ?
+                    AND revoked_at IS NULL
+                `
+              )
+              .run(
+                now.toISOString(),
+                input.actorPacketId,
+                input.deviceLabel,
+                existingSession.session_id
+              );
+            database
+              .prepare(
+                `
+                  UPDATE auth_refresh_tokens
+                  SET revoked_at = ?
+                  WHERE actor_packet_id = ?
+                    AND session_id != ?
+                    AND revoked_at IS NULL
+                `
+              )
+              .run(
+                now.toISOString(),
+                input.actorPacketId,
+                existingSession.session_id
+              );
+
+            const existingRefresh = database
+              .prepare(
+                `
+                  SELECT refresh_token_id, session_id, actor_packet_id, created_at, expires_at, revoked_at
+                  FROM auth_refresh_tokens
+                  WHERE actor_packet_id = ?
+                    AND session_id = ?
+                    AND revoked_at IS NULL
+                  ORDER BY created_at DESC
+                  LIMIT 1
+                `
+              )
+              .get(
+                input.actorPacketId,
+                existingSession.session_id
+              ) as RefreshTokenRecord | undefined;
+
+            if (existingRefresh) {
+              database
+                .prepare(
+                  `
+                    UPDATE auth_refresh_tokens
+                    SET expires_at = ?,
+                        revoked_at = NULL
+                    WHERE refresh_token_id = ?
+                  `
+                )
+                .run(refreshExpiresAt, existingRefresh.refresh_token_id);
+              database
+                .prepare(
+                  `
+                    UPDATE auth_refresh_tokens
+                    SET revoked_at = ?
+                    WHERE actor_packet_id = ?
+                      AND session_id = ?
+                      AND refresh_token_id != ?
+                      AND revoked_at IS NULL
+                  `
+                )
+                .run(
+                  now.toISOString(),
+                  input.actorPacketId,
+                  existingSession.session_id,
+                  existingRefresh.refresh_token_id
+                );
+
+              refreshRecord = {
+                ...existingRefresh,
+                expires_at: refreshExpiresAt,
+                revoked_at: null,
+              };
+            } else {
+              const refreshTokenId = randomUUID();
+
+              database
+                .prepare(
+                  `
+                    INSERT INTO auth_refresh_tokens (
+                      refresh_token_id,
+                      session_id,
+                      actor_packet_id,
+                      created_at,
+                      expires_at,
+                      revoked_at
+                    ) VALUES (?, ?, ?, ?, ?, NULL)
+                  `
+                )
+                .run(
+                  refreshTokenId,
+                  existingSession.session_id,
+                  input.actorPacketId,
+                  now.toISOString(),
+                  refreshExpiresAt
+                );
+
+              refreshRecord = {
+                refresh_token_id: refreshTokenId,
+                session_id: existingSession.session_id,
+                actor_packet_id: input.actorPacketId,
+                created_at: now.toISOString(),
+                expires_at: refreshExpiresAt,
+                revoked_at: null,
+              };
+            }
+
+            sessionRecord = {
+              ...existingSession,
+              expires_at: sessionExpiresAt,
+              last_seen_at: now.toISOString(),
+              revoked_at: null,
+              auth_method: input.authMethod,
+              csrf_token: csrfToken,
+              requires_passkey_upgrade: input.requiresPasskeyUpgrade ? 1 : 0,
+            };
+          }
+        }
+
+        if (!sessionRecord) {
+          const sessionId = randomUUID();
+
           database
             .prepare(
               `
-                INSERT INTO auth_refresh_tokens (
-                  refresh_token_id,
+                INSERT INTO auth_sessions (
                   session_id,
                   actor_packet_id,
                   created_at,
                   expires_at,
-                  revoked_at
-                ) VALUES (?, ?, ?, ?, ?, NULL)
+                  last_seen_at,
+                  revoked_at,
+                  persistent_login,
+                  device_label,
+                  auth_method,
+                  csrf_token,
+                  requires_passkey_upgrade
+                ) VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?)
               `
             )
             .run(
-              refreshTokenId,
               sessionId,
               input.actorPacketId,
               now.toISOString(),
-              refreshExpiresAt
+              sessionExpiresAt,
+              now.toISOString(),
+              input.keepMeLoggedIn ? 1 : 0,
+              input.deviceLabel,
+              input.authMethod,
+              csrfToken,
+              input.requiresPasskeyUpgrade ? 1 : 0
             );
+
+          sessionRecord = {
+            session_id: sessionId,
+            actor_packet_id: input.actorPacketId,
+            created_at: now.toISOString(),
+            expires_at: sessionExpiresAt,
+            last_seen_at: now.toISOString(),
+            revoked_at: null,
+            persistent_login: input.keepMeLoggedIn ? 1 : 0,
+            device_label: input.deviceLabel,
+            auth_method: input.authMethod,
+            csrf_token: csrfToken,
+            requires_passkey_upgrade: input.requiresPasskeyUpgrade ? 1 : 0,
+          };
+
+          if (input.keepMeLoggedIn) {
+            const refreshTokenId = randomUUID();
+
+            database
+              .prepare(
+                `
+                  INSERT INTO auth_refresh_tokens (
+                    refresh_token_id,
+                    session_id,
+                    actor_packet_id,
+                    created_at,
+                    expires_at,
+                    revoked_at
+                  ) VALUES (?, ?, ?, ?, ?, NULL)
+                `
+              )
+              .run(
+                refreshTokenId,
+                sessionId,
+                input.actorPacketId,
+                now.toISOString(),
+                refreshExpiresAt
+              );
+
+            refreshRecord = {
+              refresh_token_id: refreshTokenId,
+              session_id: sessionId,
+              actor_packet_id: input.actorPacketId,
+              created_at: now.toISOString(),
+              expires_at: refreshExpiresAt,
+              revoked_at: null,
+            };
+          }
         }
 
         database.exec('COMMIT');
@@ -491,51 +693,35 @@ export class NexusAuthStore {
       }
     });
 
-    const sessionRecord: AuthSessionRecord = {
-      session_id: sessionId,
-      actor_packet_id: input.actorPacketId,
-      created_at: now.toISOString(),
-      expires_at: sessionExpiresAt,
-      last_seen_at: now.toISOString(),
-      revoked_at: null,
-      persistent_login: input.keepMeLoggedIn ? 1 : 0,
-      device_label: input.deviceLabel,
-      auth_method: input.authMethod,
-      csrf_token: csrfToken,
-      requires_passkey_upgrade: input.requiresPasskeyUpgrade ? 1 : 0,
-    };
-    const refreshRecord = input.keepMeLoggedIn
-      ? {
-          refresh_token_id: refreshTokenId,
-          session_id: sessionId,
-          actor_packet_id: input.actorPacketId,
-          created_at: now.toISOString(),
-          expires_at: refreshExpiresAt,
-          revoked_at: null,
-        }
-      : null;
+    if (!sessionRecord) {
+      throw new Error('Session creation did not produce a session record.');
+    }
+
+    const finalSessionRecord = sessionRecord as AuthSessionRecord;
+    const finalRefreshRecord = refreshRecord as RefreshTokenRecord | null;
 
     return {
-      sessionRecord,
-      refreshRecord,
+      sessionRecord: finalSessionRecord,
+      refreshRecord: finalRefreshRecord,
       setCookieHeaders: [
         formatCookie({
           name: AUTH_SESSION_COOKIE,
-          value: sessionId,
+          value: finalSessionRecord.session_id,
           maxAgeSeconds: input.keepMeLoggedIn
             ? Math.floor(AUTH_SESSION_TTL_MS / 1000)
             : null,
         }),
-        ...(refreshRecord
+        ...(finalRefreshRecord
           ? [
               formatCookie({
                 name: AUTH_REFRESH_COOKIE,
-                value: refreshRecord.refresh_token_id,
+                value: finalRefreshRecord.refresh_token_id,
                 maxAgeSeconds: Math.floor(AUTH_REFRESH_TTL_MS / 1000),
               }),
             ]
           : []),
       ],
+      reusedExistingPersistentSession,
     };
   }
 
@@ -569,6 +755,161 @@ export class NexusAuthStore {
           .get(refreshTokenId) as RefreshTokenRecord | undefined
       ) ?? null
     );
+  }
+
+  rotateRefreshSessionRecord(input: {
+    refreshRecord: RefreshTokenRecord;
+  }): {
+    sessionRecord: AuthSessionRecord;
+    refreshRecord: RefreshTokenRecord;
+    setCookieHeaders: string[];
+  } | null {
+    const now = new Date();
+    const nextRefreshTokenId = randomUUID();
+    const nextSessionExpiresAt = new Date(
+      now.getTime() + AUTH_SESSION_TTL_MS
+    ).toISOString();
+    const nextRefreshExpiresAt = new Date(
+      now.getTime() + AUTH_REFRESH_TTL_MS
+    ).toISOString();
+    const nextCsrfToken = randomUUID();
+    let sessionRecord: AuthSessionRecord | null = null;
+    let refreshRecord: RefreshTokenRecord | null = null;
+
+    this.withDatabase((database) => {
+      database.exec('BEGIN IMMEDIATE');
+
+      try {
+        const existingSession = database
+          .prepare(
+            `
+              SELECT session_id, actor_packet_id, created_at, expires_at, last_seen_at, revoked_at, persistent_login, device_label, auth_method, csrf_token, requires_passkey_upgrade
+              FROM auth_sessions
+              WHERE session_id = ?
+            `
+          )
+          .get(input.refreshRecord.session_id) as AuthSessionRecord | undefined;
+
+        if (!existingSession) {
+          database.exec('COMMIT');
+          return;
+        }
+
+        database
+          .prepare(
+            `
+              UPDATE auth_refresh_tokens
+              SET revoked_at = ?
+              WHERE refresh_token_id = ?
+            `
+          )
+          .run(now.toISOString(), input.refreshRecord.refresh_token_id);
+        database
+          .prepare(
+            `
+              UPDATE auth_sessions
+              SET expires_at = ?,
+                  last_seen_at = ?,
+                  revoked_at = NULL,
+                  auth_method = ?,
+                  csrf_token = ?,
+                  requires_passkey_upgrade = 0
+              WHERE session_id = ?
+            `
+          )
+          .run(
+            nextSessionExpiresAt,
+            now.toISOString(),
+            'refresh',
+            nextCsrfToken,
+            existingSession.session_id
+          );
+        database
+          .prepare(
+            `
+              INSERT INTO auth_refresh_tokens (
+                refresh_token_id,
+                session_id,
+                actor_packet_id,
+                created_at,
+                expires_at,
+                revoked_at
+              ) VALUES (?, ?, ?, ?, ?, NULL)
+            `
+          )
+          .run(
+            nextRefreshTokenId,
+            existingSession.session_id,
+            input.refreshRecord.actor_packet_id,
+            now.toISOString(),
+            nextRefreshExpiresAt
+          );
+        database
+          .prepare(
+            `
+              UPDATE auth_refresh_tokens
+              SET revoked_at = ?
+              WHERE actor_packet_id = ?
+                AND session_id = ?
+                AND refresh_token_id != ?
+                AND revoked_at IS NULL
+            `
+          )
+          .run(
+            now.toISOString(),
+            input.refreshRecord.actor_packet_id,
+            existingSession.session_id,
+            nextRefreshTokenId
+          );
+
+        sessionRecord = {
+          ...existingSession,
+          expires_at: nextSessionExpiresAt,
+          last_seen_at: now.toISOString(),
+          revoked_at: null,
+          auth_method: 'refresh',
+          csrf_token: nextCsrfToken,
+          requires_passkey_upgrade: 0,
+        };
+        refreshRecord = {
+          refresh_token_id: nextRefreshTokenId,
+          session_id: existingSession.session_id,
+          actor_packet_id: input.refreshRecord.actor_packet_id,
+          created_at: now.toISOString(),
+          expires_at: nextRefreshExpiresAt,
+          revoked_at: null,
+        };
+
+        database.exec('COMMIT');
+      } catch (error) {
+        database.exec('ROLLBACK');
+        throw error;
+      }
+    });
+
+    if (!sessionRecord || !refreshRecord) {
+      return null;
+    }
+
+    const finalSessionRecord = sessionRecord as AuthSessionRecord;
+    const finalRefreshRecord = refreshRecord as RefreshTokenRecord;
+
+    return {
+      sessionRecord: finalSessionRecord,
+      refreshRecord: finalRefreshRecord,
+      setCookieHeaders: [
+        formatCookie({
+          name: AUTH_SESSION_COOKIE,
+          value: finalSessionRecord.session_id,
+          maxAgeSeconds: Math.floor(AUTH_SESSION_TTL_MS / 1000),
+        }),
+        formatCookie({
+          name: AUTH_REFRESH_COOKIE,
+          value: finalRefreshRecord.refresh_token_id,
+          maxAgeSeconds: Math.floor(AUTH_REFRESH_TTL_MS / 1000),
+        }),
+      ],
+    };
   }
 
   touchSession(sessionId: string): void {

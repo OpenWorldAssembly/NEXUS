@@ -11,6 +11,7 @@ import type {
 const FAMILY_LABELS: Record<PacketEnvelope['header']['family'], string> = {
   Element: 'element packet',
   Role: 'role packet',
+  Claim: 'claim packet',
   Signal: 'signal packet',
   Proposal: 'proposal packet',
   Vote: 'vote packet',
@@ -58,6 +59,10 @@ export function getPacketDisplayLabel(packet: PacketEnvelope): string {
       const body = packet.body as PacketBodyByType['Role'];
       return `${titleCase(body.role_kind)} role`;
     }
+    case 'Claim': {
+      const body = packet.body as PacketBodyByType['Claim'];
+      return `${titleCase(body.claim_kind)} claim`;
+    }
     case 'DiscussionForum': {
       const body = packet.body as PacketBodyByType['DiscussionForum'];
       if (body.forum_kind === 'visitor_lobby') {
@@ -95,6 +100,10 @@ export function getPacketTitle(packet: PacketEnvelope): string {
       const body = packet.body as PacketBodyByType['Role'];
       return body.title;
     }
+    case 'Claim': {
+      const body = packet.body as PacketBodyByType['Claim'];
+      return `${titleCase(body.claim_kind)} claim`;
+    }
     case 'Attestation':
       return 'Attestation';
     case 'DiscussionReply':
@@ -125,6 +134,10 @@ export function getPacketSummary(packet: PacketEnvelope): string | null {
       const body = packet.body as PacketBodyByType['Role'];
       return body.summary ?? null;
     }
+    case 'Claim': {
+      const body = packet.body as PacketBodyByType['Claim'];
+      return body.note ?? null;
+    }
     case 'DiscussionForum': {
       const body = packet.body as PacketBodyByType['DiscussionForum'];
       return body.summary ?? null;
@@ -145,6 +158,10 @@ export function getPacketStatus(packet: PacketEnvelope): string | null {
     case 'Decision': {
       const body = packet.body as PacketBodyByType['Decision'];
       return body.outcome;
+    }
+    case 'Claim': {
+      const body = packet.body as PacketBodyByType['Claim'];
+      return body.status;
     }
     case 'DiscussionPost':
     case 'DiscussionReply':

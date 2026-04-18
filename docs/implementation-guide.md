@@ -174,6 +174,7 @@ Implemented shell behavior in this slice:
 - placeholder rollout/explanatory cards have started being removed from the current route surfaces in favor of denser, more functional cards and lists
 - the primary function surface now uses `Roles` and `Trust` instead of `Account`, while account/security custody stays accessible from the profile link and `/nexus/identity/*` routes
 - the hidden account route now acts as a wrapper-level custody and local-assembly continuity workspace, including memory-only temporary guests, session-only guests, saved guests, and claimed identity flows with export, restore, claim, sign-in, sign-out, and local lock-state messaging
+- scope changes from wrapper-level account and identity routes now navigate visibly back into the scoped `Trust` workspace instead of only changing shell state in the background
 - signing out of a claimed session now restores a preserved guest actor when possible, otherwise Nexus immediately generates a fresh temporary guest so the shell never keeps showing the signed-out claimed identity as the active actor
 - the discussions thread workspace has been simplified by removing the separate expandable thread picker; feed remains the primary thread-switching surface, and successful inline replies now collapse the composer and mark the newly created reply inside the thread
 - shared Nexus action buttons now opt into a compact self-sized footprint by default so standalone actions do not stretch full-width inside vertical card layouts
@@ -183,6 +184,15 @@ Implemented shell behavior in this slice:
 - the shell sign-in workspace now uses graph-backed identity discovery and graph-backed location discovery from the packet graph itself, while keeping private signing-key custody strictly local unless the user imports a bundle or uses passkey sign-in
 - the trust route now projects scoped trust posture, association evidence, role claim summary, and baseline participation gates from policy defaults rather than showing a hidden reputation score
 - the roles route now projects the role catalog for the active scope, scope-relevant claimants, claimant trust stages for that role, and real support/dispute evidence with inline review actions
+- protected guest role actions now open a local sign-in-required confirmation modal instead of attempting the write and surfacing raw backend identity errors
+- the sign-in identity picker now dedupes saved and discovered claimed identities by actor packet id, keeps the selected identity in one place at a time, and distinguishes resuming or unlocking the current identity from switching to another one
+- identity ceremonies now preserve `return_to` and `return_scope_id` context for protected role-entry flows so sign-in, claim, create, and restore can return the user to the same workspace and scope lens after success
+- exact-scope role claims are now always visible on the roles route for that scope, and role actions immediately re-fetch the scoped payload so claimant rows, counts, and claim or unclaim button state stay synchronized without a manual page refresh
+- remembered same-device claimed sign-ins now reuse the existing persistent session by default, and refresh-token rotation updates that same session in place instead of multiplying device-session rows
+- identity security now shows only active sessions by default, sorts the current session first, and surfaces explicit empty or error states instead of silently blanking the session area
+- person-packet signature verification now accepts both the current canonical `Element` shape and older signed revisions that predate the defaulted `claimed_role_refs` field, so stored claimed identities can still sign in and authorize role or assembly-association writes without weakening signature checks
+- the library route now defaults to a strict local-only packet view keyed to the active authority scope rather than using the broader inherited scope lens
+- personal-scope function rows now keep clean function titles while using `Personal ...` wording in the supporting subtext, and the scope-map connector lane uses semantic width cues so `Global -> ... -> You` reads visually from broadest to narrowest with `You` labeled as a `Personal branch`
 
 Current implementation boundary:
 
@@ -190,7 +200,7 @@ Current implementation boundary:
 - a packet foundation now exists under `core/schema`, `core/contracts`, `core/packets`, and `core/projections`, with runtime persistence and service orchestration under `runtime/*`
 - the current codebase now includes a canonical `PacketEnvelope = { header, body }` model, Zod packet-family parsers, per-family schema-compatibility upcasters, explicit family `revision_mode` metadata, packet-store/query-service interfaces, packet label projections, shared browser/nexus query-service implementations, an Expo `SQLitePacketStore`, and a server-side `NodeSQLitePacketStore`
 - the shared server bootstrap now seeds the personal scope tree, resets discussion packets by seed version in local dev, and reseeds per-scope discussion spaces, forum tabs, starter threads, root posts, and nested replies
-- a first trust-and-roles slice now exists through `Role` packets, `Element.claimed_role_refs`, scoped trust projections, role claimant projections, baseline trust policy defaults, and the `Trust` / `Roles` workspaces
+- a first trust-and-roles slice now exists through `Role` packets, scoped `Claim` packets for `role_association` and `assembly_association`, claim-targeted attestation evidence, scoped trust projections, role claimant projections, baseline trust policy defaults, and the `Trust` / `Roles` workspaces
 - packet detail routes, deeper trust weighting, and protected spaces remain later phases
 
 ## Core entities and data model
@@ -245,9 +255,23 @@ A reusable role definition packet that can be claimed by eligible actor elements
 Current implementation stance:
 
 - `Role` is its own packet family
-- claims are stored on `Element.claimed_role_refs`
-- support and dispute stay on `Attestation`, scoped through `context_ref`
+- scoped role assertions are stored as `Claim(kind: "role_association")`
+- support and dispute stay on `Attestation`, but now target the relevant claim packet through `claim_support` and `claim_dispute`
 - trust posture is projected from evidence and policy thresholds rather than a hidden score
+
+### Claim
+
+The canonical packet family for scoped social assertions such as:
+
+- `role_association`
+- `assembly_association`
+
+Current implementation stance:
+
+- one logical claim identity exists per `(subject_ref, claim_kind, target_ref, scope_ref)`
+- claim and unclaim mutate that same logical claim through revisions with `status: active | withdrawn`
+- claim packets use the claimed scope as `authority_scope_ref`
+- discovery may include ancestor scopes through `applicable_scope_refs`, but active role legitimacy is exact-scope only
 
 ## Direction and intent
 
@@ -588,7 +612,7 @@ Every major decision gets a short entry:
 
 - Context: the first trust pass could project claimed roles for the current actor, but role review was still mixed into the trust surface and did not yet show scope-level claimant lists, real support/dispute actions, or inline evidence review.
 - Options considered: keep roles embedded in Trust longer, block in UI-only placeholders first, or add a dedicated `Roles` workspace backed by the existing role claim and attestation model.
-- Decision: add `/nexus/roles` as a top-level function, move role claim and unclaim actions onto that surface, project scope-relevant claimants per role, and use real `Attestation(kind: "role_support" | "role_dispute")` writes with `note` as the public comment field.
+- Decision: add `/nexus/roles` as a top-level function, move role claim and unclaim actions onto that surface, project scope-relevant claimants per role, and use claim-targeted `Attestation(kind: "claim_support" | "claim_dispute")` writes with `note` as the public comment field.
 - Why: this keeps `Trust` actor-centric while making `Roles` the scope-facing review surface. It also reuses the existing packet model instead of inventing a second role-voting subsystem.
 - Consequences / follow-ups: claimant lists are now scope-relevant rather than global, disputes require a comment, support and dispute are mutually exclusive per viewer/claimant/role/scope, evidence is inspected inline on the roles page for now, and later attestation-browser work should build on the same edge projections instead of replacing them.
 
@@ -596,7 +620,7 @@ Every major decision gets a short entry:
 
 - Context: packet revisions already existed, but schema evolution, trust semantics, and role legitimacy were still mostly planned concepts rather than enforceable structures in the runtime.
 - Options considered: keep using `schema_version` as a reserved placeholder, add a generic claim family first, or land the smallest compatibility-aware trust slice using the existing packet graph model.
-- Decision: add per-family schema compatibility handling with explicit upcasters and future-version rejection, add required family `revision_mode` metadata, introduce `Role` as a packet family, store role claims on `Element.claimed_role_refs`, extend `Attestation` with role support/dispute evidence kinds, and project trust through explicit stages plus baseline policy thresholds.
+- Decision: add per-family schema compatibility handling with explicit upcasters and future-version rejection, add required family `revision_mode` metadata, introduce `Role` and `Claim` as packet families, move role and assembly association assertions onto scoped `Claim` packets, extend `Attestation` with generic claim support/dispute evidence kinds, and project trust through explicit stages plus baseline policy thresholds.
 - Why: this keeps packet history backward-compatible while making trust evidence inspectable and portable. It also avoids overbuilding a generic claim system before the simpler role-and-attestation model is proven.
 - Consequences / follow-ups: older `Element` and `Policy` bodies can upcast into the current internal shape without rewriting stored revisions, trust now has a real runtime/API slice instead of only conceptual docs, numeric trust scores remain deferred, and future governance or packet explorer work should build on the same family-compatibility and evidence-threshold rules rather than inventing separate trust state.
 
@@ -798,7 +822,7 @@ Examples of decisions worth logging early:
 - Options considered: keep `PacketVote` and overload its meaning further, add a second trust packet family beside it, or rename and generalize the existing primitive into one canonical `Attestation` family while keeping discussion `+1/-1` behavior stable.
 - Decision: rename the reusable trust primitive from `PacketVote` to `Attestation`, expand its body with `attestation_kind`, optional `context_ref`, optional `supporting_refs`, optional `note`, and optional `supersedes_ref`, and move attestation indexing and mutation logic into a dedicated `SQLiteAttestationService`.
 - Why: this keeps one signed edge primitive for the graph, gives locality and trust flows a first-class home outside the discussion service, and still lets the existing discussion UI consume the same `vote_summary` shape while the product vocabulary moves toward attestations.
-- Consequences / follow-ups: discussion `+1/-1` reactions now flow through `Attestation(kind: "packet_signal")`, derived attestation rows now live in `attestation_index` and `attestation_tally_index`, `/api/nexus/packets/vote` remains behavior-compatible as the current discussion reaction transport, and the first non-discussion attestation workflow is now `assembly_association_claim` on assembly `Element` packets.
+- Consequences / follow-ups: discussion `+1/-1` reactions now flow through `Attestation(kind: "packet_signal")`, derived attestation rows now live in `attestation_index` and `attestation_tally_index`, `/api/nexus/packets/vote` remains behavior-compatible as the current discussion reaction transport, and assembly continuity plus role legitimacy now ride on scoped `Claim` packets with claim-targeted support/dispute attestations.
 
 ### 2026-04-09 - Universal packet votes power the first real discussion engine
 
@@ -1039,6 +1063,38 @@ Examples of decisions worth logging early:
 - Why: this keeps the shell honest about who is actually active, restores the expected value of remembered claimed sessions, makes guest persistence behave the way the visible controls imply, and unblocks the remaining discussion and security writes without weakening the shared auth/signing boundary.
 - Consequences / follow-ups: losing or failing to restore a claimed session now drops the shell back to guest instead of leaving a half-active claimed identity visible, the sidebar/account/security buttons route users to sign-in unless a real claimed session is active, sign-in search selection is less jumpy and stays collapsed around the selected identity, discussion posting no longer references points or vote-derived hiding, and future trust work should build on the membership-gated attestation model rather than reintroducing the old point ledger.
 
+### 2026-04-17 - Wrapper route truth, remembered-session reuse, and local-only Library now match product intent
+
+- Context: after the scoped claim and trust refactor landed, several behavioral mismatches still made the app feel less honest than the data model: scope changes from wrapper-level account and identity pages only changed shell state in the background, remembered same-device sign-ins could multiply persistent sessions, refresh-token rotation created extra session rows, and Library still behaved like a broad inherited scope lens instead of a local packet shelf.
+- Options considered: leave these as later cleanup, patch only the account page copy, or finish the stabilization pass by making wrapper-route navigation explicit, reusing same-device remembered sessions, and tightening Library to local-only behavior by default.
+- Decision: wrapper-level `/nexus/account` and `/nexus/identity/*` surfaces now resolve as hidden account-state routes in shell logic and redirect visible scope changes back into `/nexus/trust`; remembered same-device claimed sign-ins now reuse the existing persistent session by default; refresh-token rotation updates the same persistent session in place instead of inserting a new device row; and Library now requests only packets whose native authority scope matches the active scope.
+- Why: these changes keep the shell honest about what page the user is really on, make remembered-session behavior match normal user expectations, and stop the default Library surface from overstating scope visibility.
+- Consequences / follow-ups: session lists should no longer grow just because the same device signs in again or refreshes a remembered session, wrapper-level account pages stop masquerading as one of the primary function workspaces, and any future inherited/global/all-visible Library modes should be added explicitly rather than leaking in through the default local Library view.
+
+### 2026-04-18 - Legacy signed identities remain valid after the roles-and-claims refactor
+
+- Context: role and assembly-association writes started failing with `Person element signature verification failed`, and one sign-in path also regressed, because older signed person packets in the store predated the defaulted `claimed_role_refs` field while server verification was hashing the reparsed packet shape instead of the originally signed payload.
+- Options considered: trust the client packet for mutation auth, rewrite stored identity packets in place, or keep server-side verification strict while teaching signature verification to accept the older signed packet shape.
+- Decision: keep server-side identity verification in place, but let packet signature verification accept both the current canonical `Element` shape and the older pre-`claimed_role_refs` signed shape when the digest and ECDSA signature match; also fix the sign-in challenge write path to use the already loaded `actorPacket` instead of the stray `storedActorPacket` variable.
+- Why: this restores sign-in and claim mutations for already-stored identities without weakening the cryptographic check or requiring a packet-database migration.
+- Consequences / follow-ups: older saved or claimed identities should once again be able to sign in, claim roles, and claim assembly association from the live UI, while newly written person packets continue to verify against the current packet shape.
+
+### 2026-04-18 - Identity pickers, scoped role projections, and security sessions now report truthfully
+
+- Context: after claim writes started succeeding again, several UX mismatches remained: the sign-in route could visually repeat the same saved identity, account and sign-in copy still implied the wrong next action for locally saved claimed bundles, exact-scope role claims could be hidden by broader association heuristics even after a successful write, and the identity security page could show a blank sessions area with no error or empty-state guidance.
+- Options considered: wait for the upcoming location pass, patch only the visible copy, or finish this stabilization slice by making the identity picker, roles projection, and session/security surfaces report the underlying state more directly.
+- Decision: dedupe visible sign-in identities by actor packet id and only show the selected-identity card when the list is collapsed; update account and sign-in CTA copy to distinguish resume or unlock from switch-identity flows; make exact-scope `role_association` claims always appear as visible claimants on the `Roles` route; re-fetch the scoped roles payload immediately after claim and attestation mutations; and make identity security show active sessions only, sorted with the current session first, while surfacing explicit empty or error states when session data is unavailable.
+- Why: the current product phase is about tightening truthfulness before location work begins. These changes keep the visible Nexus surfaces aligned with the already-written packets and session state instead of making users guess whether a successful mutation really took effect.
+- Consequences / follow-ups: the sign-in picker should no longer show the same claimed identity twice just because it is both saved locally and discoverable in the graph; successful role actions should update card buttons, claimant rows, and counts without a manual page reload; trust metrics can explain role posture without hiding exact-scope role claims; and for early-alpha packet-shape churn the project should consider an intentional reset or reseed cutline before accumulating permanent compatibility logic for every transient test-era schema.
+
+### 2026-04-18 - Guest role gating now redirects politely, and personal scope reads like a personal lens
+
+- Context: once role claiming and attestation finally worked end to end for claimed users, two product-truth issues remained: guests could still press protected role actions and hit raw backend identity errors, and the shell still described `You` with generic `... across You` copy plus a scope-map depth graphic that widened and then narrowed again at the personal leaf.
+- Options considered: hard-disable role controls for guests, redirect immediately with no local explanation, or keep the controls visible while explaining the requirement locally and preserving return context; for the shell, leave the generic labels alone or finish the personal-scope language and depth treatment now.
+- Decision: keep protected role controls visible to guests, but intercept them with a lightweight sign-in-required modal offering `Sign in` or `Go back`; carry `return_to` plus `return_scope_id` through sign-in, claim, create, and restore so successful identity ceremonies can return to the originating workspace and scope; keep clean function titles while moving personal-scope wording into the supporting subtext; label `You` as a `Personal branch`; and make the scope-map connector lane encode semantic breadth so the tree reads from broadest global scopes down to the narrowest personal endpoint.
+- Why: this preserves discoverability and intent without leaking low-level auth errors, and it makes the `You` scope feel like a first-class personal lens rather than an awkward exception tacked onto the bottom of a geographic tree.
+- Consequences / follow-ups: guests can still browse the Roles page but cannot mutate it without entering an identity ceremony; identity routes entered from that gate should return to the same scope-aware workspace on success; and the current location disclosure/search problems remain intentionally deferred into the dedicated location pass instead of being half-solved inside this quick systems cleanup.
+
 ### 2026-04-10 - Railway cutover keeps the Expo server app intact and adds a local production-parity Node server
 
 - Context: the repo had been running through Expo's server features, but the Railway move needed a real exported-server runtime, a persistent SQLite path that works outside the repo root, and a safer bootstrap rule that would not destructively reseed hosted data.
@@ -1056,6 +1112,32 @@ Capture the real tensions explicitly, such as:
 - fast iteration vs schema stability
 - local autonomy vs global coherence
 - OWA-native UX vs Nexus-general browser UX
+
+## Current stabilization guidance
+
+Before widening the ontology again, the implementation should treat the current repo state as a catch-up phase.
+
+Working guidance:
+
+- identity/auth and discussions are the strongest reference verticals
+- dashboard, trust, votes, roles, and library should be tightened around real workflows before adding more major packet families or broader product surfaces
+- blocked-in placeholder surfaces should be made semantically honest before they are made more elaborate
+
+Priority stabilization targets:
+
+- assembly creation and assembly association need hardening and explicit tests before being treated as stable onboarding flows
+
+Role and schema guidance:
+
+- the current roles and trust surfaces now use scoped `Claim` packets for role and assembly association, which resolves the earlier mismatch between global actor-body state and scope-local legitimacy
+- the remaining follow-up is not whether to add a claim family, but how far to generalize claim kinds and policy interpretation without reopening working role and trust behavior too early
+- long-term direction should continue to favor inspectable relationship packets plus computed posture over duplicating social-state lists on actor bodies
+
+Location guidance:
+
+- location should not be expanded casually on top of unresolved role and scope semantics
+- treat location as a dedicated later subsystem that must explicitly define how disclosure, home scope, assembly association, and scope mounting relate
+- do schema and role cleanup before locality becomes a wider dependency across shell behavior and trust logic
 
 ## Open questions
 

@@ -86,6 +86,7 @@ type IdentityShellContextValue = {
   passkeyCount: number;
   requiresPasskeyUpgrade: boolean;
   sessionSummaries: NexusSessionListPayload['sessions'];
+  sessionSummariesError: string | null;
   passkeySummaries: NexusPasskeyListPayload['passkeys'];
   unlockStoredIdentity: (input: {
     actorPacketId: string;
@@ -221,6 +222,9 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
   const [sessionSummaries, setSessionSummaries] = useState<
     NexusSessionListPayload['sessions']
   >([]);
+  const [sessionSummariesError, setSessionSummariesError] = useState<string | null>(
+    null
+  );
   const [passkeySummaries, setPasskeySummaries] = useState<
     NexusPasskeyListPayload['passkeys']
   >([]);
@@ -408,6 +412,7 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
   const refreshSessionSummaries = async (csrfToken?: string | null) => {
     if (!csrfToken) {
       setSessionSummaries([]);
+      setSessionSummariesError(null);
       return;
     }
 
@@ -422,8 +427,9 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
       );
 
       setSessionSummaries(payload.sessions);
+      setSessionSummariesError(null);
     } catch {
-      setSessionSummaries([]);
+      setSessionSummariesError('Unable to load active sessions right now.');
     }
   };
 
@@ -1361,6 +1367,7 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
       reauth_expires_at: null,
     });
     setSessionSummaries([]);
+    setSessionSummariesError(null);
     setPasskeySummaries([]);
     await restorePostSignOutIdentity();
   };
@@ -1524,6 +1531,7 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
         passkeyCount,
         requiresPasskeyUpgrade,
         sessionSummaries,
+        sessionSummariesError,
         passkeySummaries,
         unlockStoredIdentity,
         continueAsEphemeralGuest,

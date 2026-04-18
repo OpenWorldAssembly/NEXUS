@@ -101,13 +101,18 @@ export interface NexusPacketCardProjection {
   status: string | null;
 }
 
+export interface NexusLibraryQueryOptions {
+  scope_mode?: 'lens' | 'local';
+}
+
 export interface NexusQueryService {
   getDashboardQueue(lens: NexusScopeLens): Promise<NexusPacketCardProjection[]>;
   listVotes(lens: NexusScopeLens): Promise<NexusPacketCardProjection[]>;
   listDiscussions(lens: NexusScopeLens): Promise<NexusPacketCardProjection[]>;
   listLibraryPackets(
     lens: NexusScopeLens,
-    family?: PacketFamily
+    family?: PacketFamily,
+    options?: NexusLibraryQueryOptions
   ): Promise<NexusPacketCardProjection[]>;
 }
 
@@ -152,7 +157,7 @@ export interface AssemblyAssociationClaimProjection {
   assembly_packet_id: string;
   assembly_name: string;
   claim_packet_id: string;
-  status: 'active' | 'cleared';
+  status: 'active' | 'withdrawn';
   note: string | null;
   created_at: string;
   supported_by_other_count: number;

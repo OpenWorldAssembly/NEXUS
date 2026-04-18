@@ -11,11 +11,16 @@ import type {
 } from '@runtime/nexus/server/trust-logic';
 
 export interface NexusRoleClaimantProjection {
+  claim_packet_id: string;
+  claim_status: 'active' | 'withdrawn';
   actor_packet_id: string;
   actor_label: string;
   actor_kind: string;
   is_current_actor: boolean;
   trust_stage: NexusTrustStageId;
+  scope_trust_stage: NexusTrustStageId;
+  has_scope_association: boolean;
+  scope_association_support_count: number;
   support_count: number;
   dispute_count: number;
   viewer_attestation: 'support' | 'dispute' | 'none';
@@ -43,10 +48,14 @@ export interface NexusRolesPayload {
 }
 
 export interface NexusRoleAttestationMutationPayload {
-  claimant_actor_packet_id: string;
-  role_packet_id: string;
+  claim_packet_id: string;
   mode: 'support' | 'dispute' | 'clear';
   support_count: number;
   dispute_count: number;
   viewer_attestation: 'support' | 'dispute' | 'none';
+}
+
+export interface NexusRoleClaimMutationPayload {
+  claim_packet_id: string;
+  claim_status: 'active' | 'withdrawn';
 }

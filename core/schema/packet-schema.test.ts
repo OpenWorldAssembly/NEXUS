@@ -141,6 +141,7 @@ test('legacy policy revisions upcast missing trust_policy to null', () => {
 test('family metadata exposes revision modes and rejects unknown future schema versions', () => {
   assert.equal(getPacketFamilyRevisionMode('Attestation'), 'append_only');
   assert.equal(getPacketFamilyRevisionMode('Role'), 'replaceable');
+  assert.equal(getPacketFamilyRevisionMode('Claim'), 'replaceable');
 
   assert.throws(() =>
     parsePacketEnvelope({
@@ -195,5 +196,81 @@ test('family metadata exposes revision modes and rejects unknown future schema v
         responsibility_markdown: null,
       },
     })
+  );
+});
+
+test('claim packets parse with the new scoped association family', () => {
+  const packet = parsePacketEnvelope({
+    header: {
+      packet_id: 'nexus:claim/role-association/test',
+      revision_id: 'nexus:claim/role-association/test@r1',
+      family: 'Claim',
+      schema_version: '1.0.0',
+      protocol_version: '0.1.0',
+      created_at: '2026-04-17T00:00:00.000Z',
+      parent_revision_refs: [],
+      merge_strategy: null,
+      authority_scope_ref: {
+        packet_id: 'nexus:element/scope-a',
+      },
+      applicable_scope_refs: [
+        {
+          packet_id: 'nexus:element/scope-a',
+        },
+      ],
+      edges: [],
+      provenance: {
+        created_by: {
+          packet_id: 'nexus:element/person-a',
+        },
+        submitted_by: null,
+        adapter: 'test',
+        recorded_at: '2026-04-17T00:00:00.000Z',
+        imported_from_revision: null,
+      },
+      integrity: {
+        canonicalization: 'RFC8785',
+        hash_alg: 'sha-256',
+        digest: null,
+        embedded_signatures: [],
+        signature_refs: [],
+      },
+      moderation: {
+        visibility: 'public',
+        moderation_state: 'open',
+        policy_refs: [],
+        content_warning_ids: [],
+      },
+      external_refs: [],
+      metadata: {
+        tags: [],
+        language: null,
+        summary: null,
+      },
+      producer: {
+        adapter: 'test',
+        app_version: null,
+      },
+    },
+    body: {
+      claim_kind: 'role_association',
+      subject_ref: {
+        packet_id: 'nexus:element/person-a',
+      },
+      target_ref: {
+        packet_id: 'nexus:role/facilitator',
+      },
+      scope_ref: {
+        packet_id: 'nexus:element/scope-a',
+      },
+      status: 'active',
+      note: 'Claiming facilitator in scope A.',
+    },
+  });
+
+  assert.equal(packet.header.family, 'Claim');
+  assert.equal(
+    (packet as { body: { claim_kind: string } }).body.claim_kind,
+    'role_association'
   );
 });

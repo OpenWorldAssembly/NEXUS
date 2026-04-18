@@ -15,6 +15,10 @@ import {
   createPacketEdge,
   createPacketRef,
 } from '@core/packets/builders';
+import {
+  createAssociationClaimPacket,
+  createClaimPacketId,
+} from '@core/packets/claims';
 import type {
   DiscussionActorClass,
   PacketEnvelopeByType,
@@ -305,14 +309,26 @@ export const POST: RequestHandler = async (request) => {
     }
 
     if (parsedBody.claim_association) {
-      await services.attestationService.setAttestation({
-        target_packet_id: assemblyPacket.header.packet_id,
-        actor_key: actorContext.actorKey,
-        actor_class: actorContext.actorClass,
-        authority_scope_id: assemblyPacket.header.packet_id,
-        value: 1,
-        attestation_kind: 'assembly_association_claim',
+      const claimPacket = createAssociationClaimPacket({
+        claimKind: 'assembly_association',
+        subjectPacketId: actorContext.actorPacket.header.packet_id,
+        targetPacketId: assemblyPacket.header.packet_id,
+        scopePacketId: assemblyPacket.header.packet_id,
+        applicableScopeRefs,
+        createdByPacketId: actorContext.actorPacket.header.packet_id,
         note: parsedBody.claim_note ?? null,
+        status: 'active',
+        packetId: createClaimPacketId({
+          claimKind: 'assembly_association',
+          subjectPacketId: actorContext.actorPacket.header.packet_id,
+          targetPacketId: assemblyPacket.header.packet_id,
+          scopePacketId: assemblyPacket.header.packet_id,
+        }),
+      });
+      await services.packetStore.writeRevision(claimPacket);
+      await services.packetStore.publishRevision({
+        packet_id: claimPacket.header.packet_id,
+        revision_id: claimPacket.header.revision_id,
       });
     } else {
       await services.attestationService.syncDerivedState();

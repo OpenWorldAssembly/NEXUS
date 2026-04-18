@@ -28,15 +28,19 @@ export function fetchNexusRolesPayload(input: {
   return fetchJsonOrThrow<NexusRolesPayload>(
     `/api/nexus/scopes/${encodeURIComponent(input.scopeId)}/roles${
       queryString.length > 0 ? `?${queryString}` : ''
-    }`
+    }`,
+    {
+      cache: 'no-store',
+    }
   );
 }
 
 export function setNexusScopedRoleClaim(input: {
+  scopeId: string;
   requestBody: Record<string, unknown>;
 }): Promise<NexusRoleClaimMutationPayload> {
   return fetchMutationJsonOrThrow<NexusRoleClaimMutationPayload>({
-    path: '/api/nexus/trust/roles',
+    path: `/api/nexus/scopes/${encodeURIComponent(input.scopeId)}/roles/claims`,
     method: 'PUT',
     body: input.requestBody,
   });

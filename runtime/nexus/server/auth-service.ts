@@ -157,6 +157,7 @@ export class NexusAuthService {
     sessionRecord: AuthSessionRecord;
     refreshRecord: RefreshTokenRecord | null;
     setCookieHeaders: string[];
+    reusedExistingPersistentSession: boolean;
   } {
     return this.store.createSessionRecord(input);
   }
@@ -452,13 +453,29 @@ export class NexusAuthService {
   }> {
     assertRecentAssertion(input.actorAssertion.issued_at);
 
-    const actorPacket = await this.verifyAndPersistIdentityPacket({
-      actorPacket: input.actorPacket,
-    });
-    const activeKeyBinding = actorPacket.body.identity?.public_key_bindings.find(
-      (binding) =>
-        binding.kid === input.actorAssertion.kid && binding.status === 'active'
+    const parsedActorPacket = parsePacketEnvelope(input.actorPacket);
+
+    if (!isPersonElementPacket(parsedActorPacket)) {
+      throw new Error('Actor packet must be a person element.');
+    }
+
+    const actorPacket = await this.requirePersonPacket(
+      parsedActorPacket.header.packet_id
     );
+    const storedActorPacket = await this.verifyIdentityPacket(actorPacket);
+
+    if (
+      input.actorAssertion.actor_packet_id !==
+      storedActorPacket.header.packet_id
+    ) {
+      throw new Error('Actor assertion packet id does not match the actor packet.');
+    }
+
+    const activeKeyBinding =
+      storedActorPacket.body.identity?.public_key_bindings.find(
+        (binding) =>
+          binding.kid === input.actorAssertion.kid && binding.status === 'active'
+      );
 
     if (!activeKeyBinding) {
       throw new Error('Actor assertion key is not active for that identity.');
@@ -482,18 +499,14 @@ export class NexusAuthService {
       throw new Error('Actor assertion path does not match this request.');
     }
 
-    if (input.actorAssertion.actor_packet_id !== actorPacket.header.packet_id) {
-      throw new Error('Actor assertion packet id does not match the actor packet.');
-    }
-
-    if (actorPacket.body.identity?.claim_status === 'claimed') {
+    if (storedActorPacket.body.identity?.claim_status === 'claimed') {
       const sessionRecord = this.requireAuthenticatedSession({
         request: input.request,
         actorPacketId: actorPacket.header.packet_id,
         csrfToken: input.csrfToken,
       });
       const securityMode = this.getNormalizedSecurityMode(
-        actorPacket.header.packet_id
+        storedActorPacket.header.packet_id
       );
 
       if (
@@ -511,10 +524,10 @@ export class NexusAuthService {
     }
 
     return {
-      actorPacket,
-      actorKey: `element:${actorPacket.header.packet_id}`,
+      actorPacket: storedActorPacket,
+      actorKey: `element:${storedActorPacket.header.packet_id}`,
       actorClass:
-        actorPacket.body.identity?.claim_status === 'claimed'
+        storedActorPacket.body.identity?.claim_status === 'claimed'
           ? 'scope_member'
           : 'anonymous_guest',
     };
@@ -688,11 +701,14 @@ export class NexusAuthService {
     this.writeAuthEvent({
       actorPacketId: actorPacket.header.packet_id,
       sessionId: createdSession.sessionRecord.session_id,
-      eventType: 'session_created',
+      eventType: createdSession.reusedExistingPersistentSession
+        ? 'session_restored'
+        : 'session_created',
       metadata: {
         auth_method: 'bundle',
         keep_me_logged_in: input.keepMeLoggedIn,
         requires_passkey_upgrade: false,
+        reused_existing_session: createdSession.reusedExistingPersistentSession,
       },
     });
 
@@ -1000,9 +1016,12 @@ export class NexusAuthService {
       actorPacketId: passkey.actor_packet_id,
       sessionId: createdSession.sessionRecord.session_id,
       credentialId: passkey.credential_id,
-      eventType: 'passkey_used',
+      eventType: createdSession.reusedExistingPersistentSession
+        ? 'session_restored'
+        : 'passkey_used',
       metadata: {
         purpose: 'signin',
+        reused_existing_session: createdSession.reusedExistingPersistentSession,
       },
     });
 
@@ -1232,130 +1251,27 @@ export class NexusAuthService {
     setCookieHeaders: string[];
   }> {
     const actorPacket = await this.requirePersonPacket(refreshRecord.actor_packet_id);
-    const now = new Date();
-    const nextRefreshTokenId = randomUUID();
-    const nextSessionId = randomUUID();
-    const nextSessionExpiresAt = new Date(
-      now.getTime() + AUTH_SESSION_TTL_MS
-    ).toISOString();
-    const nextRefreshExpiresAt = new Date(
-      now.getTime() + AUTH_REFRESH_TTL_MS
-    ).toISOString();
-    const nextCsrfToken = randomUUID();
-    const requiresPasskeyUpgrade = 0;
-
-    this.withDatabase((database) => {
-      database.exec('BEGIN IMMEDIATE');
-
-      try {
-        database
-          .prepare(
-            `
-              UPDATE auth_refresh_tokens
-              SET revoked_at = ?
-              WHERE refresh_token_id = ?
-            `
-          )
-          .run(now.toISOString(), refreshRecord.refresh_token_id);
-        database
-          .prepare(
-            `
-              INSERT INTO auth_sessions (
-                session_id,
-                actor_packet_id,
-                created_at,
-                expires_at,
-                last_seen_at,
-                revoked_at,
-                persistent_login,
-                device_label,
-                auth_method,
-                csrf_token,
-                requires_passkey_upgrade
-              ) VALUES (?, ?, ?, ?, ?, NULL, 1, ?, ?, ?, ?)
-            `
-          )
-          .run(
-            nextSessionId,
-            refreshRecord.actor_packet_id,
-            now.toISOString(),
-            nextSessionExpiresAt,
-            now.toISOString(),
-            'Persistent session',
-            'refresh',
-            nextCsrfToken,
-            requiresPasskeyUpgrade
-          );
-        database
-          .prepare(
-            `
-              INSERT INTO auth_refresh_tokens (
-                refresh_token_id,
-                session_id,
-                actor_packet_id,
-                created_at,
-                expires_at,
-                revoked_at
-              ) VALUES (?, ?, ?, ?, ?, NULL)
-            `
-          )
-          .run(
-            nextRefreshTokenId,
-            nextSessionId,
-            refreshRecord.actor_packet_id,
-            now.toISOString(),
-            nextRefreshExpiresAt
-          );
-        database.exec('COMMIT');
-      } catch (error) {
-        database.exec('ROLLBACK');
-        throw error;
-      }
+    const rotatedSession = this.store.rotateRefreshSessionRecord({
+      refreshRecord,
     });
+
+    if (!rotatedSession) {
+      throw new Error('The current remembered session could not be restored.');
+    }
 
     this.writeAuthEvent({
       actorPacketId: actorPacket.header.packet_id,
-      sessionId: nextSessionId,
+      sessionId: rotatedSession.sessionRecord.session_id,
       eventType: 'session_refreshed',
     });
 
     return {
       session: await this.toAuthSessionPayload({
         actorPacket,
-        sessionRecord: {
-          session_id: nextSessionId,
-          actor_packet_id: refreshRecord.actor_packet_id,
-          created_at: now.toISOString(),
-          expires_at: nextSessionExpiresAt,
-          last_seen_at: now.toISOString(),
-          revoked_at: null,
-          persistent_login: 1,
-          device_label: 'Persistent session',
-          auth_method: 'refresh',
-          csrf_token: nextCsrfToken,
-          requires_passkey_upgrade: requiresPasskeyUpgrade,
-        },
-        refreshRecord: {
-          refresh_token_id: nextRefreshTokenId,
-          session_id: nextSessionId,
-          actor_packet_id: refreshRecord.actor_packet_id,
-          created_at: now.toISOString(),
-          expires_at: nextRefreshExpiresAt,
-          revoked_at: null,
-        },
+        sessionRecord: rotatedSession.sessionRecord,
+        refreshRecord: rotatedSession.refreshRecord,
       }),
-      setCookieHeaders: [
-        formatCookie({
-          name: AUTH_SESSION_COOKIE,
-          value: nextSessionId,
-          maxAgeSeconds: Math.floor(AUTH_SESSION_TTL_MS / 1000),
-        }),
-        formatCookie({
-          name: AUTH_REFRESH_COOKIE,
-          value: nextRefreshTokenId,
-          maxAgeSeconds: Math.floor(AUTH_REFRESH_TTL_MS / 1000),
-        }),
-      ],
+      setCookieHeaders: rotatedSession.setCookieHeaders,
     };
   }
 
@@ -1485,9 +1401,28 @@ export class NexusAuthService {
         )
         .all(sessionRecord.actor_packet_id) as AuthSessionRecord[]
     );
+    const activeSessions = sessions
+      .filter(
+        (record) =>
+          record.revoked_at === null &&
+          new Date(record.expires_at).getTime() >= Date.now()
+      )
+      .sort((leftRecord, rightRecord) => {
+        if (
+          (leftRecord.session_id === sessionRecord.session_id) !==
+          (rightRecord.session_id === sessionRecord.session_id)
+        ) {
+          return leftRecord.session_id === sessionRecord.session_id ? -1 : 1;
+        }
+
+        return (
+          new Date(rightRecord.created_at).getTime() -
+          new Date(leftRecord.created_at).getTime()
+        );
+      });
 
     return {
-      sessions: sessions.map((record) => ({
+      sessions: activeSessions.map((record) => ({
         session_id: record.session_id,
         actor_packet_id: record.actor_packet_id,
         device_label: record.device_label,

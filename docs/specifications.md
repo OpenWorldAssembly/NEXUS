@@ -192,7 +192,7 @@ Status:
 - local workspace state on `/nexus/discussions` is route-driven through `view` (`feed | thread | post`), `post`, `replyTo`, `sort`, `replySort`, and `showHidden` query parameters
 - discussion tabs now project one `DiscussionForum` per forum kind and prefer authority forums from the active scope over inherited ancestor forums, which prevents duplicate visitor-lobby tabs
 - read-only forum tab labels are scope-aware (for example `Sunnymead Ranch general`) even when the backing forum packet is inherited from an ancestor scope
-- discussion writers now act through cryptographic person elements, including memory-only temporary guests, session-only temporary guests, saved guests, and claimed identities; top-level posting is no longer point-gated, visitor lobbies accept any signed actor, non-lobby forums require an active `Attestation(kind: "assembly_association_claim")`, and the same universal `Attestation(kind: "packet_signal")` model powers `+1/-1` controls on root posts and replies
+- discussion writers now act through cryptographic person elements, including memory-only temporary guests, session-only temporary guests, saved guests, and claimed identities; top-level posting is no longer point-gated, visitor lobbies accept any signed actor, non-lobby forums require an active `Claim(kind: "assembly_association")`, and the same universal `Attestation(kind: "packet_signal")` model powers `+1/-1` controls on root posts and replies
 - discussion writes and attestation writes now require a signed actor assertion plus the actor packet, and the active repo no longer uses the legacy visitor-lobby or anonymous-session discussion bridge
 - discussion controls are not disabled purely because a claimed local bundle is locked; signing readiness is enforced by the deeper verified-write layer, while the route surfaces an unlock reminder banner
 - feed sorting controls now live inside the `Feed` workspace, reply sorting controls live inside the `Thread` workspace, and `New post` actions are available from both the feed and thread workspaces
@@ -250,6 +250,7 @@ Status:
 
 - packet-backed
 - library cards load from `/api/nexus/scopes/[scopeId]/library` with optional family filtering
+- the default Library view is now local-only and returns packets whose native authority scope matches the active scope
 - packet actions are visible as placeholders and remain disabled
 
 ### `/nexus/trust`
@@ -284,9 +285,14 @@ Status:
 
 - packet-backed
 - roles data loads from `/api/nexus/scopes/[scopeId]/roles`
-- role claim and unclaim still write through the existing verified role-claim mutation path
-- role support, dispute, and clear actions write through `/api/nexus/scopes/[scopeId]/roles/attestations`
+- role claim and unclaim write through `/api/nexus/scopes/[scopeId]/roles/claims`
+- role support, dispute, and clear actions write through `/api/nexus/scopes/[scopeId]/roles/attestations` targeting the relevant claim packet
+- guests can see protected role actions, but pressing them opens a local sign-in-required modal instead of attempting the write or surfacing raw backend identity errors
 - dispute attestations require a comment; support comments remain optional
+- exact-scope role claims are always returned as visible claimants for that scope, even when broader association posture is still weak
+- claim, unclaim, support, dispute, and clear actions immediately re-fetch the roles payload so claimant rows, counts, and button state update without a manual page refresh
+- the modal sign-in path preserves `return_to` and `return_scope_id` so successful auth returns to the same workspace and scope lens
+- claimant cards currently expose both role-specific trust stage and broader scope trust or association posture
 - evidence is currently inspected inline on the roles route rather than through a separate attestation browser
 
 ### `/nexus/account`
@@ -295,16 +301,15 @@ Screen component: `NexusAccountPage`
 
 Role:
 
-- hidden wrapper-level account overview and local assembly continuity workspace
+- hidden wrapper-level account overview and identity/security custody workspace
 - shows current actor state and routes users into the dedicated Nexus identity ceremony screens
-- keeps local assembly claims and lightweight assembly creation attached to the wrapper/account surface rather than to the primary function navigation
 
 Status:
 
 - packet-backed
 - shows the current actor packet id, identity mode, storage/cookie state, signing-key lock state, current remembered-session/write-approval posture, and passkey count
 - routes sign-in, create, claim, restore, and detailed security management to dedicated `/nexus/identity/*` screens
-- keeps assembly-association claims and start-local-assembly flow on the account surface
+- provides direct links back into the `Trust` and `Roles` function surfaces without owning association or role workflows
 - signing out from identity security immediately hands the shell back to a guest actor instead of leaving the signed-out claimed identity visually active in the profile card
 
 ### `/nexus/identity/sign-in`
@@ -322,8 +327,11 @@ Status:
 - uses three internal sign-in modes: `LOCAL`, `PASSKEY`, and `IMPORT`
 - those modes render as one connected top-tab rail rather than as disconnected pills inside the page body
 - `LOCAL` is the default everyday sign-in path, searches the Nexus graph by display alias, packet id, and public-key-related matches, and still highlights identities already saved on this device
+- saved-on-device identities and graph search results are deduped by actor packet id so the same claimed identity does not render twice in the visible picker
 - graph-only identity matches remain discoverable but cannot be unlocked with only a passphrase unless the encrypted bundle is already on-device
 - the current-actor summary emphasizes the active actor label rather than status pills, and the saved-local-identity picker collapses back to the selected identity once a local match is chosen without auto-jumping to the first new search result
+- bundle sign-in copy and CTA labels now distinguish resuming or unlocking the current claimed identity from switching to a different identity
+- when entered from a protected role action, sign-in preserves `return_to` and `return_scope_id`, exposes a clear back-out path, and returns to the originating Nexus workspace after successful auth
 - saved claimed bundles stay discoverable here, but Nexus falls back to a guest actor unless a claimed session actually restores
 - `PASSKEY` is a device/browser authenticator path and is described as Windows Hello / phone / security-key style presence proof rather than as pasted file input
 - passkeys are optional extra protection for claimed identities, not a hard prerequisite for creation, claiming, normal sign-in, or security-preference changes
@@ -399,6 +407,7 @@ Status:
 - the shared `TEMP/SAVE` control now applies to the current actor immediately: for guests it creates or clears browser persistence right away, and for claimed identities it remains the default for future claimed sign-ins
 - when no claimed session is active, the route still stays accessible but the write-approval and passkey-management actions remain tied to a real claimed session rather than to a merely saved local bundle
 - shows active device sessions, passkeys, and encrypted bundle export
+- the default session list is active-only, sorts the current session first, and surfaces an explicit empty or error state instead of silently rendering blank session space
 - shows an export reminder when entered directly from a successful create or claim ceremony
 
 ## Current navigation structure
@@ -456,6 +465,8 @@ Left-side shell sections:
 - open primary and secondary rails use the same width, and the Nexus UI-size preference also adjusts shared route-surface spacing, typography, badges, buttons, and form controls through the Nexus appearance layer
 - the scope menu uses a full visible scope map with a fixed-width connector lane, so every scope stays visible without pushing lower labels to the right
 - the scope list now renders `You` as a personal-scope child leaf under the actor's local assembly branch instead of prepending it above the assembly tree
+- scope-map labels now call `You` a `Personal branch`, and the left connector lane uses semantic width cues so `Global -> ... -> You` reads from broadest to narrowest instead of widening and then shrinking again
+- function-menu row titles stay clean (`Dashboard`, `Trust`, and so on), while personal-scope subtext now uses wording such as `Personal dashboard` and `Personal trust` instead of generic `... across You` phrasing
 - the secondary rail now always pins a separate current-context snapshot card at its top, mirroring the guest profile card and exposing quick assembly stats such as activity level, member count, and trust score
 - the scope snapshot card is now a smaller metrics-only lens with no descriptive body copy or badges, and its three stat tiles change with the active Nexus section while keeping the same compact card shape
 - followed scopes stay with the scope menu column
@@ -546,7 +557,7 @@ Implemented flow:
 4. guest can switch between `Feed`, `Thread`, and `Post` workspaces without leaving the route
 5. guest can open a root post by pressing its feed card, the `Thread` workspace auto-opens the current top feed item when no explicit post is selected, and the guest can reply to any post in that tree through an inline composer attached to the selected reply target while voting `+1/-1` on visible discussion posts when the thread participation rules allow it
 6. feed sorting happens inside the `Feed` workspace, reply sorting happens inside the `Thread` workspace, and the feed/thread workspaces both provide direct navigation into the `Post` workspace for new top-level posts
-7. top-level posts are allowed whenever the active actor satisfies the forum participation rule: any signed actor in `visitor_lobby`, or an actor with an active `assembly_association_claim` in the other forums
+7. top-level posts are allowed whenever the active actor satisfies the forum participation rule: any signed actor in `visitor_lobby`, or an actor with an active `Claim(kind: "assembly_association")` in the other forums
 8. top-level feeds and reply branches are loaded incrementally through cursor-based API pages rather than returning the entire forum or thread tree in one payload
 9. discussion writes are sent to the local API routes, written into the local SQLite packet store as canonical `DiscussionThread + DiscussionPost`, `DiscussionReply`, or `Attestation` packets, and then re-projected back into the feed/detail UI
 10. discussion writes derive actor ownership from the verified actor packet, store `provenance.created_by` as that person element, and do not depend on the removed anonymous-session visitor-lobby bridge
@@ -560,7 +571,7 @@ Status:
 - discussion packets use a discussion-seed-version marker in the same runtime data directory, and destructive reseeds are now limited to local development or an explicit `NEXUS_ALLOW_DISCUSSION_RESET` override instead of running automatically in every hosted boot
 - discussion packets do not stand alone: `DiscussionSpace` packets attach to scope `Element` packets, `DiscussionForum` packets attach to a discussion space, `DiscussionThread` packets attach to a forum, root `DiscussionPost` packets attach to their thread, and `DiscussionReply` packets attach to their thread, root post, and immediate parent reply-or-post
 - raw trust visibility is now packet-first but still pre-weighting: `/api/nexus/attestations/target`, `/api/nexus/attestations/actor`, and `/api/nexus/assemblies/claims` expose inspectable attestation edges without any trust score math
-- a person can now claim association with an assembly through `Attestation(kind: "assembly_association_claim")`, and the hidden account flow can create a new lightweight local assembly packet plus starter discussion space/forums under the active scope
+- a person can now claim association with an assembly through `Claim(kind: "assembly_association")`, and the trust flow can create or withdraw that association while the assembly-creation API can still seed a lightweight local assembly packet plus starter discussion space/forums under the active scope
 
 ### Trust workflow
 
@@ -577,7 +588,8 @@ Status:
 - **Provisional**
 - trust stages are explicit and threshold-based: `self_claimed`, `emerging`, `recognized`, `role_eligible`
 - trust is scope-local and policy-aware
-- role support/dispute currently reuses `Attestation` through role-scoped `context_ref`
+- assembly association is now written from the `Trust` surface through `Claim(kind: "assembly_association")`
+- role support/dispute currently uses claim-targeted `Attestation(kind: "claim_support" | "claim_dispute")`
 - trust-weighted ranking and broader moderation effects remain deferred
 
 ### Roles workflow
@@ -588,15 +600,17 @@ Implemented flow:
 2. the app resolves the active scope, including `you` when selected
 3. the route loads scope-relevant role cards and claimant lists from `/api/nexus/scopes/[scopeId]/roles`
 4. the current actor can claim or unclaim a role from that surface
-5. the current actor can support, dispute, or clear a claimant's role standing, with disputes requiring a comment
-6. role evidence can be expanded inline to inspect who has supported or disputed a claimant in that scope
+5. guests pressing protected role actions see a local sign-in-required modal with `Sign in` and `Go back` instead of attempting the write
+6. the current actor can support, dispute, or clear a claimant's role standing, with disputes requiring a comment
+7. successful role actions immediately re-fetch the scoped roles payload so the claimant list, counts, and claim/unclaim button state stay in sync
+8. role evidence can be expanded inline to inspect who has supported or disputed a claimant in that scope
 
 Status:
 
 - **Provisional**
-- role claims still live on `Element.claimed_role_refs`
+- role claims are represented as exact-scope `Claim(kind: "role_association")` packets
 - claimant lists are scope-relevant rather than global
-- one viewer cannot hold both active support and active dispute for the same claimant-role pair in the same scope; writing one clears the opposite
+- one viewer cannot hold both active support and active dispute for the same claim in the same scope; writing one clears the opposite
 - role creation and editing remain deferred
 
 ## Major entities and their roles
@@ -793,12 +807,12 @@ What is implemented:
 - stable `packet_id` plus immutable `revision_id` packet identity rules
 - multi-parent revision ancestry for divergent branches and merge revisions
 - schema compatibility upcasters and explicit family `revision_mode` metadata
-- `Role` as a packet family plus `claimed_role_refs` on `Element`
+- `Role` and `Claim` as packet families with claim-based role and assembly association state
 - typed packet edges, scope refs, packet-store interfaces, a SQLite-backed packet-store implementation, and storage schema definitions
 - shared browser and nexus query-service implementations over the packet search index
 - a packet-backed discussion and attestation engine that stores canonical `DiscussionSpace`, `DiscussionForum`, `DiscussionThread`, `DiscussionPost`, `DiscussionReply`, and `Attestation` packets in the local SQLite packet store, projects derived reply/attestation/ledger indexes, and reseeds local dev discussion data deterministically by seed version
-- a first trust/runtime slice that projects scope-local trust stages, policy gates, role claims, and role evidence through `/api/nexus/scopes/[scopeId]/trust`
-- a first roles/runtime slice that projects scope-relevant role claimants, scoped role trust posture, inline evidence lists, and real support/dispute writes through `/api/nexus/scopes/[scopeId]/roles`
+- a first trust/runtime slice that projects scope-local trust stages, policy gates, assembly association claims, role-claim summaries, and role evidence through `/api/nexus/scopes/[scopeId]/trust`
+- a first roles/runtime slice that projects scope-relevant role claimants from scoped claim packets, scoped role trust posture, inline evidence lists, real self claim/unclaim writes, and real support/dispute writes through `/api/nexus/scopes/[scopeId]/roles`
 - derived packet label helpers for future browser and nexus projections
 
 What remains unimplemented but is still referenced by docs or shell affordances:
@@ -812,12 +826,58 @@ What remains unimplemented but is still referenced by docs or shell affordances:
 - moderation workflows
 - packet detail routes and cross-surface navigation from card projections into packet inspectors
 
+## Known current issues and semantic gaps
+
+These notes describe current known weaknesses or mismatches in the implemented repo. They are part of current truth, not future promises.
+
+### Depth and maturity
+
+- Identity/auth and discussions remain the two most coherent end-to-end verticals.
+- Dashboard, votes, trust, roles, and library are implemented and packet-backed, but they are still comparatively provisional and in places behave more like projection shells than fully intentional workflow surfaces.
+
+### Roles
+
+- Role claims now live as scoped `Claim(kind: "role_association")` packets instead of on actor bodies.
+- Roles and trust projections read those claim packets plus claim-targeted support/dispute attestations.
+- Legacy `Element.claimed_role_refs` remains parseable only for compatibility and bootstrap migration.
+
+### Location and assembly association
+
+- Location selection currently behaves more like identity metadata and discovery input than like a full locality or home-scope system.
+- Location does not yet fully drive dynamic scope mounting, assembly membership defaults, or a complete locality-claim workflow.
+- Assembly creation and assembly-association flows exist, but they remain rough and lightly tested.
+
+### Scope tree and account routing
+
+- The shell still exposes the full seeded testing assembly tree more broadly than the intended long-term model.
+- The intended distinction between automatic scopes, attached scopes, followed scopes, and discoverable scopes is not yet implemented as a first-class shell model.
+- Scope-menu actions now navigate visibly back to `Trust` when the user changes scope from wrapper-level account or identity pages instead of only mutating background shell state.
+- Wrapper-level account and identity routes now resolve as hidden custody surfaces rather than masquerading as one of the main function workspaces in the visible shell state.
+
+### Session persistence
+
+- Same-device remembered sign-in now reuses the existing persistent session by default instead of silently accumulating a new session record for that same actor and device label.
+- Refresh-token rotation now updates the existing persistent session in place rather than creating a new device-session row during refresh.
+- Identity security now defaults to showing active sessions only, with the current session sorted first and explicit empty or error states when session data is unavailable.
+- Person-packet signature verification now remains compatible with older signed identity revisions that were stored before `claimed_role_refs` became a defaulted `Element` field, so claimed sign-in and signed claim mutations do not fail on older stored identities.
+
+### Library semantics
+
+- The library route now uses a strict local-only mode by default instead of the broader inherited scope lens.
+- Broader inherited or all-visible library modes remain future work, but the default product behavior now matches “packets from this scope only.”
+
 ## Provisional notes
+
+### Schema churn guardrail
+
+- The compatibility layer is real, but it is still early-alpha infrastructure rather than a promise to preserve every transient test-era packet shape forever.
+- When packet-shape churn starts creating more permanent compatibility burden than value, the project should consider a reset or reseed cutline instead of silently carrying every temporary schema version forward forever.
 
 The following areas should still be treated as provisional:
 
 - guest posting behavior beyond the current packet-backed discussion rules and temporary point grant
-- the exact final ontology for assemblies, scopes, and overlays
+- location disclosure remaining optional, claim/create succeeding without a location, and canonical locality lookup issues such as missing `Sunnymead Ranch` results are intentionally deferred into the dedicated location pass rather than partially fixed in unrelated stabilization passes
+- the exact final ontology for assemblies, scopes, overlays, and future claim kinds beyond `role_association` / `assembly_association`
 - deeper trust weighting, moderation consequences, and non-default policy engines
 - vote execution, delegation, and propagation semantics
 - packet actions that currently appear as disabled placeholders

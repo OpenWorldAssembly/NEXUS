@@ -8,6 +8,7 @@ import type { z } from 'zod';
 import {
   PACKET_BODY_SCHEMAS,
   createPacketEnvelope,
+  type ClaimKind,
   type DiscussionActorClass,
   type DiscussionSort,
   type ElementKind,
@@ -95,6 +96,15 @@ export interface RolePacketInput extends PacketBuilderBaseInput {
   role_kind: string;
   status: string;
   responsibility_markdown?: string | null;
+}
+
+export interface ClaimPacketInput extends PacketBuilderBaseInput {
+  claim_kind: ClaimKind;
+  subject_ref: PacketRef;
+  target_ref: PacketRef;
+  scope_ref: PacketRef;
+  status?: 'active' | 'withdrawn';
+  note?: string | null;
 }
 
 export interface DiscussionThreadPacketInput extends PacketBuilderBaseInput {
@@ -386,6 +396,40 @@ export function createRolePacket(
       role_kind: input.role_kind,
       status: input.status,
       responsibility_markdown: input.responsibility_markdown ?? null,
+    },
+  });
+}
+
+/**
+ * Inputs: common packet header fields plus one scoped claim body.
+ * Output: a validated claim packet with explicit subject, target, and scope edges.
+ */
+export function createClaimPacket(
+  input: ClaimPacketInput
+): PacketEnvelopeByType['Claim'] {
+  return createPacket({
+    ...input,
+    family: 'Claim',
+    edges: [
+      ...(input.edges ?? []),
+      createPacketEdge('belongs_to', input.subject_ref, {
+        source_field: 'subject_ref',
+      }),
+      createPacketEdge('references', input.target_ref, {
+        source_field: 'target_ref',
+      }),
+      createPacketEdge('scoped_to', input.scope_ref, {
+        source_field: 'scope_ref',
+      }),
+    ],
+    metadata_summary: input.metadata_summary ?? input.note ?? null,
+    body: {
+      claim_kind: input.claim_kind,
+      subject_ref: input.subject_ref,
+      target_ref: input.target_ref,
+      scope_ref: input.scope_ref,
+      status: input.status ?? 'active',
+      note: input.note ?? null,
     },
   });
 }

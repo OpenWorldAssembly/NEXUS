@@ -3,16 +3,19 @@
  * Description: Renders the Nexus-shell claimed-identity sign-in entrypoint with local, passkey, and import tabs.
  */
 
+import type { Href } from 'expo-router';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
+import { buildIdentityRouteHref, getIdentityReturnDestination } from '@app/components/nexus/nexus-route-utils';
 import {
   IdentityField,
   IdentityInput,
   IdentityPageShell,
 } from '@app/components/nexus/nexus-identity-ui';
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
+import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import {
   NexusActionButton,
   NexusCard,
@@ -70,25 +73,57 @@ function getStorageModeCopy(
   storageMode: 'none' | 'session_only' | 'saved_on_device' | null
 ) {
   if (storageMode === 'session_only') {
-    return 'Session-only guest';
+    return 'Session-only browser actor';
   }
 
   if (storageMode === 'saved_on_device') {
-    return 'Saved guest';
+    return 'Saved on this device';
   }
 
-  return 'Temporary guest';
+  return 'Temporary guest actor';
+}
+
+function dedupeIdentityOptions(
+  identities: NexusIdentitySearchResultPayload[]
+): NexusIdentitySearchResultPayload[] {
+  const identityMap = new Map<string, NexusIdentitySearchResultPayload>();
+
+  identities.forEach((identity) => {
+    const currentIdentity = identityMap.get(identity.actor_packet_id);
+
+    if (!currentIdentity) {
+      identityMap.set(identity.actor_packet_id, identity);
+      return;
+    }
+
+    identityMap.set(identity.actor_packet_id, {
+      ...currentIdentity,
+      ...identity,
+      saved_on_device: currentIdentity.saved_on_device || identity.saved_on_device,
+      display_alias:
+        identity.display_alias || currentIdentity.display_alias,
+    });
+  });
+
+  return Array.from(identityMap.values());
 }
 
 export default function NexusIdentitySignInPage() {
-  const params = useLocalSearchParams<{ signed_out?: string | string[] }>();
+  const params = useLocalSearchParams<{
+    signed_out?: string | string[];
+    return_to?: string | string[];
+    return_scope_id?: string | string[];
+  }>();
   const router = useRouter();
   const appearance = useNexusAppearance();
+  const { setActiveScopeId } = useNexusShell();
   const {
     currentLabel,
+    currentActorPacketId,
     currentMode,
     currentStorageMode,
     isAuthenticated,
+    isCurrentIdentityUnlocked,
     isPasskeySupported,
     rememberClaimedSessions,
     restoreIdentityFromBundle,
@@ -121,6 +156,20 @@ export default function NexusIdentitySignInPage() {
       : Array.isArray(params.signed_out)
         ? params.signed_out[0] === 'true'
         : false;
+  const { returnTo, returnScopeId } = getIdentityReturnDestination({
+    returnToParam: params.return_to,
+    returnScopeIdParam: params.return_scope_id,
+    fallback: '/nexus/identity/security',
+  });
+  const hasReturnTarget = returnTo !== '/nexus/identity/security';
+
+  const navigateAfterIdentitySuccess = () => {
+    if (returnScopeId) {
+      setActiveScopeId(returnScopeId);
+    }
+
+    router.replace(returnTo as Href);
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -175,16 +224,18 @@ export default function NexusIdentitySignInPage() {
 
   const visibleIdentities = useMemo(() => {
     if (normalizedIdentityQuery.length === 0) {
-      return claimedIdentities.map((identity) => ({
-        actor_packet_id: identity.actor_packet_id,
-        display_alias: identity.alias,
-        claim_status: identity.claim_status,
-        saved_on_device: true,
-        match_source: 'alias' as const,
-      }));
+      return dedupeIdentityOptions(
+        claimedIdentities.map((identity) => ({
+          actor_packet_id: identity.actor_packet_id,
+          display_alias: identity.alias,
+          claim_status: identity.claim_status,
+          saved_on_device: true,
+          match_source: 'alias' as const,
+        }))
+      );
     }
 
-    return identityResults;
+    return dedupeIdentityOptions(identityResults);
   }, [claimedIdentities, identityResults, normalizedIdentityQuery]);
   const selectableIdentityMap = useMemo(() => {
     const nextMap = new Map<string, NexusIdentitySearchResultPayload>();
@@ -225,6 +276,20 @@ export default function NexusIdentitySignInPage() {
         (selectedIdentity.display_alias || selectedIdentity.actor_packet_id)
           .trim()
           .toLowerCase());
+  const showSelectedIdentityCard = selectedIdentity !== null && !showIdentityResults;
+  const selectedIdentityIsCurrentActor =
+    selectedIdentity?.actor_packet_id === currentActorPacketId;
+  const bundleActionLabel =
+    isBusy === 'bundle'
+      ? 'Signing in...'
+      : selectedIdentityIsCurrentActor && currentMode === 'claimed' && !hasActiveClaimedSession
+        ? 'Resume this identity'
+        : selectedIdentityIsCurrentActor &&
+            currentMode === 'claimed' &&
+            hasActiveClaimedSession &&
+            !isCurrentIdentityUnlocked
+          ? 'Unlock this identity'
+          : 'Sign in';
 
   const passphraseError =
     passphrase.length > 0 ? validatePassphrase(passphrase) : 'Passphrase is required.';
@@ -247,7 +312,7 @@ export default function NexusIdentitySignInPage() {
         passphrase,
         keepMeLoggedIn: rememberClaimedSessions,
       });
-      router.replace('/nexus/identity/security');
+      navigateAfterIdentitySuccess();
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : 'Unable to sign in right now.'
@@ -265,7 +330,7 @@ export default function NexusIdentitySignInPage() {
       await signInWithPasskey({
         keepMeLoggedIn: rememberClaimedSessions,
       });
-      router.replace('/nexus/identity/security');
+      navigateAfterIdentitySuccess();
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : 'Unable to sign in with a passkey.'
@@ -284,7 +349,7 @@ export default function NexusIdentitySignInPage() {
         encryptedBundleJson: bundleJson,
         passphrase: bundlePassphrase,
       });
-      router.replace('/nexus/identity/security');
+      navigateAfterIdentitySuccess();
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : 'Unable to restore that bundle.'
@@ -314,9 +379,13 @@ export default function NexusIdentitySignInPage() {
           <Text className="text-2xl font-bold text-nexus-text">{currentLabel}</Text>
           <Text className={appearance.itemBodyClass}>
             {hasActiveClaimedSession
-              ? `Claimed session active. ${getStorageModeCopy(currentStorageMode)}.`
+              ? currentMode === 'claimed'
+                ? isCurrentIdentityUnlocked
+                  ? 'Claimed session active. This identity is ready for signed writes on this device.'
+                  : 'Claimed session active. Unlock this saved identity bundle to resume signed writes on this device.'
+                : `Claimed session active. ${getStorageModeCopy(currentStorageMode)}.`
               : currentMode === 'claimed'
-                ? 'A claimed identity is saved locally, but Nexus has fallen back to guest until you sign in again.'
+                ? 'This claimed identity is saved on this device, but no claimed session is active. Resume it here when you are ready.'
                 : `Guest actor active. ${getStorageModeCopy(currentStorageMode)}.`}
           </Text>
         </View>
@@ -350,7 +419,7 @@ export default function NexusIdentitySignInPage() {
               />
             </IdentityField>
 
-            {selectedIdentity ? (
+            {showSelectedIdentityCard ? (
               <View className="gap-2">
                 <Text className={appearance.itemMetaClass}>Selected identity</Text>
                 <View className="rounded-[18px] border border-nexus-sky bg-nexus-sky/10 px-4 py-3">
@@ -444,7 +513,7 @@ export default function NexusIdentitySignInPage() {
             </IdentityField>
 
             <NexusActionButton
-              label={isBusy === 'bundle' ? 'Signing in...' : 'Sign in'}
+              label={bundleActionLabel}
               variant="primary"
               onPress={() => {
                 void handleBundleSignIn();
@@ -548,19 +617,41 @@ export default function NexusIdentitySignInPage() {
         </Text>
         <View className="flex-row flex-wrap gap-3">
           <NexusActionButton
-            label="Continue as guest"
-            onPress={() => router.push('/nexus/account')}
+            label={hasReturnTarget ? 'Go back' : 'Continue as guest'}
+            onPress={() => {
+              if (returnScopeId) {
+                setActiveScopeId(returnScopeId);
+              }
+
+              router.push((hasReturnTarget ? returnTo : '/nexus/account') as Href);
+            }}
           />
           {currentMode !== 'claimed' ? (
             <NexusActionButton
               label="Claim current guest"
               variant="primary"
-              onPress={() => router.push('/nexus/identity/claim')}
+              onPress={() =>
+                router.push(
+                  buildIdentityRouteHref({
+                    pathname: '/nexus/identity/claim',
+                    returnTo: hasReturnTarget ? returnTo : null,
+                    returnScopeId,
+                  })
+                )
+              }
             />
           ) : null}
           <NexusActionButton
             label="Create new"
-            onPress={() => router.push('/nexus/identity/create')}
+            onPress={() =>
+              router.push(
+                buildIdentityRouteHref({
+                  pathname: '/nexus/identity/create',
+                  returnTo: hasReturnTarget ? returnTo : null,
+                  returnScopeId,
+                })
+              )
+            }
           />
         </View>
       </NexusCard>

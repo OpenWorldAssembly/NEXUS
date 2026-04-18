@@ -17,8 +17,11 @@ async function readApiErrorMessage(response: Response): Promise<string> {
   return response.statusText || 'Nexus query request failed.';
 }
 
-export async function fetchJsonOrThrow<TPayload>(path: string): Promise<TPayload> {
-  const response = await fetch(path);
+export async function fetchJsonOrThrow<TPayload>(
+  path: string,
+  init?: RequestInit
+): Promise<TPayload> {
+  const response = await fetch(path, init);
 
   if (!response.ok) {
     throw new Error(await readApiErrorMessage(response));

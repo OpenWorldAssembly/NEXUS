@@ -163,6 +163,30 @@ function stripPacketSignatures<TPacket extends PacketEnvelope>(
   } as TPacket;
 }
 
+function stripLegacyElementDefaults<TPacket extends PacketEnvelope>(
+  packet: TPacket
+): TPacket {
+  if (packet.header.family !== 'Element') {
+    return packet;
+  }
+
+  const claimedRoleRefs = (packet.body as { claimed_role_refs?: unknown }).claimed_role_refs;
+
+  if (!Array.isArray(claimedRoleRefs) || claimedRoleRefs.length > 0) {
+    return packet;
+  }
+
+  const { claimed_role_refs: _claimedRoleRefs, ...legacyBody } = packet.body as Record<
+    string,
+    unknown
+  >;
+
+  return {
+    ...packet,
+    body: legacyBody,
+  } as TPacket;
+}
+
 export function canonicalizeJson(input: unknown): string {
   return canonicalizeValue(toJsonLike(input));
 }
@@ -326,11 +350,12 @@ export async function verifyPacketSignature(input: {
     return false;
   }
 
-  const unsignedPacket = stripPacketSignatures(input.packet);
-  const canonicalPacket = canonicalizeJson(unsignedPacket);
-  const digest = await sha256Base64Url(canonicalPacket);
+  const signerPacketId = signature.signer_packet_ref?.packet_id;
 
-  if (digest !== input.packet.header.integrity.digest) {
+  if (
+    signerPacketId &&
+    signerPacketId !== input.signerPacket.header.packet_id
+  ) {
     return false;
   }
 
@@ -345,15 +370,38 @@ export async function verifyPacketSignature(input: {
     ['verify']
   );
 
-  return cryptoApi.subtle.verify(
-    {
-      name: 'ECDSA',
-      hash: 'SHA-256',
-    },
-    publicKey,
-    toArrayBuffer(base64UrlToUint8Array(signature.signature)),
-    toArrayBuffer(encodeUtf8(canonicalPacket))
-  );
+  const unsignedPacket = stripPacketSignatures(input.packet);
+  const candidatePackets = [unsignedPacket];
+  const legacyUnsignedPacket = stripLegacyElementDefaults(unsignedPacket);
+
+  if (legacyUnsignedPacket !== unsignedPacket) {
+    candidatePackets.push(legacyUnsignedPacket);
+  }
+
+  for (const candidatePacket of candidatePackets) {
+    const canonicalPacket = canonicalizeJson(candidatePacket);
+    const digest = await sha256Base64Url(canonicalPacket);
+
+    if (digest !== input.packet.header.integrity.digest) {
+      continue;
+    }
+
+    const signatureIsValid = await cryptoApi.subtle.verify(
+      {
+        name: 'ECDSA',
+        hash: 'SHA-256',
+      },
+      publicKey,
+      toArrayBuffer(base64UrlToUint8Array(signature.signature)),
+      toArrayBuffer(encodeUtf8(canonicalPacket))
+    );
+
+    if (signatureIsValid) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 export async function createActorAssertion(input: {
