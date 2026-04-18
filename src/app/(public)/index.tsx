@@ -17,8 +17,8 @@ import {
   useWindowDimensions,
 } from 'react-native';
 
-import { homePageContent } from '@app/public/home-content';
 import type { PublicHeroSlide } from '@app/public/content-types';
+import { homePageContent } from '@app/public/home-content';
 
 type HeroSlideLayerProps = {
   slide: PublicHeroSlide;
@@ -57,7 +57,7 @@ function getSlideDirection(currentIndex: number, nextIndex: number, slideCount: 
 function HeroSlideLayer({ slide, translateX }: HeroSlideLayerProps) {
   return (
     <Animated.View
-      pointerEvents="none"
+      pointerEvents="box-none"
       style={[
         StyleSheet.absoluteFillObject,
         {
@@ -66,33 +66,71 @@ function HeroSlideLayer({ slide, translateX }: HeroSlideLayerProps) {
       ]}
     >
       <Image
+        pointerEvents="none"
         source={{ uri: slide.backgroundImageUri }}
         contentFit="cover"
         transition={0}
         style={StyleSheet.absoluteFillObject}
       />
-      <View className="absolute inset-0 bg-public-canvas/45" />
-      <View className="absolute -left-12 top-0 h-40 w-40 rounded-full bg-public-cyan/20 blur-3xl" />
-      <View className="absolute right-0 top-16 h-48 w-48 rounded-full bg-public-accent/10 blur-3xl" />
+      <View pointerEvents="none" className="absolute inset-0 bg-public-canvas/58" />
+      <View
+        pointerEvents="none"
+        className="absolute -left-12 top-0 h-40 w-40 rounded-full bg-public-cyan/10 blur-3xl"
+      />
+      <View
+        pointerEvents="none"
+        className="absolute right-0 top-16 h-48 w-48 rounded-full bg-public-accent/6 blur-3xl"
+      />
 
-      <View className="flex-1 gap-8 px-6 py-10 md:px-10 md:py-14">
+      <View pointerEvents="box-none" className="flex-1 gap-8 px-6 py-10 md:px-10 md:py-14">
         <View className="gap-6">
           <Text className="text-sm font-bold uppercase tracking-[0.35em] text-public-accentSoft">
             {slide.eyebrow}
           </Text>
 
           <View className="max-w-4xl gap-4 pr-2 md:pr-8">
-            <Text className="text-5xl font-black leading-[1.05] text-public-text md:text-6xl lg:text-7xl">
+            <Text className="text-5xl font-black leading-[1.02] text-[#8ec5ff] md:text-6xl lg:text-7xl">
               {slide.title}
             </Text>
 
             <Text className="max-w-3xl text-lg leading-8 text-public-muted md:text-xl">
               {slide.body}
             </Text>
+
+            {slide.actions?.length ? (
+              <View className="mt-6 flex-row flex-wrap gap-3">
+                {slide.actions.map((action) => {
+                  const isPrimary = action.variant === 'primary';
+
+                  return (
+                    <Link key={action.label} href={action.href} asChild>
+                      <Pressable
+                        pointerEvents="auto"
+                        className={`rounded-full px-6 py-3 ${
+                          isPrimary
+                            ? 'bg-public-accent'
+                            : 'border border-public-line bg-public-shell/70'
+                        }`}
+                      >
+                        <Text
+                          className={`text-sm uppercase tracking-[0.18em] ${
+                            isPrimary
+                              ? 'font-extrabold text-public-canvas'
+                              : 'font-bold text-public-text'
+                          }`}
+                        >
+                          {action.label}
+                        </Text>
+                      </Pressable>
+                    </Link>
+                  );
+                })}
+              </View>
+            ) : null}
           </View>
         </View>
 
-        <View className="mt-2 max-w-3xl gap-2 rounded-[1.75rem] border border-public-line/70 bg-public-panel/60 p-6">
+        <View className="mt-2 max-w-3xl gap-2 rounded-[1.75rem] bg-public-panel/82 p-6">
           <Text className="text-xs font-bold uppercase tracking-[0.28em] text-public-sand">
             {slide.kicker}
           </Text>
@@ -230,9 +268,10 @@ export default function HomePage() {
   return (
     <ScrollView className="flex-1" contentContainerClassName="pb-16">
       <View className="mx-auto w-full max-w-6xl px-5 py-8">
-        <View className="overflow-hidden rounded-[2rem] border border-public-line/70 bg-public-shell/70 shadow-public">
+        <View className="overflow-hidden rounded-[2rem] bg-public-shell/70 shadow-public">
           <View
-            className="relative min-h-[36rem] overflow-hidden md:min-h-[40rem]"
+            className="relative overflow-hidden"
+            style={{ height: windowWidth >= 768 ? 640 : 576 }}
             onLayout={handleHeroLayout}
           >
             <HeroSlideLayer slide={activeSlide} translateX={outgoingTranslateX} />
@@ -242,97 +281,53 @@ export default function HomePage() {
             ) : null}
           </View>
 
-          <View className="border-t border-public-line/70 bg-public-panel/55 px-6 py-5 md:px-10">
-            <View className="flex-row flex-wrap items-center justify-between gap-4">
-              <View className="flex-row flex-wrap gap-3">
-                {homePageContent.heroActions.map((action) => {
-                  const isPrimary = action.variant === 'primary';
+          <View className="bg-public-panel/40 px-6 py-4 md:px-10">
+            <View className="flex-row items-center justify-between">
+              <Pressable
+                className="rounded-full border border-public-line bg-public-shell/75 px-4 py-2"
+                onPress={showPreviousSlide}
+              >
+                <Text className="text-sm font-bold uppercase tracking-[0.18em] text-public-text">
+                  Prev
+                </Text>
+              </Pressable>
 
-                  return (
-                    <Link key={action.label} href={action.href} asChild>
-                      <Pressable
-                        className={`rounded-full px-6 py-3 ${isPrimary ? 'bg-public-accent' : 'border border-public-line bg-public-shell/75'}`}
-                      >
-                        <Text
-                          className={`text-sm uppercase tracking-[0.18em] ${isPrimary ? 'font-extrabold text-public-canvas' : 'font-bold text-public-text'}`}
-                        >
-                          {action.label}
-                        </Text>
-                      </Pressable>
-                    </Link>
-                  );
-                })}
+              <View className="flex-row items-center gap-2">
+                {homePageContent.heroSlides.map((slide, slideIndex) => (
+                  <Pressable
+                    key={slide.title}
+                    className={[
+                      'h-2.5 w-2.5 rounded-full',
+                      slideIndex === highlightedSlideIndex ? 'bg-public-accent' : 'bg-public-line',
+                    ].join(' ')}
+                    onPress={() => showSlide(slideIndex)}
+                  />
+                ))}
               </View>
 
-              <View className="flex-row items-center gap-3">
-                <Pressable
-                  className="rounded-full border border-public-line bg-public-shell/75 px-4 py-2"
-                  onPress={showPreviousSlide}
-                >
-                  <Text className="text-sm font-bold uppercase tracking-[0.18em] text-public-text">
-                    Prev
-                  </Text>
-                </Pressable>
-
-                <View className="flex-row items-center gap-2">
-                  {homePageContent.heroSlides.map((slide, slideIndex) => (
-                    <Pressable
-                      key={slide.title}
-                      className={[
-                        'h-3 w-3 rounded-full border border-public-line',
-                        slideIndex === highlightedSlideIndex
-                          ? 'bg-public-accent'
-                          : 'bg-public-shell/70',
-                      ].join(' ')}
-                      onPress={() => showSlide(slideIndex)}
-                    />
-                  ))}
-                </View>
-
-                <Pressable
-                  className="rounded-full border border-public-line bg-public-shell/75 px-4 py-2"
-                  onPress={showNextSlide}
-                >
-                  <Text className="text-sm font-bold uppercase tracking-[0.18em] text-public-text">
-                    Next
-                  </Text>
-                </Pressable>
-              </View>
+              <Pressable
+                className="rounded-full border border-public-line bg-public-shell/75 px-4 py-2"
+                onPress={showNextSlide}
+              >
+                <Text className="text-sm font-bold uppercase tracking-[0.18em] text-public-text">
+                  Next
+                </Text>
+              </Pressable>
             </View>
           </View>
         </View>
 
-        <View className="mt-10 gap-4">
-          <Text className="text-sm font-bold uppercase tracking-[0.3em] text-public-cyan">
-            {homePageContent.principlesEyebrow}
-          </Text>
-          <View className="flex-row flex-wrap gap-4">
-            {homePageContent.principles.map((principle) => (
-              <View
-                key={principle.title}
-                className="min-w-[280px] flex-1 rounded-[1.75rem] border border-public-line/70 bg-public-panel/55 p-6"
-              >
-                <Text className="mb-3 text-2xl font-bold text-public-text">
-                  {principle.title}
-                </Text>
-                <Text className="text-base leading-7 text-public-muted">
-                  {principle.body}
-                </Text>
-              </View>
-            ))}
-          </View>
-        </View>
 
         <View className="mt-10 flex-row flex-wrap gap-4">
           {homePageContent.supportingCards.map((card) => (
             <View
               key={card.title}
-              className="min-w-[280px] flex-1 rounded-[1.75rem] border border-public-line/70 bg-public-panel/55 p-6"
+              className="min-w-[280px] flex-1 rounded-[1.75rem] bg-public-panel/62 p-6"
             >
               <Text className="mb-3 text-xs font-bold uppercase tracking-[0.28em] text-public-sand">
                 {card.eyebrow}
               </Text>
-              <Text className="text-2xl font-bold text-public-text">{card.title}</Text>
+              <Text className="text-2xl font-bold text-[#8ec5ff]">{card.title}</Text>
               <Text className="mt-3 text-base leading-7 text-public-muted">{card.body}</Text>
             </View>
           ))}
