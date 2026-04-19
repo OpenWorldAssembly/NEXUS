@@ -24,3 +24,19 @@ export function fetchNexusTrustPayload(input: {
     }`
   );
 }
+
+export function setNexusHomeLocality(input: {
+  requestBody: Record<string, unknown>;
+}): Promise<{
+  claim_packet_id: string | null;
+  claim_status: 'active' | 'withdrawn';
+  home_scope_packet_id: string | null;
+}> {
+  return fetchJsonOrThrow('/api/nexus/locality/home', {
+    method: 'PUT',
+    headers: {
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify(input.requestBody),
+  });
+}

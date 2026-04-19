@@ -24,7 +24,7 @@ export const GET: RequestHandler = async (request) => {
   try {
     const requestUrl = new URL(request.url);
     const actorPacketId = requestUrl.searchParams.get('actor_packet_id');
-    const shellPayload = await getNexusShellPayload(actorPacketId);
+    const shellPayload = await getNexusShellPayload(actorPacketId, request);
 
     return createJsonResponse(shellPayload);
   } catch (error) {

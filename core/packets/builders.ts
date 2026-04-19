@@ -23,6 +23,7 @@ import {
   type PacketRef,
   type PacketRevisionRef,
   type AttestationValue,
+  type LocalityLevel,
 } from '@core/schema/packet-schema';
 
 type PacketVisibility = PacketHeader['moderation']['visibility'];
@@ -68,6 +69,12 @@ export interface ElementPacketInput extends PacketBuilderBaseInput {
   subtype?: string | null;
   summary?: string | null;
   locality_label?: string | null;
+  locality?: {
+    level: LocalityLevel;
+    canonical_name_key: string;
+    alias_keys?: string[];
+    display_aliases?: string[];
+  } | null;
   identity?: {
     alias: string;
     claim_status: PersonClaimStatus;
@@ -365,6 +372,14 @@ export function createElementPacket(
       subtype: input.subtype ?? null,
       summary: input.summary ?? null,
       locality_label: input.locality_label ?? null,
+      locality: input.locality
+        ? {
+            level: input.locality.level,
+            canonical_name_key: input.locality.canonical_name_key,
+            alias_keys: input.locality.alias_keys ?? [],
+            display_aliases: input.locality.display_aliases ?? [],
+          }
+        : null,
       identity: input.identity
         ? {
             alias: input.identity.alias,

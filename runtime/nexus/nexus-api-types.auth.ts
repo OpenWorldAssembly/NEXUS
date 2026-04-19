@@ -10,6 +10,7 @@ import type {
 } from '@runtime/nexus/identity-crypto';
 import type {
   NexusLocationDisclosureOption,
+  NexusLocationCreateCandidate,
   NexusLocationSearchResult,
 } from '@runtime/nexus/location-search';
 
@@ -164,6 +165,22 @@ export interface NexusSecurityPreferencesPayload {
 export interface NexusLocationSearchPayload {
   query: string;
   results: NexusLocationSearchResult[];
+  create_candidate: NexusLocationCreateCandidate | null;
+}
+
+export interface NexusLocalityDuplicateWarningPayload {
+  level: 'nation' | 'region' | 'city' | 'district';
+  name: string;
+  parent_packet_id: string;
+  existing_scope_id: string;
+  existing_name: string;
+  message: string;
+}
+
+export interface NexusCreateLocalityPayload {
+  created_packets: PacketEnvelopeByType['Element'][];
+  final_result: NexusLocationSearchResult;
+  duplicate_warnings: NexusLocalityDuplicateWarningPayload[];
 }
 
 export interface NexusIdentitySearchResultPayload {

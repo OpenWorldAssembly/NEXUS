@@ -73,6 +73,80 @@ test('legacy element revisions upcast claimed_role_refs to an empty array', () =
   );
 });
 
+test('assembly element locality metadata is additive and optional', () => {
+  const packet = parsePacketEnvelope({
+    header: {
+      packet_id: 'nexus:element/test-locality',
+      revision_id: 'nexus:element/test-locality@r1',
+      family: 'Element',
+      schema_version: '1.0.0',
+      protocol_version: '0.1.0',
+      created_at: '2026-04-17T00:00:00.000Z',
+      parent_revision_refs: [],
+      merge_strategy: null,
+      authority_scope_ref: null,
+      applicable_scope_refs: [],
+      edges: [],
+      provenance: {
+        created_by: null,
+        submitted_by: null,
+        adapter: 'test',
+        recorded_at: '2026-04-17T00:00:00.000Z',
+        imported_from_revision: null,
+      },
+      integrity: {
+        canonicalization: 'RFC8785',
+        hash_alg: 'sha-256',
+        digest: null,
+        embedded_signatures: [],
+        signature_refs: [],
+      },
+      moderation: {
+        visibility: 'public',
+        moderation_state: 'open',
+        policy_refs: [],
+        content_warning_ids: [],
+      },
+      external_refs: [],
+      metadata: {
+        tags: [],
+        language: null,
+        summary: null,
+      },
+      producer: {
+        adapter: 'test',
+        app_version: null,
+      },
+    },
+    body: {
+      kind: 'assembly',
+      name: 'Test District',
+      subtype: 'district',
+      summary: null,
+      locality_label: 'Test District',
+      locality: {
+        level: 'district',
+        canonical_name_key: 'test district',
+        alias_keys: ['test'],
+        display_aliases: ['Test'],
+      },
+      identity: null,
+      tags: ['assembly', 'locality'],
+      claimed_role_refs: [],
+    },
+  });
+
+  assert.equal(packet.header.family, 'Element');
+  assert.equal(
+    (
+      packet as {
+        body: { locality: { level: string; canonical_name_key: string } | null };
+      }
+    ).body.locality?.canonical_name_key,
+    'test district'
+  );
+});
+
 test('legacy policy revisions upcast missing trust_policy to null', () => {
   const packet = parsePacketEnvelope({
     header: {

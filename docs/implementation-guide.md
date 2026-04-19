@@ -176,18 +176,25 @@ Implemented shell behavior in this slice:
 - the hidden account route now acts as a wrapper-level custody and local-assembly continuity workspace, including memory-only temporary guests, session-only guests, saved guests, and claimed identity flows with export, restore, claim, sign-in, sign-out, and local lock-state messaging
 - scope changes from wrapper-level account and identity routes now navigate visibly back into the scoped `Trust` workspace instead of only changing shell state in the background
 - signing out of a claimed session now restores a preserved guest actor when possible, otherwise Nexus immediately generates a fresh temporary guest so the shell never keeps showing the signed-out claimed identity as the active actor
+- the main scope map now renders only the actor's geographic home branch rather than rebuilding from every known or followed scope, and the separate explore/follow lists are deduped and capped as lightweight sidebars until a dedicated Nexus map exists
 - the discussions thread workspace has been simplified by removing the separate expandable thread picker; feed remains the primary thread-switching surface, and successful inline replies now collapse the composer and mark the newly created reply inside the thread
+- membership-required discussion forums now use the actor's active home-locality branch as the write gate; visitor-lobby forums remain open to signed guest posting, while remote or followed-only scopes show a local community-claim modal instead of surfacing raw backend write errors
 - shared Nexus action buttons now opt into a compact self-sized footprint by default so standalone actions do not stretch full-width inside vertical card layouts
 - every nexus actor that touches the graph is now a real `Element(kind: "person")`, including ephemeral guests and device-saved guests
 - claimed sign-in now uses client-generated `P-256` keys, a signed challenge-response flow, encrypted local identity bundles, and optional persistent auth cookies that stay separate from packet-signing truth
 - passkeys are now optional extra protection instead of a hard requirement for claimed use, and protected security actions can re-approve through either passkey or signed-key re-auth from the unlocked local bundle
 - the shell sign-in workspace now uses graph-backed identity discovery and graph-backed location discovery from the packet graph itself, while keeping private signing-key custody strictly local unless the user imports a bundle or uses passkey sign-in
+- identity create/claim now treat the location picker as optional home-locality setup: skipping location keeps the default `Global + You` mounted baseline, while choosing a canonical geographic scope writes `Claim(kind: "home_locality")` after the claimed session is active; profile `location_disclosure` remains separate optional metadata rather than mounted-scope truth
+- locality search now returns directory-style metadata for canonical names, aliases, parent path context, match type, and create candidates; `/nexus/locality/create` provides the first controlled locality creation flow for geographic `Element(kind: "assembly")` packets
 - the trust route now projects scoped trust posture, association evidence, role claim summary, and baseline participation gates from policy defaults rather than showing a hidden reputation score
+- the trust route keeps trust metrics first, then groups home-locality, follow/unfollow, and assembly-association actions under `Scope relationship` so location controls stay available without dominating every trust page
 - the roles route now projects the role catalog for the active scope, scope-relevant claimants, claimant trust stages for that role, and real support/dispute evidence with inline review actions
 - protected guest role actions now open a local sign-in-required confirmation modal instead of attempting the write and surfacing raw backend identity errors
 - the sign-in identity picker now dedupes saved and discovered claimed identities by actor packet id, keeps the selected identity in one place at a time, and distinguishes resuming or unlocking the current identity from switching to another one
 - identity ceremonies now preserve `return_to` and `return_scope_id` context for protected role-entry flows so sign-in, claim, create, and restore can return the user to the same workspace and scope lens after success
 - exact-scope role claims are now always visible on the roles route for that scope, and role actions immediately re-fetch the scoped payload so claimant rows, counts, and claim or unclaim button state stay synchronized without a manual page refresh
+- the roles route now presents one role at a time through tabs so growing role catalogs do not push all claimant/evidence sections into one long vertical stack
+- guest-claim return flows treat an already-claimed current actor as a successful ready state when a protected action supplied `return_to`, instead of stranding the user on the generic already-claimed page
 - remembered same-device claimed sign-ins now reuse the existing persistent session by default, and refresh-token rotation updates that same session in place instead of multiplying device-session rows
 - identity security now shows only active sessions by default, sorts the current session first, and surfaces explicit empty or error states instead of silently blanking the session area
 - person-packet signature verification now accepts both the current canonical `Element` shape and older signed revisions that predate the defaulted `claimed_role_refs` field, so stored claimed identities can still sign in and authorize role or assembly-association writes without weakening signature checks
@@ -1095,6 +1102,51 @@ Examples of decisions worth logging early:
 - Why: this preserves discoverability and intent without leaking low-level auth errors, and it makes the `You` scope feel like a first-class personal lens rather than an awkward exception tacked onto the bottom of a geographic tree.
 - Consequences / follow-ups: guests can still browse the Roles page but cannot mutate it without entering an identity ceremony; identity routes entered from that gate should return to the same scope-aware workspace on success; and the current location disclosure/search problems remain intentionally deferred into the dedicated location pass instead of being half-solved inside this quick systems cleanup.
 
+### 2026-04-18 - Home locality now drives mounted scope ancestry, while follows become real shell preferences
+
+- Context: the repo had a location roadmap but the live shell still exposed the seeded test tree by default and used hardcoded followed-scope ids instead of actor-aware mounted-scope truth.
+- Options considered: wait for the full location pass, keep the old full-tree shell until search and creation are polished, or land a narrow first phase that establishes home-locality claims plus mounted-scope behavior without redesigning location search or locality creation yet.
+- Decision: add `Claim(kind: "home_locality")` as the source of mounted geographic ancestry; keep `Global + You` as the universal default baseline; derive mounted ancestor scopes from one active deepest home-locality claim; keep `assembly_association` separate and non-mounting for now; replace hardcoded followed scopes with cookie-backed shell follow preferences keyed to the current actor; keep the main scope tree focused on the geographic home branch; and surface unmounted known scopes separately as a lightweight explore/follow list under the scope map.
+- Why: this makes the shell honest about which scopes are actually mounted for the current actor without prematurely dragging in canonical locality search, locality creation, or deeper trust-rollup semantics.
+- Consequences / follow-ups: identity `location_disclosure` remains optional metadata rather than mounted-scope truth; `Trust` now hosts the minimal `Set as home locality` / `Clear home locality` action for eligible geographic scopes; followed scopes are now explicit opt-in shell preferences instead of seeded defaults; and later location phases still need canonical locality search, guided locality creation, and direct-vs-rolled-up locality verification.
+
+### 2026-04-18 - Mounted scope rendering, community posting gates, and role tabs are tightened
+
+- Context: after home-locality mounting landed, the sidebar still rebuilt its own scope map from every known scope, explore results could duplicate mounted scopes, membership-required discussions still used older assembly-association participation assumptions, role claim lists were becoming vertically cramped, and protected claim-return flows could show a false already-claimed dead-end.
+- Options considered: fold these into the larger location pass, add broad pagination/map infrastructure now, or apply a focused cleanup that preserves existing routes and packet shapes while fixing truthfulness at the shell and UI boundaries.
+- Decision: render the scope map from the geographic home branch supplied by shell context; cap and dedupe explore/follow lists in the sidebar; guard home-locality lookup so null actors cannot inherit another actor's home chain; gate non-visitor discussion writes on the active home-locality branch with a local `Community claim required` modal; move the roles route to one-role-at-a-time tabs; and treat already-claimed return flows as successful identity-ready states.
+- Why: this keeps Phase 1 honest without expanding the location ontology, adding new packet families, or prematurely building a full Nexus map/pagination surface.
+- Consequences / follow-ups: remote scopes can still be explored or followed without becoming community membership, visitor lobbies remain guest-writeable, role evidence stays inline inside the active tab, and later map/packet-viewer work should absorb large discoverable/followed scope lists instead of growing the sidebar indefinitely.
+
+### 2026-04-18 - Home locality controls become explicit and followed scopes leave the geographic tree
+
+- Context: followed scopes were useful but appeared both in the followed list and the main scope map, while the Trust page hid the home-locality action among general scope controls and still made assembly association feel too close to residency.
+- Options considered: make follows packet-native immediately, collapse association into home locality, or keep this as a Phase 1 cleanup that clarifies the current semantics without changing packet schema.
+- Decision: keep follows as shell preferences for now, render followed-only scopes only in the followed list, preserve the main tree as the geographic home branch, fix home-locality claim withdrawal revisions to use compact parent revision refs, and promote Home locality into its own Trust card with derived branch explanation.
+- Why: the geographic tree should answer “where is my home branch?” while follows answer “what else am I watching?” Keeping those lanes separate prevents remote follows from pretending to be community membership.
+- Consequences / follow-ups: one active deepest `home_locality` claim still derives parent-scope membership, descendants are not inferred, assembly association remains relationship/trust evidence rather than posting or voting rights, and packet-native follow/subscription mechanics remain a later core-system pass.
+
+### 2026-04-18 - Identity entry now writes home locality, and Trust relationship controls are rebalanced
+
+- Context: the old create/claim location field had been a partial home-location setup flow, but it still read as profile disclosure and did not write the mounted-scope home-locality claim. At the same time, the Trust page had made home locality too prominent above the actual trust metrics.
+- Options considered: leave location setup entirely to Trust, add profile disclosure controls now, or keep this pass focused on optional canonical home selection at identity entry while preserving disclosure as future profile metadata.
+- Decision: reframe the create/claim location picker as optional Home locality setup; allow create/claim with no selected location; write one `Claim(kind: "home_locality")` through the existing home-locality mutation after the claimed session is active when a canonical geographic scope is selected; keep `identity.location_disclosure` unset by default and separate from mounting; improve graph-backed locality search normalization for punctuation, spacing, hyphens, case, and simple aliases; and move Trust home/follow/association controls into a compact `Scope relationship` block beneath the primary trust metrics.
+- Why: the sign-up ceremony should let people choose their geographic branch early without making location mandatory, leaking profile disclosure, or hiding the core Trust posture behind location controls.
+- Consequences / follow-ups: `Global + You` remains the default baseline for anyone who skips location, canonical locality creation remains deferred, follows are still shell preferences until a packet-native follow/subscription pass, and future profile settings can add explicit public location disclosure without affecting mounted-scope truth.
+
+### 2026-04-18 - Locality search repairs legacy geographic subtype compatibility
+
+- Context: `Sunnymead Ranch` existed as a seeded geographic assembly, but it did not appear in locality search because the search service only accepted `nation`, `state/region`, `city`, and `district` subtypes while the seed used the older `neighborhood` subtype.
+- Decision: keep this as a surgical search repair: treat legacy `neighborhood` as the current district-level locality equivalent, keep non-geographic subtypes out of home-locality search, and move shared search normalization plus match scoring into a small pure helper so focused tests can cover it without booting packet services.
+- Consequences / follow-ups: `Sunnymead Ranch`, `Sunnymead`, hyphen variants, case variants, and odd spacing should resolve through the existing location search API, while canonical locality metadata, duplicate handling, translations, and controlled locality creation remain deferred to the next larger locality phase.
+
+### 2026-04-18 - Canonical locality creation uses full-path review before minting assemblies
+
+- Context: identity entry and Trust could select existing localities, but missing places still required rough generic assembly creation or could not be created from the home-locality journey at all.
+- Decision: add optional `Element.body.locality` metadata for geographic assemblies, extend location search with canonical/alias/path/fuzzy result metadata plus create candidates, add a protected `POST /api/nexus/locality` route, and introduce `/nexus/locality/create` as the shared full-path wizard for creating missing nation/region/city/district assemblies under a confirmed parent path.
+- Why: locality creation should mint real cryptographic assembly Elements without letting raw free text create ambiguous public geography; exact duplicates should reuse existing packets, while fuzzy duplicates should warn before allowing explicit override.
+- Consequences / follow-ups: signup/claim and Trust can hand off into the shared locality journey, existing legacy `subtype` and `locality_label` fields remain readable, no third-party geocoder is involved yet, and later phases still need richer parent-path discovery, merge/moderation tools for mistaken duplicates, translated aliases, and a future Nexus map/browser entry point.
+
 ### 2026-04-10 - Railway cutover keeps the Expo server app intact and adds a local production-parity Node server
 
 - Context: the repo had been running through Expo's server features, but the Railway move needed a real exported-server runtime, a persistent SQLite path that works outside the repo root, and a safer bootstrap rule that would not destructively reseed hosted data.
@@ -1135,9 +1187,10 @@ Role and schema guidance:
 
 Location guidance:
 
-- location should not be expanded casually on top of unresolved role and scope semantics
-- treat location as a dedicated later subsystem that must explicitly define how disclosure, home scope, assembly association, and scope mounting relate
-- do schema and role cleanup before locality becomes a wider dependency across shell behavior and trust logic
+- home locality now exists as a real scoped claim and drives mounted geographic ancestry
+- `identity.location_disclosure` remains optional metadata and should not be reused as mounted-scope truth
+- `assembly_association` remains distinct from home locality and should not casually be reused as “I live here”
+- canonical locality creation now exists as a protected full-path wizard for geographic assemblies; later location phases still need richer directory governance, duplicate merge/moderation, translated aliases, and locality verification rollups without reopening the mounted-scope foundation
 
 ## Open questions
 

@@ -98,6 +98,7 @@ export const ATTESTATION_KINDS = [
 export const CLAIM_KINDS = [
   'role_association',
   'assembly_association',
+  'home_locality',
 ] as const;
 
 export const CLAIM_STATUSES = ['active', 'withdrawn'] as const;
@@ -194,6 +195,10 @@ export type PacketVoteKind = AttestationKind;
 export const PacketVoteValueSchema = AttestationValueSchema;
 export const PacketVoteStatusSchema = AttestationStatusSchema;
 export const PacketVoteKindSchema = AttestationKindSchema;
+
+export const LOCALITY_LEVELS = ['nation', 'region', 'city', 'district'] as const;
+export const LocalityLevelSchema = z.enum(LOCALITY_LEVELS);
+export type LocalityLevel = z.infer<typeof LocalityLevelSchema>;
 
 export const PacketRefSchema = z
   .object({
@@ -343,6 +348,16 @@ export const ElementBodySchema = z
     subtype: z.string().min(1).nullable().optional(),
     summary: z.string().min(1).nullable().optional(),
     locality_label: z.string().min(1).nullable().optional(),
+    locality: z
+      .object({
+        level: LocalityLevelSchema,
+        canonical_name_key: z.string().min(1),
+        alias_keys: z.array(z.string().min(1)).default([]),
+        display_aliases: z.array(z.string().min(1)).default([]),
+      })
+      .strict()
+      .nullable()
+      .default(null),
     identity: z
       .object({
         alias: z.string().min(1),

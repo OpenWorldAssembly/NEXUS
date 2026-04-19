@@ -28,6 +28,13 @@ export type NexusScopeRelationship =
   | 'child'
   | 'followed';
 
+export type NexusScopeMountReason =
+  | 'global_default'
+  | 'personal_default'
+  | 'home_locality'
+  | 'home_ancestor'
+  | 'followed';
+
 export type NexusScopeSummary = {
   id: string;
   packetId: string;
@@ -41,6 +48,9 @@ export type NexusScopeSummary = {
   parentId?: string;
   childIds: string[];
   followedScopeIds: string[];
+  isMounted: boolean;
+  isDiscoverable: boolean;
+  mountReasons: NexusScopeMountReason[];
   publicLobbyLabel: string;
   stats: {
     members: number;
@@ -262,6 +272,23 @@ export function getNexusRailWidth(uiDensity: NexusUiDensity): number {
 }
 
 /**
+ * Inputs: one scope summary.
+ * Output: whether it belongs in the main geographic scope tree.
+ */
+export function isNexusGeographicTreeScope(
+  scope: Pick<NexusScopeSummary, 'mountReasons'>
+): boolean {
+  return scope.mountReasons.some((mountReason) =>
+    [
+      'global_default',
+      'home_ancestor',
+      'home_locality',
+      'personal_default',
+    ].includes(mountReason)
+  );
+}
+
+/**
  * Inputs: a list of scope ids on an item and the currently selected scope id.
  * Output: whether the item should be visible inside the active scope lens.
  */
@@ -306,7 +333,9 @@ export function buildNexusBranchNodes(
     ...expandedScopeIds,
     ...Array.from(lineageIds),
   ]);
-  const rootScopes = scopes.filter((scope) => !scope.parentId);
+  const rootScopes = scopes.filter(
+    (scope) => !scope.parentId || !scopeMap[scope.parentId]
+  );
   const nodes: NexusScopeBranchNode[] = [];
 
   const addNode = (scopeId: string, depth: number) => {
@@ -320,6 +349,8 @@ export function buildNexusBranchNodes(
 
     if (scope.level === 'personal') {
       relationship = 'personal';
+    } else if (scope.mountReasons.includes('followed') && depth === 0) {
+      relationship = 'followed';
     } else if (depth === 0) {
       relationship = 'global';
     } else if (scopeId === activeScopeId) {

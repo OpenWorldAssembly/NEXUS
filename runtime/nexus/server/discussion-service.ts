@@ -30,6 +30,10 @@ import {
   resolvePageSize,
 } from '@runtime/nexus/server/discussion-service.pagination';
 import {
+  filterClaimPackets,
+  listClaimPackets,
+} from '@runtime/nexus/server/claim-utils';
+import {
   buildScopeLens,
   getDiscussionForumDisplayTitle,
   getDiscussionForumOrder,
@@ -622,13 +626,22 @@ export class SQLiteDiscussionService
       : null;
     const requiresMembership = forumPacket.body.forum_kind !== 'visitor_lobby';
     const assemblyPacketId = forumPacket.header.authority_scope_ref?.packet_id ?? null;
-    const hasForumAccess =
+    const hasSignedActor = Boolean(actorPacketId);
+    const hasHomeLocalityAccess =
       requiresMembership && actorPacketId && assemblyPacketId
-        ? await this.attestationService.hasActiveAssemblyAssociationClaim({
-            actor_packet_id: actorPacketId,
-            assembly_packet_id: assemblyPacketId,
+        ? await this.hasActiveHomeLocalityAccess({
+            actorPacketId,
+            scopePacketId: assemblyPacketId,
           })
-        : !requiresMembership && Boolean(actorPacketId);
+        : false;
+    const hasForumAccess =
+      requiresMembership ? hasHomeLocalityAccess : hasSignedActor;
+    const writeBlockReason: DiscussionViewerContext['write_block_reason'] =
+      hasForumAccess
+        ? 'none'
+        : requiresMembership
+          ? 'home_locality_required'
+          : 'signed_actor_required';
 
     return {
       actor_key: actorIdentity.actor_key,
@@ -636,7 +649,47 @@ export class SQLiteDiscussionService
       can_create_top_level: hasForumAccess,
       can_reply: hasForumAccess,
       can_vote: hasForumAccess,
+      write_block_reason: writeBlockReason,
     };
+  }
+
+  private async hasActiveHomeLocalityAccess(input: {
+    actorPacketId: string;
+    scopePacketId: string;
+  }): Promise<boolean> {
+    if (!this.state) {
+      return false;
+    }
+
+    const homeClaims = filterClaimPackets({
+      claims: await listClaimPackets(this.packetStore),
+      claimKind: 'home_locality',
+      subjectPacketId: input.actorPacketId,
+      activeOnly: true,
+    });
+    const scopeByPacketId = new Map(
+      Array.from(this.state.scopeMap.values()).map((scopeNode) => [
+        scopeNode.packetId,
+        scopeNode,
+      ])
+    );
+
+    for (const homeClaim of homeClaims) {
+      let currentScope =
+        scopeByPacketId.get(homeClaim.body.target_ref.packet_id) ?? null;
+
+      while (currentScope) {
+        if (currentScope.packetId === input.scopePacketId) {
+          return true;
+        }
+
+        currentScope = currentScope.parentRouteId
+          ? this.state.scopeMap.get(currentScope.parentRouteId) ?? null
+          : null;
+      }
+    }
+
+    return false;
   }
 
   private async verifySignedDiscussionPacket<TPacket extends DiscussionEntryPacket | PacketEnvelopeByType['DiscussionThread']>(
@@ -701,6 +754,7 @@ export class SQLiteDiscussionService
           can_create_top_level: false,
           can_reply: false,
           can_vote: false,
+          write_block_reason: 'signed_actor_required' as const,
         },
         top_level_posts: [],
         next_cursor: null,

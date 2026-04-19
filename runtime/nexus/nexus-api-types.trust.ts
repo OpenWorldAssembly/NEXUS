@@ -28,6 +28,18 @@ export interface NexusTrustRoleProjection {
   dispute_edges: AttestationEdgeProjection[];
 }
 
+export interface NexusHomeLocalityProjection {
+  claim_packet_id: string | null;
+  scope_packet_id: string | null;
+  scope_id: string | null;
+  scope_name: string | null;
+  is_active_scope: boolean;
+  is_active_scope_in_chain: boolean;
+  can_set_active_scope: boolean;
+  derived_scope_ids: string[];
+  derived_scope_names: string[];
+}
+
 export interface NexusTrustPayload {
   lens: NexusScopeLens;
   scope: NexusScopeSummary;
@@ -39,6 +51,7 @@ export interface NexusTrustPayload {
   can_post: boolean;
   can_vote: boolean;
   can_review: boolean;
+  home_locality: NexusHomeLocalityProjection;
   assembly_claims: AssemblyAssociationClaimProjection[];
   role_cards: NexusTrustRoleProjection[];
 }

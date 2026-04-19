@@ -217,28 +217,38 @@ export function IdentityPreferenceCard({
 export function LocationLookupField({
   selection,
   onChange,
+  onCreateLocality,
   error,
 }: {
   selection: IdentityLocationSelection;
   onChange: (nextSelection: IdentityLocationSelection) => void;
+  onCreateLocality?: (query: string) => void;
   error?: string;
 }) {
   const appearance = useNexusAppearance();
   const [results, setResults] = useState<NexusLocationSearchResult[]>([]);
+  const [hasCreateCandidate, setHasCreateCandidate] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
-  const normalizedQuery = selection.query.trim().toLowerCase();
+  const normalizeLookupText = (value: string) =>
+    value
+      .trim()
+      .toLowerCase()
+      .replace(/[\W_]+/g, ' ')
+      .replace(/\s+/g, ' ');
+  const normalizedQuery = normalizeLookupText(selection.query);
   const shouldShowResults =
     results.length > 0 &&
     (!selection.selectedResult ||
       normalizedQuery.length === 0 ||
-      normalizedQuery !== selection.selectedResult.name.trim().toLowerCase());
+      normalizedQuery !== normalizeLookupText(selection.selectedResult.name));
 
   useEffect(() => {
     let isMounted = true;
 
     if (selection.query.trim().length < 2) {
       setResults([]);
+      setHasCreateCandidate(false);
       setSearchError(null);
       return () => {
         isMounted = false;
@@ -254,6 +264,7 @@ export function LocationLookupField({
           }
 
           setResults(payload.results);
+          setHasCreateCandidate(Boolean(payload.create_candidate));
           setSearchError(null);
         })
         .catch((nextError) => {
@@ -262,6 +273,7 @@ export function LocationLookupField({
           }
 
           setResults([]);
+          setHasCreateCandidate(false);
           setSearchError(
             nextError instanceof Error
               ? nextError.message
@@ -283,8 +295,8 @@ export function LocationLookupField({
 
   return (
     <IdentityField
-      label="Location disclosure"
-      hint="Pick a place, then choose how much of it to reveal."
+      label="Home locality"
+      hint="Optional. Choose a community branch now, or skip this and start with Global + You. This sets your geographic scope tree, not a public profile disclosure."
       error={error ?? searchError ?? undefined}
     >
       <IdentityInput
@@ -294,7 +306,8 @@ export function LocationLookupField({
             query: nextQuery,
             selectedResult:
               selection.selectedResult &&
-              selection.selectedResult.name.toLowerCase() === nextQuery.trim().toLowerCase()
+              normalizeLookupText(selection.selectedResult.name) ===
+                normalizeLookupText(nextQuery)
                 ? selection.selectedResult
                 : null,
             selectedDisclosureIndex: null,
@@ -302,7 +315,7 @@ export function LocationLookupField({
         }
         placeholder="Search city, region, or district"
       />
-      {isSearching ? <Text className={appearance.itemMetaClass}>Searching locations…</Text> : null}
+      {isSearching ? <Text className={appearance.itemMetaClass}>Searching locations...</Text> : null}
       {shouldShowResults ? (
         <View className="gap-2">
           {results.map((result) => {
@@ -318,42 +331,44 @@ export function LocationLookupField({
                   onChange({
                     query: result.name,
                     selectedResult: result,
-                    selectedDisclosureIndex: 0,
+                    selectedDisclosureIndex: null,
                   })
                 }
               >
                 <Text className={appearance.itemTitleClass}>{result.name}</Text>
-                <Text className={appearance.itemMetaClass}>{result.path_label}</Text>
+                <Text className={appearance.itemMetaClass}>
+                  {result.level.toUpperCase()} branch - {result.path_label}
+                </Text>
+                {result.match_type === 'fuzzy' ? (
+                  <Text className={appearance.itemMetaClass}>
+                    Similar match. Confirm this is the right locality before selecting.
+                  </Text>
+                ) : null}
               </Pressable>
             );
           })}
         </View>
       ) : null}
+      {onCreateLocality && hasCreateCandidate && selection.query.trim().length >= 2 ? (
+        <NexusCard className={`gap-3 p-4 ${appearance.cardInsetClass}`}>
+          <Text className={appearance.itemTitleClass}>Not found?</Text>
+          <Text className={appearance.itemBodyClass}>
+            Create a canonical locality Element from a confirmed parent path. No third-party
+            geocoder is used in this phase.
+          </Text>
+          <View className="flex-row flex-wrap gap-3">
+            <NexusActionButton
+              label="Create locality"
+              onPress={() => onCreateLocality(selection.query)}
+            />
+          </View>
+        </NexusCard>
+      ) : null}
       {selection.selectedResult ? (
         <View className="gap-2">
-          <Text className={appearance.itemMetaClass}>Reveal location as:</Text>
-          <View className="flex-row flex-wrap gap-2">
-            {selection.selectedResult.disclosure_options.map((option, optionIndex) => (
-              <Pressable
-                key={`${selection.selectedResult?.scope_id}-${option.scope}-${option.value}`}
-                className={`rounded-full border px-3 py-2 ${
-                  selection.selectedDisclosureIndex === optionIndex
-                    ? 'border-nexus-sky bg-nexus-sky/10'
-                    : appearance.cardInsetClass
-                }`}
-                onPress={() =>
-                  onChange({
-                    ...selection,
-                    selectedDisclosureIndex: optionIndex,
-                  })
-                }
-              >
-                <Text className="text-xs font-semibold uppercase tracking-[2px] text-nexus-text">
-                  {option.label}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
+          <Text className={appearance.itemMetaClass}>
+            Selected home branch: {selection.selectedResult.path_label}
+          </Text>
         </View>
       ) : null}
     </IdentityField>

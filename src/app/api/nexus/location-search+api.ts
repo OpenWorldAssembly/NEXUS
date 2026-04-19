@@ -6,6 +6,7 @@
 import type { RequestHandler } from 'expo-router/server';
 import { z } from 'zod';
 
+import { createLocalityCanonicalNameKey } from '@runtime/nexus/location-search-normalization';
 import { searchNexusLocations } from '@runtime/nexus/server/location-search-service';
 
 const SearchLocationQuerySchema = z.object({
@@ -32,10 +33,24 @@ export const GET: RequestHandler = async (request) => {
       query: requestUrl.searchParams.get('query') ?? '',
     });
     const results = await searchNexusLocations(parsedQuery.query);
+    const canonicalQueryKey = createLocalityCanonicalNameKey(parsedQuery.query);
+    const hasExactResult = results.some(
+      (result) => result.canonical_name_key === canonicalQueryKey
+    );
 
     return createJsonResponse({
       query: parsedQuery.query,
       results,
+      create_candidate:
+        canonicalQueryKey.length >= 2 && !hasExactResult
+          ? {
+              query: parsedQuery.query,
+              canonical_name_key: canonicalQueryKey,
+              label: 'Location not found in Nexus directory. Create it?',
+              description:
+                'Nexus can create canonical locality Elements from a confirmed parent path. No third-party geocoder is used in this phase.',
+            }
+          : null,
     });
   } catch (error) {
     const message =

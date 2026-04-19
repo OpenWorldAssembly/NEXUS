@@ -17,6 +17,17 @@ export type NexusLocationSearchResult = {
   locality_label: string;
   level: 'nation' | 'region' | 'city' | 'district';
   path_label: string;
+  parent_path_label: string | null;
+  canonical_name_key: string;
+  match_type: 'exact' | 'alias' | 'fuzzy' | 'path' | 'create_candidate';
   description: string;
+  duplicate_warnings?: string[];
   disclosure_options: NexusLocationDisclosureOption[];
+};
+
+export type NexusLocationCreateCandidate = {
+  query: string;
+  canonical_name_key: string;
+  label: string;
+  description: string;
 };

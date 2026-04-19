@@ -9,6 +9,7 @@ import {
   getNexusSectionMenuTitle,
   getNexusScopeSelectionHref,
   getNexusSectionFromPathname,
+  isNexusGeographicTreeScope,
   NEXUS_SECTION_ORDER,
   resolveNexusReturnPath,
   type NexusScopeSummary,
@@ -26,6 +27,9 @@ const GLOBAL_SCOPE: NexusScopeSummary = {
   relationshipLabel: 'Root assembly scope',
   childIds: ['moreno-valley'],
   followedScopeIds: [],
+  isMounted: true,
+  isDiscoverable: true,
+  mountReasons: ['global_default'],
   publicLobbyLabel: 'Global visitor lobby',
   stats: {
     members: 0,
@@ -49,6 +53,9 @@ const LOCAL_SCOPE: NexusScopeSummary = {
   parentId: 'global-commons',
   childIds: ['you'],
   followedScopeIds: [],
+  isMounted: true,
+  isDiscoverable: true,
+  mountReasons: ['home_locality'],
   publicLobbyLabel: 'Moreno Valley visitor lobby',
   stats: {
     members: 0,
@@ -72,6 +79,9 @@ const PERSONAL_SCOPE: NexusScopeSummary = {
   parentId: 'moreno-valley',
   childIds: [],
   followedScopeIds: [],
+  isMounted: true,
+  isDiscoverable: false,
+  mountReasons: ['personal_default'],
   publicLobbyLabel: 'Personal trust lens',
   stats: {
     members: 1,
@@ -109,6 +119,46 @@ test('personal scope renders as a child leaf under the local assembly branch', (
   assert.ok(localNode);
   assert.equal(personalNode?.depth, (localNode?.depth ?? 0) + 1);
   assert.equal(personalNode?.relationship, 'personal');
+});
+
+test('mounted followed scopes still render when their parent branch is not mounted', () => {
+  const remoteScope: NexusScopeSummary = {
+    ...LOCAL_SCOPE,
+    id: 'sunnymead-ranch',
+    packetId: 'nexus:element/sunnymead-ranch',
+    name: 'Sunnymead Ranch',
+    shortLabel: 'Sunnymead',
+    level: 'district',
+    parentId: 'unmounted-parent',
+    childIds: [],
+    isMounted: true,
+    isDiscoverable: true,
+    mountReasons: ['followed'],
+  };
+  const nodes = buildNexusBranchNodes([GLOBAL_SCOPE, remoteScope], 'global-commons', [
+    'global-commons',
+    'sunnymead-ranch',
+  ]);
+  const remoteNode = nodes.find((node) => node.scopeId === 'sunnymead-ranch');
+
+  assert.ok(remoteNode);
+  assert.equal(remoteNode?.depth, 0);
+  assert.equal(remoteNode?.relationship, 'followed');
+});
+
+test('geographic tree excludes followed-only scopes but keeps followed home scopes', () => {
+  assert.equal(
+    isNexusGeographicTreeScope({
+      mountReasons: ['followed'],
+    }),
+    false
+  );
+  assert.equal(
+    isNexusGeographicTreeScope({
+      mountReasons: ['home_ancestor', 'followed'],
+    }),
+    true
+  );
 });
 
 test('scope selection routes wrapper-level account and identity pages back to trust', () => {

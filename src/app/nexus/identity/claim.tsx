@@ -5,7 +5,7 @@
 
 import type { Href } from 'expo-router';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { buildIdentityRouteHref, getIdentityReturnDestination } from '@app/components/nexus/nexus-route-utils';
@@ -25,7 +25,6 @@ import type { NexusSecurityMode } from '@runtime/nexus/nexus-api-types';
 import {
   normalizeDisplayAlias,
   validateDisplayAlias,
-  validateLocationDisclosure,
   validatePassphrase,
   validatePassphraseConfirmation,
 } from '@runtime/nexus/identity-validation';
@@ -48,6 +47,10 @@ export default function NexusIdentityClaimPage() {
   const params = useLocalSearchParams<{
     return_to?: string | string[];
     return_scope_id?: string | string[];
+    home_scope_id?: string | string[];
+    home_scope_name?: string | string[];
+    home_scope_level?: string | string[];
+    home_scope_path?: string | string[];
   }>();
   const router = useRouter();
   const appearance = useNexusAppearance();
@@ -84,6 +87,54 @@ export default function NexusIdentityClaimPage() {
     returnScopeIdParam: params.return_scope_id,
     fallback: '/nexus/identity/security?welcome=claim',
   });
+  const hasReturnTarget = returnTo !== '/nexus/identity/security?welcome=claim';
+  const returnedHomeScopeId = Array.isArray(params.home_scope_id)
+    ? params.home_scope_id[0]
+    : params.home_scope_id;
+  const returnedHomeScopeName = Array.isArray(params.home_scope_name)
+    ? params.home_scope_name[0]
+    : params.home_scope_name;
+  const returnedHomeScopeLevel = Array.isArray(params.home_scope_level)
+    ? params.home_scope_level[0]
+    : params.home_scope_level;
+  const returnedHomeScopePath = Array.isArray(params.home_scope_path)
+    ? params.home_scope_path[0]
+    : params.home_scope_path;
+
+  useEffect(() => {
+    if (!returnedHomeScopeId || !returnedHomeScopeName) {
+      return;
+    }
+
+    const level = ['nation', 'region', 'city', 'district'].includes(
+      returnedHomeScopeLevel ?? ''
+    )
+      ? (returnedHomeScopeLevel as 'nation' | 'region' | 'city' | 'district')
+      : 'district';
+
+    setLocationSelection({
+      query: returnedHomeScopeName,
+      selectedResult: {
+        scope_id: returnedHomeScopeId,
+        name: returnedHomeScopeName,
+        short_label: returnedHomeScopeName,
+        locality_label: returnedHomeScopeName,
+        level,
+        path_label: returnedHomeScopePath ?? returnedHomeScopeName,
+        parent_path_label: null,
+        canonical_name_key: returnedHomeScopeName.toLowerCase(),
+        match_type: 'exact',
+        description: `${returnedHomeScopeName} locality`,
+        disclosure_options: [],
+      },
+      selectedDisclosureIndex: null,
+    });
+  }, [
+    returnedHomeScopeId,
+    returnedHomeScopeLevel,
+    returnedHomeScopeName,
+    returnedHomeScopePath,
+  ]);
 
   const navigateAfterSuccess = () => {
     if (returnScopeId) {
@@ -94,6 +145,7 @@ export default function NexusIdentityClaimPage() {
   };
 
   const locationDisclosure = buildLocationDisclosure(locationSelection);
+  const homeScopePacketId = locationSelection.selectedResult?.scope_id ?? null;
   const aliasError =
     alias.length > 0 ? validateDisplayAlias(alias) : 'Display alias is required.';
   const passphraseError =
@@ -105,7 +157,7 @@ export default function NexusIdentityClaimPage() {
   const locationError =
     locationSelection.query.trim().length > 0 && !locationSelection.selectedResult
       ? 'Choose a canonical place from the lookup results.'
-      : validateLocationDisclosure(locationDisclosure ?? null);
+      : null;
 
   const handleClaim = async () => {
     setIsSubmitting(true);
@@ -117,6 +169,7 @@ export default function NexusIdentityClaimPage() {
         passphrase,
         keepMeLoggedIn: selectedRememberedSessions,
         locationDisclosure,
+        homeScopePacketId,
       });
       await refreshAuthSession();
 
@@ -126,6 +179,16 @@ export default function NexusIdentityClaimPage() {
 
       navigateAfterSuccess();
     } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message.toLowerCase().includes('already claimed') &&
+        hasReturnTarget
+      ) {
+        await refreshAuthSession();
+        navigateAfterSuccess();
+        return;
+      }
+
       setErrorMessage(
         error instanceof Error ? error.message : 'Unable to claim this guest identity.'
       );
@@ -138,19 +201,33 @@ export default function NexusIdentityClaimPage() {
     return (
       <IdentityPageShell
         eyebrow="Identity"
-        title="This actor is already claimed"
-        description="Claiming preserves guest continuity, but the currently selected actor is already a claimed identity."
+        title={hasReturnTarget ? 'Identity ready' : 'This actor is already claimed'}
+        description={
+          hasReturnTarget
+            ? 'This actor is already a claimed identity. You can return to the workspace that requested identity setup.'
+            : 'Claiming preserves guest continuity, but the currently selected actor is already a claimed identity.'
+        }
       >
         <NexusCard className="gap-4">
           <Text className={appearance.itemBodyClass}>
-            Open identity security to manage passkeys, sessions, and exports, or create a fresh claimed identity if you want a separate actor.
+            {hasReturnTarget
+              ? 'Your claimed identity is active for this return flow.'
+              : 'Open identity security to manage passkeys, sessions, and exports, or create a fresh claimed identity if you want a separate actor.'}
           </Text>
           <View className="flex-row flex-wrap gap-3">
-            <NexusActionButton
-              label="Open security"
-              variant="primary"
-              onPress={() => router.replace('/nexus/identity/security')}
-            />
+            {hasReturnTarget ? (
+              <NexusActionButton
+                label="Return to workspace"
+                variant="primary"
+                onPress={navigateAfterSuccess}
+              />
+            ) : (
+              <NexusActionButton
+                label="Open security"
+                variant="primary"
+                onPress={() => router.replace('/nexus/identity/security')}
+              />
+            )}
             <NexusActionButton
               label="Create fresh identity"
               onPress={() => router.push('/nexus/identity/create')}
@@ -220,6 +297,32 @@ export default function NexusIdentityClaimPage() {
         <LocationLookupField
           selection={locationSelection}
           onChange={setLocationSelection}
+          onCreateLocality={(query) => {
+            const identityReturnParams = new URLSearchParams();
+
+            if (returnTo !== '/nexus/identity/security?welcome=claim') {
+              identityReturnParams.set('return_to', returnTo);
+            }
+
+            if (returnScopeId) {
+              identityReturnParams.set('return_scope_id', returnScopeId);
+            }
+
+            const identityReturnTo = `/nexus/identity/claim${
+              identityReturnParams.toString().length > 0
+                ? `?${identityReturnParams.toString()}`
+                : ''
+            }`;
+
+            router.push({
+              pathname: '/nexus/locality/create',
+              params: {
+                query,
+                return_to: identityReturnTo,
+                ...(returnScopeId ? { return_scope_id: returnScopeId } : {}),
+              },
+            } as Href);
+          }}
           error={locationError ?? undefined}
         />
 

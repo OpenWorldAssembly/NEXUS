@@ -11,13 +11,17 @@ import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
 import {
   NEXUS_GUEST_CAPABILITIES,
 } from '@runtime/nexus/nexus-content';
-import { fetchNexusShellPayload } from '@runtime/nexus/nexus-query-api';
+import {
+  fetchNexusShellPayload,
+  setNexusScopeFollowPreference,
+} from '@runtime/nexus/nexus-query-api';
 import {
   buildNexusBranchNodes,
   getNexusScopeSelectionHref,
   getNexusAncestorIds,
   getNexusSectionFromPathname,
   getNexusSectionHref,
+  isNexusGeographicTreeScope,
   type NexusNavMode,
   type NexusScopeBranchNode,
   type NexusScopeSummary,
@@ -33,6 +37,7 @@ type NexusShellContextValue = NexusShellState & {
   currentActorPacketId: string | null;
   currentIdentityMode: 'ephemeral_guest' | 'persistent_guest' | 'claimed' | null;
   branchNodes: NexusScopeBranchNode[];
+  discoverableScopes: NexusScopeSummary[];
   followedScopes: NexusScopeSummary[];
   scopeSummaries: NexusScopeSummary[];
   isPreferencesDrawerOpen: boolean;
@@ -44,6 +49,7 @@ type NexusShellContextValue = NexusShellState & {
   setActiveScopeId: (scopeId: string) => void;
   toggleScopeExpansion: (scopeId: string) => void;
   setActiveSection: (section: NexusSection) => void;
+  setScopeFollowed: (scopeId: string, isFollowed: boolean) => Promise<void>;
   refreshShellData: () => Promise<void>;
   togglePreferencesDrawer: () => void;
   togglePrimaryRailCollapsed: () => void;
@@ -66,6 +72,9 @@ const FALLBACK_SCOPE_SUMMARY: NexusScopeSummary = {
   relationshipLabel: 'Root assembly scope',
   childIds: [],
   followedScopeIds: [],
+  isMounted: true,
+  isDiscoverable: true,
+  mountReasons: ['global_default'],
   publicLobbyLabel: 'Global visitor lobby',
   stats: {
     members: 0,
@@ -96,6 +105,9 @@ function buildPersonalScopeSummary(input: {
     parentId: input.parentScopeId ?? undefined,
     childIds: [],
     followedScopeIds: [],
+    isMounted: true,
+    isDiscoverable: false,
+    mountReasons: ['personal_default'],
     publicLobbyLabel: 'Personal trust lens',
     stats: {
       members: 1,
@@ -144,9 +156,14 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
     scopeSummaries.find((scope) => scope.id === activeScopeId) ??
     scopeSummaries[0];
   const branchNodes = buildNexusBranchNodes(
-    scopeSummaries,
+    scopeSummaries.filter(
+      (scope) => scope.isMounted && isNexusGeographicTreeScope(scope),
+    ),
     activeScope.id,
     expandedScopeIds,
+  );
+  const discoverableScopes = scopeSummaries.filter(
+    (scope) => scope.isDiscoverable && !scope.isMounted
   );
   const followedScopes = scopeSummaries.filter((scope) =>
     followedScopeIds.includes(scope.id),
@@ -193,13 +210,13 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
     setScopeSummaries(nextScopeSummaries);
     setFollowedScopeIds(shellPayload.followed_scope_ids);
     setGuestCapabilities(shellPayload.guest_capabilities);
-    setActiveScopeIdState((currentScopeId) =>
-      nextScopeSummaries.some(
-        (scopeSummary) => scopeSummary.id === currentScopeId,
-      )
-        ? currentScopeId
-        : shellPayload.default_scope_id,
-    );
+    setActiveScopeIdState((currentScopeId) => {
+      const currentScope = nextScopeSummaries.find(
+        (scopeSummary) => scopeSummary.id === currentScopeId
+      );
+
+      return currentScope?.isMounted ? currentScopeId : shellPayload.default_scope_id;
+    });
     setExpandedScopeIds((currentExpandedScopeIds) => {
       const currentScopeIds = currentExpandedScopeIds.filter((scopeId) =>
         nextScopeSummaries.some(
@@ -277,6 +294,15 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
     router.push(getNexusSectionHref(section) as Href);
   };
 
+  const setScopeFollowed = async (scopeId: string, isFollowed: boolean) => {
+    await setNexusScopeFollowPreference({
+      actorPacketId: currentActorPacketId,
+      scopeId,
+      isFollowed,
+    });
+    await refreshShellData();
+  };
+
   /**
    * Inputs: none.
    * Output: toggles the guest preference drawer open state.
@@ -346,6 +372,7 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
         currentActorPacketId,
         currentIdentityMode: currentMode,
         branchNodes,
+        discoverableScopes,
         followedScopes,
         scopeSummaries,
         isPreferencesDrawerOpen,
@@ -357,6 +384,7 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
         setActiveScopeId,
         toggleScopeExpansion,
         setActiveSection,
+        setScopeFollowed,
         refreshShellData,
         togglePreferencesDrawer,
         togglePrimaryRailCollapsed,

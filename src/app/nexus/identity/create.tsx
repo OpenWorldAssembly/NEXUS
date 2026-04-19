@@ -5,7 +5,7 @@
 
 import type { Href } from 'expo-router';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { buildIdentityRouteHref, getIdentityReturnDestination } from '@app/components/nexus/nexus-route-utils';
@@ -26,7 +26,6 @@ import {
   DISPLAY_ALIAS_MAX_LENGTH,
   normalizeDisplayAlias,
   validateDisplayAlias,
-  validateLocationDisclosure,
   validatePassphrase,
   validatePassphraseConfirmation,
 } from '@runtime/nexus/identity-validation';
@@ -35,6 +34,10 @@ export default function NexusIdentityCreatePage() {
   const params = useLocalSearchParams<{
     return_to?: string | string[];
     return_scope_id?: string | string[];
+    home_scope_id?: string | string[];
+    home_scope_name?: string | string[];
+    home_scope_level?: string | string[];
+    home_scope_path?: string | string[];
   }>();
   const router = useRouter();
   const { setActiveScopeId } = useNexusShell();
@@ -67,6 +70,53 @@ export default function NexusIdentityCreatePage() {
     returnScopeIdParam: params.return_scope_id,
     fallback: '/nexus/identity/security?welcome=create',
   });
+  const returnedHomeScopeId = Array.isArray(params.home_scope_id)
+    ? params.home_scope_id[0]
+    : params.home_scope_id;
+  const returnedHomeScopeName = Array.isArray(params.home_scope_name)
+    ? params.home_scope_name[0]
+    : params.home_scope_name;
+  const returnedHomeScopeLevel = Array.isArray(params.home_scope_level)
+    ? params.home_scope_level[0]
+    : params.home_scope_level;
+  const returnedHomeScopePath = Array.isArray(params.home_scope_path)
+    ? params.home_scope_path[0]
+    : params.home_scope_path;
+
+  useEffect(() => {
+    if (!returnedHomeScopeId || !returnedHomeScopeName) {
+      return;
+    }
+
+    const level = ['nation', 'region', 'city', 'district'].includes(
+      returnedHomeScopeLevel ?? ''
+    )
+      ? (returnedHomeScopeLevel as 'nation' | 'region' | 'city' | 'district')
+      : 'district';
+
+    setLocationSelection({
+      query: returnedHomeScopeName,
+      selectedResult: {
+        scope_id: returnedHomeScopeId,
+        name: returnedHomeScopeName,
+        short_label: returnedHomeScopeName,
+        locality_label: returnedHomeScopeName,
+        level,
+        path_label: returnedHomeScopePath ?? returnedHomeScopeName,
+        parent_path_label: null,
+        canonical_name_key: returnedHomeScopeName.toLowerCase(),
+        match_type: 'exact',
+        description: `${returnedHomeScopeName} locality`,
+        disclosure_options: [],
+      },
+      selectedDisclosureIndex: null,
+    });
+  }, [
+    returnedHomeScopeId,
+    returnedHomeScopeLevel,
+    returnedHomeScopeName,
+    returnedHomeScopePath,
+  ]);
 
   const navigateAfterSuccess = () => {
     if (returnScopeId) {
@@ -77,6 +127,7 @@ export default function NexusIdentityCreatePage() {
   };
 
   const locationDisclosure = buildLocationDisclosure(locationSelection);
+  const homeScopePacketId = locationSelection.selectedResult?.scope_id ?? null;
   const aliasError =
     alias.length > 0 ? validateDisplayAlias(alias) : 'Display alias is required.';
   const passphraseError =
@@ -88,7 +139,7 @@ export default function NexusIdentityCreatePage() {
   const locationError =
     locationSelection.query.trim().length > 0 && !locationSelection.selectedResult
       ? 'Choose a canonical place from the lookup results.'
-      : validateLocationDisclosure(locationDisclosure ?? null);
+      : null;
 
   const handleCreate = async () => {
     setIsSubmitting(true);
@@ -100,6 +151,7 @@ export default function NexusIdentityCreatePage() {
         passphrase,
         keepMeLoggedIn: selectedRememberedSessions,
         locationDisclosure,
+        homeScopePacketId,
       });
       await refreshAuthSession();
 
@@ -165,6 +217,32 @@ export default function NexusIdentityCreatePage() {
         <LocationLookupField
           selection={locationSelection}
           onChange={setLocationSelection}
+          onCreateLocality={(query) => {
+            const identityReturnParams = new URLSearchParams();
+
+            if (returnTo !== '/nexus/identity/security?welcome=create') {
+              identityReturnParams.set('return_to', returnTo);
+            }
+
+            if (returnScopeId) {
+              identityReturnParams.set('return_scope_id', returnScopeId);
+            }
+
+            const identityReturnTo = `/nexus/identity/create${
+              identityReturnParams.toString().length > 0
+                ? `?${identityReturnParams.toString()}`
+                : ''
+            }`;
+
+            router.push({
+              pathname: '/nexus/locality/create',
+              params: {
+                query,
+                return_to: identityReturnTo,
+                ...(returnScopeId ? { return_scope_id: returnScopeId } : {}),
+              },
+            } as Href);
+          }}
           error={locationError ?? undefined}
         />
 

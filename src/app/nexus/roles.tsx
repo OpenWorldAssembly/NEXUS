@@ -24,6 +24,16 @@ import {
   setNexusScopedRoleClaim,
 } from '@runtime/nexus/nexus-query-api';
 
+type RoleTabRailProps = {
+  tabs: {
+    id: string;
+    title: string;
+    detail: string;
+  }[];
+  activeId: string | null;
+  onSelect: (tabId: string) => void;
+};
+
 function formatTrustStage(stage: string): string {
   return stage.replace(/_/g, ' ');
 }
@@ -43,6 +53,40 @@ function formatEvidenceActor(
   return 'Unknown actor';
 }
 
+function RoleTabRail({ tabs, activeId, onSelect }: RoleTabRailProps) {
+  const appearance = useNexusAppearance();
+
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      className="flex-grow-0"
+    >
+      <View className="flex-row items-end gap-2">
+        {tabs.map((tab) => {
+          const isActive = tab.id === activeId;
+
+          return (
+            <Pressable
+              key={tab.id}
+              accessibilityRole="button"
+              className={`min-w-[150px] rounded-t-[20px] border px-4 py-3 ${
+                isActive
+                  ? '-mb-px border-nexus-line/70 border-b-nexus-panel bg-nexus-panel'
+                  : 'border-nexus-line/70 bg-white/5'
+              }`}
+              onPress={() => onSelect(tab.id)}
+            >
+              <Text className={appearance.itemTitleClass}>{tab.title}</Text>
+              <Text className={appearance.itemMetaClass}>{tab.detail}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </ScrollView>
+  );
+}
+
 export default function NexusRolesPage() {
   const router = useRouter();
   const pathname = usePathname();
@@ -56,6 +100,7 @@ export default function NexusRolesPage() {
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
   const [expandedEvidenceKeys, setExpandedEvidenceKeys] = useState<string[]>([]);
   const [isGuestPromptOpen, setIsGuestPromptOpen] = useState(false);
+  const [activeRolePacketId, setActiveRolePacketId] = useState<string | null>(null);
 
   const requiresClaimedSessionForRoleAction =
     currentMode !== 'claimed' || !isAuthenticated;
@@ -105,6 +150,22 @@ export default function NexusRolesPage() {
       isMounted = false;
     };
   }, [activeScope.id, currentActorPacketId]);
+
+  useEffect(() => {
+    const roleCards = rolesPayload?.role_cards ?? [];
+
+    if (roleCards.length === 0) {
+      setActiveRolePacketId(null);
+      return;
+    }
+
+    setActiveRolePacketId((currentRolePacketId) =>
+      currentRolePacketId &&
+      roleCards.some((roleCard) => roleCard.role_packet_id === currentRolePacketId)
+        ? currentRolePacketId
+        : roleCards[0].role_packet_id
+    );
+  }, [rolesPayload?.role_cards]);
 
   const refreshRolesPayload = async () => {
     setIsLoadingRoles(true);
@@ -222,6 +283,20 @@ export default function NexusRolesPage() {
         .length ?? 0,
     [rolesPayload]
   );
+  const roleCards = rolesPayload?.role_cards ?? [];
+  const activeRoleCard =
+    roleCards.find((roleCard) => roleCard.role_packet_id === activeRolePacketId) ??
+    roleCards[0] ??
+    null;
+  const roleTabs = roleCards.map((roleCard) => ({
+    id: roleCard.role_packet_id,
+    title: roleCard.title,
+    detail: roleCard.is_claimed_by_current_actor
+      ? 'claimed'
+      : `${roleCard.claimants.length} claimant${
+          roleCard.claimants.length === 1 ? '' : 's'
+        }`,
+  }));
 
   return (
     <View className="flex-1">
@@ -300,9 +375,23 @@ export default function NexusRolesPage() {
           </NexusCard>
         </View>
 
-        <View className="gap-4">
-          {(rolesPayload?.role_cards ?? []).map((roleCard) => (
-            <NexusCard key={roleCard.role_packet_id} className="gap-4">
+        {roleTabs.length > 0 ? (
+          <View className="gap-0">
+            <RoleTabRail
+              tabs={roleTabs}
+              activeId={activeRoleCard?.role_packet_id ?? null}
+              onSelect={setActiveRolePacketId}
+            />
+            {[activeRoleCard]
+              .filter(
+                (roleCard): roleCard is NonNullable<typeof activeRoleCard> =>
+                  roleCard !== null
+              )
+              .map((roleCard) => (
+            <NexusCard
+              key={roleCard.role_packet_id}
+              className="gap-4 rounded-t-none border-t-0"
+            >
               <View className="gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <View className="min-w-0 flex-1 gap-3">
                   <View className="flex-row flex-wrap items-center gap-2">
@@ -571,8 +660,15 @@ export default function NexusRolesPage() {
                 </View>
               )}
             </NexusCard>
-          ))}
-        </View>
+            ))}
+          </View>
+        ) : !isLoadingRoles ? (
+          <NexusCard>
+            <Text className={appearance.itemBodyClass}>
+              No roles are available in this scope yet.
+            </Text>
+          </NexusCard>
+        ) : null}
         </View>
       </ScrollView>
 

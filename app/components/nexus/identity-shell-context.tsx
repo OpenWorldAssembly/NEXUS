@@ -99,12 +99,14 @@ type IdentityShellContextValue = {
     alias: string;
     passphrase: string;
     locationDisclosure?: IdentityLocationDisclosure | null;
+    homeScopePacketId?: string | null;
     keepMeLoggedIn: boolean;
   }) => Promise<void>;
   claimCurrentGuest: (input: {
     alias: string;
     passphrase: string;
     locationDisclosure?: IdentityLocationDisclosure | null;
+    homeScopePacketId?: string | null;
     keepMeLoggedIn: boolean;
   }) => Promise<void>;
   signInStoredIdentity: (input: {
@@ -470,6 +472,79 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
       ...currentIdentity,
       privateJwk: currentIdentity.privateJwk,
     };
+  };
+
+  const createVerifiedRequestBodyForIdentity = async <
+    TPayload extends Record<string, unknown>,
+  >(input: {
+    identity: ActiveIdentityState & { privateJwk: JsonWebKey };
+    session: NexusAuthSessionPayload;
+    path: string;
+    method: 'POST' | 'PUT';
+    payload: TPayload;
+  }) => {
+    if (
+      !input.session.is_authenticated ||
+      input.session.actor_packet_id !== input.identity.actorPacket.header.packet_id
+    ) {
+      throw new Error('Sign in with this claimed identity before writing Nexus packets.');
+    }
+
+    if (!input.session.csrf_token) {
+      throw new Error('Refresh the claimed session before writing Nexus packets.');
+    }
+
+    const privateKey = await importPrivateKeyFromJwk(input.identity.privateJwk);
+    const actorAssertion = await createActorAssertion({
+      actorPacketId: input.identity.actorPacket.header.packet_id,
+      kid:
+        input.identity.actorPacket.body.identity?.public_key_bindings[0]?.kid ??
+        (() => {
+          throw new Error('The active identity is missing its key binding.');
+        })(),
+      privateKey,
+      method: input.method,
+      path: input.path,
+      body: {
+        actor_packet: input.identity.actorPacket,
+        csrf_token: input.session.csrf_token,
+        reauth_token: null,
+        ...input.payload,
+      },
+    });
+
+    return {
+      actor_packet: input.identity.actorPacket,
+      actor_assertion: actorAssertion,
+      csrf_token: input.session.csrf_token,
+      reauth_token: null,
+      ...input.payload,
+    };
+  };
+
+  const setInitialHomeLocality = async (input: {
+    identity: ActiveIdentityState & { privateJwk: JsonWebKey };
+    session: NexusAuthSessionPayload;
+    homeScopePacketId?: string | null;
+  }) => {
+    if (!input.homeScopePacketId) {
+      return;
+    }
+
+    const requestBody = await createVerifiedRequestBodyForIdentity({
+      identity: input.identity,
+      session: input.session,
+      path: '/api/nexus/locality/home',
+      method: 'PUT',
+      payload: {
+        home_scope_packet_id: input.homeScopePacketId,
+      },
+    });
+
+    await fetchJsonOrThrow('/api/nexus/locality/home', {
+      method: 'PUT',
+      body: requestBody,
+    });
   };
 
   useEffect(() => {
@@ -938,6 +1013,7 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
     alias: string;
     passphrase: string;
     locationDisclosure?: IdentityLocationDisclosure | null;
+    homeScopePacketId?: string | null;
     keepMeLoggedIn: boolean;
   }) => {
     if (currentIdentity && currentIdentity.claimStatus !== 'claimed') {
@@ -995,6 +1071,18 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
       keepMeLoggedIn: input.keepMeLoggedIn,
     });
 
+    await setInitialHomeLocality({
+      identity: {
+        actorPacket: record.actor_packet,
+        publicJwk: record.public_jwk,
+        privateJwk: nextIdentity.privateJwk,
+        claimStatus: 'claimed',
+        storedKind: 'claimed',
+      },
+      session: createdSession,
+      homeScopePacketId: input.homeScopePacketId ?? null,
+    });
+
     setAuthSession(createdSession);
   };
 
@@ -1002,17 +1090,18 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
     alias: string;
     passphrase: string;
     locationDisclosure?: IdentityLocationDisclosure | null;
+    homeScopePacketId?: string | null;
     keepMeLoggedIn: boolean;
   }) => {
     if (!currentIdentity) {
       throw new Error('There is no current guest identity to claim.');
     }
 
-    const privateKey = await importPrivateKeyFromJwk(
+    const currentPrivateJwk =
       currentIdentity.privateJwk ?? (() => {
         throw new Error('Unlock this guest identity before claiming it.');
-      })()
-    );
+      })();
+    const privateKey = await importPrivateKeyFromJwk(currentPrivateJwk);
     const currentBinding = currentIdentity.actorPacket.body.identity?.public_key_bindings[0];
 
     if (!currentBinding) {
@@ -1035,9 +1124,7 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
       bundle: {
         actor_packet: signedClaimedPacket,
         public_jwk: currentIdentity.publicJwk,
-        private_jwk: currentIdentity.privateJwk ?? (() => {
-          throw new Error('Unlock this guest identity before claiming it.');
-        })(),
+        private_jwk: currentPrivateJwk,
       },
     });
 
@@ -1068,7 +1155,7 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
     setCurrentIdentity({
       actorPacket: record.actor_packet,
       publicJwk: record.public_jwk,
-      privateJwk: currentIdentity.privateJwk,
+      privateJwk: currentPrivateJwk,
       claimStatus: 'claimed',
       storedKind: 'claimed',
     });
@@ -1077,6 +1164,18 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
       actorPacketId: record.actor_packet_id,
       passphrase: input.passphrase,
       keepMeLoggedIn: input.keepMeLoggedIn,
+    });
+
+    await setInitialHomeLocality({
+      identity: {
+        actorPacket: record.actor_packet,
+        publicJwk: record.public_jwk,
+        privateJwk: currentPrivateJwk,
+        claimStatus: 'claimed',
+        storedKind: 'claimed',
+      },
+      session: createdSession,
+      homeScopePacketId: input.homeScopePacketId ?? null,
     });
 
     setAuthSession(createdSession);

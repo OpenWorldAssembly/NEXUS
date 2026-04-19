@@ -198,6 +198,7 @@ Default direction:
 - locality search should become a canonical directory with controlled parent-path-based creation
 - no third-party geocoder is required for the first locality phases
 - shared assembly-key or custody work is architectural future work, not part of the early locality phases
+- packet-native follow/subscription should become its own later core packet pass; current follows remain shell preferences and should not be treated as trust, locality, or association claims
 
 Planned phase sequence:
 
@@ -210,6 +211,7 @@ Planned phase sequence:
    - keep identity create/claim working without location
    - stop using `identity.location_disclosure` as mounted-scope truth
    - improve canonical locality search and no-result handling
+   - current implementation has begun this phase by making create/claim location optional, writing selected canonical places as `home_locality`, and improving graph-backed matching; no-result create prompts and guided creation remain future work
 3. Phase 3: guided locality creation
    - controlled creation under a confirmed parent path
    - canonical uniqueness rules

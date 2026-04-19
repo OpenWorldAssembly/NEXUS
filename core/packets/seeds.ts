@@ -553,6 +553,12 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     summary:
       'A national assembly branch nested under the Global Commons assembly.',
     locality_label: 'United States',
+    locality: {
+      level: 'nation',
+      canonical_name_key: 'united states',
+      alias_keys: ['united states', 'us', 'usa'],
+      display_aliases: ['US', 'USA'],
+    },
     tags: ['assembly', 'nation'],
   });
 
@@ -566,6 +572,12 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     subtype: 'state',
     summary: 'A statewide assembly branch for California civic coordination.',
     locality_label: 'California',
+    locality: {
+      level: 'region',
+      canonical_name_key: 'california',
+      alias_keys: ['california', 'ca'],
+      display_aliases: ['CA'],
+    },
     tags: ['assembly', 'state'],
   });
 
@@ -579,6 +591,12 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     subtype: 'city',
     summary: 'A city assembly branch for Moreno Valley.',
     locality_label: 'Moreno Valley',
+    locality: {
+      level: 'city',
+      canonical_name_key: 'moreno valley',
+      alias_keys: ['moreno valley', 'moreno'],
+      display_aliases: ['Moreno'],
+    },
     tags: ['assembly', 'city'],
   });
 
@@ -593,6 +611,12 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     summary:
       'A neighborhood assembly branch nested inside Moreno Valley for local forum and governance activity.',
     locality_label: 'Sunnymead Ranch',
+    locality: {
+      level: 'district',
+      canonical_name_key: 'sunnymead ranch',
+      alias_keys: ['sunnymead ranch', 'sunnymead'],
+      display_aliases: ['Sunnymead'],
+    },
     tags: ['assembly', 'neighborhood'],
   });
 

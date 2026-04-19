@@ -38,6 +38,7 @@ function NexusLayoutContent() {
           <Stack.Screen name="roles" />
           <Stack.Screen name="library" />
           <Stack.Screen name="trust" />
+          <Stack.Screen name="locality/create" />
           <Stack.Screen name="account" />
           <Stack.Screen name="identity/sign-in" />
           <Stack.Screen name="identity/create" />

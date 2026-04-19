@@ -122,6 +122,7 @@ export interface DiscussionViewerContext {
   can_create_top_level: boolean;
   can_reply: boolean;
   can_vote: boolean;
+  write_block_reason: 'none' | 'signed_actor_required' | 'home_locality_required';
 }
 
 export interface AttestationSummary {

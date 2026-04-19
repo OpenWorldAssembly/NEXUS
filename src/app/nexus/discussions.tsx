@@ -717,7 +717,6 @@ function ReplyNode({
               <NexusActionButton
                 label={isReplyTarget ? 'Reply target' : 'Reply here'}
                 onPress={() => onReply(reply.packet.packet_id)}
-                disabled={!canReply}
               />
             </View>
 
@@ -857,6 +856,8 @@ export default function NexusDiscussionsPage() {
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
   const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null);
   const [pendingVotePacketId, setPendingVotePacketId] = useState<string | null>(null);
+  const [isCommunityClaimPromptOpen, setIsCommunityClaimPromptOpen] =
+    useState(false);
 
   const selectedForum =
     feedPayload?.forums.find((forum) => forum.id === feedPayload.selected_forum_id) ??
@@ -870,6 +871,8 @@ export default function NexusDiscussionsPage() {
   const canCreateTopLevel = selectedViewer?.can_create_top_level ?? false;
   const canReply = selectedViewer?.can_reply ?? false;
   const canVote = selectedViewer?.can_vote ?? false;
+  const communityClaimRequired =
+    selectedViewer?.write_block_reason === 'home_locality_required';
   const topLevelPostingLocked =
     Boolean(selectedViewer) && !canCreateTopLevel;
   const isFeedWorkspace = requestedWorkspaceView === 'feed';
@@ -1322,11 +1325,92 @@ export default function NexusDiscussionsPage() {
     ]
   );
 
+  const openCommunityClaimPrompt = useCallback(() => {
+    setSubmitError(null);
+    setReplyError(null);
+    setIsCommunityClaimPromptOpen(true);
+  }, []);
+
+  const getCurrentDiscussionReturnHref = useCallback(
+    () =>
+      String(
+        getDiscussionHref({
+          forumId: activeForumId,
+          sort: selectedFeedSort,
+          view: requestedWorkspaceView,
+          postId: requestedPostId,
+          replyTargetId: requestedReplyTargetId,
+          replySort: selectedReplySort,
+          showHidden: requestedShowHidden,
+        })
+      ),
+    [
+      activeForumId,
+      requestedPostId,
+      requestedReplyTargetId,
+      requestedShowHidden,
+      requestedWorkspaceView,
+      selectedFeedSort,
+      selectedReplySort,
+    ]
+  );
+
+  const handleClaimCommunity = useCallback(() => {
+    setIsCommunityClaimPromptOpen(false);
+    router.push({
+      pathname: '/nexus/trust',
+      params: {
+        return_to: getCurrentDiscussionReturnHref(),
+        return_scope_id: activeScope.id,
+      },
+    } as Href);
+  }, [activeScope.id, getCurrentDiscussionReturnHref, router]);
+
+  const handleOpenPostWorkspace = useCallback(() => {
+    if (communityClaimRequired) {
+      openCommunityClaimPrompt();
+      return;
+    }
+
+    router.replace(
+      getDiscussionHref({
+        forumId: activeForumId,
+        sort: selectedFeedSort,
+        view: 'post',
+        showHidden: requestedShowHidden,
+      })
+    );
+  }, [
+    activeForumId,
+    communityClaimRequired,
+    openCommunityClaimPrompt,
+    requestedShowHidden,
+    router,
+    selectedFeedSort,
+  ]);
+
+  const handleStartReply = useCallback(
+    (rootPostId: string, replyTargetId: string) => {
+      if (communityClaimRequired) {
+        openCommunityClaimPrompt();
+        return;
+      }
+
+      openThreadWorkspace(rootPostId, replyTargetId);
+    },
+    [communityClaimRequired, openCommunityClaimPrompt, openThreadWorkspace]
+  );
+
   /**
    * Inputs: none.
    * Output: writes a new top-level post and opens it in the thread workspace.
    */
   const handleCreatePost = useCallback(async () => {
+    if (communityClaimRequired) {
+      openCommunityClaimPrompt();
+      return;
+    }
+
     if (!selectedForum || !currentIdentity) {
       return;
     }
@@ -1392,11 +1476,13 @@ export default function NexusDiscussionsPage() {
     }
   }, [
     activeScope.id,
+    communityClaimRequired,
     createVerifiedRequestBody,
     currentIdentity,
     draftBody,
     draftTitle,
     loadFeed,
+    openCommunityClaimPrompt,
     requestedShowHidden,
     router,
     selectedFeedSort,
@@ -1411,6 +1497,11 @@ export default function NexusDiscussionsPage() {
    * Output: writes a nested reply and refreshes the visible thread state.
    */
   const handleCreateReply = useCallback(async () => {
+    if (communityClaimRequired) {
+      openCommunityClaimPrompt();
+      return;
+    }
+
     if (!requestedReplyTargetId || !threadPayload || !currentIdentity) {
       return;
     }
@@ -1493,11 +1584,13 @@ export default function NexusDiscussionsPage() {
   }, [
     activeForumId,
     activeScope.id,
+    communityClaimRequired,
     createVerifiedRequestBody,
     currentIdentity,
     loadFeed,
     loadReplyChildren,
     loadThread,
+    openCommunityClaimPrompt,
     replyBranchStates,
     replyBody,
     rootReplies,
@@ -1645,8 +1738,9 @@ export default function NexusDiscussionsPage() {
   );
 
   return (
-    <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-      <View className={appearance.pageContainerClass}>
+    <View className="flex-1">
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        <View className={appearance.pageContainerClass}>
         <View className="mx-auto w-full max-w-[1500px] gap-5">
           <NexusSectionHeader
             eyebrow="Discussions"
@@ -1771,16 +1865,7 @@ export default function NexusDiscussionsPage() {
                           <View className="flex-row flex-wrap items-center gap-3">
                             <NexusActionButton
                               label="New post"
-                              onPress={() => {
-                                router.replace(
-                                  getDiscussionHref({
-                                    forumId: activeForumId,
-                                    sort: selectedFeedSort,
-                                    view: 'post',
-                                    showHidden: requestedShowHidden,
-                                  })
-                                );
-                              }}
+                              onPress={handleOpenPostWorkspace}
                             />
                           </View>
                         </View>
@@ -1878,16 +1963,7 @@ export default function NexusDiscussionsPage() {
 
                             <NexusActionButton
                               label="New post"
-                              onPress={() => {
-                                router.replace(
-                                  getDiscussionHref({
-                                    forumId: activeForumId,
-                                    sort: selectedFeedSort,
-                                    view: 'post',
-                                    showHidden: requestedShowHidden,
-                                  })
-                                );
-                              }}
+                              onPress={handleOpenPostWorkspace}
                             />
                           </View>
                         </ScrollView>
@@ -1939,12 +2015,12 @@ export default function NexusDiscussionsPage() {
                                     return;
                                   }
 
-                                  openThreadWorkspace(
+                                  handleStartReply(
                                     threadPayload.root_post.packet.packet_id,
                                     threadPayload.root_post.packet.packet_id
                                   );
                                 }}
-                                disabled={!threadPayload || !canReply}
+                                disabled={!threadPayload}
                               />
                             </View>
                           </View>
@@ -2090,12 +2166,11 @@ export default function NexusDiscussionsPage() {
                                         : 'Reply to OP'
                                     }
                                     onPress={() =>
-                                      openThreadWorkspace(
+                                      handleStartReply(
                                         threadPayload.root_post.packet.packet_id,
                                         threadPayload.root_post.packet.packet_id
                                       )
                                     }
-                                    disabled={!canReply}
                                   />
                                 </View>
 
@@ -2111,8 +2186,7 @@ export default function NexusDiscussionsPage() {
                                     error={replyError}
                                     disabled={
                                       !replyBody.trim() ||
-                                      isSubmittingReply ||
-                                      !canReply
+                                      isSubmittingReply
                                     }
                                     isSubmitting={isSubmittingReply}
                                     onChangeText={setReplyBody}
@@ -2169,7 +2243,7 @@ export default function NexusDiscussionsPage() {
                                       handleLoadMoreReplyChildren
                                     }
                                     onReply={(postId) =>
-                                      openThreadWorkspace(
+                                      handleStartReply(
                                         threadPayload.root_post.packet.packet_id,
                                         postId
                                       )
@@ -2201,12 +2275,11 @@ export default function NexusDiscussionsPage() {
                                 <NexusActionButton
                                   label="New reply"
                                   onPress={() => {
-                                    openThreadWorkspace(
+                                    handleStartReply(
                                       threadPayload.root_post.packet.packet_id,
                                       threadPayload.root_post.packet.packet_id
                                     );
                                   }}
-                                  disabled={!canReply}
                                 />
                                 {rootRepliesHasMore ? (
                                   <NexusActionButton
@@ -2251,8 +2324,8 @@ export default function NexusDiscussionsPage() {
                             <Text className={appearance.itemBodyClass}>
                               Top-level posting is not open to this actor in
                               the current forum. Visitor lobbies accept any
-                              signed actor, while the other forums currently
-                              require an active assembly membership attestation.
+                              signed actor, while the other forums require this
+                              scope to be part of your claimed home-locality branch.
                             </Text>
                           </NexusCard>
                         ) : null}
@@ -2295,7 +2368,8 @@ export default function NexusDiscussionsPage() {
                             }}
                             disabled={
                               isSubmittingPost ||
-                              Boolean(topLevelPostingLocked) ||
+                              (Boolean(topLevelPostingLocked) &&
+                                !communityClaimRequired) ||
                               !draftTitle.trim() ||
                               !draftBody.trim()
                             }
@@ -2316,7 +2390,40 @@ export default function NexusDiscussionsPage() {
             </NexusCard>
           )}
         </View>
-      </View>
-    </ScrollView>
+        </View>
+      </ScrollView>
+
+      {isCommunityClaimPromptOpen ? (
+        <View className="absolute inset-0 items-center justify-center bg-black/55 px-5">
+          <Pressable
+            accessibilityRole="button"
+            className="absolute inset-0"
+            onPress={() => setIsCommunityClaimPromptOpen(false)}
+          />
+          <NexusCard tone="gold" className="z-10 w-full max-w-[560px] gap-4">
+            <Text className={appearance.surfaceTitleClass}>
+              Community claim required
+            </Text>
+            <Text className={appearance.itemBodyClass}>
+              This discussion forum is for people whose claimed home-locality
+              branch includes this community. You can visit and read here, but
+              posting belongs to the local community context.
+            </Text>
+            <View className="flex-row flex-wrap gap-3">
+              <NexusActionButton
+                label="Claim community"
+                variant="primary"
+                onPress={handleClaimCommunity}
+              />
+              <NexusActionButton
+                label="Go back"
+                variant="secondary"
+                onPress={() => setIsCommunityClaimPromptOpen(false)}
+              />
+            </View>
+          </NexusCard>
+        </View>
+      ) : null}
+    </View>
   );
 }

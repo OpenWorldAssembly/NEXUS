@@ -25,6 +25,7 @@ Implemented scope today:
 - a shared public shell with persistent `Header` and `Footer`
 - redesigned public landing, about, and charter destination pages using NativeWind styling
 - Nexus-shell cryptographic identity entry pages for sign-in, sign-up, guest claim, identity restore, and identity security
+- a Nexus-shell locality creation page for controlled canonical geographic assembly creation
 - a dedicated nexus layout for `/nexus/*`
 - nexus routes for `Dashboard`, `Discussions`, `Votes`, `Roles`, `Trust`, and `Library`
 - a hidden wrapper-level `/nexus/account` route for identity custody and local assembly continuity, reached from the profile area rather than the primary function navigation
@@ -192,7 +193,7 @@ Status:
 - local workspace state on `/nexus/discussions` is route-driven through `view` (`feed | thread | post`), `post`, `replyTo`, `sort`, `replySort`, and `showHidden` query parameters
 - discussion tabs now project one `DiscussionForum` per forum kind and prefer authority forums from the active scope over inherited ancestor forums, which prevents duplicate visitor-lobby tabs
 - read-only forum tab labels are scope-aware (for example `Sunnymead Ranch general`) even when the backing forum packet is inherited from an ancestor scope
-- discussion writers now act through cryptographic person elements, including memory-only temporary guests, session-only temporary guests, saved guests, and claimed identities; top-level posting is no longer point-gated, visitor lobbies accept any signed actor, non-lobby forums require an active `Claim(kind: "assembly_association")`, and the same universal `Attestation(kind: "packet_signal")` model powers `+1/-1` controls on root posts and replies
+- discussion writers now act through cryptographic person elements, including memory-only temporary guests, session-only temporary guests, saved guests, and claimed identities; top-level posting is no longer point-gated, visitor lobbies accept any signed actor, non-lobby forums require the active scope to be inside the actor's active home-locality branch, and the same universal `Attestation(kind: "packet_signal")` model powers `+1/-1` controls on root posts and replies
 - discussion writes and attestation writes now require a signed actor assertion plus the actor packet, and the active repo no longer uses the legacy visitor-lobby or anonymous-session discussion bridge
 - discussion controls are not disabled purely because a claimed local bundle is locked; signing readiness is enforced by the deeper verified-write layer, while the route surfaces an unlock reminder banner
 - feed sorting controls now live inside the `Feed` workspace, reply sorting controls live inside the `Thread` workspace, and `New post` actions are available from both the feed and thread workspaces
@@ -202,6 +203,7 @@ Status:
 - top-level thread creation is written through `/api/nexus/scopes/[scopeId]/discussions/posts` using signed `thread_packet + post_packet`, reply creation is written through `/api/nexus/scopes/[scopeId]/discussions/replies` using `parent_post_packet_id + signed reply_packet`, and discussion reactions are written through `/api/nexus/packets/vote` using a signed attestation packet
 - seeded visitor-lobby starter posts exist across the initial scope tree so signed guests can test full thread, reply, and vote behavior immediately
 - the current discussions cleanup intentionally preserves the existing forum-shell layout and styling; this pass changes wiring, auth truthfulness, and copy rather than redesigning the page
+- membership-required discussion actions outside the actor's home-locality branch open a local `Community claim required` modal with `Claim community` and `Go back`, rather than attempting the write and surfacing raw backend errors
 - packet mechanics stay outside the screen layer: canonical writes, preferred-revision updates, vote tally refresh, reply-tree construction, and future bundle import/export or merge behavior remain on the packet-store plus server-service boundary, while the route screen consumes API projections
 - the thread detail surface now visually distinguishes the root `Original post` from the reply tree so nested replies read as derivative discussion
 - replies at depth `0-4` render expanded by default, while depth `5+` branches default to collapsed `Continue thread` affordances until the user expands them
@@ -269,6 +271,10 @@ Status:
 - trust data loads from `/api/nexus/scopes/[scopeId]/trust`
 - works with normal assembly scopes and the special `you` personal scope lens
 - shows threshold-based trust posture rather than a hidden numeric score
+- keeps primary trust metrics first, then groups home-locality, follow/unfollow, and assembly-association controls in a compact `Scope relationship` section
+- shows the active home anchor, derived parent branch, active-scope membership state, and set/clear actions for eligible geographic scopes without making home locality the dominant top card on every Trust page
+- links to `/nexus/locality/create` for find-or-create home-locality changes while preserving the active scope return path
+- uses shell follow preferences for current follow/unfollow controls; packet-native follows remain future work
 - keeps role information actor-centric and summary-oriented; role claim/unclaim and scoped role review now live on the dedicated `Roles` route
 
 ### `/nexus/roles`
@@ -291,6 +297,7 @@ Status:
 - dispute attestations require a comment; support comments remain optional
 - exact-scope role claims are always returned as visible claimants for that scope, even when broader association posture is still weak
 - claim, unclaim, support, dispute, and clear actions immediately re-fetch the roles payload so claimant rows, counts, and button state update without a manual page refresh
+- role cards now render one active role at a time behind a tab rail, so additional role definitions do not stack every claimant/evidence list into one long page
 - the modal sign-in path preserves `return_to` and `return_scope_id` so successful auth returns to the same workspace and scope lens
 - claimant cards currently expose both role-specific trust stage and broader scope trust or association posture
 - evidence is currently inspected inline on the roles route rather than through a separate attestation browser
@@ -352,10 +359,12 @@ Status:
 
 - packet-backed
 - creates a new claimed `Element(kind: "person")` with a client-generated `P-256` keypair
-- validates a mutable display alias, bundle passphrase, and optional canonical location disclosure before creation
+- validates a mutable display alias, bundle passphrase, and optional canonical home-locality selection before creation
 - separates passphrase copy from passkey copy
 - includes starting claimed-session preferences for remembered sign-in and write approval, with the same options still editable later from the sidebar drawer and identity security route
-- the claim/create location picker now reduces the selected disclosure to packet-safe `scope + value` before identity packets are written
+- the create location picker is optional; skipping it leaves the new identity on the `Global + You` baseline
+- selecting a canonical geographic scope in the create flow writes one active `Claim(kind: "home_locality")` after the claimed session is active, while profile `location_disclosure` remains unset unless a future explicit disclosure preference opts into it
+- location search can hand off to `/nexus/locality/create` when no exact directory match exists; returned localities preselect in the create form
 - once a canonical place is selected in the create flow, the location result list collapses until the query changes again
 - successful creation routes into identity security, where Nexus reminds the user to export the encrypted bundle and store it safely
 
@@ -374,9 +383,29 @@ Status:
 - claim writes send the current guest packet plus the claimed revision so the packet store preserves the revision chain instead of receiving an orphaned later revision
 - treats alias as a mutable display alias rather than a permanent username
 - includes starting claimed-session preferences for remembered sign-in and write approval, with the same options still editable later from the sidebar drawer and identity security route
-- uses the same canonical location picker and packet-safe disclosure shaping as the create flow
+- uses the same optional canonical home-locality picker as the create flow; skipping it preserves the `Global + You` baseline
+- selecting a canonical geographic scope in the claim flow writes one active `Claim(kind: "home_locality")` after the claimed session is active, while profile `location_disclosure` remains separate optional metadata
+- location search can hand off to `/nexus/locality/create` when no exact directory match exists; returned localities preselect in the claim form
 - once a canonical place is selected in the claim flow, the location result list collapses until the query changes again
 - successful claim routes into identity security, where Nexus reminds the user to export the encrypted bundle and store it safely
+
+### `/nexus/locality/create`
+
+Screen component: `NexusLocalityCreatePage`
+
+Role:
+
+- shared locality directory and creation journey for identity entry, Trust home-locality changes, and future map/browser links
+
+Status:
+
+- packet-backed
+- searches existing geographic assembly Elements through `/api/nexus/location-search`
+- creates missing geographic locality assemblies through `POST /api/nexus/locality`
+- creates only `Element(kind: "assembly")` packets for `nation`, `region`, `city`, and `district` levels
+- requires a claimed identity before minting public locality Elements
+- uses a full broad-to-narrow path review; exact duplicates reuse existing localities, alias collisions prefer existing localities with a warning, and fuzzy duplicates warn before explicit create-anyway override
+- does not use a third-party geocoder, device location, translated locality authority, duplicate merge tooling, or locality verification rollups yet
 
 ### `/nexus/identity/restore`
 
@@ -557,7 +586,7 @@ Implemented flow:
 4. guest can switch between `Feed`, `Thread`, and `Post` workspaces without leaving the route
 5. guest can open a root post by pressing its feed card, the `Thread` workspace auto-opens the current top feed item when no explicit post is selected, and the guest can reply to any post in that tree through an inline composer attached to the selected reply target while voting `+1/-1` on visible discussion posts when the thread participation rules allow it
 6. feed sorting happens inside the `Feed` workspace, reply sorting happens inside the `Thread` workspace, and the feed/thread workspaces both provide direct navigation into the `Post` workspace for new top-level posts
-7. top-level posts are allowed whenever the active actor satisfies the forum participation rule: any signed actor in `visitor_lobby`, or an actor with an active `Claim(kind: "assembly_association")` in the other forums
+7. top-level posts are allowed whenever the active actor satisfies the forum participation rule: any signed actor in `visitor_lobby`, or an active scope that sits inside the actor's active home-locality branch for the other forums
 8. top-level feeds and reply branches are loaded incrementally through cursor-based API pages rather than returning the entire forum or thread tree in one payload
 9. discussion writes are sent to the local API routes, written into the local SQLite packet store as canonical `DiscussionThread + DiscussionPost`, `DiscussionReply`, or `Attestation` packets, and then re-projected back into the feed/detail UI
 10. discussion writes derive actor ownership from the verified actor packet, store `provenance.created_by` as that person element, and do not depend on the removed anonymous-session visitor-lobby bridge
@@ -589,6 +618,7 @@ Status:
 - trust stages are explicit and threshold-based: `self_claimed`, `emerging`, `recognized`, `role_eligible`
 - trust is scope-local and policy-aware
 - assembly association is now written from the `Trust` surface through `Claim(kind: "assembly_association")`
+- assembly association records relationship, participation, or trust evidence with an assembly; it does not grant locality posting or voting rights by itself
 - role support/dispute currently uses claim-targeted `Attestation(kind: "claim_support" | "claim_dispute")`
 - trust-weighted ranking and broader moderation effects remain deferred
 
@@ -599,11 +629,12 @@ Implemented flow:
 1. user opens `/nexus/roles`
 2. the app resolves the active scope, including `you` when selected
 3. the route loads scope-relevant role cards and claimant lists from `/api/nexus/scopes/[scopeId]/roles`
-4. the current actor can claim or unclaim a role from that surface
-5. guests pressing protected role actions see a local sign-in-required modal with `Sign in` and `Go back` instead of attempting the write
-6. the current actor can support, dispute, or clear a claimant's role standing, with disputes requiring a comment
-7. successful role actions immediately re-fetch the scoped roles payload so the claimant list, counts, and claim/unclaim button state stay in sync
-8. role evidence can be expanded inline to inspect who has supported or disputed a claimant in that scope
+4. the role catalog renders as tabs, with one active role's claimant and evidence panel visible at a time
+5. the current actor can claim or unclaim a role from that surface
+6. guests pressing protected role actions see a local sign-in-required modal with `Sign in` and `Go back` instead of attempting the write
+7. the current actor can support, dispute, or clear a claimant's role standing, with disputes requiring a comment
+8. successful role actions immediately re-fetch the scoped roles payload so the claimant list, counts, and claim/unclaim button state stay in sync
+9. role evidence can be expanded inline to inspect who has supported or disputed a claimant in that scope
 
 Status:
 
@@ -843,14 +874,25 @@ These notes describe current known weaknesses or mismatches in the implemented r
 
 ### Location and assembly association
 
-- Location selection currently behaves more like identity metadata and discovery input than like a full locality or home-scope system.
-- Location does not yet fully drive dynamic scope mounting, assembly membership defaults, or a complete locality-claim workflow.
-- Assembly creation and assembly-association flows exist, but they remain rough and lightly tested.
+- `Claim(kind: "home_locality")` now exists as the packet-backed source of mounted geographic scope ancestry.
+- Identity `location_disclosure` remains optional profile/disclosure metadata and is no longer treated as mounted-scope truth.
+- Identity create/claim now treats the location picker as optional home-locality setup: no selection succeeds with `Global + You`, while a selected canonical geographic scope writes the home-locality claim after claimed-session activation.
+- Graph-backed location search normalizes case, punctuation, spacing, hyphens, and simple local aliases so seeded localities such as `Sunnymead Ranch` resolve more reliably; legacy `neighborhood` assembly subtypes are projected as district-level localities for home-locality search.
+- Geographic assembly Elements may now carry optional `body.locality` metadata with `level`, `canonical_name_key`, `alias_keys`, and `display_aliases`; legacy `subtype` and `locality_label` remain readable compatibility fields.
+- Location search now returns canonical match metadata, parent path labels, match type, and create-candidate guidance when no exact result exists.
+- Controlled locality creation can create one or more missing broad-to-narrow geographic assembly Elements under a confirmed path; exact duplicate `(parent, level, canonical_name_key)` entries reuse existing packets, while fuzzy similar matches warn before override.
+- Home locality currently supports one active deepest geographic claim per actor, with ancestors inferred into the mounted scope tree.
+- Generic assembly creation and assembly-association flows exist separately; the new locality creation path is geographic-only and does not create abstract/custom subassemblies yet.
+- `assembly_association` remains distinct from `home_locality` and does not mount scopes yet.
 
 ### Scope tree and account routing
 
-- The shell still exposes the full seeded testing assembly tree more broadly than the intended long-term model.
-- The intended distinction between automatic scopes, attached scopes, followed scopes, and discoverable scopes is not yet implemented as a first-class shell model.
+- The main scope tree now renders the actor's geographic home branch only.
+- The mounted baseline is `Global + You`, with the current home-locality ancestor chain added when present.
+- Followed scopes are now real opt-in shell preferences rather than hardcoded seeded defaults, and they mount only the chosen scope.
+- Followed-only scopes remain in the followed list instead of appearing in the main geographic tree; a followed scope can appear in both places only when it is also part of the home-locality branch.
+- Known but unmounted scopes now appear separately as lightweight explore/follow options beneath the scope map rather than being mixed directly into the mounted tree.
+- The sidebar explore and followed lists are deduped against the mounted tree and capped at ten visible items each; larger discovery belongs in the future Nexus map/packet viewer rather than the sidebar.
 - Scope-menu actions now navigate visibly back to `Trust` when the user changes scope from wrapper-level account or identity pages instead of only mutating background shell state.
 - Wrapper-level account and identity routes now resolve as hidden custody surfaces rather than masquerading as one of the main function workspaces in the visible shell state.
 
@@ -876,8 +918,8 @@ These notes describe current known weaknesses or mismatches in the implemented r
 The following areas should still be treated as provisional:
 
 - guest posting behavior beyond the current packet-backed discussion rules and temporary point grant
-- location disclosure remaining optional, claim/create succeeding without a location, and canonical locality lookup issues such as missing `Sunnymead Ranch` results are intentionally deferred into the dedicated location pass rather than partially fixed in unrelated stabilization passes
-- the exact final ontology for assemblies, scopes, overlays, and future claim kinds beyond `role_association` / `assembly_association`
+- home locality now drives mounted geographic ancestry, but canonical locality search quality, optional disclosure cleanup inside identity flows, guided locality creation, and locality verification rollups remain deferred into the later location phases
+- the exact final ontology for assemblies, scopes, overlays, and future claim kinds beyond `role_association` / `assembly_association` / `home_locality`
 - deeper trust weighting, moderation consequences, and non-default policy engines
 - vote execution, delegation, and propagation semantics
 - packet actions that currently appear as disabled placeholders
