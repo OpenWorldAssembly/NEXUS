@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, Text, TextInput, View } from 'react-native';
 
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
+import { useNexusAuthGate } from '@app/components/nexus/nexus-auth-gate';
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import {
   NexusActionButton,
@@ -45,6 +46,11 @@ export default function NexusTrustPage() {
   } = useNexusShell();
   const { createVerifiedRequestBody, currentMode, isAuthenticated } =
     useIdentityShell();
+  const { authGateModal, guardNexusWrite, openNexusAuthGateForError } =
+    useNexusAuthGate({
+      returnTo: '/nexus/trust',
+      returnScopeId: activeScope.id,
+    });
   const [trustPayload, setTrustPayload] = useState<NexusTrustPayload | null>(null);
   const [isLoadingTrust, setIsLoadingTrust] = useState(true);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -125,75 +131,94 @@ export default function NexusTrustPage() {
       return;
     }
 
-    try {
-      const requestBody = await createVerifiedRequestBody(
-        '/api/nexus/assemblies/claims',
-        'PUT',
-        {
-          assembly_packet_id: activeScope.packetId,
-          scope_id: activeScope.id,
-          note: value === 1 && associationNote.trim().length > 0 ? associationNote : null,
-          value,
-        }
-      );
+    await guardNexusWrite(
+      {
+        requiresClaimedIdentity: true,
+        writeRisk: 'standard',
+      },
+      async () => {
+        try {
+          const requestBody = await createVerifiedRequestBody(
+            '/api/nexus/assemblies/claims',
+            'PUT',
+            {
+              assembly_packet_id: activeScope.packetId,
+              scope_id: activeScope.id,
+              note: value === 1 && associationNote.trim().length > 0 ? associationNote : null,
+              value,
+            }
+          );
 
-      await setNexusAssemblyAssociationClaim({ requestBody });
-      const nextTrustPayload = await fetchNexusTrustPayload({
-        scopeId: activeScope.id,
-        actorPacketId: currentActorPacketId,
-      });
-      setTrustPayload(nextTrustPayload);
-      setStatusMessage(
-        value === 1
-          ? `Claimed association with ${activeScope.name}.`
-          : `Withdrew association with ${activeScope.name}.`
-      );
-      setErrorMessage(null);
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : 'Unable to update the assembly association.'
-      );
-      setStatusMessage(null);
-    }
+          await setNexusAssemblyAssociationClaim({ requestBody });
+          const nextTrustPayload = await fetchNexusTrustPayload({
+            scopeId: activeScope.id,
+            actorPacketId: currentActorPacketId,
+          });
+          setTrustPayload(nextTrustPayload);
+          setStatusMessage(
+            value === 1
+              ? `Claimed association with ${activeScope.name}.`
+              : `Withdrew association with ${activeScope.name}.`
+          );
+          setErrorMessage(null);
+        } catch (error) {
+          if (openNexusAuthGateForError(error)) {
+            return;
+          }
+
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : 'Unable to update the assembly association.'
+          );
+          setStatusMessage(null);
+        }
+      }
+    );
   };
 
   const handleHomeLocalityChange = async (homeScopePacketId: string | null) => {
-    if (!isClaimedIdentity) {
-      router.push('/nexus/identity/sign-in' as Href);
-      return;
-    }
+    await guardNexusWrite(
+      {
+        requiresClaimedIdentity: true,
+        writeRisk: 'standard',
+      },
+      async () => {
+        try {
+          const requestBody = await createVerifiedRequestBody(
+            '/api/nexus/locality/home',
+            'PUT',
+            {
+              home_scope_packet_id: homeScopePacketId,
+            }
+          );
 
-    try {
-      const requestBody = await createVerifiedRequestBody(
-        '/api/nexus/locality/home',
-        'PUT',
-        {
-          home_scope_packet_id: homeScopePacketId,
+          await setNexusHomeLocality({ requestBody });
+          await Promise.all([
+            fetchNexusTrustPayload({
+              scopeId: activeScope.id,
+              actorPacketId: currentActorPacketId,
+            }).then((nextTrustPayload) => setTrustPayload(nextTrustPayload)),
+            refreshShellData(),
+          ]);
+          setStatusMessage(
+            homeScopePacketId
+              ? `${activeScope.name} is now your home locality.`
+              : 'Home locality cleared.'
+          );
+          setErrorMessage(null);
+        } catch (error) {
+          if (openNexusAuthGateForError(error)) {
+            return;
+          }
+
+          setErrorMessage(
+            error instanceof Error ? error.message : 'Unable to update home locality.'
+          );
+          setStatusMessage(null);
         }
-      );
-
-      await setNexusHomeLocality({ requestBody });
-      await Promise.all([
-        fetchNexusTrustPayload({
-          scopeId: activeScope.id,
-          actorPacketId: currentActorPacketId,
-        }).then((nextTrustPayload) => setTrustPayload(nextTrustPayload)),
-        refreshShellData(),
-      ]);
-      setStatusMessage(
-        homeScopePacketId
-          ? `${activeScope.name} is now your home locality.`
-          : 'Home locality cleared.'
-      );
-      setErrorMessage(null);
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : 'Unable to update home locality.'
-      );
-      setStatusMessage(null);
-    }
+      }
+    );
   };
 
   const handleFollowPreference = async (isFollowed: boolean) => {
@@ -220,8 +245,9 @@ export default function NexusTrustPage() {
   };
 
   return (
-    <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-      <View className={appearance.pageContainerClass}>
+    <View className="flex-1">
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        <View className={appearance.pageContainerClass}>
         <NexusSectionHeader
           eyebrow="Trust"
           title={`${activeScope.name} Trust`}
@@ -588,7 +614,9 @@ export default function NexusTrustPage() {
             </NexusCard>
           </View>
         </View>
-      </View>
-    </ScrollView>
+        </View>
+      </ScrollView>
+      {authGateModal}
+    </View>
   );
 }

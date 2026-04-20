@@ -192,10 +192,10 @@ Status:
 - direct child replies for any post are loaded from `/api/nexus/scopes/[scopeId]/discussions/replies` with `thread_post_packet_id`, `parent_post_packet_id`, and optional `reply_sort`, `show_hidden`, `viewer_actor_packet_id`, `cursor`, and `limit` query parameters
 - local workspace state on `/nexus/discussions` is route-driven through `view` (`feed | thread | post`), `post`, `replyTo`, `sort`, `replySort`, and `showHidden` query parameters
 - discussion tabs and top-level feeds now project only `DiscussionSpace` and `DiscussionForum` packets whose native authority scope is the active scope; ancestor forum inheritance is intentionally disabled so newly created localities start with local clean-slate forums instead of parent threads
-- scopes with no local discussion forums show an explicit empty state rather than a persistent loading message
+- scopes with no local discussion forums show an explicit empty state rather than a persistent loading message, and eligible home-branch geographic scopes can backfill the empty OWA discussion bundle through a signed `PUT /api/nexus/scopes/[scopeId]/discussions/surfaces` action
 - discussion writers now act through cryptographic person elements, including memory-only temporary guests, session-only temporary guests, saved guests, and claimed identities; top-level posting is no longer point-gated, visitor lobbies accept any signed actor, non-lobby forums require the active scope to be inside the actor's active home-locality branch, and the same universal `Attestation(kind: "packet_signal")` model powers `+1/-1` controls on root posts and replies
 - discussion writes and attestation writes now require a signed actor assertion plus the actor packet, and the active repo no longer uses the legacy visitor-lobby or anonymous-session discussion bridge
-- discussion controls are not disabled purely because a claimed local bundle is locked; signing readiness is enforced by the deeper verified-write layer, while the route surfaces an unlock reminder banner
+- discussion controls are not disabled purely because a claimed local bundle is locked; signing readiness is enforced by the shared verified-write layer, while the route surfaces the shared auth-gate modal for sign-in, unlock, write approval, or community-claim guidance
 - feed sorting controls now live inside the `Feed` workspace, reply sorting controls live inside the `Thread` workspace, and `New post` actions are available from both the feed and thread workspaces
 - feed and reply sort options now render as single segmented pills with the active sort highlighted; the visible options are currently `new`, `top`, `controversial`, and `old`, and both workspaces default to `new` sorting when no explicit query override is present
 - feed cards themselves now act as the primary thread-open affordance, while the inline action row on feed cards is limited to vote, descendant-total reply count, and moderation state
@@ -293,7 +293,7 @@ Status:
 - roles data loads from `/api/nexus/scopes/[scopeId]/roles`
 - role claim and unclaim write through `/api/nexus/scopes/[scopeId]/roles/claims`
 - role support, dispute, and clear actions write through `/api/nexus/scopes/[scopeId]/roles/attestations` targeting the relevant claim packet
-- guests can see protected role actions, but pressing them opens a local sign-in-required modal instead of attempting the write or surfacing raw backend identity errors
+- guests can see protected role actions, but pressing them opens the shared sign-in-required auth-gate modal instead of attempting the write or surfacing raw backend identity errors
 - dispute attestations require a comment; support comments remain optional
 - exact-scope role claims are always returned as visible claimants for that scope, even when broader association posture is still weak
 - claim, unclaim, support, dispute, and clear actions immediately re-fetch the roles payload so claimant rows, counts, and button state update without a manual page refresh

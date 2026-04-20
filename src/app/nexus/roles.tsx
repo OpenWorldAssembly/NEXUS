@@ -3,12 +3,12 @@
  * Description: Renders the scoped roles workspace, including role claims, claimant review, and scoped role evidence.
  */
 
-import { usePathname, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
-import { buildRoleActionReturnHref } from '@app/components/nexus/nexus-route-utils';
+import { useNexusAuthGate } from '@app/components/nexus/nexus-auth-gate';
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import {
   NexusActionButton,
@@ -89,27 +89,21 @@ function RoleTabRail({ tabs, activeId, onSelect }: RoleTabRailProps) {
 
 export default function NexusRolesPage() {
   const router = useRouter();
-  const pathname = usePathname();
   const appearance = useNexusAppearance();
   const { activeScope, currentActorPacketId, currentActorLabel } = useNexusShell();
-  const { createVerifiedRequestBody, currentMode, isAuthenticated } = useIdentityShell();
+  const { createVerifiedRequestBody } = useIdentityShell();
   const [rolesPayload, setRolesPayload] = useState<NexusRolesPayload | null>(null);
   const [isLoadingRoles, setIsLoadingRoles] = useState(true);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
   const [expandedEvidenceKeys, setExpandedEvidenceKeys] = useState<string[]>([]);
-  const [isGuestPromptOpen, setIsGuestPromptOpen] = useState(false);
   const [activeRolePacketId, setActiveRolePacketId] = useState<string | null>(null);
-
-  const requiresClaimedSessionForRoleAction =
-    currentMode !== 'claimed' || !isAuthenticated;
-
-  const openGuestRolePrompt = () => {
-    setErrorMessage(null);
-    setStatusMessage(null);
-    setIsGuestPromptOpen(true);
-  };
+  const { authGateModal, guardNexusWrite, openNexusAuthGateForError } =
+    useNexusAuthGate({
+      returnTo: '/nexus/roles',
+      returnScopeId: activeScope.id,
+    });
 
   useEffect(() => {
     let isMounted = true;
@@ -183,45 +177,47 @@ export default function NexusRolesPage() {
   };
 
   const handleRoleClaim = async (rolePacketId: string, claimed: boolean) => {
-    if (requiresClaimedSessionForRoleAction) {
-      openGuestRolePrompt();
-      return;
-    }
+    await guardNexusWrite(
+      {
+        requiresClaimedIdentity: true,
+        writeRisk: 'standard',
+      },
+      async () => {
+        try {
+          const requestBody = await createVerifiedRequestBody(
+            `/api/nexus/scopes/${activeScope.id}/roles/claims`,
+            'PUT',
+            {
+              role_packet_id: rolePacketId,
+              claimed,
+            }
+          );
 
-    try {
-      const requestBody = await createVerifiedRequestBody(
-        `/api/nexus/scopes/${activeScope.id}/roles/claims`,
-        'PUT',
-        {
-          role_packet_id: rolePacketId,
-          claimed,
+          await setNexusScopedRoleClaim({
+            scopeId: activeScope.id,
+            requestBody,
+          });
+          await refreshRolesPayload();
+          setStatusMessage(claimed ? 'Role claimed in this scope.' : 'Role claim removed.');
+          setErrorMessage(null);
+        } catch (error) {
+          if (openNexusAuthGateForError(error)) {
+            return;
+          }
+
+          setErrorMessage(
+            error instanceof Error ? error.message : 'Unable to update the role claim.'
+          );
+          setStatusMessage(null);
         }
-      );
-
-      await setNexusScopedRoleClaim({
-        scopeId: activeScope.id,
-        requestBody,
-      });
-      await refreshRolesPayload();
-      setStatusMessage(claimed ? 'Role claimed in this scope.' : 'Role claim removed.');
-      setErrorMessage(null);
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : 'Unable to update the role claim.'
-      );
-      setStatusMessage(null);
-    }
+      }
+    );
   };
 
   const handleRoleAttestation = async (input: {
     claimPacketId: string;
     mode: 'support' | 'dispute' | 'clear';
   }) => {
-    if (requiresClaimedSessionForRoleAction) {
-      openGuestRolePrompt();
-      return;
-    }
-
     const draftKey = input.claimPacketId;
     const note = noteDrafts[draftKey]?.trim() ?? '';
 
@@ -231,42 +227,54 @@ export default function NexusRolesPage() {
       return;
     }
 
-    try {
-      const requestPath = `/api/nexus/scopes/${activeScope.id}/roles/attestations`;
-      const requestBody = await createVerifiedRequestBody(requestPath, 'PUT', {
-        claim_packet_id: input.claimPacketId,
-        mode: input.mode,
-        note: note.length > 0 ? note : null,
-      });
+    await guardNexusWrite(
+      {
+        requiresClaimedIdentity: true,
+        writeRisk: 'standard',
+      },
+      async () => {
+        try {
+          const requestPath = `/api/nexus/scopes/${activeScope.id}/roles/attestations`;
+          const requestBody = await createVerifiedRequestBody(requestPath, 'PUT', {
+            claim_packet_id: input.claimPacketId,
+            mode: input.mode,
+            note: note.length > 0 ? note : null,
+          });
 
-      await setNexusRoleAttestation({
-        scopeId: activeScope.id,
-        requestBody,
-      });
-      await refreshRolesPayload();
-      setStatusMessage(
-        input.mode === 'clear'
-          ? 'Role attestation cleared.'
-          : input.mode === 'support'
-            ? 'Role support recorded.'
-            : 'Role dispute recorded.'
-      );
-      setErrorMessage(null);
+          await setNexusRoleAttestation({
+            scopeId: activeScope.id,
+            requestBody,
+          });
+          await refreshRolesPayload();
+          setStatusMessage(
+            input.mode === 'clear'
+              ? 'Role attestation cleared.'
+              : input.mode === 'support'
+                ? 'Role support recorded.'
+                : 'Role dispute recorded.'
+          );
+          setErrorMessage(null);
 
-      if (input.mode !== 'dispute') {
-        setNoteDrafts((currentDrafts) => ({
-          ...currentDrafts,
-          [draftKey]: '',
-        }));
+          if (input.mode !== 'dispute') {
+            setNoteDrafts((currentDrafts) => ({
+              ...currentDrafts,
+              [draftKey]: '',
+            }));
+          }
+        } catch (error) {
+          if (openNexusAuthGateForError(error)) {
+            return;
+          }
+
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : 'Unable to update the role attestation.'
+          );
+          setStatusMessage(null);
+        }
       }
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : 'Unable to update the role attestation.'
-      );
-      setStatusMessage(null);
-    }
+    );
   };
 
   const totalClaimants = useMemo(
@@ -672,42 +680,7 @@ export default function NexusRolesPage() {
         </View>
       </ScrollView>
 
-      {isGuestPromptOpen ? (
-        <View className="absolute inset-0 items-center justify-center bg-black/55 px-5">
-          <Pressable
-            accessibilityRole="button"
-            className="absolute inset-0"
-            onPress={() => setIsGuestPromptOpen(false)}
-          />
-          <NexusCard tone="gold" className="z-10 w-full max-w-[560px] gap-4">
-            <Text className={appearance.surfaceTitleClass}>Sign in required</Text>
-            <Text className={appearance.itemBodyClass}>
-              Sign in to a claimed identity before claiming roles or leaving
-              scoped support and disputes in this workspace.
-            </Text>
-            <View className="flex-row flex-wrap gap-3">
-              <NexusActionButton
-                label="Sign in"
-                variant="primary"
-                onPress={() => {
-                  setIsGuestPromptOpen(false);
-                  router.push(
-                    buildRoleActionReturnHref({
-                      pathname,
-                      scopeId: activeScope.id,
-                    })
-                  );
-                }}
-              />
-              <NexusActionButton
-                label="Go back"
-                variant="secondary"
-                onPress={() => setIsGuestPromptOpen(false)}
-              />
-            </View>
-          </NexusCard>
-        </View>
-      ) : null}
+      {authGateModal}
     </View>
   );
 }

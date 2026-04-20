@@ -63,3 +63,11 @@ export interface NexusDiscussionPostMutationPayload {
   viewer: DiscussionViewerContext;
   post: DiscussionPostProjection;
 }
+
+export interface NexusDiscussionSurfaceBundlePayload {
+  created_packet_refs: {
+    packet_id: string;
+    revision_id: string;
+  }[];
+  discussions: NexusDiscussionsPayload;
+}

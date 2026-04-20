@@ -6,6 +6,7 @@
 import type {
   NexusDiscussionPostMutationPayload,
   NexusDiscussionReplyChildrenPayload,
+  NexusDiscussionSurfaceBundlePayload,
   NexusDiscussionThreadPayload,
   NexusDiscussionsPayload,
   NexusVoteMutationPayload,
@@ -177,4 +178,15 @@ export function setNexusAttestation(input: {
   requestBody: Record<string, unknown>;
 }): Promise<NexusVoteMutationPayload> {
   return setNexusPacketVote(input);
+}
+
+export function ensureNexusDiscussionSurfaces(input: {
+  scopeId: string;
+  requestBody: Record<string, unknown>;
+}): Promise<NexusDiscussionSurfaceBundlePayload> {
+  return fetchMutationJsonOrThrow<NexusDiscussionSurfaceBundlePayload>({
+    path: `/api/nexus/scopes/${encodeURIComponent(input.scopeId)}/discussions/surfaces`,
+    method: 'PUT',
+    body: input.requestBody,
+  });
 }

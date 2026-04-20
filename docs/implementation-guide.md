@@ -1161,6 +1161,13 @@ Examples of decisions worth logging early:
 - Why: creating Perris should feel like entering Perris, and Perris discussions should not appear pre-populated with California threads just because California is an ancestor scope.
 - Consequences / follow-ups: forum inheritance is no longer used for the main Discussions feed; scopes without local forums show an explicit empty state; starter threads are not created in this pass; and future work should make discussion spaces/forums dynamic and element-configurable instead of relying on a fixed starter bundle.
 
+### 2026-04-20 - Protected Nexus writes use one auth-gate modal pattern
+
+- Context: protected writes could still surface raw string errors or one-off cards for the same underlying states: signed-in identity required, locked local bundle, fresh write approval, or community/home-branch membership required. Existing localities such as Perris also needed a safe way to add the now-standard empty discussion bundle without recreating the scope.
+- Decision: add typed client-side auth gate errors and a shared Nexus auth-gate modal/hook while keeping server-side verification in `verifyActorMutation`. Roles, Trust, Discussions, and locality creation now route protected write attempts through the same modal pattern, and `/api/nexus/scopes/[scopeId]/discussions/surfaces` idempotently backfills empty OWA discussion forums for eligible geographic home-branch scopes.
+- Why: the UI should explain auth readiness consistently while the runtime remains the authority for cryptographic actor assertions, sessions, reauth tokens, and membership enforcement.
+- Consequences / follow-ups: sign-in/unlock routes preserve `return_to` and `return_scope_id`; write-protection approval still uses the existing reauth path when the user confirms; direct API writes remain protected by server checks; and future auth cleanup should continue deleting route-local auth strings in favor of the shared gate.
+
 ### 2026-04-10 - Railway cutover keeps the Expo server app intact and adds a local production-parity Node server
 
 - Context: the repo had been running through Expo's server features, but the Railway move needed a real exported-server runtime, a persistent SQLite path that works outside the repo root, and a safer bootstrap rule that would not destructively reseed hosted data.

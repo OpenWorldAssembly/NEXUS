@@ -14,6 +14,7 @@ import type {
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
+import { useNexusAuthGate } from '@app/components/nexus/nexus-auth-gate';
 import {
   NexusActionButton,
   NexusBadge,
@@ -37,6 +38,7 @@ import type {
 import {
   createNexusDiscussionPost,
   createNexusDiscussionReply,
+  ensureNexusDiscussionSurfaces,
   fetchNexusDiscussionReplyChildrenPayload,
   fetchNexusDiscussionThreadPayload,
   fetchNexusDiscussionsPayload,
@@ -801,9 +803,6 @@ export default function NexusDiscussionsPage() {
     currentActorPacketId,
     currentIdentity,
     currentLabel,
-    currentMode,
-    isAuthenticated,
-    isCurrentIdentityUnlocked,
     signCurrentIdentityPacket,
   } = useIdentityShell();
   const writeScopeId =
@@ -854,10 +853,10 @@ export default function NexusDiscussionsPage() {
   const [voteError, setVoteError] = useState<string | null>(null);
   const [isSubmittingPost, setIsSubmittingPost] = useState(false);
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
+  const [isAddingDiscussionSurfaces, setIsAddingDiscussionSurfaces] =
+    useState(false);
   const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null);
   const [pendingVotePacketId, setPendingVotePacketId] = useState<string | null>(null);
-  const [isCommunityClaimPromptOpen, setIsCommunityClaimPromptOpen] =
-    useState(false);
 
   const selectedForum =
     feedPayload?.forums.find((forum) => forum.id === feedPayload.selected_forum_id) ??
@@ -866,13 +865,13 @@ export default function NexusDiscussionsPage() {
   const selectedReplySort = (threadPayload?.selected_reply_sort ?? 'new') as ReplySort;
   const selectedViewer = threadPayload?.viewer ?? feedPayload?.viewer ?? null;
   const activeForumId = feedPayload?.selected_forum_id ?? requestedForumId;
-  const claimedSessionNeedsUnlock =
-    currentMode === 'claimed' && isAuthenticated && !isCurrentIdentityUnlocked;
   const canCreateTopLevel = selectedViewer?.can_create_top_level ?? false;
   const canReply = selectedViewer?.can_reply ?? false;
   const canVote = selectedViewer?.can_vote ?? false;
   const communityClaimRequired =
     selectedViewer?.write_block_reason === 'home_locality_required';
+  const canAddDiscussionSurfaces =
+    activeScope.level !== 'personal' && activeScope.level !== 'global';
   const topLevelPostingLocked =
     Boolean(selectedViewer) && !canCreateTopLevel;
   const isFeedWorkspace = requestedWorkspaceView === 'feed';
@@ -926,6 +925,22 @@ export default function NexusDiscussionsPage() {
     themeMode === 'dark'
       ? 'text-2xl font-semibold text-nexus-text'
       : 'text-2xl font-semibold text-slate-900';
+  const currentDiscussionReturnHref = String(
+    getDiscussionHref({
+      forumId: activeForumId,
+      sort: selectedFeedSort,
+      view: requestedWorkspaceView,
+      postId: requestedPostId,
+      replyTargetId: requestedReplyTargetId,
+      replySort: selectedReplySort,
+      showHidden: requestedShowHidden,
+    })
+  );
+  const { authGateModal, guardNexusWrite, openNexusAuthGate, openNexusAuthGateForError } =
+    useNexusAuthGate({
+      returnTo: currentDiscussionReturnHref,
+      returnScopeId: activeScope.id,
+    });
 
   const replyTargetLabel = useMemo(() => {
     if (!requestedReplyTargetId) {
@@ -1012,6 +1027,53 @@ export default function NexusDiscussionsPage() {
       requestedSort,
     ]
   );
+
+  const handleAddDiscussionSurfaces = useCallback(async () => {
+    await guardNexusWrite(
+      {
+        requiresClaimedIdentity: true,
+        writeRisk: 'standard',
+      },
+      async () => {
+        setIsAddingDiscussionSurfaces(true);
+        setFeedError(null);
+
+        try {
+          const requestBody = await createVerifiedRequestBody(
+            '/api/nexus/scopes/[scopeId]/discussions/surfaces',
+            'PUT',
+            {}
+          );
+          const payload = await ensureNexusDiscussionSurfaces({
+            scopeId: activeScope.id,
+            requestBody,
+          });
+
+          setFeedPayload(payload.discussions);
+          setFeedPosts(payload.discussions.top_level_posts);
+          setFeedNextCursor(payload.discussions.next_cursor);
+          setFeedHasMore(payload.discussions.has_more);
+        } catch (error) {
+          if (openNexusAuthGateForError(error)) {
+            return;
+          }
+
+          setFeedError(
+            error instanceof Error
+              ? error.message
+              : 'Unable to add discussion forums.'
+          );
+        } finally {
+          setIsAddingDiscussionSurfaces(false);
+        }
+      }
+    );
+  }, [
+    activeScope.id,
+    createVerifiedRequestBody,
+    guardNexusWrite,
+    openNexusAuthGateForError,
+  ]);
 
   /**
    * Inputs: none.
@@ -1238,87 +1300,102 @@ export default function NexusDiscussionsPage() {
    */
   const handleVote = useCallback(
     async (post: NexusDiscussionPost, value: -1 | 1) => {
-      if (!currentIdentity) {
-        setVoteError('There is no active identity available for this request.');
-        return;
-      }
-
-      setPendingVotePacketId(post.packet.packet_id);
-      setVoteError(null);
-
-      try {
-        const attestationPacket = buildPacketSignalAttestationPacket({
-          scopeId: activeScope.id,
-          actorPacket: currentIdentity.actorPacket,
-          targetPost: post,
-          value: post.vote_summary.viewer_value === value ? 0 : value,
-        });
-
-        if (!attestationPacket) {
-          return;
-        }
-
-        const signedAttestationPacket =
-          await signCurrentIdentityPacket(attestationPacket);
-        const requestBody = await createVerifiedRequestBody(
-          '/api/nexus/packets/vote',
-          'PUT',
-          {
-            attestation_packet: signedAttestationPacket,
+      await guardNexusWrite(
+        {
+          writeRisk: 'standard',
+        },
+        async () => {
+          if (!currentIdentity) {
+            openNexusAuthGate('sign_in_required');
+            return;
           }
-        );
-        const voteResult = await setNexusAttestation({
-          requestBody,
-        });
-        const updateReplySummary = (currentReply: NexusDiscussionReply) =>
-          currentReply.packet.packet_id === post.packet.packet_id
-            ? {
-                ...currentReply,
-                vote_summary: voteResult.summary,
-              }
-            : currentReply;
-        const { nextRootReplies, nextBranchStates } = updateReplyProjectionCollections(
-          updateReplySummary,
-          rootReplies,
-          replyBranchStates
-        );
 
-        setFeedPosts((currentPosts) =>
-          currentPosts.map((currentPost) =>
-            currentPost.packet.packet_id === post.packet.packet_id
-              ? {
-                  ...currentPost,
-                  vote_summary: voteResult.summary,
-                }
-              : currentPost
-          )
-        );
-        setThreadPayload((currentPayload) =>
-          currentPayload &&
-          currentPayload.root_post.packet.packet_id === post.packet.packet_id
-            ? {
-                ...currentPayload,
-                root_post: {
-                  ...currentPayload.root_post,
-                  vote_summary: voteResult.summary,
-                },
+          setPendingVotePacketId(post.packet.packet_id);
+          setVoteError(null);
+
+          try {
+            const attestationPacket = buildPacketSignalAttestationPacket({
+              scopeId: activeScope.id,
+              actorPacket: currentIdentity.actorPacket,
+              targetPost: post,
+              value: post.vote_summary.viewer_value === value ? 0 : value,
+            });
+
+            if (!attestationPacket) {
+              return;
+            }
+
+            const signedAttestationPacket =
+              await signCurrentIdentityPacket(attestationPacket);
+            const requestBody = await createVerifiedRequestBody(
+              '/api/nexus/packets/vote',
+              'PUT',
+              {
+                attestation_packet: signedAttestationPacket,
               }
-            : currentPayload
-        );
-        setRootReplies(nextRootReplies);
-        setReplyBranchStates(nextBranchStates);
-      } catch (error) {
-        setVoteError(
-          error instanceof Error ? error.message : 'Unable to update that vote.'
-        );
-      } finally {
-        setPendingVotePacketId(null);
-      }
+            );
+            const voteResult = await setNexusAttestation({
+              requestBody,
+            });
+            const updateReplySummary = (currentReply: NexusDiscussionReply) =>
+              currentReply.packet.packet_id === post.packet.packet_id
+                ? {
+                    ...currentReply,
+                    vote_summary: voteResult.summary,
+                  }
+                : currentReply;
+            const { nextRootReplies, nextBranchStates } =
+              updateReplyProjectionCollections(
+                updateReplySummary,
+                rootReplies,
+                replyBranchStates
+              );
+
+            setFeedPosts((currentPosts) =>
+              currentPosts.map((currentPost) =>
+                currentPost.packet.packet_id === post.packet.packet_id
+                  ? {
+                      ...currentPost,
+                      vote_summary: voteResult.summary,
+                    }
+                  : currentPost
+              )
+            );
+            setThreadPayload((currentPayload) =>
+              currentPayload &&
+              currentPayload.root_post.packet.packet_id === post.packet.packet_id
+                ? {
+                    ...currentPayload,
+                    root_post: {
+                      ...currentPayload.root_post,
+                      vote_summary: voteResult.summary,
+                    },
+                  }
+                : currentPayload
+            );
+            setRootReplies(nextRootReplies);
+            setReplyBranchStates(nextBranchStates);
+          } catch (error) {
+            if (openNexusAuthGateForError(error)) {
+              return;
+            }
+
+            setVoteError(
+              error instanceof Error ? error.message : 'Unable to update that vote.'
+            );
+          } finally {
+            setPendingVotePacketId(null);
+          }
+        }
+      );
     },
     [
       activeScope.id,
       createVerifiedRequestBody,
       currentIdentity,
+      guardNexusWrite,
+      openNexusAuthGate,
+      openNexusAuthGateForError,
       replyBranchStates,
       rootReplies,
       signCurrentIdentityPacket,
@@ -1328,43 +1405,8 @@ export default function NexusDiscussionsPage() {
   const openCommunityClaimPrompt = useCallback(() => {
     setSubmitError(null);
     setReplyError(null);
-    setIsCommunityClaimPromptOpen(true);
-  }, []);
-
-  const getCurrentDiscussionReturnHref = useCallback(
-    () =>
-      String(
-        getDiscussionHref({
-          forumId: activeForumId,
-          sort: selectedFeedSort,
-          view: requestedWorkspaceView,
-          postId: requestedPostId,
-          replyTargetId: requestedReplyTargetId,
-          replySort: selectedReplySort,
-          showHidden: requestedShowHidden,
-        })
-      ),
-    [
-      activeForumId,
-      requestedPostId,
-      requestedReplyTargetId,
-      requestedShowHidden,
-      requestedWorkspaceView,
-      selectedFeedSort,
-      selectedReplySort,
-    ]
-  );
-
-  const handleClaimCommunity = useCallback(() => {
-    setIsCommunityClaimPromptOpen(false);
-    router.push({
-      pathname: '/nexus/trust',
-      params: {
-        return_to: getCurrentDiscussionReturnHref(),
-        return_scope_id: activeScope.id,
-      },
-    } as Href);
-  }, [activeScope.id, getCurrentDiscussionReturnHref, router]);
+    openNexusAuthGate('community_claim_required');
+  }, [openNexusAuthGate]);
 
   const handleOpenPostWorkspace = useCallback(() => {
     if (communityClaimRequired) {
@@ -1406,74 +1448,82 @@ export default function NexusDiscussionsPage() {
    * Output: writes a new top-level post and opens it in the thread workspace.
    */
   const handleCreatePost = useCallback(async () => {
-    if (communityClaimRequired) {
-      openCommunityClaimPrompt();
-      return;
-    }
-
-    if (!selectedForum || !currentIdentity) {
-      return;
-    }
-
-    setIsSubmittingPost(true);
-    setSubmitError(null);
-
-    try {
-      const threadPacket = buildDiscussionThreadPacket({
-        scopeId: writeScopeId,
-        forum: selectedForum,
-        actorPacket: currentIdentity.actorPacket,
-        title: draftTitle,
-        body: draftBody,
-      });
-      const postPacket = buildDiscussionRootPostPacket({
-        scopeId: writeScopeId,
-        forum: selectedForum,
-        actorPacket: currentIdentity.actorPacket,
-        threadPacket,
-        body: draftBody,
-        createdAt: threadPacket.header.created_at,
-      });
-      const signedThreadPacket = await signCurrentIdentityPacket(threadPacket);
-      const signedPostPacket = await signCurrentIdentityPacket(postPacket);
-      const requestBody = await createVerifiedRequestBody(
-        '/api/nexus/scopes/[scopeId]/discussions/posts',
-        'POST',
-        {
-          thread_packet: signedThreadPacket,
-          post_packet: signedPostPacket,
-        },
-        {
-          writeRisk: 'high_impact',
+    await guardNexusWrite(
+      {
+        communityClaimRequired,
+        writeRisk: 'high_impact',
+      },
+      async () => {
+        if (!selectedForum || !currentIdentity) {
+          openNexusAuthGate('sign_in_required');
+          return;
         }
-      );
-      const result = await createNexusDiscussionPost({
-        scopeId: activeScope.id,
-        requestBody,
-      });
 
-      setDraftTitle('');
-      setDraftBody('');
-      await loadFeed();
-      router.replace(
-        getDiscussionHref({
-          forumId: selectedForum.id,
-          sort: selectedFeedSort,
-          view: 'thread',
-          postId: result.post.packet.packet_id,
-          replySort: selectedReplySort,
-          showHidden: requestedShowHidden,
-        })
-      );
-    } catch (error) {
-      setSubmitError(
-        error instanceof Error
-          ? error.message
-          : 'Unable to save the discussion post.'
-      );
-    } finally {
-      setIsSubmittingPost(false);
-    }
+        setIsSubmittingPost(true);
+        setSubmitError(null);
+
+        try {
+          const threadPacket = buildDiscussionThreadPacket({
+            scopeId: writeScopeId,
+            forum: selectedForum,
+            actorPacket: currentIdentity.actorPacket,
+            title: draftTitle,
+            body: draftBody,
+          });
+          const postPacket = buildDiscussionRootPostPacket({
+            scopeId: writeScopeId,
+            forum: selectedForum,
+            actorPacket: currentIdentity.actorPacket,
+            threadPacket,
+            body: draftBody,
+            createdAt: threadPacket.header.created_at,
+          });
+          const signedThreadPacket = await signCurrentIdentityPacket(threadPacket);
+          const signedPostPacket = await signCurrentIdentityPacket(postPacket);
+          const requestBody = await createVerifiedRequestBody(
+            '/api/nexus/scopes/[scopeId]/discussions/posts',
+            'POST',
+            {
+              thread_packet: signedThreadPacket,
+              post_packet: signedPostPacket,
+            },
+            {
+              writeRisk: 'high_impact',
+            }
+          );
+          const result = await createNexusDiscussionPost({
+            scopeId: activeScope.id,
+            requestBody,
+          });
+
+          setDraftTitle('');
+          setDraftBody('');
+          await loadFeed();
+          router.replace(
+            getDiscussionHref({
+              forumId: selectedForum.id,
+              sort: selectedFeedSort,
+              view: 'thread',
+              postId: result.post.packet.packet_id,
+              replySort: selectedReplySort,
+              showHidden: requestedShowHidden,
+            })
+          );
+        } catch (error) {
+          if (openNexusAuthGateForError(error)) {
+            return;
+          }
+
+          setSubmitError(
+            error instanceof Error
+              ? error.message
+              : 'Unable to save the discussion post.'
+          );
+        } finally {
+          setIsSubmittingPost(false);
+        }
+      }
+    );
   }, [
     activeScope.id,
     communityClaimRequired,
@@ -1481,8 +1531,10 @@ export default function NexusDiscussionsPage() {
     currentIdentity,
     draftBody,
     draftTitle,
+    guardNexusWrite,
     loadFeed,
-    openCommunityClaimPrompt,
+    openNexusAuthGate,
+    openNexusAuthGateForError,
     requestedShowHidden,
     router,
     selectedFeedSort,
@@ -1497,100 +1549,110 @@ export default function NexusDiscussionsPage() {
    * Output: writes a nested reply and refreshes the visible thread state.
    */
   const handleCreateReply = useCallback(async () => {
-    if (communityClaimRequired) {
-      openCommunityClaimPrompt();
-      return;
-    }
-
-    if (!requestedReplyTargetId || !threadPayload || !currentIdentity) {
-      return;
-    }
-
-    setIsSubmittingReply(true);
-    setReplyError(null);
-
-    try {
-      const parentPost =
-        requestedReplyTargetId === threadPayload.root_post.packet.packet_id
-          ? threadPayload.root_post
-          : findLoadedReplyById(
-              rootReplies,
-              replyBranchStates,
-              requestedReplyTargetId
-            );
-
-      if (!parentPost) {
-        throw new Error('Unable to resolve the reply target for this thread.');
-      }
-
-      const replyPacket = buildDiscussionReplyPacket({
-        scopeId: writeScopeId,
-        forum: threadPayload.forum,
-        actorPacket: currentIdentity.actorPacket,
-        parentPost,
-        rootPostPacketId: threadPayload.root_post.packet.packet_id,
-        body: replyBody,
-      });
-      const signedReplyPacket = await signCurrentIdentityPacket(replyPacket);
-      const requestBody = await createVerifiedRequestBody(
-        '/api/nexus/scopes/[scopeId]/discussions/replies',
-        'POST',
-        {
-          parent_post_packet_id: requestedReplyTargetId,
-          reply_packet: signedReplyPacket,
+    await guardNexusWrite(
+      {
+        communityClaimRequired,
+        writeRisk: 'standard',
+      },
+      async () => {
+        if (!requestedReplyTargetId || !threadPayload || !currentIdentity) {
+          openNexusAuthGate('sign_in_required');
+          return;
         }
-      );
-      const result = await createNexusDiscussionReply({
-        scopeId: activeScope.id,
-        requestBody,
-      });
 
-      setReplyBody('');
-      setHighlightedPostId(result.post.packet.packet_id);
-      await loadFeed();
-      await loadThread();
+        setIsSubmittingReply(true);
+        setReplyError(null);
 
-      if (
-        requestedReplyTargetId &&
-        threadPayload?.root_post.packet.packet_id &&
-        requestedReplyTargetId !== threadPayload.root_post.packet.packet_id
-      ) {
-        setReplyExpansionState((currentState) => ({
-          ...currentState,
-          [requestedReplyTargetId]: true,
-        }));
-        await loadReplyChildren({
-          parentPostPacketId: requestedReplyTargetId,
-        });
+        try {
+          const parentPost =
+            requestedReplyTargetId === threadPayload.root_post.packet.packet_id
+              ? threadPayload.root_post
+              : findLoadedReplyById(
+                  rootReplies,
+                  replyBranchStates,
+                  requestedReplyTargetId
+                );
+
+          if (!parentPost) {
+            throw new Error('Unable to resolve the reply target for this thread.');
+          }
+
+          const replyPacket = buildDiscussionReplyPacket({
+            scopeId: writeScopeId,
+            forum: threadPayload.forum,
+            actorPacket: currentIdentity.actorPacket,
+            parentPost,
+            rootPostPacketId: threadPayload.root_post.packet.packet_id,
+            body: replyBody,
+          });
+          const signedReplyPacket = await signCurrentIdentityPacket(replyPacket);
+          const requestBody = await createVerifiedRequestBody(
+            '/api/nexus/scopes/[scopeId]/discussions/replies',
+            'POST',
+            {
+              parent_post_packet_id: requestedReplyTargetId,
+              reply_packet: signedReplyPacket,
+            }
+          );
+          const result = await createNexusDiscussionReply({
+            scopeId: activeScope.id,
+            requestBody,
+          });
+
+          setReplyBody('');
+          setHighlightedPostId(result.post.packet.packet_id);
+          await loadFeed();
+          await loadThread();
+
+          if (
+            requestedReplyTargetId &&
+            threadPayload?.root_post.packet.packet_id &&
+            requestedReplyTargetId !== threadPayload.root_post.packet.packet_id
+          ) {
+            setReplyExpansionState((currentState) => ({
+              ...currentState,
+              [requestedReplyTargetId]: true,
+            }));
+            await loadReplyChildren({
+              parentPostPacketId: requestedReplyTargetId,
+            });
+          }
+
+          router.replace(
+            getDiscussionHref({
+              forumId: activeForumId,
+              sort: selectedFeedSort,
+              view: 'thread',
+              postId: requestedPostId,
+              replySort: selectedReplySort,
+              showHidden: requestedShowHidden,
+            })
+          );
+        } catch (error) {
+          if (openNexusAuthGateForError(error)) {
+            return;
+          }
+
+          setReplyError(
+            error instanceof Error ? error.message : 'Unable to save the reply.'
+          );
+        } finally {
+          setIsSubmittingReply(false);
+        }
       }
-
-      router.replace(
-        getDiscussionHref({
-          forumId: activeForumId,
-          sort: selectedFeedSort,
-          view: 'thread',
-          postId: requestedPostId,
-          replySort: selectedReplySort,
-          showHidden: requestedShowHidden,
-        })
-      );
-    } catch (error) {
-      setReplyError(
-        error instanceof Error ? error.message : 'Unable to save the reply.'
-      );
-    } finally {
-      setIsSubmittingReply(false);
-    }
+    );
   }, [
     activeForumId,
     activeScope.id,
     communityClaimRequired,
     createVerifiedRequestBody,
     currentIdentity,
+    guardNexusWrite,
     loadFeed,
     loadReplyChildren,
     loadThread,
-    openCommunityClaimPrompt,
+    openNexusAuthGate,
+    openNexusAuthGateForError,
     replyBranchStates,
     replyBody,
     rootReplies,
@@ -1766,20 +1828,6 @@ export default function NexusDiscussionsPage() {
           {voteError ? (
             <NexusCard tone="rose">
               <Text className={appearance.itemBodyClass}>{voteError}</Text>
-            </NexusCard>
-          ) : null}
-
-          {claimedSessionNeedsUnlock ? (
-            <NexusCard tone="gold">
-              <View className="gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <Text className={appearance.itemBodyClass}>
-                  Your claimed session is active, but the local signing bundle is still locked. You can keep browsing normally, and writes will ask you to unlock before Nexus signs packets locally.
-                </Text>
-                <NexusActionButton
-                  label="Unlock bundle"
-                  onPress={() => router.push('/nexus/identity/sign-in')}
-                />
-              </View>
             </NexusCard>
           ) : null}
 
@@ -2389,47 +2437,30 @@ export default function NexusDiscussionsPage() {
               </Text>
             </NexusCard>
           ) : (
-            <NexusCard>
+            <NexusCard className="gap-4">
               <Text className={appearance.itemBodyClass}>
                 No discussion forums are available for this scope yet.
               </Text>
+              {canAddDiscussionSurfaces ? (
+                <View className="flex-row flex-wrap gap-3">
+                  <NexusActionButton
+                    label={
+                      isAddingDiscussionSurfaces
+                        ? 'Adding OWA bundle...'
+                        : 'Add OWA discussion bundle'
+                    }
+                    disabled={isAddingDiscussionSurfaces}
+                    onPress={() => void handleAddDiscussionSurfaces()}
+                  />
+                </View>
+              ) : null}
             </NexusCard>
           )}
         </View>
         </View>
       </ScrollView>
 
-      {isCommunityClaimPromptOpen ? (
-        <View className="absolute inset-0 items-center justify-center bg-black/55 px-5">
-          <Pressable
-            accessibilityRole="button"
-            className="absolute inset-0"
-            onPress={() => setIsCommunityClaimPromptOpen(false)}
-          />
-          <NexusCard tone="gold" className="z-10 w-full max-w-[560px] gap-4">
-            <Text className={appearance.surfaceTitleClass}>
-              Community claim required
-            </Text>
-            <Text className={appearance.itemBodyClass}>
-              This discussion forum is for people whose claimed home-locality
-              branch includes this community. You can visit and read here, but
-              posting belongs to the local community context.
-            </Text>
-            <View className="flex-row flex-wrap gap-3">
-              <NexusActionButton
-                label="Claim community"
-                variant="primary"
-                onPress={handleClaimCommunity}
-              />
-              <NexusActionButton
-                label="Go back"
-                variant="secondary"
-                onPress={() => setIsCommunityClaimPromptOpen(false)}
-              />
-            </View>
-          </NexusCard>
-        </View>
-      ) : null}
+      {authGateModal}
     </View>
   );
 }

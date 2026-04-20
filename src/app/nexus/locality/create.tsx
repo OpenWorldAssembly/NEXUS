@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
+import { useNexusAuthGate } from '@app/components/nexus/nexus-auth-gate';
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import {
   NexusActionButton,
@@ -322,6 +323,11 @@ export default function NexusLocalityCreatePage() {
     ...(returnScopeId ? { return_scope_id: returnScopeId } : {}),
     ...(shouldSetHome ? { set_home: '1' } : {}),
   }).toString()}`;
+  const { authGateModal, guardNexusWrite, openNexusAuthGateForError } =
+    useNexusAuthGate({
+      returnTo: returnToSelf,
+      returnScopeId,
+    });
 
   useEffect(() => {
     let isMounted = true;
@@ -439,35 +445,42 @@ export default function NexusLocalityCreatePage() {
     setStatusMessage(null);
 
     if (shouldSetHome) {
-      if (!isClaimedIdentity) {
-        setErrorMessage('Sign in with a claimed identity before setting home locality.');
-        return;
-      }
+      await guardNexusWrite(
+        {
+          requiresClaimedIdentity: true,
+          writeRisk: 'standard',
+        },
+        async () => {
+          try {
+            const requestBody = await createVerifiedRequestBody(
+              '/api/nexus/locality/home',
+              'PUT',
+              {
+                home_scope_packet_id: locality.scope_id,
+              }
+            );
 
-      try {
-        const requestBody = await createVerifiedRequestBody(
-          '/api/nexus/locality/home',
-          'PUT',
-          {
-            home_scope_packet_id: locality.scope_id,
+            await setNexusHomeLocality({ requestBody });
+            await refreshShellData();
+            setActiveScopeId(toRouteScopeId(locality.scope_id));
+            router.replace({
+              pathname: '/nexus/dashboard',
+              params: {
+                locality_created: '1',
+                locality_name: locality.name,
+              },
+            } as Href);
+          } catch (error) {
+            if (openNexusAuthGateForError(error)) {
+              return;
+            }
+
+            setErrorMessage(
+              error instanceof Error ? error.message : 'Unable to set home locality.'
+            );
           }
-        );
-
-        await setNexusHomeLocality({ requestBody });
-        await refreshShellData();
-        setActiveScopeId(toRouteScopeId(locality.scope_id));
-        router.replace({
-          pathname: '/nexus/dashboard',
-          params: {
-            locality_created: '1',
-            locality_name: locality.name,
-          },
-        } as Href);
-      } catch (error) {
-        setErrorMessage(
-          error instanceof Error ? error.message : 'Unable to set home locality.'
-        );
-      }
+        }
+      );
 
       return;
     }
@@ -476,11 +489,6 @@ export default function NexusLocalityCreatePage() {
   };
 
   const handleCreatePath = async (createAnyway = false) => {
-    if (!isClaimedIdentity) {
-      setErrorMessage('Sign in with a claimed identity before creating a public locality.');
-      return;
-    }
-
     const path = visibleLevels.map((level) => {
       const entry = levelEntries[level];
 
@@ -517,46 +525,59 @@ export default function NexusLocalityCreatePage() {
       return;
     }
 
-    setIsSubmitting(true);
-    setErrorMessage(null);
-    setStatusMessage(null);
+    await guardNexusWrite(
+      {
+        requiresClaimedIdentity: true,
+        writeRisk: 'standard',
+      },
+      async () => {
+        setIsSubmitting(true);
+        setErrorMessage(null);
+        setStatusMessage(null);
 
-    try {
-      const requestBody = await createVerifiedRequestBody(
-        '/api/nexus/locality',
-        'POST',
-        {
-          path,
-          create_anyway: createAnyway,
+        try {
+          const requestBody = await createVerifiedRequestBody(
+            '/api/nexus/locality',
+            'POST',
+            {
+              path,
+              create_anyway: createAnyway,
+            }
+          );
+          const payload = await createNexusLocality({ requestBody });
+
+          setDuplicateWarnings(payload.duplicate_warnings);
+          setStatusMessage(
+            payload.created_packets.length > 0
+              ? `Created ${payload.created_packets.length} locality Element(s).`
+              : 'Existing locality path reused.'
+          );
+
+          await handleSelectLocality(payload.final_result);
+        } catch (error) {
+          if (openNexusAuthGateForError(error)) {
+            return;
+          }
+
+          if (error instanceof NexusLocalityDuplicateWarningClientError) {
+            setDuplicateWarnings(error.duplicateWarnings);
+            setErrorMessage(error.message);
+          } else {
+            setErrorMessage(
+              error instanceof Error ? error.message : 'Unable to create locality.'
+            );
+          }
+        } finally {
+          setIsSubmitting(false);
         }
-      );
-      const payload = await createNexusLocality({ requestBody });
-
-      setDuplicateWarnings(payload.duplicate_warnings);
-      setStatusMessage(
-        payload.created_packets.length > 0
-          ? `Created ${payload.created_packets.length} locality Element(s).`
-          : 'Existing locality path reused.'
-      );
-
-      await handleSelectLocality(payload.final_result);
-    } catch (error) {
-      if (error instanceof NexusLocalityDuplicateWarningClientError) {
-        setDuplicateWarnings(error.duplicateWarnings);
-        setErrorMessage(error.message);
-      } else {
-        setErrorMessage(
-          error instanceof Error ? error.message : 'Unable to create locality.'
-        );
       }
-    } finally {
-      setIsSubmitting(false);
-    }
+    );
   };
 
   return (
-    <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-      <View className={appearance.pageContainerClass}>
+    <View className="flex-1">
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        <View className={appearance.pageContainerClass}>
         <NexusSectionHeader
           eyebrow="Locality"
           title="Find or create a locality"
@@ -720,14 +741,14 @@ export default function NexusLocalityCreatePage() {
             <NexusActionButton
               label={isSubmitting ? 'Creating locality...' : 'Review and create'}
               variant="primary"
-              disabled={isSubmitting || !isClaimedIdentity}
+              disabled={isSubmitting}
               onPress={() => void handleCreatePath(false)}
             />
             {duplicateWarnings.length > 0 ? (
               <NexusActionButton
                 label="Create anyway"
                 variant="ghost"
-                disabled={isSubmitting || !isClaimedIdentity}
+                disabled={isSubmitting}
                 onPress={() => void handleCreatePath(true)}
               />
             ) : null}
@@ -743,7 +764,9 @@ export default function NexusLocalityCreatePage() {
             />
           </View>
         </NexusCard>
-      </View>
-    </ScrollView>
+        </View>
+      </ScrollView>
+      {authGateModal}
+    </View>
   );
 }

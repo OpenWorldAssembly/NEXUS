@@ -66,6 +66,7 @@ import {
   isPasskeySupported,
   registerPasskey,
 } from '@runtime/nexus/webauthn';
+import { NexusAuthGateError } from '@app/components/nexus/nexus-auth-gate-types';
 const IDENTITY_STORE_NAME = 'identities';
 
 type IdentityShellContextValue = {
@@ -461,11 +462,17 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
     privateJwk: JsonWebKey;
   } => {
     if (!currentIdentity) {
-      throw new Error('There is no active identity available for this request.');
+      throw new NexusAuthGateError(
+        'sign_in_required',
+        'There is no active identity available for this request.'
+      );
     }
 
     if (!currentIdentity.privateJwk) {
-      throw new Error('Unlock this claimed identity with its passphrase before signing Nexus packets.');
+      throw new NexusAuthGateError(
+        'unlock_required',
+        'Unlock this claimed identity with its passphrase before signing Nexus packets.'
+      );
     }
 
     return {
@@ -487,11 +494,17 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
       !input.session.is_authenticated ||
       input.session.actor_packet_id !== input.identity.actorPacket.header.packet_id
     ) {
-      throw new Error('Sign in with this claimed identity before writing Nexus packets.');
+      throw new NexusAuthGateError(
+        'sign_in_required',
+        'Sign in with this claimed identity before writing Nexus packets.'
+      );
     }
 
     if (!input.session.csrf_token) {
-      throw new Error('Refresh the claimed session before writing Nexus packets.');
+      throw new NexusAuthGateError(
+        'session_refresh_required',
+        'Refresh the claimed session before writing Nexus packets.'
+      );
     }
 
     const privateKey = await importPrivateKeyFromJwk(input.identity.privateJwk);
@@ -795,7 +808,10 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
     const effectiveSession = sessionOverride ?? authSession;
 
     if (!effectiveSession?.is_authenticated || !effectiveSession.csrf_token) {
-      throw new Error('Sign in with the claimed identity before approving this action.');
+      throw new NexusAuthGateError(
+        'sign_in_required',
+        'Sign in with the claimed identity before approving this action.'
+      );
     }
 
     const csrfToken = effectiveSession.csrf_token;
@@ -808,7 +824,8 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
         unlockedIdentity.actorPacket.header.packet_id !==
           effectiveSession.actor_packet_id
       ) {
-        throw new Error(
+        throw new NexusAuthGateError(
+          'unlock_required',
           'Unlock the claimed identity that owns this session before approving this action.'
         );
       }
@@ -1501,13 +1518,19 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
         !currentSession.is_authenticated ||
         currentSession.actor_packet_id !== unlockedIdentity.actorPacket.header.packet_id
       ) {
-        throw new Error('Sign in with this claimed identity before writing Nexus packets.');
+        throw new NexusAuthGateError(
+          'sign_in_required',
+          'Sign in with this claimed identity before writing Nexus packets.'
+        );
       }
 
       csrfToken = currentSession.csrf_token;
 
       if (!csrfToken) {
-        throw new Error('Refresh the claimed session before writing Nexus packets.');
+        throw new NexusAuthGateError(
+          'session_refresh_required',
+          'Refresh the claimed session before writing Nexus packets.'
+        );
       }
 
       const writeRisk = options?.writeRisk ?? 'standard';
