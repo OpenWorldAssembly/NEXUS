@@ -12,7 +12,7 @@ import {
   verifyPacketSignature,
 } from '@runtime/nexus/identity-crypto';
 
-test('verifyPacketSignature accepts legacy identity packets without claimed_role_refs', async () => {
+test('verifyPacketSignature accepts legacy identity packets without additive Element defaults', async () => {
   const keyPair = await generateP256KeyPair();
   const jwks = await exportIdentityKeyPairToJwk(keyPair);
   const packetId = 'nexus:element/test-legacy-identity';
@@ -32,29 +32,28 @@ test('verifyPacketSignature accepts legacy identity packets without claimed_role
       value: 'California',
     },
   });
+  const legacyUnsignedPacket = {
+    ...actorPacket,
+    body: Object.fromEntries(
+      Object.entries(actorPacket.body).filter(
+        ([key]) => key !== 'claimed_role_refs' && key !== 'locality'
+      )
+    ),
+  };
   const privateKey = await importPrivateKeyFromJwk(jwks.privateJwk);
   const signedPacket = await signPacketWithIdentity({
-    packet: actorPacket,
+    packet: legacyUnsignedPacket as typeof actorPacket,
     signerPacketId: packetId,
     kid: keyBinding.kid,
     privateKey,
     signedAt: createdAt,
   });
-
-  const legacyPacket = {
-    ...signedPacket,
-    body: Object.fromEntries(
-      Object.entries(signedPacket.body).filter(
-        ([key]) => key !== 'claimed_role_refs'
-      )
-    ),
-  };
-  const parsedLegacyPacket = parsePacketEnvelope(legacyPacket);
+  const parsedLegacyPacket = parsePacketEnvelope(signedPacket);
 
   await assert.doesNotReject(async () => {
     const signatureIsValid = await verifyPacketSignature({
-      packet: parsedLegacyPacket as typeof signedPacket,
-      signerPacket: parsedLegacyPacket as typeof signedPacket,
+      packet: parsedLegacyPacket as typeof actorPacket,
+      signerPacket: parsedLegacyPacket as typeof actorPacket,
     });
 
     assert.equal(signatureIsValid, true);

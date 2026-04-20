@@ -2382,10 +2382,16 @@ export default function NexusDiscussionsPage() {
                 </View>
               </NexusCard>
             </View>
-          ) : (
+          ) : isLoadingFeed ? (
             <NexusCard>
               <Text className={appearance.itemBodyClass}>
                 Loading discussion forums...
+              </Text>
+            </NexusCard>
+          ) : (
+            <NexusCard>
+              <Text className={appearance.itemBodyClass}>
+                No discussion forums are available for this scope yet.
               </Text>
             </NexusCard>
           )}

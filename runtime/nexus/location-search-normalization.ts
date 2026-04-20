@@ -14,6 +14,27 @@ export function normalizeLocalitySearchText(value: string): string {
 
 export type LocalitySearchLevel = 'nation' | 'region' | 'city' | 'district';
 
+export function matchesLocalitySearchScopeFilter(
+  locality: {
+    level: LocalitySearchLevel;
+    parent_packet_id: string | null;
+  },
+  filters: {
+    level?: LocalitySearchLevel | null;
+    parentScopeId?: string | null;
+  }
+): boolean {
+  if (filters.level && locality.level !== filters.level) {
+    return false;
+  }
+
+  if (filters.parentScopeId && locality.parent_packet_id !== filters.parentScopeId) {
+    return false;
+  }
+
+  return true;
+}
+
 export function createLocalityCanonicalNameKey(value: string): string {
   return normalizeLocalitySearchText(value);
 }

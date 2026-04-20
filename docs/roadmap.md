@@ -142,11 +142,13 @@ This track should define:
 - how a scope adopts, amends, supersedes, or rejects policies
 - which runtime invariants are universal and which are policy-controlled
 - how policy references affect discussions, actions, governance, trust gates, and moderation defaults
+- how discussion spaces and forums become element-configurable instead of fixed starter bundles
 
 Default direction:
 
 - use policy packets as first-class configuration and legitimacy references
 - keep only the truly universal safety and packet-integrity rules hardcoded
+- keep the current default discussion forums as a locality-creation convention until policy-backed, element-configurable forum surfaces are designed
 
 ### 5. `You`, `Trust`, and `Account` information architecture
 

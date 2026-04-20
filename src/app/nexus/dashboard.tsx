@@ -4,6 +4,7 @@
  */
 import { useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import {
@@ -21,6 +22,10 @@ import { fetchNexusDashboardPayload } from '@runtime/nexus/nexus-query-api';
  * Output: the main nexus dashboard surface for the currently selected scope.
  */
 export default function NexusDashboardPage() {
+  const params = useLocalSearchParams<{
+    locality_created?: string | string[];
+    locality_name?: string | string[];
+  }>();
   const { activeScope, currentActorPacketId, setActiveSection } = useNexusShell();
   const appearance = useNexusAppearance();
   const [dashboardPayload, setDashboardPayload] =
@@ -73,6 +78,14 @@ export default function NexusDashboardPage() {
   const visibleMetrics = dashboardPayload?.metrics ?? [];
   const visibleQueues = dashboardPayload?.queue ?? [];
   const recommendedPackets = dashboardPayload?.recommended_packets ?? [];
+  const localityCreated =
+    Array.isArray(params.locality_created)
+      ? params.locality_created[0] === '1'
+      : params.locality_created === '1';
+  const createdLocalityName =
+    (Array.isArray(params.locality_name)
+      ? params.locality_name[0]
+      : params.locality_name) ?? activeScope.name;
 
   return (
     <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
@@ -99,6 +112,14 @@ export default function NexusDashboardPage() {
         {loadError ? (
           <NexusCard>
             <Text className="text-sm leading-6 text-nexus-rose">{loadError}</Text>
+          </NexusCard>
+        ) : null}
+
+        {localityCreated ? (
+          <NexusCard tone="mint">
+            <Text className={appearance.itemBodyClass}>
+              {createdLocalityName} is ready. Your home locality branch has been updated.
+            </Text>
           </NexusCard>
         ) : null}
 

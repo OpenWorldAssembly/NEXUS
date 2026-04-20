@@ -30,4 +30,6 @@ export type NexusLocationCreateCandidate = {
   canonical_name_key: string;
   label: string;
   description: string;
+  level?: NexusLocationSearchResult['level'] | null;
+  parent_scope_id?: string | null;
 };

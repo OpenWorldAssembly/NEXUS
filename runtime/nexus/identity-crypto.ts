@@ -170,16 +170,31 @@ function stripLegacyElementDefaults<TPacket extends PacketEnvelope>(
     return packet;
   }
 
-  const claimedRoleRefs = (packet.body as { claimed_role_refs?: unknown }).claimed_role_refs;
+  const body = packet.body as Record<string, unknown>;
+  let legacyBody = body;
+  let hasLegacyDefault = false;
+  const claimedRoleRefs = body.claimed_role_refs;
 
-  if (!Array.isArray(claimedRoleRefs) || claimedRoleRefs.length > 0) {
-    return packet;
+  if (Array.isArray(claimedRoleRefs) && claimedRoleRefs.length === 0) {
+    const { claimed_role_refs: _claimedRoleRefs, ...nextBody } = legacyBody;
+
+    legacyBody = nextBody;
+    hasLegacyDefault = true;
   }
 
-  const { claimed_role_refs: _claimedRoleRefs, ...legacyBody } = packet.body as Record<
-    string,
-    unknown
-  >;
+  if (
+    Object.prototype.hasOwnProperty.call(legacyBody, 'locality') &&
+    legacyBody.locality === null
+  ) {
+    const { locality: _locality, ...nextBody } = legacyBody;
+
+    legacyBody = nextBody;
+    hasLegacyDefault = true;
+  }
+
+  if (!hasLegacyDefault) {
+    return packet;
+  }
 
   return {
     ...packet,

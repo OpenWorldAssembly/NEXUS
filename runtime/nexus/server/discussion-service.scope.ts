@@ -116,6 +116,22 @@ export function matchesScopeLens(
   );
 }
 
+export function matchesAuthorityScope(
+  packet:
+    | PacketEnvelopeByType['DiscussionSpace']
+    | PacketEnvelopeByType['DiscussionForum']
+    | PacketEnvelopeByType['DiscussionThread']
+    | DiscussionEntryPacket,
+  lens: ScopeLens
+): boolean {
+  const authorityPacketId = lens.authority_scope_ref?.packet_id ?? null;
+
+  return (
+    Boolean(authorityPacketId) &&
+    packet.header.authority_scope_ref?.packet_id === authorityPacketId
+  );
+}
+
 export function getPacketScopeRank(
   packet:
     | PacketEnvelopeByType['DiscussionSpace']

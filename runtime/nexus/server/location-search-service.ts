@@ -9,6 +9,7 @@ import {
   createLocalityCanonicalNameKey,
   getLocalityFuzzySimilarity,
   getLocalitySearchMatchScore,
+  matchesLocalitySearchScopeFilter,
   normalizeLocalitySearchText,
   toLocalitySearchLevel,
   type LocalitySearchLevel,
@@ -16,7 +17,16 @@ import {
 import { getNexusPacketServices } from '@runtime/nexus/server/nexus-packet-services';
 
 type NexusLocationLookupProvider = {
-  searchLocations: (query: string, limit: number) => Promise<NexusLocationSearchResult[]>;
+  searchLocations: (
+    input: NexusLocationSearchOptions
+  ) => Promise<NexusLocationSearchResult[]>;
+};
+
+export type NexusLocationSearchOptions = {
+  query: string;
+  limit?: number;
+  level?: LocalitySearchLevel | null;
+  parentScopeId?: string | null;
 };
 
 type ScopeSearchNode = {
@@ -170,8 +180,9 @@ async function listGraphLocationNodes(): Promise<ScopeSearchNode[]> {
 }
 
 const graphLocationLookupProvider: NexusLocationLookupProvider = {
-  async searchLocations(query: string, limit: number) {
-    const normalizedQuery = normalizeLocalitySearchText(query);
+  async searchLocations(input: NexusLocationSearchOptions) {
+    const normalizedQuery = normalizeLocalitySearchText(input.query);
+    const limit = input.limit ?? 8;
 
     if (normalizedQuery.length < 2) {
       return [];
@@ -183,6 +194,12 @@ const graphLocationLookupProvider: NexusLocationLookupProvider = {
     );
 
     return scopeNodes
+      .filter((scopeNode) =>
+        matchesLocalitySearchScopeFilter(scopeNode, {
+          level: input.level ?? null,
+          parentScopeId: input.parentScopeId ?? null,
+        })
+      )
       .map((scopeNode) => {
         const scopePath = buildScopePath(scopeNodeMap, scopeNode.packet_id);
         const match = getLocationSearchMatch({
@@ -231,12 +248,19 @@ const graphLocationLookupProvider: NexusLocationLookupProvider = {
 };
 
 /**
- * Inputs: a location search query and optional result limit.
+ * Inputs: a location search query with optional level/parent scoping.
  * Output: canonical Nexus location matches from the current graph-backed provider.
  */
 export function searchNexusLocations(
-  query: string,
+  input: string | NexusLocationSearchOptions,
   limit = 8
 ): Promise<NexusLocationSearchResult[]> {
-  return graphLocationLookupProvider.searchLocations(query, limit);
+  if (typeof input === 'string') {
+    return graphLocationLookupProvider.searchLocations({ query: input, limit });
+  }
+
+  return graphLocationLookupProvider.searchLocations({
+    ...input,
+    limit: input.limit ?? limit,
+  });
 }

@@ -7,6 +7,7 @@ import type { RequestHandler } from 'expo-router/server';
 import { z } from 'zod';
 
 import { getNexusPacketServices } from '@runtime/nexus/server/nexus-packet-services';
+import { ensureDefaultDiscussionSurfaces } from '@runtime/nexus/server/default-discussion-surfaces';
 import {
   createCanonicalLocalityPath,
   LocalityDuplicateWarningError,
@@ -56,7 +57,9 @@ function createJsonResponse(body: unknown, status = 200): Response {
 
 export const POST: RequestHandler = async (request) => {
   try {
-    const parsedBody = CreateLocalitySchema.parse(await request.json());
+    const rawBody = (await request.json()) as Record<string, unknown>;
+    const parsedBody = CreateLocalitySchema.parse(rawBody);
+    const { actor_assertion: _actorAssertion, ...signedMutationBody } = rawBody;
     const services = await getNexusPacketServices();
     const actorContext = await services.authService.verifyActorMutation({
       request,
@@ -64,13 +67,7 @@ export const POST: RequestHandler = async (request) => {
       actorAssertion: parsedBody.actor_assertion,
       method: 'POST',
       path: '/api/nexus/locality',
-      body: {
-        actor_packet: parsedBody.actor_packet,
-        csrf_token: parsedBody.csrf_token,
-        reauth_token: parsedBody.reauth_token,
-        path: parsedBody.path,
-        create_anyway: parsedBody.create_anyway,
-      },
+      body: signedMutationBody,
       csrfToken: parsedBody.csrf_token,
       reauthToken: parsedBody.reauth_token,
       writeRisk: 'standard',
@@ -81,6 +78,19 @@ export const POST: RequestHandler = async (request) => {
       path: parsedBody.path,
       createAnyway: parsedBody.create_anyway,
     });
+    const finalLocalityPacket = await services.packetStore.fetchByPacket({
+      packet_id: result.final_result.scope_id,
+    });
+
+    if (finalLocalityPacket?.header.family === 'Element') {
+      await ensureDefaultDiscussionSurfaces({
+        packetStore: services.packetStore,
+        scopePacketId: finalLocalityPacket.header.packet_id,
+        scopeName: result.final_result.name,
+        applicableScopeRefs: finalLocalityPacket.header.applicable_scope_refs,
+      });
+      await services.discussionService.syncDerivedState();
+    }
 
     return createJsonResponse(result);
   } catch (error) {

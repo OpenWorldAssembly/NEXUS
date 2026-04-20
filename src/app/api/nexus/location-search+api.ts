@@ -11,6 +11,12 @@ import { searchNexusLocations } from '@runtime/nexus/server/location-search-serv
 
 const SearchLocationQuerySchema = z.object({
   query: z.string().trim().max(120).default(''),
+  level: z
+    .enum(['nation', 'region', 'city', 'district'])
+    .optional()
+    .nullable()
+    .default(null),
+  parent_scope_id: z.string().min(1).optional().nullable().default(null),
 });
 
 function createJsonResponse(body: unknown, status = 200): Response {
@@ -31,8 +37,14 @@ export const GET: RequestHandler = async (request) => {
     const requestUrl = new URL(request.url);
     const parsedQuery = SearchLocationQuerySchema.parse({
       query: requestUrl.searchParams.get('query') ?? '',
+      level: requestUrl.searchParams.get('level'),
+      parent_scope_id: requestUrl.searchParams.get('parent_scope_id'),
     });
-    const results = await searchNexusLocations(parsedQuery.query);
+    const results = await searchNexusLocations({
+      query: parsedQuery.query,
+      level: parsedQuery.level,
+      parentScopeId: parsedQuery.parent_scope_id,
+    });
     const canonicalQueryKey = createLocalityCanonicalNameKey(parsedQuery.query);
     const hasExactResult = results.some(
       (result) => result.canonical_name_key === canonicalQueryKey
@@ -49,6 +61,8 @@ export const GET: RequestHandler = async (request) => {
               label: 'Location not found in Nexus directory. Create it?',
               description:
                 'Nexus can create canonical locality Elements from a confirmed parent path. No third-party geocoder is used in this phase.',
+              level: parsedQuery.level,
+              parent_scope_id: parsedQuery.parent_scope_id,
             }
           : null,
     });

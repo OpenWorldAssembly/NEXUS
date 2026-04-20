@@ -197,7 +197,7 @@ Implemented shell behavior in this slice:
 - guest-claim return flows treat an already-claimed current actor as a successful ready state when a protected action supplied `return_to`, instead of stranding the user on the generic already-claimed page
 - remembered same-device claimed sign-ins now reuse the existing persistent session by default, and refresh-token rotation updates that same session in place instead of multiplying device-session rows
 - identity security now shows only active sessions by default, sorts the current session first, and surfaces explicit empty or error states instead of silently blanking the session area
-- person-packet signature verification now accepts both the current canonical `Element` shape and older signed revisions that predate the defaulted `claimed_role_refs` field, so stored claimed identities can still sign in and authorize role or assembly-association writes without weakening signature checks
+- person-packet signature verification now accepts both the current canonical `Element` shape and older signed revisions that predate additive defaults such as `claimed_role_refs: []` and `locality: null`, so stored claimed identities can still sign in and authorize role, assembly-association, or locality writes without weakening signature checks
 - the library route now defaults to a strict local-only packet view keyed to the active authority scope rather than using the broader inherited scope lens
 - personal-scope function rows now keep clean function titles while using `Personal ...` wording in the supporting subtext, and the scope-map connector lane uses semantic width cues so `Global -> ... -> You` reads visually from broadest to narrowest with `You` labeled as a `Personal branch`
 
@@ -1146,6 +1146,20 @@ Examples of decisions worth logging early:
 - Decision: add optional `Element.body.locality` metadata for geographic assemblies, extend location search with canonical/alias/path/fuzzy result metadata plus create candidates, add a protected `POST /api/nexus/locality` route, and introduce `/nexus/locality/create` as the shared full-path wizard for creating missing nation/region/city/district assemblies under a confirmed parent path.
 - Why: locality creation should mint real cryptographic assembly Elements without letting raw free text create ambiguous public geography; exact duplicates should reuse existing packets, while fuzzy duplicates should warn before allowing explicit override.
 - Consequences / follow-ups: signup/claim and Trust can hand off into the shared locality journey, existing legacy `subtype` and `locality_label` fields remain readable, no third-party geocoder is involved yet, and later phases still need richer parent-path discovery, merge/moderation tools for mistaken duplicates, translated aliases, and a future Nexus map/browser entry point.
+
+### 2026-04-20 - Locality mutations keep legacy identity signatures strict while the wizard searches each path level
+
+- Context: clearing or changing home locality and submitting the locality creation route could fail for older claimed identities because reparsing legacy person Elements added `locality: null` before signature verification, changing the canonical payload from what was originally signed. The first locality creation wizard also accepted raw path text at each level instead of searching scoped existing localities first.
+- Decision: keep stored person-packet self-verification active, but let the verifier try a legacy candidate with additive `Element` defaults such as `claimed_role_refs: []` and `locality: null` removed before comparing the digest and ECDSA signature. Extend `/api/nexus/location-search` with optional `level` and `parent_scope_id` filters, and update `/nexus/locality/create` to use a `Build locality path` flow where each level searches/selects existing localities or is explicitly marked as a new candidate before review.
+- Why: older legitimate identity packets should continue to authorize signed locality mutations without bypassing auth, and locality creation should guide users toward existing canonical packets before creating new geographic assembly Elements.
+- Consequences / follow-ups: Trust `Clear home locality`, home switching, and locality creation should share the same signature compatibility fix; existing broad locality search callers continue to work; server-side duplicate reuse/warnings remain the safety backstop; future work can still add map/browser entry points, translated aliases, and merge/moderation tooling without changing this route shape.
+
+### 2026-04-20 - Created localities get clean local discussion surfaces
+
+- Context: newly created locality scopes could land the user back on Global Commons after home-locality setup, and their Discussions surface could inherit parent forums and starter threads instead of opening as a local clean slate.
+- Decision: when `/nexus/locality/create` sets the selected locality as home, refresh shell state, make that locality the active scope, and route to its dashboard with a success notice. The locality creation API now idempotently ensures one local `DiscussionSpace` plus empty `visitor_lobby`, `general`, and `proposals` forums for the final selected locality, while the discussion service only projects forums and feeds whose authority scope is the active scope.
+- Why: creating Perris should feel like entering Perris, and Perris discussions should not appear pre-populated with California threads just because California is an ancestor scope.
+- Consequences / follow-ups: forum inheritance is no longer used for the main Discussions feed; scopes without local forums show an explicit empty state; starter threads are not created in this pass; and future work should make discussion spaces/forums dynamic and element-configurable instead of relying on a fixed starter bundle.
 
 ### 2026-04-10 - Railway cutover keeps the Expo server app intact and adds a local production-parity Node server
 

@@ -5,9 +5,21 @@ import {
   createLocalityCanonicalNameKey,
   getLocalityFuzzySimilarity,
   getLocalitySearchMatchScore,
+  matchesLocalitySearchScopeFilter,
   normalizeLocalitySearchText,
   toLocalitySearchLevel,
 } from '../location-search-normalization.ts';
+
+const CALIFORNIA_NODE = {
+  level: 'region',
+  parent_packet_id: 'nexus:element/united-states',
+} satisfies Parameters<typeof matchesLocalitySearchScopeFilter>[0];
+
+function createFilters(
+  filters: Parameters<typeof matchesLocalitySearchScopeFilter>[1]
+) {
+  return filters;
+}
 
 test('locality search normalization ignores case, punctuation, hyphens, and repeated spaces', () => {
   const canonicalKey = normalizeLocalitySearchText('Sunnymead Ranch');
@@ -44,6 +56,49 @@ test('locality search simple aliases match Sunnymead-style multi-word localities
       searchableValues: ['Sunnymead Ranch'],
     }),
     null
+  );
+});
+
+test('locality search filters by requested level and parent scope', () => {
+  assert.equal(
+    matchesLocalitySearchScopeFilter(
+      CALIFORNIA_NODE,
+      createFilters({
+        level: 'region',
+        parentScopeId: 'nexus:element/united-states',
+      })
+    ),
+    true
+  );
+  assert.equal(
+    matchesLocalitySearchScopeFilter(
+      CALIFORNIA_NODE,
+      createFilters({
+        level: 'city',
+        parentScopeId: 'nexus:element/united-states',
+      })
+    ),
+    false
+  );
+  assert.equal(
+    matchesLocalitySearchScopeFilter(
+      CALIFORNIA_NODE,
+      createFilters({
+        level: 'region',
+        parentScopeId: 'nexus:element/global-commons',
+      })
+    ),
+    false
+  );
+  assert.equal(
+    matchesLocalitySearchScopeFilter(
+      CALIFORNIA_NODE,
+      createFilters({
+        level: null,
+        parentScopeId: null,
+      })
+    ),
+    true
   );
 });
 

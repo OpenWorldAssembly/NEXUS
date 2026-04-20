@@ -38,7 +38,7 @@ import {
   getDiscussionForumDisplayTitle,
   getDiscussionForumOrder,
   getPacketScopeRank,
-  matchesScopeLens,
+  matchesAuthorityScope,
   selectForumEntry,
   toDiscussionForumId,
   toRouteScopeId,
@@ -940,6 +940,25 @@ export class SQLiteDiscussionService
   }) {
     await this.syncDerivedState();
 
+    if (!this.state) {
+      throw new Error('Discussion state is unavailable.');
+    }
+
+    const rootPostPacket = this.state.rootPostMap.get(
+      resolveRootPostId(this.state.entryMap, input.thread_post_packet_id)
+    );
+    const threadPacket = rootPostPacket
+      ? this.state.threadMap.get(rootPostPacket.body.thread_ref.packet_id)
+      : null;
+    const forumPacket = threadPacket
+      ? this.state.forumMap.get(threadPacket.body.forum_ref.packet_id)
+      : null;
+    const scopeLens = buildScopeLens(input.scope_id, this.state.scopeMap);
+
+    if (!forumPacket || !matchesAuthorityScope(forumPacket, scopeLens)) {
+      throw new Error('This discussion thread is not available from the current scope.');
+    }
+
     return this.getReplyChildrenPage({
       root_post_packet_id: input.thread_post_packet_id,
       parent_post_packet_id: input.parent_post_packet_id,
@@ -974,7 +993,7 @@ export class SQLiteDiscussionService
 
     const scopeLens = buildScopeLens(input.scope_id, this.state.scopeMap);
 
-    if (!matchesScopeLens(forumPacket, scopeLens)) {
+    if (!matchesAuthorityScope(forumPacket, scopeLens)) {
       throw new Error('This discussion forum is not available from the current scope.');
     }
 
@@ -1093,7 +1112,7 @@ export class SQLiteDiscussionService
 
     const scopeLens = buildScopeLens(input.scope_id, this.state.scopeMap);
 
-    if (!matchesScopeLens(forumPacket, scopeLens)) {
+    if (!matchesAuthorityScope(forumPacket, scopeLens)) {
       throw new Error('This discussion forum is not available from the current scope.');
     }
 
@@ -1233,7 +1252,7 @@ export class SQLiteDiscussionService
     >();
 
     for (const forumPacket of this.state.forumMap.values()) {
-      if (!matchesScopeLens(forumPacket, scopeLens)) {
+      if (!matchesAuthorityScope(forumPacket, scopeLens)) {
         continue;
       }
 
@@ -1241,7 +1260,10 @@ export class SQLiteDiscussionService
         forumPacket.body.discussion_space_ref.packet_id
       );
 
-      if (!discussionSpacePacket || !matchesScopeLens(discussionSpacePacket, scopeLens)) {
+      if (
+        !discussionSpacePacket ||
+        !matchesAuthorityScope(discussionSpacePacket, scopeLens)
+      ) {
         continue;
       }
 

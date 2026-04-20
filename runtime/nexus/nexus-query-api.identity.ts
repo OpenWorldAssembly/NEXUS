@@ -26,10 +26,24 @@ export class NexusLocalityDuplicateWarningClientError extends Error {
 }
 
 export function fetchNexusLocationSearchPayload(
-  query: string
+  query: string,
+  options?: {
+    level?: 'nation' | 'region' | 'city' | 'district' | null;
+    parentScopeId?: string | null;
+  }
 ): Promise<NexusLocationSearchPayload> {
+  const params = new URLSearchParams({ query });
+
+  if (options?.level) {
+    params.set('level', options.level);
+  }
+
+  if (options?.parentScopeId) {
+    params.set('parent_scope_id', options.parentScopeId);
+  }
+
   return fetchJsonOrThrow<NexusLocationSearchPayload>(
-    `/api/nexus/location-search?query=${encodeURIComponent(query)}`
+    `/api/nexus/location-search?${params.toString()}`
   );
 }
 
