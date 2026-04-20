@@ -1,127 +1,110 @@
 /**
  * File: home-content.ts
- * Description: Stores the homepage hero and supporting card copy.
+ * Description: Stores the homepage hero and the selected sharp rail sections.
  */
 import type { PublicPageAction } from '@app/components/public/public-page-actions';
-import type { PublicHeroAction, PublicHeroSlide, PublicPrinciple } from './content-types';
-import { buildHeroBackgroundImageUri } from './public-graphics';
+import { buildAboutBackgroundImageUri } from './public-graphics';
 
-export type HomeSupportingCard = {
-  eyebrow: string;
+export type HomeHero = {
   title: string;
-  body: string;
-  actions?: PublicHeroAction[];
+  statement: string;
+  backgroundImageUri: string;
+};
+
+export type HomeRailSection = {
+  id: string;
+  mainPoint: string;
+  subPoint: string;
+  backgroundImageUri: string;
+  align: 'left' | 'right';
+  action: PublicPageAction;
 };
 
 export type HomePageContent = {
-  principlesEyebrow: string;
-  heroSlides: PublicHeroSlide[];
-  principles: PublicPrinciple[];
+  hero: HomeHero;
   heroActions: PublicPageAction[];
-  supportingCards: HomeSupportingCard[];
-  actions?: PublicHeroAction[];
+  sections: HomeRailSection[];
 };
 
-
 const heroActions: PublicPageAction[] = [
-  { href: '/about', label: 'Learn More', variant: 'secondary' },
-  { href: '/docs', label: 'Read the Charter', variant: 'secondary' },
-  { href: '/support', label: 'Support Development', variant: 'secondary' },
-  { href: '/nexus/dashboard', label: 'Browse the Nexus', variant: 'primary' },
+  { href: '/about', label: 'About OWA', variant: 'secondary' },
+  { href: '/nexus/dashboard', label: 'Enter Nexus', variant: 'primary' },
+  { href: '/docs', label: 'Read Charter', variant: 'secondary' },
 ];
 
-const supportingCards: HomeSupportingCard[] = [
-  {
-    eyebrow: 'Built for real communities',
-    title: 'Start where people already are',
-    body:
-      'Neighborhoods, cities, regions, and larger networks can all use the same democratic pattern without giving power to a permanent center.',
-  },
-  {
-    eyebrow: 'More than discussion',
-    title: 'Keep deliberation tied to action',
-    body:
-      'Discussion, decisions, records, and follow-through stay linked instead of scattering across disconnected apps, feeds, and forgotten threads.',
-  },
-];
+const hero: HomeHero = {
+  title: 'Open World Assembly',
+  statement: 'Decentralized human coordination.',
+  backgroundImageUri: buildAboutBackgroundImageUri({
+    base: '#09131f',
+    accent: '#8ec5ff',
+    accentSoft: '#d7ffbf',
+    glow: '#173651',
+    ridge: '#466176',
+  }),
+};
 
-export const publicHeroSlides: PublicHeroSlide[] = [
+const sections: HomeRailSection[] = [
   {
-    eyebrow: 'Open World Assembly',
-    title: "It's time to unite.",
-    body: 'Cooperation is overdue.',
-    kicker: 'Why this matters',
-    detail:
-      'Humanity already has the communications infrastructure. What is missing is an open democratic coordination layer people can actually use.',
-    backgroundImageUri: buildHeroBackgroundImageUri({
-      base: '#0b1626',
-      accent: '#6dd3ff',
+    id: 'unity',
+    mainPoint: 'Unity Is Inevitable',
+    subPoint: 'Nuclear war is not.',
+    backgroundImageUri: buildAboutBackgroundImageUri({
+      base: '#0a1422',
+      accent: '#9ecbff',
       accentSoft: '#d7ffbf',
-      glow: '#19344a',
-      ridge: '#35546d',
+      glow: '#18344c',
+      ridge: '#3f5a71',
     }),
-    actions: [{ href: '/about', label: 'Learn More', variant: 'primary' }],
+    align: 'right',
+    action: { href: '/about', label: 'About OWA', variant: 'secondary' },
   },
   {
-    eyebrow: 'From local to global',
-    title: 'Direct participation at every scale.',
-    body: 'Local voice, global alignment.',
-    kicker: 'What this enables',
-    detail:
-      'Communities can deliberate and act where they are, while linking upward into larger patterns of coordination without losing local context.',
-    backgroundImageUri: buildHeroBackgroundImageUri({
-      base: '#0b1423',
-      accent: '#8ec5ff',
+    id: 'time',
+    mainPoint: 'Our Time Has Come',
+    subPoint: 'No permission required.',
+    backgroundImageUri: buildAboutBackgroundImageUri({
+      base: '#0a1524',
+      accent: '#9ac8ff',
       accentSoft: '#d7ffbf',
-      glow: '#173651',
-      ridge: '#41596d',
+      glow: '#193a56',
+      ridge: '#4a6278',
     }),
-    actions: [{ href: '/about', label: 'Explore the Vision', variant: 'primary' }],
+    align: 'left',
+    action: { href: '/docs', label: 'Read Charter', variant: 'secondary' },
   },
   {
-    eyebrow: 'The question now',
-    title: 'The technology now exists.',
-    body: 'The question is how we use it.',
-    kicker: 'The real choice',
-    detail:
-      'The same tools that can centralize control can also distribute coordination, memory, and accountability more widely than ever before.',
-    backgroundImageUri: buildHeroBackgroundImageUri({
+    id: 'technology',
+    mainPoint: 'We Have The Technology',
+    subPoint: 'To liberate or to enslave.',
+    backgroundImageUri: buildAboutBackgroundImageUri({
+      base: '#08111d',
+      accent: '#a6d6ff',
+      accentSoft: '#f0d79a',
+      glow: '#16324b',
+      ridge: '#425b70',
+    }),
+    align: 'right',
+    action: { href: '/nexus/dashboard', label: 'Enter Nexus', variant: 'secondary' },
+  },
+  {
+    id: 'future',
+    mainPoint: 'The Future Is Ours',
+    subPoint: 'Let’s build it together.',
+    backgroundImageUri: buildAboutBackgroundImageUri({
       base: '#09131f',
-      accent: '#8ec5ff',
-      accentSoft: '#d7ffbf',
-      glow: '#183a56',
-      ridge: '#466176',
+      accent: '#a2d5ff',
+      accentSoft: '#c6d670',
+      glow: '#17344d',
+      ridge: '#425d73',
     }),
-    actions: [{ href: '/about', label: 'See the Framework', variant: 'primary' }],
-  },
-  {
-    eyebrow: 'Explore OWA',
-    title: 'Learn how it works.',
-    body: 'Explore the vision. See the framework.',
-    kicker: 'Next steps',
-    detail:
-      'The About page goes deeper into the structure, purpose, and design logic behind the Open World Assembly.',
-    backgroundImageUri: buildHeroBackgroundImageUri({
-      base: '#09131e',
-      accent: '#8ec5ff',
-      accentSoft: '#f7d995',
-      glow: '#1a3550',
-      ridge: '#41596d',
-    }),
-    actions: [
-      { href: '/about', label: 'Learn More', variant: 'primary' },
-      { href: '/about', label: 'Explore the Vision', variant: 'secondary' },
-      { href: '/about', label: 'See the Framework', variant: 'secondary' },
-    ],
+    align: 'left',
+    action: { href: '/support', label: 'Support OWA', variant: 'secondary' },
   },
 ];
-
-export const publicPrinciples: PublicPrinciple[] = [];
 
 export const homePageContent: HomePageContent = {
-  principlesEyebrow: 'Antifragile direct democracy',
-  heroSlides: publicHeroSlides,
-  principles: publicPrinciples,
+  hero,
   heroActions,
-  supportingCards,
+  sections,
 };
