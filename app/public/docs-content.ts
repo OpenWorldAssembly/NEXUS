@@ -1,52 +1,189 @@
 /**
- * File: docs-content.ts
- * Description: Stores the copy for the public docs and charter route.
+ * File: app/public/docs-content.ts
+ * Description: Structured content for the public charter page.
  */
-import type { PublicPageAction } from '@app/components/public/public-page-actions';
-import type { CharterResource } from './content-types';
+import type { Href } from 'expo-router';
 
-export type DocsPageContent = {
-  eyebrow: string;
-  title: string;
-  body: string;
-  calloutEyebrow: string;
-  calloutBody: string;
-  resources: CharterResource[];
-  actions: PublicPageAction[];
+import { buildAboutBackgroundImageUri } from './public-graphics';
+
+export type CharterCta = {
+  label: string;
+  href: Href;
+  variant?: 'default' | 'highlight';
 };
 
-export const charterResources: CharterResource[] = [
+export type CharterPrinciple = {
+  numeral: string;
+  title: string;
+  body: string;
+};
+
+export type CharterPairSection = {
+  id: string;
+  backgroundImageUri: string;
+  left: CharterPrinciple;
+  right: CharterPrinciple;
+};
+
+export type CharterHero = {
+  title: string;
+  subtitle: string;
+  intro: string;
+  declaration: string;
+  backgroundImageUri: string;
+};
+
+export type CharterClosing = {
+  title: string;
+  lines: string[];
+  ctas: CharterCta[];
+  backgroundImageUri: string;
+};
+
+export const CHARTER_HERO: CharterHero = {
+  title: 'The Charter of the Open World Assembly',
+  subtitle: 'For the Free Peoples of Earth',
+  intro:
+    'Humanity now possesses the means to communicate, coordinate, and act together across the planet.',
+  declaration:
+    'We need not wait for kings, parties, corporations, or catastrophes to decide our future. We declare these principles.',
+  backgroundImageUri: buildAboutBackgroundImageUri({
+    base: "#07131d",
+    accentSoft: "#7fb7ff",
+    ridge: "#d4f79a",
+    seed: 'docs-hero-charter',
+    accent: '#8dc2ff',
+    glow: '#d4f79a',
+  }),
+};
+
+export const CHARTER_SECTIONS: CharterPairSection[] = [
   {
-    status: 'Current public route',
-    title: 'Charter destination page',
-    body:
-      'This page now serves as the dedicated home for the public charter. It is no longer just a placeholder route, but the actual destination where the charter and its supporting materials will live as they are written.',
+    id: 'charter-01-02',
+    backgroundImageUri: buildAboutBackgroundImageUri({
+    base: "#07131d",
+    accentSoft: "#7fb7ff",
+    ridge: "#d4f79a",
+      seed: 'docs-people-consent',
+      accent: '#8dc2ff',
+      glow: '#d4f79a',
+    }),
+    left: {
+      numeral: 'I',
+      title: 'The People Are the Source',
+      body: 'All legitimate power rises from the people and remains answerable to them.',
+    },
+    right: {
+      numeral: 'II',
+      title: 'Consent Above Control',
+      body: 'No authority is just without consent. No consent is real without the freedom to refuse.',
+    },
   },
   {
-    status: 'Source material',
-    title: 'Long-form canon and implementation guidance',
-    body:
-      'The broader body of work still lives in longer internal documents. Those materials inform the charter, but the charter itself should remain concise, legible, and public-facing.',
+    id: 'charter-03-04',
+    backgroundImageUri: buildAboutBackgroundImageUri({
+    base: "#07131d",
+    accentSoft: "#7fb7ff",
+    ridge: "#d4f79a",
+      seed: 'docs-power-participation',
+      accent: '#8dc2ff',
+      glow: '#d4f79a',
+    }),
+    left: {
+      numeral: 'III',
+      title: 'Power Must Be Limited',
+      body: 'Any power not checked will drift toward abuse.',
+    },
+    right: {
+      numeral: 'IV',
+      title: 'Participation Over Passivity',
+      body: 'Those affected by decisions should have a voice in them.',
+    },
   },
   {
-    status: 'Next drafting step',
-    title: 'Condense principles into a short public statement',
-    body:
-      'The next major step is turning the deeper framework into a brief, trustworthy charter that explains OWA without requiring readers to absorb the entire system architecture first.',
+    id: 'charter-05-06',
+    backgroundImageUri: buildAboutBackgroundImageUri({
+    base: "#07131d",
+    accentSoft: "#7fb7ff",
+    ridge: "#d4f79a",
+      seed: 'docs-local-shared',
+      accent: '#8dc2ff',
+      glow: '#d4f79a',
+    }),
+    left: {
+      numeral: 'V',
+      title: 'Decentralize What Can Be Local',
+      body: 'What can be decided locally should never be captured from afar.',
+    },
+    right: {
+      numeral: 'VI',
+      title: 'Coordinate What Must Be Shared',
+      body: 'What concerns many may be aligned by many through open cooperation.',
+    },
+  },
+  {
+    id: 'charter-07-08',
+    backgroundImageUri: buildAboutBackgroundImageUri({
+    base: "#07131d",
+    accentSoft: "#7fb7ff",
+    ridge: "#d4f79a",
+      seed: 'docs-unity-nonviolence',
+      accent: '#8dc2ff',
+      glow: '#d4f79a',
+    }),
+    left: {
+      numeral: 'VII',
+      title: 'Unity Without Uniformity',
+      body: 'People may differ in culture, belief, and way of life while building peace together.',
+    },
+    right: {
+      numeral: 'VIII',
+      title: 'Nonviolence Is Strength',
+      body: 'Violence breeds the systems it claims to defeat. Disciplined peace outlasts fear.',
+    },
+  },
+  {
+    id: 'charter-09-10',
+    backgroundImageUri: buildAboutBackgroundImageUri({
+    base: "#07131d",
+    accentSoft: "#7fb7ff",
+    ridge: "#d4f79a",
+      seed: 'docs-truth-fatalism',
+      accent: '#8dc2ff',
+      glow: '#d4f79a',
+    }),
+    left: {
+      numeral: 'IX',
+      title: 'Truth Must Be Visible',
+      body: 'Transparency builds trust. Hidden power corrodes it.',
+    },
+    right: {
+      numeral: 'X',
+      title: 'Fatalism Is Folly',
+      body: 'We need not wait for war, collapse, or nuclear fire to become wise.',
+    },
   },
 ];
 
-export const docsPageContent: DocsPageContent = {
-  eyebrow: 'Charter',
-  title: 'The public charter belongs here.',
-  body:
-    'This route now serves as the charter destination for the public site. The charter itself still needs to be written, so this page currently frames the purpose of that document and points to the materials informing it.',
-  calloutEyebrow: 'What the charter should do',
-  calloutBody:
-    'Present the shortest trustworthy statement of OWA principles, legitimacy, structure, and commitments so a new visitor can understand what the system stands for before diving into longer canon and implementation material.',
-  resources: charterResources,
-  actions: [
-    { href: '/about', label: 'Learn More', variant: 'primary' },
-    { href: '/nexus/dashboard', label: 'Browse the Nexus', variant: 'secondary' },
+export const CHARTER_CLOSING: CharterClosing = {
+  title: 'Closing',
+  lines: [
+    'The future is not owned by tyrants, algorithms, or inherited power.',
+    'The future belongs to free peoples who choose to build it together.',
+    'Let assemblies rise wherever people are. Let consent become visible.',
+    'Let cooperation outrun coercion. Let the age of participation begin.',
   ],
+  ctas: [
+    { label: 'About OWA', href: '/about' },
+    { label: 'Support OWA', href: '/support' },
+    { label: 'Enter Nexus', href: '/nexus', variant: 'highlight' },
+  ],
+  backgroundImageUri: buildAboutBackgroundImageUri({
+    base: "#07131d",
+    accentSoft: "#7fb7ff",
+    ridge: "#d4f79a",
+    seed: 'docs-closing-charter',
+    accent: '#8dc2ff',
+    glow: '#d4f79a',
+  }),
 };

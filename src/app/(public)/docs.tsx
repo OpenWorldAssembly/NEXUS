@@ -1,46 +1,34 @@
 /**
- * File: docs.tsx
- * Description: Renders the public charter destination page and related source-document context.
+ * File: (public)/docs.tsx
+ * Description: Public charter page rendered with the live Open World Assembly charter.
  */
-import PublicCardGrid from '@app/components/public/public-card-grid';
-import PublicFeatureCard from '@app/components/public/public-feature-card';
-import PublicPageActions from '@app/components/public/public-page-actions';
-import PublicPageHero from '@app/components/public/public-page-hero';
-import PublicPageShell from '@app/components/public/public-page-shell';
-import { docsPageContent } from '@app/public/docs-content';
+import { View } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { PublicDocsClosing } from '@app/components/public/public-docs-closing';
+import { PublicDocsHero } from '@app/components/public/public-docs-hero';
+import { PublicDocsPrinciplePair } from '@app/components/public/public-docs-principle-pair';
+import { CHARTER_CLOSING, CHARTER_HERO, CHARTER_SECTIONS } from '@app/public/docs-content';
 
 /**
  * Inputs: none.
- * Output: the public charter destination page with current drafting status and supporting references.
+ * Output: public charter page with a hero, principle sections, and closing declaration.
  */
-export default function DocsPage() {
+const AnimatedScrollView = Animated.ScrollView;
+
+export default function DocsScreen() {
   return (
-    <PublicPageShell>
-      <PublicPageHero
-        eyebrow={docsPageContent.eyebrow}
-        title={docsPageContent.title}
-        body={docsPageContent.body}
-        calloutEyebrow={docsPageContent.calloutEyebrow}
-        calloutBody={docsPageContent.calloutBody}
-        eyebrowClassName="text-public-sand"
-        calloutEyebrowClassName="text-public-cyan"
-        glowPrimaryClassName="bg-public-sand/10"
-        glowSecondaryClassName="bg-public-cyan/15"
-      />
+    <AnimatedScrollView
+      className="flex-1 bg-[#040b1c]"
+      contentContainerClassName="px-6 pb-24 pt-10 md:px-10 md:pt-12">
+      <View className="mx-auto w-full max-w-[1280px] gap-7 md:gap-8">
+        <PublicDocsHero hero={CHARTER_HERO} />
 
-      <PublicCardGrid>
-        {docsPageContent.resources.map((resource) => (
-          <PublicFeatureCard
-            key={resource.title}
-            eyebrow={resource.status}
-            title={resource.title}
-            body={resource.body}
-            eyebrowClassName="text-public-cyan"
-          />
+        {CHARTER_SECTIONS.map((section) => (
+          <PublicDocsPrinciplePair key={section.id} section={section} />
         ))}
-      </PublicCardGrid>
 
-      <PublicPageActions actions={docsPageContent.actions} />
-    </PublicPageShell>
+        <PublicDocsClosing closing={CHARTER_CLOSING} />
+      </View>
+    </AnimatedScrollView>
   );
 }
