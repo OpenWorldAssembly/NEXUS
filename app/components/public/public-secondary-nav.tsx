@@ -20,35 +20,30 @@ export function PublicSecondaryNav({
   topbarShellHeight,
   railShellHeight,
   getItemAnimatedState,
-  shouldShowSubtitle,
+  shouldShowItemSubtitle,
 }: PublicSecondaryNavProps) {
+  const sharedNavProps = {
+    items,
+    activeId,
+    onItemPress,
+    title,
+    subtitle,
+    getItemAnimatedState,
+    shouldShowItemSubtitle,
+  };
+
   if (mode === 'topbar') {
-    return (
-      <PublicSecondaryNavTopbar
-        items={items}
-        activeId={activeId}
-        onItemPress={onItemPress}
-        title={title}
-        subtitle={subtitle}
-        topbarShellHeight={topbarShellHeight}
-        getItemAnimatedState={getItemAnimatedState}
-        shouldShowSubtitle={shouldShowSubtitle}
-      />
-    );
+    return <PublicSecondaryNavTopbar {...sharedNavProps} topbarShellHeight={topbarShellHeight} />;
   }
 
   return (
     <PublicSecondaryNavRail
-      items={items}
-      activeId={activeId}
-      onItemPress={onItemPress}
+      {...sharedNavProps}
       title={title ?? ''}
       subtitle={subtitle ?? ''}
       railWidth={railWidth}
       railShellHeight={railShellHeight ?? 540}
       railRightOffset={railRightOffset}
-      getItemAnimatedState={getItemAnimatedState}
-      shouldShowSubtitle={shouldShowSubtitle}
     />
   );
 }

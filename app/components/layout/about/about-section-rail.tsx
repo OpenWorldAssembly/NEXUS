@@ -2,11 +2,12 @@
  * File: about-section-rail.tsx
  * Description: About-page adapter for the shared public secondary navigation shell.
  */
+import { PublicSecondaryNav } from '@app/components/public/public-secondary-nav';
 import type {
   PublicSecondaryNavAnimatedState,
+  PublicSecondaryNavItem,
   PublicSecondaryNavMode,
 } from '@app/components/public/public-secondary-nav.types';
-import { PublicSecondaryNav } from '@app/components/public/public-secondary-nav';
 import type { AboutPageContent } from '@app/public/about-content';
 
 type AboutSectionRailProps = {
@@ -36,7 +37,7 @@ export default function AboutSectionRail({
   shouldShowItemSubtitle,
   topbarShellHeight,
 }: AboutSectionRailProps) {
-  const items = content.sections.map((section) => ({
+  const items: PublicSecondaryNavItem[] = content.sections.map((section) => ({
     id: section.id,
     title: section.headline,
     subtitle: section.eyebrow,
@@ -54,7 +55,7 @@ export default function AboutSectionRail({
       topbarShellHeight={topbarShellHeight}
       getItemAnimatedState={getItemAnimatedState}
       onItemPress={onSectionPress}
-      shouldShowSubtitle={shouldShowItemSubtitle}
+      shouldShowItemSubtitle={shouldShowItemSubtitle}
     />
   );
 }

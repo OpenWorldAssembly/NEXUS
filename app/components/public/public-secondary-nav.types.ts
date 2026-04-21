@@ -19,14 +19,20 @@ export type PublicSecondaryNavAnimatedState = {
   subtitleAnimatedStyle?: Record<string, unknown>;
 };
 
+export type PublicSecondaryNavAnimatedStateResolver = (
+  itemId: string,
+) => PublicSecondaryNavAnimatedState | undefined;
+
+export type PublicSecondaryNavSubtitleVisibilityResolver = (itemId: string) => boolean;
+
 export type PublicSecondaryNavSharedProps = {
   items: PublicSecondaryNavItem[];
   activeId: string | null;
   onItemPress: (itemId: string) => void;
   title?: string;
   subtitle?: string;
-  getItemAnimatedState?: (itemId: string) => PublicSecondaryNavAnimatedState | undefined;
-  shouldShowSubtitle?: (itemId: string) => boolean;
+  getItemAnimatedState?: PublicSecondaryNavAnimatedStateResolver;
+  shouldShowItemSubtitle?: PublicSecondaryNavSubtitleVisibilityResolver;
 };
 
 export type PublicSecondaryNavProps = PublicSecondaryNavSharedProps & {

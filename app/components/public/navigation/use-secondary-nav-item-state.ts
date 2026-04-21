@@ -7,7 +7,9 @@ import { Animated } from 'react-native';
 import { SECTION_RAIL_WIDTH } from '@app/components/public/public-secondary-nav.constants';
 import type {
   PublicSecondaryNavAnimatedState,
+  PublicSecondaryNavAnimatedStateResolver,
   PublicSecondaryNavMode,
+  PublicSecondaryNavSubtitleVisibilityResolver,
 } from '@app/components/public/public-secondary-nav.types';
 import type { PublicSectionWithId, SectionLayout } from '@app/components/public/sections/public-section.types';
 
@@ -23,8 +25,8 @@ type UseSecondaryNavItemStateArgs<TSection extends PublicSectionWithId> = {
 };
 
 type UseSecondaryNavItemStateResult = {
-  getItemAnimatedState: (sectionId: string) => PublicSecondaryNavAnimatedState;
-  shouldShowItemSubtitle: (sectionId: string) => boolean;
+  getItemAnimatedState: PublicSecondaryNavAnimatedStateResolver;
+  shouldShowItemSubtitle: PublicSecondaryNavSubtitleVisibilityResolver;
 };
 
 /**

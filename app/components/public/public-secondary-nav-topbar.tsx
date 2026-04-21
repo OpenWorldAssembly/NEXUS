@@ -5,6 +5,7 @@
 import React, { useMemo } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
+import { resolvePublicSecondaryNavItemState } from '@app/components/public/public-secondary-nav.helpers';
 import {
   SECTION_TOPBAR_COMPACT_BREAKPOINT,
   SECTION_TOPBAR_PILL_GAP,
@@ -26,6 +27,7 @@ export function PublicSecondaryNavTopbar({
   subtitle,
   topbarShellHeight,
   getItemAnimatedState,
+  shouldShowItemSubtitle,
 }: PublicSecondaryNavTopbarProps) {
   const { width } = useWindowDimensions();
   const isCompactTopbar = width < SECTION_TOPBAR_COMPACT_BREAKPOINT;
@@ -49,7 +51,11 @@ export function PublicSecondaryNavTopbar({
       <View style={[styles.navList, isCompactTopbar ? styles.navListCompact : null]}>
         {items.map((item) => {
           const isActive = item.id === activeId;
-          const animatedState = getItemAnimatedState?.(item.id);
+          const { animatedState, shouldShowSubtitle } = resolvePublicSecondaryNavItemState({
+            itemId: item.id,
+            getItemAnimatedState,
+            shouldShowItemSubtitle,
+          });
 
           return (
             <View key={item.id} style={itemStyles.shell}>
@@ -70,7 +76,11 @@ export function PublicSecondaryNavTopbar({
                     <View style={styles.subtitleSlot}>
                       <Animated.Text
                         numberOfLines={1}
-                        style={[textStyles.subtitle, animatedState?.subtitleAnimatedStyle]}
+                        style={[
+                          textStyles.subtitle,
+                          animatedState?.subtitleAnimatedStyle,
+                          !shouldShowSubtitle && styles.itemSubtitleHidden,
+                        ]}
                       >
                         {item.subtitle}
                       </Animated.Text>
@@ -210,5 +220,8 @@ const styles = StyleSheet.create({
     marginTop: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  itemSubtitleHidden: {
+    opacity: 0,
   },
 });

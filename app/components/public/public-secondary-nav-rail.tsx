@@ -4,6 +4,7 @@
  */
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { resolvePublicSecondaryNavItemState } from '@app/components/public/public-secondary-nav.helpers';
 import type { PublicSecondaryNavRailProps } from '@app/components/public/public-secondary-nav.types';
 import { SECTION_RAIL_WIDTH } from './public-secondary-nav.constants';
 
@@ -21,7 +22,7 @@ export default function PublicSecondaryNavRail({
   title,
   getItemAnimatedState,
   onItemPress,
-  shouldShowSubtitle,
+  shouldShowItemSubtitle,
 }: PublicSecondaryNavRailProps) {
   const resolvedRailWidth = railWidth ?? SECTION_RAIL_WIDTH;
   const railItemPressableWidth = Math.max(resolvedRailWidth - 16, 0);
@@ -48,8 +49,11 @@ export default function PublicSecondaryNavRail({
 
         <View style={styles.railStack}>
           {items.map((item) => {
-            const animatedState = getItemAnimatedState?.(item.id);
-            const showItemSubtitle = shouldShowSubtitle ? shouldShowSubtitle(item.id) : true;
+            const { animatedState, shouldShowSubtitle } = resolvePublicSecondaryNavItemState({
+              itemId: item.id,
+              getItemAnimatedState,
+              shouldShowItemSubtitle,
+            });
 
             return (
               <Pressable
@@ -81,7 +85,7 @@ export default function PublicSecondaryNavRail({
                           style={[
                             styles.railSubtitleBase,
                             animatedState?.subtitleAnimatedStyle,
-                            !showItemSubtitle && styles.railSubtitleHidden,
+                            !shouldShowSubtitle && styles.railSubtitleHidden,
                           ]}
                         >
                           {item.subtitle}
