@@ -18,14 +18,14 @@ type AnimatedSectionStyle = Animated.WithAnimatedValue<ViewStyle> | StyleProp<Vi
 type PublicSectionShellProps = {
   backgroundImageUri: string;
   contentClassName?: string;
-  details: ReactNode;
+  details?: ReactNode;
   detailsAnimatedStyle?: AnimatedSectionStyle;
-  header: ReactNode;
+  header?: ReactNode;
   isActive: boolean;
   isMobile?: boolean;
-  onPress: () => void;
+  onPress?: () => void;
   shellAnimatedStyle?: AnimatedSectionStyle;
-  summary: ReactNode;
+  summary?: ReactNode;
   backgroundAnimatedStyle?: AnimatedSectionStyle;
   accentAnimatedStyle?: AnimatedSectionStyle;
 };
@@ -64,11 +64,19 @@ export default function PublicSectionShell({
 
         <Animated.View pointerEvents="none" style={[styles.accentOverlay, accentAnimatedStyle]} />
 
-        <Pressable className={contentClassName} onPress={onPress}>
-          {header}
-          {summary}
-          <Animated.View style={[styles.detailsArea, detailsAnimatedStyle]}>{details}</Animated.View>
-        </Pressable>
+        {onPress ? (
+          <Pressable className={contentClassName} onPress={onPress}>
+            {header ?? null}
+            {summary ?? null}
+            {details ? <Animated.View style={[styles.detailsArea, detailsAnimatedStyle]}>{details}</Animated.View> : null}
+          </Pressable>
+        ) : (
+          <View className={contentClassName}>
+            {header ?? null}
+            {summary ?? null}
+            {details ? <Animated.View style={[styles.detailsArea, detailsAnimatedStyle]}>{details}</Animated.View> : null}
+          </View>
+        )}
       </Animated.View>
     </View>
   );

@@ -68,7 +68,6 @@ export default function AboutPage() {
                   onPress={() => handleSectionPress(section.id)}
                   scrollY={scrollY}
                   section={section}
-                  focusLineRatio={0.35}
                   sectionLayout={sectionLayouts[section.id]}
                   viewportHeight={viewportHeight}
                 />

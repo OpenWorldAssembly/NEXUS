@@ -35,8 +35,8 @@ import {
   ABOUT_RAIL_SHELL_MAX_HEIGHT,
   ABOUT_RAIL_SHELL_MIN_HEIGHT,
   PUBLIC_CONTENT_MAX_WIDTH,
-  SECTION_FOCUS_LINE_RATIO,
 } from './about.constants';
+import { PUBLIC_SECTION_FOCUS_LINE_RATIO } from '@app/components/public/sections/public-section.constants';
 import type { SectionLayout } from '@app/components/public/sections/public-section.types';
 import type {
   PublicSecondaryNavConfig,
@@ -96,7 +96,7 @@ export function useAboutPageController({ sections }: UseAboutPageControllerArgs)
     handleScroll,
     handleSectionPress,
   } = useSectionScrollSpy({
-    focusLineRatio: SECTION_FOCUS_LINE_RATIO,
+    focusLineRatio: PUBLIC_SECTION_FOCUS_LINE_RATIO,
     scrollViewRef,
     sectionLayoutsRef,
     sections,
@@ -106,7 +106,7 @@ export function useAboutPageController({ sections }: UseAboutPageControllerArgs)
   const railNavItemState = useSecondaryNavItemState({
     activeSectionId,
     activeSectionIndex,
-    focusLineRatio: SECTION_FOCUS_LINE_RATIO,
+    focusLineRatio: PUBLIC_SECTION_FOCUS_LINE_RATIO,
     mode: 'rail',
     scrollY,
     sectionLayouts,
@@ -117,7 +117,7 @@ export function useAboutPageController({ sections }: UseAboutPageControllerArgs)
   const topbarNavItemState = useSecondaryNavItemState({
     activeSectionId,
     activeSectionIndex,
-    focusLineRatio: SECTION_FOCUS_LINE_RATIO,
+    focusLineRatio: PUBLIC_SECTION_FOCUS_LINE_RATIO,
     mode: 'topbar',
     scrollY,
     sectionLayouts,

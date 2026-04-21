@@ -2,10 +2,10 @@
  * File: index.tsx
  * Description: Renders the public homepage hero and animated section rail.
  */
-import { useRef } from 'react';
 import { Image } from 'expo-image';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 
+import { useHomePageController } from '@app/components/layout/home/use-home-page-controller';
 import PublicPageActions from '@app/components/public/public-page-actions';
 import PublicHomeRailSection from '@app/components/public/public-home-rail-section';
 import { homePageContent } from '@app/public/home-content';
@@ -23,16 +23,25 @@ const noBreakTextStyle = {
  * Output: the public homepage hero and selected sharp sections.
  */
 export default function HomePage() {
-  const scrollY = useRef(new Animated.Value(0)).current;
+  const {
+    activeSectionId,
+    handleSectionLayout,
+    handleViewportLayout,
+    scrollEventHandler,
+    scrollViewRef,
+    scrollY,
+    sectionLayouts,
+    viewportHeight,
+  } = useHomePageController({ sections: homePageContent.sections });
 
   return (
     <AnimatedScrollView
+      ref={scrollViewRef}
       className="flex-1"
       contentContainerStyle={{ paddingBottom: 128 }}
+      onLayout={handleViewportLayout}
+      onScroll={scrollEventHandler}
       scrollEventThrottle={16}
-      onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
-        useNativeDriver: true,
-      })}
     >
       <View className="mx-auto w-full max-w-6xl px-5 py-8 md:py-10">
         <View className="relative pl-10">
@@ -71,7 +80,15 @@ export default function HomePage() {
 
         <View className="gap-48 pt-20 md:gap-64 md:pt-28">
           {homePageContent.sections.map((section) => (
-            <PublicHomeRailSection key={section.id} scrollY={scrollY} section={section} />
+            <PublicHomeRailSection
+              key={section.id}
+              isActive={activeSectionId === section.id}
+              onLayout={handleSectionLayout}
+              scrollY={scrollY}
+              section={section}
+              sectionLayout={sectionLayouts[section.id]}
+              viewportHeight={viewportHeight}
+            />
           ))}
         </View>
       </View>
