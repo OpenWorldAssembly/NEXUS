@@ -1,16 +1,19 @@
 import React, { useMemo } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
+import {
+  SECTION_TOPBAR_COMPACT_BREAKPOINT,
+  SECTION_TOPBAR_PILL_GAP,
+  SECTION_TOPBAR_PILL_HEIGHT,
+  SECTION_TOPBAR_PILL_ROW_GAP,
+  SECTION_TOPBAR_PILL_WIDTH,
+} from './public-secondary-nav.constants';
 import type {
   PublicSecondaryNavAnimatedState,
   PublicSecondaryNavItem,
 } from './public-secondary-nav.types';
 
 const TOPBAR_HIGHLIGHT_Z_INDEX = 3;
-const TOPBAR_PILL_WIDTH = 104;
-const TOPBAR_PILL_HEIGHT = 40;
-const TOPBAR_PILL_GAP = 10;
-const TOPBAR_PILL_ROW_GAP = 10;
 const TOPBAR_TITLE_FONT_SIZE = 10;
 const TOPBAR_SUBTITLE_FONT_SIZE = 6;
 
@@ -47,7 +50,7 @@ export function PublicSecondaryNavTopbar({
   const resolvedOnPress = onItemPress ?? onSectionPress ?? (() => undefined);
   const resolvedAnimatedState = getItemAnimatedState ?? getItemAnimatedStyle;
   const { width } = useWindowDimensions();
-  const isCompactTopbar = width < 680;
+  const isCompactTopbar = width < SECTION_TOPBAR_COMPACT_BREAKPOINT;
 
   const itemStyles = useMemo(() => buildTopbarItemStyles(isCompactTopbar), [isCompactTopbar]);
   const textStyles = useMemo(() => buildTopbarTextStyles(isCompactTopbar), [isCompactTopbar]);
@@ -107,11 +110,11 @@ export function PublicSecondaryNavTopbar({
 function buildTopbarItemStyles(isCompactTopbar: boolean) {
   return StyleSheet.create({
     shell: {
-      width: TOPBAR_PILL_WIDTH,
-      height: isCompactTopbar ? 32 : TOPBAR_PILL_HEIGHT,
+      width: SECTION_TOPBAR_PILL_WIDTH,
+      height: isCompactTopbar ? 32 : SECTION_TOPBAR_PILL_HEIGHT,
       flexShrink: 0,
-      marginHorizontal: (isCompactTopbar ? 6 : TOPBAR_PILL_GAP) / 2,
-      marginVertical: (isCompactTopbar ? 4 : TOPBAR_PILL_ROW_GAP) / 2,
+      marginHorizontal: (isCompactTopbar ? 6 : SECTION_TOPBAR_PILL_GAP) / 2,
+      marginVertical: (isCompactTopbar ? 4 : SECTION_TOPBAR_PILL_ROW_GAP) / 2,
       zIndex: TOPBAR_HIGHLIGHT_Z_INDEX,
     },
     plate: {
@@ -201,8 +204,8 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'center',
     alignItems: 'flex-start',
-    marginHorizontal: -(TOPBAR_PILL_GAP / 2),
-    marginVertical: -(TOPBAR_PILL_ROW_GAP / 2),
+    marginHorizontal: -(SECTION_TOPBAR_PILL_GAP / 2),
+    marginVertical: -(SECTION_TOPBAR_PILL_ROW_GAP / 2),
   },
   navListCompact: {
     marginHorizontal: -3,

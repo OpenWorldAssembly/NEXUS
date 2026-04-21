@@ -19,9 +19,6 @@ export default function AboutPage() {
   const {
     activeSectionId,
     bottomRunway,
-    chapterHeight,
-    collapsedHeight,
-    expandedHeight,
     railAwareContentPaddingRight,
     railRightOffset,
     railShellHeight,
@@ -79,18 +76,14 @@ export default function AboutPage() {
           ]}
         >
           <View className="gap-0 md:gap-0">
-            {sections.map((section, index) => (
+            {sections.map((section) => (
               <View key={section.id} onLayout={(event) => handleSectionLayout(section.id, event)}>
                 <PublicAboutSection
                   isActive={section.id === activeSectionId}
                   onPress={() => handleSectionPress(section.id)}
                   scrollY={scrollY}
                   section={section}
-                  sectionIndex={index}
                   focusLineRatio={0.35}
-                  chapterHeight={chapterHeight}
-                  collapsedHeight={collapsedHeight}
-                  expandedHeight={expandedHeight}
                   sectionLayout={sectionLayouts[section.id]}
                   viewportHeight={viewportHeight}
                 />

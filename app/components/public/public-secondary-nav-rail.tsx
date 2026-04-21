@@ -8,7 +8,7 @@ import type {
   PublicSecondaryNavAnimatedState,
   PublicSecondaryNavItem,
 } from '@app/components/public/public-secondary-nav.types';
-import { SECTION_RAIL_WIDTH } from '@app/components/layout/about/use-about-page-controller';
+import { SECTION_RAIL_WIDTH } from './public-secondary-nav.constants';
 
 type PublicSecondaryNavRailProps = {
   activeId?: string | null;

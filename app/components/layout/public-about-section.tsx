@@ -1,6 +1,6 @@
 /**
  * File: public-about-section.tsx
- * Description: Renders a single about-page section as a midpoint-driven chapter with smooth synchronized expansion.
+ * Description: Renders a single about-page section with midpoint-aware accent animation and fully visible detail content.
  */
 import AboutHighlightTile from '@app/components/layout/about/about-highlight-tile';
 import { getSectionProgress, type SectionLayout } from '@app/components/layout/about/about-section-motion';
@@ -14,17 +14,13 @@ type PublicAboutSectionProps = {
   scrollY: Animated.Value;
   section: AboutSection;
   focusLineRatio: number;
-  chapterHeight: number;
-  collapsedHeight: number;
-  expandedHeight: number;
   sectionLayout?: SectionLayout;
   viewportHeight: number;
-  sectionIndex: number;
 };
 
 /**
- * Inputs: the section copy, scroll driver, height targets, and viewport/layout measurements.
- * Output: one large about-page chapter that expands and collapses smoothly around the midpoint focus line.
+ * Inputs: the section copy, scroll driver, and viewport/layout measurements.
+ * Output: one about-page section with stable layout and subtle focus-aware accent motion.
  */
 export default function PublicAboutSection({
   isActive,
@@ -32,12 +28,8 @@ export default function PublicAboutSection({
   scrollY,
   section,
   focusLineRatio,
-  chapterHeight,
-  collapsedHeight,
-  expandedHeight,
   sectionLayout,
-  viewportHeight,
-  sectionIndex,
+  viewportHeight
 }: PublicAboutSectionProps) {
   const { width } = useWindowDimensions();
   const isContentDrivenMobile = width <= 720;
@@ -52,103 +44,142 @@ export default function PublicAboutSection({
     typeof rawProgress === 'number'
       ? rawProgress
       : rawProgress.interpolate({
-          inputRange: [0, 0.22, 0.55, 0.82, 1],
-          outputRange: [0, 0.18, 0.72, 0.94, 1],
+          inputRange: [0, 0.24, 0.6, 0.86, 1],
+          outputRange: [0, 0.2, 0.76, 0.94, 1],
           extrapolate: 'clamp',
         });
-  const cardHeight =
-    isContentDrivenMobile
-      ? undefined
-      : typeof progress === 'number'
-        ? collapsedHeight
-        : progress.interpolate({
-            inputRange: [0, 1],
-            outputRange: [collapsedHeight, expandedHeight],
-            extrapolate: 'clamp',
-          });
-  const backgroundTranslateY =
+  const shellScale =
     typeof progress === 'number'
-      ? 0
-      : progress.interpolate({
-          inputRange: [0, 0.35, 0.7, 1],
-          outputRange: [32, 18, 8, 0],
-          extrapolate: 'clamp',
-        });
-  const cardScale =
-    typeof progress === 'number'
-      ? 0.988
+      ? 0.997
       : progress.interpolate({
           inputRange: [0, 1],
-          outputRange: [0.988, 1],
+          outputRange: [0.997, 1],
+          extrapolate: 'clamp',
+        });
+  const shellTranslateY =
+    typeof progress === 'number'
+      ? 8
+      : progress.interpolate({
+          inputRange: [0, 1],
+          outputRange: [8, 0],
+          extrapolate: 'clamp',
+        });
+  const backgroundTranslateY =
+    typeof progress === 'number'
+      ? 10
+      : progress.interpolate({
+          inputRange: [0, 1],
+          outputRange: [10, 0],
+          extrapolate: 'clamp',
+        });
+  const backgroundScale =
+    typeof progress === 'number'
+      ? 1.03
+      : progress.interpolate({
+          inputRange: [0, 1],
+          outputRange: [1.03, 1],
+          extrapolate: 'clamp',
+        });
+  const shellBackgroundColor =
+    typeof progress === 'number'
+      ? 'rgba(7, 19, 42, 0.56)'
+      : progress.interpolate({
+          inputRange: [0, 1],
+          outputRange: ['rgba(7, 19, 42, 0.56)', 'rgba(8, 25, 54, 0.72)'],
+          extrapolate: 'clamp',
+        });
+  const shellBorderColor =
+    typeof progress === 'number'
+      ? 'rgba(117, 149, 186, 0.4)'
+      : progress.interpolate({
+          inputRange: [0, 1],
+          outputRange: ['rgba(117, 149, 186, 0.4)', 'rgba(109, 211, 255, 0.9)'],
+          extrapolate: 'clamp',
+        });
+  const accentOverlayOpacity =
+    typeof progress === 'number'
+      ? 0.06
+      : progress.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0.06, 0.15],
           extrapolate: 'clamp',
         });
   const bodyTranslateY =
     typeof progress === 'number'
-      ? 18
+      ? 8
       : progress.interpolate({
           inputRange: [0, 1],
-          outputRange: [18, 0],
+          outputRange: [8, 0],
           extrapolate: 'clamp',
         });
   const bodyOpacity =
     typeof progress === 'number'
-      ? 0.78
+      ? 0.9
       : progress.interpolate({
           inputRange: [0, 1],
-          outputRange: [0.78, 1],
+          outputRange: [0.9, 1],
           extrapolate: 'clamp',
         });
   const detailTranslateY =
     typeof progress === 'number'
-      ? 20
+      ? 10
       : progress.interpolate({
           inputRange: [0, 1],
-          outputRange: [20, 0],
+          outputRange: [10, 0],
           extrapolate: 'clamp',
         });
   const detailOpacity =
     typeof progress === 'number'
-      ? 0
+      ? 0.92
       : progress.interpolate({
-          inputRange: [0.08, 0.35, 0.72, 1],
-          outputRange: [0, 0.16, 0.68, 1],
+          inputRange: [0, 1],
+          outputRange: [0.92, 1],
           extrapolate: 'clamp',
         });
-  const detailMaxHeight =
-    isContentDrivenMobile
-      ? undefined
-      : typeof progress === 'number'
-        ? 0
-        : progress.interpolate({
-            inputRange: [0.08, 0.34, 0.7, 1],
-            outputRange: [0, expandedHeight * 0.1, expandedHeight * 0.34, expandedHeight * 0.5],
-            extrapolate: 'clamp',
-          });
+  const eyebrowColor =
+    typeof progress === 'number'
+      ? '#9ec7ea'
+      : progress.interpolate({
+          inputRange: [0, 1],
+          outputRange: ['#9ec7ea', '#b7f38d'],
+          extrapolate: 'clamp',
+        });
+  const headlineColor =
+    typeof progress === 'number'
+      ? '#8ec5ff'
+      : progress.interpolate({
+          inputRange: [0, 1],
+          outputRange: ['#8ec5ff', '#b5dcff'],
+          extrapolate: 'clamp',
+        });
 
   return (
     <View
       style={[
         styles.chapter,
-        isContentDrivenMobile ? styles.chapterMobile : { height: chapterHeight },
+        isContentDrivenMobile ? styles.chapterMobile : null,
       ]}
     >
       <Animated.View
         style={[
           styles.shell,
           {
-            minHeight: isContentDrivenMobile ? undefined : collapsedHeight,
-            height: cardHeight,
-            transform: [{ scale: cardScale }],
+            backgroundColor: shellBackgroundColor,
+            borderColor: shellBorderColor,
+            transform: [{ translateY: shellTranslateY }, { scale: shellScale }],
           },
         ]}
         className={[
-          'overflow-hidden border bg-public-panel/45',
-          isActive ? 'border-public-accent/80 shadow-public' : 'border-public-line/70',
+          'overflow-hidden border',
+          isActive ? 'shadow-public' : '',
         ].join(' ')}
       >
         <Animated.View
           pointerEvents="none"
-          style={[styles.parallaxLayer, { transform: [{ translateY: backgroundTranslateY }] }]}
+          style={[
+            styles.parallaxLayer,
+            { transform: [{ translateY: backgroundTranslateY }, { scale: backgroundScale }] },
+          ]}
         >
           <Image
             source={{ uri: section.backgroundImageUri }}
@@ -157,14 +188,25 @@ export default function PublicAboutSection({
           />
         </Animated.View>
 
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.accentOverlay, { opacity: accentOverlayOpacity }]}
+        />
+
         <Pressable className="flex-1 px-7 py-8 md:px-9 md:py-9" onPress={onPress}>
           <View className="items-center gap-3">
-            <Text className="text-xs font-bold uppercase tracking-[0.28em] text-public-accentSoft">
+            <Animated.Text
+              className="text-xs font-bold uppercase tracking-[0.28em]"
+              style={{ color: eyebrowColor }}
+            >
               {section.eyebrow}
-            </Text>
-            <Text className="max-w-5xl text-center text-[1.8rem] font-bold leading-tight text-[#8ec5ff] md:text-[2.3rem]">
+            </Animated.Text>
+            <Animated.Text
+              className="max-w-5xl text-center text-[1.8rem] font-bold leading-tight md:text-[2.3rem]"
+              style={{ color: headlineColor }}
+            >
               {section.headline}
-            </Text>
+            </Animated.Text>
           </View>
 
           <Animated.View style={{ opacity: bodyOpacity, transform: [{ translateY: bodyTranslateY }] }}>
@@ -174,11 +216,9 @@ export default function PublicAboutSection({
           </Animated.View>
 
           <Animated.View
-            pointerEvents={isActive ? 'auto' : 'none'}
             style={[
               styles.detailsArea,
               {
-                maxHeight: detailMaxHeight,
                 opacity: detailOpacity,
                 transform: [{ translateY: detailTranslateY }],
               },
@@ -198,22 +238,25 @@ export default function PublicAboutSection({
 
 const styles = StyleSheet.create({
   chapter: {
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     width: '100%',
     paddingHorizontal: 4,
-    marginBottom: 10,
+    marginBottom: 14,
   },
   chapterMobile: {
     justifyContent: 'flex-start',
     paddingVertical: 0,
   },
   detailsArea: {
-    marginTop: 59,
-    overflow: 'hidden',
+    marginTop: 30,
   },
   parallaxImage: {
     height: '112%',
     width: '100%',
+  },
+  accentOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#6dd3ff',
   },
   parallaxLayer: {
     ...StyleSheet.absoluteFillObject,
@@ -232,7 +275,4 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     overflow: 'hidden',
   },
-  headline: {
-  color: '#58A6FF',
-}
 });

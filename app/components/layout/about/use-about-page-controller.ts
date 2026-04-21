@@ -1,6 +1,6 @@
 /**
  * File: use-about-page-controller.ts
- * Description: Shared controller for the public OWA About page chapter scroll experience.
+ * Description: Shared controller for the public OWA About page section focus and navigation state.
  */
 import { useMemo, useRef, useState, type RefObject } from 'react';
 import {
@@ -12,23 +12,35 @@ import {
   useWindowDimensions,
 } from 'react-native';
 
+import {
+  SECTION_RAIL_BREAKPOINT,
+  SECTION_RAIL_WIDTH,
+  SECTION_TOPBAR_BASE_HEIGHT,
+  SECTION_TOPBAR_COMPACT_BREAKPOINT,
+  SECTION_TOPBAR_CONTENT_OFFSET,
+  SECTION_TOPBAR_PILL_GAP,
+  SECTION_TOPBAR_PILL_HEIGHT,
+  SECTION_TOPBAR_PILL_ROW_GAP,
+  SECTION_TOPBAR_PILL_WIDTH,
+} from '@app/components/public/public-secondary-nav.constants';
 import type { AboutSection } from '@app/public/content-types';
+import {
+  ABOUT_BOTTOM_RUNWAY_MIN,
+  ABOUT_BOTTOM_RUNWAY_VIEWPORT_RATIO,
+  ABOUT_RAIL_RIGHT_OFFSET_BIAS,
+  ABOUT_RAIL_RIGHT_OFFSET_SPACE_RATIO,
+  ABOUT_RAIL_SHELL_HEIGHT_RATIO,
+  ABOUT_RAIL_SHELL_MAX_HEIGHT,
+  ABOUT_RAIL_SHELL_MIN_HEIGHT,
+  PUBLIC_CONTENT_MAX_WIDTH,
+  SECTION_FOCUS_LINE_RATIO,
+} from './about.constants';
 
 export type SectionLayout = {
   y: number;
   height: number;
 };
 
-export const SECTION_FOCUS_LINE_RATIO = 0.35;
-export const SECTION_RAIL_BREAKPOINT = 1100;
-export const SECTION_RAIL_WIDTH = 200;
-export const PUBLIC_CONTENT_MAX_WIDTH = 1152;
-export const SECTION_TOPBAR_BASE_HEIGHT = 72;
-export const SECTION_TOPBAR_PILL_WIDTH = 104;
-export const SECTION_TOPBAR_PILL_HEIGHT = 40;
-export const SECTION_TOPBAR_PILL_GAP = 10;
-export const SECTION_TOPBAR_PILL_ROW_GAP = 10;
-export const SECTION_TOPBAR_CONTENT_OFFSET = 20;
 
 type UseAboutPageControllerArgs = {
   sections: AboutSection[];
@@ -38,9 +50,6 @@ type UseAboutPageControllerResult = {
   activeSectionId: string;
   activeSectionIndex: number;
   bottomRunway: number;
-  chapterHeight: number;
-  collapsedHeight: number;
-  expandedHeight: number;
   railAwareContentPaddingRight: number;
   railRightOffset: number;
   railShellHeight: number;
@@ -163,15 +172,15 @@ export function useAboutPageController({ sections }: UseAboutPageControllerArgs)
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
 
   const viewportHeight = scrollViewportHeight || windowHeight;
-  const expandedHeight = Math.min(Math.max(viewportHeight * 0.64, 440), 600);
-  const collapsedHeight = Math.min(Math.max(viewportHeight * 0.28, 210), 252);
-  const chapterHeight = Math.round(expandedHeight * 0.88);
-  const bottomRunway = Math.max(220, viewportHeight * 0.34);
+  const bottomRunway = Math.max(ABOUT_BOTTOM_RUNWAY_MIN, viewportHeight * ABOUT_BOTTOM_RUNWAY_VIEWPORT_RATIO);
   const secondaryNavLayoutMode = windowWidth >= SECTION_RAIL_BREAKPOINT ? 'rail' : 'topbar';
   const showSectionRail = secondaryNavLayoutMode === 'rail';
   const railAwareContentPaddingRight = showSectionRail ? SECTION_RAIL_WIDTH * 0.8 : 0;
-  const railShellHeight = Math.min(Math.max(viewportHeight * 0.68, 600), 1200);
-  const isCompactTopbar = windowWidth < 680;
+  const railShellHeight = Math.min(
+    Math.max(viewportHeight * ABOUT_RAIL_SHELL_HEIGHT_RATIO, ABOUT_RAIL_SHELL_MIN_HEIGHT),
+    ABOUT_RAIL_SHELL_MAX_HEIGHT,
+  );
+  const isCompactTopbar = windowWidth < SECTION_TOPBAR_COMPACT_BREAKPOINT;
   const topbarBaseHeight = isCompactTopbar ? 54 : SECTION_TOPBAR_BASE_HEIGHT;
   const topbarPillHeight = isCompactTopbar ? 32 : SECTION_TOPBAR_PILL_HEIGHT;
   const topbarPillGap = isCompactTopbar ? 6 : SECTION_TOPBAR_PILL_GAP;
@@ -193,7 +202,10 @@ export function useAboutPageController({ sections }: UseAboutPageControllerArgs)
     ? topbarShellHeight + SECTION_TOPBAR_CONTENT_OFFSET
     : 0;
   const outerSideSpace = Math.max(0, (windowWidth - PUBLIC_CONTENT_MAX_WIDTH) / 2);
-  const railRightOffset = Math.round((outerSideSpace - SECTION_RAIL_WIDTH) * 0.5 + 90);
+  const railRightOffset = Math.round(
+    (outerSideSpace - SECTION_RAIL_WIDTH) * ABOUT_RAIL_RIGHT_OFFSET_SPACE_RATIO +
+      ABOUT_RAIL_RIGHT_OFFSET_BIAS,
+  );
   const activeSectionIndex = useMemo(
     () => Math.max(0, sections.findIndex((section) => section.id === activeSectionId)),
     [activeSectionId, sections],
@@ -482,9 +494,6 @@ export function useAboutPageController({ sections }: UseAboutPageControllerArgs)
     activeSectionId,
     activeSectionIndex,
     bottomRunway,
-    chapterHeight,
-    collapsedHeight,
-    expandedHeight,
     railAwareContentPaddingRight,
     railRightOffset,
     railShellHeight,
