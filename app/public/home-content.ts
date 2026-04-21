@@ -1,15 +1,9 @@
 /**
  * File: home-content.ts
- * Description: Stores the homepage hero and the selected sharp rail sections.
+ * Description: Stores the homepage rail sections, including the leading hero section.
  */
 import type { PublicPageAction } from '@app/components/public/public-page-actions';
 import { buildAboutBackgroundImageUri } from './public-graphics';
-
-export type HomeHero = {
-  title: string;
-  statement: string;
-  backgroundImageUri: string;
-};
 
 export type HomeRailSection = {
   id: string;
@@ -17,34 +11,35 @@ export type HomeRailSection = {
   subPoint: string;
   backgroundImageUri: string;
   align: 'left' | 'right';
-  action: PublicPageAction;
+  action?: PublicPageAction;
+  actions?: PublicPageAction[];
+  variant?: 'hero' | 'standard';
 };
 
 export type HomePageContent = {
-  hero: HomeHero;
-  heroActions: PublicPageAction[];
   sections: HomeRailSection[];
 };
 
-const heroActions: PublicPageAction[] = [
-  { href: '/about', label: 'About OWA', variant: 'secondary' },
-  { href: '/nexus/dashboard', label: 'Enter Nexus', variant: 'primary' },
-  { href: '/docs', label: 'Read Charter', variant: 'secondary' },
-];
-
-const hero: HomeHero = {
-  title: 'Open World Assembly',
-  statement: 'Decentralized human coordination.',
-  backgroundImageUri: buildAboutBackgroundImageUri({
-    base: '#09131f',
-    accent: '#8ec5ff',
-    accentSoft: '#d7ffbf',
-    glow: '#173651',
-    ridge: '#466176',
-  }),
-};
-
 const sections: HomeRailSection[] = [
+  {
+    id: 'hero',
+    mainPoint: 'Open World Assembly',
+    subPoint: 'Decentralized human coordination.',
+    backgroundImageUri: buildAboutBackgroundImageUri({
+      base: '#09131f',
+      accent: '#8ec5ff',
+      accentSoft: '#d7ffbf',
+      glow: '#173651',
+      ridge: '#466176',
+    }),
+    align: 'left',
+    actions: [
+      { href: '/about', label: 'About OWA', variant: 'secondary' },
+      { href: '/nexus/dashboard', label: 'Enter Nexus', variant: 'primary' },
+      { href: '/docs', label: 'Read Charter', variant: 'secondary' },
+    ],
+    variant: 'hero',
+  },
   {
     id: 'unity',
     mainPoint: 'Unity Is Inevitable',
@@ -58,6 +53,7 @@ const sections: HomeRailSection[] = [
     }),
     align: 'right',
     action: { href: '/about', label: 'About OWA', variant: 'secondary' },
+    variant: 'standard',
   },
   {
     id: 'time',
@@ -72,6 +68,7 @@ const sections: HomeRailSection[] = [
     }),
     align: 'left',
     action: { href: '/docs', label: 'Read Charter', variant: 'secondary' },
+    variant: 'standard',
   },
   {
     id: 'technology',
@@ -86,6 +83,7 @@ const sections: HomeRailSection[] = [
     }),
     align: 'right',
     action: { href: '/nexus/dashboard', label: 'Enter Nexus', variant: 'secondary' },
+    variant: 'standard',
   },
   {
     id: 'future',
@@ -100,11 +98,10 @@ const sections: HomeRailSection[] = [
     }),
     align: 'left',
     action: { href: '/support', label: 'Support OWA', variant: 'secondary' },
+    variant: 'standard',
   },
 ];
 
 export const homePageContent: HomePageContent = {
-  hero,
-  heroActions,
   sections,
 };

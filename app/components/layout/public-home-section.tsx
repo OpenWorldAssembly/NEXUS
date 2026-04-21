@@ -3,9 +3,10 @@
  * Description: Renders a single homepage rail section by mapping Home content into the shared public section shell.
  */
 import { Link } from 'expo-router';
-import { Pressable, Text, View, Animated } from 'react-native';
+import { Pressable, Text, View, Animated, useWindowDimensions } from 'react-native';
 
 import { getSectionProgress } from '@app/components/layout/about/about-section-motion';
+import PublicPageActions from '@app/components/public/public-page-actions';
 import { PUBLIC_SECTION_FOCUS_LINE_RATIO } from '@app/components/public/sections/public-section.constants';
 import type { SectionLayout } from '@app/components/public/sections/public-section.types';
 import PublicSectionShell from '@app/components/public/sections/public-section-shell';
@@ -140,26 +141,47 @@ export default function PublicHomeSection({
           extrapolate: 'clamp',
         });
 
+  const isHero = section.variant === 'hero';
   const isRightAligned = section.align === 'right';
-  const actionAlignmentClassName = isRightAligned ? 'items-start' : 'items-end';
-  const subPointAlignmentClassName = isRightAligned ? 'items-start' : 'items-end';
+  const actionAlignmentClassName = isHero ? 'items-start' : isRightAligned ? 'items-start' : 'items-end';
+  const subPointAlignmentClassName = isHero ? 'items-start' : isRightAligned ? 'items-start' : 'items-end';
 
   const actionWrapperClassName =
-    section.action.variant === 'primary'
+    section.action?.variant === 'primary'
       ? 'rounded-full bg-public-accent px-6 py-3'
       : 'rounded-full border border-public-line bg-public-panel/70 px-6 py-3';
 
   const actionTextClassName =
-    section.action.variant === 'primary'
+    section.action?.variant === 'primary'
       ? 'text-sm font-extrabold uppercase tracking-[0.18em] text-public-canvas'
       : 'text-sm font-bold uppercase tracking-[0.18em] text-public-text';
 
+  const { width: windowWidth } = useWindowDimensions();
+  const isDesktop = windowWidth >= 768;
+
+  const mainTextStyle = {
+    fontSize: isHero ? (isDesktop ? 92 : 54) : isDesktop ? 76 : 42,
+    lineHeight: isHero ? (isDesktop ? 84 : 50) : isDesktop ? 70 : 40,
+    fontWeight: '900' as const,
+    letterSpacing: isHero ? (isDesktop ? -1.6 : -0.8) : isDesktop ? -1.2 : -0.5,
+    maxWidth: isHero ? (isDesktop ? 340 : 220) : isDesktop ? 300 : 200,
+  };
+
+  const subTextStyle = {
+    fontSize: isHero ? (isDesktop ? 34 : 22) : isDesktop ? 26 : 18,
+    lineHeight: isHero ? (isDesktop ? 38 : 26) : isDesktop ? 30 : 22,
+    fontWeight: '700' as const,
+    letterSpacing: 0,
+    maxWidth: isHero ? (isDesktop ? 420 : 260) : isDesktop ? 320 : 220,
+  };
+
+  const mainBlockWidthClassName = isHero ? 'max-w-[22rem]' : 'max-w-[18rem]';
+
+  const contentClassName = 'min-h-[350px] justify-center px-6 py-10 md:min-h-[460px] md:px-10 md:py-12';
+
   const mainBlock = (
-    <View className="flex-1 justify-center">
-      <Animated.Text
-        style={[noBreakTextStyle, { color: headlineColor }]}
-        className="text-[2.05rem] font-black uppercase leading-[0.98] tracking-[0.03em] md:text-[3.05rem]"
-      >
+    <View className={`flex-1 justify-center ${mainBlockWidthClassName}`}>
+      <Animated.Text style={[noBreakTextStyle, mainTextStyle, { color: headlineColor }]}>
         {section.mainPoint}
       </Animated.Text>
     </View>
@@ -167,19 +189,24 @@ export default function PublicHomeSection({
 
   const subBlock = (
     <View className={`flex-1 justify-center gap-6 ${subPointAlignmentClassName}`}>
-      <Animated.Text
-        style={[noBreakTextStyle, { color: subPointColor }]}
-        className="max-w-[26rem] text-[1.38rem] font-semibold leading-[1.08] tracking-[0.02em] md:text-[1.95rem]"
-      >
+      <Animated.Text style={[noBreakTextStyle, subTextStyle, { color: subPointColor }]}>
         {section.subPoint}
       </Animated.Text>
-      <View className={actionAlignmentClassName}>
-        <Link href={section.action.href} asChild>
-          <Pressable className={actionWrapperClassName}>
-            <Text className={actionTextClassName}>{section.action.label}</Text>
-          </Pressable>
-        </Link>
-      </View>
+      {isHero && section.actions?.length ? (
+        <View className={actionAlignmentClassName}>
+          <View className='-mt-2'>
+            <PublicPageActions actions={section.actions} />
+          </View>
+        </View>
+      ) : section.action ? (
+        <View className={actionAlignmentClassName}>
+          <Link href={section.action.href} asChild>
+            <Pressable className={actionWrapperClassName}>
+              <Text className={actionTextClassName}>{section.action.label}</Text>
+            </Pressable>
+          </Link>
+        </View>
+      ) : null}
     </View>
   );
 
@@ -188,7 +215,7 @@ export default function PublicHomeSection({
       accentAnimatedStyle={{ opacity: accentOverlayOpacity }}
       backgroundAnimatedStyle={{ transform: [{ translateY: backgroundTranslateY }, { scale: backgroundScale }] }}
       backgroundImageUri={section.backgroundImageUri}
-      contentClassName="min-h-[390px] justify-center px-6 py-10 md:min-h-[510px] md:px-10 md:py-12"
+      contentClassName={contentClassName}
       header={
         <Animated.View style={{ opacity: contentOpacity, transform: [{ translateY: contentTranslateY }] }}>
           <View className="gap-8 md:flex-row md:items-center md:gap-14">
