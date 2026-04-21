@@ -25,15 +25,20 @@ export type PublicSecondaryNavAnimatedStateResolver = (
 
 export type PublicSecondaryNavSubtitleVisibilityResolver = (itemId: string) => boolean;
 
-export type PublicSecondaryNavSharedProps = {
+export type PublicSecondaryNavConfig = {
   items: PublicSecondaryNavItem[];
-  activeId: string | null;
-  onItemPress: (itemId: string) => void;
   title?: string;
   subtitle?: string;
+};
+
+export type PublicSecondaryNavRenderState = {
+  activeId: string | null;
+  onItemPress: (itemId: string) => void;
   getItemAnimatedState?: PublicSecondaryNavAnimatedStateResolver;
   shouldShowItemSubtitle?: PublicSecondaryNavSubtitleVisibilityResolver;
 };
+
+export type PublicSecondaryNavSharedProps = PublicSecondaryNavConfig & PublicSecondaryNavRenderState;
 
 export type PublicSecondaryNavProps = PublicSecondaryNavSharedProps & {
   mode?: PublicSecondaryNavMode;

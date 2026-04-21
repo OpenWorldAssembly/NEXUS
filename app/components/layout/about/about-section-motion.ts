@@ -2,12 +2,8 @@
  * File: about-section-motion.ts
  * Description: Shared animation helpers for the about-page chapter cards.
  */
+import type { SectionLayout } from '@app/components/public/sections/public-section.types';
 import { Animated } from 'react-native';
-
-export type SectionLayout = {
-  y: number;
-  height: number;
-};
 
 /**
  * Inputs: the scroll driver, target section measurements, and the shared focus geometry.

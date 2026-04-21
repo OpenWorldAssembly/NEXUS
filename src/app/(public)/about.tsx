@@ -20,43 +20,28 @@ export default function AboutPage() {
     activeSectionId,
     bottomRunway,
     railAwareContentPaddingRight,
-    railRightOffset,
-    railShellHeight,
     scrollEventHandler,
     scrollViewRef,
     scrollY,
     sectionLayouts,
-    secondaryNavLayoutMode,
-    topbarShellHeight,
+    secondaryNav,
     viewportHeight,
-    getRailAnimatedState,
-    getTopbarAnimatedState,
     handleSectionLayout,
     handleSectionPress,
     handleViewportLayout,
-    shouldShowRailSubtitle,
-    shouldShowTopbarSubtitle,
   } = useAboutPageController({ sections });
-
-  const sectionNavAnimatedState =
-    secondaryNavLayoutMode === 'rail' ? getRailAnimatedState : getTopbarAnimatedState;
-  const shouldShowSectionNavSubtitle =
-    secondaryNavLayoutMode === 'rail' ? shouldShowRailSubtitle : shouldShowTopbarSubtitle;
 
   return (
     <View style={{ flex: 1 }} onLayout={handleViewportLayout}>
-      {secondaryNavLayoutMode === 'topbar' ? (
-        <View style={{ height: topbarShellHeight, position: 'relative' }}>
+      {secondaryNav.state.mode === 'topbar' ? (
+        <View style={{ height: secondaryNav.state.topbarShellHeight, position: 'relative' }}>
           <AboutSectionRail
-            activeSectionId={activeSectionId}
-            content={aboutPageContent}
-            getItemAnimatedState={sectionNavAnimatedState}
-            mode={secondaryNavLayoutMode}
-            onSectionPress={handleSectionPress}
-            railRightOffset={railRightOffset}
-            railShellHeight={railShellHeight}
-            shouldShowItemSubtitle={shouldShowSectionNavSubtitle}
-            topbarShellHeight={topbarShellHeight}
+            config={{
+              ...secondaryNav.config,
+              title: aboutPageContent.railTitle,
+              subtitle: aboutPageContent.railSubtitle,
+            }}
+            state={secondaryNav.state}
           />
         </View>
       ) : null}
@@ -72,7 +57,7 @@ export default function AboutPage() {
         <View
           className="mx-auto w-full max-w-6xl px-5 py-8"
           style={[
-            secondaryNavLayoutMode === 'rail' ? { paddingRight: railAwareContentPaddingRight } : null,
+            secondaryNav.state.mode === 'rail' ? { paddingRight: railAwareContentPaddingRight } : null,
           ]}
         >
           <View className="gap-0 md:gap-0">
@@ -93,17 +78,14 @@ export default function AboutPage() {
         </View>
       </Animated.ScrollView>
 
-      {secondaryNavLayoutMode === 'rail' ? (
+      {secondaryNav.state.mode === 'rail' ? (
         <AboutSectionRail
-          activeSectionId={activeSectionId}
-          content={aboutPageContent}
-          getItemAnimatedState={sectionNavAnimatedState}
-          mode={secondaryNavLayoutMode}
-          onSectionPress={handleSectionPress}
-          railRightOffset={railRightOffset}
-          railShellHeight={railShellHeight}
-          shouldShowItemSubtitle={shouldShowSectionNavSubtitle}
-          topbarShellHeight={topbarShellHeight}
+          config={{
+            ...secondaryNav.config,
+            title: aboutPageContent.railTitle,
+            subtitle: aboutPageContent.railSubtitle,
+          }}
+          state={secondaryNav.state}
         />
       ) : null}
     </View>

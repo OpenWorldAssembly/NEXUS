@@ -4,58 +4,29 @@
  */
 import { PublicSecondaryNav } from '@app/components/public/public-secondary-nav';
 import type {
-  PublicSecondaryNavAnimatedState,
-  PublicSecondaryNavItem,
-  PublicSecondaryNavMode,
+  PublicSecondaryNavConfig,
+  PublicSecondaryNavRenderState,
 } from '@app/components/public/public-secondary-nav.types';
-import type { AboutPageContent } from '@app/public/about-content';
 
 type AboutSectionRailProps = {
-  activeSectionId: string;
-  content: AboutPageContent;
-  getItemAnimatedState: (sectionId: string) => PublicSecondaryNavAnimatedState;
-  mode: PublicSecondaryNavMode;
-  onSectionPress: (sectionId: string) => void;
-  railRightOffset: number;
-  railShellHeight: number;
-  shouldShowItemSubtitle: (sectionId: string) => boolean;
-  topbarShellHeight: number;
+  config: PublicSecondaryNavConfig;
+  state: PublicSecondaryNavRenderState & {
+    mode: 'rail' | 'topbar';
+    railRightOffset: number;
+    railShellHeight: number;
+    topbarShellHeight: number;
+  };
 };
 
 /**
  * Inputs: About-page navigation metadata and animation helpers.
  * Output: the shared public secondary nav configured for the About page.
  */
-export default function AboutSectionRail({
-  activeSectionId,
-  content,
-  getItemAnimatedState,
-  mode,
-  onSectionPress,
-  railRightOffset,
-  railShellHeight,
-  shouldShowItemSubtitle,
-  topbarShellHeight,
-}: AboutSectionRailProps) {
-  const items: PublicSecondaryNavItem[] = content.sections.map((section) => ({
-    id: section.id,
-    title: section.headline,
-    subtitle: section.eyebrow,
-  }));
-
+export default function AboutSectionRail({ config, state }: AboutSectionRailProps) {
   return (
     <PublicSecondaryNav
-      activeId={activeSectionId}
-      items={items}
-      mode={mode}
-      title={content.railTitle}
-      subtitle={content.railSubtitle}
-      railRightOffset={railRightOffset}
-      railShellHeight={railShellHeight}
-      topbarShellHeight={topbarShellHeight}
-      getItemAnimatedState={getItemAnimatedState}
-      onItemPress={onSectionPress}
-      shouldShowItemSubtitle={shouldShowItemSubtitle}
+      {...config}
+      {...state}
     />
   );
 }

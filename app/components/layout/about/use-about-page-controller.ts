@@ -18,7 +18,6 @@ import {
   SECTION_RAIL_WIDTH,
   SECTION_TOPBAR_BASE_HEIGHT,
   SECTION_TOPBAR_COMPACT_BREAKPOINT,
-  SECTION_TOPBAR_CONTENT_OFFSET,
   SECTION_TOPBAR_PILL_GAP,
   SECTION_TOPBAR_PILL_HEIGHT,
   SECTION_TOPBAR_PILL_ROW_GAP,
@@ -39,7 +38,10 @@ import {
   SECTION_FOCUS_LINE_RATIO,
 } from './about.constants';
 import type { SectionLayout } from '@app/components/public/sections/public-section.types';
-import type { PublicSecondaryNavAnimatedState } from '@app/components/public/public-secondary-nav.types';
+import type {
+  PublicSecondaryNavConfig,
+  PublicSecondaryNavRenderState,
+} from '@app/components/public/public-secondary-nav.types';
 
 type UseAboutPageControllerArgs = {
   sections: AboutSection[];
@@ -50,23 +52,23 @@ type UseAboutPageControllerResult = {
   activeSectionIndex: number;
   bottomRunway: number;
   railAwareContentPaddingRight: number;
-  railRightOffset: number;
-  railShellHeight: number;
   scrollEventHandler: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   scrollViewRef: RefObject<ScrollView | null>;
   scrollY: Animated.Value;
   sectionLayouts: Record<string, SectionLayout>;
-  secondaryNavLayoutMode: 'rail' | 'topbar';
-  topbarContentPaddingTop: number;
-  topbarShellHeight: number;
+  secondaryNav: {
+    config: PublicSecondaryNavConfig;
+    state: PublicSecondaryNavRenderState & {
+      mode: 'rail' | 'topbar';
+      railRightOffset: number;
+      railShellHeight: number;
+      topbarShellHeight: number;
+    };
+  };
   viewportHeight: number;
-  getRailAnimatedState: (sectionId: string) => PublicSecondaryNavAnimatedState;
-  getTopbarAnimatedState: (sectionId: string) => PublicSecondaryNavAnimatedState;
   handleSectionLayout: (sectionId: string, event: LayoutChangeEvent) => void;
   handleSectionPress: (sectionId: string) => void;
   handleViewportLayout: (event: LayoutChangeEvent) => void;
-  shouldShowRailSubtitle: (sectionId: string) => boolean;
-  shouldShowTopbarSubtitle: (sectionId: string) => boolean;
 };
 
 /**
@@ -145,9 +147,6 @@ export function useAboutPageController({ sections }: UseAboutPageControllerArgs)
     topbarBaseHeight +
     topbarRowCount * topbarPillHeight +
     Math.max(0, topbarRowCount - 1) * topbarPillRowGap;
-  const topbarContentPaddingTop = secondaryNavLayoutMode === 'topbar'
-    ? topbarShellHeight + SECTION_TOPBAR_CONTENT_OFFSET
-    : 0;
   const outerSideSpace = Math.max(0, (windowWidth - PUBLIC_CONTENT_MAX_WIDTH) / 2);
   const railRightOffset = Math.round(
     (outerSideSpace - SECTION_RAIL_WIDTH) * ABOUT_RAIL_RIGHT_OFFSET_SPACE_RATIO +
@@ -159,27 +158,52 @@ export function useAboutPageController({ sections }: UseAboutPageControllerArgs)
     useNativeDriver: false,
   });
 
+  const secondaryNavConfig: PublicSecondaryNavConfig = {
+    items: sections.map((section) => ({
+      id: section.id,
+      title: section.headline,
+      subtitle: section.eyebrow,
+    })),
+  };
+
+  const secondaryNavState: PublicSecondaryNavRenderState & {
+    mode: 'rail' | 'topbar';
+    railRightOffset: number;
+    railShellHeight: number;
+    topbarShellHeight: number;
+  } = {
+    activeId: activeSectionId,
+    getItemAnimatedState:
+      secondaryNavLayoutMode === 'rail'
+        ? railNavItemState.getItemAnimatedState
+        : topbarNavItemState.getItemAnimatedState,
+    mode: secondaryNavLayoutMode,
+    onItemPress: handleSectionPress,
+    railRightOffset,
+    railShellHeight,
+    shouldShowItemSubtitle:
+      secondaryNavLayoutMode === 'rail'
+        ? railNavItemState.shouldShowItemSubtitle
+        : topbarNavItemState.shouldShowItemSubtitle,
+    topbarShellHeight,
+  };
+
   return {
     activeSectionId,
     activeSectionIndex,
     bottomRunway,
     railAwareContentPaddingRight,
-    railRightOffset,
-    railShellHeight,
     scrollEventHandler,
     scrollViewRef,
     scrollY,
     sectionLayouts,
-    secondaryNavLayoutMode,
-    topbarContentPaddingTop,
-    topbarShellHeight,
+    secondaryNav: {
+      config: secondaryNavConfig,
+      state: secondaryNavState,
+    },
     viewportHeight,
-    getRailAnimatedState: railNavItemState.getItemAnimatedState,
-    getTopbarAnimatedState: topbarNavItemState.getItemAnimatedState,
     handleSectionLayout,
     handleSectionPress,
     handleViewportLayout,
-    shouldShowRailSubtitle: railNavItemState.shouldShowItemSubtitle,
-    shouldShowTopbarSubtitle: topbarNavItemState.shouldShowItemSubtitle,
   };
 }
