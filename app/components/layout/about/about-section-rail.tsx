@@ -2,7 +2,10 @@
  * File: about-section-rail.tsx
  * Description: About-page adapter for the shared public secondary navigation shell.
  */
-import type { PublicSecondaryNavAnimatedState } from '@app/components/public/public-secondary-nav.types';
+import type {
+  PublicSecondaryNavAnimatedState,
+  PublicSecondaryNavMode,
+} from '@app/components/public/public-secondary-nav.types';
 import { PublicSecondaryNav } from '@app/components/public/public-secondary-nav';
 import type { AboutPageContent } from '@app/public/about-content';
 
@@ -10,7 +13,7 @@ type AboutSectionRailProps = {
   activeSectionId: string;
   content: AboutPageContent;
   getItemAnimatedState: (sectionId: string) => PublicSecondaryNavAnimatedState;
-  layoutMode: 'rail' | 'topbar';
+  mode: PublicSecondaryNavMode;
   onSectionPress: (sectionId: string) => void;
   railRightOffset: number;
   railShellHeight: number;
@@ -26,7 +29,7 @@ export default function AboutSectionRail({
   activeSectionId,
   content,
   getItemAnimatedState,
-  layoutMode,
+  mode,
   onSectionPress,
   railRightOffset,
   railShellHeight,
@@ -43,7 +46,7 @@ export default function AboutSectionRail({
     <PublicSecondaryNav
       activeId={activeSectionId}
       items={items}
-      mode={layoutMode}
+      mode={mode}
       title={content.railTitle}
       subtitle={content.railSubtitle}
       railRightOffset={railRightOffset}

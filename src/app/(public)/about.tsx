@@ -51,7 +51,7 @@ export default function AboutPage() {
             activeSectionId={activeSectionId}
             content={aboutPageContent}
             getItemAnimatedState={sectionNavAnimatedState}
-            layoutMode={secondaryNavLayoutMode}
+            mode={secondaryNavLayoutMode}
             onSectionPress={handleSectionPress}
             railRightOffset={railRightOffset}
             railShellHeight={railShellHeight}
@@ -98,7 +98,7 @@ export default function AboutPage() {
           activeSectionId={activeSectionId}
           content={aboutPageContent}
           getItemAnimatedState={sectionNavAnimatedState}
-          layoutMode={secondaryNavLayoutMode}
+          mode={secondaryNavLayoutMode}
           onSectionPress={handleSectionPress}
           railRightOffset={railRightOffset}
           railShellHeight={railShellHeight}

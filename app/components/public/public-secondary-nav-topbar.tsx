@@ -1,3 +1,7 @@
+/**
+ * File: public-secondary-nav-topbar.tsx
+ * Description: Reusable topbar secondary navigation shell for public pages.
+ */
 import React, { useMemo } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
@@ -8,47 +12,21 @@ import {
   SECTION_TOPBAR_PILL_ROW_GAP,
   SECTION_TOPBAR_PILL_WIDTH,
 } from './public-secondary-nav.constants';
-import type {
-  PublicSecondaryNavAnimatedState,
-  PublicSecondaryNavItem,
-} from './public-secondary-nav.types';
+import type { PublicSecondaryNavTopbarProps } from './public-secondary-nav.types';
 
 const TOPBAR_HIGHLIGHT_Z_INDEX = 3;
 const TOPBAR_TITLE_FONT_SIZE = 10;
 const TOPBAR_SUBTITLE_FONT_SIZE = 6;
 
-type PublicSecondaryNavTopbarProps = {
-  items?: PublicSecondaryNavItem[];
-  sections?: PublicSecondaryNavItem[];
-  activeId?: string | null;
-  activeItemId?: string | null;
-  onItemPress?: (id: string) => void;
-  onSectionPress?: (id: string) => void;
-  title?: string;
-  subtitle?: string;
-  topbarShellHeight?: number;
-  getItemAnimatedState?: (itemId: string) => PublicSecondaryNavAnimatedState | undefined;
-  getItemAnimatedStyle?: (itemId: string) => PublicSecondaryNavAnimatedState | undefined;
-  shouldShowSubtitle?: (itemId: string) => boolean;
-};
-
 export function PublicSecondaryNavTopbar({
   items,
-  sections,
   activeId,
-  activeItemId,
   onItemPress,
-  onSectionPress,
   title,
   subtitle,
   topbarShellHeight,
   getItemAnimatedState,
-  getItemAnimatedStyle,
 }: PublicSecondaryNavTopbarProps) {
-  const resolvedItems = items ?? sections ?? [];
-  const resolvedActiveId = activeId ?? activeItemId ?? null;
-  const resolvedOnPress = onItemPress ?? onSectionPress ?? (() => undefined);
-  const resolvedAnimatedState = getItemAnimatedState ?? getItemAnimatedStyle;
   const { width } = useWindowDimensions();
   const isCompactTopbar = width < SECTION_TOPBAR_COMPACT_BREAKPOINT;
 
@@ -69,29 +47,30 @@ export function PublicSecondaryNavTopbar({
       </View>
 
       <View style={[styles.navList, isCompactTopbar ? styles.navListCompact : null]}>
-        {resolvedItems.map((item) => {
-          const isActive = item.id === resolvedActiveId;
-          const animatedState = resolvedAnimatedState?.(item.id);
+        {items.map((item) => {
+          const isActive = item.id === activeId;
+          const animatedState = getItemAnimatedState?.(item.id);
 
           return (
             <View key={item.id} style={itemStyles.shell}>
               <Pressable
                 accessibilityRole="button"
                 accessibilityState={{ selected: isActive }}
-                onPress={() => resolvedOnPress(item.id)}
+                onPress={() => onItemPress(item.id)}
                 style={({ pressed }) => [styles.pressable, pressed ? styles.pressablePressed : null]}
               >
-                  <Animated.View style={[itemStyles.plate, animatedState?.plateAnimatedStyle]}>                  <View pointerEvents="none" style={styles.itemContent}>
+                <Animated.View style={[itemStyles.plate, animatedState?.plateAnimatedStyle]}>
+                  <View pointerEvents="none" style={styles.itemContent}>
                     <Animated.Text
                       numberOfLines={1}
-                        style={[textStyles.title, animatedState?.titleAnimatedStyle]}
+                      style={[textStyles.title, animatedState?.titleAnimatedStyle]}
                     >
                       {item.title}
                     </Animated.Text>
                     <View style={styles.subtitleSlot}>
                       <Animated.Text
                         numberOfLines={1}
-                          style={[textStyles.subtitle, animatedState?.subtitleAnimatedStyle]}
+                        style={[textStyles.subtitle, animatedState?.subtitleAnimatedStyle]}
                       >
                         {item.subtitle}
                       </Animated.Text>

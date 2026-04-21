@@ -6,30 +6,10 @@ import React from 'react';
 
 import PublicSecondaryNavRail from './public-secondary-nav-rail';
 import { PublicSecondaryNavTopbar } from './public-secondary-nav-topbar';
-import type {
-  PublicSecondaryNavAnimatedState,
-  PublicSecondaryNavItem,
-} from './public-secondary-nav.types';
-
-type PublicSecondaryNavProps = {
-  mode?: 'rail' | 'topbar';
-  layoutMode?: 'rail' | 'topbar';
-  items: PublicSecondaryNavItem[];
-  activeId: string | null;
-  onItemPress: (id: string) => void;
-  title?: string;
-  subtitle?: string;
-  railWidth?: number;
-  railRightOffset?: number;
-  topbarShellHeight?: number;
-  railShellHeight?: number;
-  getItemAnimatedState?: (itemId: string) => PublicSecondaryNavAnimatedState | undefined;
-  shouldShowSubtitle?: (itemId: string) => boolean;
-};
+import type { PublicSecondaryNavProps } from './public-secondary-nav.types';
 
 export function PublicSecondaryNav({
-  mode,
-  layoutMode,
+  mode = 'rail',
   items,
   activeId,
   onItemPress,
@@ -42,9 +22,7 @@ export function PublicSecondaryNav({
   getItemAnimatedState,
   shouldShowSubtitle,
 }: PublicSecondaryNavProps) {
-  const resolvedMode = mode ?? layoutMode ?? 'rail';
-
-  if (resolvedMode === 'topbar') {
+  if (mode === 'topbar') {
     return (
       <PublicSecondaryNavTopbar
         items={items}

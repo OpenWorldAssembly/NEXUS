@@ -4,24 +4,8 @@
  */
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import type {
-  PublicSecondaryNavAnimatedState,
-  PublicSecondaryNavItem,
-} from '@app/components/public/public-secondary-nav.types';
+import type { PublicSecondaryNavRailProps } from '@app/components/public/public-secondary-nav.types';
 import { SECTION_RAIL_WIDTH } from './public-secondary-nav.constants';
-
-type PublicSecondaryNavRailProps = {
-  activeId?: string | null;
-  items: PublicSecondaryNavItem[];
-  railRightOffset?: number;
-  railShellHeight?: number;
-  railWidth?: number;
-  subtitle?: string;
-  title: string;
-  getItemAnimatedState?: (itemId: string) => PublicSecondaryNavAnimatedState | undefined;
-  onItemPress: (itemId: string) => void;
-  shouldShowSubtitle?: (itemId: string) => boolean;
-};
 
 /**
  * Inputs: shared nav item metadata, current active state, and animation helpers.
@@ -39,6 +23,10 @@ export default function PublicSecondaryNavRail({
   onItemPress,
   shouldShowSubtitle,
 }: PublicSecondaryNavRailProps) {
+  const resolvedRailWidth = railWidth ?? SECTION_RAIL_WIDTH;
+  const railItemPressableWidth = Math.max(resolvedRailWidth - 16, 0);
+  const railItemContentWidth = Math.max(resolvedRailWidth - 24, 0);
+
   return (
     <View
       pointerEvents="box-none"
@@ -49,7 +37,7 @@ export default function PublicSecondaryNavRail({
           styles.railShell,
           {
             height: railShellHeight ?? 540,
-            width: railWidth ?? SECTION_RAIL_WIDTH,
+            width: resolvedRailWidth,
           },
         ]}
       >
@@ -69,15 +57,15 @@ export default function PublicSecondaryNavRail({
                 accessibilityRole="button"
                 accessibilityState={{ selected: item.id === activeId }}
                 onPress={() => onItemPress(item.id)}
-                style={styles.railItemPressable}
+                style={[styles.railItemPressable, { width: railItemPressableWidth }]}
               >
-                <View style={styles.railItemBase}>
+                <View style={[styles.railItemBase, { width: railItemContentWidth }]}>
                   <Animated.View
                     pointerEvents="none"
                     style={[styles.railItemPlate, animatedState?.plateAnimatedStyle]}
                   />
 
-                  <View style={styles.railItemContent}>
+                  <View style={[styles.railItemContent, { width: railItemContentWidth }]}>
                     <View style={styles.railTextWrap}>
                       <Animated.Text
                         numberOfLines={1}
@@ -150,12 +138,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   railItemPressable: {
-    width: SECTION_RAIL_WIDTH - 16,
     alignSelf: 'center',
   },
   railItemBase: {
     minHeight: 54,
-    width: SECTION_RAIL_WIDTH - 24,
     alignSelf: 'center',
     justifyContent: 'center',
   },
@@ -169,7 +155,6 @@ const styles = StyleSheet.create({
   },
   railItemContent: {
     minHeight: 50,
-    width: SECTION_RAIL_WIDTH - 24,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 12,
