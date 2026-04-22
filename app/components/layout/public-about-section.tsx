@@ -3,7 +3,7 @@
  * Description: Renders a single about-page section by mapping About content into the shared public section shell.
  */
 import AboutHighlightTile from '@app/components/layout/about/about-highlight-tile';
-import { getSectionProgress } from '@app/components/layout/about/about-section-motion';
+import { getSectionProgress } from '@/app/components/public/sections/public-section-motion';
 import { PUBLIC_SECTION_FOCUS_LINE_RATIO } from '@app/components/public/sections/public-section.constants';
 import type { SectionLayout } from '@app/components/public/sections/public-section.types';
 import PublicSectionShell from '@app/components/public/sections/public-section-shell';

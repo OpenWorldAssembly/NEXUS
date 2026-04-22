@@ -5,7 +5,7 @@
 import { Link } from 'expo-router';
 import { Pressable, Text, View, Animated, useWindowDimensions } from 'react-native';
 
-import { getSectionProgress } from '@app/components/layout/about/about-section-motion';
+import { getSectionProgress } from '@/app/components/public/sections/public-section-motion';
 import PublicPageActions from '@app/components/public/public-page-actions';
 import { PUBLIC_SECTION_FOCUS_LINE_RATIO } from '@app/components/public/sections/public-section.constants';
 import type { SectionLayout } from '@app/components/public/sections/public-section.types';
@@ -143,70 +143,78 @@ export default function PublicHomeSection({
 
   const isHero = section.variant === 'hero';
   const isRightAligned = section.align === 'right';
-  const actionAlignmentClassName = isHero ? 'items-start' : isRightAligned ? 'items-start' : 'items-end';
-  const subPointAlignmentClassName = isHero ? 'items-start' : isRightAligned ? 'items-start' : 'items-end';
+  const { width: windowWidth } = useWindowDimensions();
+  const isDesktop = windowWidth >= 768;
 
+  const actionAlignmentClassName = isRightAligned ? 'items-start' : 'items-end';
   const actionWrapperClassName =
     section.action?.variant === 'primary'
       ? 'rounded-full bg-public-accent px-6 py-3'
       : 'rounded-full border border-public-line bg-public-panel/70 px-6 py-3';
-
   const actionTextClassName =
     section.action?.variant === 'primary'
       ? 'text-sm font-extrabold uppercase tracking-[0.18em] text-public-canvas'
       : 'text-sm font-bold uppercase tracking-[0.18em] text-public-text';
 
-  const { width: windowWidth } = useWindowDimensions();
-  const isDesktop = windowWidth >= 768;
-
   const mainTextStyle = {
-    fontSize: isHero ? (isDesktop ? 92 : 54) : isDesktop ? 76 : 42,
-    lineHeight: isHero ? (isDesktop ? 84 : 50) : isDesktop ? 70 : 40,
+    fontSize: isHero ? (isDesktop ? 78 : 52) : isDesktop ? 64 : 44,
+    lineHeight: isHero ? (isDesktop ? 72 : 48) : isDesktop ? 58 : 40,
     fontWeight: '900' as const,
-    letterSpacing: isHero ? (isDesktop ? -1.6 : -0.8) : isDesktop ? -1.2 : -0.5,
-    maxWidth: isHero ? (isDesktop ? 340 : 220) : isDesktop ? 300 : 200,
+    letterSpacing: isHero ? (isDesktop ? -1.4 : -0.8) : isDesktop ? -1 : -0.5,
+    maxWidth: isHero ? (isDesktop ? 370 : 240) : isDesktop ? 320 : 220,
   };
 
   const subTextStyle = {
-    fontSize: isHero ? (isDesktop ? 34 : 22) : isDesktop ? 26 : 18,
-    lineHeight: isHero ? (isDesktop ? 38 : 26) : isDesktop ? 30 : 22,
-    fontWeight: '700' as const,
-    letterSpacing: 0,
-    maxWidth: isHero ? (isDesktop ? 420 : 260) : isDesktop ? 320 : 220,
+    fontSize: isHero ? (isDesktop ? 28 : 22) : isDesktop ? 24 : 19,
+    lineHeight: isHero ? (isDesktop ? 32 : 26) : isDesktop ? 28 : 23,
+    fontWeight: '800' as const,
+    letterSpacing: -0.2,
+    maxWidth: isHero ? (isDesktop ? 360 : 260) : isDesktop ? 300 : 230,
   };
 
-  const mainBlockWidthClassName = isHero ? 'max-w-[22rem]' : 'max-w-[18rem]';
-
+  const mainRowClassName = isRightAligned
+    ? 'w-full items-end md:pr-4'
+    : 'w-full items-start md:pl-1';
+  const subRowClassName = isRightAligned
+    ? 'w-full items-start gap-5 md:pl-2'
+    : 'w-full items-end gap-5 md:pr-2';
+  const subRowOverlapClassName = isDesktop ? '-mt-10' : '-mt-4';
   const contentClassName = 'min-h-[350px] justify-center px-6 py-10 md:min-h-[460px] md:px-10 md:py-12';
 
   const mainBlock = (
-    <View className={`flex-1 justify-center ${mainBlockWidthClassName}`}>
-      <Animated.Text style={[noBreakTextStyle, mainTextStyle, { color: headlineColor }]}>
+    <View className={mainRowClassName}>
+      <Animated.Text
+        className={isRightAligned ? 'text-right' : 'text-left'}
+        style={[noBreakTextStyle, mainTextStyle, { color: headlineColor }]}
+      >
         {section.mainPoint}
       </Animated.Text>
     </View>
   );
 
+  const actionNode = isHero && section.actions?.length ? (
+    <View className={actionAlignmentClassName}>
+      <PublicPageActions actions={section.actions} />
+    </View>
+  ) : section.action ? (
+    <View className={actionAlignmentClassName}>
+      <Link href={section.action.href} asChild>
+        <Pressable className={actionWrapperClassName}>
+          <Text className={actionTextClassName}>{section.action.label}</Text>
+        </Pressable>
+      </Link>
+    </View>
+  ) : null;
+
   const subBlock = (
-    <View className={`flex-1 justify-center gap-6 ${subPointAlignmentClassName}`}>
-      <Animated.Text style={[noBreakTextStyle, subTextStyle, { color: subPointColor }]}>
+    <View className={`${subRowClassName} ${subRowOverlapClassName}`}>
+      <Animated.Text
+        className={isRightAligned ? 'text-left' : 'text-right'}
+        style={[noBreakTextStyle, subTextStyle, { color: subPointColor }]}
+      >
         {section.subPoint}
       </Animated.Text>
-      {isHero && section.actions?.length ? (
-        <View className={actionAlignmentClassName}>
-          <View className='-mt-2'>
-            <PublicPageActions actions={section.actions} />
-          </View>
-        </View>
-      ) : section.action ? (
-        <View className={actionAlignmentClassName}>
-          <Link href={section.action.href} asChild>
-            <Pressable className={actionWrapperClassName}>
-              <Text className={actionTextClassName}>{section.action.label}</Text>
-            </Pressable>
-          </Link>
-        </View>
-      ) : null}
+      {actionNode}
     </View>
   );
 
@@ -218,18 +226,9 @@ export default function PublicHomeSection({
       contentClassName={contentClassName}
       header={
         <Animated.View style={{ opacity: contentOpacity, transform: [{ translateY: contentTranslateY }] }}>
-          <View className="gap-8 md:flex-row md:items-center md:gap-14">
-            {isRightAligned ? (
-              <>
-                {subBlock}
-                {mainBlock}
-              </>
-            ) : (
-              <>
-                {mainBlock}
-                {subBlock}
-              </>
-            )}
+          <View className="min-h-[270px] justify-between md:min-h-[360px]">
+            {mainBlock}
+            {subBlock}
           </View>
         </Animated.View>
       }

@@ -30,6 +30,8 @@ export type CharterHero = {
   subtitle: string;
   intro: string;
   declaration: string;
+  lines: string[];
+  ctas: CharterCta[];
   backgroundImageUri: string;
 };
 
@@ -47,6 +49,15 @@ export const CHARTER_HERO: CharterHero = {
     'Humanity now possesses the means to communicate, coordinate, and act together across the planet.',
   declaration:
     'We need not wait for kings, parties, corporations, or catastrophes to decide our future. We declare these principles.',
+  lines: [
+    'Humanity now possesses the means to communicate, coordinate, and act together across the planet.',
+    'We need not wait for kings, parties, corporations, or catastrophes to decide our future. We declare these principles.',
+  ],
+  ctas: [
+    { label: 'About OWA', href: '/about' },
+    { label: 'Support OWA', href: '/support' },
+    { label: 'Enter Nexus', href: '/nexus', variant: 'highlight' },
+  ],
   backgroundImageUri: buildAboutBackgroundImageUri({
     base: "#07131d",
     accentSoft: "#7fb7ff",
@@ -164,6 +175,25 @@ export const CHARTER_SECTIONS: CharterPairSection[] = [
     },
   },
 ];
+
+
+export type CharterPrincipleCard = {
+  id: string;
+  label: string;
+  title: string;
+  body: string;
+  anchor: 'left' | 'right';
+};
+
+export const CHARTER_PRINCIPLE_CARDS: CharterPrincipleCard[] = CHARTER_SECTIONS.flatMap(
+  (pair, pairIndex) => [pair.left, pair.right].map((section, sectionIndex) => ({
+    id: `${pair.id}-${section.numeral.toLowerCase()}`,
+    label: `Principle ${section.numeral}`,
+    title: section.title,
+    body: section.body,
+    anchor: (pairIndex + sectionIndex) % 2 === 0 ? 'left' : 'right',
+  })),
+);
 
 export const CHARTER_CLOSING: CharterClosing = {
   title: 'Closing',
