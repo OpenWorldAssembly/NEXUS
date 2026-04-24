@@ -13,11 +13,7 @@ type PublicPanelShellProps = {
   accentOpacity?: number;
 };
 
-/**
- * Inputs: child content plus optional styling knobs.
- * Output: a rounded, layered public-site panel with subtle glow and wave accents.
- */
-export default function PublicPanelShell({
+export function PublicPanelShell({
   children,
   className,
   contentClassName,
@@ -81,3 +77,5 @@ export default function PublicPanelShell({
     </View>
   );
 }
+
+export default PublicPanelShell;

@@ -1,219 +1,86 @@
-/**
- * File: app/public/docs-content.ts
- * Description: Structured content for the public charter page.
- */
-import type { Href } from 'expo-router';
+import type {
+  CharterPrincipleCard,
+  PublicDocumentEntry,
+  PublicDocumentResource,
+} from "@/app/public/content-types";
 
-import { buildAboutBackgroundImageUri } from './public-graphics';
+const CHARTER_PAIRS: Array<[string, string]> = [
+  ["I", "The People Are the Source"],
+  ["II", "Consent Above Control"],
+  ["III", "Power Must Be Limited"],
+  ["IV", "Participation Over Passivity"],
+  ["V", "Decentralize What Can Be Local"],
+  ["VI", "Coordinate What Must Be Shared"],
+  ["VII", "Unity Without Uniformity"],
+  ["VIII", "Nonviolence Is Strength"],
+  ["IX", "Truth Must Be Visible"],
+  ["X", "Fatalism Is Folly"],
+];
 
-export type CharterCta = {
-  label: string;
-  href: Href;
-  variant?: 'default' | 'highlight';
-};
+const CHARTER_BODIES = [
+  "All legitimate power rises from the people and remains answerable to them.",
+  "No authority is just without consent. No consent is real without the freedom to refuse.",
+  "Any power not checked will drift toward abuse.",
+  "Those affected by decisions should have a voice in them.",
+  "What can be decided locally should never be captured from afar.",
+  "What concerns many may be aligned by many through open cooperation.",
+  "People may differ in culture, belief, and way of life while building peace together.",
+  "Violence breeds the systems it claims to defeat. Disciplined peace outlasts fear.",
+  "Transparency builds trust. Hidden power corrodes it.",
+  "We need not wait for war, collapse, or nuclear fire to become wise.",
+];
 
-export type CharterPrinciple = {
-  numeral: string;
-  title: string;
-  body: string;
-};
-
-export type CharterPairSection = {
-  id: string;
-  backgroundImageUri: string;
-  left: CharterPrinciple;
-  right: CharterPrinciple;
-};
-
-export type CharterHero = {
-  title: string;
-  subtitle: string;
-  intro: string;
-  declaration: string;
-  lines: string[];
-  ctas: CharterCta[];
-  backgroundImageUri: string;
-};
-
-export type CharterClosing = {
-  title: string;
-  lines: string[];
-  ctas: CharterCta[];
-  backgroundImageUri: string;
-};
-
-export const CHARTER_HERO: CharterHero = {
-  title: 'The Charter of the Open World Assembly',
-  subtitle: 'For the Free Peoples of Earth',
-  intro:
-    'Humanity now possesses the means to communicate, coordinate, and act together across the planet.',
-  declaration:
-    'We need not wait for kings, parties, corporations, or catastrophes to decide our future. We declare these principles.',
-  lines: [
-    'Humanity now possesses the means to communicate, coordinate, and act together across the planet.',
-    'We need not wait for kings, parties, corporations, or catastrophes to decide our future. We declare these principles.',
-  ],
-  ctas: [
-    { label: 'About OWA', href: '/about' },
-    { label: 'Support OWA', href: '/support' },
-    { label: 'Enter Nexus', href: '/nexus', variant: 'highlight' },
-  ],
-  backgroundImageUri: buildAboutBackgroundImageUri({
-    base: "#07131d",
-    accentSoft: "#7fb7ff",
-    ridge: "#d4f79a",
-    seed: 'docs-hero-charter',
-    accent: '#8dc2ff',
-    glow: '#d4f79a',
-  }),
-};
-
-export const CHARTER_SECTIONS: CharterPairSection[] = [
+const CHARTER_RESOURCES: PublicDocumentResource[] = [
   {
-    id: 'charter-01-02',
-    backgroundImageUri: buildAboutBackgroundImageUri({
-    base: "#07131d",
-    accentSoft: "#7fb7ff",
-    ridge: "#d4f79a",
-      seed: 'docs-people-consent',
-      accent: '#8dc2ff',
-      glow: '#d4f79a',
-    }),
-    left: {
-      numeral: 'I',
-      title: 'The People Are the Source',
-      body: 'All legitimate power rises from the people and remains answerable to them.',
-    },
-    right: {
-      numeral: 'II',
-      title: 'Consent Above Control',
-      body: 'No authority is just without consent. No consent is real without the freedom to refuse.',
-    },
-  },
-  {
-    id: 'charter-03-04',
-    backgroundImageUri: buildAboutBackgroundImageUri({
-    base: "#07131d",
-    accentSoft: "#7fb7ff",
-    ridge: "#d4f79a",
-      seed: 'docs-power-participation',
-      accent: '#8dc2ff',
-      glow: '#d4f79a',
-    }),
-    left: {
-      numeral: 'III',
-      title: 'Power Must Be Limited',
-      body: 'Any power not checked will drift toward abuse.',
-    },
-    right: {
-      numeral: 'IV',
-      title: 'Participation Over Passivity',
-      body: 'Those affected by decisions should have a voice in them.',
-    },
-  },
-  {
-    id: 'charter-05-06',
-    backgroundImageUri: buildAboutBackgroundImageUri({
-    base: "#07131d",
-    accentSoft: "#7fb7ff",
-    ridge: "#d4f79a",
-      seed: 'docs-local-shared',
-      accent: '#8dc2ff',
-      glow: '#d4f79a',
-    }),
-    left: {
-      numeral: 'V',
-      title: 'Decentralize What Can Be Local',
-      body: 'What can be decided locally should never be captured from afar.',
-    },
-    right: {
-      numeral: 'VI',
-      title: 'Coordinate What Must Be Shared',
-      body: 'What concerns many may be aligned by many through open cooperation.',
-    },
-  },
-  {
-    id: 'charter-07-08',
-    backgroundImageUri: buildAboutBackgroundImageUri({
-    base: "#07131d",
-    accentSoft: "#7fb7ff",
-    ridge: "#d4f79a",
-      seed: 'docs-unity-nonviolence',
-      accent: '#8dc2ff',
-      glow: '#d4f79a',
-    }),
-    left: {
-      numeral: 'VII',
-      title: 'Unity Without Uniformity',
-      body: 'People may differ in culture, belief, and way of life while building peace together.',
-    },
-    right: {
-      numeral: 'VIII',
-      title: 'Nonviolence Is Strength',
-      body: 'Violence breeds the systems it claims to defeat. Disciplined peace outlasts fear.',
-    },
-  },
-  {
-    id: 'charter-09-10',
-    backgroundImageUri: buildAboutBackgroundImageUri({
-    base: "#07131d",
-    accentSoft: "#7fb7ff",
-    ridge: "#d4f79a",
-      seed: 'docs-truth-fatalism',
-      accent: '#8dc2ff',
-      glow: '#d4f79a',
-    }),
-    left: {
-      numeral: 'IX',
-      title: 'Truth Must Be Visible',
-      body: 'Transparency builds trust. Hidden power corrodes it.',
-    },
-    right: {
-      numeral: 'X',
-      title: 'Fatalism Is Folly',
-      body: 'We need not wait for war, collapse, or nuclear fire to become wise.',
-    },
+    slug: "charter-pdf",
+    title: "Download PDF",
+    summary: "Printable public release placeholder for the charter.",
+    disabled: true,
   },
 ];
 
-
-export type CharterPrincipleCard = {
-  id: string;
-  label: string;
-  title: string;
-  body: string;
-  anchor: 'left' | 'right';
-};
-
-export const CHARTER_PRINCIPLE_CARDS: CharterPrincipleCard[] = CHARTER_SECTIONS.flatMap(
-  (pair, pairIndex) => [pair.left, pair.right].map((section, sectionIndex) => ({
-    id: `${pair.id}-${section.numeral.toLowerCase()}`,
-    label: `Principle ${section.numeral}`,
-    title: section.title,
-    body: section.body,
-    anchor: (pairIndex + sectionIndex) % 2 === 0 ? 'left' : 'right',
-  })),
+export const CHARTER_PRINCIPLE_CARDS: CharterPrincipleCard[] = CHARTER_PAIRS.map(
+  ([principle, title], index) => ({
+    principle,
+    title,
+    body: CHARTER_BODIES[index] ?? "",
+    anchor: index % 2 === 0 ? "left" : "right",
+  }),
 );
 
-export const CHARTER_CLOSING: CharterClosing = {
-  title: 'Closing',
-  lines: [
-    'The future is not owned by tyrants, algorithms, or inherited power.',
-    'The future belongs to free peoples who choose to build it together.',
-    'Let assemblies rise wherever people are. Let consent become visible.',
-    'Let cooperation outrun coercion. Let the age of participation begin.',
-  ],
-  ctas: [
-    { label: 'About OWA', href: '/about' },
-    { label: 'Support OWA', href: '/support' },
-    { label: 'Enter Nexus', href: '/nexus', variant: 'highlight' },
-  ],
-  backgroundImageUri: buildAboutBackgroundImageUri({
-    base: "#07131d",
-    accentSoft: "#7fb7ff",
-    ridge: "#d4f79a",
-    seed: 'docs-closing-charter',
-    accent: '#8dc2ff',
-    glow: '#d4f79a',
-  }),
-};
+export const PUBLIC_DOCUMENTS: PublicDocumentEntry[] = [
+  {
+    slug: "charter",
+    title: "The Charter of the Open World Assembly",
+    description: "Founding document for the public site.",
+    hero: {
+      eyebrow: "Founding Documents",
+      title: "The Charter of the Open World Assembly",
+      summary: [
+        "Humanity now possesses the means to communicate, coordinate, and act together across the planet.",
+        "We need not wait for kings, parties, corporations, or catastrophes to decide our future. We declare these principles.",
+      ],
+      noteTitle: "Structured as a readable, reusable set of principles for every scope.",
+      noteBody:
+        "The page now reads as an adaptive field of panels that can grow as the document library expands.",
+      actions: [
+        { label: "About OWA", href: "/about", variant: "outline" },
+        { label: "Support OWA", href: "/support", variant: "outline" },
+        { label: "Enter Nexus", href: "/nexus/dashboard", variant: "outline" },
+        { label: "Download PDF", variant: "outline", disabled: true },
+      ],
+    },
+    sections: CHARTER_PRINCIPLE_CARDS,
+    closing: {
+      title: "Closing",
+      body: [
+        "The future is not owned by tyrants, algorithms, or inherited power.",
+        "The future belongs to free peoples who choose to build it together.",
+        "Let assemblies rise wherever people are. Let consent become visible. Let cooperation outrun coercion. Let the age of participation begin.",
+      ],
+    },
+    resources: CHARTER_RESOURCES,
+  },
+];
+
+export const DEFAULT_PUBLIC_DOCUMENT = PUBLIC_DOCUMENTS[0];

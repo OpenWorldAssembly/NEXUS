@@ -2,46 +2,77 @@
  * File: public-page-actions.tsx
  * Description: Renders a reusable action row for public-site content pages.
  */
-import type { Href } from 'expo-router';
-import { Link } from 'expo-router';
+import { Link, type Href } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
-export type PublicPageAction = {
+import type { PublicPageActionItem } from '@/app/public/content-types';
+
+type LegacyPublicPageAction = {
   href: Href;
   label: string;
   variant: 'primary' | 'secondary';
 };
 
 type PublicPageActionsProps = {
-  actions: PublicPageAction[];
+  actions: Array<LegacyPublicPageAction | PublicPageActionItem>;
+  className?: string;
 };
 
-/**
- * Inputs: a list of CTA actions with hrefs, labels, and visual variants.
- * Output: a shared CTA row for public informational pages.
- */
-export default function PublicPageActions({ actions }: PublicPageActionsProps) {
+function normalizeVariant(action: LegacyPublicPageAction | PublicPageActionItem): 'solid' | 'outline' {
+  if ('variant' in action && action.variant === 'primary') {
+    return 'solid';
+  }
+
+  if ('variant' in action && action.variant === 'secondary') {
+    return 'outline';
+  }
+
+  return action.variant === 'solid' ? 'solid' : 'outline';
+}
+
+function getActionKey(action: LegacyPublicPageAction | PublicPageActionItem) {
+  const href = 'href' in action ? action.href : undefined;
+  return `${href ?? 'disabled'}:${action.label}`;
+}
+
+export function PublicPageActions({ actions, className }: PublicPageActionsProps) {
   return (
-    <View className="mt-10 flex-row flex-wrap gap-3">
+    <View className={`mt-10 flex-row flex-wrap gap-3 ${className ?? ''}`.trim()}>
       {actions.map((action) => {
+        const variant = normalizeVariant(action);
+        const disabled = 'disabled' in action ? !!action.disabled : false;
+        const href = 'href' in action ? action.href : undefined;
+
         const wrapperClassName =
-          action.variant === 'primary'
+          variant === 'solid'
             ? 'rounded-full bg-public-accent px-6 py-3'
             : 'rounded-full border border-public-line bg-public-panel/70 px-6 py-3';
 
         const textClassName =
-          action.variant === 'primary'
+          variant === 'solid'
             ? 'text-sm font-extrabold uppercase tracking-[0.18em] text-public-canvas'
             : 'text-sm font-bold uppercase tracking-[0.18em] text-public-text';
 
+        const content = (
+          <Pressable className={wrapperClassName} disabled={disabled || !href}>
+            <Text className={`${textClassName} ${disabled || !href ? 'opacity-50' : ''}`.trim()}>
+              {action.label}
+            </Text>
+          </Pressable>
+        );
+
+        if (disabled || !href) {
+          return <View key={getActionKey(action)}>{content}</View>;
+        }
+
         return (
-          <Link key={`${action.href}:${action.label}`} href={action.href} asChild>
-            <Pressable className={wrapperClassName}>
-              <Text className={textClassName}>{action.label}</Text>
-            </Pressable>
+          <Link key={getActionKey(action)} href={href as Href} asChild>
+            {content}
           </Link>
         );
       })}
     </View>
   );
 }
+
+export default PublicPageActions;

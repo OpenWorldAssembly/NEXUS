@@ -1,107 +1,63 @@
-/**
- * File: public-docs-section-card.tsx
- * Description: Renders one animated charter principle card for the public docs page.
- */
-import { useEffect, useMemo, useState } from 'react';
-import { Animated, type LayoutChangeEvent, Text, View } from 'react-native';
+import { Text, View } from "react-native";
 
-import PublicPanelShell from '@/app/components/public/public-panel-shell';
-import { getSectionProgress } from '@/app/components/public/sections/public-section-motion';
-import type { SectionLayout } from '@/app/components/public/sections/public-section.types';
-import type { CharterPrincipleCard } from '@/app/public/docs-content';
+import type { CharterPrincipleCard } from "@/app/public/content-types";
 
 type PublicDocsSectionCardProps = {
   section: CharterPrincipleCard;
-  scrollY: Animated.Value;
-  viewportHeight: number;
-  offsetY: number;
 };
 
-/**
- * Inputs: a docs card definition and shared page scroll state.
- * Output: an animated principle card that subtly intensifies near the viewport midpoint.
- */
-export default function PublicDocsSectionCard({
-  section,
-  scrollY,
-  viewportHeight,
-  offsetY,
-}: PublicDocsSectionCardProps) {
-  const [sectionLayout, setSectionLayout] = useState<SectionLayout | null>(null);
-  const [progress, setProgress] = useState(0);
+export function PublicDocsSectionCard({ section }: PublicDocsSectionCardProps) {
+  const isRightAnchored = section.anchor === "right";
 
-  useEffect(() => {
-    if (!sectionLayout) {
-      return undefined;
-    }
-
-    const initialScrollY = typeof scrollY.__getValue === 'function' ? scrollY.__getValue() : 0;
-    setProgress(
-      getSectionProgress(initialScrollY, sectionLayout.y, sectionLayout.height, viewportHeight),
-    );
-
-    const listenerId = scrollY.addListener(({ value }) => {
-      setProgress(getSectionProgress(value, sectionLayout.y, sectionLayout.height, viewportHeight));
-    });
-
-    return () => {
-      scrollY.removeListener(listenerId);
-    };
-  }, [offsetY, scrollY, sectionLayout, viewportHeight]);
-
-  const handleLayout = ({ nativeEvent }: LayoutChangeEvent) => {
-    setSectionLayout({
-      y: offsetY + nativeEvent.layout.y,
-      height: nativeEvent.layout.height,
-    });
-  };
-
-  const isRightAnchored = section.anchor === 'right';
-  const titleClassName = isRightAnchored ? 'text-right' : 'text-left';
-  const detailClassName = isRightAnchored ? 'self-start items-start' : 'self-end items-end';
-  const detailTextClassName = isRightAnchored ? 'text-left' : 'text-right';
-
-  const cardScale = useMemo(() => 0.985 + progress * 0.015, [progress]);
-  const accentOpacity = useMemo(() => 0.16 + progress * 0.16, [progress]);
-  const borderColor = useMemo(
-    () => `rgba(142, 197, 255, ${0.14 + progress * 0.2})`,
-    [progress],
-  );
+  const titleWrapClassName = isRightAnchored ? "items-end" : "items-start";
+  const titleClassName = isRightAnchored ? "text-right" : "text-left";
+  const detailWrapClassName = isRightAnchored ? "items-start" : "items-end";
+  const detailClassName = isRightAnchored ? "text-left" : "text-right";
+  const eyebrowClassName = isRightAnchored ? "text-right" : "text-left";
+  const hairlineClassName = isRightAnchored ? "self-end" : "self-start";
 
   return (
-    <Animated.View
-      onLayout={handleLayout}
-      style={{
-        transform: [{ scale: cardScale }],
-      }}
-    >
-      <PublicPanelShell
-        accentOpacity={accentOpacity}
-        className="min-h-[320px] overflow-hidden px-6 py-6 md:min-h-[340px] md:px-7 md:py-7"
-        contentClassName="h-full"
-        style={{ borderColor }}
-      >
-        <View className="flex-1 justify-between gap-8">
-          <View className={isRightAnchored ? 'max-w-[78%] self-end items-end' : 'max-w-[78%]'}>
-            <Text className="text-[10px] font-medium uppercase tracking-[2.8px] text-[#8cb1d9] md:text-[11px]">
-              {section.label}
-            </Text>
-            <Text
-              className={`mt-3 font-larken text-[28px] leading-[31px] text-[#d3e6ff] md:text-[34px] md:leading-[37px] ${titleClassName}`}
-            >
-              {section.title}
-            </Text>
-          </View>
+    <View className="min-w-[280px] flex-1 self-stretch rounded-[28px] border border-[#1c4f79] bg-[#031129] px-7 py-7">
+      <View className="pointer-events-none absolute left-0 top-0 h-full w-full overflow-hidden rounded-[28px]">
+        <View className="absolute -left-12 -top-12 h-40 w-40 rounded-full bg-[#14355c]/45" />
+        <View className="absolute -bottom-14 right-[-10%] h-44 w-44 rounded-full bg-[#102c4d]/35" />
+      </View>
 
-          <View className={`max-w-[88%] gap-4 ${detailClassName}`}>
-            <Text
-              className={`font-larken text-[17px] leading-[23px] text-[#ecf3c8] md:text-[19px] md:leading-[25px] ${detailTextClassName}`}
-            >
-              {section.body}
-            </Text>
-          </View>
+      <View className="flex-1 justify-between gap-10">
+        <View className={titleWrapClassName}>
+          <View className={["mb-5 w-full max-w-[92%] border-t border-[#244e77]", hairlineClassName].join(" ")} />
+          <Text
+            className={[
+              "mb-3 font-[Orbitron_700Bold] text-[10px] uppercase tracking-[3px] text-[#89afe0]",
+              eyebrowClassName,
+            ].join(" ")}
+          >
+            Principle {section.principle}
+          </Text>
+          <Text
+            className={[
+              "max-w-[92%] font-[Inter_700Bold] text-[30px] leading-[34px] text-[#b8d7ff]",
+              titleClassName,
+            ].join(" ")}
+          >
+            {section.title}
+          </Text>
         </View>
-      </PublicPanelShell>
-    </Animated.View>
+
+        <View className={detailWrapClassName}>
+          <Text
+            className={[
+              "max-w-[92%] font-[Inter_500Medium] text-[16px] leading-[24px] text-[#f3f8d6]",
+              detailClassName,
+            ].join(" ")}
+          >
+            {section.body}
+          </Text>
+          <View className={["mt-5 w-full max-w-[92%] border-t border-[#244e77]", hairlineClassName].join(" ")} />
+        </View>
+      </View>
+    </View>
   );
 }
+
+export default PublicDocsSectionCard;

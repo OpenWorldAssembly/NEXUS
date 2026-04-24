@@ -1,59 +1,47 @@
-/**
- * File: content-types.ts
- * Description: Shared public-site content models for structured copy and highlight sections.
- */
-import type { PublicHref } from './public-routes';
+import type { PublicHref } from "@/app/public/public-routes";
 
-export type AboutHighlightTone = 'accent' | 'sand' | 'cyan' | 'muted';
+export type CharterPrincipleCard = {
+  principle: string;
+  title: string;
+  body: string;
+  anchor: "left" | "right";
+};
 
-export type PublicHeroAction = {
-  href: PublicHref;
+export type PublicPageActionItem = {
   label: string;
-  variant?: 'primary' | 'secondary';
-};
-
-export type PublicHeroSlide = {
-  eyebrow: string;
-  title: string;
-  body: string;
-  kicker: string;
-  detail: string;
-  backgroundImageUri: string;
-  actions?: PublicHeroAction[];
-};
-
-export type PublicPrinciple = {
-  title: string;
-  body: string;
-};
-
-export type AboutHighlight = {
-  title: string;
-  body: string;
-  cta?: string;
   href?: PublicHref;
-  color?: AboutHighlightTone;
+  variant?: "outline" | "solid";
+  disabled?: boolean;
 };
 
-export type AboutSection = {
-  id: string;
+export type PublicDocumentHero = {
   eyebrow: string;
-  headline: string;
-  summary: string;
-  backgroundImageUri: string;
-  highlights: AboutHighlight[];
-};
-
-export type AboutPageContent = {
-  pageTitle: string;
-  pageSubtitle: string;
-  railTitle: string;
-  railSubtitle: string;
-  sections: AboutSection[];
-};
-
-export type CharterResource = {
-  status: string;
   title: string;
-  body: string;
+  summary: string[];
+  noteTitle?: string;
+  noteBody?: string;
+  actions: PublicPageActionItem[];
+};
+
+export type PublicDocumentClosing = {
+  title: string;
+  body: string[];
+};
+
+export type PublicDocumentResource = {
+  slug: string;
+  title: string;
+  summary: string;
+  href?: PublicHref;
+  disabled?: boolean;
+};
+
+export type PublicDocumentEntry = {
+  slug: string;
+  title: string;
+  description: string;
+  hero: PublicDocumentHero;
+  sections: CharterPrincipleCard[];
+  closing: PublicDocumentClosing;
+  resources?: PublicDocumentResource[];
 };

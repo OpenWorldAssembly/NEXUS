@@ -1,50 +1,55 @@
-/**
- * File: app/components/public/public-docs-hero.tsx
- * Description: Hero section for the public charter page.
- */
-import { Image } from 'expo-image';
-import { Text, View } from 'react-native';
+import { Text, View } from "react-native";
 
-import type { CharterHero } from '@app/public/docs-content';
+import type { PublicDocumentHero } from "@/app/public/content-types";
+import { PublicPageActions } from "@/app/components/public/public-page-actions";
+import { PublicPanelShell } from "@/app/components/public/public-panel-shell";
 
 type PublicDocsHeroProps = {
-  hero: CharterHero;
+  hero: PublicDocumentHero;
 };
 
-/**
- * Inputs: charter hero content.
- * Output: a wide introductory panel that matches the public-site visual system.
- */
 export function PublicDocsHero({ hero }: PublicDocsHeroProps) {
   return (
-    <View className="relative overflow-hidden rounded-[28px] border border-public-line/60 bg-public-panel/75 px-7 py-8 md:px-10 md:py-10">
-      <Image
-        source={{ uri: hero.backgroundImageUri }}
-        contentFit="cover"
-        transition={150}
-        className="absolute inset-0 opacity-70"
-      />
-      <View className="absolute inset-0 bg-[#041225]/78" />
-
-      <View className="relative flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
-        <View className="max-w-[540px] gap-4">
-          <Text className="font-public-display text-[14px] uppercase tracking-[0.34em] text-[#d4f79a] md:text-[15px]">
-            {hero.subtitle}
+    <PublicPanelShell className="px-6 py-7 sm:px-7 sm:py-8 lg:px-8 lg:py-9">
+      <View className="w-full flex-col gap-8 lg:flex-row lg:items-start lg:justify-between lg:gap-10">
+        <View className="min-w-0 flex-1 gap-4 lg:max-w-[56%]">
+          <Text className="font-[Orbitron_700Bold] text-[10px] uppercase tracking-[3px] text-[#89afe0]">
+            {hero.eyebrow}
           </Text>
-          <Text className="font-public-display text-[34px] uppercase leading-[0.94] tracking-[-0.03em] text-[#f5f8ff] md:text-[60px]">
+          <Text className="font-[Inter_700Bold] text-[38px] leading-[44px] text-[#b8d7ff] sm:text-[44px] sm:leading-[50px]">
             {hero.title}
           </Text>
+          <View className="gap-3">
+            {hero.summary.map((paragraph) => (
+              <Text
+                key={paragraph}
+                className="max-w-[760px] font-[Inter_400Regular] text-[18px] leading-[30px] text-[#d8e7f4]"
+              >
+                {paragraph}
+              </Text>
+            ))}
+          </View>
         </View>
 
-        <View className="max-w-[460px] gap-4 md:pt-2">
-          <Text className="text-[18px] leading-[1.35] text-[#8dc2ff] md:text-[22px]">
-            {hero.intro}
-          </Text>
-          <Text className="text-[15px] leading-7 text-[#d8e5ff]/88 md:text-[17px]">
-            {hero.declaration}
-          </Text>
+        <View className="w-full gap-5 lg:max-w-[420px] lg:items-end">
+          {!!hero.noteTitle && (
+            <View className="w-full gap-2 lg:max-w-[400px]">
+              <Text className="font-[Inter_600SemiBold] text-[20px] leading-[28px] text-[#f3f8d6] lg:text-right">
+                {hero.noteTitle}
+              </Text>
+              {!!hero.noteBody && (
+                <Text className="font-[Inter_400Regular] text-[15px] leading-[24px] text-[#9fb6ca] lg:text-right">
+                  {hero.noteBody}
+                </Text>
+              )}
+            </View>
+          )}
+
+          <PublicPageActions actions={hero.actions} className="lg:justify-end" />
         </View>
       </View>
-    </View>
+    </PublicPanelShell>
   );
 }
+
+export default PublicDocsHero;
