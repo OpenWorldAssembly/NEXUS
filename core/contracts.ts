@@ -4,6 +4,8 @@
  */
 
 import type {
+  PacketAdaptedWritePreparation,
+  PacketCompatibilityReadResult,
   AttestationValue,
   DiscussionActorClass,
   DiscussionReplySort,
@@ -11,6 +13,7 @@ import type {
   PacketEdge,
   PacketEnvelope,
   PacketFamily,
+  PacketReadMode,
   PacketMergeStrategy,
   PacketRevisionState,
   PacketRef,
@@ -47,6 +50,12 @@ export interface PacketHeadStatus {
   revision_state: PacketRevisionState;
 }
 
+export type PacketReadValue<TMode extends PacketReadMode> = TMode extends 'raw'
+  ? unknown
+  : TMode extends 'raw_plus_adaptation'
+    ? PacketCompatibilityReadResult
+    : PacketEnvelope;
+
 export interface PacketStore {
   validate(input: unknown): PacketEnvelope;
   writeRevision(packet: PacketEnvelope): Promise<PacketRevisionRef>;
@@ -62,6 +71,17 @@ export interface PacketStore {
     strategy: PacketMergeStrategy;
     merged_packet: PacketEnvelope;
   }): Promise<PacketRevisionRef>;
+  readByPacket<TMode extends PacketReadMode>(
+    packet: PacketRef,
+    options?: { mode?: TMode }
+  ): Promise<PacketReadValue<TMode> | null>;
+  readByRevision<TMode extends PacketReadMode>(
+    revision: PacketRevisionRef,
+    options?: { mode?: TMode }
+  ): Promise<PacketReadValue<TMode> | null>;
+  prepareRevisionForAdaptedSave(
+    revision: PacketRevisionRef
+  ): Promise<PacketAdaptedWritePreparation | null>;
   importBundle(bundle: Uint8Array | ArrayBuffer | string): Promise<BundleImportResult>;
   exportBundle(packet_refs: PacketRef[]): Promise<BundleExportResult>;
 }

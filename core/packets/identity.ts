@@ -220,3 +220,53 @@ export function createElementRoleClaimsRevision(input: {
     claimed_role_refs: input.claimedRoleRefs,
   });
 }
+
+/**
+ * Inputs: an element packet and the next moderation policy refs for that same actor.
+ * Output: a new element revision that preserves existing identity, locality, and role state.
+ */
+export function createElementPolicyRefsRevision(input: {
+  actorPacket: PacketEnvelopeByType['Element'];
+  policyRefs: PacketRef[];
+}): PacketEnvelopeByType['Element'] {
+  const actorPacket = input.actorPacket;
+
+  return createElementPacket({
+    packet_id: actorPacket.header.packet_id,
+    revision_id: createNextRevisionId(
+      actorPacket.header.packet_id,
+      actorPacket.header.revision_id
+    ),
+    created_at: new Date().toISOString(),
+    parent_revision_refs: [
+      {
+        packet_id: actorPacket.header.packet_id,
+        revision_id: actorPacket.header.revision_id,
+      },
+    ],
+    authority_scope_ref: actorPacket.header.authority_scope_ref,
+    applicable_scope_refs: actorPacket.header.applicable_scope_refs,
+    edges: actorPacket.header.edges,
+    created_by: actorPacket.header.provenance.created_by,
+    submitted_by: actorPacket.header.provenance.submitted_by,
+    recorded_at: actorPacket.header.provenance.recorded_at,
+    adapter: actorPacket.header.provenance.adapter,
+    app_version: actorPacket.header.producer.app_version,
+    visibility: actorPacket.header.moderation.visibility,
+    moderation_state: actorPacket.header.moderation.moderation_state,
+    policy_refs: input.policyRefs,
+    content_warning_ids: actorPacket.header.moderation.content_warning_ids,
+    external_refs: actorPacket.header.external_refs,
+    metadata_tags: actorPacket.header.metadata.tags,
+    metadata_language: actorPacket.header.metadata.language,
+    metadata_summary: actorPacket.header.metadata.summary,
+    kind: actorPacket.body.kind,
+    name: actorPacket.body.name,
+    subtype: actorPacket.body.subtype ?? null,
+    summary: actorPacket.body.summary ?? null,
+    locality_label: actorPacket.body.locality_label ?? null,
+    identity: actorPacket.body.identity,
+    tags: actorPacket.body.tags,
+    claimed_role_refs: actorPacket.body.claimed_role_refs ?? [],
+  });
+}

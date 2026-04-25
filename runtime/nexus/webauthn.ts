@@ -75,22 +75,42 @@ export async function registerPasskey(
 ): Promise<NexusPasskeyRegistrationCredentialPayload> {
   requirePasskeySupport();
 
-  const credential = (await navigator.credentials.create({
-    publicKey: {
-      ...optionsPayload.public_key,
-      challenge: decodeBase64Url(optionsPayload.public_key.challenge),
-      user: {
-        ...optionsPayload.public_key.user,
-        id: decodeBase64Url(optionsPayload.public_key.user.id),
+  let credential: PublicKeyCredential | null;
+
+  try {
+    credential = (await navigator.credentials.create({
+      publicKey: {
+        ...optionsPayload.public_key,
+        challenge: decodeBase64Url(optionsPayload.public_key.challenge),
+        user: {
+          ...optionsPayload.public_key.user,
+          id: decodeBase64Url(optionsPayload.public_key.user.id),
+        },
+        excludeCredentials: optionsPayload.public_key.excludeCredentials.map(
+          (credentialDescriptor) => ({
+            ...credentialDescriptor,
+            id: decodeBase64Url(credentialDescriptor.id),
+          })
+        ),
       },
-      excludeCredentials: optionsPayload.public_key.excludeCredentials.map(
-        (credentialDescriptor) => ({
-          ...credentialDescriptor,
-          id: decodeBase64Url(credentialDescriptor.id),
-        })
-      ),
-    },
-  })) as PublicKeyCredential | null;
+    })) as PublicKeyCredential | null;
+  } catch (error) {
+    if (error instanceof DOMException) {
+      if (error.name === 'InvalidStateError') {
+        throw new Error(
+          'This authenticator is already registered for this identity. Use the existing passkey, register a different authenticator or device, or revoke and replace the current one.'
+        );
+      }
+
+      if (error.name === 'NotAllowedError') {
+        throw new Error('Passkey registration was cancelled.');
+      }
+    }
+
+    throw error instanceof Error
+      ? error
+      : new Error('Unable to register a passkey on this device.');
+  }
 
   if (!credential) {
     throw new Error('Passkey registration was cancelled.');
@@ -123,18 +143,30 @@ export async function completePasskeyAssertion(
 ): Promise<NexusPasskeyAssertionCredentialPayload> {
   requirePasskeySupport();
 
-  const credential = (await navigator.credentials.get({
-    publicKey: {
-      ...optionsPayload.public_key,
-      challenge: decodeBase64Url(optionsPayload.public_key.challenge),
-      allowCredentials: optionsPayload.public_key.allowCredentials.map(
-        (credentialDescriptor) => ({
-          ...credentialDescriptor,
-          id: decodeBase64Url(credentialDescriptor.id),
-        })
-      ),
-    },
-  })) as PublicKeyCredential | null;
+  let credential: PublicKeyCredential | null;
+
+  try {
+    credential = (await navigator.credentials.get({
+      publicKey: {
+        ...optionsPayload.public_key,
+        challenge: decodeBase64Url(optionsPayload.public_key.challenge),
+        allowCredentials: optionsPayload.public_key.allowCredentials.map(
+          (credentialDescriptor) => ({
+            ...credentialDescriptor,
+            id: decodeBase64Url(credentialDescriptor.id),
+          })
+        ),
+      },
+    })) as PublicKeyCredential | null;
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'NotAllowedError') {
+      throw new Error('Passkey verification was cancelled.');
+    }
+
+    throw error instanceof Error
+      ? error
+      : new Error('Unable to verify this passkey on the current device.');
+  }
 
   if (!credential) {
     throw new Error('Passkey verification was cancelled.');

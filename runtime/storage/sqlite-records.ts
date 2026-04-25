@@ -50,6 +50,12 @@ export interface PacketRevisionRecord {
   revision_json: string;
 }
 
+export interface PacketRevisionRecordOptions {
+  header_json?: string;
+  body_json?: string;
+  revision_json?: string;
+}
+
 export interface PacketEdgeRecord {
   source_revision_id: string;
   source_packet_id: string;
@@ -164,7 +170,8 @@ export function projectPacketRecord(
  * Output: a normalized row for the immutable `packet_revisions` table.
  */
 export function projectPacketRevisionRecord(
-  packet: PacketEnvelope
+  packet: PacketEnvelope,
+  options?: PacketRevisionRecordOptions
 ): PacketRevisionRecord {
   return {
     revision_id: packet.header.revision_id,
@@ -184,9 +191,9 @@ export function projectPacketRevisionRecord(
     external_refs_json: stringify(packet.header.external_refs),
     metadata_json: stringify(packet.header.metadata),
     producer_json: stringify(packet.header.producer),
-    header_json: stringify(packet.header),
-    body_json: stringify(packet.body),
-    revision_json: stringify(packet),
+    header_json: options?.header_json ?? stringify(packet.header),
+    body_json: options?.body_json ?? stringify(packet.body),
+    revision_json: options?.revision_json ?? stringify(packet),
   };
 }
 

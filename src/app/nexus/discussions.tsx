@@ -23,12 +23,6 @@ import {
   useNexusAppearance,
 } from '@app/components/nexus/nexus-ui';
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
-import {
-  buildDiscussionReplyPacket,
-  buildDiscussionRootPostPacket,
-  buildDiscussionThreadPacket,
-  buildPacketSignalAttestationPacket,
-} from '@runtime/nexus/discussion-packets';
 import type {
   NexusDiscussionPost,
   NexusDiscussionReply,
@@ -36,13 +30,10 @@ import type {
   NexusDiscussionsPayload,
 } from '@runtime/nexus/nexus-api-types';
 import {
-  createNexusDiscussionPost,
-  createNexusDiscussionReply,
   ensureNexusDiscussionSurfaces,
   fetchNexusDiscussionReplyChildrenPayload,
   fetchNexusDiscussionThreadPayload,
   fetchNexusDiscussionsPayload,
-  setNexusAttestation,
 } from '@runtime/nexus/nexus-query-api';
 
 const DISCUSSION_WORKSPACE_VIEWS = ['feed', 'thread', 'post'] as const;
@@ -803,7 +794,7 @@ export default function NexusDiscussionsPage() {
     currentActorPacketId,
     currentIdentity,
     currentLabel,
-    signCurrentIdentityPacket,
+    runFortressMutation,
   } = useIdentityShell();
   const writeScopeId =
     activeScope.id === 'you' && currentActorPacketId
@@ -1308,75 +1299,68 @@ export default function NexusDiscussionsPage() {
           if (!currentIdentity) {
             openNexusAuthGate('sign_in_required');
             return;
-          }
+        }
 
-          setPendingVotePacketId(post.packet.packet_id);
-          setVoteError(null);
-
-          try {
-            const attestationPacket = buildPacketSignalAttestationPacket({
-              scopeId: activeScope.id,
-              actorPacket: currentIdentity.actorPacket,
-              targetPost: post,
+        setPendingVotePacketId(post.packet.packet_id);
+        setVoteError(null);
+        const applyVote = async () => {
+          const finalizedMutation = await runFortressMutation<{
+            target_packet_id: string;
+            value: -1 | 0 | 1;
+            summary: NexusDiscussionPost['vote_summary'];
+          }>({
+            intent: {
+              kind: 'attestation.packet_signal.set',
+              scope_id: activeScope.id,
+              target_packet_id: post.packet.packet_id,
               value: post.vote_summary.viewer_value === value ? 0 : value,
-            });
-
-            if (!attestationPacket) {
-              return;
-            }
-
-            const signedAttestationPacket =
-              await signCurrentIdentityPacket(attestationPacket);
-            const requestBody = await createVerifiedRequestBody(
-              '/api/nexus/packets/vote',
-              'PUT',
-              {
-                attestation_packet: signedAttestationPacket,
-              }
+            },
+          });
+          const voteResult = finalizedMutation.result;
+          const updateReplySummary = (currentReply: NexusDiscussionReply) =>
+            currentReply.packet.packet_id === post.packet.packet_id
+              ? {
+                  ...currentReply,
+                  vote_summary: voteResult.summary,
+                }
+              : currentReply;
+          const { nextRootReplies, nextBranchStates } =
+            updateReplyProjectionCollections(
+              updateReplySummary,
+              rootReplies,
+              replyBranchStates
             );
-            const voteResult = await setNexusAttestation({
-              requestBody,
-            });
-            const updateReplySummary = (currentReply: NexusDiscussionReply) =>
-              currentReply.packet.packet_id === post.packet.packet_id
+
+          setFeedPosts((currentPosts) =>
+            currentPosts.map((currentPost) =>
+              currentPost.packet.packet_id === post.packet.packet_id
                 ? {
-                    ...currentReply,
+                    ...currentPost,
                     vote_summary: voteResult.summary,
                   }
-                : currentReply;
-            const { nextRootReplies, nextBranchStates } =
-              updateReplyProjectionCollections(
-                updateReplySummary,
-                rootReplies,
-                replyBranchStates
-              );
+                : currentPost
+            )
+          );
+          setThreadPayload((currentPayload) =>
+            currentPayload &&
+            currentPayload.root_post.packet.packet_id === post.packet.packet_id
+              ? {
+                  ...currentPayload,
+                  root_post: {
+                    ...currentPayload.root_post,
+                    vote_summary: voteResult.summary,
+                  },
+                }
+              : currentPayload
+          );
+          setRootReplies(nextRootReplies);
+          setReplyBranchStates(nextBranchStates);
+        };
 
-            setFeedPosts((currentPosts) =>
-              currentPosts.map((currentPost) =>
-                currentPost.packet.packet_id === post.packet.packet_id
-                  ? {
-                      ...currentPost,
-                      vote_summary: voteResult.summary,
-                    }
-                  : currentPost
-              )
-            );
-            setThreadPayload((currentPayload) =>
-              currentPayload &&
-              currentPayload.root_post.packet.packet_id === post.packet.packet_id
-                ? {
-                    ...currentPayload,
-                    root_post: {
-                      ...currentPayload.root_post,
-                      vote_summary: voteResult.summary,
-                    },
-                  }
-                : currentPayload
-            );
-            setRootReplies(nextRootReplies);
-            setReplyBranchStates(nextBranchStates);
+        try {
+          await applyVote();
           } catch (error) {
-            if (openNexusAuthGateForError(error)) {
+            if (openNexusAuthGateForError(error, applyVote)) {
               return;
             }
 
@@ -1391,14 +1375,13 @@ export default function NexusDiscussionsPage() {
     },
     [
       activeScope.id,
-      createVerifiedRequestBody,
       currentIdentity,
       guardNexusWrite,
       openNexusAuthGate,
       openNexusAuthGateForError,
       replyBranchStates,
       rootReplies,
-      signCurrentIdentityPacket,
+      runFortressMutation,
     ]
   );
 
@@ -1461,40 +1444,22 @@ export default function NexusDiscussionsPage() {
 
         setIsSubmittingPost(true);
         setSubmitError(null);
-
-        try {
-          const threadPacket = buildDiscussionThreadPacket({
-            scopeId: writeScopeId,
-            forum: selectedForum,
-            actorPacket: currentIdentity.actorPacket,
-            title: draftTitle,
-            body: draftBody,
-          });
-          const postPacket = buildDiscussionRootPostPacket({
-            scopeId: writeScopeId,
-            forum: selectedForum,
-            actorPacket: currentIdentity.actorPacket,
-            threadPacket,
-            body: draftBody,
-            createdAt: threadPacket.header.created_at,
-          });
-          const signedThreadPacket = await signCurrentIdentityPacket(threadPacket);
-          const signedPostPacket = await signCurrentIdentityPacket(postPacket);
-          const requestBody = await createVerifiedRequestBody(
-            '/api/nexus/scopes/[scopeId]/discussions/posts',
-            'POST',
-            {
-              thread_packet: signedThreadPacket,
-              post_packet: signedPostPacket,
+        const createPost = async () => {
+          const finalizedMutation = await runFortressMutation<{
+            viewer: unknown;
+            post: NexusDiscussionPost;
+          }>({
+            intent: {
+              kind: 'discussion.thread_post.create',
+              scope_id: writeScopeId,
+              forum_packet_id: selectedForum.forum_packet_id,
+              thread_title: draftTitle,
+              post_markdown: draftBody,
+              related_packet_ids: [],
             },
-            {
-              writeRisk: 'high_impact',
-            }
-          );
-          const result = await createNexusDiscussionPost({
-            scopeId: activeScope.id,
-            requestBody,
+            writeRisk: 'high_impact',
           });
+          const result = finalizedMutation.result;
 
           setDraftTitle('');
           setDraftBody('');
@@ -1509,8 +1474,12 @@ export default function NexusDiscussionsPage() {
               showHidden: requestedShowHidden,
             })
           );
+        };
+
+        try {
+          await createPost();
         } catch (error) {
-          if (openNexusAuthGateForError(error)) {
+          if (openNexusAuthGateForError(error, createPost)) {
             return;
           }
 
@@ -1525,9 +1494,7 @@ export default function NexusDiscussionsPage() {
       }
     );
   }, [
-    activeScope.id,
     communityClaimRequired,
-    createVerifiedRequestBody,
     currentIdentity,
     draftBody,
     draftTitle,
@@ -1540,7 +1507,7 @@ export default function NexusDiscussionsPage() {
     selectedFeedSort,
     selectedForum,
     selectedReplySort,
-    signCurrentIdentityPacket,
+    runFortressMutation,
     writeScopeId,
   ]);
 
@@ -1562,8 +1529,7 @@ export default function NexusDiscussionsPage() {
 
         setIsSubmittingReply(true);
         setReplyError(null);
-
-        try {
+        const createReply = async () => {
           const parentPost =
             requestedReplyTargetId === threadPayload.root_post.packet.packet_id
               ? threadPayload.root_post
@@ -1577,27 +1543,18 @@ export default function NexusDiscussionsPage() {
             throw new Error('Unable to resolve the reply target for this thread.');
           }
 
-          const replyPacket = buildDiscussionReplyPacket({
-            scopeId: writeScopeId,
-            forum: threadPayload.forum,
-            actorPacket: currentIdentity.actorPacket,
-            parentPost,
-            rootPostPacketId: threadPayload.root_post.packet.packet_id,
-            body: replyBody,
-          });
-          const signedReplyPacket = await signCurrentIdentityPacket(replyPacket);
-          const requestBody = await createVerifiedRequestBody(
-            '/api/nexus/scopes/[scopeId]/discussions/replies',
-            'POST',
-            {
+          const finalizedMutation = await runFortressMutation<{
+            viewer: unknown;
+            post: NexusDiscussionPost;
+          }>({
+            intent: {
+              kind: 'discussion.reply.create',
+              scope_id: writeScopeId,
               parent_post_packet_id: requestedReplyTargetId,
-              reply_packet: signedReplyPacket,
-            }
-          );
-          const result = await createNexusDiscussionReply({
-            scopeId: activeScope.id,
-            requestBody,
+              reply_markdown: replyBody,
+            },
           });
+          const result = finalizedMutation.result;
 
           setReplyBody('');
           setHighlightedPostId(result.post.packet.packet_id);
@@ -1628,8 +1585,12 @@ export default function NexusDiscussionsPage() {
               showHidden: requestedShowHidden,
             })
           );
+        };
+
+        try {
+          await createReply();
         } catch (error) {
-          if (openNexusAuthGateForError(error)) {
+          if (openNexusAuthGateForError(error, createReply)) {
             return;
           }
 
@@ -1643,9 +1604,7 @@ export default function NexusDiscussionsPage() {
     );
   }, [
     activeForumId,
-    activeScope.id,
     communityClaimRequired,
-    createVerifiedRequestBody,
     currentIdentity,
     guardNexusWrite,
     loadFeed,
@@ -1662,7 +1621,7 @@ export default function NexusDiscussionsPage() {
     router,
     selectedFeedSort,
     selectedReplySort,
-    signCurrentIdentityPacket,
+    runFortressMutation,
     threadPayload,
     writeScopeId,
   ]);

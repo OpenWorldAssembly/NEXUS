@@ -13,6 +13,7 @@ import {
   IdentityPageShell,
 } from '@app/components/nexus/nexus-identity-ui';
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
+import { useNexusAuthGate } from '@app/components/nexus/nexus-auth-gate';
 import {
   NexusActionButton,
   NexusBadge,
@@ -20,6 +21,10 @@ import {
   NexusSegmentedPill,
   useNexusAppearance,
 } from '@app/components/nexus/nexus-ui';
+import type {
+  NexusPasskeySummaryPayload,
+  NexusSecurityMode,
+} from '@runtime/nexus/nexus-api-types';
 import {
   PASSPHRASE_EXPORT_MIN_LENGTH,
   validatePassphrase,
@@ -40,10 +45,51 @@ function getStorageModeCopy(
   return 'No browser storage';
 }
 
+function formatPasskeyLabel(index: number): string {
+  return `Passkey ${index + 1}`;
+}
+
+function formatPasskeySuffix(credentialId: string): string {
+  return credentialId.length <= 8
+    ? credentialId
+    : `...${credentialId.slice(-6)}`;
+}
+
+function formatPasskeyDate(value: string | null): string {
+  if (!value) {
+    return 'never';
+  }
+
+  const timestamp = new Date(value);
+
+  if (Number.isNaN(timestamp.getTime())) {
+    return value;
+  }
+
+  return timestamp.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+function getPasskeyMetaLine(passkey: NexusPasskeySummaryPayload): string {
+  return `ID ${formatPasskeySuffix(passkey.credential_id)} · Added ${formatPasskeyDate(passkey.created_at)}`;
+}
+
 export default function NexusIdentitySecurityPage() {
   const params = useLocalSearchParams<{ welcome?: string | string[] }>();
   const router = useRouter();
   const appearance = useNexusAppearance();
+  const {
+    authGateModal,
+    openNexusAuthGate,
+    openNexusAuthGateForError,
+  } =
+    useNexusAuthGate({
+      returnTo: '/nexus/identity/security',
+      returnScopeId: null,
+    });
   const {
     currentIdentity,
     currentLabel,
@@ -114,6 +160,10 @@ export default function NexusIdentitySecurityPage() {
       await action();
       setStatusMessage(successMessage);
     } catch (error) {
+      if (openNexusAuthGateForError(error)) {
+        return;
+      }
+
       setErrorMessage(
         error instanceof Error
           ? error.message
@@ -122,14 +172,49 @@ export default function NexusIdentitySecurityPage() {
     }
   };
 
+  const handleSecurityModeChange = async (nextMode: NexusSecurityMode) => {
+    if (nextMode === (securityMode ?? 'guarded')) {
+      return;
+    }
+
+    const successMessage =
+      nextMode === 'every_write'
+        ? 'Every write now requires fresh approval.'
+        : nextMode === 'guarded'
+          ? 'Guarded write approval is active.'
+          : 'Standard write approval is active.';
+
+    setErrorMessage(null);
+    setStatusMessage(null);
+
+    const applySecurityModeChange = async () => {
+      try {
+        await setSecurityMode(nextMode);
+        setStatusMessage(successMessage);
+      } catch (error) {
+        if (openNexusAuthGateForError(error, applySecurityModeChange)) {
+          return;
+        }
+
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : 'Unable to complete that action.'
+        );
+      }
+    };
+
+    await applySecurityModeChange();
+  };
+
   return (
     <IdentityPageShell
       eyebrow="Identity"
       title="Identity security"
       description="Manage the Nexus shell around the current cryptographic actor: remembered sessions, write approval, passkeys, device sessions, and encrypted bundle export."
     >
-      <View className="gap-4 xl:flex-row">
-        <View className="flex-1 gap-4">
+      <View className="gap-4 2xl:flex-row">
+        <View className="min-w-0 flex-1 gap-4">
           {welcomeMode === 'create' || welcomeMode === 'claim' ? (
             <NexusCard tone="gold">
               <View className="gap-3">
@@ -147,7 +232,7 @@ export default function NexusIdentitySecurityPage() {
             </NexusCard>
           ) : null}
 
-          <NexusCard className="gap-4">
+          <NexusCard className="gap-4 overflow-hidden">
             <Text className={appearance.surfaceTitleClass}>{currentLabel}</Text>
             <View className="flex-row flex-wrap gap-3">
               <NexusBadge
@@ -183,6 +268,13 @@ export default function NexusIdentitySecurityPage() {
                 label="Open account overview"
                 onPress={() => router.push('/nexus/account')}
               />
+              {currentMode === 'claimed' && !isCurrentIdentityUnlocked ? (
+                <NexusActionButton
+                  label="Unlock this identity"
+                  variant="primary"
+                  onPress={() => openNexusAuthGate('unlock_required')}
+                />
+              ) : null}
               {currentMode !== 'claimed' ? (
                 <NexusActionButton
                   label="Claim this guest"
@@ -204,7 +296,7 @@ export default function NexusIdentitySecurityPage() {
             </View>
           </NexusCard>
 
-          <NexusCard className="gap-4">
+          <NexusCard className="gap-4 overflow-hidden">
             <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
               Session preferences
             </Text>
@@ -251,21 +343,7 @@ export default function NexusIdentitySecurityPage() {
                 ]}
                 activeId={securityMode ?? 'guarded'}
                 onSelect={(optionId) => {
-                  const nextMode = optionId as
-                    | 'standard'
-                    | 'guarded'
-                    | 'every_write';
-                  const successMessage =
-                    nextMode === 'every_write'
-                      ? 'Every write now requires fresh approval.'
-                      : nextMode === 'guarded'
-                        ? 'Guarded write approval is active.'
-                        : 'Standard write approval is active.';
-
-                  void handleAction(
-                    () => setSecurityMode(nextMode),
-                    successMessage
-                  );
+                  void handleSecurityModeChange(optionId as NexusSecurityMode);
                 }}
                 disabled={!hasActiveClaimedSession}
               />
@@ -293,9 +371,9 @@ export default function NexusIdentitySecurityPage() {
               />
             </View>
             <Text className={appearance.itemMetaClass}>
-              Add a passkey if you want faster device-bound sign-in and
-              re-approval. Nexus can still work from the encrypted local bundle
-              and passphrase alone.
+              Add a passkey if you want faster claimed-session sign-in and
+              protected re-approval. It does not replace the passphrase that
+              unlocks the encrypted local identity bundle on this device.
             </Text>
             <NexusActionButton
               label="Register passkey"
@@ -307,17 +385,24 @@ export default function NexusIdentitySecurityPage() {
               }}
               disabled={!hasActiveClaimedSession || !isPasskeySupported}
             />
-            <View className="gap-3">
-              {passkeySummaries.map((passkey) => (
+            <View className="min-w-0 gap-3">
+              {passkeySummaries.map((passkey, passkeyIndex) => (
                 <NexusCard
                   key={passkey.credential_id}
-                  className={`gap-2 p-4 ${appearance.cardInsetClass}`}
+                  className={`min-w-0 gap-2 overflow-hidden p-4 ${appearance.cardInsetClass}`}
                 >
-                  <Text className={appearance.itemTitleClass}>
-                    {passkey.credential_id}
-                  </Text>
                   <Text className={appearance.itemMetaClass}>
-                    Last used {passkey.last_used_at ?? 'never'}
+                    {getPasskeyMetaLine(passkey)}
+                  </Text>
+                  <Text className={appearance.itemTitleClass}>
+                    {formatPasskeyLabel(passkeyIndex)}
+                  </Text>
+                  <Text
+                    className={appearance.itemMetaClass}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    Last used {formatPasskeyDate(passkey.last_used_at)}
                   </Text>
                   <NexusActionButton
                     label="Revoke passkey"
@@ -335,7 +420,7 @@ export default function NexusIdentitySecurityPage() {
           </NexusCard>
         </View>
 
-        <View className="flex-1 gap-4">
+        <View className="min-w-0 flex-1 gap-4">
           <NexusCard className="gap-4">
             <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
               Sessions and devices
@@ -492,6 +577,7 @@ export default function NexusIdentitySecurityPage() {
           ) : null}
         </View>
       </View>
+      {authGateModal}
     </IdentityPageShell>
   );
 }

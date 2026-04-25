@@ -4,7 +4,7 @@
  */
 
 import type { PropsWithChildren } from 'react';
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   createActorAssertion,
@@ -17,16 +17,24 @@ import {
   signPacketWithIdentity,
   type EncryptedIdentityBundle,
 } from '@runtime/nexus/identity-crypto';
+import type {
+  MutationIntent,
+} from '@core/auth/mutation-corridor';
 import type { PacketEnvelope } from '@core/schema/packet-schema';
 import type {
+  MutationProofMethod,
+  WriteProofLevel,
+} from '@core/auth/proof-types';
+import type {
   NexusAuthSessionPayload,
+  NexusFinalizedMutationPayload,
   NexusLocalIdentityPreview,
   NexusPasskeyListPayload,
   NexusPasskeyRegistrationOptionsPayload,
   NexusPasskeyRequestOptionsPayload,
   NexusPasskeyVerifyPayload,
+  NexusReauthVerifyPayload,
   NexusSecurityMode,
-  NexusSecurityPreferencesPayload,
   NexusSessionListPayload,
 } from '@runtime/nexus/nexus-api-types';
 import {
@@ -62,12 +70,22 @@ import {
   type NexusStorageMode,
 } from '@runtime/nexus/identity-storage';
 import {
+  finalizeNexusMutation,
+  prepareNexusMutation,
+} from '@runtime/nexus/nexus-query-api.mutations';
+import {
   completePasskeyAssertion,
   isPasskeySupported,
   registerPasskey,
 } from '@runtime/nexus/webauthn';
 import { NexusAuthGateError } from '@app/components/nexus/nexus-auth-gate-types';
 const IDENTITY_STORE_NAME = 'identities';
+
+type PendingInteractionProof = {
+  reauthToken: string;
+  proofMethod: NexusReauthVerifyPayload['proof_method'];
+  expiresAt: string;
+};
 
 type IdentityShellContextValue = {
   isReady: boolean;
@@ -89,10 +107,13 @@ type IdentityShellContextValue = {
   sessionSummaries: NexusSessionListPayload['sessions'];
   sessionSummariesError: string | null;
   passkeySummaries: NexusPasskeyListPayload['passkeys'];
+  hasAvailablePasskeyApproval: boolean;
   unlockStoredIdentity: (input: {
     actorPacketId: string;
     passphrase: string;
   }) => Promise<void>;
+  approveProtectedWriteWithPassphrase: (passphrase: string) => Promise<void>;
+  approveProtectedWriteWithPasskey: () => Promise<void>;
   continueAsEphemeralGuest: () => Promise<void>;
   continueAsSessionGuest: () => Promise<void>;
   saveGuestOnDevice: () => Promise<void>;
@@ -123,6 +144,10 @@ type IdentityShellContextValue = {
   }) => Promise<void>;
   exportCurrentIdentityBundle: (passphrase: string) => Promise<string>;
   setSecurityMode: (securityMode: NexusSecurityMode) => Promise<void>;
+  runFortressMutation: <TResult = unknown>(input: {
+    intent: MutationIntent;
+    writeRisk?: 'standard' | 'high_impact';
+  }) => Promise<NexusFinalizedMutationPayload & { result: TResult }>;
   revokePasskey: (credentialId: string) => Promise<void>;
   revokeSession: (sessionId: string) => Promise<void>;
   revokeOtherSessions: () => Promise<void>;
@@ -133,6 +158,8 @@ type IdentityShellContextValue = {
     payload: TPayload,
     options?: {
       writeRisk?: 'standard' | 'high_impact';
+      skipAutomaticReauth?: boolean;
+      reauthTokenOverride?: string | null;
     }
   ) => Promise<TPayload & Record<string, unknown>>;
   signCurrentIdentityPacket: <TPacket extends PacketEnvelope>(
@@ -231,11 +258,90 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
   const [passkeySummaries, setPasskeySummaries] = useState<
     NexusPasskeyListPayload['passkeys']
   >([]);
+  const pendingInteractionProofRef = useRef<PendingInteractionProof | null>(null);
 
   const refreshStoredIdentities = async () => {
     const records = await readStoredIdentityRecords();
 
     setStoredIdentityPreviews(records.map(toStoredIdentityPreview));
+  };
+
+  const parseEncryptedBundleJson = (
+    encryptedBundleJson: string,
+    malformedMessage: string
+  ): EncryptedIdentityBundle => {
+    try {
+      const parsedBundle = JSON.parse(encryptedBundleJson) as Partial<EncryptedIdentityBundle>;
+
+      if (
+        !parsedBundle ||
+        typeof parsedBundle.salt !== 'string' ||
+        typeof parsedBundle.iv !== 'string' ||
+        typeof parsedBundle.cipher_text !== 'string'
+      ) {
+        throw new Error(malformedMessage);
+      }
+
+      return parsedBundle as EncryptedIdentityBundle;
+    } catch (error) {
+      if (error instanceof Error && error.message === malformedMessage) {
+        throw error;
+      }
+
+      throw new Error(malformedMessage);
+    }
+  };
+
+  const isBundleDecryptFailure = (error: unknown): boolean => {
+    if (error instanceof DOMException) {
+      if (
+        error.name === 'OperationError' ||
+        error.name === 'DataError' ||
+        error.name === 'InvalidAccessError'
+      ) {
+        return true;
+      }
+
+      return /decrypt|operation failed|operation-specific reason/i.test(error.message);
+    }
+
+    if (!(error instanceof Error)) {
+      return false;
+    }
+
+    return (
+      error.name === 'OperationError' ||
+      error.name === 'DataError' ||
+      error.name === 'InvalidAccessError' ||
+      /unable to decrypt/i.test(error.message) ||
+      /decrypt|operation failed|operation-specific reason/i.test(error.message)
+    );
+  };
+
+  const decryptBundleWithPassphrase = async (input: {
+    passphrase: string;
+    encryptedBundle: EncryptedIdentityBundle;
+  }): Promise<unknown> => {
+    try {
+      return await decryptIdentityBundle({
+        passphrase: input.passphrase,
+        encryptedBundle: input.encryptedBundle,
+      });
+    } catch (error) {
+      if (isBundleDecryptFailure(error)) {
+        throw new Error('Incorrect bundle passphrase.');
+      }
+
+      throw error instanceof Error ? error : new Error('Unable to unlock the identity bundle.');
+    }
+  };
+
+  const stashPendingInteractionProof = (proof: PendingInteractionProof) => {
+    pendingInteractionProofRef.current = proof;
+  };
+
+  const clearPendingInteractionProof = () => {
+    pendingInteractionProofRef.current = null;
   };
 
   const resolveGuestFallbackIdentity = async (input?: {
@@ -781,16 +887,17 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
       throw new Error('That claimed identity is not available on this device.');
     }
 
-    const bundle = await decryptIdentityBundle<{
+    const bundle = (await decryptBundleWithPassphrase({
+      passphrase: input.passphrase,
+      encryptedBundle: parseEncryptedBundleJson(
+        targetRecord.encrypted_bundle_json,
+        'The saved identity bundle is malformed.'
+      ),
+    })) as {
       actor_packet: ActiveIdentityState['actorPacket'];
       public_jwk: JsonWebKey;
       private_jwk: JsonWebKey;
-    }>({
-      passphrase: input.passphrase,
-      encryptedBundle: JSON.parse(
-        targetRecord.encrypted_bundle_json
-      ) as EncryptedIdentityBundle,
-    });
+    };
 
     setCurrentIdentity({
       actorPacket: bundle.actor_packet,
@@ -799,6 +906,112 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
       claimStatus: 'claimed',
       storedKind: 'claimed',
     });
+  };
+
+  const readStoredClaimedIdentityRecord = async (
+    actorPacketId: string
+  ): Promise<StoredIdentityRecord> => {
+    const records = await readStoredIdentityRecords();
+    const targetRecord = records.find(
+      (record) => record.actor_packet_id === actorPacketId
+    );
+
+    if (!targetRecord || !targetRecord.encrypted_bundle_json) {
+      throw new Error('That claimed identity is not available on this device.');
+    }
+
+    return targetRecord;
+  };
+
+  const createSignedReauthToken = async (input: {
+    purpose: 'sensitive' | 'interaction';
+    session: NexusAuthSessionPayload;
+    proofMethod?: 'signed_reauth' | 'bundle_passphrase_unlock';
+    identityOverride?: ActiveIdentityState & { privateJwk: JsonWebKey };
+  }): Promise<NexusReauthVerifyPayload> => {
+    const unlockedIdentity = input.identityOverride ?? requireUnlockedCurrentIdentity();
+
+    if (
+      input.session.actor_packet_id &&
+      unlockedIdentity.actorPacket.header.packet_id !== input.session.actor_packet_id
+    ) {
+      throw new NexusAuthGateError(
+        'unlock_required',
+        'Unlock the claimed identity that owns this session before approving this action.'
+      );
+    }
+
+    const proofMethod = input.proofMethod ?? 'signed_reauth';
+    const privateKey = await importPrivateKeyFromJwk(unlockedIdentity.privateJwk);
+    const actorAssertion = await createActorAssertion({
+      actorPacketId: unlockedIdentity.actorPacket.header.packet_id,
+      kid:
+        unlockedIdentity.actorPacket.body.identity?.public_key_bindings[0]?.kid ??
+        (() => {
+          throw new Error('The active identity is missing its key binding.');
+        })(),
+      privateKey,
+      method: 'POST',
+      path: '/api/nexus/auth/reauth/signed',
+      body: {
+        purpose: input.purpose,
+        proof_method: proofMethod,
+      },
+    });
+
+    return fetchJsonOrThrow<NexusReauthVerifyPayload>(
+      '/api/nexus/auth/reauth/signed',
+      {
+        method: 'POST',
+        headers: {
+          'x-csrf-token': input.session.csrf_token ?? '',
+        },
+        body: {
+          purpose: input.purpose,
+          proof_method: proofMethod,
+          actor_packet: unlockedIdentity.actorPacket,
+          actor_assertion: actorAssertion,
+        },
+      }
+    );
+  };
+
+  const createPasskeyReauthToken = async (input: {
+    purpose: 'sensitive' | 'interaction';
+    session: NexusAuthSessionPayload;
+  }): Promise<NexusReauthVerifyPayload> => {
+    const optionsPayload = await fetchJsonOrThrow<{
+      challenge_id: string;
+      purpose: 'sensitive' | 'interaction';
+      public_key: NexusPasskeyRequestOptionsPayload['public_key'];
+    }>('/api/nexus/auth/reauth/options', {
+      method: 'POST',
+      headers: {
+        'x-csrf-token': input.session.csrf_token ?? '',
+      },
+      body: {
+        purpose: input.purpose,
+      },
+    });
+    const assertionPayload = await completePasskeyAssertion({
+      challenge_id: optionsPayload.challenge_id,
+      public_key: optionsPayload.public_key,
+    });
+
+    return fetchJsonOrThrow<NexusReauthVerifyPayload>(
+      '/api/nexus/auth/reauth/verify',
+      {
+        method: 'POST',
+        headers: {
+          'x-csrf-token': input.session.csrf_token ?? '',
+        },
+        body: {
+          challenge_id: assertionPayload.challenge_id,
+          purpose: input.purpose,
+          credential: assertionPayload.credential,
+        },
+      }
+    );
   };
 
   const ensureFreshReauth = async (
@@ -814,93 +1027,22 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
       );
     }
 
-    const csrfToken = effectiveSession.csrf_token;
-
-    const performSignedReauth = async () => {
-      const unlockedIdentity = requireUnlockedCurrentIdentity();
-
-      if (
-        effectiveSession.actor_packet_id &&
-        unlockedIdentity.actorPacket.header.packet_id !==
-          effectiveSession.actor_packet_id
-      ) {
-        throw new NexusAuthGateError(
-          'unlock_required',
-          'Unlock the claimed identity that owns this session before approving this action.'
-        );
-      }
-
-      const privateKey = await importPrivateKeyFromJwk(unlockedIdentity.privateJwk);
-      const actorAssertion = await createActorAssertion({
-        actorPacketId: unlockedIdentity.actorPacket.header.packet_id,
-        kid:
-          unlockedIdentity.actorPacket.body.identity?.public_key_bindings[0]?.kid ??
-          (() => {
-            throw new Error('The active identity is missing its key binding.');
-          })(),
-        privateKey,
-        method: 'POST',
-        path: '/api/nexus/auth/reauth/signed',
-        body: {
-          purpose,
-        },
-      });
-      const verifyPayload = await fetchJsonOrThrow<{
-        reauth_token: string;
-        expires_at: string;
-      }>('/api/nexus/auth/reauth/signed', {
-        method: 'POST',
-        headers: {
-          'x-csrf-token': csrfToken,
-        },
-        body: {
-          purpose,
-          actor_packet: unlockedIdentity.actorPacket,
-          actor_assertion: actorAssertion,
-        },
-      });
-
-      return verifyPayload.reauth_token;
-    };
-
     if (effectiveSession.has_passkey && isPasskeyPlatformSupported) {
       try {
-        const optionsPayload = await fetchJsonOrThrow<{
-          challenge_id: string;
-          purpose: 'sensitive' | 'interaction';
-          public_key: NexusPasskeyRequestOptionsPayload['public_key'];
-        }>('/api/nexus/auth/reauth/options', {
-          method: 'POST',
-          headers: {
-            'x-csrf-token': csrfToken,
-          },
-          body: {
-            purpose,
-          },
-        });
-        const assertionPayload = await completePasskeyAssertion({
-          challenge_id: optionsPayload.challenge_id,
-          public_key: optionsPayload.public_key,
-        });
-        const verifyPayload = await fetchJsonOrThrow<{
-          reauth_token: string;
-          expires_at: string;
-        }>('/api/nexus/auth/reauth/verify', {
-          method: 'POST',
-          headers: {
-            'x-csrf-token': effectiveSession.csrf_token,
-          },
-          body: {
-            challenge_id: assertionPayload.challenge_id,
-            purpose,
-            credential: assertionPayload.credential,
-          },
+        const verifyPayload = await createPasskeyReauthToken({
+          purpose,
+          session: effectiveSession,
         });
 
         return verifyPayload.reauth_token;
       } catch (error) {
         try {
-          return await performSignedReauth();
+          const verifyPayload = await createSignedReauthToken({
+            purpose,
+            session: effectiveSession,
+          });
+
+          return verifyPayload.reauth_token;
         } catch {
           const message =
             error instanceof Error ? error.message : 'Passkey approval failed.';
@@ -912,7 +1054,86 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
       }
     }
 
-    return performSignedReauth();
+    const verifyPayload = await createSignedReauthToken({
+      purpose,
+      session: effectiveSession,
+    });
+
+    return verifyPayload.reauth_token;
+  };
+
+  const approveProtectedWriteWithPassphrase = async (passphrase: string) => {
+    const session = await refreshAuthSession();
+
+    if (!session.is_authenticated || !session.actor_packet_id || !session.csrf_token) {
+      throw new NexusAuthGateError(
+        'sign_in_required',
+        'Sign in with the claimed identity before approving this action.'
+      );
+    }
+
+    const record = await readStoredClaimedIdentityRecord(session.actor_packet_id);
+    const bundle = (await decryptBundleWithPassphrase({
+      passphrase,
+      encryptedBundle: parseEncryptedBundleJson(
+        record.encrypted_bundle_json ?? '{}',
+        'The saved identity bundle is malformed.'
+      ),
+    })) as {
+      actor_packet: ActiveIdentityState['actorPacket'];
+      public_jwk: JsonWebKey;
+      private_jwk: JsonWebKey;
+    };
+    const unlockedIdentity = {
+      actorPacket: bundle.actor_packet,
+      publicJwk: bundle.public_jwk,
+      privateJwk: bundle.private_jwk,
+      claimStatus: 'claimed' as const,
+      storedKind: 'claimed' as const,
+    };
+
+    if (!isCurrentIdentityUnlocked) {
+      setCurrentIdentity(unlockedIdentity);
+    }
+
+    const verifyPayload = await createSignedReauthToken({
+      purpose: 'interaction',
+      session,
+      proofMethod: 'bundle_passphrase_unlock',
+      identityOverride: unlockedIdentity,
+    });
+
+    stashPendingInteractionProof({
+      reauthToken: verifyPayload.reauth_token,
+      proofMethod: verifyPayload.proof_method,
+      expiresAt: verifyPayload.expires_at,
+    });
+  };
+
+  const approveProtectedWriteWithPasskey = async () => {
+    const session = await refreshAuthSession();
+
+    if (!session.is_authenticated || !session.csrf_token) {
+      throw new NexusAuthGateError(
+        'sign_in_required',
+        'Sign in with the claimed identity before approving this action.'
+      );
+    }
+
+    if (!session.has_passkey || !isPasskeyPlatformSupported) {
+      throw new Error('A passkey is not available for this claimed identity.');
+    }
+
+    const verifyPayload = await createPasskeyReauthToken({
+      purpose: 'interaction',
+      session,
+    });
+
+    stashPendingInteractionProof({
+      reauthToken: verifyPayload.reauth_token,
+      proofMethod: verifyPayload.proof_method,
+      expiresAt: verifyPayload.expires_at,
+    });
   };
 
   const registerCurrentPasskey = async (
@@ -1216,16 +1437,17 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
       throw new Error('That claimed identity is not available on this device.');
     }
 
-    const bundle = await decryptIdentityBundle<{
+    const bundle = (await decryptBundleWithPassphrase({
+      passphrase: input.passphrase,
+      encryptedBundle: parseEncryptedBundleJson(
+        targetRecord.encrypted_bundle_json,
+        'The saved identity bundle is malformed.'
+      ),
+    })) as {
       actor_packet: ActiveIdentityState['actorPacket'];
       public_jwk: JsonWebKey;
       private_jwk: JsonWebKey;
-    }>({
-      passphrase: input.passphrase,
-      encryptedBundle: JSON.parse(
-        targetRecord.encrypted_bundle_json
-      ) as EncryptedIdentityBundle,
-    });
+    };
     const privateKey = await importPrivateKeyFromJwk(bundle.private_jwk);
     const challenge = await fetchJsonOrThrow<{
       challenge_id: string;
@@ -1290,14 +1512,17 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
       storePreservedGuestIdentity(currentIdentity);
     }
 
-    const bundle = await decryptIdentityBundle<{
+    const bundle = (await decryptBundleWithPassphrase({
+      passphrase: input.passphrase,
+      encryptedBundle: parseEncryptedBundleJson(
+        input.encryptedBundleJson,
+        'The exported identity bundle is malformed.'
+      ),
+    })) as {
       actor_packet: ActiveIdentityState['actorPacket'];
       public_jwk: JsonWebKey;
       private_jwk: JsonWebKey;
-    }>({
-      passphrase: input.passphrase,
-      encryptedBundle: JSON.parse(input.encryptedBundleJson) as EncryptedIdentityBundle,
-    });
+    };
 
     await fetchJsonOrThrow('/api/nexus/auth/restore', {
       method: 'POST',
@@ -1440,25 +1665,34 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
   };
 
   const setSecurityMode = async (securityMode: NexusSecurityMode) => {
-    if (!authSession?.csrf_token) {
-      throw new Error('Sign in before changing security preferences.');
+    await runFortressMutation({
+      intent: {
+        kind: 'actor.write_policy.update',
+        security_mode: securityMode,
+      },
+    });
+  };
+
+  const consumePendingInteractionProof = (input: {
+    acceptedMethods: MutationProofMethod[];
+  }): string | null => {
+    const pendingInteractionProof = pendingInteractionProofRef.current;
+
+    if (!pendingInteractionProof) {
+      return null;
     }
 
-    const reauthToken = await ensureFreshReauth('sensitive');
-    await fetchJsonOrThrow<NexusSecurityPreferencesPayload>(
-      '/api/nexus/auth/security',
-      {
-        method: 'PUT',
-        headers: {
-          'x-csrf-token': authSession.csrf_token,
-        },
-        body: {
-          security_mode: securityMode,
-          reauth_token: reauthToken,
-        },
-      }
-    );
-    await refreshAuthSession();
+    if (new Date(pendingInteractionProof.expiresAt).getTime() < Date.now()) {
+      clearPendingInteractionProof();
+      return null;
+    }
+
+    if (!input.acceptedMethods.includes(pendingInteractionProof.proofMethod)) {
+      return null;
+    }
+
+    clearPendingInteractionProof();
+    return pendingInteractionProof.reauthToken;
   };
 
   const signOut = async () => {
@@ -1468,6 +1702,7 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
         'x-csrf-token': authSession?.csrf_token ?? '',
       },
     });
+    clearPendingInteractionProof();
     setAuthSession({
       is_authenticated: false,
       session_id: null,
@@ -1505,11 +1740,13 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
     payload: TPayload,
     options?: {
       writeRisk?: 'standard' | 'high_impact';
+      skipAutomaticReauth?: boolean;
+      reauthTokenOverride?: string | null;
     }
   ) => {
     const unlockedIdentity = requireUnlockedCurrentIdentity();
     let csrfToken: string | null = null;
-    let reauthToken: string | null = null;
+    let reauthToken = options?.reauthTokenOverride ?? null;
 
     if (unlockedIdentity.claimStatus === 'claimed') {
       const currentSession = await refreshAuthSession();
@@ -1536,9 +1773,10 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
       const writeRisk = options?.writeRisk ?? 'standard';
 
       if (
-        currentSession.security_mode === 'every_write' ||
-        (currentSession.security_mode === 'guarded' &&
-          writeRisk === 'high_impact')
+        !options?.skipAutomaticReauth &&
+        (currentSession.security_mode === 'every_write' ||
+          (currentSession.security_mode === 'guarded' &&
+            writeRisk === 'high_impact'))
       ) {
         reauthToken = await ensureFreshReauth('interaction', currentSession);
       }
@@ -1572,7 +1810,74 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
     };
   };
 
-  const signCurrentIdentityPacket = async <TPacket extends PacketEnvelope>(
+  const runFortressMutation = async <TResult = unknown,>(input: {
+    intent: MutationIntent;
+    writeRisk?: 'standard' | 'high_impact';
+  }): Promise<NexusFinalizedMutationPayload & { result: TResult }> => {
+    const prepareRequestBody = await createVerifiedRequestBody(
+      '/api/nexus/mutations/prepare',
+      'POST',
+      {
+        intent: input.intent,
+      },
+      {
+        writeRisk: input.writeRisk,
+        skipAutomaticReauth: true,
+      }
+    );
+    const preparedMutation = await prepareNexusMutation({
+      requestBody: prepareRequestBody,
+    });
+    let reauthToken: string | null = null;
+    const requiredProofLevel = preparedMutation.prepared_mutation
+      .required_proof_level as WriteProofLevel;
+    const acceptedProofMethods = (
+      preparedMutation.prepared_mutation.accepted_proof_methods ?? []
+    ) as MutationProofMethod[];
+
+    if (requiredProofLevel === 'reauth' || requiredProofLevel === 'passkey') {
+      reauthToken = consumePendingInteractionProof({
+        acceptedMethods: acceptedProofMethods,
+      });
+
+      if (!reauthToken) {
+        throw new NexusAuthGateError(
+          'write_approval_required',
+          'Fresh approval is required before this write can continue.'
+        );
+      }
+    }
+
+    const signedPackets = await Promise.all(
+      preparedMutation.prepared_mutation.prepared_packets.map((candidate) =>
+        signCurrentIdentityPacket(candidate.packet)
+      )
+    );
+    const finalizeRequestBody = await createVerifiedRequestBody(
+      '/api/nexus/mutations/finalize',
+      'POST',
+      {
+        ticket_id: preparedMutation.ticket.ticket_id,
+        signed_packets: signedPackets,
+      },
+      {
+        writeRisk: input.writeRisk,
+        skipAutomaticReauth: true,
+        reauthTokenOverride: reauthToken,
+      }
+    );
+    const finalizedMutation = await finalizeNexusMutation({
+      requestBody: finalizeRequestBody,
+    });
+
+    await refreshAuthSession();
+
+    return finalizedMutation as NexusFinalizedMutationPayload & {
+      result: TResult;
+    };
+  };
+
+  const signCurrentIdentityPacket = async <TPacket extends PacketEnvelope,>(
     packet: TPacket
   ): Promise<TPacket> => {
     const unlockedIdentity = requireUnlockedCurrentIdentity();
@@ -1631,6 +1936,8 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
   const isUsingSessionCookies = Boolean(authSession?.session_expires_at);
   const securityMode = authSession?.security_mode ?? null;
   const passkeyCount = passkeySummaries.length;
+  const hasAvailablePasskeyApproval =
+    Boolean(authSession?.has_passkey) && isPasskeyPlatformSupported;
   const requiresPasskeyUpgrade = authSession?.requires_passkey_upgrade ?? false;
 
   return (
@@ -1655,7 +1962,10 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
         sessionSummaries,
         sessionSummariesError,
         passkeySummaries,
+        hasAvailablePasskeyApproval,
         unlockStoredIdentity,
+        approveProtectedWriteWithPassphrase,
+        approveProtectedWriteWithPasskey,
         continueAsEphemeralGuest,
         continueAsSessionGuest,
         saveGuestOnDevice,
@@ -1667,6 +1977,7 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
         restoreIdentityFromBundle,
         exportCurrentIdentityBundle,
         setSecurityMode,
+        runFortressMutation,
         revokePasskey,
         revokeSession,
         revokeOtherSessions,

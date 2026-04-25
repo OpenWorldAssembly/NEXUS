@@ -142,3 +142,84 @@ test('refresh rotation keeps one persistent session instead of creating a new de
     harness.cleanup();
   }
 });
+
+test('reauth tokens persist and consume proof methods', () => {
+  const harness = createAuthStoreHarness();
+
+  try {
+    const session = harness.store.createSessionRecord({
+      actorPacketId: 'nexus:element/person-a',
+      keepMeLoggedIn: true,
+      deviceLabel: 'Device A',
+      authMethod: 'bundle',
+      requiresPasskeyUpgrade: false,
+    });
+    const token = harness.store.createReauthToken({
+      actorPacketId: 'nexus:element/person-a',
+      sessionId: session.sessionRecord.session_id,
+      purpose: 'interaction',
+      proofMethod: 'bundle_passphrase_unlock',
+    });
+
+    const consumed = harness.store.consumeReauthToken({
+      actorPacketId: 'nexus:element/person-a',
+      sessionId: session.sessionRecord.session_id,
+      reauthToken: token.reauth_token_id,
+      purpose: 'interaction',
+    });
+
+    assert.equal(consumed.proof_method, 'bundle_passphrase_unlock');
+    assert.throws(
+      () =>
+        harness.store.consumeReauthToken({
+          actorPacketId: 'nexus:element/person-a',
+          sessionId: session.sessionRecord.session_id,
+          reauthToken: token.reauth_token_id,
+          purpose: 'interaction',
+        }),
+      /already been used/i
+    );
+  } finally {
+    harness.cleanup();
+  }
+});
+
+test('ensureStorage upgrades legacy reauth token tables with proof_method', () => {
+  const tempDirectory = mkdtempSync(join(tmpdir(), 'owa-auth-legacy-'));
+  const databasePath = join(tempDirectory, 'owa-auth.db');
+  const database = new DatabaseSync(databasePath);
+
+  try {
+    database.exec(PACKET_STORE_SCHEMA_SQL);
+    database.exec('DROP TABLE auth_reauth_tokens');
+    database.exec(`
+      CREATE TABLE auth_reauth_tokens (
+        reauth_token_id TEXT PRIMARY KEY,
+        actor_packet_id TEXT NOT NULL,
+        session_id TEXT NOT NULL,
+        purpose TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        expires_at TEXT NOT NULL,
+        used_at TEXT,
+        revoked_at TEXT
+      );
+    `);
+    database.close();
+
+    const store = new NexusAuthStore(databasePath);
+    store.ensureStorage();
+
+    const migratedDatabase = new DatabaseSync(databasePath);
+    const columnNames = migratedDatabase
+      .prepare(`PRAGMA table_info('auth_reauth_tokens')`)
+      .all() as Array<{ name: string }>;
+
+    assert.ok(columnNames.some((column) => column.name === 'proof_method'));
+    migratedDatabase.close();
+  } finally {
+    try {
+      database.close();
+    } catch {}
+    rmSync(tempDirectory, { recursive: true, force: true });
+  }
+});

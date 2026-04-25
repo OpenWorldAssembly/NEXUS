@@ -23,6 +23,9 @@ const ActorAssertionSchema = z
 const VerifySignedReauthRequestSchema = z
   .object({
     purpose: z.enum(['sensitive', 'interaction']).default('sensitive'),
+    proof_method: z
+      .enum(['signed_reauth', 'bundle_passphrase_unlock'])
+      .default('signed_reauth'),
     actor_packet: z.unknown(),
     actor_assertion: ActorAssertionSchema,
   })
@@ -47,6 +50,7 @@ export const POST: RequestHandler = async (request) => {
       actorPacket: parsedBody.actor_packet,
       actorAssertion: parsedBody.actor_assertion,
       purpose: parsedBody.purpose,
+      proofMethod: parsedBody.proof_method,
     });
 
     return createJsonResponse(payload);

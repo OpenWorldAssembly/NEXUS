@@ -22,6 +22,7 @@ import {
   type AuthSessionRecord,
   type PasskeyRecord,
   type ReauthPurpose,
+  type ReauthProofMethod,
   type ReauthTokenRecord,
   type RefreshTokenRecord,
   type SecurityPreferenceRecord,
@@ -102,6 +103,7 @@ export class NexusAuthStore {
           actor_packet_id TEXT NOT NULL,
           session_id TEXT NOT NULL,
           purpose TEXT NOT NULL,
+          proof_method TEXT NOT NULL DEFAULT 'signed_reauth',
           created_at TEXT NOT NULL,
           expires_at TEXT NOT NULL,
           used_at TEXT,
@@ -129,6 +131,12 @@ export class NexusAuthStore {
         );
       `);
 
+      ensureTableColumn(
+        database,
+        'auth_reauth_tokens',
+        'proof_method',
+        `proof_method TEXT NOT NULL DEFAULT 'signed_reauth'`
+      );
       ensureTableColumn(
         database,
         'auth_sessions',
@@ -994,6 +1002,7 @@ export class NexusAuthStore {
     actorPacketId: string;
     sessionId: string;
     purpose: ReauthPurpose;
+    proofMethod: ReauthProofMethod;
   }): ReauthTokenRecord {
     const now = new Date();
     const record: ReauthTokenRecord = {
@@ -1001,6 +1010,7 @@ export class NexusAuthStore {
       actor_packet_id: input.actorPacketId,
       session_id: input.sessionId,
       purpose: input.purpose,
+      proof_method: input.proofMethod,
       created_at: now.toISOString(),
       expires_at: new Date(now.getTime() + REAUTH_TOKEN_TTL_MS).toISOString(),
       used_at: null,
@@ -1016,11 +1026,12 @@ export class NexusAuthStore {
               actor_packet_id,
               session_id,
               purpose,
+              proof_method,
               created_at,
               expires_at,
               used_at,
               revoked_at
-            ) VALUES (?, ?, ?, ?, ?, ?, NULL, NULL)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL)
           `
         )
         .run(
@@ -1028,6 +1039,7 @@ export class NexusAuthStore {
           record.actor_packet_id,
           record.session_id,
           record.purpose,
+          record.proof_method,
           record.created_at,
           record.expires_at
         );
@@ -1041,12 +1053,14 @@ export class NexusAuthStore {
     sessionId: string;
     reauthToken: string | null | undefined;
     purpose: ReauthPurpose;
-  }): void {
+  }): ReauthTokenRecord {
     const reauthToken = input.reauthToken;
 
     if (!reauthToken) {
       throw new Error('This action requires a fresh re-auth token.');
     }
+
+    let consumedRecord: ReauthTokenRecord | null = null;
 
     this.withDatabase((database) => {
       database.exec('BEGIN IMMEDIATE');
@@ -1055,7 +1069,7 @@ export class NexusAuthStore {
         const record = database
           .prepare(
             `
-              SELECT reauth_token_id, actor_packet_id, session_id, purpose, created_at, expires_at, used_at, revoked_at
+              SELECT reauth_token_id, actor_packet_id, session_id, purpose, proof_method, created_at, expires_at, used_at, revoked_at
               FROM auth_reauth_tokens
               WHERE reauth_token_id = ?
             `
@@ -1091,12 +1105,19 @@ export class NexusAuthStore {
             `
           )
           .run(new Date().toISOString(), reauthToken);
+        consumedRecord = record;
         database.exec('COMMIT');
       } catch (error) {
         database.exec('ROLLBACK');
         throw error;
       }
     });
+
+    if (!consumedRecord) {
+      throw new Error('This action requires a fresh re-auth token.');
+    }
+
+    return consumedRecord;
   }
 
   listSessions(actorPacketId: string): AuthSessionRecord[] {

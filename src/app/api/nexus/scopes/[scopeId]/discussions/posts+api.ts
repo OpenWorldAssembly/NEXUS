@@ -30,8 +30,19 @@ const DiscussionPostInputSchema = z
     actor_assertion: ActorAssertionSchema,
     csrf_token: z.string().min(1).optional().nullable().default(null),
     reauth_token: z.string().min(1).optional().nullable().default(null),
-    thread_packet: z.unknown(),
-    post_packet: z.unknown(),
+    mutation_nonce: z.string().min(1),
+    created_at: z.string().min(1),
+    forum_packet_id: z.string().min(1),
+    thread_title: z.string(),
+    post_markdown: z.string().min(1),
+    thread_kind: z.string().min(1).optional().nullable().default(null),
+    related_packet_ids: z.array(z.string().min(1)).default([]),
+    signed_candidate_packets: z
+      .object({
+        thread_packet: z.unknown(),
+        post_packet: z.unknown(),
+      })
+      .strict(),
   })
   .strict();
 
@@ -58,15 +69,25 @@ export const POST: RequestHandler = async (request, params) => {
         actor_packet: parsedBody.actor_packet,
         csrf_token: parsedBody.csrf_token,
         reauth_token: parsedBody.reauth_token,
-        thread_packet: parsedBody.thread_packet,
-        post_packet: parsedBody.post_packet,
+        mutation_nonce: parsedBody.mutation_nonce,
+        created_at: parsedBody.created_at,
+        forum_packet_id: parsedBody.forum_packet_id,
+        thread_title: parsedBody.thread_title,
+        post_markdown: parsedBody.post_markdown,
+        thread_kind: parsedBody.thread_kind,
+        related_packet_ids: parsedBody.related_packet_ids,
+        signed_candidate_packets: parsedBody.signed_candidate_packets,
       },
       csrfToken: parsedBody.csrf_token,
       reauthToken: parsedBody.reauth_token,
       writeRisk: 'high_impact',
     });
-    const parsedThreadPacket = parsePacketEnvelope(parsedBody.thread_packet);
-    const parsedPostPacket = parsePacketEnvelope(parsedBody.post_packet);
+    const parsedThreadPacket = parsePacketEnvelope(
+      parsedBody.signed_candidate_packets.thread_packet
+    );
+    const parsedPostPacket = parsePacketEnvelope(
+      parsedBody.signed_candidate_packets.post_packet
+    );
 
     if (parsedThreadPacket.header.family !== 'DiscussionThread') {
       return createJsonResponse(
@@ -87,19 +108,32 @@ export const POST: RequestHandler = async (request, params) => {
     const postPacket =
       parsedPostPacket as PacketEnvelopeByType['DiscussionPost'];
 
-    const result = await services.discussionService.createPost({
-      scope_id:
-        params.scopeId === 'you'
-          ? actorContext.actorPacket.header.packet_id
-          : params.scopeId,
-      actor_key: actorContext.actorKey,
-      actor_class: actorContext.actorClass,
-      actor_packet: actorContext.actorPacket,
-      thread_packet: threadPacket,
-      post_packet: postPacket,
+    const preparedMutation = await services.mutationService.prepareMutation({
+      intent: {
+        kind: 'discussion.thread_post.create',
+        scope_id:
+          params.scopeId === 'you'
+            ? actorContext.actorPacket.header.packet_id
+            : params.scopeId,
+        forum_packet_id: parsedBody.forum_packet_id,
+        thread_title: parsedBody.thread_title,
+        post_markdown: parsedBody.post_markdown,
+        related_packet_ids: parsedBody.related_packet_ids,
+        created_at: parsedBody.created_at,
+        mutation_nonce: parsedBody.mutation_nonce,
+      },
+      actorPacket: actorContext.actorPacket,
+      actorKey: actorContext.actorKey,
+    });
+    const result = await services.mutationService.finalizeMutation({
+      request: {
+        ticket_id: preparedMutation.ticket.ticket_id,
+        signed_packets: [threadPacket, postPacket],
+      },
+      actorContext,
     });
 
-    return createJsonResponse(result, 201);
+    return createJsonResponse(result.result, 201);
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Unable to save the discussion post.';

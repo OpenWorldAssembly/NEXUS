@@ -8,6 +8,7 @@ import type { z } from 'zod';
 import {
   PACKET_BODY_SCHEMAS,
   createPacketEnvelope,
+  type PacketBodyByType,
   type ClaimKind,
   type DiscussionActorClass,
   type DiscussionSort,
@@ -191,6 +192,7 @@ export interface PolicyPacketInput extends PacketBuilderBaseInput {
     voting_gate?: TrustStage;
     review_gate?: TrustStage;
   } | null;
+  write_policy?: PacketBodyByType['Policy']['write_policy'];
 }
 
 export interface VotePacketInput extends PacketBuilderBaseInput {
@@ -720,6 +722,13 @@ export function createPolicyPacket(
             posting_gate: input.trust_policy.posting_gate ?? 'emerging',
             voting_gate: input.trust_policy.voting_gate ?? 'recognized',
             review_gate: input.trust_policy.review_gate ?? 'role_eligible',
+          }
+        : null,
+      write_policy: input.write_policy
+        ? {
+            default_proof_level:
+              input.write_policy.default_proof_level ?? 'session',
+            action_overrides: input.write_policy.action_overrides ?? {},
           }
         : null,
     },

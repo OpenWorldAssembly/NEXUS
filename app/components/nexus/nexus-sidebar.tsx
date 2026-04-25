@@ -2,7 +2,7 @@
  * File: nexus-sidebar.tsx
  * Description: Renders the left-side nexus rails with collapsible primary and secondary navigation panels.
  */
-import { useRouter } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -16,6 +16,7 @@ import {
 
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
+import { useNexusAuthGate } from '@app/components/nexus/nexus-auth-gate';
 import { NexusBadge, NexusCard, NexusSegmentedPill } from '@app/components/nexus/nexus-ui';
 import type { NexusSecurityMode } from '@runtime/nexus/nexus-api-types';
 import {
@@ -124,6 +125,18 @@ const SIDEBAR_SCOPE_LIST_LIMIT = 10;
  */
 function joinClasses(...classes: (string | false | null | undefined)[]) {
   return classes.filter(Boolean).join(' ');
+}
+
+function getWriteApprovalSuccessMessage(securityMode: NexusSecurityMode): string {
+  switch (securityMode) {
+    case 'every_write':
+      return 'Every write now requires fresh approval.';
+    case 'guarded':
+      return 'Guarded write approval is active.';
+    case 'standard':
+    default:
+      return 'Standard write approval is active.';
+  }
 }
 
 /**
@@ -1054,6 +1067,7 @@ export default function NexusSidebar({
   isDesktop,
   onRequestClose,
 }: NexusSidebarProps) {
+  const pathname = usePathname();
   const router = useRouter();
   const {
     activeScope,
@@ -1084,11 +1098,23 @@ export default function NexusSidebar({
   const {
     currentStorageMode,
     isAuthenticated,
+    isCurrentIdentityUnlocked,
     rememberClaimedSessions,
     securityMode,
     setRememberClaimedSessions,
     setSecurityMode,
   } = useIdentityShell();
+  const { authGateModal, openNexusAuthGate, openNexusAuthGateForError } =
+    useNexusAuthGate({
+      returnTo: pathname || '/nexus',
+      returnScopeId: activeScopeId,
+    });
+  const [preferenceStatusMessage, setPreferenceStatusMessage] = useState<string | null>(
+    null
+  );
+  const [preferenceErrorMessage, setPreferenceErrorMessage] = useState<string | null>(
+    null
+  );
   const hasActiveClaimedSession =
     currentIdentityMode === 'claimed' && isAuthenticated;
   const sessionPreferenceActiveId =
@@ -1334,10 +1360,32 @@ export default function NexusSidebar({
                       : 'text-xs font-semibold uppercase tracking-[2px]',
                     titleTextClass,
                   )}
+                  >
+                    Back to Home
+                  </Text>
+                </Pressable>
+              {hasActiveClaimedSession && !isCurrentIdentityUnlocked ? (
+                <Pressable
+                  accessibilityRole="button"
+                  className={joinClasses(
+                    'items-center rounded-full border',
+                    isLargeUi ? 'px-4 py-3' : 'px-3 py-2.5',
+                    homeButtonClass,
+                  )}
+                  onPress={() => openNexusAuthGate('unlock_required')}
                 >
-                  Back to Home
-                </Text>
-              </Pressable>
+                  <Text
+                    className={joinClasses(
+                      isLargeUi
+                        ? 'text-sm font-semibold uppercase tracking-[2px]'
+                        : 'text-xs font-semibold uppercase tracking-[2px]',
+                      titleTextClass,
+                    )}
+                  >
+                    Unlock This Identity
+                  </Text>
+                </Pressable>
+              ) : null}
 
               <View
                 className={joinClasses(
@@ -1413,8 +1461,16 @@ export default function NexusSidebar({
                         ]}
                         activeId={sessionPreferenceActiveId}
                         onSelect={(value) => {
+                          setPreferenceStatusMessage(null);
+                          setPreferenceErrorMessage(null);
                           void setRememberClaimedSessions(value === 'save').catch(
-                            () => undefined
+                            (error: unknown) => {
+                              setPreferenceErrorMessage(
+                                error instanceof Error
+                                  ? error.message
+                                  : 'Unable to update session preferences.'
+                              );
+                            }
                           );
                         }}
                       />
@@ -1440,12 +1496,63 @@ export default function NexusSidebar({
                         ]}
                         activeId={securityMode ?? 'guarded'}
                         onSelect={(value) => {
-                          void setSecurityMode(value as NexusSecurityMode).catch(
-                            () => undefined
-                          );
+                          setPreferenceStatusMessage(null);
+                          setPreferenceErrorMessage(null);
+                          const nextMode = value as NexusSecurityMode;
+
+                          if (nextMode === (securityMode ?? 'guarded')) {
+                            return;
+                          }
+
+                          const applySecurityModeChange = async () => {
+                            try {
+                              await setSecurityMode(nextMode);
+                              setPreferenceStatusMessage(
+                                getWriteApprovalSuccessMessage(nextMode)
+                              );
+                            } catch (error: unknown) {
+                              if (
+                                openNexusAuthGateForError(
+                                  error,
+                                  applySecurityModeChange
+                                )
+                              ) {
+                                return;
+                              }
+
+                              setPreferenceErrorMessage(
+                                error instanceof Error
+                                  ? error.message
+                                  : 'Unable to update write approval.'
+                              );
+                            }
+                          };
+                          void applySecurityModeChange();
                         }}
                         disabled={!hasActiveClaimedSession}
                       />
+                      {preferenceStatusMessage ? (
+                        <Text
+                          className={joinClasses(
+                            isLargeUi ? 'text-xs' : 'text-[11px]',
+                            themeMode === 'dark'
+                              ? 'text-nexus-mint'
+                              : 'text-emerald-700',
+                          )}
+                        >
+                          {preferenceStatusMessage}
+                        </Text>
+                      ) : null}
+                      {preferenceErrorMessage ? (
+                        <Text
+                          className={joinClasses(
+                            isLargeUi ? 'text-xs' : 'text-[11px]',
+                            'text-nexus-rose',
+                          )}
+                        >
+                          {preferenceErrorMessage}
+                        </Text>
+                      ) : null}
                     </View>
                   </View>
                 </Animated.View>
@@ -1647,6 +1754,7 @@ export default function NexusSidebar({
           />
         </View>
       ) : null}
+      {authGateModal}
     </View>
   );
 }

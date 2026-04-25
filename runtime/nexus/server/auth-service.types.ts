@@ -27,6 +27,10 @@ const LEGACY_SECURITY_MODE_MAP: Record<string, NexusSecurityMode> = {
 export type AuthMethod = 'bundle' | 'passkey' | 'refresh';
 export type WebAuthnChallengePurpose = 'register' | 'signin' | 'reauth';
 export type ReauthPurpose = 'sensitive' | 'interaction';
+export type ReauthProofMethod =
+  | 'signed_reauth'
+  | 'bundle_passphrase_unlock'
+  | 'passkey_confirmation';
 
 export type AuthSessionRecord = {
   session_id: string;
@@ -84,6 +88,7 @@ export type ReauthTokenRecord = {
   actor_packet_id: string;
   session_id: string;
   purpose: ReauthPurpose;
+  proof_method: ReauthProofMethod;
   created_at: string;
   expires_at: string;
   used_at: string | null;

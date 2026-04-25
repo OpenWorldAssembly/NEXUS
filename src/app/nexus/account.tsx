@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { ScrollView, Text, View } from 'react-native';
 
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
+import { useNexusAuthGate } from '@app/components/nexus/nexus-auth-gate';
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import {
   NexusActionButton,
@@ -44,6 +45,10 @@ export default function NexusAccountPage() {
     rememberClaimedSessions,
     securityMode,
   } = useIdentityShell();
+  const { authGateModal, openNexusAuthGate } = useNexusAuthGate({
+    returnTo: '/nexus/account',
+    returnScopeId: null,
+  });
 
   const hasActiveClaimedSession =
     currentIdentityMode === 'claimed' && isAuthenticated;
@@ -115,11 +120,13 @@ export default function NexusAccountPage() {
                   label={primaryIdentityActionLabel}
                   variant="primary"
                   onPress={() =>
-                    router.push(
-                      hasActiveClaimedSession && isCurrentIdentityUnlocked
-                        ? '/nexus/identity/security'
-                        : '/nexus/identity/sign-in'
-                    )
+                    hasActiveClaimedSession && !isCurrentIdentityUnlocked
+                      ? openNexusAuthGate('unlock_required')
+                      : router.push(
+                          hasActiveClaimedSession && isCurrentIdentityUnlocked
+                            ? '/nexus/identity/security'
+                            : '/nexus/identity/sign-in'
+                        )
                   }
                 />
                 {currentIdentityMode !== 'claimed' ? (
@@ -182,6 +189,7 @@ export default function NexusAccountPage() {
           </View>
         </View>
       </View>
+      {authGateModal}
     </ScrollView>
   );
 }

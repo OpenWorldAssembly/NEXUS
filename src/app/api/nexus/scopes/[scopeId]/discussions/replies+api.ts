@@ -37,8 +37,15 @@ const DiscussionReplyInputSchema = z
     actor_assertion: ActorAssertionSchema,
     csrf_token: z.string().min(1).optional().nullable().default(null),
     reauth_token: z.string().min(1).optional().nullable().default(null),
+    mutation_nonce: z.string().min(1),
+    created_at: z.string().min(1),
     parent_post_packet_id: z.string().min(1),
-    reply_packet: z.unknown(),
+    reply_markdown: z.string().min(1),
+    signed_candidate_packets: z
+      .object({
+        reply_packet: z.unknown(),
+      })
+      .strict(),
   })
   .strict();
 
@@ -133,13 +140,18 @@ export const POST: RequestHandler = async (request, params) => {
         actor_packet: parsedBody.actor_packet,
         csrf_token: parsedBody.csrf_token,
         reauth_token: parsedBody.reauth_token,
+        mutation_nonce: parsedBody.mutation_nonce,
+        created_at: parsedBody.created_at,
         parent_post_packet_id: parsedBody.parent_post_packet_id,
-        reply_packet: parsedBody.reply_packet,
+        reply_markdown: parsedBody.reply_markdown,
+        signed_candidate_packets: parsedBody.signed_candidate_packets,
       },
       csrfToken: parsedBody.csrf_token,
       reauthToken: parsedBody.reauth_token,
     });
-    const parsedReplyPacket = parsePacketEnvelope(parsedBody.reply_packet);
+    const parsedReplyPacket = parsePacketEnvelope(
+      parsedBody.signed_candidate_packets.reply_packet
+    );
 
     if (parsedReplyPacket.header.family !== 'DiscussionReply') {
       return createJsonResponse(
@@ -151,19 +163,30 @@ export const POST: RequestHandler = async (request, params) => {
     const replyPacket =
       parsedReplyPacket as PacketEnvelopeByType['DiscussionReply'];
 
-    const result = await services.discussionService.createReply({
-      scope_id:
-        params.scopeId === 'you'
-          ? actorContext.actorPacket.header.packet_id
-          : params.scopeId,
-      actor_key: actorContext.actorKey,
-      actor_class: actorContext.actorClass,
-      actor_packet: actorContext.actorPacket,
-      parent_post_packet_id: parsedBody.parent_post_packet_id,
-      reply_packet: replyPacket,
+    const preparedMutation = await services.mutationService.prepareMutation({
+      intent: {
+        kind: 'discussion.reply.create',
+        scope_id:
+          params.scopeId === 'you'
+            ? actorContext.actorPacket.header.packet_id
+            : params.scopeId,
+        parent_post_packet_id: parsedBody.parent_post_packet_id,
+        reply_markdown: parsedBody.reply_markdown,
+        created_at: parsedBody.created_at,
+        mutation_nonce: parsedBody.mutation_nonce,
+      },
+      actorPacket: actorContext.actorPacket,
+      actorKey: actorContext.actorKey,
+    });
+    const result = await services.mutationService.finalizeMutation({
+      request: {
+        ticket_id: preparedMutation.ticket.ticket_id,
+        signed_packets: [replyPacket],
+      },
+      actorContext,
     });
 
-    return createJsonResponse(result, 201);
+    return createJsonResponse(result.result, 201);
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Unable to save the reply.';

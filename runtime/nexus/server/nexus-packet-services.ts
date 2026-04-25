@@ -13,8 +13,17 @@ import type { NexusPacketServices } from '@runtime/nexus/server/nexus-packet-ser
 export type { NexusPacketServices } from '@runtime/nexus/server/nexus-packet-services.types';
 
 let cachedServicesPromise: Promise<NexusPacketServices> | null = null;
+const GLOBAL_SERVICES_PROMISE_KEY = '__owaNexusPacketServicesPromise';
 
 export async function getNexusPacketServices(): Promise<NexusPacketServices> {
+  const globalState = globalThis as typeof globalThis & {
+    [GLOBAL_SERVICES_PROMISE_KEY]?: Promise<NexusPacketServices>;
+  };
+
+  if (globalState[GLOBAL_SERVICES_PROMISE_KEY]) {
+    return globalState[GLOBAL_SERVICES_PROMISE_KEY]!;
+  }
+
   if (!cachedServicesPromise) {
     cachedServicesPromise = (async () => {
       const queryServices = await createNodeSQLiteQueryServicesAsync();
@@ -27,6 +36,7 @@ export async function getNexusPacketServices(): Promise<NexusPacketServices> {
 
       return services;
     })();
+    globalState[GLOBAL_SERVICES_PROMISE_KEY] = cachedServicesPromise;
   }
 
   return cachedServicesPromise;

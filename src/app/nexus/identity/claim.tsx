@@ -60,6 +60,7 @@ export default function NexusIdentityClaimPage() {
     currentLabel,
     currentMode,
     currentStorageMode,
+    isAuthenticated,
     rememberClaimedSessions,
     refreshAuthSession,
     securityMode,
@@ -198,20 +199,38 @@ export default function NexusIdentityClaimPage() {
   };
 
   if (currentMode === 'claimed') {
+    if (isSubmitting) {
+      return (
+        <IdentityPageShell
+          eyebrow="Identity"
+          title="Finalizing identity"
+          description="Completing sign-in and routing you into the next Nexus workspace."
+        >
+          <NexusCard>
+            <Text className={appearance.itemBodyClass}>
+              Completing sign-in and loading the next screen.
+            </Text>
+          </NexusCard>
+        </IdentityPageShell>
+      );
+    }
+
+    const isClaimReadyState = hasReturnTarget || isAuthenticated;
+
     return (
       <IdentityPageShell
         eyebrow="Identity"
-        title={hasReturnTarget ? 'Identity ready' : 'This actor is already claimed'}
+        title={isClaimReadyState ? 'Identity ready' : 'This actor is already claimed'}
         description={
-          hasReturnTarget
-            ? 'This actor is already a claimed identity. You can return to the workspace that requested identity setup.'
+          isClaimReadyState
+            ? 'This actor is already a claimed identity and the session is active. You can continue into the workspace or security surface.'
             : 'Claiming preserves guest continuity, but the currently selected actor is already a claimed identity.'
         }
       >
         <NexusCard className="gap-4">
           <Text className={appearance.itemBodyClass}>
-            {hasReturnTarget
-              ? 'Your claimed identity is active for this return flow.'
+            {isClaimReadyState
+              ? 'Your claimed identity is ready to continue.'
               : 'Open identity security to manage passkeys, sessions, and exports, or create a fresh claimed identity if you want a separate actor.'}
           </Text>
           <View className="flex-row flex-wrap gap-3">
@@ -220,6 +239,12 @@ export default function NexusIdentityClaimPage() {
                 label="Return to workspace"
                 variant="primary"
                 onPress={navigateAfterSuccess}
+              />
+            ) : isAuthenticated ? (
+              <NexusActionButton
+                label="Open security"
+                variant="primary"
+                onPress={() => router.replace('/nexus/identity/security')}
               />
             ) : (
               <NexusActionButton

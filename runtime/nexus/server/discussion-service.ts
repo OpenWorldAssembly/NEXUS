@@ -5,6 +5,12 @@
 
 import { DatabaseSync } from 'node:sqlite';
 
+import {
+  assertMutationProofBundle,
+  evaluateDiscussionReplyMutation,
+  evaluateDiscussionThreadPostMutation,
+  type MutationIntent,
+} from '@core/auth/mutation-verifier';
 import { createTextExcerpt } from '@core/packets/builders';
 import type {
   AttestationService,
@@ -24,6 +30,7 @@ import type {
   PacketEnvelope,
   PacketEnvelopeByType,
 } from '@core/schema/packet-schema';
+import type { MutationProofBundle } from '@core/auth/proof-types';
 import { verifyPacketSignature } from '@runtime/nexus/identity-crypto';
 import {
   paginateItems,
@@ -84,8 +91,10 @@ type DiscussionPostWriteInput = {
   actor_key: string;
   actor_class: DiscussionActorClass;
   actor_packet: PacketEnvelopeByType['Element'];
-  thread_packet: PacketEnvelopeByType['DiscussionThread'];
-  post_packet: PacketEnvelopeByType['DiscussionPost'];
+  proof_bundle: MutationProofBundle;
+  intent: Extract<MutationIntent, { kind: 'discussion.thread_post.create' }>;
+  signed_thread_packet: PacketEnvelopeByType['DiscussionThread'];
+  signed_post_packet: PacketEnvelopeByType['DiscussionPost'];
 };
 
 type DiscussionReplyWriteInput = {
@@ -93,8 +102,9 @@ type DiscussionReplyWriteInput = {
   actor_key: string;
   actor_class: DiscussionActorClass;
   actor_packet: PacketEnvelopeByType['Element'];
-  parent_post_packet_id: string;
-  reply_packet: PacketEnvelopeByType['DiscussionReply'];
+  proof_bundle: MutationProofBundle;
+  intent: Extract<MutationIntent, { kind: 'discussion.reply.create' }>;
+  signed_reply_packet: PacketEnvelopeByType['DiscussionReply'];
 };
 
 
@@ -400,6 +410,37 @@ async function getDiscussionEntryById(
   return packet as DiscussionEntryPacket;
 }
 
+async function getElementPacketById(
+  packetStore: NodeSQLitePacketStore,
+  packetId: string | null
+): Promise<PacketEnvelopeByType['Element'] | null> {
+  if (!packetId) {
+    return null;
+  }
+
+  const packet = await packetStore.fetchByPacket({ packet_id: packetId });
+
+  if (!packet || packet.header.family !== 'Element') {
+    return null;
+  }
+
+  return packet as PacketEnvelopeByType['Element'];
+}
+
+async function getPolicyPacketsByRefs(
+  packetStore: NodeSQLitePacketStore,
+  policyRefs: PacketEnvelopeByType['Element']['header']['moderation']['policy_refs']
+): Promise<PacketEnvelopeByType['Policy'][]> {
+  const packets = await Promise.all(
+    policyRefs.map((policyRef) => packetStore.fetchByPacket(policyRef))
+  );
+
+  return packets.filter(
+    (packet): packet is PacketEnvelopeByType['Policy'] =>
+      packet !== null && packet.header.family === 'Policy'
+  );
+}
+
 export class SQLiteDiscussionService
   implements DiscussionQueryService
 {
@@ -692,19 +733,15 @@ export class SQLiteDiscussionService
     return false;
   }
 
-  private async verifySignedDiscussionPacket<TPacket extends DiscussionEntryPacket | PacketEnvelopeByType['DiscussionThread']>(
+  private async verifySignedCandidatePacket<TPacket extends PacketEnvelope>(
     packet: TPacket,
     actorPacket: PacketEnvelopeByType['Element']
   ): Promise<void> {
-    if (packet.header.provenance.created_by?.packet_id !== actorPacket.header.packet_id) {
-      throw new Error('Discussion packet provenance does not match the actor packet.');
-    }
-
     if (
       packet.header.integrity.embedded_signatures[0]?.signer_packet_ref?.packet_id !==
       actorPacket.header.packet_id
     ) {
-      throw new Error('Discussion packet signature does not match the actor packet.');
+      throw new Error('Signed mutation packet signature does not match the actor packet.');
     }
 
     const signatureIsValid = await verifyPacketSignature({
@@ -713,7 +750,7 @@ export class SQLiteDiscussionService
     });
 
     if (!signatureIsValid) {
-      throw new Error('Discussion packet signature verification failed.');
+      throw new Error('Signed mutation packet signature verification failed.');
     }
   }
 
@@ -982,12 +1019,12 @@ export class SQLiteDiscussionService
 
     const forumPacket = await getDiscussionForumById(
       this.packetStore,
-      input.thread_packet.body.forum_ref.packet_id
+      input.intent.forum_packet_id
     );
 
     if (!forumPacket) {
       throw new Error(
-        `Unknown discussion forum: ${input.thread_packet.body.forum_ref.packet_id}`
+        `Unknown discussion forum: ${input.intent.forum_packet_id}`
       );
     }
 
@@ -1006,54 +1043,61 @@ export class SQLiteDiscussionService
       actorIdentity
     );
 
-    if (!viewer.can_create_top_level) {
-      throw new Error('Top-level posting is not open to your current actor here.');
-    }
-
-    await this.verifySignedDiscussionPacket(input.thread_packet, input.actor_packet);
-    await this.verifySignedDiscussionPacket(input.post_packet, input.actor_packet);
-
-    if (
-      input.thread_packet.body.forum_ref.packet_id !== forumPacket.header.packet_id
-    ) {
-      throw new Error('Discussion thread packet does not match the selected forum.');
-    }
-
-    if (input.thread_packet.body.thread_kind !== forumPacket.body.forum_kind) {
-      throw new Error('Discussion thread packet uses the wrong forum kind.');
-    }
-
-    if (
-      input.post_packet.body.thread_ref.packet_id !== input.thread_packet.header.packet_id
-    ) {
-      throw new Error('Discussion post packet does not reference the submitted thread.');
-    }
-
-    if (input.post_packet.body.reply_to_ref) {
-      throw new Error('Top-level discussion posts cannot include a reply target.');
-    }
-
-    await this.packetStore.writeRevision(input.thread_packet);
-    await this.packetStore.publishRevision({
-      packet_id: input.thread_packet.header.packet_id,
-      revision_id: input.thread_packet.header.revision_id,
+    const governingScopePacket = await getElementPacketById(
+      this.packetStore,
+      forumPacket.header.authority_scope_ref?.packet_id ?? null
+    );
+    const policyPackets = governingScopePacket
+      ? await getPolicyPacketsByRefs(
+          this.packetStore,
+          governingScopePacket.header.moderation.policy_refs
+        )
+      : [];
+    const decision = evaluateDiscussionThreadPostMutation({
+      intent: input.intent,
+      actorPacket: input.actor_packet,
+      viewer,
+      governingScopePacket,
+      policyPackets,
     });
-    await this.packetStore.writeRevision(input.post_packet);
+
+    assertMutationProofBundle({
+      decision,
+      proofs: input.proof_bundle,
+    });
+    await this.verifySignedCandidatePacket(
+      input.signed_thread_packet,
+      input.actor_packet
+    );
+    await this.verifySignedCandidatePacket(
+      input.signed_post_packet,
+      input.actor_packet
+    );
+
+    await this.packetStore.writeRevision(input.signed_thread_packet);
     await this.packetStore.publishRevision({
-      packet_id: input.post_packet.header.packet_id,
-      revision_id: input.post_packet.header.revision_id,
+      packet_id: input.signed_thread_packet.header.packet_id,
+      revision_id: input.signed_thread_packet.header.revision_id,
+    });
+    await this.packetStore.writeRevision(input.signed_post_packet);
+    await this.packetStore.publishRevision({
+      packet_id: input.signed_post_packet.header.packet_id,
+      revision_id: input.signed_post_packet.header.revision_id,
     });
     await this.syncDerivedState();
 
     const nextViewer = await this.buildViewerContext(
       forumPacket,
       actorIdentity,
-      input.thread_packet
+      input.signed_thread_packet
     );
 
     return {
       viewer: nextViewer,
-      post: this.toDiscussionPostProjection(input.post_packet, actorIdentity.actor_key),
+      post: this.toDiscussionPostProjection(
+        input.signed_post_packet,
+        actorIdentity.actor_key
+      ),
     };
   }
 
@@ -1069,11 +1113,11 @@ export class SQLiteDiscussionService
 
     const parentEntry = await getDiscussionEntryById(
       this.packetStore,
-      input.parent_post_packet_id
+      input.intent.parent_post_packet_id
     );
 
     if (!parentEntry) {
-      throw new Error(`Unknown discussion post: ${input.parent_post_packet_id}`);
+      throw new Error(`Unknown discussion post: ${input.intent.parent_post_packet_id}`);
     }
 
     const threadPacket = await getDiscussionThreadById(
@@ -1083,7 +1127,7 @@ export class SQLiteDiscussionService
 
     if (!threadPacket) {
       throw new Error(
-        `Missing discussion thread for post ${input.parent_post_packet_id}.`
+        `Missing discussion thread for post ${input.intent.parent_post_packet_id}.`
       );
     }
 
@@ -1106,7 +1150,7 @@ export class SQLiteDiscussionService
 
     if (!rootPostPacket) {
       throw new Error(
-        `Missing root discussion post for reply target ${input.parent_post_packet_id}.`
+        `Missing root discussion post for reply target ${input.intent.parent_post_packet_id}.`
       );
     }
 
@@ -1126,34 +1170,37 @@ export class SQLiteDiscussionService
       threadPacket
     );
 
-    if (!viewer.can_reply) {
-      throw new Error('Replies are not open to your current actor class here.');
-    }
+    const governingScopePacket = await getElementPacketById(
+      this.packetStore,
+      forumPacket.header.authority_scope_ref?.packet_id ?? null
+    );
+    const policyPackets = governingScopePacket
+      ? await getPolicyPacketsByRefs(
+          this.packetStore,
+          governingScopePacket.header.moderation.policy_refs
+        )
+      : [];
+    const decision = evaluateDiscussionReplyMutation({
+      intent: input.intent,
+      actorPacket: input.actor_packet,
+      viewer,
+      governingScopePacket,
+      policyPackets,
+    });
 
-    await this.verifySignedDiscussionPacket(input.reply_packet, input.actor_packet);
+    assertMutationProofBundle({
+      decision,
+      proofs: input.proof_bundle,
+    });
+    await this.verifySignedCandidatePacket(
+      input.signed_reply_packet,
+      input.actor_packet
+    );
 
-    if (
-      input.reply_packet.body.thread_ref.packet_id !== threadPacket.header.packet_id
-    ) {
-      throw new Error('Reply packet does not reference the selected thread.');
-    }
-
-    if (
-      input.reply_packet.body.root_post_ref.packet_id !== rootPostPacket.header.packet_id
-    ) {
-      throw new Error('Reply packet does not reference the root post of this thread.');
-    }
-
-    if (
-      input.reply_packet.body.reply_to_ref.packet_id !== parentEntry.header.packet_id
-    ) {
-      throw new Error('Reply packet does not reference the selected parent post.');
-    }
-
-    await this.packetStore.writeRevision(input.reply_packet);
+    await this.packetStore.writeRevision(input.signed_reply_packet);
     await this.packetStore.publishRevision({
-      packet_id: input.reply_packet.header.packet_id,
-      revision_id: input.reply_packet.header.revision_id,
+      packet_id: input.signed_reply_packet.header.packet_id,
+      revision_id: input.signed_reply_packet.header.revision_id,
     });
     await this.syncDerivedState();
 
@@ -1166,7 +1213,7 @@ export class SQLiteDiscussionService
     return {
       viewer: nextViewer,
       post: this.toDiscussionPostProjection(
-        input.reply_packet,
+        input.signed_reply_packet,
         actorIdentity.actor_key
       ),
     };

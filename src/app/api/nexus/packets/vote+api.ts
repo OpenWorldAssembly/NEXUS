@@ -80,20 +80,39 @@ export const PUT: RequestHandler = async (request) => {
     const attestationPacket =
       parsedAttestationPacket as PacketEnvelopeByType['Attestation'];
 
-    const summary = await services.packetVoteService.persistSignedAttestation({
-      attestation_packet: attestationPacket,
-      actor_packet: actorContext.actorPacket,
-      actor_key: actorContext.actorKey,
-      actor_class: actorContext.actorClass,
+    const preparedMutation = await services.mutationService.prepareMutation({
+      intent: {
+        kind: 'attestation.packet_signal.set',
+        scope_id:
+          attestationPacket.header.authority_scope_ref?.packet_id ??
+          actorContext.actorPacket.header.packet_id,
+        target_packet_id: attestationPacket.body.target_ref.packet_id,
+        value:
+          attestationPacket.body.status === 'cleared'
+            ? 0
+            : attestationPacket.body.value,
+      },
+      actorPacket: actorContext.actorPacket,
+      actorKey: actorContext.actorKey,
     });
-    const responseValue =
-      attestationPacket.body.status === 'cleared' ? 0 : attestationPacket.body.value;
+    const finalizedMutation = await services.mutationService.finalizeMutation({
+      request: {
+        ticket_id: preparedMutation.ticket.ticket_id,
+        signed_packets: [attestationPacket],
+      },
+      actorContext,
+    });
+    const voteResult = finalizedMutation.result as {
+      target_packet_id: string;
+      value: 0 | -1 | 1;
+      summary: unknown;
+    };
 
     return createJsonResponse(
       {
-        target_packet_id: attestationPacket.body.target_ref.packet_id,
-        value: responseValue,
-        summary,
+        target_packet_id: voteResult.target_packet_id,
+        value: voteResult.value,
+        summary: voteResult.summary,
       },
       200
     );

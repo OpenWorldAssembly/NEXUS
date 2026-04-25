@@ -7,6 +7,11 @@ import type {
   PacketEnvelope,
   PacketEnvelopeByType,
 } from '@core/schema/packet-schema';
+import { getPacketSignatureCanonicalCandidates } from '@core/schema/packet-schema';
+import {
+  canonicalizeJson,
+  sha256Base64Url,
+} from '@core/crypto/canonical-json';
 
 export const IDENTITY_SIGNING_ALGORITHM = 'ES256';
 export const IDENTITY_ENCRYPTION_VERSION = 1;
@@ -33,41 +38,12 @@ export interface ActorAssertion {
   signature: string;
 }
 
-type JsonPrimitive = string | number | boolean | null;
-type JsonLike = JsonPrimitive | JsonLike[] | { [key: string]: JsonLike };
-
 function getCryptoOrThrow(): Crypto {
   if (typeof crypto !== 'undefined' && crypto.subtle) {
     return crypto;
   }
 
   throw new Error('Web Crypto is unavailable in this environment.');
-}
-
-function toJsonLike(input: unknown): JsonLike {
-  if (
-    input === null ||
-    typeof input === 'string' ||
-    typeof input === 'number' ||
-    typeof input === 'boolean'
-  ) {
-    return input;
-  }
-
-  if (Array.isArray(input)) {
-    return input.map((value) => toJsonLike(value));
-  }
-
-  if (typeof input === 'object') {
-    return Object.fromEntries(
-      Object.entries(input as Record<string, unknown>).map(([key, value]) => [
-        key,
-        toJsonLike(value),
-      ])
-    );
-  }
-
-  return String(input);
 }
 
 function encodeUtf8(value: string): Uint8Array {
@@ -122,30 +98,6 @@ function base64UrlToUint8Array(value: string): Uint8Array {
   return bytes;
 }
 
-function canonicalizeValue(value: JsonLike): string {
-  if (value === null) {
-    return 'null';
-  }
-
-  if (typeof value === 'number') {
-    return Number.isFinite(value) ? JSON.stringify(value) : 'null';
-  }
-
-  if (typeof value === 'boolean' || typeof value === 'string') {
-    return JSON.stringify(value);
-  }
-
-  if (Array.isArray(value)) {
-    return `[${value.map((item) => canonicalizeValue(item)).join(',')}]`;
-  }
-
-  const sortedKeys = Object.keys(value).sort();
-
-  return `{${sortedKeys
-    .map((key) => `${JSON.stringify(key)}:${canonicalizeValue(value[key])}`)
-    .join(',')}}`;
-}
-
 function stripPacketSignatures<TPacket extends PacketEnvelope>(
   packet: TPacket
 ): TPacket {
@@ -161,57 +113,6 @@ function stripPacketSignatures<TPacket extends PacketEnvelope>(
       },
     },
   } as TPacket;
-}
-
-function stripLegacyElementDefaults<TPacket extends PacketEnvelope>(
-  packet: TPacket
-): TPacket {
-  if (packet.header.family !== 'Element') {
-    return packet;
-  }
-
-  const body = packet.body as Record<string, unknown>;
-  let legacyBody = body;
-  let hasLegacyDefault = false;
-  const claimedRoleRefs = body.claimed_role_refs;
-
-  if (Array.isArray(claimedRoleRefs) && claimedRoleRefs.length === 0) {
-    const { claimed_role_refs: _claimedRoleRefs, ...nextBody } = legacyBody;
-
-    legacyBody = nextBody;
-    hasLegacyDefault = true;
-  }
-
-  if (
-    Object.prototype.hasOwnProperty.call(legacyBody, 'locality') &&
-    legacyBody.locality === null
-  ) {
-    const { locality: _locality, ...nextBody } = legacyBody;
-
-    legacyBody = nextBody;
-    hasLegacyDefault = true;
-  }
-
-  if (!hasLegacyDefault) {
-    return packet;
-  }
-
-  return {
-    ...packet,
-    body: legacyBody,
-  } as TPacket;
-}
-
-export function canonicalizeJson(input: unknown): string {
-  return canonicalizeValue(toJsonLike(input));
-}
-
-export async function sha256Base64Url(input: string | Uint8Array): Promise<string> {
-  const cryptoApi = getCryptoOrThrow();
-  const bytes = typeof input === 'string' ? encodeUtf8(input) : input;
-  const digest = await cryptoApi.subtle.digest('SHA-256', toArrayBuffer(bytes));
-
-  return arrayBufferToBase64Url(digest);
 }
 
 export async function generateP256KeyPair(): Promise<CryptoKeyPair> {
@@ -386,12 +287,7 @@ export async function verifyPacketSignature(input: {
   );
 
   const unsignedPacket = stripPacketSignatures(input.packet);
-  const candidatePackets = [unsignedPacket];
-  const legacyUnsignedPacket = stripLegacyElementDefaults(unsignedPacket);
-
-  if (legacyUnsignedPacket !== unsignedPacket) {
-    candidatePackets.push(legacyUnsignedPacket);
-  }
+  const candidatePackets = getPacketSignatureCanonicalCandidates(unsignedPacket);
 
   for (const candidatePacket of candidatePackets) {
     const canonicalPacket = canonicalizeJson(candidatePacket);

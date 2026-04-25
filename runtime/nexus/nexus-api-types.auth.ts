@@ -201,6 +201,10 @@ export type NexusLocationDisclosureOptionPayload = NexusLocationDisclosureOption
 export interface NexusReauthVerifyPayload {
   reauth_token: string;
   expires_at: string;
+  proof_method:
+    | 'signed_reauth'
+    | 'bundle_passphrase_unlock'
+    | 'passkey_confirmation';
 }
 
 export interface NexusLocalIdentityPreview {

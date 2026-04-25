@@ -6,6 +6,11 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 
+import type {
+  MutationProofMethod,
+  MutationProofBundle,
+  WriteProofLevel,
+} from '@core/auth/proof-types';
 import type { DiscussionActorClass } from '@core/schema/packet-schema';
 import type { PacketEnvelope, PacketEnvelopeByType } from '@core/schema/packet-schema';
 import { parsePacketEnvelope } from '@core/schema/packet-schema';
@@ -43,6 +48,7 @@ import {
   type AuthMethod,
   type AuthSessionRecord,
   type PasskeyRecord,
+  type ReauthProofMethod,
   type ReauthTokenRecord,
   type ReauthPurpose,
   type RefreshTokenRecord,
@@ -60,6 +66,7 @@ import {
   toPasskeySummary,
   validateIdentityPacketMetadata,
 } from '@runtime/nexus/server/auth-service.utils';
+import { inferSecurityModeFromWritePolicy } from '@runtime/nexus/server/write-security-mode';
 import type { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store';
 
 export class NexusAuthService {
@@ -98,13 +105,45 @@ export class NexusAuthService {
   private async getPersonPacket(
     packetId: string
   ): Promise<PacketEnvelopeByType['Element'] | null> {
-    const packet = await this.packetStore.fetchByPacket({ packet_id: packetId });
+    const revisionHeads = await this.packetStore.fetchRevisionHeads({
+      packet_id: packetId,
+    });
+    const freshestRevision =
+      revisionHeads.head_revisions.length === 1
+        ? revisionHeads.head_revisions[0]
+        : revisionHeads.preferred_revision;
+
+    if (!freshestRevision) {
+      return null;
+    }
+
+    const packet = await this.packetStore.fetchByRevision(freshestRevision);
 
     if (!isPersonElementPacket(packet)) {
       return null;
     }
 
     return packet;
+  }
+
+  private async getPersonPacketRevisionInput(
+    packetId: string
+  ): Promise<unknown | null> {
+    const revisionHeads = await this.packetStore.fetchRevisionHeads({
+      packet_id: packetId,
+    });
+    const freshestRevision =
+      revisionHeads.head_revisions.length === 1
+        ? revisionHeads.head_revisions[0]
+        : revisionHeads.preferred_revision;
+
+    if (!freshestRevision) {
+      return null;
+    }
+
+    return this.packetStore.readByRevision(freshestRevision, {
+      mode: 'raw',
+    });
   }
 
   private async requirePersonPacket(
@@ -127,7 +166,30 @@ export class NexusAuthService {
     return this.store.readSecurityPreference(actorPacketId);
   }
 
-  private getNormalizedSecurityMode(actorPacketId: string): NexusSecurityMode {
+  async resolveEffectiveSecurityMode(
+    actorPacketId: string
+  ): Promise<NexusSecurityMode> {
+    const actorPacket = await this.getPersonPacket(actorPacketId);
+
+    if (actorPacket) {
+      const policyPackets = await Promise.all(
+        actorPacket.header.moderation.policy_refs.map((policyRef) =>
+          this.packetStore.fetchByPacket({ packet_id: policyRef.packet_id })
+        )
+      );
+      const availablePolicyPackets = policyPackets.filter(
+        (packet): packet is PacketEnvelopeByType['Policy'] =>
+          packet?.header.family === 'Policy'
+      );
+      const writeLockPolicyPacket = availablePolicyPackets.find(
+        (packet) => packet.body.policy_kind === 'write_lock'
+      );
+
+      if (writeLockPolicyPacket?.body.write_policy) {
+        return inferSecurityModeFromWritePolicy(writeLockPolicyPacket.body.write_policy);
+      }
+    }
+
     return this.store.getNormalizedSecurityMode(actorPacketId);
   }
 
@@ -181,7 +243,7 @@ export class NexusAuthService {
   }): Promise<NexusAuthSessionPayload> {
     const actorPacketId = input.actorPacket?.header.packet_id ?? null;
     const securityMode = actorPacketId
-      ? this.getNormalizedSecurityMode(actorPacketId)
+      ? await this.resolveEffectiveSecurityMode(actorPacketId)
       : null;
     const hasPasskey = actorPacketId ? this.countActivePasskeys(actorPacketId) > 0 : false;
 
@@ -290,8 +352,48 @@ export class NexusAuthService {
     actorPacketId: string;
     sessionId: string;
     purpose: ReauthPurpose;
+    proofMethod: ReauthProofMethod;
   }): ReauthTokenRecord {
     return this.store.createReauthToken(input);
+  }
+
+  private normalizePasskeyAssertionError(
+    error: unknown,
+    context: 'sign-in' | 're-approval'
+  ): Error {
+    const message =
+      error instanceof Error
+        ? error.message
+        : `Passkey ${context} verification failed.`;
+
+    if (message === 'Passkey challenge does not match the stored challenge.') {
+      return new Error(
+        `This passkey ${context} no longer matches the current request. Start the action again and use the newest prompt on this device.`
+      );
+    }
+
+    if (message === 'Passkey signature counter did not advance.') {
+      return new Error(
+        `This passkey did not advance its security counter for ${context} on this device. Use the bundle passphrase for now, and re-register the passkey if this keeps happening.`
+      );
+    }
+
+    if (
+      message === 'Passkey origin does not match this request origin.' ||
+      message === 'Passkey RP ID hash does not match this request host.'
+    ) {
+      return new Error(
+        `This passkey ${context} was presented from the wrong device or origin for this request. Retry from the current device, or use the bundle passphrase instead.`
+      );
+    }
+
+    if (message === 'Passkey signature verification failed.') {
+      return new Error(
+        `Passkey signature verification failed. This passkey did not verify for ${context} on this device. Use the bundle passphrase for now, and re-register the passkey if this keeps happening.`
+      );
+    }
+
+    return error instanceof Error ? error : new Error(message);
   }
 
   private consumeReauthToken(input: {
@@ -299,8 +401,34 @@ export class NexusAuthService {
     sessionId: string;
     reauthToken: string | null | undefined;
     purpose: ReauthPurpose;
-  }): void {
-    this.store.consumeReauthToken(input);
+  }): ReauthTokenRecord {
+    return this.store.consumeReauthToken(input);
+  }
+
+  private toMutationProofMethods(input: {
+    isClaimedIdentity: boolean;
+    isUnlockedIdentity: boolean;
+    reauthProofMethod?: ReauthProofMethod | null;
+  }): MutationProofMethod[] {
+    const methods = new Set<MutationProofMethod>();
+
+    if (input.isClaimedIdentity) {
+      methods.add('claimed_session');
+    }
+
+    if (input.isUnlockedIdentity) {
+      methods.add('bundle_unlocked');
+    }
+
+    if (input.reauthProofMethod === 'signed_reauth') {
+      methods.add('signed_reauth');
+    } else if (input.reauthProofMethod === 'bundle_passphrase_unlock') {
+      methods.add('bundle_passphrase_unlock');
+    } else if (input.reauthProofMethod === 'passkey_confirmation') {
+      methods.add('passkey_confirmation');
+    }
+
+    return [...methods];
   }
 
   private resolveDeviceLabel(input: {
@@ -446,10 +574,12 @@ export class NexusAuthService {
     csrfToken?: string | null;
     reauthToken?: string | null;
     writeRisk?: 'standard' | 'high_impact';
+    requiredProofLevel?: WriteProofLevel | null;
   }): Promise<{
     actorPacket: PacketEnvelopeByType['Element'];
     actorKey: string;
     actorClass: DiscussionActorClass;
+    proofBundle: MutationProofBundle;
   }> {
     assertRecentAssertion(input.actorAssertion.issued_at);
 
@@ -459,10 +589,28 @@ export class NexusAuthService {
       throw new Error('Actor packet must be a person element.');
     }
 
-    const actorPacket = await this.requirePersonPacket(
+    const storedActorPacketInput = await this.getPersonPacketRevisionInput(
       parsedActorPacket.header.packet_id
     );
-    const storedActorPacket = await this.verifyIdentityPacket(actorPacket);
+    let storedActorPacket: PacketEnvelopeByType['Element'];
+    let providedActorPacket: PacketEnvelopeByType['Element'] | null = null;
+
+    if (storedActorPacketInput) {
+      try {
+        storedActorPacket = await this.verifyIdentityPacket(storedActorPacketInput);
+      } catch {
+        providedActorPacket = await this.verifyIdentityPacket(parsedActorPacket);
+        storedActorPacket = providedActorPacket;
+      }
+    } else {
+      providedActorPacket = await this.verifyIdentityPacket(parsedActorPacket);
+
+      if (providedActorPacket.body.identity?.claim_status !== 'claimed') {
+        await this.persistVerifiedIdentityPacket(providedActorPacket);
+      }
+
+      storedActorPacket = providedActorPacket;
+    }
 
     if (
       input.actorAssertion.actor_packet_id !==
@@ -471,19 +619,45 @@ export class NexusAuthService {
       throw new Error('Actor assertion packet id does not match the actor packet.');
     }
 
-    const activeKeyBinding =
-      storedActorPacket.body.identity?.public_key_bindings.find(
-        (binding) =>
-          binding.kid === input.actorAssertion.kid && binding.status === 'active'
-      );
+    const actorPacketCandidates = [storedActorPacket];
 
-    if (!activeKeyBinding) {
+    if (
+      providedActorPacket &&
+      providedActorPacket.header.revision_id !== storedActorPacket.header.revision_id
+    ) {
+      actorPacketCandidates.push(providedActorPacket);
+    }
+
+    const assertionSigner =
+      actorPacketCandidates
+        .map((candidatePacket) => ({
+          packet: candidatePacket,
+          keyBinding: candidatePacket.body.identity?.public_key_bindings.find(
+            (binding) =>
+              binding.kid === input.actorAssertion.kid &&
+              binding.status === 'active'
+          ),
+        }))
+        .find(
+          (
+            candidate
+          ): candidate is {
+            packet: PacketEnvelopeByType['Element'];
+            keyBinding: NonNullable<
+              NonNullable<
+                PacketEnvelopeByType['Element']['body']['identity']
+              >['public_key_bindings']
+            >[number];
+          } => Boolean(candidate.keyBinding)
+        ) ?? null;
+
+    if (!assertionSigner) {
       throw new Error('Actor assertion key is not active for that identity.');
     }
 
     const assertionIsValid = await verifyActorAssertion({
       assertion: input.actorAssertion,
-      publicJwk: activeKeyBinding.public_jwk as JsonWebKey,
+      publicJwk: assertionSigner.keyBinding.public_jwk as JsonWebKey,
       body: input.body,
     });
 
@@ -499,27 +673,38 @@ export class NexusAuthService {
       throw new Error('Actor assertion path does not match this request.');
     }
 
+    let hasRecentReauth = false;
+    let hasPasskeyConfirmation = false;
+    let reauthProofMethod: ReauthProofMethod | null = null;
+
     if (storedActorPacket.body.identity?.claim_status === 'claimed') {
       const sessionRecord = this.requireAuthenticatedSession({
         request: input.request,
-        actorPacketId: actorPacket.header.packet_id,
+        actorPacketId: storedActorPacket.header.packet_id,
         csrfToken: input.csrfToken,
       });
-      const securityMode = this.getNormalizedSecurityMode(
+      const securityMode = await this.resolveEffectiveSecurityMode(
         storedActorPacket.header.packet_id
       );
+      const requiresFreshReauth =
+        input.requiredProofLevel === 'reauth' ||
+        input.requiredProofLevel === 'passkey' ||
+        (!input.requiredProofLevel &&
+          (securityMode === 'every_write' ||
+            (securityMode === 'guarded' &&
+              (input.writeRisk ?? 'standard') === 'high_impact')));
 
-      if (
-        securityMode === 'every_write' ||
-        (securityMode === 'guarded' &&
-          (input.writeRisk ?? 'standard') === 'high_impact')
-      ) {
-        this.consumeReauthToken({
-          actorPacketId: actorPacket.header.packet_id,
+      if (requiresFreshReauth) {
+        const consumedToken = this.consumeReauthToken({
+          actorPacketId: storedActorPacket.header.packet_id,
           sessionId: sessionRecord.session_id,
           reauthToken: input.reauthToken,
           purpose: 'interaction',
         });
+        hasRecentReauth = true;
+        hasPasskeyConfirmation =
+          consumedToken.proof_method === 'passkey_confirmation';
+        reauthProofMethod = consumedToken.proof_method;
       }
     }
 
@@ -530,6 +715,23 @@ export class NexusAuthService {
         storedActorPacket.body.identity?.claim_status === 'claimed'
           ? 'scope_member'
           : 'anonymous_guest',
+      proofBundle: {
+        actor_packet_id: storedActorPacket.header.packet_id,
+        is_claimed_identity:
+          storedActorPacket.body.identity?.claim_status === 'claimed',
+        has_actor_assertion: true,
+        has_claimed_session:
+          storedActorPacket.body.identity?.claim_status === 'claimed',
+        has_unlocked_identity: true,
+        has_recent_reauth: hasRecentReauth,
+        has_passkey_confirmation: hasPasskeyConfirmation,
+        proof_methods: this.toMutationProofMethods({
+          isClaimedIdentity:
+            storedActorPacket.body.identity?.claim_status === 'claimed',
+          isUnlockedIdentity: true,
+          reauthProofMethod,
+        }),
+      },
     };
   }
 
@@ -958,14 +1160,20 @@ export class NexusAuthService {
       throw new Error('Unknown or revoked passkey credential.');
     }
 
-    const assertion = await verifyPasskeyAssertion({
-      credential: input.credential,
-      expectedChallenge: challenge.challenge,
-      expectedOrigin: getRequestOrigin(input.request),
-      expectedRpId: getRequestRpId(input.request),
-      publicKeySpki: passkey.public_key_spki,
-      previousCounter: passkey.sign_count,
-    });
+    let assertion: Awaited<ReturnType<typeof verifyPasskeyAssertion>>;
+
+    try {
+      assertion = await verifyPasskeyAssertion({
+        credential: input.credential,
+        expectedChallenge: challenge.challenge,
+        expectedOrigin: getRequestOrigin(input.request),
+        expectedRpId: getRequestRpId(input.request),
+        publicKeySpki: passkey.public_key_spki,
+        previousCounter: passkey.sign_count,
+      });
+    } catch (error) {
+      throw this.normalizePasskeyAssertionError(error, 'sign-in');
+    }
 
     this.withDatabase((database) => {
       database.exec('BEGIN IMMEDIATE');
@@ -1108,14 +1316,20 @@ export class NexusAuthService {
       throw new Error('That passkey does not belong to this claimed identity.');
     }
 
-    const assertion = await verifyPasskeyAssertion({
-      credential: input.credential,
-      expectedChallenge: challenge.challenge,
-      expectedOrigin: getRequestOrigin(input.request),
-      expectedRpId: getRequestRpId(input.request),
-      publicKeySpki: passkey.public_key_spki,
-      previousCounter: passkey.sign_count,
-    });
+    let assertion: Awaited<ReturnType<typeof verifyPasskeyAssertion>>;
+
+    try {
+      assertion = await verifyPasskeyAssertion({
+        credential: input.credential,
+        expectedChallenge: challenge.challenge,
+        expectedOrigin: getRequestOrigin(input.request),
+        expectedRpId: getRequestRpId(input.request),
+        publicKeySpki: passkey.public_key_spki,
+        previousCounter: passkey.sign_count,
+      });
+    } catch (error) {
+      throw this.normalizePasskeyAssertionError(error, 're-approval');
+    }
 
     this.withDatabase((database) => {
       database.exec('BEGIN IMMEDIATE');
@@ -1154,6 +1368,7 @@ export class NexusAuthService {
       actorPacketId: sessionRecord.actor_packet_id,
       sessionId: sessionRecord.session_id,
       purpose: input.purpose,
+      proofMethod: 'passkey_confirmation',
     });
 
     this.writeAuthEvent({
@@ -1169,6 +1384,7 @@ export class NexusAuthService {
     return {
       reauth_token: token.reauth_token_id,
       expires_at: token.expires_at,
+      proof_method: token.proof_method,
     };
   }
 
@@ -1178,6 +1394,7 @@ export class NexusAuthService {
     actorPacket: unknown;
     actorAssertion: ActorAssertion;
     purpose: ReauthPurpose;
+    proofMethod?: ReauthProofMethod;
   }): Promise<NexusReauthVerifyPayload> {
     assertRecentAssertion(input.actorAssertion.issued_at);
 
@@ -1203,6 +1420,7 @@ export class NexusAuthService {
       publicJwk: activeKeyBinding.public_jwk as JsonWebKey,
       body: {
         purpose: input.purpose,
+        proof_method: input.proofMethod ?? 'signed_reauth',
       },
     });
 
@@ -1226,6 +1444,7 @@ export class NexusAuthService {
       actorPacketId: sessionRecord.actor_packet_id,
       sessionId: sessionRecord.session_id,
       purpose: input.purpose,
+      proofMethod: input.proofMethod ?? 'signed_reauth',
     });
 
     this.writeAuthEvent({
@@ -1235,12 +1454,14 @@ export class NexusAuthService {
       metadata: {
         auth_method: 'signed-reauth',
         purpose: input.purpose,
+        proof_method: token.proof_method,
       },
     });
 
     return {
       reauth_token: token.reauth_token_id,
       expires_at: token.expires_at,
+      proof_method: token.proof_method,
     };
   }
 
@@ -1610,7 +1831,9 @@ export class NexusAuthService {
     });
 
     return {
-      security_mode: this.getNormalizedSecurityMode(sessionRecord.actor_packet_id),
+      security_mode: await this.resolveEffectiveSecurityMode(
+        sessionRecord.actor_packet_id
+      ),
     };
   }
 

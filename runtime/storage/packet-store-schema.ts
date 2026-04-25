@@ -234,6 +234,7 @@ CREATE TABLE IF NOT EXISTS auth_reauth_tokens (
   actor_packet_id TEXT NOT NULL,
   session_id TEXT NOT NULL,
   purpose TEXT NOT NULL,
+  proof_method TEXT NOT NULL DEFAULT 'signed_reauth',
   created_at TEXT NOT NULL,
   expires_at TEXT NOT NULL,
   used_at TEXT,

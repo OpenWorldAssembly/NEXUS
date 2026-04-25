@@ -9,6 +9,10 @@ import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
+import {
+  IdentityField,
+  IdentityInput,
+} from '@app/components/nexus/nexus-identity-ui';
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
 import {
   isNexusAuthGateError,
@@ -51,10 +55,15 @@ function getGateTitle(reason: NexusAuthGateReason): string {
   }
 }
 
-function getGateMessage(reason: NexusAuthGateReason): string {
+function getGateMessage(
+  reason: NexusAuthGateReason,
+  hasPendingAction: boolean
+): string {
   switch (reason) {
     case 'unlock_required':
-      return 'Your claimed session is active, but the local signing bundle is locked. Unlock this identity before Nexus signs packets from this device.';
+      return hasPendingAction
+        ? 'Your claimed session is active, but the local signing bundle is locked. Enter the bundle passphrase once to unlock this identity, approve the pending action, and continue without losing your draft.'
+        : 'Your claimed session is active, but the local signing bundle is locked. Unlock this identity before Nexus signs packets from this device.';
     case 'session_refresh_required':
       return 'Refresh or sign in to your claimed identity before writing Nexus packets.';
     case 'write_approval_required':
@@ -85,10 +94,34 @@ function getPrimaryLabel(reason: NexusAuthGateReason): string {
 
 function NexusAuthGateModal(input: {
   gate: NexusAuthGateState;
+  currentLabel: string;
+  hasAvailablePasskeyApproval: boolean;
+  hasPendingAction: boolean;
+  unlockPassphrase: string;
+  gateErrorMessage: string | null;
+  isSubmitting: boolean;
+  onChangeUnlockPassphrase: (nextValue: string) => void;
   onDismiss: () => void;
-  onPrimary: () => void;
+  onPrimary: () => void | Promise<void>;
+  onUsePasskey: () => void | Promise<void>;
+  onSetUpPasskey: () => void;
 }) {
   const appearance = useNexusAppearance();
+  const showPasswordField =
+    input.gate.reason === 'unlock_required' ||
+    input.gate.reason === 'write_approval_required';
+  const passwordLabel =
+    input.gate.reason === 'write_approval_required'
+      ? `Enter your password for ${input.currentLabel}`
+      : input.hasPendingAction
+        ? `Enter your password for ${input.currentLabel}`
+        : 'Bundle passphrase';
+  const passwordHint =
+    input.gate.reason === 'write_approval_required'
+      ? 'Fresh password entry approves this protected write and then resumes the pending action.'
+      : input.hasPendingAction
+        ? 'Fresh password entry unlocks the local bundle, satisfies this protected write, and then resumes the pending action.'
+        : 'Unlock stays local to this device and does not change your claimed session.';
 
   return (
     <View className="absolute inset-0 items-center justify-center bg-black/55 px-5">
@@ -102,13 +135,58 @@ function NexusAuthGateModal(input: {
           {getGateTitle(input.gate.reason)}
         </Text>
         <Text className={appearance.itemBodyClass}>
-          {getGateMessage(input.gate.reason)}
+          {getGateMessage(input.gate.reason, input.hasPendingAction)}
         </Text>
+        {showPasswordField ? (
+          <IdentityField
+            label={passwordLabel}
+            hint={passwordHint}
+            error={input.gateErrorMessage ?? undefined}
+          >
+            <IdentityInput
+              value={input.unlockPassphrase}
+              onChangeText={input.onChangeUnlockPassphrase}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoFocus
+              placeholder="Enter the bundle passphrase"
+              editable={!input.isSubmitting}
+              onSubmitEditing={() => {
+                void input.onPrimary();
+              }}
+            />
+          </IdentityField>
+        ) : input.gateErrorMessage ? (
+          <Text className="text-sm text-nexus-rose">{input.gateErrorMessage}</Text>
+        ) : null}
+        {input.gate.reason === 'write_approval_required' ? (
+          <Pressable
+            accessibilityRole="button"
+            disabled={input.isSubmitting}
+            onPress={() => {
+              if (input.hasAvailablePasskeyApproval) {
+                void input.onUsePasskey();
+                return;
+              }
+
+              input.onSetUpPasskey();
+            }}
+          >
+            <Text className="text-sm font-semibold text-nexus-sky">
+              {input.hasAvailablePasskeyApproval
+                ? 'Or use passkey'
+                : 'Or set up passkey'}
+            </Text>
+          </Pressable>
+        ) : null}
         <View className="flex-row flex-wrap gap-3">
           <NexusActionButton
             label={getPrimaryLabel(input.gate.reason)}
             variant="primary"
-            onPress={input.onPrimary}
+            onPress={() => {
+              void input.onPrimary();
+            }}
           />
           <NexusActionButton
             label="Go back"
@@ -131,19 +209,33 @@ export function useNexusAuthGate(input: {
     action: () => void | Promise<void>
   ) => Promise<void>;
   openNexusAuthGate: (reason: NexusAuthGateReason) => void;
-  openNexusAuthGateForError: (error: unknown) => boolean;
+  openNexusAuthGateForError: (
+    error: unknown,
+    retryAction?: () => void | Promise<void>
+  ) => boolean;
 } {
   const router = useRouter();
   const {
     currentMode,
+    currentActorPacketId,
+    currentLabel,
+    hasAvailablePasskeyApproval,
     isAuthenticated,
     isCurrentIdentityUnlocked,
-    securityMode,
+    approveProtectedWriteWithPassphrase,
+    approveProtectedWriteWithPasskey,
+    unlockStoredIdentity,
   } = useIdentityShell();
   const [gate, setGate] = useState<NexusAuthGateState | null>(null);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
+  const [unlockPassphrase, setUnlockPassphrase] = useState('');
+  const [gateErrorMessage, setGateErrorMessage] = useState<string | null>(null);
+  const [isSubmittingGate, setIsSubmittingGate] = useState(false);
 
   const openNexusAuthGate = (reason: NexusAuthGateReason) => {
+    setUnlockPassphrase('');
+    setGateErrorMessage(null);
+    setIsSubmittingGate(false);
     setGate({
       reason,
       returnTo: input.returnTo,
@@ -170,14 +262,6 @@ export function useNexusAuthGate(input: {
       return 'unlock_required';
     }
 
-    if (
-      currentMode === 'claimed' &&
-      (securityMode === 'every_write' ||
-        (securityMode === 'guarded' && options.writeRisk === 'high_impact'))
-    ) {
-      return 'write_approval_required';
-    }
-
     return null;
   };
 
@@ -188,7 +272,7 @@ export function useNexusAuthGate(input: {
     const requiredGate = getRequiredGate(options);
 
     if (requiredGate) {
-      if (requiredGate === 'write_approval_required') {
+      if (requiredGate === 'unlock_required') {
         setPendingAction(() => action);
       }
 
@@ -199,9 +283,16 @@ export function useNexusAuthGate(input: {
     await action();
   };
 
-  const openNexusAuthGateForError = (error: unknown): boolean => {
+  const openNexusAuthGateForError = (
+    error: unknown,
+    retryAction?: () => void | Promise<void>
+  ): boolean => {
     if (!isNexusAuthGateError(error)) {
       return false;
+    }
+
+    if (retryAction) {
+      setPendingAction(() => retryAction);
     }
 
     openNexusAuthGate(error.reason);
@@ -211,9 +302,12 @@ export function useNexusAuthGate(input: {
   const handleDismiss = () => {
     setGate(null);
     setPendingAction(null);
+    setUnlockPassphrase('');
+    setGateErrorMessage(null);
+    setIsSubmittingGate(false);
   };
 
-  const handlePrimary = () => {
+  const handlePrimary = async () => {
     if (!gate) {
       return;
     }
@@ -231,12 +325,74 @@ export function useNexusAuthGate(input: {
       return;
     }
 
+    if (gate.reason === 'unlock_required') {
+      if (!currentActorPacketId) {
+        setGateErrorMessage('No claimed identity is active for this unlock request.');
+        return;
+      }
+
+      if (!unlockPassphrase.trim()) {
+        setGateErrorMessage('Enter the bundle passphrase to unlock this identity.');
+        return;
+      }
+
+      setIsSubmittingGate(true);
+      setGateErrorMessage(null);
+
+      try {
+        if (pendingAction) {
+          await approveProtectedWriteWithPassphrase(unlockPassphrase);
+        } else {
+          await unlockStoredIdentity({
+            actorPacketId: currentActorPacketId,
+            passphrase: unlockPassphrase,
+          });
+        }
+        const action = pendingAction;
+
+        setGate(null);
+        setPendingAction(null);
+        setUnlockPassphrase('');
+        setGateErrorMessage(null);
+        setIsSubmittingGate(false);
+        await action?.();
+      } catch (error) {
+        setIsSubmittingGate(false);
+        setGateErrorMessage(
+          error instanceof Error ? error.message : 'Unable to unlock this identity.'
+        );
+      }
+
+      return;
+    }
+
     if (gate.reason === 'write_approval_required') {
+      if (!unlockPassphrase.trim()) {
+        setGateErrorMessage(`Enter the bundle passphrase for ${currentLabel}.`);
+        return;
+      }
+
+      setIsSubmittingGate(true);
+      setGateErrorMessage(null);
       const action = pendingAction;
 
-      setGate(null);
-      setPendingAction(null);
-      void action?.();
+      try {
+        await approveProtectedWriteWithPassphrase(unlockPassphrase);
+        setGate(null);
+        setPendingAction(null);
+        setUnlockPassphrase('');
+        setGateErrorMessage(null);
+        setIsSubmittingGate(false);
+        await action?.();
+      } catch (error) {
+        setIsSubmittingGate(false);
+        setGateErrorMessage(
+          error instanceof Error
+            ? error.message
+            : 'Unable to approve this protected write.'
+        );
+      }
+
       return;
     }
 
@@ -255,8 +411,42 @@ export function useNexusAuthGate(input: {
     authGateModal: gate ? (
       <NexusAuthGateModal
         gate={gate}
+        currentLabel={currentLabel}
+        hasAvailablePasskeyApproval={hasAvailablePasskeyApproval}
+        hasPendingAction={Boolean(pendingAction)}
+        unlockPassphrase={unlockPassphrase}
+        gateErrorMessage={gateErrorMessage}
+        isSubmitting={isSubmittingGate}
+        onChangeUnlockPassphrase={setUnlockPassphrase}
         onDismiss={handleDismiss}
         onPrimary={handlePrimary}
+        onUsePasskey={async () => {
+          const action = pendingAction;
+
+          setIsSubmittingGate(true);
+          setGateErrorMessage(null);
+
+          try {
+            await approveProtectedWriteWithPasskey();
+            setGate(null);
+            setPendingAction(null);
+            setUnlockPassphrase('');
+            setGateErrorMessage(null);
+            setIsSubmittingGate(false);
+            await action?.();
+          } catch (error) {
+            setIsSubmittingGate(false);
+            setGateErrorMessage(
+              error instanceof Error
+                ? error.message
+                : 'Unable to approve this protected write.'
+            );
+          }
+        }}
+        onSetUpPasskey={() => {
+          handleDismiss();
+          router.push('/nexus/identity/security');
+        }}
       />
     ) : null,
     guardNexusWrite,

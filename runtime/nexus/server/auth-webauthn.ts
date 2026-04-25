@@ -86,6 +86,114 @@ function sha256Text(input: string): Uint8Array {
   return sha256Bytes(new TextEncoder().encode(input));
 }
 
+function readDerLength(input: Uint8Array, offset: number): {
+  length: number;
+  nextOffset: number;
+} {
+  const firstByte = input[offset];
+
+  if (typeof firstByte !== 'number') {
+    throw new Error('Passkey signature DER encoding is truncated.');
+  }
+
+  if ((firstByte & 0x80) === 0) {
+    return {
+      length: firstByte,
+      nextOffset: offset + 1,
+    };
+  }
+
+  const lengthByteCount = firstByte & 0x7f;
+
+  if (lengthByteCount === 0 || lengthByteCount > 4) {
+    throw new Error('Passkey signature DER length encoding is invalid.');
+  }
+
+  let length = 0;
+
+  for (let index = 0; index < lengthByteCount; index += 1) {
+    const nextByte = input[offset + 1 + index];
+
+    if (typeof nextByte !== 'number') {
+      throw new Error('Passkey signature DER encoding is truncated.');
+    }
+
+    length = (length << 8) | nextByte;
+  }
+
+  return {
+    length,
+    nextOffset: offset + 1 + lengthByteCount,
+  };
+}
+
+function normalizeEcdsaDerInteger(input: Uint8Array, componentLength: number): Uint8Array {
+  let value = input;
+
+  while (value.length > 1 && value[0] === 0) {
+    value = value.slice(1);
+  }
+
+  if (value.length > componentLength) {
+    throw new Error('Passkey signature DER integer is too large.');
+  }
+
+  const normalized = new Uint8Array(componentLength);
+  normalized.set(value, componentLength - value.length);
+
+  return normalized;
+}
+
+function normalizePasskeySignature(signature: Uint8Array): Uint8Array {
+  const P256_COMPONENT_LENGTH = 32;
+  const rawLength = P256_COMPONENT_LENGTH * 2;
+
+  if (signature.length === rawLength && signature[0] !== 0x30) {
+    return signature;
+  }
+
+  if (signature[0] !== 0x30) {
+    throw new Error('Passkey signature encoding is invalid.');
+  }
+
+  const sequenceLength = readDerLength(signature, 1);
+  const sequenceEnd = sequenceLength.nextOffset + sequenceLength.length;
+
+  if (sequenceEnd !== signature.length) {
+    throw new Error('Passkey signature DER sequence length is invalid.');
+  }
+
+  if (signature[sequenceLength.nextOffset] !== 0x02) {
+    throw new Error('Passkey signature DER is missing the R component.');
+  }
+
+  const rLength = readDerLength(signature, sequenceLength.nextOffset + 1);
+  const rEnd = rLength.nextOffset + rLength.length;
+  const rBytes = signature.slice(rLength.nextOffset, rEnd);
+
+  if (signature[rEnd] !== 0x02) {
+    throw new Error('Passkey signature DER is missing the S component.');
+  }
+
+  const sLength = readDerLength(signature, rEnd + 1);
+  const sEnd = sLength.nextOffset + sLength.length;
+
+  if (sEnd !== sequenceEnd) {
+    throw new Error('Passkey signature DER has trailing data.');
+  }
+
+  const sBytes = signature.slice(sLength.nextOffset, sEnd);
+  const normalized = new Uint8Array(rawLength);
+
+  normalized.set(normalizeEcdsaDerInteger(rBytes, P256_COMPONENT_LENGTH), 0);
+  normalized.set(
+    normalizeEcdsaDerInteger(sBytes, P256_COMPONENT_LENGTH),
+    P256_COMPONENT_LENGTH
+  );
+
+  return normalized;
+}
+
 function parseClientDataJson(input: string): {
   type: string;
   challenge: string;
@@ -356,7 +464,7 @@ export async function verifyPasskeyAssertion(input: {
       hash: 'SHA-256',
     },
     publicKey,
-    toArrayBuffer(decodeBase64Url(input.credential.signature)),
+    toArrayBuffer(normalizePasskeySignature(decodeBase64Url(input.credential.signature))),
     toArrayBuffer(signedPayload)
   );
 

@@ -10,14 +10,19 @@ import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 import type {
   PacketEdgeQuery,
   PacketHeadStatus,
+  PacketReadValue,
   PacketStore,
 } from '@core/contracts';
 import {
+  inspectPacketEnvelope,
   parsePacketEnvelope,
+  parseRawPacketEnvelopeInput,
+  preparePacketEnvelopeForAdaptedWrite,
   type PacketEdge,
   type PacketEnvelope,
   type PacketEnvelopeByType,
   type PacketFamily,
+  type PacketReadMode,
   type PacketMergeStrategy,
   type PacketRef,
   type PacketRevisionRef,
@@ -59,6 +64,13 @@ interface PacketEdgeRow {
   edge_type: string;
   target_packet_id: string;
   metadata_json: string;
+}
+
+interface StoredPacketJsonOverrides {
+  revision_json: string;
+  header_json: string;
+  body_json: string;
+  preferred_revision_json: string;
 }
 
 /**
@@ -221,7 +233,18 @@ export class NodeSQLitePacketStore implements PacketStore {
    */
   async writeRevision(packetInput: PacketEnvelope): Promise<PacketRevisionRef> {
     const packet = this.validate(packetInput);
-    const revisionRecord = projectPacketRevisionRecord(packet);
+    return this.writeValidatedRevision(packet);
+  }
+
+  private async writeValidatedRevision(
+    packet: PacketEnvelope,
+    storedPacketJsonOverrides: StoredPacketJsonOverrides | null = null
+  ): Promise<PacketRevisionRef> {
+    const revisionRecord = projectPacketRevisionRecord(packet, {
+      revision_json: storedPacketJsonOverrides?.revision_json,
+      header_json: storedPacketJsonOverrides?.header_json,
+      body_json: storedPacketJsonOverrides?.body_json,
+    });
     const packetRecordInsert = this.getPacketRow(packet.header.packet_id);
     let hasPacketRow = packetRecordInsert !== null;
     const parentRevisionIds = packet.header.parent_revision_refs.map(
@@ -425,7 +448,8 @@ export class NodeSQLitePacketStore implements PacketStore {
         preferred_revision_id: packet.header.revision_id,
         head_revision_ids: nextHeadRevisionIds,
         revision_state: revisionState,
-        preferred_revision_json: JSON.stringify(packet),
+        preferred_revision_json:
+          storedPacketJsonOverrides?.preferred_revision_json ?? JSON.stringify(packet),
       });
       const packetUpdateRecord = {
         packet_id: packetRecord.packet_id,
@@ -605,6 +629,17 @@ export class NodeSQLitePacketStore implements PacketStore {
    * Output: the preferred revision packet for that packet id, when present.
    */
   async fetchByPacket(packet: PacketRef): Promise<PacketEnvelope | null> {
+    return (await this.readByPacket(packet, {
+      mode: 'adapted',
+    })) as PacketEnvelope | null;
+  }
+
+  async readByPacket<TMode extends PacketReadMode>(
+    packet: PacketRef,
+    options: {
+      mode?: TMode;
+    } = {}
+  ): Promise<PacketReadValue<TMode> | null> {
     const row = this.database
       .prepare(
         `
@@ -619,7 +654,10 @@ export class NodeSQLitePacketStore implements PacketStore {
       return null;
     }
 
-    return parsePacketEnvelope(JSON.parse(row.preferred_revision_json));
+    return this.readStoredPacketJson(
+      row.preferred_revision_json,
+      (options.mode ?? 'adapted') as TMode
+    );
   }
 
   /**
@@ -629,6 +667,17 @@ export class NodeSQLitePacketStore implements PacketStore {
   async fetchByRevision(
     revision: PacketRevisionRef
   ): Promise<PacketEnvelope | null> {
+    return (await this.readByRevision(revision, {
+      mode: 'adapted',
+    })) as PacketEnvelope | null;
+  }
+
+  async readByRevision<TMode extends PacketReadMode>(
+    revision: PacketRevisionRef,
+    options: {
+      mode?: TMode;
+    } = {}
+  ): Promise<PacketReadValue<TMode> | null> {
     const row = this.database
       .prepare(
         `
@@ -646,7 +695,24 @@ export class NodeSQLitePacketStore implements PacketStore {
       return null;
     }
 
-    return parsePacketEnvelope(JSON.parse(row.revision_json));
+    return this.readStoredPacketJson(
+      row.revision_json,
+      (options.mode ?? 'adapted') as TMode
+    );
+  }
+
+  async prepareRevisionForAdaptedSave(
+    revision: PacketRevisionRef
+  ) {
+    const compatibilityRead = await this.readByRevision(revision, {
+      mode: 'raw_plus_adaptation',
+    });
+
+    if (!compatibilityRead) {
+      return null;
+    }
+
+    return preparePacketEnvelopeForAdaptedWrite(compatibilityRead.raw_packet);
   }
 
   /**
@@ -840,10 +906,20 @@ export class NodeSQLitePacketStore implements PacketStore {
     const packetIds = new Set<string>();
 
     for (const rawPacket of revisionsRaw) {
-      const packet = this.validate(rawPacket);
+      const compatibilityRead = inspectPacketEnvelope(rawPacket);
+      const rawEnvelope = parseRawPacketEnvelopeInput(rawPacket);
+      const storedPacketJsonOverrides = {
+        revision_json: JSON.stringify(rawPacket),
+        header_json: JSON.stringify(rawEnvelope.header),
+        body_json: JSON.stringify(rawEnvelope.body),
+        preferred_revision_json: JSON.stringify(rawPacket),
+      };
 
       try {
-        await this.writeRevision(packet);
+        await this.writeValidatedRevision(
+          compatibilityRead.adapted_packet,
+          storedPacketJsonOverrides
+        );
       } catch (error) {
         if (
           error instanceof Error &&
@@ -856,8 +932,8 @@ export class NodeSQLitePacketStore implements PacketStore {
       }
 
       revisionCount += 1;
-      edgeCount += packet.header.edges.length;
-      packetIds.add(packet.header.packet_id);
+      edgeCount += compatibilityRead.adapted_packet.header.edges.length;
+      packetIds.add(compatibilityRead.adapted_packet.header.packet_id);
     }
 
     return {
@@ -877,7 +953,7 @@ export class NodeSQLitePacketStore implements PacketStore {
     revision_count: number;
   }> {
     const packetIds = Array.from(new Set(packetRefs.map((packet) => packet.packet_id)));
-    const revisions: PacketEnvelope[] = [];
+    const revisions: unknown[] = [];
     let packetCount = 0;
 
     for (const packetId of packetIds) {
@@ -897,7 +973,7 @@ export class NodeSQLitePacketStore implements PacketStore {
       }
 
       for (const revisionRow of revisionRows) {
-        revisions.push(parsePacketEnvelope(JSON.parse(revisionRow.revision_json)));
+        revisions.push(JSON.parse(revisionRow.revision_json));
       }
     }
 
@@ -963,7 +1039,10 @@ export class NodeSQLitePacketStore implements PacketStore {
     return rows
       .map((row) => row.preferred_revision_json)
       .filter((value): value is string => typeof value === 'string')
-      .map((value) => parsePacketEnvelope(JSON.parse(value)) as PacketEnvelopeByType[TFamily]);
+      .map(
+        (value) =>
+          this.readStoredPacketJson(value, 'adapted') as PacketEnvelopeByType[TFamily]
+      );
   }
 
   /**
@@ -984,7 +1063,7 @@ export class NodeSQLitePacketStore implements PacketStore {
     return rows
       .map((row) => row.preferred_revision_json)
       .filter((value): value is string => typeof value === 'string')
-      .map((value) => parsePacketEnvelope(JSON.parse(value)));
+      .map((value) => this.readStoredPacketJson(value, 'adapted') as PacketEnvelope);
   }
 
   /**
@@ -1027,6 +1106,25 @@ export class NodeSQLitePacketStore implements PacketStore {
     }
 
     return parseJson<string[]>(row.head_revision_ids_json, []);
+  }
+
+  private readStoredPacketJson<TMode extends PacketReadMode>(
+    storedPacketJson: string,
+    mode: TMode
+  ): PacketReadValue<TMode> {
+    const rawPacket = JSON.parse(storedPacketJson);
+
+    if (mode === 'raw') {
+      return rawPacket as PacketReadValue<TMode>;
+    }
+
+    const compatibilityRead = inspectPacketEnvelope(rawPacket);
+
+    if (mode === 'raw_plus_adaptation') {
+      return compatibilityRead as PacketReadValue<TMode>;
+    }
+
+    return compatibilityRead.adapted_packet as PacketReadValue<TMode>;
   }
 
   /**
