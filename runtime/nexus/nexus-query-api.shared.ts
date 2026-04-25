@@ -3,6 +3,17 @@
  * Description: Shared client-side fetch helpers for Nexus query and mutation APIs.
  */
 
+export class NexusApiError extends Error {
+  readonly status: number;
+  readonly payload: unknown;
+
+  constructor(input: { message: string; status: number; payload: unknown }) {
+    super(input.message);
+    this.status = input.status;
+    this.payload = input.payload;
+  }
+}
+
 async function readApiErrorMessage(response: Response): Promise<string> {
   try {
     const parsedError = (await response.json()) as { error?: string };
@@ -24,7 +35,19 @@ export async function fetchJsonOrThrow<TPayload>(
   const response = await fetch(path, init);
 
   if (!response.ok) {
-    throw new Error(await readApiErrorMessage(response));
+    let payload: unknown = null;
+
+    try {
+      payload = await response.clone().json();
+    } catch {
+      payload = null;
+    }
+
+    throw new NexusApiError({
+      message: await readApiErrorMessage(response),
+      status: response.status,
+      payload,
+    });
   }
 
   return (await response.json()) as TPayload;
@@ -44,7 +67,19 @@ export async function fetchMutationJsonOrThrow<TPayload>(input: {
   });
 
   if (!response.ok) {
-    throw new Error(await readApiErrorMessage(response));
+    let payload: unknown = null;
+
+    try {
+      payload = await response.clone().json();
+    } catch {
+      payload = null;
+    }
+
+    throw new NexusApiError({
+      message: await readApiErrorMessage(response),
+      status: response.status,
+      payload,
+    });
   }
 
   return (await response.json()) as TPayload;

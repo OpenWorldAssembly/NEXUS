@@ -8,6 +8,7 @@ import { z } from 'zod';
 
 import type { MutationIntent } from '@core/auth/mutation-corridor';
 import { getNexusPacketServices } from '@runtime/nexus/server/nexus-packet-services';
+import { LocalityDuplicateWarningError } from '@runtime/nexus/server/locality-directory-service';
 
 const ActorAssertionSchema = z
   .object({
@@ -50,6 +51,96 @@ const MutationIntentSchema = z.discriminatedUnion('kind', [
       scope_id: z.string().min(1),
       target_packet_id: z.string().min(1),
       value: z.union([z.literal(-1), z.literal(0), z.literal(1)]),
+      created_at: z.string().optional().nullable().default(null),
+      mutation_nonce: z.string().optional().nullable().default(null),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('assembly.element.create'),
+      name: z.string().min(1),
+      parent_scope_packet_id: z.string().min(1),
+      subtype: z.string().min(1).optional().nullable().default(null),
+      summary: z.string().min(1).optional().nullable().default(null),
+      locality_label: z.string().min(1).optional().nullable().default(null),
+      seed_discussions: z.boolean().optional().default(true),
+      claim_association: z.boolean().optional().default(true),
+      claim_note: z.string().min(1).optional().nullable().default(null),
+      created_at: z.string().optional().nullable().default(null),
+      mutation_nonce: z.string().optional().nullable().default(null),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('assembly_association.claim.set'),
+      assembly_packet_id: z.string().min(1),
+      scope_id: z.string().min(1),
+      note: z.string().min(1).optional().nullable().default(null),
+      value: z.union([z.literal(-1), z.literal(0), z.literal(1)]).default(1),
+      created_at: z.string().optional().nullable().default(null),
+      mutation_nonce: z.string().optional().nullable().default(null),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('home_locality.claim.set'),
+      home_scope_packet_id: z.string().min(1).optional().nullable().default(null),
+      created_at: z.string().optional().nullable().default(null),
+      mutation_nonce: z.string().optional().nullable().default(null),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('role_association.claim.set'),
+      scope_id: z.string().min(1),
+      role_packet_id: z.string().min(1),
+      claimed: z.boolean(),
+      created_at: z.string().optional().nullable().default(null),
+      mutation_nonce: z.string().optional().nullable().default(null),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('role_association.attestation.set'),
+      scope_id: z.string().min(1),
+      claim_packet_id: z.string().min(1),
+      mode: z.enum(['support', 'dispute', 'clear']),
+      note: z.string().optional().nullable().default(null),
+      created_at: z.string().optional().nullable().default(null),
+      mutation_nonce: z.string().optional().nullable().default(null),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('locality.path.create'),
+      path: z
+        .array(
+          z
+            .object({
+              level: z.enum(['nation', 'region', 'city', 'district']),
+              name: z.string().trim().max(120).default(''),
+              existing_scope_id: z
+                .string()
+                .min(1)
+                .optional()
+                .nullable()
+                .default(null),
+              alias_keys: z.array(z.string().min(1)).optional().default([]),
+              display_aliases: z.array(z.string().min(1)).optional().default([]),
+            })
+            .strict()
+        )
+        .min(1)
+        .max(4),
+      create_anyway: z.boolean().optional().default(false),
+      created_at: z.string().optional().nullable().default(null),
+      mutation_nonce: z.string().optional().nullable().default(null),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('discussion.surfaces.ensure'),
+      scope_id: z.string().min(1),
       created_at: z.string().optional().nullable().default(null),
       mutation_nonce: z.string().optional().nullable().default(null),
     })
@@ -109,6 +200,16 @@ export const POST: RequestHandler = async (request) => {
 
     return createJsonResponse(result);
   } catch (error) {
+    if (error instanceof LocalityDuplicateWarningError) {
+      return createJsonResponse(
+        {
+          error: error.message,
+          duplicate_warnings: error.duplicateWarnings,
+        },
+        409
+      );
+    }
+
     return createJsonResponse(
       {
         error:

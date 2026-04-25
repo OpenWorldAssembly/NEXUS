@@ -28,7 +28,7 @@ const FinalizeMutationRequestSchema = z
     csrf_token: z.string().min(1).optional().nullable().default(null),
     reauth_token: z.string().min(1).optional().nullable().default(null),
     ticket_id: z.string().min(1),
-    signed_packets: z.array(z.unknown()).min(1),
+    signed_packets: z.array(z.unknown()),
   })
   .strict();
 

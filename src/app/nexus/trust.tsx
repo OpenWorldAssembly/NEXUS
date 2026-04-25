@@ -19,11 +19,7 @@ import {
   useNexusAppearance,
 } from '@app/components/nexus/nexus-ui';
 import type { NexusTrustPayload } from '@runtime/nexus/nexus-api-types';
-import {
-  fetchNexusTrustPayload,
-  setNexusHomeLocality,
-  setNexusAssemblyAssociationClaim,
-} from '@runtime/nexus/nexus-query-api';
+import { fetchNexusTrustPayload } from '@runtime/nexus/nexus-query-api';
 
 function formatTrustStage(stage: NexusTrustPayload['trust_stage']): string {
   return stage.replace(/_/g, ' ');
@@ -44,7 +40,7 @@ export default function NexusTrustPage() {
     refreshShellData,
     setScopeFollowed,
   } = useNexusShell();
-  const { createVerifiedRequestBody, currentMode, isAuthenticated } =
+  const { currentMode, isAuthenticated, runFortressMutation } =
     useIdentityShell();
   const { authGateModal, guardNexusWrite, openNexusAuthGateForError } =
     useNexusAuthGate({
@@ -138,18 +134,18 @@ export default function NexusTrustPage() {
       },
       async () => {
         try {
-          const requestBody = await createVerifiedRequestBody(
-            '/api/nexus/assemblies/claims',
-            'PUT',
-            {
+          await runFortressMutation({
+            intent: {
+              kind: 'assembly_association.claim.set',
               assembly_packet_id: activeScope.packetId,
               scope_id: activeScope.id,
-              note: value === 1 && associationNote.trim().length > 0 ? associationNote : null,
+              note:
+                value === 1 && associationNote.trim().length > 0
+                  ? associationNote
+                  : null,
               value,
-            }
-          );
-
-          await setNexusAssemblyAssociationClaim({ requestBody });
+            },
+          });
           const nextTrustPayload = await fetchNexusTrustPayload({
             scopeId: activeScope.id,
             actorPacketId: currentActorPacketId,
@@ -185,15 +181,12 @@ export default function NexusTrustPage() {
       },
       async () => {
         try {
-          const requestBody = await createVerifiedRequestBody(
-            '/api/nexus/locality/home',
-            'PUT',
-            {
+          await runFortressMutation({
+            intent: {
+              kind: 'home_locality.claim.set',
               home_scope_packet_id: homeScopePacketId,
-            }
-          );
-
-          await setNexusHomeLocality({ requestBody });
+            },
+          });
           await Promise.all([
             fetchNexusTrustPayload({
               scopeId: activeScope.id,

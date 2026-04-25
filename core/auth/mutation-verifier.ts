@@ -1,6 +1,6 @@
 /**
  * File: mutation-verifier.ts
- * Description: Builds canonical discussion mutation candidates and evaluates the first fortress write-admission law.
+ * Description: Discussion-specific canonical mutation candidate builders and policy evaluation helpers.
  */
 
 import {

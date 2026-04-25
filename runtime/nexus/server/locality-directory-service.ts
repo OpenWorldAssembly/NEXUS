@@ -260,7 +260,7 @@ function validatePathOrder(path: LocalityCreatePathEntry[]) {
   });
 }
 
-export async function createCanonicalLocalityPath(input: {
+export async function planCanonicalLocalityPath(input: {
   actorPacketId: string;
   path: LocalityCreatePathEntry[];
   createAnyway?: boolean;
@@ -406,12 +406,6 @@ export async function createCanonicalLocalityPath(input: {
       metadata_tags: ['assembly', 'locality', entry.level],
     });
 
-    await services.packetStore.writeRevision(packet);
-    await services.packetStore.publishRevision({
-      packet_id: packet.header.packet_id,
-      revision_id: packet.header.revision_id,
-    });
-
     createdPackets.push(packet);
     packetMap.set(packet.header.packet_id, packet);
     parentByPacketId.set(packet.header.packet_id, parentPacketId);
@@ -440,4 +434,27 @@ export async function createCanonicalLocalityPath(input: {
     }),
     duplicate_warnings: duplicateWarnings,
   };
+}
+
+export async function createCanonicalLocalityPath(input: {
+  actorPacketId: string;
+  path: LocalityCreatePathEntry[];
+  createAnyway?: boolean;
+}): Promise<{
+  created_packets: PacketEnvelopeByType['Element'][];
+  final_result: NexusLocationSearchResult;
+  duplicate_warnings: LocalityDuplicateWarning[];
+}> {
+  const services = await getNexusPacketServices();
+  const plannedResult = await planCanonicalLocalityPath(input);
+
+  for (const packet of plannedResult.created_packets) {
+    await services.packetStore.writeRevision(packet);
+    await services.packetStore.publishRevision({
+      packet_id: packet.header.packet_id,
+      revision_id: packet.header.revision_id,
+    });
+  }
+
+  return plannedResult;
 }

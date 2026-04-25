@@ -23,7 +23,6 @@ import type {
 import type { PacketEnvelope } from '@core/schema/packet-schema';
 import type {
   MutationProofMethod,
-  WriteProofLevel,
 } from '@core/auth/proof-types';
 import type {
   NexusAuthSessionPayload,
@@ -70,14 +69,11 @@ import {
   type NexusStorageMode,
 } from '@runtime/nexus/identity-storage';
 import {
-  finalizeNexusMutation,
-  prepareNexusMutation,
-} from '@runtime/nexus/nexus-query-api.mutations';
-import {
   completePasskeyAssertion,
   isPasskeySupported,
   registerPasskey,
 } from '@runtime/nexus/webauthn';
+import { createIdentityShellFortressAdapter } from '@app/components/nexus/identity-shell-fortress-adapter';
 import { NexusAuthGateError } from '@app/components/nexus/nexus-auth-gate-types';
 const IDENTITY_STORE_NAME = 'identities';
 
@@ -587,60 +583,6 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
     };
   };
 
-  const createVerifiedRequestBodyForIdentity = async <
-    TPayload extends Record<string, unknown>,
-  >(input: {
-    identity: ActiveIdentityState & { privateJwk: JsonWebKey };
-    session: NexusAuthSessionPayload;
-    path: string;
-    method: 'POST' | 'PUT';
-    payload: TPayload;
-  }) => {
-    if (
-      !input.session.is_authenticated ||
-      input.session.actor_packet_id !== input.identity.actorPacket.header.packet_id
-    ) {
-      throw new NexusAuthGateError(
-        'sign_in_required',
-        'Sign in with this claimed identity before writing Nexus packets.'
-      );
-    }
-
-    if (!input.session.csrf_token) {
-      throw new NexusAuthGateError(
-        'session_refresh_required',
-        'Refresh the claimed session before writing Nexus packets.'
-      );
-    }
-
-    const privateKey = await importPrivateKeyFromJwk(input.identity.privateJwk);
-    const actorAssertion = await createActorAssertion({
-      actorPacketId: input.identity.actorPacket.header.packet_id,
-      kid:
-        input.identity.actorPacket.body.identity?.public_key_bindings[0]?.kid ??
-        (() => {
-          throw new Error('The active identity is missing its key binding.');
-        })(),
-      privateKey,
-      method: input.method,
-      path: input.path,
-      body: {
-        actor_packet: input.identity.actorPacket,
-        csrf_token: input.session.csrf_token,
-        reauth_token: null,
-        ...input.payload,
-      },
-    });
-
-    return {
-      actor_packet: input.identity.actorPacket,
-      actor_assertion: actorAssertion,
-      csrf_token: input.session.csrf_token,
-      reauth_token: null,
-      ...input.payload,
-    };
-  };
-
   const setInitialHomeLocality = async (input: {
     identity: ActiveIdentityState & { privateJwk: JsonWebKey };
     session: NexusAuthSessionPayload;
@@ -650,19 +592,13 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
       return;
     }
 
-    const requestBody = await createVerifiedRequestBodyForIdentity({
+    await runFortressMutationForIdentity({
       identity: input.identity,
       session: input.session,
-      path: '/api/nexus/locality/home',
-      method: 'PUT',
-      payload: {
+      intent: {
+        kind: 'home_locality.claim.set',
         home_scope_packet_id: input.homeScopePacketId,
       },
-    });
-
-    await fetchJsonOrThrow('/api/nexus/locality/home', {
-      method: 'PUT',
-      body: requestBody,
     });
   };
 
@@ -1695,6 +1631,18 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
     return pendingInteractionProof.reauthToken;
   };
 
+  const {
+    createVerifiedRequestBody,
+    runFortressMutation,
+    runFortressMutationForIdentity,
+    signCurrentIdentityPacket,
+  } = createIdentityShellFortressAdapter({
+    requireUnlockedCurrentIdentity,
+    refreshAuthSession,
+    ensureFreshReauth,
+    consumePendingInteractionProof,
+  });
+
   const signOut = async () => {
     await fetchJsonOrThrow('/api/nexus/auth/session', {
       method: 'DELETE',
@@ -1730,169 +1678,6 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
     if (currentIdentity?.claimStatus !== 'claimed') {
       await setCurrentGuestBrowserPersistence(nextRememberClaimedSessions);
     }
-  };
-
-  const createVerifiedRequestBody = async <
-    TPayload extends Record<string, unknown>,
-  >(
-    path: string,
-    method: 'POST' | 'PUT',
-    payload: TPayload,
-    options?: {
-      writeRisk?: 'standard' | 'high_impact';
-      skipAutomaticReauth?: boolean;
-      reauthTokenOverride?: string | null;
-    }
-  ) => {
-    const unlockedIdentity = requireUnlockedCurrentIdentity();
-    let csrfToken: string | null = null;
-    let reauthToken = options?.reauthTokenOverride ?? null;
-
-    if (unlockedIdentity.claimStatus === 'claimed') {
-      const currentSession = await refreshAuthSession();
-
-      if (
-        !currentSession.is_authenticated ||
-        currentSession.actor_packet_id !== unlockedIdentity.actorPacket.header.packet_id
-      ) {
-        throw new NexusAuthGateError(
-          'sign_in_required',
-          'Sign in with this claimed identity before writing Nexus packets.'
-        );
-      }
-
-      csrfToken = currentSession.csrf_token;
-
-      if (!csrfToken) {
-        throw new NexusAuthGateError(
-          'session_refresh_required',
-          'Refresh the claimed session before writing Nexus packets.'
-        );
-      }
-
-      const writeRisk = options?.writeRisk ?? 'standard';
-
-      if (
-        !options?.skipAutomaticReauth &&
-        (currentSession.security_mode === 'every_write' ||
-          (currentSession.security_mode === 'guarded' &&
-            writeRisk === 'high_impact'))
-      ) {
-        reauthToken = await ensureFreshReauth('interaction', currentSession);
-      }
-    }
-
-    const privateKey = await importPrivateKeyFromJwk(unlockedIdentity.privateJwk);
-    const actorAssertion = await createActorAssertion({
-      actorPacketId: unlockedIdentity.actorPacket.header.packet_id,
-      kid:
-        unlockedIdentity.actorPacket.body.identity?.public_key_bindings[0]?.kid ??
-        (() => {
-          throw new Error('The active identity is missing its key binding.');
-        })(),
-      privateKey,
-      method,
-      path,
-      body: {
-        actor_packet: unlockedIdentity.actorPacket,
-        csrf_token: csrfToken,
-        reauth_token: reauthToken,
-        ...payload,
-      },
-    });
-
-    return {
-      actor_packet: unlockedIdentity.actorPacket,
-      actor_assertion: actorAssertion,
-      csrf_token: csrfToken,
-      reauth_token: reauthToken,
-      ...payload,
-    };
-  };
-
-  const runFortressMutation = async <TResult = unknown,>(input: {
-    intent: MutationIntent;
-    writeRisk?: 'standard' | 'high_impact';
-  }): Promise<NexusFinalizedMutationPayload & { result: TResult }> => {
-    const prepareRequestBody = await createVerifiedRequestBody(
-      '/api/nexus/mutations/prepare',
-      'POST',
-      {
-        intent: input.intent,
-      },
-      {
-        writeRisk: input.writeRisk,
-        skipAutomaticReauth: true,
-      }
-    );
-    const preparedMutation = await prepareNexusMutation({
-      requestBody: prepareRequestBody,
-    });
-    let reauthToken: string | null = null;
-    const requiredProofLevel = preparedMutation.prepared_mutation
-      .required_proof_level as WriteProofLevel;
-    const acceptedProofMethods = (
-      preparedMutation.prepared_mutation.accepted_proof_methods ?? []
-    ) as MutationProofMethod[];
-
-    if (requiredProofLevel === 'reauth' || requiredProofLevel === 'passkey') {
-      reauthToken = consumePendingInteractionProof({
-        acceptedMethods: acceptedProofMethods,
-      });
-
-      if (!reauthToken) {
-        throw new NexusAuthGateError(
-          'write_approval_required',
-          'Fresh approval is required before this write can continue.'
-        );
-      }
-    }
-
-    const signedPackets = await Promise.all(
-      preparedMutation.prepared_mutation.prepared_packets.map((candidate) =>
-        signCurrentIdentityPacket(candidate.packet)
-      )
-    );
-    const finalizeRequestBody = await createVerifiedRequestBody(
-      '/api/nexus/mutations/finalize',
-      'POST',
-      {
-        ticket_id: preparedMutation.ticket.ticket_id,
-        signed_packets: signedPackets,
-      },
-      {
-        writeRisk: input.writeRisk,
-        skipAutomaticReauth: true,
-        reauthTokenOverride: reauthToken,
-      }
-    );
-    const finalizedMutation = await finalizeNexusMutation({
-      requestBody: finalizeRequestBody,
-    });
-
-    await refreshAuthSession();
-
-    return finalizedMutation as NexusFinalizedMutationPayload & {
-      result: TResult;
-    };
-  };
-
-  const signCurrentIdentityPacket = async <TPacket extends PacketEnvelope,>(
-    packet: TPacket
-  ): Promise<TPacket> => {
-    const unlockedIdentity = requireUnlockedCurrentIdentity();
-    const privateKey = await importPrivateKeyFromJwk(unlockedIdentity.privateJwk);
-
-    return signPacketWithIdentity({
-      packet,
-      signerPacketId: unlockedIdentity.actorPacket.header.packet_id,
-      kid:
-        unlockedIdentity.actorPacket.body.identity?.public_key_bindings[0]?.kid ??
-        (() => {
-          throw new Error('The active identity is missing its key binding.');
-        })(),
-      privateKey,
-    });
   };
 
   const currentLabel = useMemo(() => {

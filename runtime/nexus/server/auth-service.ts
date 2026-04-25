@@ -7,12 +7,11 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 
 import type {
-  MutationProofMethod,
   MutationProofBundle,
+  MutationProofMethod,
   WriteProofLevel,
 } from '@core/auth/proof-types';
-import type { DiscussionActorClass } from '@core/schema/packet-schema';
-import type { PacketEnvelope, PacketEnvelopeByType } from '@core/schema/packet-schema';
+import type { DiscussionActorClass, PacketEnvelopeByType } from '@core/schema/packet-schema';
 import { parsePacketEnvelope } from '@core/schema/packet-schema';
 import type { ActorAssertion } from '@runtime/nexus/identity-crypto';
 import { verifyActorAssertion, verifyPacketSignature } from '@runtime/nexus/identity-crypto';
@@ -27,6 +26,31 @@ import type {
   NexusSecurityPreferencesPayload,
   NexusSessionListPayload,
 } from '@runtime/nexus/nexus-api-types';
+import { NexusAuthStore } from '@runtime/nexus/server/auth-service.store';
+import {
+  AUTH_REFRESH_COOKIE,
+  AUTH_SESSION_COOKIE,
+  SIGN_IN_CHALLENGE_TTL_MS,
+  type AuthMethod,
+  type AuthSessionRecord,
+  type PasskeyRecord,
+  type ReauthProofMethod,
+  type ReauthPurpose,
+  type ReauthTokenRecord,
+  type RefreshTokenRecord,
+  type SecurityPreferenceRecord,
+  type WebAuthnChallengePurpose,
+  type WebAuthnChallengeRecord
+} from '@runtime/nexus/server/auth-service.types';
+import {
+  assertRecentAssertion,
+  createExpiredCookie,
+  isPersonElementPacket,
+  parseCookieHeader,
+  resolveDeviceLabel as resolveAuthDeviceLabel,
+  toPasskeySummary,
+  validateIdentityPacketMetadata
+} from '@runtime/nexus/server/auth-service.utils';
 import {
   createWebAuthnRegistrationOptions,
   createWebAuthnRequestOptions,
@@ -38,34 +62,6 @@ import {
   type SerializedPasskeyAssertionCredential,
   type SerializedPasskeyRegistrationCredential,
 } from '@runtime/nexus/server/auth-webauthn';
-import { NexusAuthStore } from '@runtime/nexus/server/auth-service.store';
-import {
-  AUTH_REFRESH_COOKIE,
-  AUTH_REFRESH_TTL_MS,
-  AUTH_SESSION_COOKIE,
-  AUTH_SESSION_TTL_MS,
-  SIGN_IN_CHALLENGE_TTL_MS,
-  type AuthMethod,
-  type AuthSessionRecord,
-  type PasskeyRecord,
-  type ReauthProofMethod,
-  type ReauthTokenRecord,
-  type ReauthPurpose,
-  type RefreshTokenRecord,
-  type SecurityPreferenceRecord,
-  type WebAuthnChallengePurpose,
-  type WebAuthnChallengeRecord,
-} from '@runtime/nexus/server/auth-service.types';
-import {
-  assertRecentAssertion,
-  createExpiredCookie,
-  formatCookie,
-  isPersonElementPacket,
-  parseCookieHeader,
-  resolveDeviceLabel as resolveAuthDeviceLabel,
-  toPasskeySummary,
-  validateIdentityPacketMetadata,
-} from '@runtime/nexus/server/auth-service.utils';
 import { inferSecurityModeFromWritePolicy } from '@runtime/nexus/server/write-security-mode';
 import type { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store';
 
@@ -190,6 +186,8 @@ export class NexusAuthService {
       }
     }
 
+    // Legacy fallback only: packet-backed write_lock policy is the canonical source of
+    // truth, but older actors may still rely on the runtime projection until migrated.
     return this.store.getNormalizedSecurityMode(actorPacketId);
   }
 
@@ -1788,8 +1786,8 @@ export class NexusAuthService {
 
     const currentPasskeys = this.listActivePasskeys(sessionRecord.actor_packet_id);
 
-    if (currentPasskeys.length <= 1) {
-      throw new Error('Claimed identities must keep at least one registered passkey.');
+    if (currentPasskeys.length < 1) {
+      throw new Error('No active passkey exists for this identity.');
     }
 
     this.withDatabase((database) => {
@@ -1843,51 +1841,10 @@ export class NexusAuthService {
     reauthToken: string | null;
     securityMode: NexusSecurityMode;
   }): Promise<NexusSecurityPreferencesPayload> {
-    const sessionRecord = this.requireAuthenticatedSession({
-      request: input.request,
-      csrfToken: input.csrfToken,
-    });
-
-    this.consumeReauthToken({
-      actorPacketId: sessionRecord.actor_packet_id,
-      sessionId: sessionRecord.session_id,
-      reauthToken: input.reauthToken,
-      purpose: 'sensitive',
-    });
-
-    this.withDatabase((database) => {
-      database
-        .prepare(
-          `
-            INSERT INTO auth_identity_security (
-              actor_packet_id,
-              security_mode,
-              updated_at
-            ) VALUES (?, ?, ?)
-            ON CONFLICT(actor_packet_id) DO UPDATE SET
-              security_mode = excluded.security_mode,
-              updated_at = excluded.updated_at
-          `
-        )
-        .run(
-          sessionRecord.actor_packet_id,
-          input.securityMode,
-          new Date().toISOString()
-        );
-    });
-
-    this.writeAuthEvent({
-      actorPacketId: sessionRecord.actor_packet_id,
-      sessionId: sessionRecord.session_id,
-      eventType: 'security_mode_updated',
-      metadata: {
-        security_mode: input.securityMode,
-      },
-    });
-
-    return {
-      security_mode: input.securityMode,
-    };
+    void input;
+    throw new Error(
+      'Direct runtime security preference writes are deprecated. Use actor.write_policy.update through the mutation corridor.'
+    );
   }
 
   async getUpgradeStatus(

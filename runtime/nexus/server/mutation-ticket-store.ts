@@ -19,6 +19,7 @@ export interface StoredMutationTicket {
   expires_at: string;
   prepared_mutation: PreparedMutation;
   intent: MutationIntent;
+  prepared_result?: unknown;
   consumed_at: string | null;
 }
 
@@ -41,6 +42,7 @@ export class MutationTicketStore {
     actor_packet_id: string;
     prepared_mutation: PreparedMutation;
     intent: MutationIntent;
+    prepared_result?: unknown;
     ttl_ms?: number;
   }): StoredMutationTicket {
     this.cleanupExpired();
@@ -52,6 +54,7 @@ export class MutationTicketStore {
       expires_at: new Date(now + (input.ttl_ms ?? DEFAULT_TICKET_TTL_MS)).toISOString(),
       prepared_mutation: input.prepared_mutation,
       intent: input.intent,
+      prepared_result: input.prepared_result,
       consumed_at: null,
     };
 

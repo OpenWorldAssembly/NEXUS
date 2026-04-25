@@ -30,7 +30,6 @@ import type {
   NexusDiscussionsPayload,
 } from '@runtime/nexus/nexus-api-types';
 import {
-  ensureNexusDiscussionSurfaces,
   fetchNexusDiscussionReplyChildrenPayload,
   fetchNexusDiscussionThreadPayload,
   fetchNexusDiscussionsPayload,
@@ -790,7 +789,6 @@ export default function NexusDiscussionsPage() {
   }>();
   const { activeScope, themeMode } = useNexusShell();
   const {
-    createVerifiedRequestBody,
     currentActorPacketId,
     currentIdentity,
     currentLabel,
@@ -1030,20 +1028,20 @@ export default function NexusDiscussionsPage() {
         setFeedError(null);
 
         try {
-          const requestBody = await createVerifiedRequestBody(
-            '/api/nexus/scopes/[scopeId]/discussions/surfaces',
-            'PUT',
-            {}
-          );
-          const payload = await ensureNexusDiscussionSurfaces({
-            scopeId: activeScope.id,
-            requestBody,
+          const finalizedMutation = await runFortressMutation<{
+            created_packet_refs: { packet_id: string; revision_id: string }[];
+            discussions: NexusDiscussionsPayload;
+          }>({
+            intent: {
+              kind: 'discussion.surfaces.ensure',
+              scope_id: activeScope.id,
+            },
           });
 
-          setFeedPayload(payload.discussions);
-          setFeedPosts(payload.discussions.top_level_posts);
-          setFeedNextCursor(payload.discussions.next_cursor);
-          setFeedHasMore(payload.discussions.has_more);
+          setFeedPayload(finalizedMutation.result.discussions);
+          setFeedPosts(finalizedMutation.result.discussions.top_level_posts);
+          setFeedNextCursor(finalizedMutation.result.discussions.next_cursor);
+          setFeedHasMore(finalizedMutation.result.discussions.has_more);
         } catch (error) {
           if (openNexusAuthGateForError(error)) {
             return;
@@ -1061,9 +1059,9 @@ export default function NexusDiscussionsPage() {
     );
   }, [
     activeScope.id,
-    createVerifiedRequestBody,
     guardNexusWrite,
     openNexusAuthGateForError,
+    runFortressMutation,
   ]);
 
   /**

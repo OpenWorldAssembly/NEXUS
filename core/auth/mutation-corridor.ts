@@ -39,6 +39,79 @@ export type PacketSignalMutationIntent = {
   mutation_nonce?: string | null;
 };
 
+export type AssemblyElementCreateMutationIntent = {
+  kind: 'assembly.element.create';
+  name: string;
+  parent_scope_packet_id: string;
+  subtype?: string | null;
+  summary?: string | null;
+  locality_label?: string | null;
+  seed_discussions?: boolean;
+  claim_association?: boolean;
+  claim_note?: string | null;
+  created_at?: string | null;
+  mutation_nonce?: string | null;
+};
+
+export type AssemblyAssociationClaimMutationIntent = {
+  kind: 'assembly_association.claim.set';
+  assembly_packet_id: string;
+  scope_id: string;
+  note?: string | null;
+  value: -1 | 0 | 1;
+  created_at?: string | null;
+  mutation_nonce?: string | null;
+};
+
+export type HomeLocalityClaimMutationIntent = {
+  kind: 'home_locality.claim.set';
+  home_scope_packet_id: string | null;
+  created_at?: string | null;
+  mutation_nonce?: string | null;
+};
+
+export type RoleAssociationClaimMutationIntent = {
+  kind: 'role_association.claim.set';
+  scope_id: string;
+  role_packet_id: string;
+  claimed: boolean;
+  created_at?: string | null;
+  mutation_nonce?: string | null;
+};
+
+export type RoleAssociationAttestationMutationIntent = {
+  kind: 'role_association.attestation.set';
+  scope_id: string;
+  claim_packet_id: string;
+  mode: 'support' | 'dispute' | 'clear';
+  note?: string | null;
+  created_at?: string | null;
+  mutation_nonce?: string | null;
+};
+
+export type LocalityPathEntryIntent = {
+  level: 'nation' | 'region' | 'city' | 'district';
+  name: string;
+  existing_scope_id?: string | null;
+  alias_keys?: string[];
+  display_aliases?: string[];
+};
+
+export type LocalityPathCreateMutationIntent = {
+  kind: 'locality.path.create';
+  path: LocalityPathEntryIntent[];
+  create_anyway?: boolean;
+  created_at?: string | null;
+  mutation_nonce?: string | null;
+};
+
+export type DiscussionSurfacesEnsureMutationIntent = {
+  kind: 'discussion.surfaces.ensure';
+  scope_id: string;
+  created_at?: string | null;
+  mutation_nonce?: string | null;
+};
+
 export type ActorWritePolicyMutationIntent = {
   kind: 'actor.write_policy.update';
   security_mode: 'standard' | 'guarded' | 'every_write';
@@ -50,7 +123,17 @@ export type MutationIntent =
   | DiscussionThreadPostMutationIntent
   | DiscussionReplyMutationIntent
   | PacketSignalMutationIntent
+  | AssemblyElementCreateMutationIntent
+  | AssemblyAssociationClaimMutationIntent
+  | HomeLocalityClaimMutationIntent
+  | RoleAssociationClaimMutationIntent
+  | RoleAssociationAttestationMutationIntent
+  | LocalityPathCreateMutationIntent
+  | DiscussionSurfacesEnsureMutationIntent
   | ActorWritePolicyMutationIntent;
+
+// This typed corridor is the temporary containment seam for explicit per-intent mutation
+// planners until a future packet-declared or registry-driven mutation model is affordable.
 
 export interface PreparedPacketCandidate {
   packet: PacketEnvelope;

@@ -20,8 +20,6 @@ import {
 import type { NexusRolesPayload } from '@runtime/nexus/nexus-api-types';
 import {
   fetchNexusRolesPayload,
-  setNexusRoleAttestation,
-  setNexusScopedRoleClaim,
 } from '@runtime/nexus/nexus-query-api';
 
 type RoleTabRailProps = {
@@ -91,7 +89,7 @@ export default function NexusRolesPage() {
   const router = useRouter();
   const appearance = useNexusAppearance();
   const { activeScope, currentActorPacketId, currentActorLabel } = useNexusShell();
-  const { createVerifiedRequestBody } = useIdentityShell();
+  const { runFortressMutation } = useIdentityShell();
   const [rolesPayload, setRolesPayload] = useState<NexusRolesPayload | null>(null);
   const [isLoadingRoles, setIsLoadingRoles] = useState(true);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -184,18 +182,13 @@ export default function NexusRolesPage() {
       },
       async () => {
         try {
-          const requestBody = await createVerifiedRequestBody(
-            `/api/nexus/scopes/${activeScope.id}/roles/claims`,
-            'PUT',
-            {
+          await runFortressMutation({
+            intent: {
+              kind: 'role_association.claim.set',
+              scope_id: activeScope.id,
               role_packet_id: rolePacketId,
               claimed,
-            }
-          );
-
-          await setNexusScopedRoleClaim({
-            scopeId: activeScope.id,
-            requestBody,
+            },
           });
           await refreshRolesPayload();
           setStatusMessage(claimed ? 'Role claimed in this scope.' : 'Role claim removed.');
@@ -234,16 +227,14 @@ export default function NexusRolesPage() {
       },
       async () => {
         try {
-          const requestPath = `/api/nexus/scopes/${activeScope.id}/roles/attestations`;
-          const requestBody = await createVerifiedRequestBody(requestPath, 'PUT', {
-            claim_packet_id: input.claimPacketId,
-            mode: input.mode,
-            note: note.length > 0 ? note : null,
-          });
-
-          await setNexusRoleAttestation({
-            scopeId: activeScope.id,
-            requestBody,
+          await runFortressMutation({
+            intent: {
+              kind: 'role_association.attestation.set',
+              scope_id: activeScope.id,
+              claim_packet_id: input.claimPacketId,
+              mode: input.mode,
+              note: note.length > 0 ? note : null,
+            },
           });
           await refreshRolesPayload();
           setStatusMessage(

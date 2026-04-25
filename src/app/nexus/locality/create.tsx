@@ -21,12 +21,10 @@ import {
 } from '@app/components/nexus/nexus-ui';
 import type { NexusLocationSearchResult } from '@runtime/nexus/location-search';
 import {
-  createNexusLocality,
   fetchNexusLocationSearchPayload,
-  NexusLocalityDuplicateWarningClientError,
-  setNexusHomeLocality,
 } from '@runtime/nexus/nexus-query-api';
 import type { NexusLocalityDuplicateWarningPayload } from '@runtime/nexus/nexus-api-types';
+import { NexusApiError } from '@runtime/nexus/nexus-query-api.shared';
 
 type LocalityLevel = 'nation' | 'region' | 'city' | 'district';
 
@@ -292,7 +290,7 @@ export default function NexusLocalityCreatePage() {
   const router = useRouter();
   const appearance = useNexusAppearance();
   const { activeScope, refreshShellData, setActiveScopeId } = useNexusShell();
-  const { createVerifiedRequestBody, currentMode, isAuthenticated } = useIdentityShell();
+  const { currentMode, isAuthenticated, runFortressMutation } = useIdentityShell();
   const returnTo = getSingleParam(params.return_to) ?? '/nexus/trust';
   const returnScopeId = getSingleParam(params.return_scope_id);
   const initialQuery = getSingleParam(params.query) ?? '';
@@ -452,15 +450,12 @@ export default function NexusLocalityCreatePage() {
         },
         async () => {
           try {
-            const requestBody = await createVerifiedRequestBody(
-              '/api/nexus/locality/home',
-              'PUT',
-              {
+            await runFortressMutation({
+              intent: {
+                kind: 'home_locality.claim.set',
                 home_scope_packet_id: locality.scope_id,
-              }
-            );
-
-            await setNexusHomeLocality({ requestBody });
+              },
+            });
             await refreshShellData();
             setActiveScopeId(toRouteScopeId(locality.scope_id));
             router.replace({
@@ -536,15 +531,18 @@ export default function NexusLocalityCreatePage() {
         setStatusMessage(null);
 
         try {
-          const requestBody = await createVerifiedRequestBody(
-            '/api/nexus/locality',
-            'POST',
-            {
+          const finalizedMutation = await runFortressMutation<{
+            created_packets: unknown[];
+            final_result: NexusLocationSearchResult;
+            duplicate_warnings: NexusLocalityDuplicateWarningPayload[];
+          }>({
+            intent: {
+              kind: 'locality.path.create',
               path,
               create_anyway: createAnyway,
-            }
-          );
-          const payload = await createNexusLocality({ requestBody });
+            },
+          });
+          const payload = finalizedMutation.result;
 
           setDuplicateWarnings(payload.duplicate_warnings);
           setStatusMessage(
@@ -559,8 +557,20 @@ export default function NexusLocalityCreatePage() {
             return;
           }
 
-          if (error instanceof NexusLocalityDuplicateWarningClientError) {
-            setDuplicateWarnings(error.duplicateWarnings);
+          if (
+            error instanceof NexusApiError &&
+            error.status === 409 &&
+            typeof error.payload === 'object' &&
+            error.payload !== null &&
+            Array.isArray(
+              (error.payload as { duplicate_warnings?: unknown }).duplicate_warnings
+            )
+          ) {
+            setDuplicateWarnings(
+              (error.payload as {
+                duplicate_warnings: NexusLocalityDuplicateWarningPayload[];
+              }).duplicate_warnings
+            );
             setErrorMessage(error.message);
           } else {
             setErrorMessage(

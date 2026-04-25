@@ -7,13 +7,13 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 
+import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
+import { useNexusAuthGate } from '@app/components/nexus/nexus-auth-gate';
 import {
   IdentityField,
   IdentityInput,
   IdentityPageShell,
 } from '@app/components/nexus/nexus-identity-ui';
-import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
-import { useNexusAuthGate } from '@app/components/nexus/nexus-auth-gate';
 import {
   NexusActionButton,
   NexusBadge,
@@ -21,15 +21,15 @@ import {
   NexusSegmentedPill,
   useNexusAppearance,
 } from '@app/components/nexus/nexus-ui';
-import type {
-  NexusPasskeySummaryPayload,
-  NexusSecurityMode,
-} from '@runtime/nexus/nexus-api-types';
 import {
   PASSPHRASE_EXPORT_MIN_LENGTH,
   validatePassphrase,
   validatePassphraseConfirmation,
 } from '@runtime/nexus/identity-validation';
+import type {
+  NexusPasskeySummaryPayload,
+  NexusSecurityMode,
+} from '@runtime/nexus/nexus-api-types';
 
 function getStorageModeCopy(
   storageMode: 'none' | 'session_only' | 'saved_on_device' | null
@@ -213,8 +213,8 @@ export default function NexusIdentitySecurityPage() {
       title="Identity security"
       description="Manage the Nexus shell around the current cryptographic actor: remembered sessions, write approval, passkeys, device sessions, and encrypted bundle export."
     >
-      <View className="gap-4 2xl:flex-row">
-        <View className="min-w-0 flex-1 gap-4">
+      <View className="flex-col gap-4 2xl:flex-row">
+        <View className="min-w-0 gap-4 2xl:flex-1">
           {welcomeMode === 'create' || welcomeMode === 'claim' ? (
             <NexusCard tone="gold">
               <View className="gap-3">
@@ -412,7 +412,7 @@ export default function NexusIdentitySecurityPage() {
                         'Revoked the selected passkey.'
                       );
                     }}
-                    disabled={passkeyCount <= 1}
+                    disabled={!hasActiveClaimedSession}
                   />
                 </NexusCard>
               ))}
@@ -420,7 +420,7 @@ export default function NexusIdentitySecurityPage() {
           </NexusCard>
         </View>
 
-        <View className="min-w-0 flex-1 gap-4">
+        <View className="min-w-0 gap-4 2xl:flex-1">
           <NexusCard className="gap-4">
             <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
               Sessions and devices

@@ -115,17 +115,13 @@ function createDefaultDiscussionSurfacePackets(input: {
   ];
 }
 
-/**
- * Inputs: a scope packet id/name and packet store.
- * Output: creates missing empty default discussion surface packets only once.
- */
-export async function ensureDefaultDiscussionSurfaces(input: {
+export async function planDefaultDiscussionSurfaces(input: {
   packetStore: NodeSQLitePacketStore;
   scopePacketId: string;
   scopeName: string;
   applicableScopeRefs: PacketRef[];
 }): Promise<PacketEnvelopeByType['DiscussionSpace' | 'DiscussionForum'][]> {
-  const createdPackets: PacketEnvelopeByType['DiscussionSpace' | 'DiscussionForum'][] = [];
+  const plannedPackets: PacketEnvelopeByType['DiscussionSpace' | 'DiscussionForum'][] = [];
   const packets = createDefaultDiscussionSurfacePackets({
     scopePacketId: input.scopePacketId,
     scopeName: input.scopeName,
@@ -138,10 +134,28 @@ export async function ensureDefaultDiscussionSurfaces(input: {
       packet_id: packet.header.packet_id,
     });
 
-    if (existingPacket) {
-      continue;
+    if (!existingPacket) {
+      plannedPackets.push(packet);
     }
+  }
 
+  return plannedPackets;
+}
+
+/**
+ * Inputs: a scope packet id/name and packet store.
+ * Output: creates missing empty default discussion surface packets only once.
+ */
+export async function ensureDefaultDiscussionSurfaces(input: {
+  packetStore: NodeSQLitePacketStore;
+  scopePacketId: string;
+  scopeName: string;
+  applicableScopeRefs: PacketRef[];
+}): Promise<PacketEnvelopeByType['DiscussionSpace' | 'DiscussionForum'][]> {
+  const createdPackets: PacketEnvelopeByType['DiscussionSpace' | 'DiscussionForum'][] = [];
+  const packets = await planDefaultDiscussionSurfaces(input);
+
+  for (const packet of packets) {
     await input.packetStore.writeRevision(packet);
     await input.packetStore.publishRevision({
       packet_id: packet.header.packet_id,
