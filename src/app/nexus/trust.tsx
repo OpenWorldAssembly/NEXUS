@@ -127,90 +127,94 @@ export default function NexusTrustPage() {
       return;
     }
 
+    const applyAssociationClaim = async () => {
+      try {
+        await runFortressMutation({
+          intent: {
+            kind: 'assembly_association.claim.set',
+            assembly_packet_id: activeScope.packetId,
+            scope_id: activeScope.id,
+            note:
+              value === 1 && associationNote.trim().length > 0
+                ? associationNote
+                : null,
+            value,
+          },
+        });
+        const nextTrustPayload = await fetchNexusTrustPayload({
+          scopeId: activeScope.id,
+          actorPacketId: currentActorPacketId,
+        });
+        setTrustPayload(nextTrustPayload);
+        setStatusMessage(
+          value === 1
+            ? `Claimed association with ${activeScope.name}.`
+            : `Withdrew association with ${activeScope.name}.`
+        );
+        setErrorMessage(null);
+      } catch (error) {
+        if (openNexusAuthGateForError(error, applyAssociationClaim)) {
+          return;
+        }
+
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : 'Unable to update the assembly association.'
+        );
+        setStatusMessage(null);
+      }
+    };
+
     await guardNexusWrite(
       {
         requiresClaimedIdentity: true,
         writeRisk: 'standard',
       },
-      async () => {
-        try {
-          await runFortressMutation({
-            intent: {
-              kind: 'assembly_association.claim.set',
-              assembly_packet_id: activeScope.packetId,
-              scope_id: activeScope.id,
-              note:
-                value === 1 && associationNote.trim().length > 0
-                  ? associationNote
-                  : null,
-              value,
-            },
-          });
-          const nextTrustPayload = await fetchNexusTrustPayload({
-            scopeId: activeScope.id,
-            actorPacketId: currentActorPacketId,
-          });
-          setTrustPayload(nextTrustPayload);
-          setStatusMessage(
-            value === 1
-              ? `Claimed association with ${activeScope.name}.`
-              : `Withdrew association with ${activeScope.name}.`
-          );
-          setErrorMessage(null);
-        } catch (error) {
-          if (openNexusAuthGateForError(error)) {
-            return;
-          }
-
-          setErrorMessage(
-            error instanceof Error
-              ? error.message
-              : 'Unable to update the assembly association.'
-          );
-          setStatusMessage(null);
-        }
-      }
+      applyAssociationClaim
     );
   };
 
   const handleHomeLocalityChange = async (homeScopePacketId: string | null) => {
+    const applyHomeLocalityChange = async () => {
+      try {
+        await runFortressMutation({
+          intent: {
+            kind: 'home_locality.claim.set',
+            home_scope_packet_id: homeScopePacketId,
+          },
+        });
+        await Promise.all([
+          fetchNexusTrustPayload({
+            scopeId: activeScope.id,
+            actorPacketId: currentActorPacketId,
+          }).then((nextTrustPayload) => setTrustPayload(nextTrustPayload)),
+          refreshShellData(),
+        ]);
+        setStatusMessage(
+          homeScopePacketId
+            ? `${activeScope.name} is now your home locality.`
+            : 'Home locality cleared.'
+        );
+        setErrorMessage(null);
+      } catch (error) {
+        if (openNexusAuthGateForError(error, applyHomeLocalityChange)) {
+          return;
+        }
+
+        setErrorMessage(
+          error instanceof Error ? error.message : 'Unable to update home locality.'
+        );
+        setStatusMessage(null);
+      }
+    };
+
     await guardNexusWrite(
       {
         requiresClaimedIdentity: true,
         writeRisk: 'standard',
       },
-      async () => {
-        try {
-          await runFortressMutation({
-            intent: {
-              kind: 'home_locality.claim.set',
-              home_scope_packet_id: homeScopePacketId,
-            },
-          });
-          await Promise.all([
-            fetchNexusTrustPayload({
-              scopeId: activeScope.id,
-              actorPacketId: currentActorPacketId,
-            }).then((nextTrustPayload) => setTrustPayload(nextTrustPayload)),
-            refreshShellData(),
-          ]);
-          setStatusMessage(
-            homeScopePacketId
-              ? `${activeScope.name} is now your home locality.`
-              : 'Home locality cleared.'
-          );
-          setErrorMessage(null);
-        } catch (error) {
-          if (openNexusAuthGateForError(error)) {
-            return;
-          }
-
-          setErrorMessage(
-            error instanceof Error ? error.message : 'Unable to update home locality.'
-          );
-          setStatusMessage(null);
-        }
-      }
+      applyHomeLocalityChange
     );
   };
 

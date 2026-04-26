@@ -443,38 +443,40 @@ export default function NexusLocalityCreatePage() {
     setStatusMessage(null);
 
     if (shouldSetHome) {
+      const applyHomeLocalitySelection = async () => {
+        try {
+          await runFortressMutation({
+            intent: {
+              kind: 'home_locality.claim.set',
+              home_scope_packet_id: locality.scope_id,
+            },
+          });
+          await refreshShellData();
+          setActiveScopeId(toRouteScopeId(locality.scope_id));
+          router.replace({
+            pathname: '/nexus/dashboard',
+            params: {
+              locality_created: '1',
+              locality_name: locality.name,
+            },
+          } as Href);
+        } catch (error) {
+          if (openNexusAuthGateForError(error, applyHomeLocalitySelection)) {
+            return;
+          }
+
+          setErrorMessage(
+            error instanceof Error ? error.message : 'Unable to set home locality.'
+          );
+        }
+      };
+
       await guardNexusWrite(
         {
           requiresClaimedIdentity: true,
           writeRisk: 'standard',
         },
-        async () => {
-          try {
-            await runFortressMutation({
-              intent: {
-                kind: 'home_locality.claim.set',
-                home_scope_packet_id: locality.scope_id,
-              },
-            });
-            await refreshShellData();
-            setActiveScopeId(toRouteScopeId(locality.scope_id));
-            router.replace({
-              pathname: '/nexus/dashboard',
-              params: {
-                locality_created: '1',
-                locality_name: locality.name,
-              },
-            } as Href);
-          } catch (error) {
-            if (openNexusAuthGateForError(error)) {
-              return;
-            }
-
-            setErrorMessage(
-              error instanceof Error ? error.message : 'Unable to set home locality.'
-            );
-          }
-        }
+        applyHomeLocalitySelection
       );
 
       return;
@@ -520,67 +522,69 @@ export default function NexusLocalityCreatePage() {
       return;
     }
 
+    const applyCreatePath = async () => {
+      setIsSubmitting(true);
+      setErrorMessage(null);
+      setStatusMessage(null);
+
+      try {
+        const finalizedMutation = await runFortressMutation<{
+          created_packets: unknown[];
+          final_result: NexusLocationSearchResult;
+          duplicate_warnings: NexusLocalityDuplicateWarningPayload[];
+        }>({
+          intent: {
+            kind: 'locality.path.create',
+            path,
+            create_anyway: createAnyway,
+          },
+        });
+        const payload = finalizedMutation.result;
+
+        setDuplicateWarnings(payload.duplicate_warnings);
+        setStatusMessage(
+          payload.created_packets.length > 0
+            ? `Created ${payload.created_packets.length} locality Element(s).`
+            : 'Existing locality path reused.'
+        );
+
+        await handleSelectLocality(payload.final_result);
+      } catch (error) {
+        if (openNexusAuthGateForError(error, applyCreatePath)) {
+          return;
+        }
+
+        if (
+          error instanceof NexusApiError &&
+          error.status === 409 &&
+          typeof error.payload === 'object' &&
+          error.payload !== null &&
+          Array.isArray(
+            (error.payload as { duplicate_warnings?: unknown }).duplicate_warnings
+          )
+        ) {
+          setDuplicateWarnings(
+            (error.payload as {
+              duplicate_warnings: NexusLocalityDuplicateWarningPayload[];
+            }).duplicate_warnings
+          );
+          setErrorMessage(error.message);
+        } else {
+          setErrorMessage(
+            error instanceof Error ? error.message : 'Unable to create locality.'
+          );
+        }
+      } finally {
+        setIsSubmitting(false);
+      }
+    };
+
     await guardNexusWrite(
       {
         requiresClaimedIdentity: true,
         writeRisk: 'standard',
       },
-      async () => {
-        setIsSubmitting(true);
-        setErrorMessage(null);
-        setStatusMessage(null);
-
-        try {
-          const finalizedMutation = await runFortressMutation<{
-            created_packets: unknown[];
-            final_result: NexusLocationSearchResult;
-            duplicate_warnings: NexusLocalityDuplicateWarningPayload[];
-          }>({
-            intent: {
-              kind: 'locality.path.create',
-              path,
-              create_anyway: createAnyway,
-            },
-          });
-          const payload = finalizedMutation.result;
-
-          setDuplicateWarnings(payload.duplicate_warnings);
-          setStatusMessage(
-            payload.created_packets.length > 0
-              ? `Created ${payload.created_packets.length} locality Element(s).`
-              : 'Existing locality path reused.'
-          );
-
-          await handleSelectLocality(payload.final_result);
-        } catch (error) {
-          if (openNexusAuthGateForError(error)) {
-            return;
-          }
-
-          if (
-            error instanceof NexusApiError &&
-            error.status === 409 &&
-            typeof error.payload === 'object' &&
-            error.payload !== null &&
-            Array.isArray(
-              (error.payload as { duplicate_warnings?: unknown }).duplicate_warnings
-            )
-          ) {
-            setDuplicateWarnings(
-              (error.payload as {
-                duplicate_warnings: NexusLocalityDuplicateWarningPayload[];
-              }).duplicate_warnings
-            );
-            setErrorMessage(error.message);
-          } else {
-            setErrorMessage(
-              error instanceof Error ? error.message : 'Unable to create locality.'
-            );
-          }
-        } finally {
-          setIsSubmitting(false);
-        }
-      }
+      applyCreatePath
     );
   };
 

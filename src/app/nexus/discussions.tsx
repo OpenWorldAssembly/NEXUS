@@ -1018,44 +1018,46 @@ export default function NexusDiscussionsPage() {
   );
 
   const handleAddDiscussionSurfaces = useCallback(async () => {
+    const applyAddDiscussionSurfaces = async () => {
+      setIsAddingDiscussionSurfaces(true);
+      setFeedError(null);
+
+      try {
+        const finalizedMutation = await runFortressMutation<{
+          created_packet_refs: { packet_id: string; revision_id: string }[];
+          discussions: NexusDiscussionsPayload;
+        }>({
+          intent: {
+            kind: 'discussion.surfaces.ensure',
+            scope_id: activeScope.id,
+          },
+        });
+
+        setFeedPayload(finalizedMutation.result.discussions);
+        setFeedPosts(finalizedMutation.result.discussions.top_level_posts);
+        setFeedNextCursor(finalizedMutation.result.discussions.next_cursor);
+        setFeedHasMore(finalizedMutation.result.discussions.has_more);
+      } catch (error) {
+        if (openNexusAuthGateForError(error, applyAddDiscussionSurfaces)) {
+          return;
+        }
+
+        setFeedError(
+          error instanceof Error
+            ? error.message
+            : 'Unable to add discussion forums.'
+        );
+      } finally {
+        setIsAddingDiscussionSurfaces(false);
+      }
+    };
+
     await guardNexusWrite(
       {
         requiresClaimedIdentity: true,
         writeRisk: 'standard',
       },
-      async () => {
-        setIsAddingDiscussionSurfaces(true);
-        setFeedError(null);
-
-        try {
-          const finalizedMutation = await runFortressMutation<{
-            created_packet_refs: { packet_id: string; revision_id: string }[];
-            discussions: NexusDiscussionsPayload;
-          }>({
-            intent: {
-              kind: 'discussion.surfaces.ensure',
-              scope_id: activeScope.id,
-            },
-          });
-
-          setFeedPayload(finalizedMutation.result.discussions);
-          setFeedPosts(finalizedMutation.result.discussions.top_level_posts);
-          setFeedNextCursor(finalizedMutation.result.discussions.next_cursor);
-          setFeedHasMore(finalizedMutation.result.discussions.has_more);
-        } catch (error) {
-          if (openNexusAuthGateForError(error)) {
-            return;
-          }
-
-          setFeedError(
-            error instanceof Error
-              ? error.message
-              : 'Unable to add discussion forums.'
-          );
-        } finally {
-          setIsAddingDiscussionSurfaces(false);
-        }
-      }
+      applyAddDiscussionSurfaces
     );
   }, [
     activeScope.id,

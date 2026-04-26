@@ -76,11 +76,19 @@ import {
 import { createIdentityShellFortressAdapter } from '@app/components/nexus/identity-shell-fortress-adapter';
 import { NexusAuthGateError } from '@app/components/nexus/nexus-auth-gate-types';
 const IDENTITY_STORE_NAME = 'identities';
+const FRESH_UNLOCKED_IDENTITY_HANDOFF_MS = 30_000;
 
 type PendingInteractionProof = {
   reauthToken: string;
   proofMethod: NexusReauthVerifyPayload['proof_method'];
   expiresAt: string;
+};
+
+type UnlockedActiveIdentity = ActiveIdentityState & { privateJwk: JsonWebKey };
+
+type FreshUnlockedIdentityHandoff = {
+  identity: UnlockedActiveIdentity;
+  expiresAtMs: number;
 };
 
 type IdentityShellContextValue = {
@@ -255,6 +263,9 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
     NexusPasskeyListPayload['passkeys']
   >([]);
   const pendingInteractionProofRef = useRef<PendingInteractionProof | null>(null);
+  const freshUnlockedIdentityRef = useRef<FreshUnlockedIdentityHandoff | null>(
+    null
+  );
 
   const refreshStoredIdentities = async () => {
     const records = await readStoredIdentityRecords();
@@ -338,6 +349,17 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
 
   const clearPendingInteractionProof = () => {
     pendingInteractionProofRef.current = null;
+  };
+
+  const stashFreshUnlockedIdentity = (identity: UnlockedActiveIdentity) => {
+    freshUnlockedIdentityRef.current = {
+      identity,
+      expiresAtMs: Date.now() + FRESH_UNLOCKED_IDENTITY_HANDOFF_MS,
+    };
+  };
+
+  const clearFreshUnlockedIdentity = () => {
+    freshUnlockedIdentityRef.current = null;
   };
 
   const resolveGuestFallbackIdentity = async (input?: {
@@ -568,6 +590,23 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
         'sign_in_required',
         'There is no active identity available for this request.'
       );
+    }
+
+    const freshUnlockedIdentityHandoff = freshUnlockedIdentityRef.current;
+    const currentActorPacketId = currentIdentity.actorPacket.header.packet_id;
+
+    if (
+      freshUnlockedIdentityHandoff &&
+      freshUnlockedIdentityHandoff.identity.actorPacket.header.packet_id ===
+        currentActorPacketId &&
+      (!authSession?.actor_packet_id ||
+        authSession.actor_packet_id === currentActorPacketId)
+    ) {
+      if (freshUnlockedIdentityHandoff.expiresAtMs < Date.now()) {
+        clearFreshUnlockedIdentity();
+      } else {
+        return freshUnlockedIdentityHandoff.identity;
+      }
     }
 
     if (!currentIdentity.privateJwk) {
@@ -835,13 +874,16 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
       private_jwk: JsonWebKey;
     };
 
-    setCurrentIdentity({
+    const unlockedIdentity = {
       actorPacket: bundle.actor_packet,
       publicJwk: bundle.public_jwk,
       privateJwk: bundle.private_jwk,
-      claimStatus: 'claimed',
-      storedKind: 'claimed',
-    });
+      claimStatus: 'claimed' as const,
+      storedKind: 'claimed' as const,
+    } satisfies UnlockedActiveIdentity;
+
+    stashFreshUnlockedIdentity(unlockedIdentity);
+    setCurrentIdentity(unlockedIdentity);
   };
 
   const readStoredClaimedIdentityRecord = async (
@@ -1026,10 +1068,13 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
       privateJwk: bundle.private_jwk,
       claimStatus: 'claimed' as const,
       storedKind: 'claimed' as const,
-    };
+    } satisfies UnlockedActiveIdentity;
 
     if (!isCurrentIdentityUnlocked) {
+      stashFreshUnlockedIdentity(unlockedIdentity);
       setCurrentIdentity(unlockedIdentity);
+    } else {
+      clearFreshUnlockedIdentity();
     }
 
     const verifyPayload = await createSignedReauthToken({
@@ -1643,6 +1688,46 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
     consumePendingInteractionProof,
   });
 
+  useEffect(() => {
+    const freshUnlockedIdentityHandoff = freshUnlockedIdentityRef.current;
+
+    if (!freshUnlockedIdentityHandoff) {
+      return;
+    }
+
+    if (!currentIdentity) {
+      clearFreshUnlockedIdentity();
+      return;
+    }
+
+    const actorPacketId = currentIdentity.actorPacket.header.packet_id;
+
+    if (
+      freshUnlockedIdentityHandoff.identity.actorPacket.header.packet_id !==
+        actorPacketId ||
+      freshUnlockedIdentityHandoff.expiresAtMs < Date.now()
+    ) {
+      clearFreshUnlockedIdentity();
+    }
+  }, [currentIdentity]);
+
+  useEffect(() => {
+    const freshUnlockedIdentityHandoff = freshUnlockedIdentityRef.current;
+
+    if (!freshUnlockedIdentityHandoff) {
+      return;
+    }
+
+    if (
+      !authSession?.actor_packet_id ||
+      authSession.actor_packet_id !==
+        freshUnlockedIdentityHandoff.identity.actorPacket.header.packet_id ||
+      freshUnlockedIdentityHandoff.expiresAtMs < Date.now()
+    ) {
+      clearFreshUnlockedIdentity();
+    }
+  }, [authSession?.actor_packet_id]);
+
   const signOut = async () => {
     await fetchJsonOrThrow('/api/nexus/auth/session', {
       method: 'DELETE',
@@ -1651,6 +1736,7 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
       },
     });
     clearPendingInteractionProof();
+    clearFreshUnlockedIdentity();
     setAuthSession({
       is_authenticated: false,
       session_id: null,

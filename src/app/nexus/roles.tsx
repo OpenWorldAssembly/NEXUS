@@ -175,35 +175,37 @@ export default function NexusRolesPage() {
   };
 
   const handleRoleClaim = async (rolePacketId: string, claimed: boolean) => {
+    const applyRoleClaim = async () => {
+      try {
+        await runFortressMutation({
+          intent: {
+            kind: 'role_association.claim.set',
+            scope_id: activeScope.id,
+            role_packet_id: rolePacketId,
+            claimed,
+          },
+        });
+        await refreshRolesPayload();
+        setStatusMessage(claimed ? 'Role claimed in this scope.' : 'Role claim removed.');
+        setErrorMessage(null);
+      } catch (error) {
+        if (openNexusAuthGateForError(error, applyRoleClaim)) {
+          return;
+        }
+
+        setErrorMessage(
+          error instanceof Error ? error.message : 'Unable to update the role claim.'
+        );
+        setStatusMessage(null);
+      }
+    };
+
     await guardNexusWrite(
       {
         requiresClaimedIdentity: true,
         writeRisk: 'standard',
       },
-      async () => {
-        try {
-          await runFortressMutation({
-            intent: {
-              kind: 'role_association.claim.set',
-              scope_id: activeScope.id,
-              role_packet_id: rolePacketId,
-              claimed,
-            },
-          });
-          await refreshRolesPayload();
-          setStatusMessage(claimed ? 'Role claimed in this scope.' : 'Role claim removed.');
-          setErrorMessage(null);
-        } catch (error) {
-          if (openNexusAuthGateForError(error)) {
-            return;
-          }
-
-          setErrorMessage(
-            error instanceof Error ? error.message : 'Unable to update the role claim.'
-          );
-          setStatusMessage(null);
-        }
-      }
+      applyRoleClaim
     );
   };
 
@@ -220,51 +222,53 @@ export default function NexusRolesPage() {
       return;
     }
 
+    const applyRoleAttestation = async () => {
+      try {
+        await runFortressMutation({
+          intent: {
+            kind: 'role_association.attestation.set',
+            scope_id: activeScope.id,
+            claim_packet_id: input.claimPacketId,
+            mode: input.mode,
+            note: note.length > 0 ? note : null,
+          },
+        });
+        await refreshRolesPayload();
+        setStatusMessage(
+          input.mode === 'clear'
+            ? 'Role attestation cleared.'
+            : input.mode === 'support'
+              ? 'Role support recorded.'
+              : 'Role dispute recorded.'
+        );
+        setErrorMessage(null);
+
+        if (input.mode !== 'dispute') {
+          setNoteDrafts((currentDrafts) => ({
+            ...currentDrafts,
+            [draftKey]: '',
+          }));
+        }
+      } catch (error) {
+        if (openNexusAuthGateForError(error, applyRoleAttestation)) {
+          return;
+        }
+
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : 'Unable to update the role attestation.'
+        );
+        setStatusMessage(null);
+      }
+    };
+
     await guardNexusWrite(
       {
         requiresClaimedIdentity: true,
         writeRisk: 'standard',
       },
-      async () => {
-        try {
-          await runFortressMutation({
-            intent: {
-              kind: 'role_association.attestation.set',
-              scope_id: activeScope.id,
-              claim_packet_id: input.claimPacketId,
-              mode: input.mode,
-              note: note.length > 0 ? note : null,
-            },
-          });
-          await refreshRolesPayload();
-          setStatusMessage(
-            input.mode === 'clear'
-              ? 'Role attestation cleared.'
-              : input.mode === 'support'
-                ? 'Role support recorded.'
-                : 'Role dispute recorded.'
-          );
-          setErrorMessage(null);
-
-          if (input.mode !== 'dispute') {
-            setNoteDrafts((currentDrafts) => ({
-              ...currentDrafts,
-              [draftKey]: '',
-            }));
-          }
-        } catch (error) {
-          if (openNexusAuthGateForError(error)) {
-            return;
-          }
-
-          setErrorMessage(
-            error instanceof Error
-              ? error.message
-              : 'Unable to update the role attestation.'
-          );
-          setStatusMessage(null);
-        }
-      }
+      applyRoleAttestation
     );
   };
 

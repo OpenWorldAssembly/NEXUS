@@ -783,6 +783,10 @@ Important note:
 - packet compatibility now distinguishes raw stored revisions from adapted runtime reads: packet-store default fetches return canonical adapted packets, while internal compatibility reads can return raw packets plus machine-readable adaptation summaries for debug or future packet-browser work
 - compatibility interpretation now distinguishes declared schema version from effective source profile, so packets stamped as current but still missing older additive fields are adapted and signature-verified through the correct legacy profile instead of skipping compatibility handling
 - legacy packet-signature verification now uses schema-owned compatibility canonicalization rather than auth-local field stripping, so older signed packets remain verifiable without scattering schema knowledge into runtime auth helpers
+- packet-family compatibility coverage is now classified explicitly: `Element`, `Claim`, and `Policy` are the families with intentional legacy support plus adapted-write preparation, while most remaining families are intentionally `current_only` until a concrete migration need exists
+- packet compatibility is now target-version aware for supported family versions: callers can request the current family schema or an older supported target, receive structured change/loss metadata, and prepare explicit versioned writes without rewriting raw stored history in place
+- versioned write preparation distinguishes exact, lossy-but-allowed, and blocked targets; lossy downcasts report machine-readable `losses`, `is_lossy`, and `requires_loss_acknowledgement` so future Packet Explorer and guarded-upgrade flows can show what would change before admission
+- discussion packets are currently part of that explicit freeze: `DiscussionSpace`, `DiscussionForum`, `DiscussionThread`, `DiscussionPost`, and `DiscussionReply` remain separate stored families for now, and any future unification into one conceptual discussion domain must happen as an adapter-backed migration rather than a silent rename
 
 ## Current naming patterns
 
@@ -845,6 +849,7 @@ What is implemented:
 - hidden wrapper-level account and identity/security flows separate from the primary function navigation
 - cryptographic identity continuity across guest, saved-guest, and claimed nexus actors
 - passkey-optional claimed-session authentication with passkey sign-in, passkey registration, short-lived single-use passkey re-auth tokens, rotating refresh cookies, and server-side device/session revocation
+- protected writes now use a shared unlock/approval surface whose locked-bundle retry path carries the freshly decrypted identity synchronously into the resumed action, so action-bound unlocks do not depend on React state committing before the queued write retries
 - packet-backed shell and scope query routes feeding active nexus surfaces, including the actor-backed `you` personal scope
 - `You` now renders as a personal child leaf under the actor's local assembly branch instead of sitting above the scope tree
 - canonical packet schema definitions with nested `header/body` envelopes
@@ -915,7 +920,7 @@ These notes describe current known weaknesses or mismatches in the implemented r
 - Refresh-token rotation now updates the existing persistent session in place rather than creating a new device-session row during refresh.
 - Identity security now defaults to showing active sessions only, with the current session sorted first and explicit empty or error states when session data is unavailable.
 - Person-packet signature verification now remains compatible with older signed identity revisions that were stored before additive defaulted `Element` fields such as `claimed_role_refs: []` and `locality: null`, so claimed sign-in and signed claim/locality mutations do not fail on older stored identities.
-- Legacy packet revisions can now be prepared explicitly for adapted saves: old revisions remain readable as raw history, runtime projections use adapted packets, and a later write can bump the schema version in a new child revision instead of silently rewriting stored history in place.
+- Legacy packet revisions can now be prepared explicitly for adapted saves or explicit supported target versions: old revisions remain readable as raw history, runtime projections use adapted packets, and later writes can target the current family schema or an older supported schema version without silently rewriting stored history in place.
 - Bundle import/export now preserves raw stored revision shapes for legacy packets while still adapting them into the current canonical runtime shape on read.
 
 ### Library semantics
@@ -935,6 +940,8 @@ The following areas should still be treated as provisional:
 - guest posting behavior beyond the current packet-backed discussion rules and temporary point grant
 - home locality now drives mounted geographic ancestry, but canonical locality search quality, optional disclosure cleanup inside identity flows, guided locality creation, and locality verification rollups remain deferred into the later location phases
 - the exact final ontology for assemblies, scopes, overlays, and future claim kinds beyond `role_association` / `assembly_association` / `home_locality`
+- the current split discussion families are intentionally kept in place for now; future cleanup should route through adapters and migration rules instead of schema-family renames in place
+- discussion-family cleanup should begin at the packet compatibility layer first, then update runtime/query/UI wiring after the packet-level target model and migration behavior are explicit
 - deeper trust weighting, moderation consequences, and non-default policy engines
 - vote execution, delegation, and propagation semantics
 - packet actions that currently appear as disabled placeholders

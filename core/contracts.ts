@@ -6,6 +6,7 @@
 import type {
   PacketAdaptedWritePreparation,
   PacketCompatibilityReadResult,
+  PacketVersionedWritePreparation,
   AttestationValue,
   DiscussionActorClass,
   DiscussionReplySort,
@@ -73,15 +74,24 @@ export interface PacketStore {
   }): Promise<PacketRevisionRef>;
   readByPacket<TMode extends PacketReadMode>(
     packet: PacketRef,
-    options?: { mode?: TMode }
+    options?: { mode?: TMode; target_schema_version?: string }
   ): Promise<PacketReadValue<TMode> | null>;
   readByRevision<TMode extends PacketReadMode>(
     revision: PacketRevisionRef,
-    options?: { mode?: TMode }
+    options?: { mode?: TMode; target_schema_version?: string }
   ): Promise<PacketReadValue<TMode> | null>;
   prepareRevisionForAdaptedSave(
     revision: PacketRevisionRef
   ): Promise<PacketAdaptedWritePreparation | null>;
+  prepareRevisionForVersionedSave(
+    revision: PacketRevisionRef,
+    options?: {
+      target_schema_version?: string;
+    }
+  ): Promise<PacketVersionedWritePreparation | null>;
+  writePreparedRevision(
+    preparation: PacketVersionedWritePreparation
+  ): Promise<PacketRevisionRef>;
   importBundle(bundle: Uint8Array | ArrayBuffer | string): Promise<BundleImportResult>;
   exportBundle(packet_refs: PacketRef[]): Promise<BundleExportResult>;
 }

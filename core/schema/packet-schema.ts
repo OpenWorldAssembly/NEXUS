@@ -119,6 +119,11 @@ export const PACKET_REVISION_MODES = [
 ] as const;
 
 export const PACKET_READ_MODES = ['raw', 'adapted', 'raw_plus_adaptation'] as const;
+export const PACKET_ADAPTATION_DIRECTIONS = [
+  'same_version',
+  'upcast',
+  'downcast',
+] as const;
 
 export const PACKET_ADAPTATION_CHANGE_KINDS = [
   'added_default_field',
@@ -127,6 +132,18 @@ export const PACKET_ADAPTATION_CHANGE_KINDS = [
   'renamed_field',
   'moved_field',
   'dropped_deprecated_field',
+] as const;
+export const PACKET_ADAPTATION_LOSS_KINDS = [
+  'dropped_deprecated_field',
+  'value_coercion',
+  'enum_narrowing',
+  'precision_detail_loss',
+  'unsupported_target_feature_omission',
+] as const;
+export const PACKET_WRITE_TARGET_SUPPORTS = [
+  'exact',
+  'lossy_allowed',
+  'blocked',
 ] as const;
 
 export const CORE_EDGE_TYPES = [
@@ -203,8 +220,20 @@ export type PacketRevisionMode = z.infer<typeof PacketRevisionModeSchema>;
 export type ClaimKind = z.infer<typeof ClaimKindSchema>;
 export type ClaimStatus = z.infer<typeof ClaimStatusSchema>;
 export type PacketReadMode = (typeof PACKET_READ_MODES)[number];
+export type PacketAdaptationDirection =
+  (typeof PACKET_ADAPTATION_DIRECTIONS)[number];
 export type PacketAdaptationChangeKind =
   (typeof PACKET_ADAPTATION_CHANGE_KINDS)[number];
+export type PacketAdaptationLossKind =
+  (typeof PACKET_ADAPTATION_LOSS_KINDS)[number];
+export type PacketCompatibilitySupportLevel =
+  | 'current_only'
+  | 'legacy_supported';
+export type PacketWriteTargetSupport =
+  (typeof PACKET_WRITE_TARGET_SUPPORTS)[number];
+export type PacketWriteTargetPolicy =
+  | 'current_only'
+  | 'supported_versions';
 export type PacketVoteValue = AttestationValue;
 export type PacketVoteStatus = AttestationStatus;
 export type PacketVoteKind = AttestationKind;
@@ -220,6 +249,14 @@ export interface PacketAdaptationChange {
   message: string;
 }
 
+export interface PacketAdaptationLoss {
+  kind: PacketAdaptationLossKind;
+  path: string;
+  from_schema_version: string;
+  to_schema_version: string;
+  message: string;
+}
+
 export interface PacketCompatibilityStatus {
   family: PacketFamily;
   declared_schema_version: string;
@@ -227,8 +264,15 @@ export interface PacketCompatibilityStatus {
   interpreted_as_legacy_profile: boolean;
   source_schema_version: string;
   target_schema_version: string;
+  direction: PacketAdaptationDirection;
   changes: PacketAdaptationChange[];
+  losses: PacketAdaptationLoss[];
+  is_lossy: boolean;
+  is_exact: boolean;
   writable_as_is: boolean;
+  requires_guarded_upgrade: boolean;
+  requires_loss_acknowledgement: boolean;
+  supported_write_target: PacketWriteTargetSupport;
 }
 
 export interface PacketCompatibilityReadResult {
@@ -237,18 +281,26 @@ export interface PacketCompatibilityReadResult {
   status: PacketCompatibilityStatus;
 }
 
-export interface PacketAdaptedWritePreparation {
+export interface PacketVersionedWritePreparation {
   raw_packet: unknown;
   adapted_packet: PacketEnvelope;
-  prepared_packet: PacketEnvelope;
+  prepared_packet: PacketEnvelope | null;
   declared_schema_version: string;
   effective_source_schema_version: string;
   interpreted_as_legacy_profile: boolean;
   source_schema_version: string;
   target_schema_version: string;
+  direction: PacketAdaptationDirection;
   changes: PacketAdaptationChange[];
+  losses: PacketAdaptationLoss[];
+  is_lossy: boolean;
+  is_exact: boolean;
   writable_as_is: boolean;
+  requires_guarded_upgrade: boolean;
+  requires_loss_acknowledgement: boolean;
+  supported_write_target: PacketWriteTargetSupport;
 }
+export type PacketAdaptedWritePreparation = PacketVersionedWritePreparation;
 
 export const LOCALITY_LEVELS = ['nation', 'region', 'city', 'district'] as const;
 export const LocalityLevelSchema = z.enum(LOCALITY_LEVELS);
@@ -862,12 +914,15 @@ export const PACKET_FAMILY_REVISION_MODES = {
 type PacketCompatibilityAdapterOutput = {
   body: unknown;
   changes: PacketAdaptationChange[];
+  losses?: PacketAdaptationLoss[];
 };
 
 type PacketSchemaVersionDefinition<TFamily extends PacketFamily> = {
   parseBody: (body: unknown) => unknown;
   next_schema_version?: string;
   adaptToNext?: (body: unknown) => PacketCompatibilityAdapterOutput;
+  previous_schema_version?: string;
+  adaptToPrevious?: (body: unknown) => PacketCompatibilityAdapterOutput;
   matchesDeclaredCurrentBodyShape?: (body: unknown) => boolean;
   createUnsignedPacketCandidate?: (
     packet: PacketEnvelopeByType[TFamily]
@@ -877,8 +932,21 @@ type PacketSchemaVersionDefinition<TFamily extends PacketFamily> = {
 type PacketCompatibilityEntry<TFamily extends PacketFamily> = {
   current_schema_version: string;
   revision_mode: PacketRevisionMode;
+  support_level: PacketCompatibilitySupportLevel;
+  write_target_policy: PacketWriteTargetPolicy;
   versions: Record<string, PacketSchemaVersionDefinition<TFamily>>;
 };
+
+export interface PacketCompatibilityAuditSummary {
+  family: PacketFamily;
+  current_schema_version: string;
+  revision_mode: PacketRevisionMode;
+  support_level: PacketCompatibilitySupportLevel;
+  write_target_policy: PacketWriteTargetPolicy;
+  supported_schema_versions: string[];
+  has_legacy_versions: boolean;
+  has_write_preparation: boolean;
+}
 
 const RESERVED_BODY_KEYS = new Set([
   'packet_id',
@@ -919,6 +987,7 @@ const RawPacketEnvelopeInputSchema = z
 
 const LegacyElementBodySchema = ElementBodySchema.omit({
   claimed_role_refs: true,
+  locality: true,
 }).extend({
   claimed_role_refs: z.array(PacketRefSchema).optional(),
 });
@@ -960,6 +1029,8 @@ function createDefaultCompatibilityEntry<TFamily extends PacketFamily>(
   return {
     current_schema_version: DEFAULT_SCHEMA_VERSION,
     revision_mode: PACKET_FAMILY_REVISION_MODES[family],
+    support_level: 'current_only',
+    write_target_policy: 'current_only',
     versions: {
       [DEFAULT_SCHEMA_VERSION]: {
         parseBody: (body) => {
@@ -979,6 +1050,22 @@ function createAdaptationChange(input: {
   toSchemaVersion: string;
   message: string;
 }): PacketAdaptationChange {
+  return {
+    kind: input.kind,
+    path: input.path,
+    from_schema_version: input.fromSchemaVersion,
+    to_schema_version: input.toSchemaVersion,
+    message: input.message,
+  };
+}
+
+function createAdaptationLoss(input: {
+  kind: PacketAdaptationLossKind;
+  path: string;
+  fromSchemaVersion: string;
+  toSchemaVersion: string;
+  message: string;
+}): PacketAdaptationLoss {
   return {
     kind: input.kind,
     path: input.path,
@@ -1069,6 +1156,8 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
   Element: {
     current_schema_version: DEFAULT_SCHEMA_VERSION,
     revision_mode: PACKET_FAMILY_REVISION_MODES.Element,
+    support_level: 'legacy_supported',
+    write_target_policy: 'supported_versions',
     versions: {
       '0.9.0': {
         parseBody: (body) => {
@@ -1135,6 +1224,45 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
           rejectHeaderBodyCollisions(body, 'Element');
           return ElementBodySchema.parse(body);
         },
+        previous_schema_version: '0.9.0',
+        adaptToPrevious: (body) => {
+          const currentBody = ElementBodySchema.parse(body);
+          const currentBodyRecord = currentBody as Record<string, unknown>;
+          const strippedBody =
+            stripCurrentElementCompatibilityFields(currentBodyRecord);
+          const nextBody =
+            (strippedBody ?? currentBodyRecord) as Record<string, unknown>;
+          const losses: PacketAdaptationLoss[] = [];
+
+          if (
+            Object.prototype.hasOwnProperty.call(nextBody, 'locality') &&
+            nextBody.locality !== null
+          ) {
+            const { locality: _locality, ...withoutLocality } = nextBody;
+            losses.push(
+              createAdaptationLoss({
+                kind: 'unsupported_target_feature_omission',
+                path: 'body.locality',
+                fromSchemaVersion: DEFAULT_SCHEMA_VERSION,
+                toSchemaVersion: '0.9.0',
+                message:
+                  'Dropped non-null locality metadata because schema version 0.9.0 does not support Element locality.',
+              })
+            );
+
+            return {
+              body: withoutLocality,
+              changes: [],
+              losses,
+            };
+          }
+
+          return {
+            body: nextBody ?? currentBody,
+            changes: [],
+            losses,
+          };
+        },
         createUnsignedPacketCandidate: (packet) => {
           const nextBody = stripCurrentElementCompatibilityFields(
             packet.body as Record<string, unknown>
@@ -1156,6 +1284,8 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
   Claim: {
     current_schema_version: DEFAULT_SCHEMA_VERSION,
     revision_mode: PACKET_FAMILY_REVISION_MODES.Claim,
+    support_level: 'legacy_supported',
+    write_target_policy: 'supported_versions',
     versions: {
       '0.9.0': {
         parseBody: (body) => {
@@ -1193,6 +1323,19 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
           rejectHeaderBodyCollisions(body, 'Claim');
           return ClaimBodySchema.parse(body);
         },
+        previous_schema_version: '0.9.0',
+        adaptToPrevious: (body) => {
+          const currentBody = ClaimBodySchema.parse(body);
+          const nextBody = stripCurrentClaimCompatibilityFields(
+            currentBody as Record<string, unknown>
+          );
+
+          return {
+            body: nextBody ?? currentBody,
+            changes: [],
+            losses: [],
+          };
+        },
         createUnsignedPacketCandidate: (packet) => {
           const nextBody = stripCurrentClaimCompatibilityFields(
             packet.body as Record<string, unknown>
@@ -1225,6 +1368,8 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
   Policy: {
     current_schema_version: DEFAULT_SCHEMA_VERSION,
     revision_mode: PACKET_FAMILY_REVISION_MODES.Policy,
+    support_level: 'legacy_supported',
+    write_target_policy: 'supported_versions',
     versions: {
       '0.9.0': {
         parseBody: (body) => {
@@ -1278,6 +1423,19 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
         parseBody: (body) => {
           rejectHeaderBodyCollisions(body, 'Policy');
           return PolicyBodySchema.parse(body);
+        },
+        previous_schema_version: '0.9.0',
+        adaptToPrevious: (body) => {
+          const currentBody = PolicyBodySchema.parse(body);
+          const nextBody = stripCurrentPolicyCompatibilityFields(
+            currentBody as Record<string, unknown>
+          );
+
+          return {
+            body: nextBody ?? currentBody,
+            changes: [],
+            losses: [],
+          };
         },
         createUnsignedPacketCandidate: (packet) => {
           const nextBody = stripCurrentPolicyCompatibilityFields(
@@ -1337,12 +1495,41 @@ function getPacketVersionDefinition<TFamily extends PacketFamily>(
   const versionDefinition = versions[schemaVersion];
 
   if (!versionDefinition) {
-    throw new Error(
-      `Unsupported schema version ${schemaVersion} for packet family ${family}.`
-    );
+    throw new PacketCompatibilityError({
+      code: 'unsupported_schema_version',
+      family,
+      sourceSchemaVersion: schemaVersion,
+      targetSchemaVersion: schemaVersion,
+      message: `Unsupported schema version ${schemaVersion} for packet family ${family}.`,
+    });
   }
 
   return versionDefinition;
+}
+
+export class PacketCompatibilityError extends Error {
+  readonly family: PacketFamily;
+  readonly source_schema_version: string;
+  readonly target_schema_version: string;
+  readonly code:
+    | 'unsupported_schema_version'
+    | 'missing_adapter_path'
+    | 'blocked_write_target';
+
+  constructor(input: {
+    code: PacketCompatibilityError['code'];
+    family: PacketFamily;
+    sourceSchemaVersion: string;
+    targetSchemaVersion: string;
+    message: string;
+  }) {
+    super(input.message);
+    this.name = 'PacketCompatibilityError';
+    this.family = input.family;
+    this.source_schema_version = input.sourceSchemaVersion;
+    this.target_schema_version = input.targetSchemaVersion;
+    this.code = input.code;
+  }
 }
 
 function resolveEffectiveSourceSchemaVersion<TFamily extends PacketFamily>(input: {
@@ -1370,47 +1557,155 @@ function resolveEffectiveSourceSchemaVersion<TFamily extends PacketFamily>(input
   return input.declaredSchemaVersion;
 }
 
-function adaptPacketBodyToCurrent<TFamily extends PacketFamily>(input: {
+type PacketAdaptationPathStep = {
+  from_schema_version: string;
+  to_schema_version: string;
+  direction: Exclude<PacketAdaptationDirection, 'same_version'>;
+  apply: (body: unknown) => PacketCompatibilityAdapterOutput;
+  parseTargetBody: (body: unknown) => unknown;
+};
+
+function resolvePacketAdaptationPath<TFamily extends PacketFamily>(input: {
+  family: TFamily;
+  sourceSchemaVersion: string;
+  targetSchemaVersion: string;
+}): PacketAdaptationPathStep[] {
+  if (input.sourceSchemaVersion === input.targetSchemaVersion) {
+    return [];
+  }
+
+  const queue: {
+    schemaVersion: string;
+    path: PacketAdaptationPathStep[];
+  }[] = [
+    {
+      schemaVersion: input.sourceSchemaVersion,
+      path: [],
+    },
+  ];
+  const visited = new Set([input.sourceSchemaVersion]);
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+
+    if (!current) {
+      break;
+    }
+
+    const versionDefinition = getPacketVersionDefinition(
+      input.family,
+      current.schemaVersion
+    );
+    const nextSteps: PacketAdaptationPathStep[] = [];
+
+    if (versionDefinition.next_schema_version && versionDefinition.adaptToNext) {
+      nextSteps.push({
+        from_schema_version: current.schemaVersion,
+        to_schema_version: versionDefinition.next_schema_version,
+        direction: 'upcast',
+        apply: versionDefinition.adaptToNext,
+        parseTargetBody: (body: unknown) =>
+          getPacketVersionDefinition(
+            input.family,
+            versionDefinition.next_schema_version as string
+          ).parseBody(body),
+      });
+    }
+
+    if (
+      versionDefinition.previous_schema_version &&
+      versionDefinition.adaptToPrevious
+    ) {
+      nextSteps.push({
+        from_schema_version: current.schemaVersion,
+        to_schema_version: versionDefinition.previous_schema_version,
+        direction: 'downcast',
+        apply: versionDefinition.adaptToPrevious,
+        parseTargetBody: (body: unknown) =>
+          getPacketVersionDefinition(
+            input.family,
+            versionDefinition.previous_schema_version as string
+          ).parseBody(body),
+      });
+    }
+
+    for (const step of nextSteps.sort((left, right) =>
+      left.to_schema_version.localeCompare(right.to_schema_version)
+    )) {
+      if (visited.has(step.to_schema_version)) {
+        continue;
+      }
+
+      const nextPath = [...current.path, step];
+
+      if (step.to_schema_version === input.targetSchemaVersion) {
+        return nextPath;
+      }
+
+      visited.add(step.to_schema_version);
+      queue.push({
+        schemaVersion: step.to_schema_version,
+        path: nextPath,
+      });
+    }
+  }
+
+  throw new PacketCompatibilityError({
+    code: 'missing_adapter_path',
+    family: input.family,
+    sourceSchemaVersion: input.sourceSchemaVersion,
+    targetSchemaVersion: input.targetSchemaVersion,
+    message: `Missing adapter path from schema version ${input.sourceSchemaVersion} to ${input.targetSchemaVersion} for packet family ${input.family}.`,
+  });
+}
+
+function adaptPacketBodyToTarget<TFamily extends PacketFamily>(input: {
   family: TFamily;
   schemaVersion: string;
+  targetSchemaVersion: string;
   body: unknown;
 }): {
   body: PacketBodyByType[TFamily];
   changes: PacketAdaptationChange[];
+  losses: PacketAdaptationLoss[];
   effectiveSourceSchemaVersion: string;
+  direction: PacketAdaptationDirection;
 } {
-  const familyEntry = PACKET_COMPATIBILITY_REGISTRY[input.family];
   const effectiveSourceSchemaVersion = resolveEffectiveSourceSchemaVersion({
     family: input.family,
     declaredSchemaVersion: input.schemaVersion,
     body: input.body,
   });
   let currentSchemaVersion = effectiveSourceSchemaVersion;
-  let versionDefinition = getPacketVersionDefinition(
+  let currentBody = getPacketVersionDefinition(
     input.family,
     currentSchemaVersion
-  );
-  let currentBody = versionDefinition.parseBody(input.body);
+  ).parseBody(input.body);
   const changes: PacketAdaptationChange[] = [];
+  const losses: PacketAdaptationLoss[] = [];
+  const path = resolvePacketAdaptationPath({
+    family: input.family,
+    sourceSchemaVersion: effectiveSourceSchemaVersion,
+    targetSchemaVersion: input.targetSchemaVersion,
+  });
 
-  while (currentSchemaVersion !== familyEntry.current_schema_version) {
-    if (!versionDefinition.adaptToNext || !versionDefinition.next_schema_version) {
-      throw new Error(
-        `Missing adapter from schema version ${currentSchemaVersion} for packet family ${input.family}.`
-      );
-    }
-
-    const adapted = versionDefinition.adaptToNext(currentBody);
+  for (const step of path) {
+    const adapted = step.apply(currentBody);
     changes.push(...adapted.changes);
-    currentSchemaVersion = versionDefinition.next_schema_version;
-    versionDefinition = getPacketVersionDefinition(input.family, currentSchemaVersion);
-    currentBody = versionDefinition.parseBody(adapted.body);
+    losses.push(...(adapted.losses ?? []));
+    currentSchemaVersion = step.to_schema_version;
+    currentBody = step.parseTargetBody(adapted.body);
   }
 
   return {
     body: currentBody as PacketBodyByType[TFamily],
     changes,
+    losses,
     effectiveSourceSchemaVersion,
+    direction:
+      effectiveSourceSchemaVersion === input.targetSchemaVersion
+        ? 'same_version'
+        : path[0]?.direction ?? 'same_version',
   };
 }
 
@@ -1421,23 +1716,62 @@ export function parseRawPacketEnvelopeInput(
 }
 
 export function inspectPacketEnvelope(input: unknown): PacketCompatibilityReadResult {
+  return inspectPacketEnvelopeForTarget(input);
+}
+
+export function inspectPacketEnvelopeForTarget(
+  input: unknown,
+  options: {
+    target_schema_version?: string;
+  } = {}
+): PacketCompatibilityReadResult {
   const rawEnvelope = parseRawPacketEnvelopeInput(input);
   const declaredSchemaVersion =
     rawEnvelope.header.schema_version ?? DEFAULT_SCHEMA_VERSION;
+  const familyEntry = PACKET_COMPATIBILITY_REGISTRY[rawEnvelope.header.family];
+  const targetSchemaVersion =
+    options.target_schema_version ?? familyEntry.current_schema_version;
+
+  if (
+    !Object.prototype.hasOwnProperty.call(
+      familyEntry.versions,
+      targetSchemaVersion
+    )
+  ) {
+    throw new PacketCompatibilityError({
+      code: 'unsupported_schema_version',
+      family: rawEnvelope.header.family,
+      sourceSchemaVersion: declaredSchemaVersion,
+      targetSchemaVersion,
+      message: `Unsupported target schema version ${targetSchemaVersion} for packet family ${rawEnvelope.header.family}.`,
+    });
+  }
+
   const adaptedHeader = PacketHeaderSchema.parse({
     ...rawEnvelope.header,
-    schema_version: declaredSchemaVersion,
+    schema_version: targetSchemaVersion,
   });
-  const adaptedBody = adaptPacketBodyToCurrent({
+  const adaptedBody = adaptPacketBodyToTarget({
     family: rawEnvelope.header.family,
     schemaVersion: declaredSchemaVersion,
+    targetSchemaVersion,
     body: rawEnvelope.body,
   });
-  const targetSchemaVersion = getPacketCurrentSchemaVersion(
-    rawEnvelope.header.family
-  );
   const interpretedAsLegacyProfile =
     adaptedBody.effectiveSourceSchemaVersion !== declaredSchemaVersion;
+  const isExact =
+    !interpretedAsLegacyProfile &&
+    adaptedBody.losses.length === 0 &&
+    adaptedBody.changes.length === 0;
+  const writableAsIs =
+    isExact && adaptedBody.effectiveSourceSchemaVersion === targetSchemaVersion;
+  const supportedWriteTarget: PacketWriteTargetSupport =
+    targetSchemaVersion !== familyEntry.current_schema_version &&
+    familyEntry.write_target_policy !== 'supported_versions'
+      ? 'blocked'
+      : adaptedBody.losses.length > 0
+        ? 'lossy_allowed'
+        : 'exact';
 
   return {
     raw_packet: input,
@@ -1452,10 +1786,19 @@ export function inspectPacketEnvelope(input: unknown): PacketCompatibilityReadRe
       interpreted_as_legacy_profile: interpretedAsLegacyProfile,
       source_schema_version: adaptedBody.effectiveSourceSchemaVersion,
       target_schema_version: targetSchemaVersion,
+      direction: adaptedBody.direction,
       changes: adaptedBody.changes,
-      writable_as_is:
-        !interpretedAsLegacyProfile &&
-        adaptedBody.effectiveSourceSchemaVersion === targetSchemaVersion,
+      losses: adaptedBody.losses,
+      is_lossy: adaptedBody.losses.length > 0,
+      is_exact: isExact,
+      writable_as_is: writableAsIs,
+      requires_guarded_upgrade:
+        supportedWriteTarget !== 'blocked' &&
+        targetSchemaVersion === familyEntry.current_schema_version &&
+        !writableAsIs,
+      requires_loss_acknowledgement:
+        supportedWriteTarget === 'lossy_allowed',
+      supported_write_target: supportedWriteTarget,
     },
   };
 }
@@ -1488,7 +1831,45 @@ export function getPacketSignatureCanonicalCandidates(
 export function preparePacketEnvelopeForAdaptedWrite(
   input: unknown
 ): PacketAdaptedWritePreparation {
-  const inspected = inspectPacketEnvelope(input);
+  return preparePacketEnvelopeForVersionedWrite(input);
+}
+
+export function preparePacketEnvelopeForVersionedWrite(
+  input: unknown,
+  options: {
+    target_schema_version?: string;
+  } = {}
+): PacketVersionedWritePreparation {
+  const inspected = inspectPacketEnvelopeForTarget(input, options);
+  const sourceSchemaVersion = inspected.status.source_schema_version;
+  const declaredSchemaVersion = inspected.status.declared_schema_version;
+  const needsSchemaVersionBump =
+    declaredSchemaVersion !== inspected.status.target_schema_version;
+
+  if (inspected.status.supported_write_target === 'blocked') {
+    return {
+      raw_packet: inspected.raw_packet,
+      adapted_packet: inspected.adapted_packet,
+      prepared_packet: null,
+      declared_schema_version: declaredSchemaVersion,
+      effective_source_schema_version:
+        inspected.status.effective_source_schema_version,
+      interpreted_as_legacy_profile:
+        inspected.status.interpreted_as_legacy_profile,
+      source_schema_version: sourceSchemaVersion,
+      target_schema_version: inspected.status.target_schema_version,
+      direction: inspected.status.direction,
+      changes: inspected.status.changes,
+      losses: inspected.status.losses,
+      is_lossy: inspected.status.is_lossy,
+      is_exact: inspected.status.is_exact,
+      writable_as_is: inspected.status.writable_as_is,
+      requires_guarded_upgrade: false,
+      requires_loss_acknowledgement: false,
+      supported_write_target: inspected.status.supported_write_target,
+    };
+  }
+
   const preparedPacket =
     inspected.status.writable_as_is &&
     inspected.adapted_packet.header.schema_version ===
@@ -1505,13 +1886,12 @@ export function preparePacketEnvelopeForAdaptedWrite(
     ? inspected.status.changes
     : [
         ...inspected.status.changes,
-        ...(inspected.status.declared_schema_version !==
-        inspected.status.target_schema_version
+        ...(needsSchemaVersionBump
           ? [
               createAdaptationChange({
                 kind: 'schema_version_bump',
                 path: 'header.schema_version',
-                fromSchemaVersion: inspected.status.declared_schema_version,
+                fromSchemaVersion: declaredSchemaVersion,
                 toSchemaVersion: inspected.status.target_schema_version,
                 message: `Prepared packet for write against schema version ${inspected.status.target_schema_version}.`,
               }),
@@ -1530,8 +1910,16 @@ export function preparePacketEnvelopeForAdaptedWrite(
       inspected.status.interpreted_as_legacy_profile,
     source_schema_version: inspected.status.source_schema_version,
     target_schema_version: inspected.status.target_schema_version,
+    direction: inspected.status.direction,
     changes,
+    losses: inspected.status.losses,
+    is_lossy: inspected.status.is_lossy,
+    is_exact: inspected.status.is_exact,
     writable_as_is: inspected.status.writable_as_is,
+    requires_guarded_upgrade: inspected.status.requires_guarded_upgrade,
+    requires_loss_acknowledgement:
+      inspected.status.requires_loss_acknowledgement,
+    supported_write_target: inspected.status.supported_write_target,
   };
 }
 
@@ -1543,6 +1931,7 @@ export function describePacketCompatibility(
   schema_version: string;
   current_schema_version: string;
   revision_mode: PacketRevisionMode;
+  write_target_policy: PacketWriteTargetPolicy;
   is_supported: boolean;
   is_current: boolean;
 } {
@@ -1553,6 +1942,7 @@ export function describePacketCompatibility(
     schema_version: schemaVersion,
     current_schema_version: familyEntry.current_schema_version,
     revision_mode: familyEntry.revision_mode,
+    write_target_policy: familyEntry.write_target_policy,
     is_supported:
       Object.prototype.hasOwnProperty.call(familyEntry.versions, schemaVersion),
     is_current: schemaVersion === familyEntry.current_schema_version,
@@ -1571,6 +1961,33 @@ export function getPacketFamilyRevisionMode(
   return PACKET_COMPATIBILITY_REGISTRY[family].revision_mode;
 }
 
+export function getPacketCompatibilityAuditSummary(
+  family: PacketFamily
+): PacketCompatibilityAuditSummary {
+  const familyEntry = PACKET_COMPATIBILITY_REGISTRY[family];
+  const supportedSchemaVersions = Object.keys(familyEntry.versions).sort();
+
+  return {
+    family,
+    current_schema_version: familyEntry.current_schema_version,
+    revision_mode: familyEntry.revision_mode,
+    support_level: familyEntry.support_level,
+    write_target_policy: familyEntry.write_target_policy,
+    supported_schema_versions: supportedSchemaVersions,
+    has_legacy_versions: supportedSchemaVersions.some(
+      (schemaVersion) => schemaVersion !== familyEntry.current_schema_version
+    ),
+    has_write_preparation: Object.values(familyEntry.versions).some(
+      (versionDefinition) =>
+        typeof versionDefinition.createUnsignedPacketCandidate === 'function'
+    ),
+  };
+}
+
+export function listPacketCompatibilityAuditSummaries(): PacketCompatibilityAuditSummary[] {
+  return PACKET_FAMILIES.map((family) => getPacketCompatibilityAuditSummary(family));
+}
+
 export function getPacketCurrentSchemaVersion(
   family: PacketFamily
 ): string {
@@ -1582,15 +1999,39 @@ export function parsePacketBody<TFamily extends PacketFamily>(
   body: unknown,
   schemaVersion = DEFAULT_SCHEMA_VERSION
 ): PacketBodyByType[TFamily] {
-  return adaptPacketBodyToCurrent({
+  return parsePacketBodyForTarget(family, body, {
+    schema_version: schemaVersion,
+  });
+}
+
+export function parsePacketBodyForTarget<TFamily extends PacketFamily>(
+  family: TFamily,
+  body: unknown,
+  options: {
+    schema_version?: string;
+    target_schema_version?: string;
+  } = {}
+): PacketBodyByType[TFamily] {
+  return adaptPacketBodyToTarget({
     family,
-    schemaVersion,
+    schemaVersion: options.schema_version ?? DEFAULT_SCHEMA_VERSION,
+    targetSchemaVersion:
+      options.target_schema_version ?? getPacketCurrentSchemaVersion(family),
     body,
   }).body;
 }
 
 export function parsePacketEnvelope(input: unknown): PacketEnvelope {
   return inspectPacketEnvelope(input).adapted_packet;
+}
+
+export function parsePacketEnvelopeForTarget(
+  input: unknown,
+  options: {
+    target_schema_version?: string;
+  } = {}
+): PacketEnvelope {
+  return inspectPacketEnvelopeForTarget(input, options).adapted_packet;
 }
 
 export function createPacketEnvelope<TFamily extends PacketFamily>(input: {

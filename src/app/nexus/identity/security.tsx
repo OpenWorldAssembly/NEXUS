@@ -160,7 +160,11 @@ export default function NexusIdentitySecurityPage() {
       await action();
       setStatusMessage(successMessage);
     } catch (error) {
-      if (openNexusAuthGateForError(error)) {
+      if (
+        openNexusAuthGateForError(error, () =>
+          handleAction(action, successMessage)
+        )
+      ) {
         return;
       }
 

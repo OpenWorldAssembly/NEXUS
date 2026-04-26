@@ -15,9 +15,10 @@ import type {
 } from '@core/contracts';
 import {
   inspectPacketEnvelope,
+  inspectPacketEnvelopeForTarget,
   parsePacketEnvelope,
   parseRawPacketEnvelopeInput,
-  preparePacketEnvelopeForAdaptedWrite,
+  preparePacketEnvelopeForVersionedWrite,
   type PacketEdge,
   type PacketEnvelope,
   type PacketEnvelopeByType,
@@ -26,6 +27,7 @@ import {
   type PacketMergeStrategy,
   type PacketRef,
   type PacketRevisionRef,
+  type PacketVersionedWritePreparation,
 } from '@core/schema/packet-schema';
 import { PACKET_STORE_SCHEMA_SQL } from '@runtime/storage/packet-store-schema';
 import {
@@ -48,14 +50,6 @@ interface PacketRow {
   updated_at: string;
   authority_scope_packet_id: string | null;
   preferred_revision_json: string | null;
-}
-
-interface PacketRevisionRow {
-  revision_id: string;
-  packet_id: string;
-  family: string;
-  created_at: string;
-  revision_json: string;
 }
 
 interface PacketEdgeRow {
@@ -207,7 +201,7 @@ export class NodeSQLitePacketStore implements PacketStore {
   readonly databasePath: string;
 
   constructor(
-    private readonly options: {
+    options: {
       databasePath?: string;
     } = {}
   ) {
@@ -234,6 +228,24 @@ export class NodeSQLitePacketStore implements PacketStore {
   async writeRevision(packetInput: PacketEnvelope): Promise<PacketRevisionRef> {
     const packet = this.validate(packetInput);
     return this.writeValidatedRevision(packet);
+  }
+
+  async writePreparedRevision(
+    preparation: PacketVersionedWritePreparation
+  ): Promise<PacketRevisionRef> {
+    if (!preparation.prepared_packet) {
+      throw new Error('Cannot write a blocked versioned packet preparation.');
+    }
+
+    const canonicalPacket = parsePacketEnvelope(preparation.prepared_packet);
+    const rawEnvelope = parseRawPacketEnvelopeInput(preparation.prepared_packet);
+
+    return this.writeValidatedRevision(canonicalPacket, {
+      revision_json: JSON.stringify(preparation.prepared_packet),
+      header_json: JSON.stringify(rawEnvelope.header),
+      body_json: JSON.stringify(rawEnvelope.body),
+      preferred_revision_json: JSON.stringify(preparation.prepared_packet),
+    });
   }
 
   private async writeValidatedRevision(
@@ -536,8 +548,11 @@ export class NodeSQLitePacketStore implements PacketStore {
    */
   async publishRevision(revision: PacketRevisionRef): Promise<void> {
     const packet = await this.fetchByRevision(revision);
+    const rawPacket = await this.readByRevision(revision, {
+      mode: 'raw',
+    });
 
-    if (!packet) {
+    if (!packet || !rawPacket) {
       throw new Error(
         `Cannot publish missing revision ${revision.revision_id} for ${revision.packet_id}.`
       );
@@ -548,7 +563,7 @@ export class NodeSQLitePacketStore implements PacketStore {
       preferred_revision_id: packet.header.revision_id,
       head_revision_ids: this.getRevisionHeadIds(packet.header.packet_id),
       revision_state: this.getPacketRow(packet.header.packet_id)?.revision_state,
-      preferred_revision_json: JSON.stringify(packet),
+      preferred_revision_json: JSON.stringify(rawPacket),
     });
     const packetPublishUpdateRecord = {
       packet_id: packetRecord.packet_id,
@@ -638,6 +653,7 @@ export class NodeSQLitePacketStore implements PacketStore {
     packet: PacketRef,
     options: {
       mode?: TMode;
+      target_schema_version?: string;
     } = {}
   ): Promise<PacketReadValue<TMode> | null> {
     const row = this.database
@@ -656,7 +672,8 @@ export class NodeSQLitePacketStore implements PacketStore {
 
     return this.readStoredPacketJson(
       row.preferred_revision_json,
-      (options.mode ?? 'adapted') as TMode
+      (options.mode ?? 'adapted') as TMode,
+      options.target_schema_version
     );
   }
 
@@ -676,6 +693,7 @@ export class NodeSQLitePacketStore implements PacketStore {
     revision: PacketRevisionRef,
     options: {
       mode?: TMode;
+      target_schema_version?: string;
     } = {}
   ): Promise<PacketReadValue<TMode> | null> {
     const row = this.database
@@ -697,22 +715,35 @@ export class NodeSQLitePacketStore implements PacketStore {
 
     return this.readStoredPacketJson(
       row.revision_json,
-      (options.mode ?? 'adapted') as TMode
+      (options.mode ?? 'adapted') as TMode,
+      options.target_schema_version
     );
   }
 
   async prepareRevisionForAdaptedSave(
     revision: PacketRevisionRef
   ) {
+    return this.prepareRevisionForVersionedSave(revision);
+  }
+
+  async prepareRevisionForVersionedSave(
+    revision: PacketRevisionRef,
+    options: {
+      target_schema_version?: string;
+    } = {}
+  ) {
     const compatibilityRead = await this.readByRevision(revision, {
       mode: 'raw_plus_adaptation',
+      target_schema_version: options.target_schema_version,
     });
 
     if (!compatibilityRead) {
       return null;
     }
 
-    return preparePacketEnvelopeForAdaptedWrite(compatibilityRead.raw_packet);
+    return preparePacketEnvelopeForVersionedWrite(compatibilityRead.raw_packet, {
+      target_schema_version: options.target_schema_version,
+    });
   }
 
   /**
@@ -1110,7 +1141,8 @@ export class NodeSQLitePacketStore implements PacketStore {
 
   private readStoredPacketJson<TMode extends PacketReadMode>(
     storedPacketJson: string,
-    mode: TMode
+    mode: TMode,
+    targetSchemaVersion?: string
   ): PacketReadValue<TMode> {
     const rawPacket = JSON.parse(storedPacketJson);
 
@@ -1118,7 +1150,9 @@ export class NodeSQLitePacketStore implements PacketStore {
       return rawPacket as PacketReadValue<TMode>;
     }
 
-    const compatibilityRead = inspectPacketEnvelope(rawPacket);
+    const compatibilityRead = inspectPacketEnvelopeForTarget(rawPacket, {
+      target_schema_version: targetSchemaVersion,
+    });
 
     if (mode === 'raw_plus_adaptation') {
       return compatibilityRead as PacketReadValue<TMode>;

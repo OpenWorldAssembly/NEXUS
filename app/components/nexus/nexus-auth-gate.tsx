@@ -307,8 +307,34 @@ export function useNexusAuthGate(input: {
     setIsSubmittingGate(false);
   };
 
+  const closeGateBeforeQueuedAction = () => {
+    setGate(null);
+    setPendingAction(null);
+    setUnlockPassphrase('');
+    setGateErrorMessage(null);
+    setIsSubmittingGate(false);
+  };
+
+  const runQueuedActionAfterGate = async (action: PendingAction) => {
+    if (!action) {
+      return;
+    }
+
+    try {
+      await action();
+    } catch (error) {
+      if (openNexusAuthGateForError(error, action)) {
+        return;
+      }
+
+      setGateErrorMessage(
+        error instanceof Error ? error.message : 'Unable to complete that action.'
+      );
+    }
+  };
+
   const handlePrimary = async () => {
-    if (!gate) {
+    if (!gate || isSubmittingGate) {
       return;
     }
 
@@ -350,12 +376,8 @@ export function useNexusAuthGate(input: {
         }
         const action = pendingAction;
 
-        setGate(null);
-        setPendingAction(null);
-        setUnlockPassphrase('');
-        setGateErrorMessage(null);
-        setIsSubmittingGate(false);
-        await action?.();
+        closeGateBeforeQueuedAction();
+        await runQueuedActionAfterGate(action);
       } catch (error) {
         setIsSubmittingGate(false);
         setGateErrorMessage(
@@ -378,12 +400,8 @@ export function useNexusAuthGate(input: {
 
       try {
         await approveProtectedWriteWithPassphrase(unlockPassphrase);
-        setGate(null);
-        setPendingAction(null);
-        setUnlockPassphrase('');
-        setGateErrorMessage(null);
-        setIsSubmittingGate(false);
-        await action?.();
+        closeGateBeforeQueuedAction();
+        await runQueuedActionAfterGate(action);
       } catch (error) {
         setIsSubmittingGate(false);
         setGateErrorMessage(
@@ -428,12 +446,8 @@ export function useNexusAuthGate(input: {
 
           try {
             await approveProtectedWriteWithPasskey();
-            setGate(null);
-            setPendingAction(null);
-            setUnlockPassphrase('');
-            setGateErrorMessage(null);
-            setIsSubmittingGate(false);
-            await action?.();
+            closeGateBeforeQueuedAction();
+            await runQueuedActionAfterGate(action);
           } catch (error) {
             setIsSubmittingGate(false);
             setGateErrorMessage(

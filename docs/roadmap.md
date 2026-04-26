@@ -76,7 +76,7 @@ The next work should be organized by dependency, not by aesthetics or convenienc
 
 This is the most important foundation track.
 
-We already have stable `packet_id`, immutable `revision_id`, and DAG ancestry. What is still missing is an explicit compatibility model for changing packet shapes over time.
+We already have stable `packet_id`, immutable `revision_id`, DAG ancestry, and the first target-version compatibility foundation. The remaining work is to apply that foundation consistently to family evolution decisions, especially discussion packets.
 
 This track should define:
 
@@ -84,14 +84,16 @@ This track should define:
 - when a change is a new packet revision versus a new family schema version
 - when a change is big enough to justify a new packet family
 - how parsers/upcasters/downcasters should behave
+- how target-version inspection and versioned write preparation expose exact changes and losses
 - how imported legacy packets are normalized without silently rewriting history
 - how merge procedures differ for append-only families versus editable document-style families
 
 Target output:
 
 - explicit schema-evolution rules in `core/schema`
-- family-level compatibility handlers or upcasters
+- family-level compatibility handlers, upcasters, downcasters, and loss policies
 - documented revision procedure for new writes, amendments, merges, supersessions, and imports
+- discussion-family compatibility plan before any stored-family rename or unification
 
 ### 2. Trust and legitimacy
 
@@ -244,6 +246,8 @@ This track should deliver:
 
 - packet detail view
 - header/body/provenance/signature visibility
+- raw, adapted-current, and adapted-target schema views
+- visible adapter diffs and loss warnings for versioned reads or writes
 - revision ancestry and preferred-head visibility
 - incoming/outgoing edges
 - links to related discussions, votes, policies, and actions

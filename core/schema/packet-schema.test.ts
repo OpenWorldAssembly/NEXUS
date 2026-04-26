@@ -3,11 +3,29 @@ import assert from 'node:assert/strict';
 
 import {
   getPacketSignatureCanonicalCandidates,
+  getPacketCompatibilityAuditSummary,
+  listPacketCompatibilityAuditSummaries,
   inspectPacketEnvelope,
+  inspectPacketEnvelopeForTarget,
+  PacketCompatibilityError,
   preparePacketEnvelopeForAdaptedWrite,
+  preparePacketEnvelopeForVersionedWrite,
   getPacketFamilyRevisionMode,
   parsePacketEnvelope,
 } from './packet-schema.ts';
+
+function requirePreparedPacket(preparedPacket: {
+  prepared_packet: unknown;
+}): asserts preparedPacket is {
+  prepared_packet: {
+    header: {
+      schema_version: string;
+    };
+    body: unknown;
+  };
+} {
+  assert.ok(preparedPacket.prepared_packet);
+}
 
 test('legacy element revisions upcast claimed_role_refs to an empty array', () => {
   const legacyPacket = {
@@ -81,6 +99,9 @@ test('legacy element revisions upcast claimed_role_refs to an empty array', () =
   assert.equal(compatibilityRead.status.effective_source_schema_version, '0.9.0');
   assert.equal(compatibilityRead.status.interpreted_as_legacy_profile, false);
   assert.equal(compatibilityRead.status.target_schema_version, '1.0.0');
+  assert.equal(compatibilityRead.status.direction, 'upcast');
+  assert.equal(compatibilityRead.status.is_lossy, false);
+  assert.equal(compatibilityRead.status.supported_write_target, 'exact');
   assert.equal(compatibilityRead.status.writable_as_is, false);
   assert.deepEqual(
     compatibilityRead.status.changes.map((change) => change.path),
@@ -163,6 +184,7 @@ test('declared-current legacy element revisions still use the legacy compatibili
     compatibilityRead.status.changes.map((change) => change.path),
     ['body.claimed_role_refs', 'body.locality']
   );
+  requirePreparedPacket(preparedPacket);
   assert.equal(preparedPacket.prepared_packet.header.schema_version, '1.0.0');
   assert.deepEqual(
     preparedPacket.changes.map((change) => change.kind),
@@ -309,10 +331,11 @@ test('legacy policy revisions upcast missing trust_policy to null', () => {
     ).body.trust_policy,
     null
   );
+  requirePreparedPacket(preparedPacket);
   assert.equal(preparedPacket.prepared_packet.header.schema_version, '1.0.0');
   assert.deepEqual(
     preparedPacket.changes.map((change) => change.kind),
-    ['normalized_null_default', 'schema_version_bump']
+    ['normalized_null_default', 'normalized_null_default', 'schema_version_bump']
   );
 });
 
@@ -513,6 +536,50 @@ test('family metadata exposes revision modes and rejects unknown future schema v
   );
 });
 
+test('compatibility audit summaries classify legacy support and write preparation explicitly', () => {
+  const summaries = listPacketCompatibilityAuditSummaries();
+
+  assert.ok(summaries.length > 0);
+  assert.equal(
+    summaries.every((summary) => summary.supported_schema_versions.length > 0),
+    true
+  );
+
+  const elementSummary = getPacketCompatibilityAuditSummary('Element');
+  const claimSummary = getPacketCompatibilityAuditSummary('Claim');
+  const policySummary = getPacketCompatibilityAuditSummary('Policy');
+
+  assert.equal(elementSummary.support_level, 'legacy_supported');
+  assert.equal(claimSummary.support_level, 'legacy_supported');
+  assert.equal(policySummary.support_level, 'legacy_supported');
+  assert.equal(elementSummary.has_legacy_versions, true);
+  assert.equal(claimSummary.has_legacy_versions, true);
+  assert.equal(policySummary.has_legacy_versions, true);
+  assert.equal(elementSummary.write_target_policy, 'supported_versions');
+  assert.equal(claimSummary.write_target_policy, 'supported_versions');
+  assert.equal(policySummary.write_target_policy, 'supported_versions');
+  assert.equal(elementSummary.has_write_preparation, true);
+  assert.equal(claimSummary.has_write_preparation, true);
+  assert.equal(policySummary.has_write_preparation, true);
+
+  const discussionFamilies = [
+    'DiscussionSpace',
+    'DiscussionForum',
+    'DiscussionThread',
+    'DiscussionPost',
+    'DiscussionReply',
+  ] as const;
+
+  for (const family of discussionFamilies) {
+    const summary = getPacketCompatibilityAuditSummary(family);
+
+    assert.equal(summary.support_level, 'current_only');
+    assert.equal(summary.has_legacy_versions, false);
+    assert.equal(summary.write_target_policy, 'current_only');
+    assert.deepEqual(summary.supported_schema_versions, ['1.0.0']);
+  }
+});
+
 test('claim packets parse with the new scoped association family', () => {
   const packet = parsePacketEnvelope({
     header: {
@@ -658,5 +725,238 @@ test('raw packet inspection preserves the original stored body shape', () => {
       }
     ).body.note,
     null
+  );
+});
+
+test('current packets can be inspected against an older supported target schema version', () => {
+  const currentPacket = {
+    header: {
+      packet_id: 'nexus:element/test-current-downcast',
+      revision_id: 'nexus:element/test-current-downcast@r1',
+      family: 'Element',
+      schema_version: '1.0.0',
+      protocol_version: '0.1.0',
+      created_at: '2026-04-17T00:00:00.000Z',
+      parent_revision_refs: [],
+      merge_strategy: null,
+      authority_scope_ref: null,
+      applicable_scope_refs: [],
+      edges: [],
+      provenance: {
+        created_by: null,
+        submitted_by: null,
+        adapter: 'test',
+        recorded_at: '2026-04-17T00:00:00.000Z',
+        imported_from_revision: null,
+      },
+      integrity: {
+        canonicalization: 'RFC8785',
+        hash_alg: 'sha-256',
+        digest: null,
+        embedded_signatures: [],
+        signature_refs: [],
+      },
+      moderation: {
+        visibility: 'public',
+        moderation_state: 'open',
+        policy_refs: [],
+        content_warning_ids: [],
+      },
+      external_refs: [],
+      metadata: {
+        tags: ['person'],
+        language: null,
+        summary: null,
+      },
+      producer: {
+        adapter: 'test',
+        app_version: null,
+      },
+    },
+    body: {
+      kind: 'person',
+      name: 'Current Person',
+      subtype: 'guest_identity',
+      summary: null,
+      locality_label: null,
+      locality: null,
+      identity: null,
+      tags: ['person'],
+      claimed_role_refs: [],
+    },
+  };
+  const compatibilityRead = inspectPacketEnvelopeForTarget(currentPacket, {
+    target_schema_version: '0.9.0',
+  });
+  const preparedPacket = preparePacketEnvelopeForVersionedWrite(currentPacket, {
+    target_schema_version: '0.9.0',
+  });
+
+  assert.equal(compatibilityRead.status.direction, 'downcast');
+  assert.equal(compatibilityRead.status.target_schema_version, '0.9.0');
+  assert.equal(compatibilityRead.status.is_exact, true);
+  assert.equal(compatibilityRead.status.is_lossy, false);
+  assert.equal(compatibilityRead.status.supported_write_target, 'exact');
+  assert.equal(
+    Object.prototype.hasOwnProperty.call(
+      compatibilityRead.adapted_packet.body as Record<string, unknown>,
+      'claimed_role_refs'
+    ),
+    false
+  );
+  assert.equal(
+    Object.prototype.hasOwnProperty.call(
+      compatibilityRead.adapted_packet.body as Record<string, unknown>,
+      'locality'
+    ),
+    false
+  );
+  requirePreparedPacket(preparedPacket);
+  assert.equal(preparedPacket.prepared_packet.header.schema_version, '0.9.0');
+  assert.equal(preparedPacket.supported_write_target, 'exact');
+});
+
+test('downcasting unsupported locality metadata reports a lossy adaptation', () => {
+  const currentPacket = {
+    header: {
+      packet_id: 'nexus:element/test-lossy-downcast',
+      revision_id: 'nexus:element/test-lossy-downcast@r1',
+      family: 'Element',
+      schema_version: '1.0.0',
+      protocol_version: '0.1.0',
+      created_at: '2026-04-17T00:00:00.000Z',
+      parent_revision_refs: [],
+      merge_strategy: null,
+      authority_scope_ref: null,
+      applicable_scope_refs: [],
+      edges: [],
+      provenance: {
+        created_by: null,
+        submitted_by: null,
+        adapter: 'test',
+        recorded_at: '2026-04-17T00:00:00.000Z',
+        imported_from_revision: null,
+      },
+      integrity: {
+        canonicalization: 'RFC8785',
+        hash_alg: 'sha-256',
+        digest: null,
+        embedded_signatures: [],
+        signature_refs: [],
+      },
+      moderation: {
+        visibility: 'public',
+        moderation_state: 'open',
+        policy_refs: [],
+        content_warning_ids: [],
+      },
+      external_refs: [],
+      metadata: {
+        tags: ['assembly', 'locality'],
+        language: null,
+        summary: null,
+      },
+      producer: {
+        adapter: 'test',
+        app_version: null,
+      },
+    },
+    body: {
+      kind: 'assembly',
+      name: 'Lossy Town',
+      subtype: 'city',
+      summary: null,
+      locality_label: 'Lossy Town',
+      locality: {
+        level: 'city',
+        canonical_name_key: 'lossy-town',
+        alias_keys: ['lossy-town'],
+        display_aliases: ['Lossy Town'],
+      },
+      identity: null,
+      tags: ['assembly', 'locality'],
+      claimed_role_refs: [],
+    },
+  };
+  const compatibilityRead = inspectPacketEnvelopeForTarget(currentPacket, {
+    target_schema_version: '0.9.0',
+  });
+  const preparedPacket = preparePacketEnvelopeForVersionedWrite(currentPacket, {
+    target_schema_version: '0.9.0',
+  });
+
+  assert.equal(compatibilityRead.status.direction, 'downcast');
+  assert.equal(compatibilityRead.status.is_lossy, true);
+  assert.equal(compatibilityRead.status.requires_loss_acknowledgement, true);
+  assert.equal(compatibilityRead.status.supported_write_target, 'lossy_allowed');
+  assert.deepEqual(
+    compatibilityRead.status.losses.map((loss) => loss.path),
+    ['body.locality']
+  );
+  requirePreparedPacket(preparedPacket);
+  assert.equal(preparedPacket.supported_write_target, 'lossy_allowed');
+  assert.equal(preparedPacket.requires_loss_acknowledgement, true);
+});
+
+test('unsupported target schema requests fail with a structured compatibility error', () => {
+  assert.throws(
+    () =>
+      inspectPacketEnvelopeForTarget({
+        header: {
+          packet_id: 'nexus:role/test-role-target',
+          revision_id: 'nexus:role/test-role-target@r1',
+          family: 'Role',
+          schema_version: '1.0.0',
+          protocol_version: '0.1.0',
+          created_at: '2026-04-17T00:00:00.000Z',
+          parent_revision_refs: [],
+          merge_strategy: null,
+          authority_scope_ref: null,
+          applicable_scope_refs: [],
+          edges: [],
+          provenance: {
+            created_by: null,
+            submitted_by: null,
+            adapter: 'test',
+            recorded_at: '2026-04-17T00:00:00.000Z',
+            imported_from_revision: null,
+          },
+          integrity: {
+            canonicalization: 'RFC8785',
+            hash_alg: 'sha-256',
+            digest: null,
+            embedded_signatures: [],
+            signature_refs: [],
+          },
+          moderation: {
+            visibility: 'public',
+            moderation_state: 'open',
+            policy_refs: [],
+            content_warning_ids: [],
+          },
+          external_refs: [],
+          metadata: {
+            tags: [],
+            language: null,
+            summary: null,
+          },
+          producer: {
+            adapter: 'test',
+            app_version: null,
+          },
+        },
+        body: {
+          title: 'Test Role',
+          summary: null,
+          role_kind: 'facilitator',
+          status: 'active',
+          responsibility_markdown: null,
+        },
+      }, {
+        target_schema_version: '0.9.0',
+      }),
+    (error: unknown) =>
+      error instanceof PacketCompatibilityError &&
+      error.code === 'unsupported_schema_version'
   );
 });
