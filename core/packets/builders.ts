@@ -6,6 +6,12 @@
 import type { z } from 'zod';
 
 import {
+  createInitialRevisionId,
+  createPacketEdge,
+  createTextExcerpt,
+} from '@core/packets/packet-build-helpers';
+import { buildPacket } from '@core/packets/packet-build-pipeline';
+import {
   PACKET_BODY_SCHEMAS,
   createPacketEnvelope,
   type PacketBodyByType,
@@ -27,6 +33,14 @@ import {
   type AttestationValue,
   type LocalityLevel,
 } from '@core/schema/packet-schema';
+
+export {
+  createInitialRevisionId,
+  createPacketEdge,
+  createPacketRef,
+  createPacketRevisionRef,
+  createTextExcerpt,
+} from '@core/packets/packet-build-helpers';
 
 type PacketVisibility = PacketHeader['moderation']['visibility'];
 type PacketModerationState = PacketHeader['moderation']['moderation_state'];
@@ -243,69 +257,6 @@ const DEFAULT_CREATED_AT = '2026-04-08T00:00:00.000Z';
 const DEFAULT_ADAPTER = 'seed';
 
 /**
- * Inputs: a packet id string.
- * Output: a packet ref object suitable for scope refs, links, and graph edges.
- */
-export function createPacketRef(packetId: string): PacketRef {
-  return { packet_id: packetId };
-}
-
-/**
- * Inputs: a packet id and revision id string.
- * Output: an immutable revision ref object.
- */
-export function createPacketRevisionRef(
-  packetId: string,
-  revisionId: string
-): PacketRevisionRef {
-  return {
-    packet_id: packetId,
-    revision_id: revisionId,
-  };
-}
-
-/**
- * Inputs: a packet id and optional revision number.
- * Output: a readable deterministic revision id for seed and fixture data.
- */
-export function createInitialRevisionId(
-  packetId: string,
-  revisionNumber = 1
-): string {
-  return `${packetId}@r${revisionNumber}`;
-}
-
-/**
- * Inputs: an edge type, a target packet ref or id, and optional metadata.
- * Output: a normalized packet edge object.
- */
-export function createPacketEdge(
-  edgeType: string,
-  target: PacketRef | string,
-  metadata: Record<string, unknown> = {}
-): PacketEdge {
-  return {
-    edge_type: edgeType,
-    target: typeof target === 'string' ? createPacketRef(target) : target,
-    metadata,
-  };
-}
-
-/**
- * Inputs: a markdown or plain-text string and an optional max length.
- * Output: a compact excerpt suitable for header metadata summaries.
- */
-export function createTextExcerpt(content: string, maxLength = 140): string {
-  const normalizedContent = content.replace(/\s+/g, ' ').trim();
-
-  if (normalizedContent.length <= maxLength) {
-    return normalizedContent;
-  }
-
-  return `${normalizedContent.slice(0, maxLength - 3).trimEnd()}...`;
-}
-
-/**
  * Inputs: a list of edges that may contain duplicates.
  * Output: the same edge list with duplicate edge/type/metadata tuples removed.
  */
@@ -509,127 +460,10 @@ export function createPersonPacket(
 export function createDiscussionPacket(
   input: DiscussionPacketInput
 ): PacketEnvelopeByType['Discussion'] {
-  const edges = [...(input.edges ?? [])];
-  let body: z.input<(typeof PACKET_BODY_SCHEMAS)['Discussion']> | null = null;
-  const participationRules = {
-    top_level_actor_classes:
-      input.participation_rules?.top_level_actor_classes ?? [],
-    reply_actor_classes: input.participation_rules?.reply_actor_classes ?? [],
-    reaction_actor_classes:
-      input.participation_rules?.reaction_actor_classes ?? [],
-    top_level_post_cost: input.participation_rules?.top_level_post_cost ?? 0,
-  };
-
-  if (input.kind === 'space') {
-    if (!input.scope_ref) {
-      throw new Error('Discussion space packets require scope_ref.');
-    }
-    edges.push(
-      createPacketEdge('belongs_to', input.scope_ref, {
-        source_field: 'scope_ref',
-      })
-    );
-    body = {
-      kind: 'space',
-      role: input.role,
-      title: input.title,
-      summary: input.summary ?? null,
-      status: input.status ?? 'open',
-      scope_ref: input.scope_ref,
-    };
-  } else if (input.parent_ref) {
-    edges.push(
-      createPacketEdge('belongs_to', input.parent_ref, {
-        source_field: 'parent_ref',
-      })
-    );
-  } else {
-    throw new Error(`Discussion ${input.kind} packets require parent_ref.`);
-  }
-
-  if (input.kind === 'topic') {
-    for (const relatedRef of input.related_refs ?? []) {
-      edges.push(
-        createPacketEdge('references', relatedRef, {
-          source_field: 'related_refs',
-        })
-      );
-    }
-    body = {
-      kind: 'topic',
-      role: input.role,
-      title: input.title,
-      summary: input.summary ?? null,
-      status: input.status ?? 'open',
-      parent_ref: input.parent_ref as PacketRef,
-      related_refs: input.related_refs ?? [],
-      participation_rules: participationRules,
-      default_sort: input.default_sort ?? 'new',
-    };
-  }
-
-  if (input.kind === 'message') {
-    if (!input.topic_ref) {
-      throw new Error('Discussion message packets require topic_ref.');
-    }
-    edges.push(
-      createPacketEdge('references', input.topic_ref, {
-        source_field: 'topic_ref',
-      })
-    );
-    if (input.root_message_ref) {
-      edges.push(
-        createPacketEdge('belongs_to', input.root_message_ref, {
-          source_field: 'root_message_ref',
-        })
-      );
-    }
-    if (input.parent_ref) {
-      edges.push(
-        createPacketEdge('reply_to', input.parent_ref, {
-          source_field: 'parent_ref',
-        })
-      );
-    }
-    body = {
-      kind: 'message',
-      role: input.role,
-      title: input.title,
-      summary: input.summary ?? null,
-      status: input.status ?? 'open',
-      parent_ref: input.parent_ref as PacketRef,
-      topic_ref: input.topic_ref,
-      root_message_ref: input.root_message_ref ?? null,
-      content_markdown: input.content_markdown ?? '',
-    };
-  } else if (input.kind === 'forum') {
-    body = {
-      kind: 'forum',
-      role: input.role,
-      title: input.title,
-      summary: input.summary ?? null,
-      status: input.status ?? 'open',
-      parent_ref: input.parent_ref as PacketRef,
-      participation_rules: participationRules,
-      default_sort: input.default_sort ?? 'new',
-    };
-  }
-
-  if (!body) {
-    throw new Error(`Unsupported Discussion kind: ${input.kind}`);
-  }
-
-  return createPacket({
-    ...input,
+  return buildPacket({
     family: 'Discussion',
-    edges,
-    metadata_summary:
-      input.metadata_summary ??
-      input.summary ??
-      (input.content_markdown
-        ? createTextExcerpt(input.content_markdown)
-        : null),
-    body,
+    body: input,
+    header: input,
   });
 }
 
@@ -856,38 +690,10 @@ export function createProposalPacket(
 export function createPolicyPacket(
   input: PolicyPacketInput
 ): PacketEnvelopeByType['Policy'] {
-  return createPacket({
-    ...input,
+  return buildPacket({
     family: 'Policy',
-    metadata_summary:
-      input.metadata_summary ??
-      input.summary ??
-      createTextExcerpt(input.body_markdown),
-    body: {
-      title: input.title,
-      summary: input.summary ?? null,
-      policy_kind: input.policy_kind,
-      body_markdown: input.body_markdown,
-      status: input.status,
-      trust_policy: input.trust_policy
-        ? {
-            association_support_threshold:
-              input.trust_policy.association_support_threshold ?? 1,
-            role_support_threshold:
-              input.trust_policy.role_support_threshold ?? 2,
-            posting_gate: input.trust_policy.posting_gate ?? 'emerging',
-            voting_gate: input.trust_policy.voting_gate ?? 'recognized',
-            review_gate: input.trust_policy.review_gate ?? 'role_eligible',
-          }
-        : null,
-      write_policy: input.write_policy
-        ? {
-            default_proof_level:
-              input.write_policy.default_proof_level ?? 'session',
-            action_overrides: input.write_policy.action_overrides ?? {},
-          }
-        : null,
-    },
+    body: input,
+    header: input,
   });
 }
 

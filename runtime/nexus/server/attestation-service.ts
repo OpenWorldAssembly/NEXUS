@@ -8,8 +8,10 @@ import { DatabaseSync } from 'node:sqlite';
 import { createAttestationPacket } from '@core/packets/builders';
 import {
   isDiscussionMessagePacket,
-  projectDiscussionPacketToLegacy,
+  resolveCanonicalDiscussionTarget,
+  type DiscussionLegacyFamily,
 } from '@core/packets/discussion-compat';
+import { interpretPacket } from '@core/packets/packet-interpreter';
 import type {
   AssemblyAssociationClaimProjection,
   AttestationEdgeProjection,
@@ -131,25 +133,38 @@ function toAttestationEdgeProjection(
   };
 }
 
+function projectDiscussionLegacyView<TFamily extends DiscussionLegacyFamily>(
+  packet: PacketEnvelope,
+  targetFamily: TFamily
+): PacketEnvelopeByType[TFamily] | null {
+  const interpretation = interpretPacket({
+    packet,
+    target: {
+      family: targetFamily,
+      mode: 'legacy',
+    },
+  });
+
+  return (interpretation.interpreted as PacketEnvelopeByType[TFamily] | null) ?? null;
+}
+
 async function getDiscussionForumById(
   packetStore: NodeSQLitePacketStore,
   forumPacketId: string
 ): Promise<PacketEnvelopeByType['DiscussionForum'] | null> {
-  const packet = await packetStore.fetchByPacket({ packet_id: forumPacketId });
+  const resolution = await resolveCanonicalDiscussionTarget({
+    packet_id: forumPacketId,
+    fetchPacket: async (packetId) =>
+      packetStore.fetchByPacket({ packet_id: packetId }),
+  });
+  const packet = resolution.canonical_packet ?? resolution.source_packet;
 
   if (!packet) {
     return null;
   }
 
-  if (packet.header.family === 'Discussion') {
-    return projectDiscussionPacketToLegacy(
-      packet as PacketEnvelopeByType['Discussion'],
-      'DiscussionForum'
-    ) as PacketEnvelopeByType['DiscussionForum'] | null;
-  }
-
   if (packet.header.family !== 'DiscussionForum') {
-    return null;
+    return projectDiscussionLegacyView(packet, 'DiscussionForum');
   }
 
   return packet as PacketEnvelopeByType['DiscussionForum'];
@@ -159,21 +174,19 @@ async function getDiscussionThreadById(
   packetStore: NodeSQLitePacketStore,
   threadPacketId: string
 ): Promise<PacketEnvelopeByType['DiscussionThread'] | null> {
-  const packet = await packetStore.fetchByPacket({ packet_id: threadPacketId });
+  const resolution = await resolveCanonicalDiscussionTarget({
+    packet_id: threadPacketId,
+    fetchPacket: async (packetId) =>
+      packetStore.fetchByPacket({ packet_id: packetId }),
+  });
+  const packet = resolution.canonical_packet ?? resolution.source_packet;
 
   if (!packet) {
     return null;
   }
 
-  if (packet.header.family === 'Discussion') {
-    return projectDiscussionPacketToLegacy(
-      packet as PacketEnvelopeByType['Discussion'],
-      'DiscussionThread'
-    ) as PacketEnvelopeByType['DiscussionThread'] | null;
-  }
-
   if (packet.header.family !== 'DiscussionThread') {
-    return null;
+    return projectDiscussionLegacyView(packet, 'DiscussionThread');
   }
 
   return packet as PacketEnvelopeByType['DiscussionThread'];
@@ -195,10 +208,10 @@ function toLegacyDiscussionEntry(
   | null {
   if (isDiscussionMessagePacket(packet)) {
     return (
-      (projectDiscussionPacketToLegacy(packet, 'DiscussionReply') as
+      (projectDiscussionLegacyView(packet, 'DiscussionReply') as
         | PacketEnvelopeByType['DiscussionReply']
         | null) ??
-      (projectDiscussionPacketToLegacy(packet, 'DiscussionPost') as
+      (projectDiscussionLegacyView(packet, 'DiscussionPost') as
         | PacketEnvelopeByType['DiscussionPost']
         | null)
     );

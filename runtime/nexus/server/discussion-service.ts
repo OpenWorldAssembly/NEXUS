@@ -14,8 +14,10 @@ import {
 import { createTextExcerpt } from '@core/packets/builders';
 import {
   isDiscussionMessagePacket,
-  projectDiscussionPacketToLegacy,
+  resolveCanonicalDiscussionTarget,
+  type DiscussionLegacyFamily,
 } from '@core/packets/discussion-compat';
+import { interpretPacket } from '@core/packets/packet-interpreter';
 import type {
   AttestationService,
   AttestationSummary,
@@ -69,6 +71,21 @@ const REDDIT_EPOCH_SECONDS = 1134028003;
 const HOT_SCORE_DECAY_SECONDS = 45000;
 const DEFAULT_FEED_PAGE_SIZE = 20;
 const DEFAULT_REPLY_PAGE_SIZE = 10;
+
+function projectDiscussionLegacyView<TFamily extends DiscussionLegacyFamily>(
+  packet: PacketEnvelope,
+  targetFamily: TFamily
+): PacketEnvelopeByType[TFamily] | null {
+  const interpretation = interpretPacket({
+    packet,
+    target: {
+      family: targetFamily,
+      mode: 'legacy',
+    },
+  });
+
+  return (interpretation.interpreted as PacketEnvelopeByType[TFamily] | null) ?? null;
+}
 const MAX_FEED_PAGE_SIZE = 50;
 const MAX_REPLY_PAGE_SIZE = 25;
 const DEFAULT_COLLAPSED_REPLY_DEPTH = 5;
@@ -375,21 +392,19 @@ async function getDiscussionForumById(
   packetStore: NodeSQLitePacketStore,
   forumPacketId: string
 ): Promise<PacketEnvelopeByType['DiscussionForum'] | null> {
-  const packet = await packetStore.fetchByPacket({ packet_id: forumPacketId });
+  const resolution = await resolveCanonicalDiscussionTarget({
+    packet_id: forumPacketId,
+    fetchPacket: async (packetId) =>
+      packetStore.fetchByPacket({ packet_id: packetId }),
+  });
+  const packet = resolution.canonical_packet ?? resolution.source_packet;
 
   if (!packet) {
     return null;
   }
 
-  if (packet.header.family === 'Discussion') {
-    return projectDiscussionPacketToLegacy(
-      packet as PacketEnvelopeByType['Discussion'],
-      'DiscussionForum'
-    ) as PacketEnvelopeByType['DiscussionForum'] | null;
-  }
-
   if (packet.header.family !== 'DiscussionForum') {
-    return null;
+    return projectDiscussionLegacyView(packet, 'DiscussionForum');
   }
 
   return packet as PacketEnvelopeByType['DiscussionForum'];
@@ -399,21 +414,19 @@ async function getDiscussionThreadById(
   packetStore: NodeSQLitePacketStore,
   threadPacketId: string
 ): Promise<PacketEnvelopeByType['DiscussionThread'] | null> {
-  const packet = await packetStore.fetchByPacket({ packet_id: threadPacketId });
+  const resolution = await resolveCanonicalDiscussionTarget({
+    packet_id: threadPacketId,
+    fetchPacket: async (packetId) =>
+      packetStore.fetchByPacket({ packet_id: packetId }),
+  });
+  const packet = resolution.canonical_packet ?? resolution.source_packet;
 
   if (!packet) {
     return null;
   }
 
-  if (packet.header.family === 'Discussion') {
-    return projectDiscussionPacketToLegacy(
-      packet as PacketEnvelopeByType['Discussion'],
-      'DiscussionThread'
-    ) as PacketEnvelopeByType['DiscussionThread'] | null;
-  }
-
   if (packet.header.family !== 'DiscussionThread') {
-    return null;
+    return projectDiscussionLegacyView(packet, 'DiscussionThread');
   }
 
   return packet as PacketEnvelopeByType['DiscussionThread'];
@@ -423,23 +436,25 @@ async function getDiscussionEntryById(
   packetStore: NodeSQLitePacketStore,
   packetId: string
 ): Promise<DiscussionEntryPacket | null> {
-  const packet = await packetStore.fetchByPacket({ packet_id: packetId });
+  const resolution = await resolveCanonicalDiscussionTarget({
+    packet_id: packetId,
+    fetchPacket: async (nextPacketId) =>
+      packetStore.fetchByPacket({ packet_id: nextPacketId }),
+  });
+  const packet = resolution.canonical_packet ?? resolution.source_packet;
 
   if (!packet) {
     return null;
   }
 
   if (isDiscussionMessagePacket(packet)) {
-    const asReply = projectDiscussionPacketToLegacy(packet, 'DiscussionReply');
+    const asReply = projectDiscussionLegacyView(packet, 'DiscussionReply');
 
     if (asReply) {
       return asReply as DiscussionEntryPacket;
     }
 
-    return projectDiscussionPacketToLegacy(
-      packet,
-      'DiscussionPost'
-    ) as DiscussionEntryPacket | null;
+    return projectDiscussionLegacyView(packet, 'DiscussionPost') as DiscussionEntryPacket | null;
   }
 
   if (
@@ -516,31 +531,31 @@ export class SQLiteDiscussionService
       this.packetStore.listPreferredPackets(),
     ]);
     const canonicalSpaces = canonicalDiscussionPackets
-      .map((packet) => projectDiscussionPacketToLegacy(packet, 'DiscussionSpace'))
+      .map((packet) => projectDiscussionLegacyView(packet, 'DiscussionSpace'))
       .filter(
         (packet): packet is PacketEnvelopeByType['DiscussionSpace'] =>
           packet !== null
       );
     const canonicalForums = canonicalDiscussionPackets
-      .map((packet) => projectDiscussionPacketToLegacy(packet, 'DiscussionForum'))
+      .map((packet) => projectDiscussionLegacyView(packet, 'DiscussionForum'))
       .filter(
         (packet): packet is PacketEnvelopeByType['DiscussionForum'] =>
           packet !== null
       );
     const canonicalThreads = canonicalDiscussionPackets
-      .map((packet) => projectDiscussionPacketToLegacy(packet, 'DiscussionThread'))
+      .map((packet) => projectDiscussionLegacyView(packet, 'DiscussionThread'))
       .filter(
         (packet): packet is PacketEnvelopeByType['DiscussionThread'] =>
           packet !== null
       );
     const canonicalRootPosts = canonicalDiscussionPackets
-      .map((packet) => projectDiscussionPacketToLegacy(packet, 'DiscussionPost'))
+      .map((packet) => projectDiscussionLegacyView(packet, 'DiscussionPost'))
       .filter(
         (packet): packet is PacketEnvelopeByType['DiscussionPost'] =>
           packet !== null
       );
     const canonicalReplies = canonicalDiscussionPackets
-      .map((packet) => projectDiscussionPacketToLegacy(packet, 'DiscussionReply'))
+      .map((packet) => projectDiscussionLegacyView(packet, 'DiscussionReply'))
       .filter(
         (packet): packet is PacketEnvelopeByType['DiscussionReply'] =>
           packet !== null

@@ -23,12 +23,16 @@ import type {
   PacketRef,
 } from '@core/schema/packet-schema';
 
+export const DISCUSSION_LEGACY_FAMILIES = [
+  'DiscussionSpace',
+  'DiscussionForum',
+  'DiscussionThread',
+  'DiscussionPost',
+  'DiscussionReply',
+] as const;
+
 export type DiscussionLegacyFamily =
-  | 'DiscussionSpace'
-  | 'DiscussionForum'
-  | 'DiscussionThread'
-  | 'DiscussionPost'
-  | 'DiscussionReply';
+  (typeof DISCUSSION_LEGACY_FAMILIES)[number];
 
 export type DiscussionLegacyPacket =
   | PacketEnvelopeByType['DiscussionSpace']
@@ -158,6 +162,21 @@ function createMirrorRevisionId(packetId: string, sourceRevisionId: string): str
 
 function canonicalRef(sourcePacketId: string): PacketRef {
   return createPacketRef(createCanonicalDiscussionPacketId(sourcePacketId));
+}
+
+export function isDiscussionLegacyFamily(
+  family: PacketFamily | string
+): family is DiscussionLegacyFamily {
+  return DISCUSSION_LEGACY_FAMILIES.includes(family as DiscussionLegacyFamily);
+}
+
+export interface CanonicalDiscussionTargetResolution {
+  requested_packet_id: string;
+  resolved_packet_id: string;
+  canonical_packet_id: string;
+  source_packet: DiscussionSourcePacket | null;
+  canonical_packet: PacketEnvelopeByType['Discussion'] | null;
+  should_create_mirror: boolean;
 }
 
 function createFamilyHistory(packet: PacketEnvelope) {
@@ -477,6 +496,64 @@ export function createCanonicalDiscussionMirrorPacket(
     root_message_ref: canonicalRef(discussionReplyPacket.body.root_post_ref.packet_id),
     content_markdown: discussionReplyPacket.body.content_markdown,
   });
+}
+
+export async function resolveCanonicalDiscussionTarget(input: {
+  packet_id: string;
+  fetchPacket: (packetId: string) => Promise<PacketEnvelope | null>;
+}): Promise<CanonicalDiscussionTargetResolution> {
+  const sourcePacket = await input.fetchPacket(input.packet_id);
+
+  if (!sourcePacket) {
+    return {
+      requested_packet_id: input.packet_id,
+      resolved_packet_id: input.packet_id,
+      canonical_packet_id: createCanonicalDiscussionPacketId(input.packet_id),
+      source_packet: null,
+      canonical_packet: null,
+      should_create_mirror: false,
+    };
+  }
+
+  if (!isDiscussionSourcePacket(sourcePacket)) {
+    throw new Error(`Packet ${input.packet_id} is not a discussion packet.`);
+  }
+
+  if (sourcePacket.header.family === 'Discussion') {
+    return {
+      requested_packet_id: input.packet_id,
+      resolved_packet_id: sourcePacket.header.packet_id,
+      canonical_packet_id: sourcePacket.header.packet_id,
+      source_packet: sourcePacket as DiscussionSourcePacket,
+      canonical_packet: sourcePacket as PacketEnvelopeByType['Discussion'],
+      should_create_mirror: false,
+    };
+  }
+
+  const canonicalPacketId = createCanonicalDiscussionPacketId(
+    sourcePacket.header.packet_id
+  );
+  const canonicalPacket = await input.fetchPacket(canonicalPacketId);
+
+  if (canonicalPacket?.header.family === 'Discussion') {
+    return {
+      requested_packet_id: input.packet_id,
+      resolved_packet_id: canonicalPacket.header.packet_id,
+      canonical_packet_id: canonicalPacket.header.packet_id,
+      source_packet: sourcePacket as DiscussionSourcePacket,
+      canonical_packet: canonicalPacket as PacketEnvelopeByType['Discussion'],
+      should_create_mirror: false,
+    };
+  }
+
+  return {
+    requested_packet_id: input.packet_id,
+    resolved_packet_id: sourcePacket.header.packet_id,
+    canonical_packet_id: canonicalPacketId,
+    source_packet: sourcePacket as DiscussionSourcePacket,
+    canonical_packet: null,
+    should_create_mirror: true,
+  };
 }
 
 export function projectDiscussionPacketToLegacy(

@@ -3,17 +3,9 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import test from 'node:test';
 
-const SERVER_ROOT = join(process.cwd(), 'runtime', 'nexus', 'server');
+import { DIRECT_PACKET_WRITE_SEAMS } from './write-seam-registry.ts';
 
-const ALLOWLISTED_WRITERS = new Map<string, string>([
-  ['mutation-service.ts', 'fortress actor-write path'],
-  ['discussion-service.ts', 'fortress-internal discussion persistence helper'],
-  ['attestation-service.ts', 'fortress-internal attestation persistence helper'],
-  ['default-discussion-surfaces.ts', 'system discussion-surface bootstrap helper'],
-  ['locality-directory-service.ts', 'system locality bootstrap helper'],
-  ['auth-service.ts', 'identity bootstrap writer'],
-  ['nexus-packet-service-bootstrap.ts', 'bootstrap/backfill writer'],
-]);
+const SERVER_ROOT = join(process.cwd(), 'runtime', 'nexus', 'server');
 
 function listTypeScriptFiles(directoryPath: string): string[] {
   return readdirSync(directoryPath).flatMap((entryName) => {
@@ -36,15 +28,26 @@ test('runtime packet writers stay explicitly classified', () => {
   );
 
   const unclassifiedWriters = writerFiles.filter(
-    (filePath) => !ALLOWLISTED_WRITERS.has(basename(filePath))
+    (filePath) => !Object.hasOwn(DIRECT_PACKET_WRITE_SEAMS, basename(filePath))
   );
 
   assert.deepEqual(unclassifiedWriters, []);
 
   const observedAllowlistedWriters = writerFiles
     .map((filePath) => basename(filePath))
-    .filter((fileName) => ALLOWLISTED_WRITERS.has(fileName))
+    .filter((fileName) => Object.hasOwn(DIRECT_PACKET_WRITE_SEAMS, fileName))
     .sort();
 
-  assert.deepEqual(observedAllowlistedWriters, [...ALLOWLISTED_WRITERS.keys()].sort());
+  assert.deepEqual(
+    observedAllowlistedWriters,
+    Object.keys(DIRECT_PACKET_WRITE_SEAMS).sort()
+  );
+});
+
+test('runtime packet writer classifications keep explicit category and reason', () => {
+  Object.entries(DIRECT_PACKET_WRITE_SEAMS).forEach(([fileName, seam]) => {
+    assert.match(fileName, /\.ts$/);
+    assert.notEqual(seam.category.trim(), '');
+    assert.notEqual(seam.reason.trim(), '');
+  });
 });

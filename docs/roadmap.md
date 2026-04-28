@@ -268,6 +268,15 @@ Default direction:
 - keep `Library` as the browse-and-collect surface
 - keep `Packet Explorer` as the inspect-and-navigate surface
 - do not block this on graph visualization
+- use the shared interpreter pipeline rather than packet-family-specific readers, so Packet Explorer can ask for `raw`, `canonical`, `legacy`, or UI-targeted packet views through one contract
+- show structured adapter `changes`, `losses`, `requires_guarded_migration`, and `requires_loss_acknowledgement` directly from the compatibility layer instead of re-deriving them in UI code
+
+Compatibility / packet-dynamics direction:
+
+- current system remains core-owned TypeScript metadata and adapter logic; stored packets may describe compatibility intent, dependency requirements, compatible targets, and migration/loss policy, but they do not execute adapter code
+- long-term packet evolution should keep the envelope, mutation corridor, proof rules, and signature law rigid while letting packet families, kinds, relationships, policies, and interpreters stay extensible
+- preferred future shape is packet-policy/dependency-informed compatibility: packet metadata can declare family history, target families/versions, omitted features, and migration policy, while core still interprets and enforces every transform
+- backward compatibility should default to virtual downcast where possible; explicit shadow writes or export bridges remain guarded interoperability tools rather than the normal write path
 
 ### 8. Governance loop
 

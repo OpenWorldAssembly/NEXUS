@@ -598,7 +598,7 @@ Implemented flow:
 6. feed sorting happens inside the `Feed` workspace, reply sorting happens inside the `Thread` workspace, and the feed/thread workspaces both provide direct navigation into the `Post` workspace for new top-level posts
 7. top-level posts are allowed whenever the active actor satisfies the forum participation rule: any signed actor in `visitor_lobby`, or an active scope that sits inside the actor's active home-locality branch for the other forums
 8. top-level feeds and reply branches are loaded incrementally through cursor-based API pages rather than returning the entire forum or thread tree in one payload
-9. discussion writes are prepared and finalized through the shared fortress mutation corridor, written into the local SQLite packet store as canonical `DiscussionThread + DiscussionPost`, `DiscussionReply`, or `Attestation` packets, and then re-projected back into the feed/detail UI
+9. discussion writes are prepared and finalized through the shared fortress mutation corridor, written into the local SQLite packet store as canonical `Discussion(kind: "topic" | "message")` or `Attestation` packets, and then re-projected back into the current feed/detail UI through the discussion compatibility layer
 10. discussion writes derive actor ownership from the verified actor packet, store `provenance.created_by` as that person element, and do not depend on the removed anonymous-session visitor-lobby bridge
 
 Status:
@@ -608,7 +608,7 @@ Status:
 - discussion point balances, top-level post costs, and point-earned reply loops are currently disabled
 - discussion reactions still use raw `Attestation(kind: "packet_signal")` packets, but vote-derived deprioritization and auto-hide behavior are currently disabled
 - discussion packets use a discussion-seed-version marker in the same runtime data directory, and destructive reseeds are now limited to local development or an explicit `NEXUS_ALLOW_DISCUSSION_RESET` override instead of running automatically in every hosted boot
-- discussion packets do not stand alone: `DiscussionSpace` packets attach to scope `Element` packets, `DiscussionForum` packets attach to a discussion space, `DiscussionThread` packets attach to a forum, root `DiscussionPost` packets attach to their thread, and `DiscussionReply` packets attach to their thread, root post, and immediate parent reply-or-post
+- canonical discussion packets do not stand alone: `Discussion(kind: "space")` attaches to a scope `Element`, `Discussion(kind: "forum")` attaches to a discussion space, `Discussion(kind: "topic")` attaches to a forum, and `Discussion(kind: "message")` attaches to its topic plus parent message/thread context; legacy `DiscussionSpace`, `DiscussionForum`, `DiscussionThread`, `DiscussionPost`, and `DiscussionReply` packets remain readable and projectable through the compatibility layer
 - raw trust visibility is now packet-first but still pre-weighting: `/api/nexus/attestations/target`, `/api/nexus/attestations/actor`, and `/api/nexus/assemblies/claims` expose inspectable attestation edges without any trust score math
 - a person can now claim association with an assembly through `Claim(kind: "assembly_association")`, and the trust flow can create or withdraw that association while the assembly-creation API can still seed a lightweight local assembly packet plus starter discussion space/forums under the active scope
 
@@ -786,7 +786,7 @@ Important note:
 - packet-family compatibility coverage is now classified explicitly: `Element`, `Claim`, and `Policy` are the families with intentional legacy support plus adapted-write preparation, while most remaining families are intentionally `current_only` until a concrete migration need exists
 - packet compatibility is now target-version aware for supported family versions: callers can request the current family schema or an older supported target, receive structured change/loss metadata, and prepare explicit versioned writes without rewriting raw stored history in place
 - versioned write preparation distinguishes exact, lossy-but-allowed, and blocked targets; lossy downcasts report machine-readable `losses`, `is_lossy`, and `requires_loss_acknowledgement` so future Packet Explorer and guarded-upgrade flows can show what would change before admission
-- discussion packets are currently part of that explicit freeze: `DiscussionSpace`, `DiscussionForum`, `DiscussionThread`, `DiscussionPost`, and `DiscussionReply` remain separate stored families for now, and any future unification into one conceptual discussion domain must happen as an adapter-backed migration rather than a silent rename
+- packet-family compatibility now includes a family-evolution bridge for discussion: canonical `Discussion` packets are the primary target for new writes, legacy `DiscussionSpace`, `DiscussionForum`, `DiscussionThread`, `DiscussionPost`, and `DiscussionReply` packets remain readable/projectable, and further discussion evolution should continue as additive adapter-backed migration rather than destructive renaming
 
 ## Current naming patterns
 
@@ -859,7 +859,7 @@ What is implemented:
 - `Role` and `Claim` as packet families with claim-based role and assembly association state
 - typed packet edges, scope refs, packet-store interfaces, a SQLite-backed packet-store implementation, and storage schema definitions
 - shared browser and nexus query-service implementations over the packet search index
-- a packet-backed discussion and attestation engine that stores canonical `DiscussionSpace`, `DiscussionForum`, `DiscussionThread`, `DiscussionPost`, `DiscussionReply`, and `Attestation` packets in the local SQLite packet store, projects derived reply/attestation/ledger indexes, and reseeds local dev discussion data deterministically by seed version
+- a packet-backed discussion and attestation engine that stores canonical `Discussion` and `Attestation` packets in the local SQLite packet store, keeps legacy discussion families readable through bidirectional compatibility projection, projects derived reply/attestation/ledger indexes, and reseeds local dev discussion data deterministically by seed version
 - a first trust/runtime slice that projects scope-local trust stages, policy gates, assembly association claims, role-claim summaries, and role evidence through `/api/nexus/scopes/[scopeId]/trust`
 - a first roles/runtime slice that projects scope-relevant role claimants from scoped claim packets, scoped role trust posture, inline evidence lists, real self claim/unclaim writes, and real support/dispute writes through `/api/nexus/scopes/[scopeId]/roles`
 - derived packet label helpers for future browser and nexus projections

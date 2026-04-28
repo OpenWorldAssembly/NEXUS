@@ -36,6 +36,7 @@ import {
   createCanonicalDiscussionPacketId,
   isDiscussionMessagePacket,
   projectDiscussionPacketToLegacy,
+  resolveCanonicalDiscussionTarget,
   type DiscussionLegacyFamily,
 } from '@core/packets/discussion-compat';
 import {
@@ -373,6 +374,9 @@ export class NexusMutationService {
     canonical_packet_id: string;
     packets: PacketEnvelopeByType['Discussion'][];
   }> {
+    // Temporary containment boundary: explicit discussion-family canonicalization
+    // stays inside the fortress mutation layer until the generic interpreter and
+    // builder pipelines can absorb more family-evolution planning centrally.
     const planned = input.planned ?? new Map<string, PacketEnvelopeByType['Discussion']>();
     const visiting = input.visiting ?? new Set<string>();
 
@@ -395,24 +399,22 @@ export class NexusMutationService {
       throw new Error(`Packet ${input.packet.header.packet_id} is not a discussion packet.`);
     }
 
-    const canonicalPacketId = createCanonicalDiscussionPacketId(
-      input.packet.header.packet_id
-    );
+    const resolution = await resolveCanonicalDiscussionTarget({
+      packet_id: input.packet.header.packet_id,
+      fetchPacket: async (packetId) =>
+        this.packetStore.fetchByPacket({ packet_id: packetId }),
+    });
 
-    if (planned.has(canonicalPacketId)) {
+    if (planned.has(resolution.canonical_packet_id)) {
       return {
-        canonical_packet_id: canonicalPacketId,
+        canonical_packet_id: resolution.canonical_packet_id,
         packets: [...planned.values()],
       };
     }
 
-    const existingCanonical = await this.packetStore.fetchByPacket({
-      packet_id: canonicalPacketId,
-    });
-
-    if (existingCanonical?.header.family === 'Discussion') {
+    if (resolution.canonical_packet) {
       return {
-        canonical_packet_id: canonicalPacketId,
+        canonical_packet_id: resolution.canonical_packet_id,
         packets: [...planned.values()],
       };
     }
@@ -460,7 +462,7 @@ export class NexusMutationService {
     }
 
     planned.set(
-      canonicalPacketId,
+      resolution.canonical_packet_id,
       createCanonicalDiscussionMirrorPacket(
         input.packet as PacketEnvelopeByType[DiscussionLegacyFamily]
       )
@@ -468,7 +470,7 @@ export class NexusMutationService {
     visiting.delete(input.packet.header.packet_id);
 
     return {
-      canonical_packet_id: canonicalPacketId,
+      canonical_packet_id: resolution.canonical_packet_id,
       packets: [...planned.values()],
     };
   }
