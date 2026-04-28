@@ -9,9 +9,8 @@ import {
 } from '@core/auth/authority';
 import type { DiscussionViewerContext } from '@core/contracts';
 import {
-  createDiscussionPostPacket,
-  createDiscussionReplyPacket,
-  createDiscussionThreadPacket,
+  createDiscussionPacket,
+  createPacketEdge,
   createTextExcerpt,
 } from '@core/packets/builders';
 import {
@@ -59,6 +58,7 @@ type DiscussionThreadPostIntent = {
   post_markdown: string;
   thread_kind?: string | null;
   related_packet_ids?: string[];
+  legacy_context_packet_ids?: string[];
 };
 
 type DiscussionReplyIntent = {
@@ -73,6 +73,7 @@ type DiscussionReplyIntent = {
   root_post_packet_id: string;
   parent_post_packet_id: string;
   reply_markdown: string;
+  legacy_context_packet_ids?: string[];
 };
 
 export type MutationIntent = DiscussionThreadPostIntent | DiscussionReplyIntent;
@@ -145,7 +146,7 @@ function createDiscussionThreadPacketId(input: {
 }): string {
   const compactTimestamp = input.createdAt.replace(/[^0-9]/g, '').slice(0, 14);
 
-  return `nexus:discussion-thread/${createPacketSlug(
+  return `nexus:discussion/topic/${createPacketSlug(
     input.scopePacketId,
     18
   )}-${createPacketSlug(input.forumPacketId, 18)}-${createContentSlug(
@@ -163,7 +164,7 @@ function createDiscussionRootPostPacketId(input: {
 }): string {
   const compactTimestamp = input.createdAt.replace(/[^0-9]/g, '').slice(0, 14);
 
-  return `nexus:discussion-post/${createPacketSlug(
+  return `nexus:discussion/message/${createPacketSlug(
     input.scopePacketId,
     18
   )}-${createPacketSlug(input.threadPacketId, 20)}-${createContentSlug(
@@ -181,7 +182,7 @@ function createDiscussionReplyPacketId(input: {
 }): string {
   const compactTimestamp = input.createdAt.replace(/[^0-9]/g, '').slice(0, 14);
 
-  return `nexus:discussion-reply/${createPacketSlug(
+  return `nexus:discussion/message/${createPacketSlug(
     input.scopePacketId,
     18
   )}-${createPacketSlug(input.threadPacketId, 20)}-${createContentSlug(
@@ -253,6 +254,13 @@ export function createDiscussionThreadPostCandidate(input: {
           'Post'
         );
   const relatedPacketIds = input.intent.related_packet_ids ?? [];
+  const legacyContextEdges = (input.intent.legacy_context_packet_ids ?? []).map(
+    (packetId) =>
+      createPacketEdge('references', packetId, {
+        source_field: 'legacy_context_packet_ids',
+        adapter_profile: 'discussion-family-unification',
+      })
+  );
   const threadKind =
     input.intent.thread_kind?.trim() || input.intent.forum_kind;
   const authorityScopePacketId =
@@ -268,7 +276,7 @@ export function createDiscussionThreadPostCandidate(input: {
     createdAt: input.intent.created_at,
     mutationNonce: input.intent.mutation_nonce,
   });
-  const threadPacket = createDiscussionThreadPacket({
+  const topicPacket = createDiscussionPacket({
     packet_id: threadPacketId,
     revision_id: createDiscussionRevisionId({
       packetId: threadPacketId,
@@ -284,26 +292,28 @@ export function createDiscussionThreadPostCandidate(input: {
     created_by: {
       packet_id: input.actorPacket.header.packet_id,
     },
-    metadata_tags: ['discussion-thread', input.intent.forum_kind],
+    metadata_tags: ['discussion', 'topic', input.intent.forum_kind],
     metadata_summary: createTextExcerpt(postBody),
+    edges: legacyContextEdges,
+    kind: 'topic',
+    role: threadKind,
     title: threadTitle,
     summary: createTextExcerpt(postBody, 160),
-    forum_ref: {
+    parent_ref: {
       packet_id: input.intent.forum_packet_id,
     },
-    thread_kind: threadKind,
     status: 'open',
     related_refs: toPacketRefs(relatedPacketIds),
     default_sort: input.intent.default_sort,
   });
   const postPacketId = createDiscussionRootPostPacketId({
     scopePacketId,
-    threadPacketId: threadPacket.header.packet_id,
-    title: threadPacket.body.title,
+    threadPacketId: topicPacket.header.packet_id,
+    title: topicPacket.body.title,
     createdAt: input.intent.created_at,
     mutationNonce: input.intent.mutation_nonce,
   });
-  const postPacket = createDiscussionPostPacket({
+  const postPacket = createDiscussionPacket({
     packet_id: postPacketId,
     revision_id: createDiscussionRevisionId({
       packetId: postPacketId,
@@ -311,26 +321,33 @@ export function createDiscussionThreadPostCandidate(input: {
       mutationNonce: input.intent.mutation_nonce,
     }),
     created_at: input.intent.created_at,
-    authority_scope_ref: threadPacket.header.authority_scope_ref,
-    applicable_scope_refs: threadPacket.header.applicable_scope_refs,
+    authority_scope_ref: topicPacket.header.authority_scope_ref,
+    applicable_scope_refs: topicPacket.header.applicable_scope_refs,
     adapter: 'nexus-web',
-    metadata_tags: ['discussion-post', input.intent.forum_kind, 'thread-root'],
+    metadata_tags: ['discussion', 'message', input.intent.forum_kind, 'topic-root'],
     metadata_summary: createTextExcerpt(postBody),
-    title: threadPacket.body.title,
+    edges: legacyContextEdges,
+    kind: 'message',
+    role: 'forum_post',
+    title: topicPacket.body.title,
     created_by: {
       packet_id: input.actorPacket.header.packet_id,
     },
-    thread_ref: {
-      packet_id: threadPacket.header.packet_id,
+    parent_ref: {
+      packet_id: topicPacket.header.packet_id,
     },
-    post_kind: 'forum_post',
+    topic_ref: {
+      packet_id: topicPacket.header.packet_id,
+    },
+    root_message_ref: null,
+    status: 'open',
     content_markdown: postBody,
   });
 
   return {
     intent: input.intent,
     action_ids: ['discussion.thread.create', 'discussion.post.create'],
-    packets: [threadPacket, postPacket],
+    packets: [topicPacket, postPacket],
     governing_scope_packet_id: authorityScopePacketId,
   };
 }
@@ -341,6 +358,13 @@ export function createDiscussionReplyCandidate(input: {
 }): MutationCandidate {
   const scopePacketId = resolveDiscussionScopePacketId(input.intent.scope_id);
   const replyBody = input.intent.reply_markdown.trim();
+  const legacyContextEdges = (input.intent.legacy_context_packet_ids ?? []).map(
+    (packetId) =>
+      createPacketEdge('references', packetId, {
+        source_field: 'legacy_context_packet_ids',
+        adapter_profile: 'discussion-family-unification',
+      })
+  );
   const authorityScopePacketId =
     input.intent.authority_scope_packet_id ?? scopePacketId;
   const applicableScopePacketIds =
@@ -354,7 +378,7 @@ export function createDiscussionReplyCandidate(input: {
     createdAt: input.intent.created_at,
     mutationNonce: input.intent.mutation_nonce,
   });
-  const replyPacket = createDiscussionReplyPacket({
+  const replyPacket = createDiscussionPacket({
     packet_id: replyPacketId,
     revision_id: createDiscussionRevisionId({
       packetId: replyPacketId,
@@ -367,8 +391,11 @@ export function createDiscussionReplyCandidate(input: {
     },
     applicable_scope_refs: toPacketRefs(applicableScopePacketIds),
     adapter: 'nexus-web',
-    metadata_tags: ['discussion-reply', input.intent.forum_kind],
+    metadata_tags: ['discussion', 'message', 'reply', input.intent.forum_kind],
     metadata_summary: createTextExcerpt(replyBody),
+    edges: legacyContextEdges,
+    kind: 'message',
+    role: 'reply',
     title: createFallbackDiscussionTitle(
       input.actorPacket.body.name,
       replyBody,
@@ -377,15 +404,16 @@ export function createDiscussionReplyCandidate(input: {
     created_by: {
       packet_id: input.actorPacket.header.packet_id,
     },
-    thread_ref: {
-      packet_id: input.intent.thread_packet_id,
-    },
-    root_post_ref: {
-      packet_id: input.intent.root_post_packet_id,
-    },
-    reply_to_ref: {
+    parent_ref: {
       packet_id: input.intent.parent_post_packet_id,
     },
+    topic_ref: {
+      packet_id: input.intent.thread_packet_id,
+    },
+    root_message_ref: {
+      packet_id: input.intent.root_post_packet_id,
+    },
+    status: 'open',
     content_markdown: replyBody,
   });
 

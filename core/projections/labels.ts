@@ -25,6 +25,7 @@ const FAMILY_LABELS: Record<PacketEnvelope['header']['family'], string> = {
   MissionReport: 'mission report',
   Module: 'module packet',
   Policy: 'policy packet',
+  Discussion: 'discussion packet',
   DiscussionSpace: 'discussion space',
   DiscussionForum: 'discussion forum',
   DiscussionThread: 'discussion thread',
@@ -70,6 +71,16 @@ export function getPacketDisplayLabel(packet: PacketEnvelope): string {
       }
       return FAMILY_LABELS.DiscussionForum;
     }
+    case 'Discussion': {
+      const body = packet.body as PacketBodyByType['Discussion'];
+      if (body.kind === 'topic') {
+        return 'discussion topic';
+      }
+      if (body.kind === 'message') {
+        return body.role === 'reply' ? 'discussion reply' : 'discussion message';
+      }
+      return `${body.kind} discussion`;
+    }
     case 'DiscussionPost': {
       const body = packet.body as PacketBodyByType['DiscussionPost'];
       if (body.post_kind === 'forum_post') {
@@ -106,6 +117,10 @@ export function getPacketTitle(packet: PacketEnvelope): string {
     }
     case 'Attestation':
       return 'Attestation';
+    case 'Discussion': {
+      const body = packet.body as PacketBodyByType['Discussion'];
+      return body.kind === 'message' && body.role === 'reply' ? 'Reply' : body.title;
+    }
     case 'DiscussionReply':
       return 'Reply';
     default:
@@ -141,6 +156,12 @@ export function getPacketSummary(packet: PacketEnvelope): string | null {
     case 'DiscussionForum': {
       const body = packet.body as PacketBodyByType['DiscussionForum'];
       return body.summary ?? null;
+    }
+    case 'Discussion': {
+      const body = packet.body as PacketBodyByType['Discussion'];
+      return body.kind === 'message'
+        ? body.content_markdown
+        : body.summary ?? null;
     }
     case 'DiscussionSpace': {
       const body = packet.body as PacketBodyByType['DiscussionSpace'];

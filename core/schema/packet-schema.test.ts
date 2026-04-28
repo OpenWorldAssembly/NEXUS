@@ -562,6 +562,13 @@ test('compatibility audit summaries classify legacy support and write preparatio
   assert.equal(claimSummary.has_write_preparation, true);
   assert.equal(policySummary.has_write_preparation, true);
 
+  const discussionSummary = getPacketCompatibilityAuditSummary('Discussion');
+
+  assert.equal(discussionSummary.support_level, 'legacy_supported');
+  assert.equal(discussionSummary.has_legacy_versions, false);
+  assert.equal(discussionSummary.write_target_policy, 'supported_versions');
+  assert.deepEqual(discussionSummary.supported_schema_versions, ['1.0.0']);
+
   const discussionFamilies = [
     'DiscussionSpace',
     'DiscussionForum',

@@ -4,8 +4,7 @@
  */
 
 import {
-  createDiscussionForumPacket,
-  createDiscussionSpacePacket,
+  createDiscussionPacket,
   createPacketRef,
 } from '@core/packets/builders';
 import type {
@@ -16,11 +15,11 @@ import type {
 import type { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store';
 
 function createDiscussionSpaceId(scopePacketId: string): string {
-  return `nexus:discussion-space/${scopePacketId.slice('nexus:element/'.length)}`;
+  return `nexus:discussion/space/${scopePacketId.slice('nexus:element/'.length)}`;
 }
 
 function createDiscussionForumId(scopePacketId: string, forumKind: string): string {
-  return `${createDiscussionSpaceId(scopePacketId)}-${forumKind.replace(/_/g, '-')}`;
+  return `nexus:discussion/forum/${scopePacketId.slice('nexus:element/'.length)}-${forumKind.replace(/_/g, '-')}`;
 }
 
 function createDefaultDiscussionSurfacePackets(input: {
@@ -28,7 +27,7 @@ function createDefaultDiscussionSurfacePackets(input: {
   scopeName: string;
   createdAt: string;
   applicableScopeRefs: PacketRef[];
-}): PacketEnvelopeByType['DiscussionSpace' | 'DiscussionForum'][] {
+}): PacketEnvelopeByType['Discussion'][] {
   const guestForumActors = [
     'anonymous_guest',
     'scope_member',
@@ -85,31 +84,34 @@ function createDefaultDiscussionSurfacePackets(input: {
   ];
 
   return [
-    createDiscussionSpacePacket({
+    createDiscussionPacket({
       packet_id: discussionSpaceRef.packet_id,
       created_at: input.createdAt,
       authority_scope_ref: { packet_id: input.scopePacketId },
       applicable_scope_refs: input.applicableScopeRefs,
+      kind: 'space',
+      role: 'space',
       title: `${input.scopeName} discussions`,
       summary: `Packet-backed discussion surface for ${input.scopeName}.`,
       scope_ref: { packet_id: input.scopePacketId },
       status: 'open',
-      metadata_tags: ['discussion-space', 'scope-discussions'],
+      metadata_tags: ['discussion', 'space', 'scope-discussions'],
     }),
     ...forumKinds.map((forumKind) =>
-      createDiscussionForumPacket({
+      createDiscussionPacket({
         packet_id: createDiscussionForumId(input.scopePacketId, forumKind.forum_kind),
         created_at: input.createdAt,
         authority_scope_ref: { packet_id: input.scopePacketId },
         applicable_scope_refs: input.applicableScopeRefs,
+        kind: 'forum',
+        role: forumKind.forum_kind,
         title: forumKind.title,
         summary: forumKind.summary,
-        discussion_space_ref: discussionSpaceRef,
-        forum_kind: forumKind.forum_kind,
+        parent_ref: discussionSpaceRef,
         status: 'open',
         participation_rules: forumKind.participation_rules,
         default_sort: forumKind.default_sort,
-        metadata_tags: ['discussion-forum', forumKind.forum_kind.replace(/_/g, '-')],
+        metadata_tags: ['discussion', 'forum', forumKind.forum_kind.replace(/_/g, '-')],
       })
     ),
   ];
@@ -120,8 +122,8 @@ export async function planDefaultDiscussionSurfaces(input: {
   scopePacketId: string;
   scopeName: string;
   applicableScopeRefs: PacketRef[];
-}): Promise<PacketEnvelopeByType['DiscussionSpace' | 'DiscussionForum'][]> {
-  const plannedPackets: PacketEnvelopeByType['DiscussionSpace' | 'DiscussionForum'][] = [];
+}): Promise<PacketEnvelopeByType['Discussion'][]> {
+  const plannedPackets: PacketEnvelopeByType['Discussion'][] = [];
   const packets = createDefaultDiscussionSurfacePackets({
     scopePacketId: input.scopePacketId,
     scopeName: input.scopeName,
@@ -151,8 +153,8 @@ export async function ensureDefaultDiscussionSurfaces(input: {
   scopePacketId: string;
   scopeName: string;
   applicableScopeRefs: PacketRef[];
-}): Promise<PacketEnvelopeByType['DiscussionSpace' | 'DiscussionForum'][]> {
-  const createdPackets: PacketEnvelopeByType['DiscussionSpace' | 'DiscussionForum'][] = [];
+}): Promise<PacketEnvelopeByType['Discussion'][]> {
+  const createdPackets: PacketEnvelopeByType['Discussion'][] = [];
   const packets = await planDefaultDiscussionSurfaces(input);
 
   for (const packet of packets) {

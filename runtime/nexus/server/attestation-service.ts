@@ -6,6 +6,10 @@
 import { DatabaseSync } from 'node:sqlite';
 
 import { createAttestationPacket } from '@core/packets/builders';
+import {
+  isDiscussionMessagePacket,
+  projectDiscussionPacketToLegacy,
+} from '@core/packets/discussion-compat';
 import type {
   AssemblyAssociationClaimProjection,
   AttestationEdgeProjection,
@@ -133,7 +137,18 @@ async function getDiscussionForumById(
 ): Promise<PacketEnvelopeByType['DiscussionForum'] | null> {
   const packet = await packetStore.fetchByPacket({ packet_id: forumPacketId });
 
-  if (!packet || packet.header.family !== 'DiscussionForum') {
+  if (!packet) {
+    return null;
+  }
+
+  if (packet.header.family === 'Discussion') {
+    return projectDiscussionPacketToLegacy(
+      packet as PacketEnvelopeByType['Discussion'],
+      'DiscussionForum'
+    ) as PacketEnvelopeByType['DiscussionForum'] | null;
+  }
+
+  if (packet.header.family !== 'DiscussionForum') {
     return null;
   }
 
@@ -146,7 +161,18 @@ async function getDiscussionThreadById(
 ): Promise<PacketEnvelopeByType['DiscussionThread'] | null> {
   const packet = await packetStore.fetchByPacket({ packet_id: threadPacketId });
 
-  if (!packet || packet.header.family !== 'DiscussionThread') {
+  if (!packet) {
+    return null;
+  }
+
+  if (packet.header.family === 'Discussion') {
+    return projectDiscussionPacketToLegacy(
+      packet as PacketEnvelopeByType['Discussion'],
+      'DiscussionThread'
+    ) as PacketEnvelopeByType['DiscussionThread'] | null;
+  }
+
+  if (packet.header.family !== 'DiscussionThread') {
     return null;
   }
 
@@ -159,6 +185,35 @@ function getEntryThreadPacketId(
     | PacketEnvelopeByType['DiscussionReply']
 ): string {
   return entryPacket.body.thread_ref.packet_id;
+}
+
+function toLegacyDiscussionEntry(
+  packet: PacketEnvelope
+):
+  | PacketEnvelopeByType['DiscussionPost']
+  | PacketEnvelopeByType['DiscussionReply']
+  | null {
+  if (isDiscussionMessagePacket(packet)) {
+    return (
+      (projectDiscussionPacketToLegacy(packet, 'DiscussionReply') as
+        | PacketEnvelopeByType['DiscussionReply']
+        | null) ??
+      (projectDiscussionPacketToLegacy(packet, 'DiscussionPost') as
+        | PacketEnvelopeByType['DiscussionPost']
+        | null)
+    );
+  }
+
+  if (
+    packet.header.family === 'DiscussionPost' ||
+    packet.header.family === 'DiscussionReply'
+  ) {
+    return packet as
+      | PacketEnvelopeByType['DiscussionPost']
+      | PacketEnvelopeByType['DiscussionReply'];
+  }
+
+  return null;
 }
 
 export class SQLiteAttestationService implements AttestationService {
@@ -304,13 +359,9 @@ export class SQLiteAttestationService implements AttestationService {
       throw new Error(`Unknown attestation target: ${input.target_packet_id}`);
     }
 
-    if (
-      targetPacket.header.family === 'DiscussionPost' ||
-      targetPacket.header.family === 'DiscussionReply'
-    ) {
-      const entryPacket = targetPacket as
-        | PacketEnvelopeByType['DiscussionPost']
-        | PacketEnvelopeByType['DiscussionReply'];
+    const entryPacket = toLegacyDiscussionEntry(targetPacket);
+
+    if (entryPacket) {
       const threadPacket = await getDiscussionThreadById(
         this.packetStore,
         getEntryThreadPacketId(entryPacket)
@@ -502,13 +553,9 @@ export class SQLiteAttestationService implements AttestationService {
       );
     }
 
-    if (
-      targetPacket.header.family === 'DiscussionPost' ||
-      targetPacket.header.family === 'DiscussionReply'
-    ) {
-      const entryPacket = targetPacket as
-        | PacketEnvelopeByType['DiscussionPost']
-        | PacketEnvelopeByType['DiscussionReply'];
+    const entryPacket = toLegacyDiscussionEntry(targetPacket);
+
+    if (entryPacket) {
       const threadPacket = await getDiscussionThreadById(
         this.packetStore,
         getEntryThreadPacketId(entryPacket)

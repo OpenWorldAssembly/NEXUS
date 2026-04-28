@@ -24,6 +24,7 @@ export const PACKET_FAMILIES = [
   'MissionReport',
   'Module',
   'Policy',
+  'Discussion',
   'DiscussionSpace',
   'DiscussionForum',
   'DiscussionThread',
@@ -79,6 +80,7 @@ export const DISCUSSION_REPLY_SORTS = [
   'controversial',
   'old',
 ] as const;
+export const DISCUSSION_KINDS = ['space', 'forum', 'topic', 'message'] as const;
 
 export const ATTESTATION_VALUES = [1, -1] as const;
 export const ATTESTATION_STATUSES = ['active', 'cleared'] as const;
@@ -193,6 +195,7 @@ export const MissionParticipationModeSchema = z.enum(
 export const DiscussionActorClassSchema = z.enum(DISCUSSION_ACTOR_CLASSES);
 export const DiscussionSortSchema = z.enum(DISCUSSION_SORTS);
 export const DiscussionReplySortSchema = z.enum(DISCUSSION_REPLY_SORTS);
+export const DiscussionKindSchema = z.enum(DISCUSSION_KINDS);
 export const AttestationStatusSchema = z.enum(ATTESTATION_STATUSES);
 export const AttestationKindSchema = z.enum(ATTESTATION_KINDS);
 export const PacketRevisionStateSchema = z.enum(REVISION_STATES);
@@ -212,6 +215,7 @@ export type PacketMergeStrategy = z.infer<typeof PacketMergeStrategySchema>;
 export type DiscussionActorClass = z.infer<typeof DiscussionActorClassSchema>;
 export type DiscussionSort = z.infer<typeof DiscussionSortSchema>;
 export type DiscussionReplySort = z.infer<typeof DiscussionReplySortSchema>;
+export type DiscussionKind = z.infer<typeof DiscussionKindSchema>;
 export type AttestationValue = z.infer<typeof AttestationValueSchema>;
 export type AttestationStatus = z.infer<typeof AttestationStatusSchema>;
 export type AttestationKind = z.infer<typeof AttestationKindSchema>;
@@ -387,6 +391,48 @@ export const PacketMetadataSchema = z
     tags: z.array(z.string().min(1)).default([]),
     language: z.string().min(1).nullable().default(null),
     summary: z.string().min(1).nullable().default(null),
+    compatibility: z
+      .object({
+        family_history: z
+          .array(
+            z
+              .object({
+                family: z.string().min(1),
+                schema_version: z.string().min(1),
+                adapter_profile: z.string().min(1),
+              })
+              .strict()
+          )
+          .default([]),
+        compatible_targets: z
+          .array(
+            z
+              .object({
+                family: z.string().min(1),
+                schema_version: z.string().min(1),
+                mode: z.enum(['exact', 'lossy', 'blocked']),
+                required_features: z.array(z.string().min(1)).default([]),
+                omitted_features: z.array(z.string().min(1)).default([]),
+              })
+              .strict()
+          )
+          .default([]),
+        migration_policy: z
+          .object({
+            allow_virtual_downcast: z.boolean().default(true),
+            allow_guarded_shadow_write: z.boolean().default(false),
+            requires_loss_acknowledgement: z.boolean().default(false),
+          })
+          .strict()
+          .default({
+            allow_virtual_downcast: true,
+            allow_guarded_shadow_write: false,
+            requires_loss_acknowledgement: false,
+          }),
+      })
+      .strict()
+      .nullable()
+      .default(null),
   })
   .strict();
 
@@ -422,6 +468,7 @@ export const PacketHeaderSchema = z
       tags: [],
       language: null,
       summary: null,
+      compatibility: null,
     }),
     producer: PacketProducerSchema,
   })
@@ -748,6 +795,57 @@ export const DiscussionThreadBodySchema = z
   })
   .strict();
 
+const DiscussionParticipationRulesSchema = z
+  .object({
+    top_level_actor_classes: z.array(DiscussionActorClassSchema).default([]),
+    reply_actor_classes: z.array(DiscussionActorClassSchema).default([]),
+    reaction_actor_classes: z.array(DiscussionActorClassSchema).default([]),
+    top_level_post_cost: z.number().int().nonnegative().default(0),
+  })
+  .default({
+    top_level_actor_classes: [],
+    reply_actor_classes: [],
+    reaction_actor_classes: [],
+    top_level_post_cost: 0,
+  });
+
+const DiscussionBaseBodySchema = z
+  .object({
+    kind: DiscussionKindSchema,
+    role: z.string().min(1),
+    title: z.string().min(1),
+    summary: z.string().min(1).nullable().optional(),
+    status: z.string().min(1).default('open'),
+  })
+  .strict();
+
+export const DiscussionBodySchema = z.discriminatedUnion('kind', [
+  DiscussionBaseBodySchema.extend({
+    kind: z.literal('space'),
+    scope_ref: PacketRefSchema,
+  }).strict(),
+  DiscussionBaseBodySchema.extend({
+    kind: z.literal('forum'),
+    parent_ref: PacketRefSchema,
+    participation_rules: DiscussionParticipationRulesSchema,
+    default_sort: DiscussionSortSchema.default('new'),
+  }).strict(),
+  DiscussionBaseBodySchema.extend({
+    kind: z.literal('topic'),
+    parent_ref: PacketRefSchema,
+    related_refs: z.array(PacketRefSchema).default([]),
+    participation_rules: DiscussionParticipationRulesSchema,
+    default_sort: DiscussionSortSchema.default('new'),
+  }).strict(),
+  DiscussionBaseBodySchema.extend({
+    kind: z.literal('message'),
+    parent_ref: PacketRefSchema,
+    topic_ref: PacketRefSchema,
+    root_message_ref: PacketRefSchema.nullable().default(null),
+    content_markdown: z.string().min(1),
+  }).strict(),
+]);
+
 export const DiscussionSpaceBodySchema = z
   .object({
     title: z.string().min(1),
@@ -845,6 +943,7 @@ export const PACKET_BODY_SCHEMAS = {
   MissionReport: MissionReportBodySchema,
   Module: ModuleBodySchema,
   Policy: PolicyBodySchema,
+  Discussion: DiscussionBodySchema,
   DiscussionSpace: DiscussionSpaceBodySchema,
   DiscussionForum: DiscussionForumBodySchema,
   DiscussionThread: DiscussionThreadBodySchema,
@@ -902,6 +1001,7 @@ export const PACKET_FAMILY_REVISION_MODES = {
   MissionReport: 'replaceable',
   Module: 'replaceable',
   Policy: 'replaceable',
+  Discussion: 'replaceable',
   DiscussionSpace: 'replaceable',
   DiscussionForum: 'replaceable',
   DiscussionThread: 'replaceable',
@@ -1453,6 +1553,11 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
         },
       },
     },
+  },
+  Discussion: {
+    ...createDefaultCompatibilityEntry('Discussion'),
+    support_level: 'legacy_supported',
+    write_target_policy: 'supported_versions',
   },
   DiscussionSpace: createDefaultCompatibilityEntry('DiscussionSpace'),
   DiscussionForum: createDefaultCompatibilityEntry('DiscussionForum'),

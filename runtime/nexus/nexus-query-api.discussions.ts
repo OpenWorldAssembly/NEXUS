@@ -4,17 +4,11 @@
  */
 
 import type {
-  NexusDiscussionPostMutationPayload,
   NexusDiscussionReplyChildrenPayload,
-  NexusDiscussionSurfaceBundlePayload,
   NexusDiscussionThreadPayload,
   NexusDiscussionsPayload,
-  NexusVoteMutationPayload,
 } from '@runtime/nexus/nexus-api-types';
-import {
-  fetchJsonOrThrow,
-  fetchMutationJsonOrThrow,
-} from '@runtime/nexus/nexus-query-api.shared';
+import { fetchJsonOrThrow } from '@runtime/nexus/nexus-query-api.shared';
 
 export function fetchNexusDiscussionsPayload(input: {
   scopeId: string;
@@ -140,53 +134,4 @@ export function fetchNexusDiscussionReplyChildrenPayload(input: {
   return fetchJsonOrThrow<NexusDiscussionReplyChildrenPayload>(
     `/api/nexus/scopes/${encodeURIComponent(input.scopeId)}/discussions/replies?${searchParams.toString()}`
   );
-}
-
-export function createNexusDiscussionPost(input: {
-  scopeId: string;
-  requestBody: Record<string, unknown>;
-}): Promise<NexusDiscussionPostMutationPayload> {
-  return fetchMutationJsonOrThrow<NexusDiscussionPostMutationPayload>({
-    path: `/api/nexus/scopes/${encodeURIComponent(input.scopeId)}/discussions/posts`,
-    method: 'POST',
-    body: input.requestBody,
-  });
-}
-
-export function createNexusDiscussionReply(input: {
-  scopeId: string;
-  requestBody: Record<string, unknown>;
-}): Promise<NexusDiscussionPostMutationPayload> {
-  return fetchMutationJsonOrThrow<NexusDiscussionPostMutationPayload>({
-    path: `/api/nexus/scopes/${encodeURIComponent(input.scopeId)}/discussions/replies`,
-    method: 'POST',
-    body: input.requestBody,
-  });
-}
-
-export function setNexusPacketVote(input: {
-  requestBody: Record<string, unknown>;
-}): Promise<NexusVoteMutationPayload> {
-  return fetchMutationJsonOrThrow<NexusVoteMutationPayload>({
-    path: '/api/nexus/packets/vote',
-    method: 'PUT',
-    body: input.requestBody,
-  });
-}
-
-export function setNexusAttestation(input: {
-  requestBody: Record<string, unknown>;
-}): Promise<NexusVoteMutationPayload> {
-  return setNexusPacketVote(input);
-}
-
-export function ensureNexusDiscussionSurfaces(input: {
-  scopeId: string;
-  requestBody: Record<string, unknown>;
-}): Promise<NexusDiscussionSurfaceBundlePayload> {
-  return fetchMutationJsonOrThrow<NexusDiscussionSurfaceBundlePayload>({
-    path: `/api/nexus/scopes/${encodeURIComponent(input.scopeId)}/discussions/surfaces`,
-    method: 'PUT',
-    body: input.requestBody,
-  });
 }

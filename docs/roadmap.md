@@ -87,13 +87,22 @@ This track should define:
 - how target-version inspection and versioned write preparation expose exact changes and losses
 - how imported legacy packets are normalized without silently rewriting history
 - how merge procedures differ for append-only families versus editable document-style families
+- how packet policy/dependency metadata can declare compatibility intent, required source/target versions, migration constraints, and loss acknowledgement requirements without making runtime execute packet-provided code
+- how raw packets, adapted views, and interpreted view models stay separate so UI surfaces can request a target schema while core remains the compatibility authority
 
 Target output:
 
 - explicit schema-evolution rules in `core/schema`
 - family-level compatibility handlers, upcasters, downcasters, and loss policies
+- a policy/dependency-informed adapter contract where packet metadata can guide compatibility decisions but core-owned adapter definitions still perform parsing and transformation
 - documented revision procedure for new writes, amendments, merges, supersessions, and imports
 - discussion-family compatibility plan before any stored-family rename or unification
+
+Default direction:
+
+- keep packet envelope, signature, revision, mutation, proof, and policy-resolution rules stable and hard to bypass
+- make packet families, body kinds, relationships, compatibility policies, and interpreted view models extensible
+- treat packet-declared compatibility as declarative input to trusted core interpreters, not as arbitrary executable adapter code stored in packets
 
 ### 2. Trust and legitimacy
 
@@ -151,6 +160,7 @@ Default direction:
 - use policy packets as first-class configuration and legitimacy references
 - keep only the truly universal safety and packet-integrity rules hardcoded
 - keep the current default discussion forums as a locality-creation convention until policy-backed, element-configurable forum surfaces are designed
+- move toward dynamic discussion interpretation where a discussion space can expose forums, topics, messages, chats, or future communication tiers through packet-declared kinds, parent refs, policy refs, and dependency refs rather than route-specific packet families
 
 ### 5. `You`, `Trust`, and `Account` information architecture
 

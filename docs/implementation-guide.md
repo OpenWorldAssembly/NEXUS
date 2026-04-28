@@ -858,7 +858,7 @@ Examples of decisions worth logging early:
 - Options considered: keep `PacketVote` and overload its meaning further, add a second trust packet family beside it, or rename and generalize the existing primitive into one canonical `Attestation` family while keeping discussion `+1/-1` behavior stable.
 - Decision: rename the reusable trust primitive from `PacketVote` to `Attestation`, expand its body with `attestation_kind`, optional `context_ref`, optional `supporting_refs`, optional `note`, and optional `supersedes_ref`, and move attestation indexing and mutation logic into a dedicated `SQLiteAttestationService`.
 - Why: this keeps one signed edge primitive for the graph, gives locality and trust flows a first-class home outside the discussion service, and still lets the existing discussion UI consume the same `vote_summary` shape while the product vocabulary moves toward attestations.
-- Consequences / follow-ups: discussion `+1/-1` reactions now flow through `Attestation(kind: "packet_signal")`, derived attestation rows now live in `attestation_index` and `attestation_tally_index`, `/api/nexus/packets/vote` remains behavior-compatible as the current discussion reaction transport, and assembly continuity plus role legitimacy now ride on scoped `Claim` packets with claim-targeted support/dispute attestations.
+- Consequences / follow-ups: discussion `+1/-1` reactions now flow through `Attestation(kind: "packet_signal")`, derived attestation rows now live in `attestation_index` and `attestation_tally_index`, the legacy `/api/nexus/packets/vote` write route has since been retired in favor of the shared mutation corridor, and assembly continuity plus role legitimacy now ride on scoped `Claim` packets with claim-targeted support/dispute attestations.
 
 ### 2026-04-09 - Universal packet votes power the first real discussion engine
 
@@ -1193,7 +1193,7 @@ Examples of decisions worth logging early:
 ### 2026-04-20 - Protected Nexus writes use one auth-gate modal pattern
 
 - Context: protected writes could still surface raw string errors or one-off cards for the same underlying states: signed-in identity required, locked local bundle, fresh write approval, or community/home-branch membership required. Existing localities such as Perris also needed a safe way to add the now-standard empty discussion bundle without recreating the scope.
-- Decision: add typed client-side auth gate errors and a shared Nexus auth-gate modal/hook while keeping server-side verification in `verifyActorMutation`. Roles, Trust, Discussions, and locality creation now route protected write attempts through the same modal pattern, and `/api/nexus/scopes/[scopeId]/discussions/surfaces` idempotently backfills empty OWA discussion forums for eligible geographic home-branch scopes.
+- Decision: add typed client-side auth gate errors and a shared Nexus auth-gate modal/hook while keeping server-side verification in `verifyActorMutation`. Roles, Trust, Discussions, and locality creation now route protected write attempts through the same modal pattern, and discussion-surface backfills now use the shared mutation corridor instead of the retired route-specific surface write.
 - Why: the UI should explain auth readiness consistently while the runtime remains the authority for cryptographic actor assertions, sessions, reauth tokens, and membership enforcement.
 - Consequences / follow-ups: sign-in/unlock routes preserve `return_to` and `return_scope_id`; write-protection approval still uses the existing reauth path when the user confirms; direct API writes remain protected by server checks; and future auth cleanup should continue deleting route-local auth strings in favor of the shared gate.
 
@@ -1219,6 +1219,14 @@ Examples of decisions worth logging early:
 - Decision: action-bound passphrase approval now stashes the freshly unlocked identity in a short-lived ref used by the signer adapter during the immediate queued retry, while the existing pending interaction proof still supplies the reauth token. The ref is cleared once React state reflects the unlocked identity, when the actor/session changes, or on sign-out.
 - Why: the approval surface should be single-step for locked protected writes, and the resumed action should use the actual decrypted bundle rather than depending on component render timing.
 - Consequences / follow-ups: locked-bundle attestations, discussion votes, and replies should unlock once and resume once; passkey approval and standalone unlock semantics remain unchanged. The packet compatibility layer also now supports explicit target-version inspection and versioned write preparation, including structured loss reporting for downcasts, so discussion-family cleanup can start at the packet layer before runtime/UI wiring changes.
+
+### 2026-04-28 - Legacy write seams are sealed before discussion-family work
+
+- Context: first-party Nexus writes had moved to the shared mutation corridor, but old discussion post/reply and packet-vote API methods still existed as route-specific write surfaces that called the mutation service directly.
+- Options considered: leave the routes as wrappers, delete the files outright, or keep read routes intact while turning stale mutation methods into explicit deprecations.
+- Decision: legacy discussion post `POST`, discussion reply `POST`, and packet vote `PUT` now return `410` and point callers to `/api/nexus/mutations/prepare` plus `/api/nexus/mutations/finalize`. Route audits now fail if non-canonical API routes call `mutationService.prepareMutation(...)` or `mutationService.finalizeMutation(...)`, while the canonical mutation endpoints remain the only normal route-level mutation corridor.
+- Why: keeping alternate HTTP write seams around makes future packet-family migrations harder to reason about, even when those seams eventually call the same mutation service internally.
+- Consequences / follow-ups: discussion read routes remain stable, first-party discussion writes continue through `runFortressMutation(...)`, and actor write-policy updates now have regression coverage proving that lowering from `every_write` to `standard` is governed by the current policy and still requires fresh proof. The roadmap now records the future packet-policy/dependency-informed adapter direction without turning stored packet instances into executable code.
 
 ### 2026-04-10 - Railway cutover keeps the Expo server app intact and adds a local production-parity Node server
 

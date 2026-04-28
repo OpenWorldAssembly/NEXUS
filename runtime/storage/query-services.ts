@@ -301,6 +301,7 @@ export class PacketStoreNexusQueryService implements NexusQueryService {
     lens: NexusScopeLens
   ): Promise<NexusPacketCardProjection[]> {
     return this.listCardsByFamilies(lens, [
+      'Discussion',
       'DiscussionForum',
       'DiscussionThread',
       'DiscussionPost',

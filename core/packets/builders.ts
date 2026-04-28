@@ -11,6 +11,7 @@ import {
   type PacketBodyByType,
   type ClaimKind,
   type DiscussionActorClass,
+  type DiscussionKind,
   type DiscussionSort,
   type ElementKind,
   type PersonClaimStatus,
@@ -30,6 +31,7 @@ import {
 type PacketVisibility = PacketHeader['moderation']['visibility'];
 type PacketModerationState = PacketHeader['moderation']['moderation_state'];
 type PacketLanguage = PacketHeader['metadata']['language'];
+type PacketCompatibilityMetadata = PacketHeader['metadata']['compatibility'];
 type PacketExternalRef = PacketHeader['external_refs'][number];
 
 export interface PacketBuilderBaseInput {
@@ -56,6 +58,7 @@ export interface PacketBuilderBaseInput {
   metadata_tags?: string[];
   metadata_language?: PacketLanguage;
   metadata_summary?: string | null;
+  metadata_compatibility?: PacketCompatibilityMetadata;
 }
 
 export interface PacketBuilderInput<TFamily extends PacketFamily>
@@ -83,7 +86,7 @@ export interface ElementPacketInput extends PacketBuilderBaseInput {
       scope: string;
       value: string;
     } | null;
-    public_key_bindings?: Array<{
+    public_key_bindings?: {
       kid: string;
       alg: string;
       kty: string;
@@ -92,7 +95,7 @@ export interface ElementPacketInput extends PacketBuilderBaseInput {
       status?: 'active' | 'revoked';
       added_at: string;
       revoked_at?: string | null;
-    }>;
+    }[];
   } | null;
   tags?: string[];
   claimed_role_refs?: PacketRef[];
@@ -168,6 +171,27 @@ export interface DiscussionReplyPacketInput extends PacketBuilderBaseInput {
   root_post_ref: PacketRef;
   reply_to_ref: PacketRef;
   content_markdown: string;
+}
+
+export interface DiscussionPacketInput extends PacketBuilderBaseInput {
+  kind: DiscussionKind;
+  role: string;
+  title: string;
+  summary?: string | null;
+  status?: string;
+  scope_ref?: PacketRef;
+  parent_ref?: PacketRef;
+  topic_ref?: PacketRef;
+  root_message_ref?: PacketRef | null;
+  related_refs?: PacketRef[];
+  participation_rules?: {
+    top_level_actor_classes?: DiscussionActorClass[];
+    reply_actor_classes?: DiscussionActorClass[];
+    reaction_actor_classes?: DiscussionActorClass[];
+    top_level_post_cost?: number;
+  };
+  default_sort?: DiscussionSort;
+  content_markdown?: string;
 }
 
 export interface ProposalPacketInput extends PacketBuilderBaseInput {
@@ -346,6 +370,7 @@ export function createPacket<TFamily extends PacketFamily>(
         tags: input.metadata_tags ?? [],
         language: input.metadata_language ?? null,
         summary: input.metadata_summary ?? null,
+        compatibility: input.metadata_compatibility ?? null,
       },
       producer: {
         adapter,
@@ -474,6 +499,137 @@ export function createPersonPacket(
   return createElementPacket({
     ...input,
     kind: 'person',
+  });
+}
+
+/**
+ * Inputs: common packet header fields plus a canonical discussion node body.
+ * Output: a single-family Discussion packet with relationship edges mirrored from node refs.
+ */
+export function createDiscussionPacket(
+  input: DiscussionPacketInput
+): PacketEnvelopeByType['Discussion'] {
+  const edges = [...(input.edges ?? [])];
+  let body: z.input<(typeof PACKET_BODY_SCHEMAS)['Discussion']> | null = null;
+  const participationRules = {
+    top_level_actor_classes:
+      input.participation_rules?.top_level_actor_classes ?? [],
+    reply_actor_classes: input.participation_rules?.reply_actor_classes ?? [],
+    reaction_actor_classes:
+      input.participation_rules?.reaction_actor_classes ?? [],
+    top_level_post_cost: input.participation_rules?.top_level_post_cost ?? 0,
+  };
+
+  if (input.kind === 'space') {
+    if (!input.scope_ref) {
+      throw new Error('Discussion space packets require scope_ref.');
+    }
+    edges.push(
+      createPacketEdge('belongs_to', input.scope_ref, {
+        source_field: 'scope_ref',
+      })
+    );
+    body = {
+      kind: 'space',
+      role: input.role,
+      title: input.title,
+      summary: input.summary ?? null,
+      status: input.status ?? 'open',
+      scope_ref: input.scope_ref,
+    };
+  } else if (input.parent_ref) {
+    edges.push(
+      createPacketEdge('belongs_to', input.parent_ref, {
+        source_field: 'parent_ref',
+      })
+    );
+  } else {
+    throw new Error(`Discussion ${input.kind} packets require parent_ref.`);
+  }
+
+  if (input.kind === 'topic') {
+    for (const relatedRef of input.related_refs ?? []) {
+      edges.push(
+        createPacketEdge('references', relatedRef, {
+          source_field: 'related_refs',
+        })
+      );
+    }
+    body = {
+      kind: 'topic',
+      role: input.role,
+      title: input.title,
+      summary: input.summary ?? null,
+      status: input.status ?? 'open',
+      parent_ref: input.parent_ref as PacketRef,
+      related_refs: input.related_refs ?? [],
+      participation_rules: participationRules,
+      default_sort: input.default_sort ?? 'new',
+    };
+  }
+
+  if (input.kind === 'message') {
+    if (!input.topic_ref) {
+      throw new Error('Discussion message packets require topic_ref.');
+    }
+    edges.push(
+      createPacketEdge('references', input.topic_ref, {
+        source_field: 'topic_ref',
+      })
+    );
+    if (input.root_message_ref) {
+      edges.push(
+        createPacketEdge('belongs_to', input.root_message_ref, {
+          source_field: 'root_message_ref',
+        })
+      );
+    }
+    if (input.parent_ref) {
+      edges.push(
+        createPacketEdge('reply_to', input.parent_ref, {
+          source_field: 'parent_ref',
+        })
+      );
+    }
+    body = {
+      kind: 'message',
+      role: input.role,
+      title: input.title,
+      summary: input.summary ?? null,
+      status: input.status ?? 'open',
+      parent_ref: input.parent_ref as PacketRef,
+      topic_ref: input.topic_ref,
+      root_message_ref: input.root_message_ref ?? null,
+      content_markdown: input.content_markdown ?? '',
+    };
+  } else if (input.kind === 'forum') {
+    body = {
+      kind: 'forum',
+      role: input.role,
+      title: input.title,
+      summary: input.summary ?? null,
+      status: input.status ?? 'open',
+      parent_ref: input.parent_ref as PacketRef,
+      participation_rules: participationRules,
+      default_sort: input.default_sort ?? 'new',
+    };
+  }
+
+  if (!body) {
+    throw new Error(`Unsupported Discussion kind: ${input.kind}`);
+  }
+
+  return createPacket({
+    ...input,
+    family: 'Discussion',
+    edges,
+    metadata_summary:
+      input.metadata_summary ??
+      input.summary ??
+      (input.content_markdown
+        ? createTextExcerpt(input.content_markdown)
+        : null),
+    body,
   });
 }
 

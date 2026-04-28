@@ -32,6 +32,13 @@ import {
 } from '@core/packets/builders';
 import { buildPacketSignalAttestationPacket } from '@core/packets/discussion';
 import {
+  createCanonicalDiscussionMirrorPacket,
+  createCanonicalDiscussionPacketId,
+  isDiscussionMessagePacket,
+  projectDiscussionPacketToLegacy,
+  type DiscussionLegacyFamily,
+} from '@core/packets/discussion-compat';
+import {
   describeWriteProofLevel,
   doesProofBundleSatisfyRequirement,
 } from '@core/auth/proof-types';
@@ -358,14 +365,145 @@ export class NexusMutationService {
     }
   }
 
+  private async planCanonicalDiscussionMirrors(input: {
+    packet: PacketEnvelope;
+    planned?: Map<string, PacketEnvelopeByType['Discussion']>;
+    visiting?: Set<string>;
+  }): Promise<{
+    canonical_packet_id: string;
+    packets: PacketEnvelopeByType['Discussion'][];
+  }> {
+    const planned = input.planned ?? new Map<string, PacketEnvelopeByType['Discussion']>();
+    const visiting = input.visiting ?? new Set<string>();
+
+    if (input.packet.header.family === 'Discussion') {
+      return {
+        canonical_packet_id: input.packet.header.packet_id,
+        packets: [...planned.values()],
+      };
+    }
+
+    const legacyFamily = input.packet.header.family as DiscussionLegacyFamily;
+    const isLegacyDiscussion =
+      legacyFamily === 'DiscussionSpace' ||
+      legacyFamily === 'DiscussionForum' ||
+      legacyFamily === 'DiscussionThread' ||
+      legacyFamily === 'DiscussionPost' ||
+      legacyFamily === 'DiscussionReply';
+
+    if (!isLegacyDiscussion) {
+      throw new Error(`Packet ${input.packet.header.packet_id} is not a discussion packet.`);
+    }
+
+    const canonicalPacketId = createCanonicalDiscussionPacketId(
+      input.packet.header.packet_id
+    );
+
+    if (planned.has(canonicalPacketId)) {
+      return {
+        canonical_packet_id: canonicalPacketId,
+        packets: [...planned.values()],
+      };
+    }
+
+    const existingCanonical = await this.packetStore.fetchByPacket({
+      packet_id: canonicalPacketId,
+    });
+
+    if (existingCanonical?.header.family === 'Discussion') {
+      return {
+        canonical_packet_id: canonicalPacketId,
+        packets: [...planned.values()],
+      };
+    }
+
+    if (visiting.has(input.packet.header.packet_id)) {
+      throw new Error(`Cyclic discussion compatibility chain at ${input.packet.header.packet_id}.`);
+    }
+
+    visiting.add(input.packet.header.packet_id);
+    let dependencyIds: string[] = [];
+
+    if (input.packet.header.family === 'DiscussionForum') {
+      const packet = input.packet as PacketEnvelopeByType['DiscussionForum'];
+      dependencyIds = [packet.body.discussion_space_ref.packet_id];
+    } else if (input.packet.header.family === 'DiscussionThread') {
+      const packet = input.packet as PacketEnvelopeByType['DiscussionThread'];
+      dependencyIds = [packet.body.forum_ref.packet_id];
+    } else if (input.packet.header.family === 'DiscussionPost') {
+      const packet = input.packet as PacketEnvelopeByType['DiscussionPost'];
+      dependencyIds = [
+        packet.body.thread_ref.packet_id,
+        ...(packet.body.reply_to_ref ? [packet.body.reply_to_ref.packet_id] : []),
+      ];
+    } else if (input.packet.header.family === 'DiscussionReply') {
+      const packet = input.packet as PacketEnvelopeByType['DiscussionReply'];
+      dependencyIds = [
+        packet.body.thread_ref.packet_id,
+        packet.body.root_post_ref.packet_id,
+        packet.body.reply_to_ref.packet_id,
+      ];
+    }
+
+    for (const dependencyId of dependencyIds) {
+      const dependencyPacket = await this.packetStore.fetchByPacket({
+        packet_id: dependencyId,
+      });
+
+      if (dependencyPacket) {
+        await this.planCanonicalDiscussionMirrors({
+          packet: dependencyPacket,
+          planned,
+          visiting,
+        });
+      }
+    }
+
+    planned.set(
+      canonicalPacketId,
+      createCanonicalDiscussionMirrorPacket(
+        input.packet as PacketEnvelopeByType[DiscussionLegacyFamily]
+      )
+    );
+    visiting.delete(input.packet.header.packet_id);
+
+    return {
+      canonical_packet_id: canonicalPacketId,
+      packets: [...planned.values()],
+    };
+  }
+
   private async prepareDiscussionThreadPost(input: {
     intent: Extract<MutationIntent, { kind: 'discussion.thread_post.create' }>;
     actorPacket: PacketEnvelopeByType['Element'];
   }): Promise<PreparedMutation> {
-    const forumPacket = await this.requirePacket({
-      packetId: input.intent.forum_packet_id,
-      family: 'DiscussionForum',
+    const rawForumPacket = await this.packetStore.fetchByPacket({
+      packet_id: input.intent.forum_packet_id,
     });
+
+    if (!rawForumPacket) {
+      throw new Error(`Unknown discussion forum: ${input.intent.forum_packet_id}`);
+    }
+
+    const forumPacket =
+      rawForumPacket.header.family === 'Discussion'
+        ? (projectDiscussionPacketToLegacy(
+            rawForumPacket as PacketEnvelopeByType['Discussion'],
+            'DiscussionForum'
+          ) as PacketEnvelopeByType['DiscussionForum'] | null)
+        : rawForumPacket.header.family === 'DiscussionForum'
+          ? (rawForumPacket as PacketEnvelopeByType['DiscussionForum'])
+          : null;
+
+    if (!forumPacket) {
+      throw new Error(`Unknown discussion forum: ${input.intent.forum_packet_id}`);
+    }
+
+    const mirrorPlan =
+      rawForumPacket.header.family === 'Discussion'
+        ? { canonical_packet_id: rawForumPacket.header.packet_id, packets: [] }
+        : await this.planCanonicalDiscussionMirrors({ packet: rawForumPacket });
+
     const governingScopePacket = forumPacket.header.authority_scope_ref
       ? await this.requirePacket({
           packetId: forumPacket.header.authority_scope_ref.packet_id,
@@ -402,7 +540,7 @@ export class NexusMutationService {
           mutation_nonce:
             input.intent.mutation_nonce?.trim() || randomUUID().slice(0, 8),
           created_at: input.intent.created_at ?? new Date().toISOString(),
-          forum_packet_id: forumPacket.header.packet_id,
+          forum_packet_id: mirrorPlan.canonical_packet_id,
           forum_kind: forumPacket.body.forum_kind,
           authority_scope_packet_id:
             forumPacket.header.authority_scope_ref?.packet_id ?? null,
@@ -414,11 +552,16 @@ export class NexusMutationService {
           post_markdown: input.intent.post_markdown,
           thread_kind: forumPacket.body.forum_kind,
           related_packet_ids: input.intent.related_packet_ids ?? [],
+          legacy_context_packet_ids:
+            rawForumPacket.header.family === 'Discussion'
+              ? []
+              : [rawForumPacket.header.packet_id],
         },
         actorPacket: input.actorPacket,
       }),
       ...mergedPolicyDecision,
     } satisfies MutationDecision;
+    decision.packets.unshift(...mirrorPlan.packets);
     const digests = await Promise.all(
       decision.packets.map(async (packet) => {
         const candidates = await getPacketUnsignedDigestCandidates(packet);
@@ -441,25 +584,79 @@ export class NexusMutationService {
       packet_id: input.intent.parent_post_packet_id,
     });
 
-    if (
-      !parentPacket ||
-      (parentPacket.header.family !== 'DiscussionPost' &&
-        parentPacket.header.family !== 'DiscussionReply')
-    ) {
+    if (!parentPacket) {
       throw new Error(`Unknown discussion post: ${input.intent.parent_post_packet_id}`);
     }
-    const discussionParentPacket = parentPacket as
-      | PacketEnvelopeByType['DiscussionPost']
-      | PacketEnvelopeByType['DiscussionReply'];
 
-    const threadPacket = (await this.requirePacket({
-      packetId: discussionParentPacket.body.thread_ref.packet_id,
-      family: 'DiscussionThread',
-    })) as PacketEnvelopeByType['DiscussionThread'];
-    const forumPacket = await this.requirePacket({
-      packetId: threadPacket.body.forum_ref.packet_id,
-      family: 'DiscussionForum',
+    const discussionParentPacket =
+      isDiscussionMessagePacket(parentPacket)
+        ? (() => {
+            const discussionPacket = parentPacket as PacketEnvelopeByType['Discussion'];
+
+            return projectDiscussionPacketToLegacy(
+              discussionPacket,
+              discussionPacket.body.kind === 'message' &&
+                discussionPacket.body.root_message_ref
+                ? 'DiscussionReply'
+                : 'DiscussionPost'
+            ) as
+              | PacketEnvelopeByType['DiscussionPost']
+              | PacketEnvelopeByType['DiscussionReply']
+              | null;
+          })()
+        : parentPacket.header.family === 'DiscussionPost' ||
+            parentPacket.header.family === 'DiscussionReply'
+          ? (parentPacket as
+              | PacketEnvelopeByType['DiscussionPost']
+              | PacketEnvelopeByType['DiscussionReply'])
+          : null;
+
+    if (!discussionParentPacket) {
+      throw new Error(`Unknown discussion post: ${input.intent.parent_post_packet_id}`);
+    }
+
+    const mirrorPlan =
+      parentPacket.header.family === 'Discussion'
+        ? { canonical_packet_id: parentPacket.header.packet_id, packets: [] }
+        : await this.planCanonicalDiscussionMirrors({ packet: parentPacket });
+
+    const rawThreadPacket = await this.packetStore.fetchByPacket({
+      packet_id: discussionParentPacket.body.thread_ref.packet_id,
     });
+    const threadPacket =
+      rawThreadPacket?.header.family === 'Discussion'
+        ? (projectDiscussionPacketToLegacy(
+            rawThreadPacket as PacketEnvelopeByType['Discussion'],
+            'DiscussionThread'
+          ) as PacketEnvelopeByType['DiscussionThread'] | null)
+        : rawThreadPacket?.header.family === 'DiscussionThread'
+          ? (rawThreadPacket as PacketEnvelopeByType['DiscussionThread'])
+          : null;
+
+    if (!threadPacket) {
+      throw new Error(
+        `Missing discussion thread for post ${input.intent.parent_post_packet_id}.`
+      );
+    }
+
+    const rawForumPacket = await this.packetStore.fetchByPacket({
+      packet_id: threadPacket.body.forum_ref.packet_id,
+    });
+    const forumPacket =
+      rawForumPacket?.header.family === 'Discussion'
+        ? (projectDiscussionPacketToLegacy(
+            rawForumPacket as PacketEnvelopeByType['Discussion'],
+            'DiscussionForum'
+          ) as PacketEnvelopeByType['DiscussionForum'] | null)
+        : rawForumPacket?.header.family === 'DiscussionForum'
+          ? (rawForumPacket as PacketEnvelopeByType['DiscussionForum'])
+          : null;
+
+    if (!forumPacket) {
+      throw new Error(
+        `Missing discussion forum for thread ${threadPacket.header.packet_id}.`
+      );
+    }
     const governingScopePacket = forumPacket.header.authority_scope_ref
       ? await this.requirePacket({
           packetId: forumPacket.header.authority_scope_ref.packet_id,
@@ -502,20 +699,29 @@ export class NexusMutationService {
           applicable_scope_packet_ids: parentPacket.header.applicable_scope_refs.map(
             (scopeRef) => scopeRef.packet_id
           ),
-          thread_packet_id: threadPacket.header.packet_id,
+          thread_packet_id:
+            rawThreadPacket?.header.family === 'Discussion'
+              ? rawThreadPacket.header.packet_id
+              : createCanonicalDiscussionPacketId(threadPacket.header.packet_id),
           root_post_packet_id:
             discussionParentPacket.header.family === 'DiscussionPost'
-              ? discussionParentPacket.header.packet_id
-              : (
-                  discussionParentPacket as PacketEnvelopeByType['DiscussionReply']
-                ).body.root_post_ref.packet_id,
-          parent_post_packet_id: discussionParentPacket.header.packet_id,
+              ? createCanonicalDiscussionPacketId(discussionParentPacket.header.packet_id)
+              : createCanonicalDiscussionPacketId(
+                  (discussionParentPacket as PacketEnvelopeByType['DiscussionReply'])
+                    .body.root_post_ref.packet_id
+                ),
+          parent_post_packet_id: mirrorPlan.canonical_packet_id,
           reply_markdown: input.intent.reply_markdown,
+          legacy_context_packet_ids:
+            parentPacket.header.family === 'Discussion'
+              ? []
+              : [parentPacket.header.packet_id],
         },
         actorPacket: input.actorPacket,
       }),
       ...mergedPolicyDecision,
     } satisfies MutationDecision;
+    decision.packets.unshift(...mirrorPlan.packets);
     const digests = await Promise.all(
       decision.packets.map(async (packet) => {
         const candidates = await getPacketUnsignedDigestCandidates(packet);
@@ -542,7 +748,8 @@ export class NexusMutationService {
     if (
       !targetPacket ||
       (targetPacket.header.family !== 'DiscussionPost' &&
-        targetPacket.header.family !== 'DiscussionReply')
+        targetPacket.header.family !== 'DiscussionReply' &&
+        !isDiscussionMessagePacket(targetPacket))
     ) {
       throw new Error(`Unknown packet vote target: ${input.intent.target_packet_id}`);
     }
@@ -1426,9 +1633,44 @@ export class NexusMutationService {
   private async finalizeDiscussionThreadPost(input: {
     storedTicket: ReturnType<MutationTicketStore['consume']>;
     actorContext: ActorContext;
-    signedPackets: [PacketEnvelopeByType['DiscussionThread'], PacketEnvelopeByType['DiscussionPost']];
+    signedPackets: PacketEnvelope[];
   }) {
-    const [threadPacket, postPacket] = input.signedPackets;
+    const mirrorPackets = input.signedPackets.slice(0, -2);
+    const [threadPacket, postPacket] = input.signedPackets.slice(-2);
+
+    if (!threadPacket || !postPacket) {
+      throw new Error('Signed discussion thread/post packet bundle is incomplete.');
+    }
+    const threadProjection =
+      threadPacket.header.family === 'Discussion'
+        ? (projectDiscussionPacketToLegacy(
+            threadPacket as PacketEnvelopeByType['Discussion'],
+            'DiscussionThread'
+          ) as PacketEnvelopeByType['DiscussionThread'] | null)
+        : threadPacket.header.family === 'DiscussionThread'
+          ? (threadPacket as PacketEnvelopeByType['DiscussionThread'])
+          : null;
+    const postProjection =
+      postPacket.header.family === 'Discussion'
+        ? (projectDiscussionPacketToLegacy(
+            postPacket as PacketEnvelopeByType['Discussion'],
+            'DiscussionPost'
+          ) as PacketEnvelopeByType['DiscussionPost'] | null)
+        : postPacket.header.family === 'DiscussionPost'
+          ? (postPacket as PacketEnvelopeByType['DiscussionPost'])
+          : null;
+
+    if (!threadProjection || !postProjection) {
+      throw new Error('Signed discussion thread/post packets are not projectable.');
+    }
+
+    if (mirrorPackets.length > 0) {
+      await this.persistSignedPacketsForActor({
+        actorPacket: input.actorContext.actorPacket,
+        signedPackets: mirrorPackets,
+      });
+    }
+
     const result = await this.discussionService.createPost({
       scope_id:
         input.storedTicket.intent.kind === 'discussion.thread_post.create'
@@ -1448,22 +1690,22 @@ export class NexusMutationService {
           input.storedTicket.intent.kind === 'discussion.thread_post.create'
             ? input.storedTicket.intent.mutation_nonce?.trim() || 'prepared00'
             : 'prepared00',
-        created_at: threadPacket.header.created_at,
-        forum_packet_id: threadPacket.body.forum_ref.packet_id,
+        created_at: threadProjection.header.created_at,
+        forum_packet_id: threadProjection.body.forum_ref.packet_id,
         forum_kind:
-          typeof threadPacket.header.metadata.tags[1] === 'string'
-            ? threadPacket.header.metadata.tags[1]
-            : threadPacket.body.thread_kind,
+          typeof threadProjection.header.metadata.tags[2] === 'string'
+            ? threadProjection.header.metadata.tags[2]
+            : threadProjection.body.thread_kind,
         authority_scope_packet_id:
-          threadPacket.header.authority_scope_ref?.packet_id ?? null,
-        applicable_scope_packet_ids: threadPacket.header.applicable_scope_refs.map(
+          threadProjection.header.authority_scope_ref?.packet_id ?? null,
+        applicable_scope_packet_ids: threadProjection.header.applicable_scope_refs.map(
           (scopeRef) => scopeRef.packet_id
         ),
-        default_sort: threadPacket.body.default_sort,
-        thread_title: threadPacket.body.title,
-        post_markdown: postPacket.body.content_markdown,
-        thread_kind: threadPacket.body.thread_kind,
-        related_packet_ids: threadPacket.body.related_refs.map(
+        default_sort: threadProjection.body.default_sort,
+        thread_title: threadProjection.body.title,
+        post_markdown: postProjection.body.content_markdown,
+        thread_kind: threadProjection.body.thread_kind,
+        related_packet_ids: threadProjection.body.related_refs.map(
           (relatedRef) => relatedRef.packet_id
         ),
       },
@@ -1480,9 +1722,35 @@ export class NexusMutationService {
   private async finalizeDiscussionReply(input: {
     storedTicket: ReturnType<MutationTicketStore['consume']>;
     actorContext: ActorContext;
-    signedPackets: [PacketEnvelopeByType['DiscussionReply']];
+    signedPackets: PacketEnvelope[];
   }) {
-    const [replyPacket] = input.signedPackets;
+    const mirrorPackets = input.signedPackets.slice(0, -1);
+    const [replyPacket] = input.signedPackets.slice(-1);
+
+    if (!replyPacket) {
+      throw new Error('Signed discussion reply packet bundle is incomplete.');
+    }
+    const replyProjection =
+      replyPacket.header.family === 'Discussion'
+        ? (projectDiscussionPacketToLegacy(
+            replyPacket as PacketEnvelopeByType['Discussion'],
+            'DiscussionReply'
+          ) as PacketEnvelopeByType['DiscussionReply'] | null)
+        : replyPacket.header.family === 'DiscussionReply'
+          ? (replyPacket as PacketEnvelopeByType['DiscussionReply'])
+          : null;
+
+    if (!replyProjection) {
+      throw new Error('Signed discussion reply packet is not projectable.');
+    }
+
+    if (mirrorPackets.length > 0) {
+      await this.persistSignedPacketsForActor({
+        actorPacket: input.actorContext.actorPacket,
+        signedPackets: mirrorPackets,
+      });
+    }
+
     const result = await this.discussionService.createReply({
       scope_id:
         input.storedTicket.intent.kind === 'discussion.reply.create'
@@ -1502,20 +1770,20 @@ export class NexusMutationService {
           input.storedTicket.intent.kind === 'discussion.reply.create'
             ? input.storedTicket.intent.mutation_nonce?.trim() || 'prepared00'
             : 'prepared00',
-        created_at: replyPacket.header.created_at,
+        created_at: replyProjection.header.created_at,
         forum_kind:
-          typeof replyPacket.header.metadata.tags[1] === 'string'
-            ? replyPacket.header.metadata.tags[1]
+          typeof replyProjection.header.metadata.tags[3] === 'string'
+            ? replyProjection.header.metadata.tags[3]
             : 'general',
         authority_scope_packet_id:
-          replyPacket.header.authority_scope_ref?.packet_id ?? null,
-        applicable_scope_packet_ids: replyPacket.header.applicable_scope_refs.map(
+          replyProjection.header.authority_scope_ref?.packet_id ?? null,
+        applicable_scope_packet_ids: replyProjection.header.applicable_scope_refs.map(
           (scopeRef) => scopeRef.packet_id
         ),
-        thread_packet_id: replyPacket.body.thread_ref.packet_id,
-        root_post_packet_id: replyPacket.body.root_post_ref.packet_id,
-        parent_post_packet_id: replyPacket.body.reply_to_ref.packet_id,
-        reply_markdown: replyPacket.body.content_markdown,
+        thread_packet_id: replyProjection.body.thread_ref.packet_id,
+        root_post_packet_id: replyProjection.body.root_post_ref.packet_id,
+        parent_post_packet_id: replyProjection.body.reply_to_ref.packet_id,
+        reply_markdown: replyProjection.body.content_markdown,
       },
       signed_reply_packet: replyPacket,
     });
@@ -1856,19 +2124,14 @@ export class NexusMutationService {
         finalized = await this.finalizeDiscussionThreadPost({
           storedTicket,
           actorContext: input.actorContext,
-          signedPackets: input.request.signed_packets as [
-            PacketEnvelopeByType['DiscussionThread'],
-            PacketEnvelopeByType['DiscussionPost'],
-          ],
+          signedPackets: input.request.signed_packets,
         });
         break;
       case 'discussion.reply.create':
         finalized = await this.finalizeDiscussionReply({
           storedTicket,
           actorContext: input.actorContext,
-          signedPackets: input.request.signed_packets as [
-            PacketEnvelopeByType['DiscussionReply'],
-          ],
+          signedPackets: input.request.signed_packets,
         });
         break;
       case 'attestation.packet_signal.set':

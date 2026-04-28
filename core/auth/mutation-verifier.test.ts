@@ -216,6 +216,10 @@ test('signed packet bundles must match the canonical discussion candidate', () =
       signedPackets: decision.packets,
     })
   );
+  assert.deepEqual(
+    decision.packets.map((packet) => packet.header.family),
+    ['Discussion', 'Discussion']
+  );
 
   const mismatchedPackets: PacketEnvelope[] = [
     {

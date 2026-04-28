@@ -25,3 +25,24 @@ test('first-party interactive nexus routes do not directly write packets', () =>
 
   assert.deepEqual(offenders, []);
 });
+
+test('non-canonical nexus routes do not run the mutation corridor directly', () => {
+  const allowedMutationRoutes = new Set([
+    join(API_ROOT, 'mutations', 'prepare+api.ts'),
+    join(API_ROOT, 'mutations', 'finalize+api.ts'),
+  ]);
+  const offenders = listApiFiles(API_ROOT).filter((filePath) => {
+    if (allowedMutationRoutes.has(filePath)) {
+      return false;
+    }
+
+    const source = readFileSync(filePath, 'utf8');
+
+    return (
+      source.includes('mutationService.prepareMutation(') ||
+      source.includes('mutationService.finalizeMutation(')
+    );
+  });
+
+  assert.deepEqual(offenders, []);
+});

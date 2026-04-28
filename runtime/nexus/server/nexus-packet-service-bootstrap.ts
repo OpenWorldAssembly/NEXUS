@@ -22,6 +22,7 @@ import {
 } from '@runtime/storage/node-runtime-paths';
 
 const DISCUSSION_RESET_FAMILIES = [
+  'Discussion',
   'DiscussionSpace',
   'DiscussionForum',
   'DiscussionThread',
