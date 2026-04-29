@@ -7,6 +7,7 @@ import type {
   NexusDiscussionReplyChildrenPayload,
   NexusDiscussionThreadPayload,
   NexusDiscussionsPayload,
+  NexusDiscussionWorkspacePayload,
 } from '@runtime/nexus/nexus-api-types';
 import { fetchJsonOrThrow } from '@runtime/nexus/nexus-query-api.shared';
 
@@ -133,5 +134,65 @@ export function fetchNexusDiscussionReplyChildrenPayload(input: {
 
   return fetchJsonOrThrow<NexusDiscussionReplyChildrenPayload>(
     `/api/nexus/scopes/${encodeURIComponent(input.scopeId)}/discussions/replies?${searchParams.toString()}`
+  );
+}
+
+export function fetchNexusDiscussionWorkspacePayload(input: {
+  scopeId: string;
+  forumId?: string | null;
+  sort?: string | null;
+  view?: string | null;
+  postId?: string | null;
+  replyTargetId?: string | null;
+  replySort?: string | null;
+  showHidden?: boolean;
+  viewerActorPacketId?: string | null;
+  feedLimit?: number | null;
+  replyLimit?: number | null;
+}): Promise<NexusDiscussionWorkspacePayload> {
+  const searchParams = new URLSearchParams();
+
+  if (input.forumId) {
+    searchParams.set('forum', input.forumId);
+  }
+
+  if (input.sort) {
+    searchParams.set('sort', input.sort);
+  }
+
+  if (input.view) {
+    searchParams.set('view', input.view);
+  }
+
+  if (input.postId) {
+    searchParams.set('post_packet_id', input.postId);
+  }
+
+  if (input.replyTargetId) {
+    searchParams.set('reply_target_packet_id', input.replyTargetId);
+  }
+
+  if (input.replySort) {
+    searchParams.set('reply_sort', input.replySort);
+  }
+
+  if (input.showHidden) {
+    searchParams.set('show_hidden', 'true');
+  }
+
+  if (input.viewerActorPacketId) {
+    searchParams.set('viewer_actor_packet_id', input.viewerActorPacketId);
+  }
+
+  if (typeof input.feedLimit === 'number' && Number.isFinite(input.feedLimit)) {
+    searchParams.set('feed_limit', String(input.feedLimit));
+  }
+
+  if (typeof input.replyLimit === 'number' && Number.isFinite(input.replyLimit)) {
+    searchParams.set('reply_limit', String(input.replyLimit));
+  }
+
+  return fetchJsonOrThrow<NexusDiscussionWorkspacePayload>(
+    `/api/nexus/scopes/${encodeURIComponent(input.scopeId)}/discussions/workspace?${searchParams.toString()}`
   );
 }

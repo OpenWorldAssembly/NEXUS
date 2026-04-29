@@ -242,6 +242,14 @@ export interface VotePacketInput extends PacketBuilderBaseInput {
   closes_at?: string | null;
 }
 
+export interface DecisionPacketInput extends PacketBuilderBaseInput {
+  title: string;
+  summary?: string | null;
+  outcome: string;
+  proposal_ref?: PacketRef | null;
+  vote_ref?: PacketRef | null;
+}
+
 export interface AttestationPacketInput extends PacketBuilderBaseInput {
   target_ref: PacketRef;
   value: AttestationValue;
@@ -335,35 +343,13 @@ export function createPacket<TFamily extends PacketFamily>(
 export function createElementPacket(
   input: ElementPacketInput
 ): PacketEnvelopeByType['Element'] {
-  return createPacket({
-    ...input,
+  return buildPacket({
     family: 'Element',
-    metadata_tags: input.metadata_tags ?? input.tags ?? [],
-    metadata_summary: input.metadata_summary ?? input.summary ?? null,
-    body: {
-      kind: input.kind,
-      name: input.name,
-      subtype: input.subtype ?? null,
-      summary: input.summary ?? null,
-      locality_label: input.locality_label ?? null,
-      locality: input.locality
-        ? {
-            level: input.locality.level,
-            canonical_name_key: input.locality.canonical_name_key,
-            alias_keys: input.locality.alias_keys ?? [],
-            display_aliases: input.locality.display_aliases ?? [],
-          }
-        : null,
-      identity: input.identity
-        ? {
-            alias: input.identity.alias,
-            claim_status: input.identity.claim_status,
-            location_disclosure: input.identity.location_disclosure ?? null,
-            public_key_bindings: input.identity.public_key_bindings ?? [],
-          }
-        : null,
-      tags: input.tags ?? [],
-      claimed_role_refs: input.claimed_role_refs ?? [],
+    body: input,
+    header: {
+      ...input,
+      metadata_tags: input.metadata_tags ?? input.tags ?? [],
+      metadata_summary: input.metadata_summary ?? input.summary ?? null,
     },
   });
 }
@@ -375,16 +361,12 @@ export function createElementPacket(
 export function createRolePacket(
   input: RolePacketInput
 ): PacketEnvelopeByType['Role'] {
-  return createPacket({
-    ...input,
+  return buildPacket({
     family: 'Role',
-    metadata_summary: input.metadata_summary ?? input.summary ?? null,
-    body: {
-      title: input.title,
-      summary: input.summary ?? null,
-      role_kind: input.role_kind,
-      status: input.status,
-      responsibility_markdown: input.responsibility_markdown ?? null,
+    body: input,
+    header: {
+      ...input,
+      metadata_summary: input.metadata_summary ?? input.summary ?? null,
     },
   });
 }
@@ -396,29 +378,12 @@ export function createRolePacket(
 export function createClaimPacket(
   input: ClaimPacketInput
 ): PacketEnvelopeByType['Claim'] {
-  return createPacket({
-    ...input,
+  return buildPacket({
     family: 'Claim',
-    edges: [
-      ...(input.edges ?? []),
-      createPacketEdge('belongs_to', input.subject_ref, {
-        source_field: 'subject_ref',
-      }),
-      createPacketEdge('references', input.target_ref, {
-        source_field: 'target_ref',
-      }),
-      createPacketEdge('scoped_to', input.scope_ref, {
-        source_field: 'scope_ref',
-      }),
-    ],
-    metadata_summary: input.metadata_summary ?? input.note ?? null,
-    body: {
-      claim_kind: input.claim_kind,
-      subject_ref: input.subject_ref,
-      target_ref: input.target_ref,
-      scope_ref: input.scope_ref,
-      status: input.status ?? 'active',
-      note: input.note ?? null,
+    body: input,
+    header: {
+      ...input,
+      metadata_summary: input.metadata_summary ?? input.note ?? null,
     },
   });
 }
@@ -656,25 +621,12 @@ export function createDiscussionReplyPacket(
 export function createProposalPacket(
   input: ProposalPacketInput
 ): PacketEnvelopeByType['Proposal'] {
-  const relatedPolicyRefs = input.related_policy_refs ?? [];
-  const policyEdges = relatedPolicyRefs.map((policyRef) =>
-    createPacketEdge('governed_by', policyRef, {
-      source_field: 'related_policy_refs',
-    })
-  );
-
-  return createPacket({
-    ...input,
+  return buildPacket({
     family: 'Proposal',
-    edges: [...(input.edges ?? []), ...policyEdges],
-    metadata_summary: input.metadata_summary ?? input.summary ?? null,
-    body: {
-      title: input.title,
-      summary: input.summary ?? null,
-      proposal_kind: input.proposal_kind,
-      status: input.status,
-      decision_scope_refs: input.decision_scope_refs ?? [],
-      related_policy_refs: relatedPolicyRefs,
+    body: input,
+    header: {
+      ...input,
+      metadata_summary: input.metadata_summary ?? input.summary ?? null,
     },
   });
 }
@@ -700,22 +652,26 @@ export function createPolicyPacket(
 export function createVotePacket(
   input: VotePacketInput
 ): PacketEnvelopeByType['Vote'] {
-  return createPacket({
-    ...input,
+  return buildPacket({
     family: 'Vote',
-    edges: [
-      ...(input.edges ?? []),
-      createPacketEdge('votes_on', input.proposal_ref, {
-        source_field: 'proposal_ref',
-      }),
-    ],
-    body: {
-      title: input.title,
-      proposal_ref: input.proposal_ref,
-      vote_method: input.vote_method,
-      status: input.status,
-      opened_at: input.opened_at ?? null,
-      closes_at: input.closes_at ?? null,
+    body: input,
+    header: input,
+  });
+}
+
+/**
+ * Inputs: common packet header fields plus the decision body data.
+ * Output: a decision packet with optional references to supporting proposal and vote packets.
+ */
+export function createDecisionPacket(
+  input: DecisionPacketInput
+): PacketEnvelopeByType['Decision'] {
+  return buildPacket({
+    family: 'Decision',
+    body: input,
+    header: {
+      ...input,
+      metadata_summary: input.metadata_summary ?? input.summary ?? null,
     },
   });
 }
@@ -727,40 +683,12 @@ export function createVotePacket(
 export function createAttestationPacket(
   input: AttestationPacketInput
 ): PacketEnvelopeByType['Attestation'] {
-  const supportingRefs = input.supporting_refs ?? [];
-  const contextEdges = input.context_ref
-    ? [
-        createPacketEdge('belongs_to', input.context_ref, {
-          source_field: 'context_ref',
-        }),
-      ]
-    : [];
-  const supportingEdges = supportingRefs.map((supportingRef) =>
-    createPacketEdge('references', supportingRef, {
-      source_field: 'supporting_refs',
-    })
-  );
-
-  return createPacket({
-    ...input,
+  return buildPacket({
     family: 'Attestation',
-    edges: [
-      ...(input.edges ?? []),
-      createPacketEdge('votes_on', input.target_ref, {
-        source_field: 'target_ref',
-      }),
-      ...contextEdges,
-      ...supportingEdges,
-    ],
-    body: {
-      target_ref: input.target_ref,
-      value: input.value,
-      status: input.status ?? 'active',
-      attestation_kind: input.attestation_kind ?? 'packet_signal',
-      context_ref: input.context_ref ?? null,
-      supporting_refs: supportingRefs,
-      note: input.note ?? null,
-      supersedes_ref: input.supersedes_ref ?? null,
+    body: input,
+    header: {
+      ...input,
+      metadata_summary: input.metadata_summary ?? input.note ?? null,
     },
   });
 }

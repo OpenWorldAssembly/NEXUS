@@ -31,6 +31,8 @@ import type {
   DiscussionReplyProjection,
   DiscussionThreadDetailProjection,
   DiscussionViewerContext,
+  DiscussionWorkspaceModel,
+  NexusActionMap,
 } from '@core/contracts';
 import type {
   AttestationValue,
@@ -70,6 +72,7 @@ import type {
   AttestationTallyIndexRecord,
 } from '@runtime/storage/sqlite-records';
 import { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store';
+import { DISCUSSION_ACTION_DESCRIPTORS } from '@runtime/nexus/discussion-action-contract';
 
 const REDDIT_EPOCH_SECONDS = 1134028003;
 const HOT_SCORE_DECAY_SECONDS = 45000;
@@ -159,6 +162,20 @@ type EffectiveParticipationRules = {
   reply_actor_classes: DiscussionActorClass[];
   reaction_actor_classes: DiscussionActorClass[];
 };
+
+function toDiscussionAuthGateReason(
+  writeBlockReason: DiscussionViewerContext['write_block_reason']
+): 'sign_in_required' | 'community_claim_required' | null {
+  if (writeBlockReason === 'signed_actor_required') {
+    return 'sign_in_required';
+  }
+
+  if (writeBlockReason === 'home_locality_required') {
+    return 'community_claim_required';
+  }
+
+  return null;
+}
 
 function isPersonElementPacket(
   packet: PacketEnvelope | null | undefined
@@ -1050,7 +1067,11 @@ export class SQLiteDiscussionService
         );
       })
       .map((rootPostPacket) =>
-        this.toDiscussionPostProjection(rootPostPacket, actorIdentity.actor_key)
+        this.toDiscussionPostProjection(
+          rootPostPacket,
+          actorIdentity.actor_key,
+          viewer
+        )
       )
       .filter((postProjection) => input.show_hidden || !postProjection.is_hidden)
       .sort((leftPost, rightPost) =>
@@ -1181,7 +1202,8 @@ export class SQLiteDiscussionService
     const selectedReplySort = input.reply_sort ?? 'top';
     const rootPostProjection = this.toDiscussionPostProjection(
       rootPostPacket,
-      actorIdentity.actor_key
+      actorIdentity.actor_key,
+      viewer
     );
     const rootReplyPage = this.getReplyChildrenPage({
       root_post_packet_id: rootPostPacket.header.packet_id,
@@ -1189,6 +1211,7 @@ export class SQLiteDiscussionService
       reply_sort: selectedReplySort,
       show_hidden: input.show_hidden,
       viewer_actor_key: actorIdentity.actor_key,
+      viewer,
       cursor: input.cursor ?? null,
       limit: input.limit ?? null,
     });
@@ -1259,9 +1282,105 @@ export class SQLiteDiscussionService
       reply_sort: input.reply_sort ?? null,
       show_hidden: input.show_hidden,
       viewer_actor_key: input.viewer_actor_key,
+      viewer: forumPacket
+        ? await this.buildViewerContext(
+            forumPacket,
+            getActorIdentity(input.viewer_actor_key, this.state.packetMap),
+            threadPacket
+          )
+        : null,
       cursor: input.cursor ?? null,
       limit: input.limit ?? null,
     });
+  }
+
+  async getWorkspace(input: {
+    scope_id: string;
+    forum_id: string | null;
+    view: 'feed' | 'thread' | 'post';
+    post_packet_id: string | null;
+    reply_target_packet_id: string | null;
+    sort: DiscussionSort | null;
+    reply_sort: DiscussionReplySort | null;
+    show_hidden: boolean;
+    viewer_actor_key: string | null;
+    feed_limit?: number | null;
+    reply_limit?: number | null;
+  }): Promise<DiscussionWorkspaceModel> {
+    const feed = await this.getForumFeed({
+      scope_id: input.scope_id,
+      forum_id: input.forum_id,
+      sort: input.sort,
+      show_hidden: input.show_hidden,
+      viewer_actor_key: input.viewer_actor_key,
+      limit: input.feed_limit ?? null,
+    });
+    const selectedForum =
+      feed.forums.find((forum) => forum.id === feed.selected_forum_id) ?? null;
+    const thread =
+      input.post_packet_id
+        ? await this.getThreadDetail({
+            scope_id: input.scope_id,
+            post_packet_id: input.post_packet_id,
+            reply_sort: input.reply_sort,
+            show_hidden: input.show_hidden,
+            viewer_actor_key: input.viewer_actor_key,
+            limit: input.reply_limit ?? null,
+          })
+        : null;
+    const viewer = thread?.viewer ?? feed.viewer ?? null;
+    const replyTargetPacketId = input.reply_target_packet_id ?? null;
+    const selectedThreadPacketId =
+      thread?.root_post.packet.packet_id ?? input.post_packet_id ?? null;
+    const feedItems = feed.top_level_posts.map((postProjection) =>
+      this.withDiscussionNodeState(postProjection, {
+        is_selected_thread:
+          selectedThreadPacketId === postProjection.packet.packet_id,
+      })
+    );
+    const threadRoot = thread
+      ? this.withDiscussionNodeState(thread.root_post, {
+          is_selected_thread: true,
+          is_reply_target:
+            thread.root_post.packet.packet_id === replyTargetPacketId,
+          has_loaded_children: thread.replies.length > 0,
+        })
+      : null;
+    const threadItems = this.markReplyTreeState({
+      replies: thread?.replies ?? [],
+      replyTargetPacketId,
+    });
+    const workspaceActions = this.createDiscussionWorkspaceActions({
+      viewer,
+      selectedForum,
+      selectedThreadPacketId,
+      feedHasMore: feed.has_more,
+    });
+
+    return {
+      lens: feed.lens,
+      active_view: input.view,
+      available_forums: feed.forums,
+      selected_forum: selectedForum,
+      selected_thread_packet_id: selectedThreadPacketId,
+      reply_target_packet_id: replyTargetPacketId,
+      viewer,
+      feed_items: feedItems,
+      thread_root: threadRoot,
+      thread_items: threadItems,
+      workspace_actions: workspaceActions,
+      action_descriptors: DISCUSSION_ACTION_DESCRIPTORS,
+      composer: {
+        mode:
+          input.view === 'post'
+            ? 'top_level'
+            : replyTargetPacketId && threadRoot
+              ? 'reply'
+              : 'none',
+        root_post_packet_id: threadRoot?.packet.packet_id ?? null,
+        reply_target_packet_id: replyTargetPacketId,
+      },
+    };
   }
 
   async createPost(input: DiscussionPostWriteInput): Promise<{
@@ -1366,7 +1485,8 @@ export class SQLiteDiscussionService
       viewer: nextViewer,
       post: this.toDiscussionPostProjection(
         createdPost,
-        actorIdentity.actor_key
+        actorIdentity.actor_key,
+        nextViewer
       ),
     };
   }
@@ -1493,7 +1613,8 @@ export class SQLiteDiscussionService
       viewer: nextViewer,
       post: this.toDiscussionPostProjection(
         createdReply,
-        actorIdentity.actor_key
+        actorIdentity.actor_key,
+        nextViewer
       ),
     };
   }
@@ -1558,6 +1679,129 @@ export class SQLiteDiscussionService
       this.state?.voteSummaryByTarget.get(targetPacketId),
       viewerValue
     );
+  }
+
+  private createDiscussionWorkspaceActions(input: {
+    viewer: DiscussionViewerContext | null;
+    selectedForum: DiscussionForumProjection | null;
+    selectedThreadPacketId: string | null;
+    feedHasMore: boolean;
+  }): NexusActionMap {
+    const createTopLevelEnabled = input.viewer?.can_create_top_level ?? false;
+    const writeBlockReason = input.viewer?.write_block_reason ?? 'signed_actor_required';
+
+    return {
+      'discussion.create_top_level': {
+        id: 'discussion.create_top_level',
+        visible: input.selectedForum !== null,
+        enabled: createTopLevelEnabled,
+        reason: createTopLevelEnabled ? null : writeBlockReason,
+        auth_gate_reason: createTopLevelEnabled
+          ? null
+          : toDiscussionAuthGateReason(writeBlockReason),
+        target_packet_id: input.selectedForum?.forum_packet_id ?? null,
+      },
+      'discussion.load_more_feed': {
+        id: 'discussion.load_more_feed',
+        visible: input.feedHasMore,
+        enabled: input.feedHasMore,
+        reason: input.feedHasMore ? null : 'exhausted',
+        target_packet_id: input.selectedThreadPacketId,
+      },
+    };
+  }
+
+  private createDiscussionPostActions(
+    postProjection: DiscussionPostProjection,
+    viewer: DiscussionViewerContext | null
+  ): NexusActionMap {
+    const canReply = viewer?.can_reply ?? false;
+    const canVote = viewer?.can_vote ?? false;
+    const writeBlockReason = viewer?.write_block_reason ?? 'signed_actor_required';
+    const authGateReason = toDiscussionAuthGateReason(writeBlockReason);
+
+    return {
+      'discussion.open_thread': {
+        id: 'discussion.open_thread',
+        visible: postProjection.depth === 0,
+        enabled: postProjection.depth === 0,
+        reason: null,
+        target_packet_id: postProjection.packet.packet_id,
+        target_revision_id: postProjection.revision.revision_id,
+      },
+      'discussion.reply': {
+        id: 'discussion.reply',
+        visible: true,
+        enabled: canReply,
+        reason: canReply ? null : writeBlockReason,
+        auth_gate_reason: canReply ? null : authGateReason,
+        target_packet_id: postProjection.packet.packet_id,
+        target_revision_id: postProjection.revision.revision_id,
+      },
+      'discussion.vote_up': {
+        id: 'discussion.vote_up',
+        visible: true,
+        enabled: canVote,
+        reason: canVote ? null : writeBlockReason,
+        auth_gate_reason: canVote ? null : authGateReason,
+        target_packet_id: postProjection.packet.packet_id,
+        target_revision_id: postProjection.revision.revision_id,
+      },
+      'discussion.vote_down': {
+        id: 'discussion.vote_down',
+        visible: true,
+        enabled: canVote,
+        reason: canVote ? null : writeBlockReason,
+        auth_gate_reason: canVote ? null : authGateReason,
+        target_packet_id: postProjection.packet.packet_id,
+        target_revision_id: postProjection.revision.revision_id,
+      },
+      'discussion.load_more_replies': {
+        id: 'discussion.load_more_replies',
+        visible: postProjection.reply_count > 0,
+        enabled: postProjection.reply_count > 0,
+        reason: postProjection.reply_count > 0 ? null : 'no_children',
+        target_packet_id: postProjection.packet.packet_id,
+        target_revision_id: postProjection.revision.revision_id,
+      },
+    };
+  }
+
+  private withDiscussionNodeState<TProjection extends DiscussionPostProjection>(
+    projection: TProjection,
+    state: Partial<TProjection['state']>
+  ): TProjection {
+    return {
+      ...projection,
+      state: {
+        ...projection.state,
+        ...state,
+      },
+    };
+  }
+
+  private markReplyTreeState(input: {
+    replies: DiscussionReplyProjection[];
+    replyTargetPacketId: string | null;
+  }): DiscussionReplyProjection[] {
+    return input.replies.map((replyProjection) => {
+      const childReplies = this.markReplyTreeState({
+        replies: replyProjection.replies,
+        replyTargetPacketId: input.replyTargetPacketId,
+      });
+
+      return this.withDiscussionNodeState(
+        {
+          ...replyProjection,
+          replies: childReplies,
+        },
+        {
+          is_reply_target:
+            replyProjection.packet.packet_id === input.replyTargetPacketId,
+          has_loaded_children: childReplies.length > 0,
+        }
+      );
+    });
   }
 
   private getVisibleForums(
@@ -1689,15 +1933,15 @@ export class SQLiteDiscussionService
 
   private toDiscussionPostProjection(
     postPacket: DiscussionEntryPacket,
-    viewerActorKey: string | null
+    viewerActorKey: string | null,
+    viewer: DiscussionViewerContext | null = null
   ): DiscussionPostProjection {
     const postIndex = this.state?.postIndexByPacketId.get(postPacket.header.packet_id);
     const voteSummary = this.getVoteSummaryForTarget(
       postPacket.header.packet_id,
       viewerActorKey
     );
-
-    return {
+    const projection: DiscussionPostProjection = {
       packet: {
         packet_id: postPacket.header.packet_id,
       },
@@ -1727,20 +1971,62 @@ export class SQLiteDiscussionService
       is_hidden: false,
       hidden_reason: null,
       vote_summary: voteSummary,
+      state: {
+        structural_kind: (postIndex?.depth ?? 0) > 0 ? 'reply' : 'root_post',
+        is_selected_thread: false,
+        is_reply_target: false,
+        has_children: (postIndex?.direct_reply_count ?? 0) > 0,
+        has_loaded_children: false,
+      },
+      actions: {},
+    };
+
+    return {
+      ...projection,
+      actions: this.createDiscussionPostActions(projection, viewer),
     };
   }
 
   private toDiscussionReplyProjection(
     replyPacket: PacketEnvelopeByType['DiscussionReply'],
-    viewerActorKey: string | null
+    viewerActorKey: string | null,
+    viewer: DiscussionViewerContext | null = null
   ): DiscussionReplyProjection {
     const postProjection = this.toDiscussionPostProjection(
       replyPacket,
-      viewerActorKey
+      viewerActorKey,
+      viewer
     );
 
     return {
       ...postProjection,
+      actions: {
+        ...postProjection.actions,
+        'discussion.expand_branch': {
+          id: 'discussion.expand_branch',
+          visible: postProjection.reply_count > 0,
+          enabled: postProjection.reply_count > 0,
+          reason: postProjection.reply_count > 0 ? null : 'no_children',
+          target_packet_id: postProjection.packet.packet_id,
+          target_revision_id: postProjection.revision.revision_id,
+        },
+        'discussion.collapse_branch': {
+          id: 'discussion.collapse_branch',
+          visible: postProjection.reply_count > 0,
+          enabled: postProjection.reply_count > 0,
+          reason: postProjection.reply_count > 0 ? null : 'no_children',
+          target_packet_id: postProjection.packet.packet_id,
+          target_revision_id: postProjection.revision.revision_id,
+        },
+        'discussion.load_more_replies': {
+          id: 'discussion.load_more_replies',
+          visible: postProjection.reply_count > 0,
+          enabled: postProjection.reply_count > 0,
+          reason: postProjection.reply_count > 0 ? null : 'no_children',
+          target_packet_id: postProjection.packet.packet_id,
+          target_revision_id: postProjection.revision.revision_id,
+        },
+      },
       replies: [],
       child_page: {
         next_cursor: postProjection.reply_count > 0 ? '0' : null,
@@ -1757,6 +2043,7 @@ export class SQLiteDiscussionService
     reply_sort: DiscussionReplySort | null;
     show_hidden: boolean;
     viewer_actor_key: string | null;
+    viewer?: DiscussionViewerContext | null;
     cursor?: string | null;
     limit?: number | null;
   }) {
@@ -1801,7 +2088,11 @@ export class SQLiteDiscussionService
     );
     const sortedReplies = childReplies
       .map((replyPacket) =>
-        this.toDiscussionReplyProjection(replyPacket, input.viewer_actor_key)
+        this.toDiscussionReplyProjection(
+          replyPacket,
+          input.viewer_actor_key,
+          input.viewer ?? null
+        )
       )
       .filter((replyProjection) => input.show_hidden || !replyProjection.is_hidden)
       .sort((leftReply, rightReply) =>

@@ -4,6 +4,9 @@
  */
 
 import type {
+  MutationIntent,
+} from '@core/auth/mutation-corridor';
+import type {
   PacketAdaptedWritePreparation,
   PacketCompatibilityReadResult,
   PacketVersionedWritePreparation,
@@ -121,6 +124,49 @@ export interface NexusScopeLens {
   applicable_scope_refs: PacketRef[];
 }
 
+export type NexusActionId =
+  | 'discussion.open_thread'
+  | 'discussion.reply'
+  | 'discussion.vote_up'
+  | 'discussion.vote_down'
+  | 'discussion.create_top_level'
+  | 'discussion.expand_branch'
+  | 'discussion.collapse_branch'
+  | 'discussion.load_more_replies'
+  | 'discussion.load_more_feed'
+  | 'role.claim'
+  | 'role.unclaim'
+  | 'role.support_claim'
+  | 'role.dispute_claim'
+  | 'role.clear_attestation'
+  | 'trust.set_home_locality';
+
+export type NexusActionExecutionKind =
+  | 'mutation'
+  | 'navigation'
+  | 'query'
+  | 'local';
+
+export interface NexusActionState {
+  id: NexusActionId;
+  visible: boolean;
+  enabled: boolean;
+  reason: string | null;
+  auth_gate_reason?: string | null;
+  target_packet_id?: string | null;
+  target_revision_id?: string | null;
+}
+
+export interface NexusActionIntentDescriptor {
+  id: NexusActionId;
+  execution_kind: NexusActionExecutionKind;
+  mutation_kind?: MutationIntent['kind'];
+  requires_selection?: boolean;
+  target_kind?: string | null;
+}
+
+export type NexusActionMap = Partial<Record<NexusActionId, NexusActionState>>;
+
 export interface NexusPacketCardProjection {
   packet: PacketRef;
   revision: PacketRevisionRef;
@@ -212,6 +258,14 @@ export interface DiscussionForumProjection {
   default_sort: DiscussionSort;
 }
 
+export interface DiscussionNodeState {
+  structural_kind: 'root_post' | 'reply';
+  is_selected_thread: boolean;
+  is_reply_target: boolean;
+  has_children: boolean;
+  has_loaded_children: boolean;
+}
+
 export interface DiscussionPostProjection {
   packet: PacketRef;
   revision: PacketRevisionRef;
@@ -231,6 +285,8 @@ export interface DiscussionPostProjection {
   is_hidden: boolean;
   hidden_reason: string | null;
   vote_summary: AttestationSummary;
+  state: DiscussionNodeState;
+  actions: NexusActionMap;
 }
 
 export interface DiscussionPageInfo {
@@ -242,6 +298,30 @@ export interface DiscussionReplyProjection extends DiscussionPostProjection {
   replies: DiscussionReplyProjection[];
   child_page: DiscussionPageInfo;
   is_collapsed_by_default: boolean;
+}
+
+export type DiscussionWorkspaceView = 'feed' | 'thread' | 'post';
+
+export interface DiscussionWorkspaceComposer {
+  mode: 'none' | 'reply' | 'top_level';
+  root_post_packet_id: string | null;
+  reply_target_packet_id: string | null;
+}
+
+export interface DiscussionWorkspaceModel {
+  lens: NexusScopeLens;
+  active_view: DiscussionWorkspaceView;
+  available_forums: DiscussionForumProjection[];
+  selected_forum: DiscussionForumProjection | null;
+  selected_thread_packet_id: string | null;
+  reply_target_packet_id: string | null;
+  viewer: DiscussionViewerContext | null;
+  feed_items: DiscussionPostProjection[];
+  thread_root: DiscussionPostProjection | null;
+  thread_items: DiscussionReplyProjection[];
+  workspace_actions: NexusActionMap;
+  action_descriptors: NexusActionIntentDescriptor[];
+  composer: DiscussionWorkspaceComposer;
 }
 
 export interface DiscussionFeedProjection {
@@ -304,6 +384,19 @@ export interface DiscussionQueryService {
     cursor?: string | null;
     limit?: number | null;
   }): Promise<DiscussionReplyChildrenProjection>;
+  getWorkspace(input: {
+    scope_id: string;
+    forum_id: string | null;
+    view: DiscussionWorkspaceView;
+    post_packet_id: string | null;
+    reply_target_packet_id: string | null;
+    sort: DiscussionSort | null;
+    reply_sort: DiscussionReplySort | null;
+    show_hidden: boolean;
+    viewer_actor_key: string | null;
+    feed_limit?: number | null;
+    reply_limit?: number | null;
+  }): Promise<DiscussionWorkspaceModel>;
 }
 
 export interface AttestationService {

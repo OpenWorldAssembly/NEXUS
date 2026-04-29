@@ -9,6 +9,8 @@ import type {
 } from '@core/contracts';
 import {
   PACKET_FAMILIES,
+  type DiscussionReplySort,
+  type DiscussionSort,
   type PacketEnvelopeByType,
   type PacketFamily,
   type PacketRef,
@@ -21,6 +23,7 @@ import {
   NEXUS_VOTE_MECHANICS,
 } from '@runtime/nexus/nexus-content';
 import type {
+  NexusDiscussionWorkspacePayload,
   NexusDashboardPayload,
   NexusDiscussionReplyChildrenPayload,
   NexusDiscussionThreadPayload,
@@ -46,10 +49,6 @@ import {
   meetsTrustGate,
   type NexusTrustPolicySnapshot,
 } from '@runtime/nexus/server/trust-logic';
-import type {
-  DiscussionReplySort,
-  DiscussionSort,
-} from '@core/schema/packet-schema';
 import {
   filterClaimPackets,
   listClaimPackets,
@@ -1106,6 +1105,64 @@ export async function getNexusDiscussionReplyChildrenPayload(input: {
     cursor: input.cursor ?? null,
     limit: input.limit ?? null,
   });
+}
+
+/**
+ * Inputs: unified discussion workspace query settings.
+ * Output: additive workspace payload with feed, optional thread, and action-rich workspace state.
+ */
+export async function getNexusDiscussionWorkspacePayload(input: {
+  scopeId: string;
+  forumId?: string | null;
+  sort?: DiscussionSort | null;
+  view?: 'feed' | 'thread' | 'post';
+  postPacketId?: string | null;
+  replyTargetPacketId?: string | null;
+  replySort?: DiscussionReplySort | null;
+  showHidden?: boolean;
+  viewerActorKey?: string | null;
+  feedLimit?: number | null;
+  replyLimit?: number | null;
+}): Promise<NexusDiscussionWorkspacePayload> {
+  const services = await getNexusPacketServices();
+  const feed = await services.discussionService.getForumFeed({
+    scope_id: input.scopeId,
+    forum_id: input.forumId ?? null,
+    sort: input.sort ?? null,
+    show_hidden: input.showHidden ?? false,
+    viewer_actor_key: input.viewerActorKey ?? null,
+    limit: input.feedLimit ?? null,
+  });
+  const thread =
+    input.postPacketId
+      ? await services.discussionService.getThreadDetail({
+          scope_id: input.scopeId,
+          post_packet_id: input.postPacketId,
+          reply_sort: input.replySort ?? null,
+          show_hidden: input.showHidden ?? false,
+          viewer_actor_key: input.viewerActorKey ?? null,
+          limit: input.replyLimit ?? null,
+        })
+      : null;
+  const workspace = await services.discussionService.getWorkspace({
+    scope_id: input.scopeId,
+    forum_id: input.forumId ?? null,
+    sort: input.sort ?? null,
+    view: input.view ?? 'feed',
+    post_packet_id: input.postPacketId ?? null,
+    reply_target_packet_id: input.replyTargetPacketId ?? null,
+    reply_sort: input.replySort ?? null,
+    show_hidden: input.showHidden ?? false,
+    viewer_actor_key: input.viewerActorKey ?? null,
+    feed_limit: input.feedLimit ?? null,
+    reply_limit: input.replyLimit ?? null,
+  });
+
+  return {
+    feed,
+    thread,
+    workspace,
+  };
 }
 
 /**

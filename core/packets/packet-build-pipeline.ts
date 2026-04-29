@@ -4,12 +4,26 @@
  */
 
 import type {
+  AttestationPacketInput,
+  ClaimPacketInput,
+  DecisionPacketInput,
   DiscussionPacketInput,
+  ElementPacketInput,
   PacketBuilderBaseInput,
   PolicyPacketInput,
+  ProposalPacketInput,
+  RolePacketInput,
+  VotePacketInput,
 } from '@core/packets/builders';
+import { attestationBuildDefinition } from '@core/packets/families/attestation';
+import { claimBuildDefinition } from '@core/packets/families/claim';
+import { decisionBuildDefinition } from '@core/packets/families/decision';
 import { discussionBuildDefinition } from '@core/packets/families/discussion';
+import { elementBuildDefinition } from '@core/packets/families/element';
 import { policyBuildDefinition } from '@core/packets/families/policy';
+import { proposalBuildDefinition } from '@core/packets/families/proposal';
+import { roleBuildDefinition } from '@core/packets/families/role';
+import { voteBuildDefinition } from '@core/packets/families/vote';
 import { createInitialRevisionId } from '@core/packets/packet-build-helpers';
 import {
   createPacketEnvelope,
@@ -112,7 +126,17 @@ type PacketBuildHeaderInput = {
   metadata_compatibility?: PacketCompatibilityMetadata | null;
 };
 
-export const GENERIC_PACKET_BUILD_FAMILIES = ['Discussion', 'Policy'] as const;
+export const GENERIC_PACKET_BUILD_FAMILIES = [
+  'Element',
+  'Role',
+  'Claim',
+  'Proposal',
+  'Vote',
+  'Attestation',
+  'Decision',
+  'Discussion',
+  'Policy',
+] as const;
 
 function dedupeEdges(edges: PacketEdge[]): PacketEdge[] {
   const seen = new Set<string>();
@@ -226,6 +250,27 @@ function buildPacketWithDefinition<
 }
 
 export function buildPacket(
+  request: PacketBuildRequest<'Element', ElementPacketInput>
+): PacketEnvelopeByType['Element'];
+export function buildPacket(
+  request: PacketBuildRequest<'Role', RolePacketInput>
+): PacketEnvelopeByType['Role'];
+export function buildPacket(
+  request: PacketBuildRequest<'Claim', ClaimPacketInput>
+): PacketEnvelopeByType['Claim'];
+export function buildPacket(
+  request: PacketBuildRequest<'Proposal', ProposalPacketInput>
+): PacketEnvelopeByType['Proposal'];
+export function buildPacket(
+  request: PacketBuildRequest<'Vote', VotePacketInput>
+): PacketEnvelopeByType['Vote'];
+export function buildPacket(
+  request: PacketBuildRequest<'Attestation', AttestationPacketInput>
+): PacketEnvelopeByType['Attestation'];
+export function buildPacket(
+  request: PacketBuildRequest<'Decision', DecisionPacketInput>
+): PacketEnvelopeByType['Decision'];
+export function buildPacket(
   request: PacketBuildRequest<'Discussion', DiscussionPacketInput>
 ): PacketEnvelopeByType['Discussion'];
 export function buildPacket(
@@ -235,6 +280,41 @@ export function buildPacket(
   request: PacketBuildRequest<PacketFamily, unknown>
 ): PacketEnvelopeByType[PacketFamily] {
   switch (request.family) {
+    case 'Element':
+      return buildPacketWithDefinition(
+        request as PacketBuildRequest<'Element', ElementPacketInput>,
+        elementBuildDefinition
+      );
+    case 'Role':
+      return buildPacketWithDefinition(
+        request as PacketBuildRequest<'Role', RolePacketInput>,
+        roleBuildDefinition
+      );
+    case 'Claim':
+      return buildPacketWithDefinition(
+        request as PacketBuildRequest<'Claim', ClaimPacketInput>,
+        claimBuildDefinition
+      );
+    case 'Proposal':
+      return buildPacketWithDefinition(
+        request as PacketBuildRequest<'Proposal', ProposalPacketInput>,
+        proposalBuildDefinition
+      );
+    case 'Vote':
+      return buildPacketWithDefinition(
+        request as PacketBuildRequest<'Vote', VotePacketInput>,
+        voteBuildDefinition
+      );
+    case 'Attestation':
+      return buildPacketWithDefinition(
+        request as PacketBuildRequest<'Attestation', AttestationPacketInput>,
+        attestationBuildDefinition
+      );
+    case 'Decision':
+      return buildPacketWithDefinition(
+        request as PacketBuildRequest<'Decision', DecisionPacketInput>,
+        decisionBuildDefinition
+      );
     case 'Discussion':
       return buildPacketWithDefinition(
         request as PacketBuildRequest<'Discussion', DiscussionPacketInput>,

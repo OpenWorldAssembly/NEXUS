@@ -8,10 +8,14 @@ import {
   createPacket,
   createPacketEdge,
   createAttestationPacket,
+  createDecisionPacket,
   createDiscussionPacket,
   createDiscussionPostPacket,
   createDiscussionThreadPacket,
   createElementPacket,
+  createProposalPacket,
+  createRolePacket,
+  createVotePacket,
 } from './builders.ts';
 import { createCanonicalDiscussionPacketId } from './discussion-compat.ts';
 import { interpretPacket } from './packet-interpreter.ts';
@@ -124,6 +128,119 @@ test('generic builder pipeline builds canonical Policy packets', () => {
   assert.equal(packet.body.policy_kind, 'write_lock');
 });
 
+test('generic builder pipeline builds canonical Element packets', () => {
+  const packet = buildPacket({
+    family: 'Element',
+    body: {
+      packet_id: 'nexus:element/person/alice',
+      created_at: '2026-04-28T00:00:00.000Z',
+      kind: 'person',
+      name: 'Alice',
+      identity: {
+        alias: 'alice',
+        claim_status: 'claimed',
+      },
+      tags: ['person'],
+    },
+    header: {
+      packet_id: 'nexus:element/person/alice',
+      created_at: '2026-04-28T00:00:00.000Z',
+      metadata_tags: ['person'],
+    },
+  });
+
+  assert.equal(packet.header.family, 'Element');
+  assert.equal(packet.body.kind, 'person');
+  assert.deepEqual(packet.body.claimed_role_refs, []);
+});
+
+test('generic builder pipeline builds canonical Claim packets', () => {
+  const packet = buildPacket({
+    family: 'Claim',
+    body: {
+      packet_id: 'nexus:claim/role-association/alice-facilitator',
+      created_at: '2026-04-28T00:00:00.000Z',
+      claim_kind: 'role_association',
+      subject_ref: { packet_id: 'nexus:element/person/alice' },
+      target_ref: { packet_id: 'nexus:role/facilitator' },
+      scope_ref: { packet_id: 'nexus:element/global' },
+      note: 'Facilitator in Global.',
+    },
+    header: {
+      packet_id: 'nexus:claim/role-association/alice-facilitator',
+      created_at: '2026-04-28T00:00:00.000Z',
+    },
+  });
+
+  assert.equal(packet.header.family, 'Claim');
+  assert.equal(packet.header.edges.length, 3);
+  assert.equal(packet.body.note, 'Facilitator in Global.');
+});
+
+test('generic builder pipeline builds canonical Attestation packets', () => {
+  const packet = buildPacket({
+    family: 'Attestation',
+    body: {
+      packet_id: 'nexus:attestation/signal/alice-root',
+      created_at: '2026-04-28T00:00:00.000Z',
+      target_ref: { packet_id: 'nexus:discussion/message/root' },
+      value: 1,
+      note: 'Support.',
+    },
+    header: {
+      packet_id: 'nexus:attestation/signal/alice-root',
+      created_at: '2026-04-28T00:00:00.000Z',
+    },
+  });
+
+  assert.equal(packet.header.family, 'Attestation');
+  assert.equal(packet.body.attestation_kind, 'packet_signal');
+  assert.equal(packet.header.edges[0]?.edge_type, 'votes_on');
+});
+
+test('generic builder pipeline builds canonical Role, Proposal, Vote, and Decision packets', () => {
+  const role = createRolePacket({
+    packet_id: 'nexus:role/facilitator',
+    created_at: '2026-04-28T00:00:00.000Z',
+    title: 'Facilitator',
+    role_kind: 'facilitator',
+    status: 'active',
+  });
+  const proposal = createProposalPacket({
+    packet_id: 'nexus:proposal/onboarding-global',
+    created_at: '2026-04-28T00:01:00.000Z',
+    title: 'Global onboarding',
+    proposal_kind: 'onboarding',
+    status: 'open',
+    related_policy_refs: [{ packet_id: 'nexus:policy/write-lock/global' }],
+  });
+  const vote = createVotePacket({
+    packet_id: 'nexus:vote/onboarding-global',
+    created_at: '2026-04-28T00:02:00.000Z',
+    title: 'Vote on onboarding',
+    proposal_ref: { packet_id: proposal.header.packet_id },
+    vote_method: 'majority',
+    status: 'open',
+  });
+  const decision = createDecisionPacket({
+    packet_id: 'nexus:decision/onboarding-global',
+    created_at: '2026-04-28T00:03:00.000Z',
+    title: 'Decision on onboarding',
+    outcome: 'accepted',
+    proposal_ref: { packet_id: proposal.header.packet_id },
+    vote_ref: { packet_id: vote.header.packet_id },
+  });
+
+  assert.equal(role.header.family, 'Role');
+  assert.equal(proposal.header.edges[0]?.edge_type, 'governed_by');
+  assert.equal(vote.header.edges[0]?.edge_type, 'votes_on');
+  assert.equal(decision.header.family, 'Decision');
+  assert.deepEqual(
+    decision.header.edges.map((edge) => edge.edge_type),
+    ['references', 'references']
+  );
+});
+
 test('interpreter keeps non-discussion families on same-family stages for canonical and read_model targets', () => {
   const element = createElementPacket({
     packet_id: 'nexus:element/person/alice',
@@ -162,6 +279,46 @@ test('interpreter keeps non-discussion families on same-family stages for canoni
     (readModelAttestation.interpreted as { header: { family: string } }).header.family,
     'Attestation'
   );
+});
+
+test('helper-built migrated families remain interpretable as same-family packets', () => {
+  const role = createRolePacket({
+    packet_id: 'nexus:role/interpreter-facilitator',
+    created_at: '2026-04-28T00:00:00.000Z',
+    title: 'Facilitator',
+    role_kind: 'facilitator',
+    status: 'active',
+  });
+  const proposal = createProposalPacket({
+    packet_id: 'nexus:proposal/interpreter-onboarding',
+    created_at: '2026-04-28T00:01:00.000Z',
+    title: 'Onboarding',
+    proposal_kind: 'onboarding',
+    status: 'open',
+  });
+  const vote = createVotePacket({
+    packet_id: 'nexus:vote/interpreter-onboarding',
+    created_at: '2026-04-28T00:02:00.000Z',
+    title: 'Vote',
+    proposal_ref: { packet_id: proposal.header.packet_id },
+    vote_method: 'majority',
+    status: 'open',
+  });
+  const decision = createDecisionPacket({
+    packet_id: 'nexus:decision/interpreter-onboarding',
+    created_at: '2026-04-28T00:03:00.000Z',
+    title: 'Decision',
+    outcome: 'accepted',
+  });
+
+  const interpretedFamilies = [role, proposal, vote, decision].map((packet) =>
+    interpretPacket({
+      packet,
+      target: { mode: 'canonical' },
+    }).target_family
+  );
+
+  assert.deepEqual(interpretedFamilies, ['Role', 'Proposal', 'Vote', 'Decision']);
 });
 
 test('unified interpreter adapts legacy discussion packets into canonical, legacy, and read-model targets', () => {

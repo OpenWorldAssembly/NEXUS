@@ -4,6 +4,7 @@
  */
 
 import type {
+  DiscussionWorkspaceModel,
   AttestationEdgeProjection,
   DiscussionFeedProjection,
   DiscussionForumProjection,
@@ -26,6 +27,12 @@ export interface NexusDiscussionThreadPayload
 
 export interface NexusDiscussionReplyChildrenPayload
   extends DiscussionReplyChildrenProjection {}
+
+export interface NexusDiscussionWorkspacePayload {
+  feed: NexusDiscussionsPayload;
+  thread: NexusDiscussionThreadPayload | null;
+  workspace: DiscussionWorkspaceModel;
+}
 
 export interface NexusVoteSummaryPayload {
   upvote_count: number;

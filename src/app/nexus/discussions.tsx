@@ -28,11 +28,12 @@ import type {
   NexusDiscussionReply,
   NexusDiscussionThreadPayload,
   NexusDiscussionsPayload,
+  NexusDiscussionWorkspacePayload,
 } from '@runtime/nexus/nexus-api-types';
 import {
   fetchNexusDiscussionReplyChildrenPayload,
-  fetchNexusDiscussionThreadPayload,
   fetchNexusDiscussionsPayload,
+  fetchNexusDiscussionWorkspacePayload,
 } from '@runtime/nexus/nexus-query-api';
 
 const DISCUSSION_WORKSPACE_VIEWS = ['feed', 'thread', 'post'] as const;
@@ -626,6 +627,15 @@ function ReplyNode({
   const railLineClass = themeMode === 'dark' ? 'bg-nexus-line/60' : 'bg-slate-300';
   const railBubbleTextClass =
     themeMode === 'dark' ? 'text-nexus-text' : 'text-slate-900';
+  const replyAction = reply.actions['discussion.reply'];
+  const voteUpAction = reply.actions['discussion.vote_up'];
+  const branchAction = reply.actions['discussion.expand_branch'];
+  const loadMoreAction = reply.actions['discussion.load_more_replies'];
+  const canReplyHere = replyAction?.visible !== false;
+  const isReplyEnabled = replyAction?.enabled ?? canReply;
+  const canVoteHere = voteUpAction?.enabled ?? canVote;
+  const canToggleBranch = branchAction?.visible !== false && canLoadChildren;
+  const canLoadMoreChildren = loadMoreAction?.visible !== false && childHasMore;
 
   useEffect(() => {
     if (
@@ -654,6 +664,7 @@ function ReplyNode({
           <Pressable
             accessibilityRole="button"
             className={`h-10 w-10 flex-row items-center justify-center gap-0.5 rounded-full border ${railButtonClass}`}
+            disabled={!canToggleBranch}
             onPress={() => onToggleReplyExpansion(reply)}
           >
             <Text className={`text-[10px] font-semibold ${railBubbleTextClass}`}>
@@ -697,7 +708,7 @@ function ReplyNode({
               <DiscussionVotePill
                 score={reply.vote_summary.net_score}
                 viewerValue={reply.vote_summary.viewer_value}
-                canVote={canVote}
+                canVote={canVoteHere}
                 disabled={pendingVotePacketId === reply.packet.packet_id}
                 onVote={(event, value) => {
                   event.stopPropagation?.();
@@ -721,7 +732,7 @@ function ReplyNode({
                 viewerLabel={viewerLabel}
                 value={replyBody}
               error={replyError}
-              disabled={!replyBody.trim() || isSubmittingReply || !canReply}
+              disabled={!replyBody.trim() || isSubmittingReply || !isReplyEnabled}
               isSubmitting={isSubmittingReply}
               onChangeText={onChangeReplyBody}
               onCancel={() => onReply('')}
@@ -763,7 +774,7 @@ function ReplyNode({
               <Text className={appearance.itemMetaClass}>Loading replies...</Text>
             ) : null}
 
-            {childHasMore ? (
+            {canLoadMoreChildren ? (
               <NexusActionButton
                 label="Load more replies"
                 onPress={() => onLoadMoreReplyChildren(reply)}
@@ -813,6 +824,8 @@ export default function NexusDiscussionsPage() {
   const [feedPayload, setFeedPayload] = useState<NexusDiscussionsPayload | null>(null);
   const [threadPayload, setThreadPayload] =
     useState<NexusDiscussionThreadPayload | null>(null);
+  const [workspacePayload, setWorkspacePayload] =
+    useState<NexusDiscussionWorkspacePayload | null>(null);
   const [feedPosts, setFeedPosts] = useState<NexusDiscussionPost[]>([]);
   const [feedNextCursor, setFeedNextCursor] = useState<string | null>(null);
   const [feedHasMore, setFeedHasMore] = useState(false);
@@ -852,12 +865,21 @@ export default function NexusDiscussionsPage() {
     null;
   const selectedFeedSort = (feedPayload?.selected_sort ?? 'new') as FeedSort;
   const selectedReplySort = (threadPayload?.selected_reply_sort ?? 'new') as ReplySort;
-  const selectedViewer = threadPayload?.viewer ?? feedPayload?.viewer ?? null;
+  const selectedViewer =
+    threadPayload?.viewer ??
+    feedPayload?.viewer ??
+    workspacePayload?.workspace.viewer ??
+    null;
   const activeForumId = feedPayload?.selected_forum_id ?? requestedForumId;
-  const canCreateTopLevel = selectedViewer?.can_create_top_level ?? false;
+  const createTopLevelAction =
+    workspacePayload?.workspace.workspace_actions['discussion.create_top_level'] ??
+    null;
+  const canCreateTopLevel =
+    createTopLevelAction?.enabled ?? selectedViewer?.can_create_top_level ?? false;
   const canReply = selectedViewer?.can_reply ?? false;
   const canVote = selectedViewer?.can_vote ?? false;
   const communityClaimRequired =
+    createTopLevelAction?.auth_gate_reason === 'community_claim_required' ||
     selectedViewer?.write_block_reason === 'home_locality_required';
   const canAddDiscussionSurfaces =
     activeScope.level !== 'personal' && activeScope.level !== 'global';
@@ -1017,13 +1039,80 @@ export default function NexusDiscussionsPage() {
     ]
   );
 
+  /**
+   * Inputs: the current route-level workspace selection.
+   * Output: refreshes the additive workspace payload plus the visible feed/thread slices.
+   */
+  const loadWorkspace = useCallback(async () => {
+    setIsLoadingFeed(true);
+    setIsLoadingThread(Boolean(requestedPostId));
+    setFeedError(null);
+    setThreadError(null);
+
+    try {
+      const nextWorkspacePayload = await fetchNexusDiscussionWorkspacePayload({
+        scopeId: activeScope.id,
+        forumId: requestedForumId,
+        sort: requestedSort ?? 'new',
+        view: requestedWorkspaceView,
+        postId: requestedPostId,
+        replyTargetId: requestedReplyTargetId,
+        replySort: requestedReplySort ?? 'new',
+        showHidden: requestedShowHidden,
+        viewerActorPacketId: currentActorPacketId,
+        feedLimit: FEED_PAGE_LIMIT,
+        replyLimit: REPLY_PAGE_LIMIT,
+      });
+
+      setWorkspacePayload(nextWorkspacePayload);
+      setFeedPayload(nextWorkspacePayload.feed);
+      setFeedPosts(nextWorkspacePayload.feed.top_level_posts);
+      setFeedNextCursor(nextWorkspacePayload.feed.next_cursor);
+      setFeedHasMore(nextWorkspacePayload.feed.has_more);
+      setThreadPayload(nextWorkspacePayload.thread);
+      setRootReplies(nextWorkspacePayload.thread?.replies ?? []);
+      setRootRepliesNextCursor(nextWorkspacePayload.thread?.next_cursor ?? null);
+      setRootRepliesHasMore(nextWorkspacePayload.thread?.has_more ?? false);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Unable to load the discussion workspace.';
+
+      setFeedError(message);
+      setThreadError(requestedPostId ? message : null);
+      setWorkspacePayload(null);
+      setFeedPayload(null);
+      setFeedPosts([]);
+      setFeedNextCursor(null);
+      setFeedHasMore(false);
+      setThreadPayload(null);
+      setRootReplies([]);
+      setRootRepliesNextCursor(null);
+      setRootRepliesHasMore(false);
+    } finally {
+      setIsLoadingFeed(false);
+      setIsLoadingThread(false);
+    }
+  }, [
+    activeScope.id,
+    currentActorPacketId,
+    requestedForumId,
+    requestedPostId,
+    requestedReplySort,
+    requestedReplyTargetId,
+    requestedShowHidden,
+    requestedSort,
+    requestedWorkspaceView,
+  ]);
+
   const handleAddDiscussionSurfaces = useCallback(async () => {
     const applyAddDiscussionSurfaces = async () => {
       setIsAddingDiscussionSurfaces(true);
       setFeedError(null);
 
       try {
-        const finalizedMutation = await runFortressMutation<{
+        await runFortressMutation<{
           created_packet_refs: { packet_id: string; revision_id: string }[];
           discussions: NexusDiscussionsPayload;
         }>({
@@ -1032,11 +1121,7 @@ export default function NexusDiscussionsPage() {
             scope_id: activeScope.id,
           },
         });
-
-        setFeedPayload(finalizedMutation.result.discussions);
-        setFeedPosts(finalizedMutation.result.discussions.top_level_posts);
-        setFeedNextCursor(finalizedMutation.result.discussions.next_cursor);
-        setFeedHasMore(finalizedMutation.result.discussions.has_more);
+        await loadWorkspace();
       } catch (error) {
         if (openNexusAuthGateForError(error, applyAddDiscussionSurfaces)) {
           return;
@@ -1062,61 +1147,9 @@ export default function NexusDiscussionsPage() {
   }, [
     activeScope.id,
     guardNexusWrite,
+    loadWorkspace,
     openNexusAuthGateForError,
     runFortressMutation,
-  ]);
-
-  /**
-   * Inputs: none.
-   * Output: refreshes the selected thread root plus its first reply page.
-   */
-  const loadThread = useCallback(async () => {
-    if (!requestedPostId) {
-      setThreadPayload(null);
-      setThreadError(null);
-      setRootReplies([]);
-      setRootRepliesNextCursor(null);
-      setRootRepliesHasMore(false);
-      setIsLoadingThread(false);
-      return;
-    }
-
-    setIsLoadingThread(true);
-    setThreadError(null);
-
-    try {
-      const nextThreadPayload = await fetchNexusDiscussionThreadPayload({
-        scopeId: activeScope.id,
-        postPacketId: requestedPostId,
-        replySort: requestedReplySort ?? 'new',
-        showHidden: requestedShowHidden,
-        viewerActorPacketId: currentActorPacketId,
-        limit: REPLY_PAGE_LIMIT,
-      });
-
-      setThreadPayload(nextThreadPayload);
-      setRootReplies(nextThreadPayload.replies);
-      setRootRepliesNextCursor(nextThreadPayload.next_cursor);
-      setRootRepliesHasMore(nextThreadPayload.has_more);
-    } catch (error) {
-      setThreadError(
-        error instanceof Error
-          ? error.message
-          : 'Unable to load the discussion thread.'
-      );
-      setThreadPayload(null);
-      setRootReplies([]);
-      setRootRepliesNextCursor(null);
-      setRootRepliesHasMore(false);
-    } finally {
-      setIsLoadingThread(false);
-    }
-  }, [
-    activeScope.id,
-    currentActorPacketId,
-    requestedPostId,
-    requestedReplySort,
-    requestedShowHidden,
   ]);
 
   /**
@@ -1196,12 +1229,8 @@ export default function NexusDiscussionsPage() {
     setSubmitError(null);
     setReplyError(null);
     setVoteError(null);
-    void loadFeed();
-  }, [loadFeed]);
-
-  useEffect(() => {
-    void loadThread();
-  }, [loadThread]);
+    void loadWorkspace();
+  }, [loadWorkspace]);
 
   useEffect(() => {
     setReplyError(null);
@@ -1463,7 +1492,7 @@ export default function NexusDiscussionsPage() {
 
           setDraftTitle('');
           setDraftBody('');
-          await loadFeed();
+          await loadWorkspace();
           router.replace(
             getDiscussionHref({
               forumId: selectedForum.id,
@@ -1499,7 +1528,7 @@ export default function NexusDiscussionsPage() {
     draftBody,
     draftTitle,
     guardNexusWrite,
-    loadFeed,
+    loadWorkspace,
     openNexusAuthGate,
     openNexusAuthGateForError,
     requestedShowHidden,
@@ -1558,8 +1587,7 @@ export default function NexusDiscussionsPage() {
 
           setReplyBody('');
           setHighlightedPostId(result.post.packet.packet_id);
-          await loadFeed();
-          await loadThread();
+          await loadWorkspace();
 
           if (
             requestedReplyTargetId &&
@@ -1607,9 +1635,8 @@ export default function NexusDiscussionsPage() {
     communityClaimRequired,
     currentIdentity,
     guardNexusWrite,
-    loadFeed,
     loadReplyChildren,
-    loadThread,
+    loadWorkspace,
     openNexusAuthGate,
     openNexusAuthGateForError,
     replyBranchStates,
@@ -1935,7 +1962,10 @@ export default function NexusDiscussionsPage() {
                                       viewerValue={
                                         post.vote_summary.viewer_value
                                       }
-                                      canVote={canVote}
+                                      canVote={
+                                        post.actions['discussion.vote_up']?.enabled ??
+                                        canVote
+                                      }
                                       disabled={
                                         pendingVotePacketId ===
                                         post.packet.packet_id
@@ -1961,7 +1991,10 @@ export default function NexusDiscussionsPage() {
                               </Text>
                             ) : null}
 
-                            {feedHasMore ? (
+                            {feedHasMore &&
+                            workspacePayload?.workspace.workspace_actions[
+                              'discussion.load_more_feed'
+                            ]?.visible !== false ? (
                               <NexusActionButton
                                 label="Load more threads"
                                 onPress={handleLoadMoreFeed}
@@ -2152,7 +2185,11 @@ export default function NexusDiscussionsPage() {
                                       threadPayload.root_post.vote_summary
                                         .viewer_value
                                     }
-                                    canVote={canVote}
+                                    canVote={
+                                      threadPayload.root_post.actions[
+                                        'discussion.vote_up'
+                                      ]?.enabled ?? canVote
+                                    }
                                     disabled={
                                       pendingVotePacketId ===
                                       threadPayload.root_post.packet.packet_id
@@ -2193,7 +2230,12 @@ export default function NexusDiscussionsPage() {
                                     error={replyError}
                                     disabled={
                                       !replyBody.trim() ||
-                                      isSubmittingReply
+                                      isSubmittingReply ||
+                                      !(
+                                        threadPayload.root_post.actions[
+                                          'discussion.reply'
+                                        ]?.enabled ?? canReply
+                                      )
                                     }
                                     isSubmitting={isSubmittingReply}
                                     onChangeText={setReplyBody}

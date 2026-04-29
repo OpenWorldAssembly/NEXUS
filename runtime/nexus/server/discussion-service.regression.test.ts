@@ -572,3 +572,87 @@ test('mixed legacy and canonical discussion ids resolve as one operational threa
     harness.cleanup();
   }
 });
+
+test('discussion workspace projections expose runtime-owned action maps and descriptors', async () => {
+  const harness = createDiscussionHarness();
+
+  try {
+    const { legacyForumPacket } = await seedVisitorLobbyContext(harness.packetStore);
+    const guestActor = await createSignedGuestActor({
+      alias: 'Guest Workspace',
+      packetId: 'nexus:element/guest-workspace',
+    });
+    const topicPacket = createDiscussionPacket({
+      packet_id: 'nexus:discussion/topic/global-commons-workspace-topic',
+      revision_id:
+        'nexus:discussion/topic/global-commons-workspace-topic@r1',
+      created_at: '2026-04-28T21:00:00.000Z',
+      authority_scope_ref: { packet_id: SCOPE_PACKET_ID },
+      applicable_scope_refs: [{ packet_id: SCOPE_PACKET_ID }],
+      adapter: 'nexus-web',
+      created_by: { packet_id: guestActor.actorPacket.header.packet_id },
+      kind: 'topic',
+      role: 'visitor_lobby',
+      title: 'Workspace topic',
+      summary: 'Workspace topic',
+      parent_ref: { packet_id: legacyForumPacket.header.packet_id },
+      status: 'open',
+    });
+    const rootPostPacket = createDiscussionPacket({
+      packet_id: 'nexus:discussion/message/global-commons-workspace-root',
+      revision_id:
+        'nexus:discussion/message/global-commons-workspace-root@r1',
+      created_at: '2026-04-28T21:00:00.000Z',
+      authority_scope_ref: { packet_id: SCOPE_PACKET_ID },
+      applicable_scope_refs: [{ packet_id: SCOPE_PACKET_ID }],
+      adapter: 'nexus-web',
+      created_by: { packet_id: guestActor.actorPacket.header.packet_id },
+      kind: 'message',
+      role: 'forum_post',
+      title: 'Workspace root',
+      parent_ref: { packet_id: topicPacket.header.packet_id },
+      topic_ref: { packet_id: topicPacket.header.packet_id },
+      root_message_ref: null,
+      status: 'open',
+      content_markdown: 'Workspace root body',
+    });
+
+    await writePreferredPacket(harness.packetStore, guestActor.actorPacket);
+    await writePreferredPacket(harness.packetStore, topicPacket);
+    await writePreferredPacket(harness.packetStore, rootPostPacket);
+    await harness.discussionService.syncDerivedState();
+
+    const workspace = await harness.discussionService.getWorkspace({
+      scope_id: SCOPE_ROUTE_ID,
+      forum_id: 'visitor-lobby',
+      view: 'thread',
+      post_packet_id: rootPostPacket.header.packet_id,
+      reply_target_packet_id: rootPostPacket.header.packet_id,
+      sort: 'new',
+      reply_sort: 'top',
+      show_hidden: true,
+      viewer_actor_key: `element:${guestActor.actorPacket.header.packet_id}`,
+      feed_limit: 20,
+      reply_limit: 10,
+    });
+
+    assert.equal(
+      workspace.workspace_actions['discussion.create_top_level']?.enabled,
+      true
+    );
+    assert.equal(
+      workspace.thread_root?.actions['discussion.reply']?.enabled,
+      true
+    );
+    assert.equal(workspace.thread_root?.state.is_selected_thread, true);
+    assert.equal(workspace.thread_root?.state.is_reply_target, true);
+    assert.equal(
+      workspace.action_descriptors.some(
+        (descriptor) => descriptor.id === 'discussion.reply'
+      ),
+      true
+    );
+  } finally {
+    harness.cleanup();
+  }
+});

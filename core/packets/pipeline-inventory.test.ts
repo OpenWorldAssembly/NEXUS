@@ -37,10 +37,18 @@ test('inventory does not overstate next-target live families as production pipel
   const element = inventory.find((entry) => entry.family === 'Element');
   const claim = inventory.find((entry) => entry.family === 'Claim');
   const attestation = inventory.find((entry) => entry.family === 'Attestation');
+  const role = inventory.find((entry) => entry.family === 'Role');
+  const proposal = inventory.find((entry) => entry.family === 'Proposal');
+  const vote = inventory.find((entry) => entry.family === 'Vote');
+  const decision = inventory.find((entry) => entry.family === 'Decision');
   const discussion = inventory.find((entry) => entry.family === 'Discussion');
 
-  assert.equal(element?.builder_pipeline_status, 'declared');
-  assert.equal(claim?.builder_pipeline_status, 'declared');
-  assert.equal(attestation?.builder_pipeline_status, 'declared');
+  assert.equal(element?.builder_pipeline_status, 'production');
+  assert.equal(claim?.builder_pipeline_status, 'production');
+  assert.equal(attestation?.builder_pipeline_status, 'production');
+  assert.equal(role?.builder_pipeline_status, 'production');
+  assert.equal(proposal?.builder_pipeline_status, 'production');
+  assert.equal(vote?.builder_pipeline_status, 'production');
+  assert.equal(decision?.builder_pipeline_status, 'production');
   assert.equal(discussion?.family_evolution_status, 'production');
 });
