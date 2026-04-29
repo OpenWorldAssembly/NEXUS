@@ -5,6 +5,15 @@
 
 import type { PacketEnvelope, PacketEnvelopeByType } from '@core/schema/packet-schema';
 import {
+  createNexusAuthFailurePayload,
+  createNexusAuthGatePayload,
+  isNexusAuthFailureError,
+  isNexusAuthGateError,
+  NexusAuthGateError,
+  type NexusAuthFailurePayload,
+  type NexusAuthGatePayload,
+} from '@runtime/nexus/nexus-auth-gate-error';
+import {
   normalizeDisplayAlias,
   validateDisplayAlias,
   validateLocationDisclosure,
@@ -183,4 +192,59 @@ export function resolveDeviceLabel(input: {
     'Current device';
 
   return userAgent.slice(0, 120);
+}
+
+export function toNexusAuthGatePayload(
+  error: unknown
+): NexusAuthGatePayload | null {
+  if (isNexusAuthGateError(error)) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[nexus-auth-gate]', {
+        reason: error.reason,
+        failure_code: error.failureCode,
+        diagnostics: error.diagnostics,
+      });
+    }
+
+    return createNexusAuthGatePayload(error);
+  }
+
+  if (!(error instanceof Error)) {
+    return null;
+  }
+
+  if (
+    /requires a fresh re-auth token|re-auth token|fresh approval/i.test(
+      error.message
+    )
+  ) {
+    return createNexusAuthGatePayload(
+      new NexusAuthGateError('write_approval_required', error.message, {
+        retryable: true,
+        actorRequired: true,
+        writeApprovalRequired: true,
+        failureCode: 'reauth_token_missing',
+      })
+    );
+  }
+
+  return null;
+}
+
+export function toNexusAuthFailurePayload(
+  error: unknown
+): NexusAuthFailurePayload | null {
+  if (!isNexusAuthFailureError(error)) {
+    return null;
+  }
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn('[nexus-auth-failure]', {
+      failure_code: error.failureCode,
+      diagnostics: error.diagnostics,
+      message: error.message,
+    });
+  }
+
+  return createNexusAuthFailurePayload(error);
 }

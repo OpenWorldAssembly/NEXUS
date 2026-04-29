@@ -6,8 +6,14 @@
 import type {
   PacketEnvelope,
   PacketEnvelopeByType,
+  PacketSignatureCandidateSource,
+  RawPacketEnvelopeInput,
 } from '@core/schema/packet-schema';
-import { getPacketSignatureCanonicalCandidates } from '@core/schema/packet-schema';
+import {
+  getRawPacketSignatureCanonicalCandidateDetails,
+  parsePacketEnvelope,
+  parseRawPacketEnvelopeInput,
+} from '@core/schema/packet-schema';
 import {
   canonicalizeJson,
   sha256Base64Url,
@@ -113,6 +119,122 @@ function stripPacketSignatures<TPacket extends PacketEnvelope>(
       },
     },
   } as TPacket;
+}
+
+function stripRawPacketSignatures<TPacket extends RawPacketEnvelopeInput>(
+  packet: TPacket
+): TPacket {
+  const headerRecord = packet.header as RawPacketEnvelopeInput['header'] &
+    Record<string, unknown>;
+  const integrityRecord =
+    headerRecord.integrity &&
+    typeof headerRecord.integrity === 'object' &&
+    !Array.isArray(headerRecord.integrity)
+      ? (headerRecord.integrity as Record<string, unknown>)
+      : {};
+
+  return {
+    ...packet,
+    header: {
+      ...headerRecord,
+      integrity: {
+        ...integrityRecord,
+        digest: null,
+        embedded_signatures: [],
+        signature_refs: [],
+      },
+    },
+  };
+}
+
+function isPersonElementPacketForVerification(
+  packet: PacketEnvelope
+): packet is PacketEnvelopeByType['Element'] {
+  const body = packet.body as Record<string, unknown>;
+
+  return packet.header.family === 'Element' && body.kind === 'person';
+}
+
+function readRawEmbeddedSignature(
+  packet: RawPacketEnvelopeInput
+): {
+  kid: string;
+  signature: string;
+  signerPacketId: string | null;
+} | null {
+  const integrity =
+    packet.header.integrity &&
+    typeof packet.header.integrity === 'object' &&
+    !Array.isArray(packet.header.integrity)
+      ? (packet.header.integrity as Record<string, unknown>)
+      : null;
+
+  if (!integrity) {
+    return null;
+  }
+
+  const embeddedSignatures = integrity.embedded_signatures;
+
+  if (!Array.isArray(embeddedSignatures) || embeddedSignatures.length === 0) {
+    return null;
+  }
+
+  const signature = embeddedSignatures[0];
+
+  if (!signature || typeof signature !== 'object' || Array.isArray(signature)) {
+    return null;
+  }
+
+  const signatureRecord = signature as Record<string, unknown>;
+
+  if (
+    typeof signatureRecord.kid !== 'string' ||
+    typeof signatureRecord.signature !== 'string'
+  ) {
+    return null;
+  }
+
+  const signerPacketRef =
+    signatureRecord.signer_packet_ref &&
+    typeof signatureRecord.signer_packet_ref === 'object' &&
+    !Array.isArray(signatureRecord.signer_packet_ref)
+      ? (signatureRecord.signer_packet_ref as Record<string, unknown>)
+      : null;
+
+  return {
+    kid: signatureRecord.kid,
+    signature: signatureRecord.signature,
+    signerPacketId:
+      signerPacketRef && typeof signerPacketRef.packet_id === 'string'
+        ? signerPacketRef.packet_id
+        : null,
+  };
+}
+
+function readRawPacketDigest(packet: RawPacketEnvelopeInput): string | null {
+  const integrity =
+    packet.header.integrity &&
+    typeof packet.header.integrity === 'object' &&
+    !Array.isArray(packet.header.integrity)
+      ? (packet.header.integrity as Record<string, unknown>)
+      : null;
+
+  return integrity && typeof integrity.digest === 'string'
+    ? integrity.digest
+    : null;
+}
+
+export type PacketSignatureVerificationFailureKind =
+  | 'missing_signature'
+  | 'key_binding_missing'
+  | 'signer_mismatch'
+  | 'canonicalization_mismatch'
+  | 'signature_invalid';
+
+export interface PacketSignatureVerificationResult {
+  isValid: boolean;
+  matchedCandidateSource?: PacketSignatureCandidateSource;
+  failureKind?: PacketSignatureVerificationFailureKind;
 }
 
 export async function generateP256KeyPair(): Promise<CryptoKeyPair> {
@@ -248,31 +370,71 @@ export async function signPacketWithIdentity<TPacket extends PacketEnvelope>(inp
 }
 
 export async function verifyPacketSignature(input: {
-  packet: PacketEnvelope;
-  signerPacket: PacketEnvelopeByType['Element'];
+  packet: unknown;
+  signerPacket: unknown;
 }): Promise<boolean> {
+  const result = await verifyPacketSignatureDetailed(input);
+
+  return result.isValid;
+}
+
+export async function verifyPacketSignatureDetailed(input: {
+  packet: unknown;
+  signerPacket: unknown;
+}): Promise<PacketSignatureVerificationResult> {
   const cryptoApi = getCryptoOrThrow();
-  const signature = input.packet.header.integrity.embedded_signatures[0];
+  // Verify against the raw signed envelope first. Adapted packets are a
+  // runtime convenience view and must not replace the historical bytes that
+  // produced the stored digest/signature.
+  const rawPacket = parseRawPacketEnvelopeInput(input.packet);
+  const signature = readRawEmbeddedSignature(rawPacket);
 
   if (!signature) {
-    return false;
+    return {
+      isValid: false,
+      failureKind: 'missing_signature',
+    };
   }
 
-  const keyBinding = input.signerPacket.body.identity?.public_key_bindings.find(
+  let signerPacket: PacketEnvelopeByType['Element'];
+
+  try {
+    const parsedSignerPacket = parsePacketEnvelope(input.signerPacket);
+
+    if (!isPersonElementPacketForVerification(parsedSignerPacket)) {
+      return {
+        isValid: false,
+        failureKind: 'key_binding_missing',
+      };
+    }
+
+    signerPacket = parsedSignerPacket;
+  } catch {
+    return {
+      isValid: false,
+      failureKind: 'key_binding_missing',
+    };
+  }
+
+  const keyBinding = signerPacket.body.identity?.public_key_bindings.find(
     (binding) => binding.kid === signature.kid && binding.status === 'active'
   );
 
   if (!keyBinding) {
-    return false;
+    return {
+      isValid: false,
+      failureKind: 'key_binding_missing',
+    };
   }
 
-  const signerPacketId = signature.signer_packet_ref?.packet_id;
-
   if (
-    signerPacketId &&
-    signerPacketId !== input.signerPacket.header.packet_id
+    signature.signerPacketId &&
+    signature.signerPacketId !== signerPacket.header.packet_id
   ) {
-    return false;
+    return {
+      isValid: false,
+      failureKind: 'signer_mismatch',
+    };
   }
 
   const publicKey = await cryptoApi.subtle.importKey(
@@ -286,16 +448,28 @@ export async function verifyPacketSignature(input: {
     ['verify']
   );
 
-  const unsignedPacket = stripPacketSignatures(input.packet);
-  const candidatePackets = getPacketSignatureCanonicalCandidates(unsignedPacket);
+  const unsignedPacket = stripRawPacketSignatures(rawPacket);
+  const candidatePackets =
+    getRawPacketSignatureCanonicalCandidateDetails(unsignedPacket);
+  const expectedDigest = readRawPacketDigest(rawPacket);
+  let matchedDigestSource: PacketSignatureCandidateSource | undefined;
 
-  for (const candidatePacket of candidatePackets) {
-    const canonicalPacket = canonicalizeJson(candidatePacket);
+  if (!expectedDigest) {
+    return {
+      isValid: false,
+      failureKind: 'signature_invalid',
+    };
+  }
+
+  for (const candidate of candidatePackets) {
+    const canonicalPacket = canonicalizeJson(candidate.packet);
     const digest = await sha256Base64Url(canonicalPacket);
 
-    if (digest !== input.packet.header.integrity.digest) {
+    if (digest !== expectedDigest) {
       continue;
     }
+
+    matchedDigestSource = candidate.source;
 
     const signatureIsValid = await cryptoApi.subtle.verify(
       {
@@ -308,11 +482,20 @@ export async function verifyPacketSignature(input: {
     );
 
     if (signatureIsValid) {
-      return true;
+      return {
+        isValid: true,
+        matchedCandidateSource: candidate.source,
+      };
     }
   }
 
-  return false;
+  return {
+    isValid: false,
+    matchedCandidateSource: matchedDigestSource,
+    failureKind: matchedDigestSource
+      ? 'signature_invalid'
+      : 'canonicalization_mismatch',
+  };
 }
 
 export async function createActorAssertion(input: {

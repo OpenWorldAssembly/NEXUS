@@ -8,10 +8,10 @@ import { DatabaseSync } from 'node:sqlite';
 import { createAttestationPacket } from '@core/packets/builders';
 import {
   isDiscussionMessagePacket,
-  resolveCanonicalDiscussionTarget,
   type DiscussionLegacyFamily,
 } from '@core/packets/discussion-compat';
 import { interpretPacket } from '@core/packets/packet-interpreter';
+import { resolvePacketTarget } from '@core/packets/packet-target-resolver';
 import type {
   AssemblyAssociationClaimProjection,
   AttestationEdgeProjection,
@@ -152,12 +152,14 @@ async function getDiscussionForumById(
   packetStore: NodeSQLitePacketStore,
   forumPacketId: string
 ): Promise<PacketEnvelopeByType['DiscussionForum'] | null> {
-  const resolution = await resolveCanonicalDiscussionTarget({
+  const resolution = await resolvePacketTarget({
     packet_id: forumPacketId,
     fetchPacket: async (packetId) =>
       packetStore.fetchByPacket({ packet_id: packetId }),
+    fetchRevisionHeads: async (packetId) =>
+      packetStore.fetchRevisionHeads({ packet_id: packetId }),
   });
-  const packet = resolution.canonical_packet ?? resolution.source_packet;
+  const packet = resolution.resolved_packet ?? resolution.source_packet;
 
   if (!packet) {
     return null;
@@ -174,12 +176,14 @@ async function getDiscussionThreadById(
   packetStore: NodeSQLitePacketStore,
   threadPacketId: string
 ): Promise<PacketEnvelopeByType['DiscussionThread'] | null> {
-  const resolution = await resolveCanonicalDiscussionTarget({
+  const resolution = await resolvePacketTarget({
     packet_id: threadPacketId,
     fetchPacket: async (packetId) =>
       packetStore.fetchByPacket({ packet_id: packetId }),
+    fetchRevisionHeads: async (packetId) =>
+      packetStore.fetchRevisionHeads({ packet_id: packetId }),
   });
-  const packet = resolution.canonical_packet ?? resolution.source_packet;
+  const packet = resolution.resolved_packet ?? resolution.source_packet;
 
   if (!packet) {
     return null;

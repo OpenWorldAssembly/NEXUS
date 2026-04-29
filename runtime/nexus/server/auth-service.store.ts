@@ -40,7 +40,7 @@ function ensureTableColumn(
 ): void {
   const columnRows = database
     .prepare(`PRAGMA table_info(${tableName})`)
-    .all() as Array<{ name: string }>;
+    .all() as { name: string }[];
   const hasColumn = columnRows.some((column) => column.name === columnName);
 
   if (!hasColumn) {
@@ -49,7 +49,11 @@ function ensureTableColumn(
 }
 
 export class NexusAuthStore {
-  constructor(private readonly databasePath: string) {}
+  private readonly databasePath: string;
+
+  constructor(databasePath: string) {
+    this.databasePath = databasePath;
+  }
 
   withDatabase<TValue>(run: (database: DatabaseSync) => TValue): TValue {
     const database = new DatabaseSync(this.databasePath);

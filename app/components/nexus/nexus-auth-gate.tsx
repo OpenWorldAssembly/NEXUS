@@ -43,6 +43,8 @@ function getGateTitle(reason: NexusAuthGateReason): string {
   switch (reason) {
     case 'unlock_required':
       return 'Unlock identity';
+    case 'stale_actor_packet':
+      return 'Refresh identity';
     case 'session_refresh_required':
       return 'Session refresh required';
     case 'write_approval_required':
@@ -64,6 +66,8 @@ function getGateMessage(
       return hasPendingAction
         ? 'Your claimed session is active, but the local signing bundle is locked. Enter the bundle passphrase once to unlock this identity, approve the pending action, and continue without losing your draft.'
         : 'Your claimed session is active, but the local signing bundle is locked. Unlock this identity before Nexus signs packets from this device.';
+    case 'stale_actor_packet':
+      return 'This device is holding an outdated claimed identity packet for the current session. Refresh the claimed session before writing Nexus packets.';
     case 'session_refresh_required':
       return 'Refresh or sign in to your claimed identity before writing Nexus packets.';
     case 'write_approval_required':
@@ -80,6 +84,8 @@ function getPrimaryLabel(reason: NexusAuthGateReason): string {
   switch (reason) {
     case 'unlock_required':
       return 'Unlock identity';
+    case 'stale_actor_packet':
+      return 'Refresh identity';
     case 'session_refresh_required':
       return 'Sign in';
     case 'write_approval_required':
@@ -97,6 +103,7 @@ function NexusAuthGateModal(input: {
   currentLabel: string;
   hasAvailablePasskeyApproval: boolean;
   hasPendingAction: boolean;
+  showPasswordField: boolean;
   unlockPassphrase: string;
   gateErrorMessage: string | null;
   isSubmitting: boolean;
@@ -107,18 +114,23 @@ function NexusAuthGateModal(input: {
   onSetUpPasskey: () => void;
 }) {
   const appearance = useNexusAppearance();
-  const showPasswordField =
-    input.gate.reason === 'unlock_required' ||
-    input.gate.reason === 'write_approval_required';
   const passwordLabel =
     input.gate.reason === 'write_approval_required'
       ? `Enter your password for ${input.currentLabel}`
+      : input.gate.reason === 'sign_in_required' ||
+          input.gate.reason === 'session_refresh_required' ||
+          input.gate.reason === 'stale_actor_packet'
+        ? `Enter your password for ${input.currentLabel}`
       : input.hasPendingAction
         ? `Enter your password for ${input.currentLabel}`
         : 'Bundle passphrase';
   const passwordHint =
     input.gate.reason === 'write_approval_required'
       ? 'Fresh password entry approves this protected write and then resumes the pending action.'
+      : input.gate.reason === 'sign_in_required' ||
+          input.gate.reason === 'session_refresh_required' ||
+          input.gate.reason === 'stale_actor_packet'
+        ? 'This signs the claimed identity back into the current session, updates the local signer state, and then resumes the pending action.'
       : input.hasPendingAction
         ? 'Fresh password entry unlocks the local bundle, satisfies this protected write, and then resumes the pending action.'
         : 'Unlock stays local to this device and does not change your claimed session.';
@@ -137,7 +149,7 @@ function NexusAuthGateModal(input: {
         <Text className={appearance.itemBodyClass}>
           {getGateMessage(input.gate.reason, input.hasPendingAction)}
         </Text>
-        {showPasswordField ? (
+        {input.showPasswordField ? (
           <IdentityField
             label={passwordLabel}
             hint={passwordHint}
@@ -224,6 +236,9 @@ export function useNexusAuthGate(input: {
     isCurrentIdentityUnlocked,
     approveProtectedWriteWithPassphrase,
     approveProtectedWriteWithPasskey,
+    recoverClaimedSessionInPlace,
+    resumeClaimedIdentitySessionWithPassphrase,
+    storedIdentityPreviews,
     unlockStoredIdentity,
   } = useIdentityShell();
   const [gate, setGate] = useState<NexusAuthGateState | null>(null);
@@ -231,6 +246,15 @@ export function useNexusAuthGate(input: {
   const [unlockPassphrase, setUnlockPassphrase] = useState('');
   const [gateErrorMessage, setGateErrorMessage] = useState<string | null>(null);
   const [isSubmittingGate, setIsSubmittingGate] = useState(false);
+  const canUseLocalClaimedPassphraseRecovery = Boolean(
+    currentMode === 'claimed' &&
+      currentActorPacketId &&
+      storedIdentityPreviews.some(
+        (identity) =>
+          identity.actor_packet_id === currentActorPacketId &&
+          identity.stored_kind === 'claimed'
+      )
+  );
 
   const openNexusAuthGate = (reason: NexusAuthGateReason) => {
     setUnlockPassphrase('');
@@ -272,7 +296,7 @@ export function useNexusAuthGate(input: {
     const requiredGate = getRequiredGate(options);
 
     if (requiredGate) {
-      if (requiredGate === 'unlock_required') {
+      if (requiredGate !== 'community_claim_required') {
         setPendingAction(() => action);
       }
 
@@ -379,6 +403,9 @@ export function useNexusAuthGate(input: {
         closeGateBeforeQueuedAction();
         await runQueuedActionAfterGate(action);
       } catch (error) {
+        if (openNexusAuthGateForError(error, pendingAction ?? undefined)) {
+          return;
+        }
         setIsSubmittingGate(false);
         setGateErrorMessage(
           error instanceof Error ? error.message : 'Unable to unlock this identity.'
@@ -403,6 +430,9 @@ export function useNexusAuthGate(input: {
         closeGateBeforeQueuedAction();
         await runQueuedActionAfterGate(action);
       } catch (error) {
+        if (openNexusAuthGateForError(error, action ?? undefined)) {
+          return;
+        }
         setIsSubmittingGate(false);
         setGateErrorMessage(
           error instanceof Error
@@ -411,6 +441,60 @@ export function useNexusAuthGate(input: {
         );
       }
 
+      return;
+    }
+
+    if (
+      gate.reason === 'stale_actor_packet' ||
+      gate.reason === 'session_refresh_required' ||
+      gate.reason === 'sign_in_required'
+    ) {
+      setIsSubmittingGate(true);
+      setGateErrorMessage(null);
+      const action = pendingAction;
+
+      try {
+        const recoveredInPlace = await recoverClaimedSessionInPlace();
+
+        if (recoveredInPlace) {
+          closeGateBeforeQueuedAction();
+          await runQueuedActionAfterGate(action);
+          return;
+        }
+
+        if (canUseLocalClaimedPassphraseRecovery) {
+          if (!unlockPassphrase.trim()) {
+            setIsSubmittingGate(false);
+            setGateErrorMessage(`Enter the bundle passphrase for ${currentLabel}.`);
+            return;
+          }
+
+          await resumeClaimedIdentitySessionWithPassphrase(unlockPassphrase);
+          closeGateBeforeQueuedAction();
+          await runQueuedActionAfterGate(action);
+          return;
+        }
+      } catch (error) {
+        if (openNexusAuthGateForError(error, action ?? undefined)) {
+          return;
+        }
+
+        setIsSubmittingGate(false);
+        setGateErrorMessage(
+          error instanceof Error ? error.message : 'Unable to refresh this identity.'
+        );
+        return;
+      }
+
+      setGate(null);
+      setPendingAction(null);
+      router.push(
+        buildIdentityRouteHref({
+          pathname: '/nexus/identity/sign-in',
+          returnTo: gate.returnTo,
+          returnScopeId: gate.returnScopeId,
+        })
+      );
       return;
     }
 
@@ -432,6 +516,14 @@ export function useNexusAuthGate(input: {
         currentLabel={currentLabel}
         hasAvailablePasskeyApproval={hasAvailablePasskeyApproval}
         hasPendingAction={Boolean(pendingAction)}
+        showPasswordField={
+          gate.reason === 'unlock_required' ||
+          gate.reason === 'write_approval_required' ||
+          ((gate.reason === 'sign_in_required' ||
+            gate.reason === 'session_refresh_required' ||
+            gate.reason === 'stale_actor_packet') &&
+            canUseLocalClaimedPassphraseRecovery)
+        }
         unlockPassphrase={unlockPassphrase}
         gateErrorMessage={gateErrorMessage}
         isSubmitting={isSubmittingGate}
@@ -449,6 +541,9 @@ export function useNexusAuthGate(input: {
             closeGateBeforeQueuedAction();
             await runQueuedActionAfterGate(action);
           } catch (error) {
+            if (openNexusAuthGateForError(error, action ?? undefined)) {
+              return;
+            }
             setIsSubmittingGate(false);
             setGateErrorMessage(
               error instanceof Error

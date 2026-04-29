@@ -11,7 +11,12 @@ export const policyBuildDefinition: PacketFamilyBuildDefinition<
   'Policy',
   PolicyPacketInput
 > = {
-  prepareBody: (input) => ({
+  validateBody: (input) => {
+    if (!input.title.trim()) {
+      throw new Error('Policy packets require a title.');
+    }
+  },
+  finalizeBody: (input) => ({
     title: input.title,
     summary: input.summary ?? null,
     policy_kind: input.policy_kind,

@@ -212,7 +212,7 @@ test('ensureStorage upgrades legacy reauth token tables with proof_method', () =
     const migratedDatabase = new DatabaseSync(databasePath);
     const columnNames = migratedDatabase
       .prepare(`PRAGMA table_info('auth_reauth_tokens')`)
-      .all() as Array<{ name: string }>;
+      .all() as { name: string }[];
 
     assert.ok(columnNames.some((column) => column.name === 'proof_method'));
     migratedDatabase.close();
@@ -221,5 +221,20 @@ test('ensureStorage upgrades legacy reauth token tables with proof_method', () =
       database.close();
     } catch {}
     rmSync(tempDirectory, { recursive: true, force: true });
+  }
+});
+
+test('security preferences default new identities to standard mode', () => {
+  const harness = createAuthStoreHarness();
+
+  try {
+    harness.store.ensureSecurityPreference('nexus:element/person-standard');
+    const securityPreference = harness.store.readSecurityPreference(
+      'nexus:element/person-standard'
+    );
+
+    assert.equal(securityPreference.security_mode, 'standard');
+  } finally {
+    harness.cleanup();
   }
 });

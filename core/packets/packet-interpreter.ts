@@ -1,6 +1,6 @@
 /**
  * File: packet-interpreter.ts
- * Description: Unified packet interpretation pipeline that wraps schema adapters and family-evolution adapters.
+ * Description: Unified packet interpretation pipeline that separates same-family adaptation, family evolution, and interface-facing read-model projection.
  */
 
 import {
@@ -23,13 +23,23 @@ import {
   type PacketFamily,
 } from '@core/schema/packet-schema';
 
-export type PacketInterpretMode = 'raw' | 'canonical' | 'legacy' | 'ui';
+export type PacketInterpretMode =
+  | 'raw'
+  | 'canonical'
+  | 'legacy'
+  | 'read_model';
 export type PacketCompatibilityMode =
   | 'native'
   | 'adapted'
   | 'downcast'
   | 'lossy'
   | 'blocked';
+export type PacketInterpretStage =
+  | 'raw_packet_read'
+  | 'same_family_adaptation'
+  | 'family_evolution'
+  | 'target_projection'
+  | 'read_model_projection';
 
 export interface PacketInterpretRequest {
   packet: unknown;
@@ -37,6 +47,7 @@ export interface PacketInterpretRequest {
     family?: PacketFamily;
     schema_version?: string;
     mode?: PacketInterpretMode;
+    read_model_id?: string;
   };
 }
 
@@ -48,6 +59,7 @@ export interface PacketInterpretResult {
   target_family: PacketFamily;
   source_schema_version: string;
   target_schema_version: string;
+  stages: PacketInterpretStage[];
   compatibility_mode: PacketCompatibilityMode;
   changes: PacketAdaptationChange[];
   losses: PacketAdaptationLoss[];
@@ -56,25 +68,39 @@ export interface PacketInterpretResult {
   requires_loss_acknowledgement: boolean;
 }
 
-function wrapReadResult(
+function createCompatibilityMode(
   inspected: PacketCompatibilityReadResult
+): PacketCompatibilityMode {
+  if (inspected.status.direction === 'same_version' && inspected.status.is_exact) {
+    return 'native';
+  }
+
+  if (inspected.status.is_lossy) {
+    return 'lossy';
+  }
+
+  if (inspected.status.direction === 'downcast') {
+    return 'downcast';
+  }
+
+  return 'adapted';
+}
+
+function createBaseResult(
+  inspected: PacketCompatibilityReadResult,
+  interpreted: unknown,
+  stages: PacketInterpretStage[]
 ): PacketInterpretResult {
   return {
     raw_packet: inspected.raw_packet,
     adapted_packet: inspected.adapted_packet,
-    interpreted: inspected.adapted_packet,
+    interpreted,
     source_family: inspected.adapted_packet.header.family,
     target_family: inspected.adapted_packet.header.family,
     source_schema_version: inspected.status.source_schema_version,
     target_schema_version: inspected.status.target_schema_version,
-    compatibility_mode:
-      inspected.status.direction === 'same_version' && inspected.status.is_exact
-        ? 'native'
-        : inspected.status.is_lossy
-          ? 'lossy'
-          : inspected.status.direction === 'downcast'
-            ? 'downcast'
-            : 'adapted',
+    stages,
+    compatibility_mode: createCompatibilityMode(inspected),
     changes: inspected.status.changes,
     losses: inspected.status.losses,
     warnings: [],
@@ -121,6 +147,25 @@ function inferDiscussionLegacyTargetFamily(
   return 'DiscussionPost';
 }
 
+function inspectDiscussionLegacyProjectionChanges(
+  packet: PacketEnvelope,
+  targetLegacyFamily: DiscussionLegacyFamily
+): PacketAdaptationChange[] {
+  if (packet.header.family === targetLegacyFamily) {
+    return [];
+  }
+
+  return [
+    {
+      kind: 'moved_field',
+      path: 'header.family',
+      from_schema_version: packet.header.schema_version,
+      to_schema_version: targetLegacyFamily,
+      message: `Projected discussion packet into legacy ${targetLegacyFamily} view.`,
+    },
+  ];
+}
+
 function interpretDiscussionThroughFamilyAdapter(
   inspected: PacketCompatibilityReadResult,
   request: PacketInterpretRequest['target']
@@ -134,10 +179,10 @@ function interpretDiscussionThroughFamilyAdapter(
       : createCanonicalDiscussionMirrorPacket(packet as never);
 
   if (requestedMode === 'raw') {
-    return wrapReadResult(inspected);
+    return createBaseResult(inspected, inspected.raw_packet, ['raw_packet_read']);
   }
 
-  if (requestedMode === 'ui') {
+  if (requestedMode === 'read_model') {
     const interpretedNode = interpretDiscussionPacket(packet as never);
 
     return {
@@ -148,6 +193,12 @@ function interpretDiscussionThroughFamilyAdapter(
       target_family: 'Discussion',
       source_schema_version: inspected.status.source_schema_version,
       target_schema_version: canonicalPacket.header.schema_version,
+      stages: [
+        'raw_packet_read',
+        'same_family_adaptation',
+        ...(packet.header.family === 'Discussion' ? [] : (['family_evolution'] as const)),
+        'read_model_projection',
+      ],
       compatibility_mode:
         packet.header.family === 'Discussion' &&
         inspected.status.direction === 'same_version' &&
@@ -157,7 +208,7 @@ function interpretDiscussionThroughFamilyAdapter(
       changes: interpretedNode.adaptation.changes,
       losses: interpretedNode.adaptation.losses,
       warnings: [],
-      requires_guarded_migration: false,
+      requires_guarded_migration: packet.header.family !== 'Discussion',
       requires_loss_acknowledgement:
         interpretedNode.adaptation.requires_loss_acknowledgement,
     };
@@ -179,6 +230,12 @@ function interpretDiscussionThroughFamilyAdapter(
       target_family: 'Discussion',
       source_schema_version: inspected.status.source_schema_version,
       target_schema_version: canonicalPacket.header.schema_version,
+      stages: [
+        'raw_packet_read',
+        'same_family_adaptation',
+        ...(packet.header.family === 'Discussion' ? [] : (['family_evolution'] as const)),
+        'target_projection',
+      ],
       compatibility_mode:
         packet.header.family === 'Discussion' &&
         inspected.status.direction === 'same_version' &&
@@ -201,9 +258,7 @@ function interpretDiscussionThroughFamilyAdapter(
 
   const targetLegacyFamily = isDiscussionLegacyFamily(requestedFamily)
     ? requestedFamily
-    : packet.header.family === 'Discussion'
-      ? inferDiscussionLegacyTargetFamily(packet)
-      : inferDiscussionLegacyTargetFamily(packet);
+    : inferDiscussionLegacyTargetFamily(packet);
   const legacyProjection = projectDiscussionPacketToLegacy(
     canonicalPacket,
     targetLegacyFamily
@@ -227,6 +282,12 @@ function interpretDiscussionThroughFamilyAdapter(
       target_family: targetLegacyFamily,
       source_schema_version: inspected.status.source_schema_version,
       target_schema_version: canonicalPacket.header.schema_version,
+      stages: [
+        'raw_packet_read',
+        'same_family_adaptation',
+        ...(packet.header.family === 'Discussion' ? [] : (['family_evolution'] as const)),
+        'target_projection',
+      ],
       compatibility_mode: 'blocked',
       changes: [],
       losses,
@@ -246,6 +307,12 @@ function interpretDiscussionThroughFamilyAdapter(
     target_family: targetLegacyFamily,
     source_schema_version: inspected.status.source_schema_version,
     target_schema_version: legacyProjection.header.schema_version,
+    stages: [
+      'raw_packet_read',
+      'same_family_adaptation',
+      ...(packet.header.family === 'Discussion' ? [] : (['family_evolution'] as const)),
+      'target_projection',
+    ],
     compatibility_mode:
       packet.header.family === targetLegacyFamily &&
       inspected.status.direction === 'same_version' &&
@@ -271,32 +338,20 @@ function interpretDiscussionThroughFamilyAdapter(
   };
 }
 
-function inspectDiscussionLegacyProjectionChanges(
-  packet: PacketEnvelope,
-  targetLegacyFamily: DiscussionLegacyFamily
-): PacketAdaptationChange[] {
-  if (packet.header.family === targetLegacyFamily) {
-    return [];
-  }
-
-  return [
-    {
-      kind: 'moved_field',
-      path: 'header.family',
-      from_schema_version: packet.header.schema_version,
-      to_schema_version: targetLegacyFamily,
-      message: `Projected discussion packet into legacy ${targetLegacyFamily} view.`,
-    },
-  ];
-}
-
 export function interpretPacket(
   request: PacketInterpretRequest
 ): PacketInterpretResult {
   const targetMode = request.target?.mode ?? 'canonical';
+
+  if (targetMode === 'read_model' && !request.target?.read_model_id) {
+    throw new Error('Packet read_model interpretation requires target.read_model_id.');
+  }
+
   const targetFamily = request.target?.family;
   const sameFamilyTarget =
-    targetFamily && targetFamily !== 'Discussion' && !DISCUSSION_LEGACY_FAMILIES.includes(targetFamily as DiscussionLegacyFamily)
+    targetFamily &&
+    targetFamily !== 'Discussion' &&
+    !DISCUSSION_LEGACY_FAMILIES.includes(targetFamily as DiscussionLegacyFamily)
       ? targetFamily
       : undefined;
   const inspected = sameFamilyTarget
@@ -306,18 +361,35 @@ export function interpretPacket(
     : inspectPacketEnvelope(request.packet);
 
   if (!isDiscussionSourcePacket(inspected.adapted_packet)) {
-    return wrapReadResult(
-      sameFamilyTarget
-        ? inspectPacketEnvelopeForTarget(request.packet, {
-            target_schema_version: request.target?.schema_version,
-          })
-        : inspected
-    );
+    if (targetMode === 'raw') {
+      return createBaseResult(inspected, inspected.raw_packet, ['raw_packet_read']);
+    }
+
+    const stages: PacketInterpretStage[] = [
+      'raw_packet_read',
+      'same_family_adaptation',
+    ];
+
+    if (targetMode === 'read_model') {
+      stages.push('read_model_projection');
+    } else {
+      stages.push('target_projection');
+    }
+
+    return createBaseResult(inspected, inspected.adapted_packet, stages);
   }
 
-  if (targetMode === 'legacy' || targetMode === 'canonical' || targetMode === 'ui') {
+  if (
+    targetMode === 'legacy' ||
+    targetMode === 'canonical' ||
+    targetMode === 'read_model' ||
+    targetMode === 'raw'
+  ) {
     return interpretDiscussionThroughFamilyAdapter(inspected, request.target);
   }
 
-  return wrapReadResult(inspected);
+  return createBaseResult(inspected, inspected.adapted_packet, [
+    'raw_packet_read',
+    'same_family_adaptation',
+  ]);
 }

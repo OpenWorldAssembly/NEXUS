@@ -13,11 +13,15 @@ import {
 } from '@core/auth/mutation-verifier';
 import { createTextExcerpt } from '@core/packets/builders';
 import {
+  areDiscussionPacketIdsEquivalent,
+  isCanonicalDiscussionPacketId,
   isDiscussionMessagePacket,
-  resolveCanonicalDiscussionTarget,
+  resolvePreferredDiscussionPacketId,
+  toDiscussionOperationalPacketId,
   type DiscussionLegacyFamily,
 } from '@core/packets/discussion-compat';
 import { interpretPacket } from '@core/packets/packet-interpreter';
+import { resolvePacketTarget } from '@core/packets/packet-target-resolver';
 import type {
   AttestationService,
   AttestationSummary,
@@ -94,11 +98,17 @@ type DiscussionState = {
   packetMap: Map<string, PacketEnvelope>;
   scopeMap: Map<string, ScopeNode>;
   discussionSpaceMap: Map<string, PacketEnvelopeByType['DiscussionSpace']>;
+  discussionSpaceOperationalMap: Map<string, PacketEnvelopeByType['DiscussionSpace']>;
   forumMap: Map<string, PacketEnvelopeByType['DiscussionForum']>;
+  forumOperationalMap: Map<string, PacketEnvelopeByType['DiscussionForum']>;
   threadMap: Map<string, PacketEnvelopeByType['DiscussionThread']>;
+  threadOperationalMap: Map<string, PacketEnvelopeByType['DiscussionThread']>;
   rootPostMap: Map<string, PacketEnvelopeByType['DiscussionPost']>;
+  rootPostOperationalMap: Map<string, PacketEnvelopeByType['DiscussionPost']>;
   replyMap: Map<string, PacketEnvelopeByType['DiscussionReply']>;
+  replyOperationalMap: Map<string, PacketEnvelopeByType['DiscussionReply']>;
   entryMap: Map<string, DiscussionEntryPacket>;
+  entryOperationalMap: Map<string, DiscussionEntryPacket>;
   voteSummaryByTarget: Map<string, Omit<AttestationSummary, 'viewer_value'>>;
   viewerVotesByActor: Map<string, Map<string, AttestationValue>>;
   postIndexByPacketId: Map<string, DiscussionPostIndexRecord>;
@@ -325,6 +335,84 @@ function getEntryThreadPacketId(entryPacket: DiscussionEntryPacket): string {
   return entryPacket.body.thread_ref.packet_id;
 }
 
+function isSameDiscussionTarget(
+  leftPacketId: string | null | undefined,
+  rightPacketId: string | null | undefined
+): boolean {
+  if (!leftPacketId || !rightPacketId) {
+    return false;
+  }
+
+  return areDiscussionPacketIdsEquivalent(leftPacketId, rightPacketId);
+}
+
+function preferOperationalDiscussionPacket<TPacket extends PacketEnvelope>(
+  currentPacket: TPacket | null | undefined,
+  nextPacket: TPacket
+): TPacket {
+  if (!currentPacket) {
+    return nextPacket;
+  }
+
+  const currentIsCanonical = isCanonicalDiscussionPacketId(
+    currentPacket.header.packet_id
+  );
+  const nextIsCanonical = isCanonicalDiscussionPacketId(nextPacket.header.packet_id);
+
+  if (currentIsCanonical !== nextIsCanonical) {
+    return nextIsCanonical ? nextPacket : currentPacket;
+  }
+
+  if (nextPacket.header.created_at !== currentPacket.header.created_at) {
+    return nextPacket.header.created_at > currentPacket.header.created_at
+      ? nextPacket
+      : currentPacket;
+  }
+
+  return nextPacket.header.packet_id.localeCompare(currentPacket.header.packet_id) < 0
+    ? nextPacket
+    : currentPacket;
+}
+
+function createOperationalDiscussionMap<TPacket extends PacketEnvelope>(
+  packets: Iterable<TPacket>
+): Map<string, TPacket> {
+  const operationalMap = new Map<string, TPacket>();
+
+  for (const packet of packets) {
+    const operationalPacketId = toDiscussionOperationalPacketId(
+      packet.header.packet_id
+    );
+    const currentPacket = operationalMap.get(operationalPacketId);
+
+    operationalMap.set(
+      operationalPacketId,
+      preferOperationalDiscussionPacket(currentPacket, packet)
+    );
+  }
+
+  return operationalMap;
+}
+
+function resolveOperationalDiscussionPacket<TPacket extends PacketEnvelope>(input: {
+  packetMap: Map<string, TPacket>;
+  operationalMap: Map<string, TPacket>;
+  packetId: string;
+}): TPacket | null {
+  const operationalPacketId = toDiscussionOperationalPacketId(input.packetId);
+  const preferredPacketId = resolvePreferredDiscussionPacketId({
+    candidate_packet_ids: input.packetMap.keys(),
+    requested_packet_id: input.packetId,
+  });
+
+  return (
+    (preferredPacketId ? input.packetMap.get(preferredPacketId) : null) ??
+    input.operationalMap.get(operationalPacketId) ??
+    input.packetMap.get(input.packetId) ??
+    null
+  );
+}
+
 function getEntryReplyToPacketId(entryPacket: DiscussionEntryPacket): string | null {
   if (entryPacket.header.family === 'DiscussionReply') {
     return (entryPacket as PacketEnvelopeByType['DiscussionReply']).body.reply_to_ref
@@ -335,22 +423,33 @@ function getEntryReplyToPacketId(entryPacket: DiscussionEntryPacket): string | n
     ?.packet_id ?? null;
 }
 
-function resolveRootPostId(
-  entriesByPacketId: Map<string, DiscussionEntryPacket>,
-  postPacketId: string
-): string {
-  const currentEntry = entriesByPacketId.get(postPacketId);
+function resolveOperationalRootPostId(input: {
+  entryMap: Map<string, DiscussionEntryPacket>;
+  entryOperationalMap: Map<string, DiscussionEntryPacket>;
+  packetId: string;
+}): string {
+  const currentEntry = resolveOperationalDiscussionPacket({
+    packetMap: input.entryMap,
+    operationalMap: input.entryOperationalMap,
+    packetId: input.packetId,
+  });
 
   if (!currentEntry) {
-    return postPacketId;
+    return toDiscussionOperationalPacketId(input.packetId);
   }
 
   if (currentEntry.header.family === 'DiscussionPost') {
     return currentEntry.header.packet_id;
   }
 
-  return (currentEntry as PacketEnvelopeByType['DiscussionReply']).body.root_post_ref
-    .packet_id;
+  const rootPostPacketId = (currentEntry as PacketEnvelopeByType['DiscussionReply']).body
+    .root_post_ref.packet_id;
+  const operationalRootPacketId = toDiscussionOperationalPacketId(rootPostPacketId);
+
+  return (
+    input.entryOperationalMap.get(operationalRootPacketId)?.header.packet_id ??
+    operationalRootPacketId
+  );
 }
 
 function summarizePostTree(input: {
@@ -392,12 +491,14 @@ async function getDiscussionForumById(
   packetStore: NodeSQLitePacketStore,
   forumPacketId: string
 ): Promise<PacketEnvelopeByType['DiscussionForum'] | null> {
-  const resolution = await resolveCanonicalDiscussionTarget({
+  const resolution = await resolvePacketTarget({
     packet_id: forumPacketId,
     fetchPacket: async (packetId) =>
       packetStore.fetchByPacket({ packet_id: packetId }),
+    fetchRevisionHeads: async (packetId) =>
+      packetStore.fetchRevisionHeads({ packet_id: packetId }),
   });
-  const packet = resolution.canonical_packet ?? resolution.source_packet;
+  const packet = resolution.resolved_packet ?? resolution.source_packet;
 
   if (!packet) {
     return null;
@@ -414,12 +515,14 @@ async function getDiscussionThreadById(
   packetStore: NodeSQLitePacketStore,
   threadPacketId: string
 ): Promise<PacketEnvelopeByType['DiscussionThread'] | null> {
-  const resolution = await resolveCanonicalDiscussionTarget({
+  const resolution = await resolvePacketTarget({
     packet_id: threadPacketId,
     fetchPacket: async (packetId) =>
       packetStore.fetchByPacket({ packet_id: packetId }),
+    fetchRevisionHeads: async (packetId) =>
+      packetStore.fetchRevisionHeads({ packet_id: packetId }),
   });
-  const packet = resolution.canonical_packet ?? resolution.source_packet;
+  const packet = resolution.resolved_packet ?? resolution.source_packet;
 
   if (!packet) {
     return null;
@@ -436,12 +539,14 @@ async function getDiscussionEntryById(
   packetStore: NodeSQLitePacketStore,
   packetId: string
 ): Promise<DiscussionEntryPacket | null> {
-  const resolution = await resolveCanonicalDiscussionTarget({
+  const resolution = await resolvePacketTarget({
     packet_id: packetId,
     fetchPacket: async (nextPacketId) =>
       packetStore.fetchByPacket({ packet_id: nextPacketId }),
+    fetchRevisionHeads: async (nextPacketId) =>
+      packetStore.fetchRevisionHeads({ packet_id: nextPacketId }),
   });
-  const packet = resolution.canonical_packet ?? resolution.source_packet;
+  const packet = resolution.resolved_packet ?? resolution.source_packet;
 
   if (!packet) {
     return null;
@@ -580,42 +685,40 @@ export class SQLiteDiscussionService
         })(),
       }));
     const scopeMap = new Map(scopeNodes.map((scopeNode) => [scopeNode.routeId, scopeNode]));
+    const discussionSpacePacketsAll = [...discussionSpacePackets, ...canonicalSpaces];
+    const forumPacketsAll = [...discussionForumPackets, ...canonicalForums];
+    const threadPacketsAll = [...discussionThreadPackets, ...canonicalThreads];
+    const rootPostPacketsAll = [...discussionPostPackets, ...canonicalRootPosts];
+    const replyPacketsAll = [...discussionReplyPackets, ...canonicalReplies];
+    const entryPacketsAll = [
+      ...rootPostPacketsAll,
+      ...replyPacketsAll,
+    ] as DiscussionEntryPacket[];
     const discussionSpaceMap = new Map(
-      [...discussionSpacePackets, ...canonicalSpaces].map((packet) => [
-        packet.header.packet_id,
-        packet,
-      ])
+      discussionSpacePacketsAll.map((packet) => [packet.header.packet_id, packet])
     );
+    const discussionSpaceOperationalMap =
+      createOperationalDiscussionMap(discussionSpacePacketsAll);
     const forumMap = new Map(
-      [...discussionForumPackets, ...canonicalForums].map((packet) => [
-        packet.header.packet_id,
-        packet,
-      ])
+      forumPacketsAll.map((packet) => [packet.header.packet_id, packet])
     );
+    const forumOperationalMap = createOperationalDiscussionMap(forumPacketsAll);
     const threadMap = new Map(
-      [...discussionThreadPackets, ...canonicalThreads].map((packet) => [
-        packet.header.packet_id,
-        packet,
-      ])
+      threadPacketsAll.map((packet) => [packet.header.packet_id, packet])
     );
+    const threadOperationalMap = createOperationalDiscussionMap(threadPacketsAll);
     const rootPostMap = new Map(
-      [...discussionPostPackets, ...canonicalRootPosts].map((packet) => [
-        packet.header.packet_id,
-        packet,
-      ])
+      rootPostPacketsAll.map((packet) => [packet.header.packet_id, packet])
     );
+    const rootPostOperationalMap = createOperationalDiscussionMap(rootPostPacketsAll);
     const replyMap = new Map(
-      [...discussionReplyPackets, ...canonicalReplies].map((packet) => [
-        packet.header.packet_id,
-        packet,
-      ])
+      replyPacketsAll.map((packet) => [packet.header.packet_id, packet])
     );
-    const entryMap = new Map<string, DiscussionEntryPacket>([
-      ...discussionPostPackets.map((packet) => [packet.header.packet_id, packet] as const),
-      ...discussionReplyPackets.map((packet) => [packet.header.packet_id, packet] as const),
-      ...canonicalRootPosts.map((packet) => [packet.header.packet_id, packet] as const),
-      ...canonicalReplies.map((packet) => [packet.header.packet_id, packet] as const),
-    ]);
+    const replyOperationalMap = createOperationalDiscussionMap(replyPacketsAll);
+    const entryMap = new Map<string, DiscussionEntryPacket>(
+      entryPacketsAll.map((packet) => [packet.header.packet_id, packet] as const)
+    );
+    const entryOperationalMap = createOperationalDiscussionMap(entryPacketsAll);
     const database = new DatabaseSync(this.packetStore.databasePath);
     const voteIndexRows = database
       .prepare(
@@ -694,29 +797,39 @@ export class SQLiteDiscussionService
 
     const childIdsByParent = new Map<string, string[]>();
 
-    for (const replyPacket of replyMap.values()) {
-      const parentPacketId = replyPacket.body.reply_to_ref.packet_id;
+    for (const replyPacket of replyOperationalMap.values()) {
+      const parentPacketId = toDiscussionOperationalPacketId(
+        replyPacket.body.reply_to_ref.packet_id
+      );
       const currentChildIds = childIdsByParent.get(parentPacketId) ?? [];
 
       currentChildIds.push(replyPacket.header.packet_id);
       childIdsByParent.set(parentPacketId, currentChildIds);
     }
 
-    const discussionIndexRows: DiscussionPostIndexRecord[] = [];
-    const postIndexByPacketId = new Map<string, DiscussionPostIndexRecord>();
+      const discussionIndexRows: DiscussionPostIndexRecord[] = [];
+      const postIndexByPacketId = new Map<string, DiscussionPostIndexRecord>();
 
-    for (const entryPacket of entryMap.values()) {
-      const rootPostPacketId = resolveRootPostId(entryMap, entryPacket.header.packet_id);
-      let depth = 0;
-      let currentParentPacketId = getEntryReplyToPacketId(entryPacket);
+      for (const entryPacket of entryOperationalMap.values()) {
+        const rootPostPacketId = resolveOperationalRootPostId({
+          entryMap,
+          entryOperationalMap,
+          packetId: entryPacket.header.packet_id,
+        });
+        let depth = 0;
+        let currentParentPacketId = getEntryReplyToPacketId(entryPacket);
 
-      while (currentParentPacketId) {
-        depth += 1;
-        currentParentPacketId =
-          entryMap.get(currentParentPacketId) === undefined
-            ? null
-            : getEntryReplyToPacketId(entryMap.get(currentParentPacketId)!);
-      }
+        while (currentParentPacketId) {
+          depth += 1;
+          const parentEntry = resolveOperationalDiscussionPacket({
+            packetMap: entryMap,
+            operationalMap: entryOperationalMap,
+            packetId: currentParentPacketId,
+          });
+          currentParentPacketId = parentEntry
+            ? getEntryReplyToPacketId(parentEntry)
+            : null;
+        }
 
       const postTreeSummary = summarizePostTree({
         postPacketId: entryPacket.header.packet_id,
@@ -744,11 +857,17 @@ export class SQLiteDiscussionService
       packetMap,
       scopeMap,
       discussionSpaceMap,
+      discussionSpaceOperationalMap,
       forumMap,
+      forumOperationalMap,
       threadMap,
+      threadOperationalMap,
       rootPostMap,
+      rootPostOperationalMap,
       replyMap,
+      replyOperationalMap,
       entryMap,
+      entryOperationalMap,
       voteSummaryByTarget,
       viewerVotesByActor,
       postIndexByPacketId,
@@ -915,15 +1034,19 @@ export class SQLiteDiscussionService
     );
     const selectedSort =
       input.sort ?? selectedForum.forumPacket.body.default_sort ?? 'new';
-    const topLevelPosts = Array.from(this.state.rootPostMap.values())
-      .filter((rootPostPacket) => {
-        const threadPacket = this.state?.threadMap.get(
-          rootPostPacket.body.thread_ref.packet_id
-        );
+    const topLevelPosts = Array.from(this.state.rootPostOperationalMap.values())
+        .filter((rootPostPacket) => {
+          const threadPacket = resolveOperationalDiscussionPacket({
+            packetMap: this.state?.threadMap ?? new Map(),
+            operationalMap: this.state?.threadOperationalMap ?? new Map(),
+            packetId: rootPostPacket.body.thread_ref.packet_id,
+          });
 
         return (
-          threadPacket?.body.forum_ref.packet_id ===
-          selectedForum.forumPacket.header.packet_id
+          isSameDiscussionTarget(
+            threadPacket?.body.forum_ref.packet_id,
+            selectedForum.forumPacket.header.packet_id
+          )
         );
       })
       .map((rootPostPacket) =>
@@ -977,17 +1100,24 @@ export class SQLiteDiscussionService
       throw new Error('Discussion state is unavailable.');
     }
 
-    const canonicalRootPostId = resolveRootPostId(
-      this.state.entryMap,
-      input.post_packet_id
+    const canonicalRootPostId = resolveOperationalRootPostId({
+      entryMap: this.state.entryMap,
+      entryOperationalMap: this.state.entryOperationalMap,
+      packetId: input.post_packet_id,
+    });
+    const rootPostPacket = this.state.rootPostOperationalMap.get(
+      canonicalRootPostId
     );
-    const rootPostPacket = this.state.rootPostMap.get(canonicalRootPostId);
 
     if (!rootPostPacket) {
       throw new Error(`Unknown discussion post: ${input.post_packet_id}`);
     }
 
-    const threadPacket = this.state.threadMap.get(rootPostPacket.body.thread_ref.packet_id);
+    const threadPacket = resolveOperationalDiscussionPacket({
+      packetMap: this.state.threadMap,
+      operationalMap: this.state.threadOperationalMap,
+      packetId: rootPostPacket.body.thread_ref.packet_id,
+    });
 
     if (!threadPacket) {
       throw new Error(
@@ -995,7 +1125,11 @@ export class SQLiteDiscussionService
       );
     }
 
-    const forumPacket = this.state.forumMap.get(threadPacket.body.forum_ref.packet_id);
+    const forumPacket = resolveOperationalDiscussionPacket({
+      packetMap: this.state.forumMap,
+      operationalMap: this.state.forumOperationalMap,
+      packetId: threadPacket.body.forum_ref.packet_id,
+    });
 
     if (!forumPacket) {
       throw new Error(
@@ -1003,9 +1137,11 @@ export class SQLiteDiscussionService
       );
     }
 
-    const discussionSpacePacket = this.state.discussionSpaceMap.get(
-      forumPacket.body.discussion_space_ref.packet_id
-    );
+    const discussionSpacePacket = resolveOperationalDiscussionPacket({
+      packetMap: this.state.discussionSpaceMap,
+      operationalMap: this.state.discussionSpaceOperationalMap,
+      packetId: forumPacket.body.discussion_space_ref.packet_id,
+    });
 
     if (!discussionSpacePacket) {
       throw new Error(
@@ -1023,7 +1159,10 @@ export class SQLiteDiscussionService
     const matchingForum =
       forumEntries.find(
         (forumEntry) =>
-          forumEntry.forumPacket.header.packet_id === forumPacket.header.packet_id
+          isSameDiscussionTarget(
+            forumEntry.forumPacket.header.packet_id,
+            forumPacket.header.packet_id
+          )
       ) ?? null;
 
     if (!matchingForum) {
@@ -1087,14 +1226,26 @@ export class SQLiteDiscussionService
       throw new Error('Discussion state is unavailable.');
     }
 
-    const rootPostPacket = this.state.rootPostMap.get(
-      resolveRootPostId(this.state.entryMap, input.thread_post_packet_id)
+    const rootPostPacket = this.state.rootPostOperationalMap.get(
+      resolveOperationalRootPostId({
+        entryMap: this.state.entryMap,
+        entryOperationalMap: this.state.entryOperationalMap,
+        packetId: input.thread_post_packet_id,
+      })
     );
     const threadPacket = rootPostPacket
-      ? this.state.threadMap.get(rootPostPacket.body.thread_ref.packet_id)
+      ? resolveOperationalDiscussionPacket({
+          packetMap: this.state.threadMap,
+          operationalMap: this.state.threadOperationalMap,
+          packetId: rootPostPacket.body.thread_ref.packet_id,
+        })
       : null;
     const forumPacket = threadPacket
-      ? this.state.forumMap.get(threadPacket.body.forum_ref.packet_id)
+      ? resolveOperationalDiscussionPacket({
+          packetMap: this.state.forumMap,
+          operationalMap: this.state.forumOperationalMap,
+          packetId: threadPacket.body.forum_ref.packet_id,
+        })
       : null;
     const scopeLens = buildScopeLens(input.scope_id, this.state.scopeMap);
 
@@ -1261,11 +1412,12 @@ export class SQLiteDiscussionService
       );
     }
 
-    const rootPostPacketId = resolveRootPostId(
-      this.state.entryMap,
-      parentEntry.header.packet_id
-    );
-    const rootPostPacket = this.state.rootPostMap.get(rootPostPacketId);
+    const rootPostPacketId = resolveOperationalRootPostId({
+      entryMap: this.state.entryMap,
+      entryOperationalMap: this.state.entryOperationalMap,
+      packetId: parentEntry.header.packet_id,
+    });
+    const rootPostPacket = this.state.rootPostOperationalMap.get(rootPostPacketId);
 
     if (!rootPostPacket) {
       throw new Error(
@@ -1425,14 +1577,16 @@ export class SQLiteDiscussionService
       }
     >();
 
-    for (const forumPacket of this.state.forumMap.values()) {
+    for (const forumPacket of this.state.forumOperationalMap.values()) {
       if (!matchesAuthorityScope(forumPacket, scopeLens)) {
         continue;
       }
 
-      const discussionSpacePacket = this.state.discussionSpaceMap.get(
-        forumPacket.body.discussion_space_ref.packet_id
-      );
+      const discussionSpacePacket = resolveOperationalDiscussionPacket({
+        packetMap: this.state.discussionSpaceMap,
+        operationalMap: this.state.discussionSpaceOperationalMap,
+        packetId: forumPacket.body.discussion_space_ref.packet_id,
+      });
 
       if (
         !discussionSpacePacket ||
@@ -1610,20 +1764,26 @@ export class SQLiteDiscussionService
       throw new Error('Discussion state is unavailable.');
     }
 
-    const canonicalRootPostId = resolveRootPostId(
-      this.state.entryMap,
-      input.root_post_packet_id
-    );
-    const parentEntry = this.state.entryMap.get(input.parent_post_packet_id);
+    const canonicalRootPostId = resolveOperationalRootPostId({
+      entryMap: this.state.entryMap,
+      entryOperationalMap: this.state.entryOperationalMap,
+      packetId: input.root_post_packet_id,
+    });
+    const parentEntry = resolveOperationalDiscussionPacket({
+      packetMap: this.state.entryMap,
+      operationalMap: this.state.entryOperationalMap,
+      packetId: input.parent_post_packet_id,
+    });
 
     if (!parentEntry) {
       throw new Error(`Unknown discussion post: ${input.parent_post_packet_id}`);
     }
 
-    const parentRootPostId = resolveRootPostId(
-      this.state.entryMap,
-      input.parent_post_packet_id
-    );
+    const parentRootPostId = resolveOperationalRootPostId({
+      entryMap: this.state.entryMap,
+      entryOperationalMap: this.state.entryOperationalMap,
+      packetId: input.parent_post_packet_id,
+    });
 
     if (parentRootPostId !== canonicalRootPostId) {
       throw new Error(
@@ -1632,9 +1792,12 @@ export class SQLiteDiscussionService
     }
 
     const selectedReplySort = input.reply_sort ?? 'top';
-    const childReplies = Array.from(this.state.replyMap.values()).filter(
-      (replyPacket) =>
-        replyPacket.body.reply_to_ref.packet_id === input.parent_post_packet_id
+    const childReplies = Array.from(this.state.replyOperationalMap.values()).filter(
+        (replyPacket) =>
+          isSameDiscussionTarget(
+            replyPacket.body.reply_to_ref.packet_id,
+          input.parent_post_packet_id
+        )
     );
     const sortedReplies = childReplies
       .map((replyPacket) =>

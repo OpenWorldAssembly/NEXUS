@@ -8,6 +8,10 @@ import { z } from 'zod';
 
 import type { MutationIntent } from '@core/auth/mutation-corridor';
 import { getNexusPacketServices } from '@runtime/nexus/server/nexus-packet-services';
+import {
+  toNexusAuthFailurePayload,
+  toNexusAuthGatePayload,
+} from '@runtime/nexus/server/auth-service.utils';
 import { LocalityDuplicateWarningError } from '@runtime/nexus/server/locality-directory-service';
 
 const ActorAssertionSchema = z
@@ -210,14 +214,19 @@ export const POST: RequestHandler = async (request) => {
       );
     }
 
+    const authGate = toNexusAuthGatePayload(error);
+    const authFailure = toNexusAuthFailurePayload(error);
+
     return createJsonResponse(
       {
         error:
           error instanceof Error
             ? error.message
             : 'Unable to prepare the mutation.',
+        ...(authGate ? { auth_gate: authGate } : {}),
+        ...(authFailure ? { auth_failure: authFailure } : {}),
       },
-      400
+      authGate ? 409 : 400
     );
   }
 };

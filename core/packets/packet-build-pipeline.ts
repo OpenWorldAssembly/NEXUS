@@ -13,6 +13,7 @@ import { policyBuildDefinition } from '@core/packets/families/policy';
 import { createInitialRevisionId } from '@core/packets/packet-build-helpers';
 import {
   createPacketEnvelope,
+  type PacketRef,
   type PacketEdge,
   type PacketEnvelopeByType,
   type PacketFamily,
@@ -43,21 +44,43 @@ export interface PacketFamilyBuildDefinition<
   TFamily extends PacketFamily,
   TBodyInput,
   TContext = undefined,
+  TNormalizedBody = TBodyInput,
 > {
-  prepareBody: (
+  normalizeBody?: (
     body: TBodyInput,
+    context: TContext | undefined
+  ) => TNormalizedBody;
+  validateBody?: (
+    body: TNormalizedBody,
+    context: TContext | undefined
+  ) => void;
+  extractRelationships?: (
+    body: TNormalizedBody,
+    context: TContext | undefined
+  ) => {
+    dependencies?: PacketRef[];
+    references?: PacketRef[];
+  };
+  finalizeBody: (
+    body: TNormalizedBody,
     context: TContext | undefined
   ) => PacketEnvelopeByType[TFamily]['body'];
   prepareEdges?: (
-    body: TBodyInput,
+    body: TNormalizedBody,
+    relationships:
+      | {
+          dependencies?: PacketRef[];
+          references?: PacketRef[];
+        }
+      | undefined,
     context: TContext | undefined
   ) => PacketEdge[];
   prepareMetadataSummary?: (
-    body: TBodyInput,
+    body: TNormalizedBody,
     context: TContext | undefined
   ) => string | null | undefined;
   prepareMetadataCompatibility?: (
-    body: TBodyInput,
+    body: TNormalizedBody,
     context: TContext | undefined
   ) => PacketCompatibilityMetadata | null | undefined;
 }
@@ -95,11 +118,7 @@ function dedupeEdges(edges: PacketEdge[]): PacketEdge[] {
   const seen = new Set<string>();
 
   return edges.filter((edge) => {
-    const key = JSON.stringify([
-      edge.edge_type,
-      edge.target.packet_id,
-      edge.metadata ?? null,
-    ]);
+    const key = JSON.stringify([edge.edge_type, edge.target.packet_id]);
 
     if (seen.has(key)) {
       return false;
@@ -165,15 +184,32 @@ function buildPacketWithDefinition<
   TFamily extends PacketFamily,
   TBodyInput,
   TContext = undefined,
+  TNormalizedBody = TBodyInput,
 >(
   request: PacketBuildRequest<TFamily, TBodyInput, TContext>,
-  definition: PacketFamilyBuildDefinition<TFamily, TBodyInput, TContext>
+  definition: PacketFamilyBuildDefinition<
+    TFamily,
+    TBodyInput,
+    TContext,
+    TNormalizedBody
+  >
 ): PacketEnvelopeByType[TFamily] {
-  const preparedEdges = definition.prepareEdges?.(request.body, request.context) ?? [];
+  const normalizedBody = definition.normalizeBody
+    ? definition.normalizeBody(request.body, request.context)
+    : (request.body as unknown as TNormalizedBody);
+
+  definition.validateBody?.(normalizedBody, request.context);
+
+  const relationships = definition.extractRelationships?.(
+    normalizedBody,
+    request.context
+  );
+  const preparedEdges =
+    definition.prepareEdges?.(normalizedBody, relationships, request.context) ?? [];
   const preparedMetadataCompatibility =
-    definition.prepareMetadataCompatibility?.(request.body, request.context) ?? null;
+    definition.prepareMetadataCompatibility?.(normalizedBody, request.context) ?? null;
   const preparedMetadataSummary =
-    definition.prepareMetadataSummary?.(request.body, request.context) ?? null;
+    definition.prepareMetadataSummary?.(normalizedBody, request.context) ?? null;
 
   return finalizeBuiltPacket({
     family: request.family,
@@ -185,7 +221,7 @@ function buildPacketWithDefinition<
       metadata_compatibility:
         request.header.metadata_compatibility ?? preparedMetadataCompatibility,
     },
-    body: definition.prepareBody(request.body, request.context),
+    body: definition.finalizeBody(normalizedBody, request.context),
   });
 }
 

@@ -13,6 +13,11 @@ import {
   createPacketEdge,
   createPacketRef,
 } from '@core/packets/builders';
+import type { PacketHeadStatus } from '@core/contracts';
+import type {
+  PacketTargetMigrationPlan,
+  PacketTargetResolution,
+} from '@core/packets/packet-target-resolver';
 import type {
   DiscussionKind,
   PacketAdaptationChange,
@@ -156,12 +161,124 @@ export function createCanonicalDiscussionPacketId(sourcePacketId: string): strin
   return `nexus:discussion/compat/${slugPacketId(sourcePacketId)}`;
 }
 
+export function toDiscussionOperationalPacketId(packetId: string): string {
+  return createCanonicalDiscussionPacketId(packetId);
+}
+
+export function isCanonicalDiscussionPacketId(packetId: string): boolean {
+  return packetId === toDiscussionOperationalPacketId(packetId);
+}
+
+export function areDiscussionPacketIdsEquivalent(
+  leftPacketId: string,
+  rightPacketId: string
+): boolean {
+  return (
+    toDiscussionOperationalPacketId(leftPacketId) ===
+    toDiscussionOperationalPacketId(rightPacketId)
+  );
+}
+
+export function resolvePreferredDiscussionPacketId(input: {
+  candidate_packet_ids: Iterable<string>;
+  requested_packet_id: string;
+}): string | null {
+  const requestedOperationalPacketId = toDiscussionOperationalPacketId(
+    input.requested_packet_id
+  );
+  const equivalentPacketIds = [...input.candidate_packet_ids].filter((packetId) =>
+    areDiscussionPacketIdsEquivalent(packetId, input.requested_packet_id)
+  );
+
+  if (equivalentPacketIds.length === 0) {
+    return null;
+  }
+
+  equivalentPacketIds.sort((leftPacketId, rightPacketId) => {
+    if (leftPacketId === requestedOperationalPacketId) {
+      return -1;
+    }
+
+    if (rightPacketId === requestedOperationalPacketId) {
+      return 1;
+    }
+
+    const leftIsCanonical = isCanonicalDiscussionPacketId(leftPacketId);
+    const rightIsCanonical = isCanonicalDiscussionPacketId(rightPacketId);
+
+    if (leftIsCanonical !== rightIsCanonical) {
+      return leftIsCanonical ? -1 : 1;
+    }
+
+    return leftPacketId.localeCompare(rightPacketId);
+  });
+
+  return equivalentPacketIds[0] ?? null;
+}
+
+export function getDiscussionPacketAliases(packet: DiscussionSourcePacket): {
+  canonical_packet_id: string;
+  legacy_source_packet_ids: string[];
+} {
+  if (packet.header.family !== 'Discussion') {
+    return {
+      canonical_packet_id: createCanonicalDiscussionPacketId(packet.header.packet_id),
+      legacy_source_packet_ids: [packet.header.packet_id],
+    };
+  }
+
+  const legacySourcePacketIds = packet.header.edges
+    .filter((edge) => edge.edge_type === 'derived_from')
+    .map((edge) => edge.target.packet_id);
+
+  return {
+    canonical_packet_id: packet.header.packet_id,
+    legacy_source_packet_ids: legacySourcePacketIds,
+  };
+}
+
 function createMirrorRevisionId(packetId: string, sourceRevisionId: string): string {
   return `${packetId}@compat-${hashPacketId(sourceRevisionId).slice(0, 12)}`;
 }
 
 function canonicalRef(sourcePacketId: string): PacketRef {
   return createPacketRef(createCanonicalDiscussionPacketId(sourcePacketId));
+}
+
+function getLegacyDiscussionDependencyPacketIds(packet: DiscussionLegacyPacket): string[] {
+  if (packet.header.family === 'DiscussionSpace') {
+    return [];
+  }
+
+  if (packet.header.family === 'DiscussionForum') {
+    return [
+      (packet as PacketEnvelopeByType['DiscussionForum']).body.discussion_space_ref
+        .packet_id,
+    ];
+  }
+
+  if (packet.header.family === 'DiscussionThread') {
+    return [(packet as PacketEnvelopeByType['DiscussionThread']).body.forum_ref.packet_id];
+  }
+
+  if (packet.header.family === 'DiscussionPost') {
+    const discussionPostPacket = packet as PacketEnvelopeByType['DiscussionPost'];
+
+    return [
+      discussionPostPacket.body.thread_ref.packet_id,
+      ...(discussionPostPacket.body.reply_to_ref
+        ? [discussionPostPacket.body.reply_to_ref.packet_id]
+        : []),
+    ];
+  }
+
+  const discussionReplyPacket = packet as PacketEnvelopeByType['DiscussionReply'];
+
+  return [
+    discussionReplyPacket.body.thread_ref.packet_id,
+    discussionReplyPacket.body.root_post_ref.packet_id,
+    discussionReplyPacket.body.reply_to_ref.packet_id,
+  ];
 }
 
 export function isDiscussionLegacyFamily(
@@ -177,6 +294,13 @@ export interface CanonicalDiscussionTargetResolution {
   source_packet: DiscussionSourcePacket | null;
   canonical_packet: PacketEnvelopeByType['Discussion'] | null;
   should_create_mirror: boolean;
+}
+
+function toPreferredRevision(packet: PacketEnvelope) {
+  return {
+    packet_id: packet.header.packet_id,
+    revision_id: packet.header.revision_id,
+  };
 }
 
 function createFamilyHistory(packet: PacketEnvelope) {
@@ -498,17 +622,277 @@ export function createCanonicalDiscussionMirrorPacket(
   });
 }
 
-export async function resolveCanonicalDiscussionTarget(input: {
+export async function resolveDiscussionPacketTarget(input: {
   packet_id: string;
   fetchPacket: (packetId: string) => Promise<PacketEnvelope | null>;
-}): Promise<CanonicalDiscussionTargetResolution> {
+  fetchRevisionHeads?: (packetId: string) => Promise<PacketHeadStatus | null>;
+}): Promise<PacketTargetResolution> {
   const sourcePacket = await input.fetchPacket(input.packet_id);
 
   if (!sourcePacket) {
     return {
       requested_packet_id: input.packet_id,
-      resolved_packet_id: input.packet_id,
+      resolved_packet_id: null,
       canonical_packet_id: createCanonicalDiscussionPacketId(input.packet_id),
+      source_packet: null,
+      resolved_packet: null,
+      preferred_revision: null,
+      basis: 'deterministic_mirror',
+      currentness_status: 'missing',
+      warnings: [`Discussion packet ${input.packet_id} was not found.`],
+    };
+  }
+
+  if (!isDiscussionSourcePacket(sourcePacket)) {
+    throw new Error(`Packet ${input.packet_id} is not a discussion packet.`);
+  }
+
+  if (sourcePacket.header.family === 'Discussion') {
+    const heads = input.fetchRevisionHeads
+      ? await input.fetchRevisionHeads(sourcePacket.header.packet_id)
+      : null;
+
+    if (heads && heads.head_revisions.length > 1 && heads.preferred_revision === null) {
+      return {
+        requested_packet_id: input.packet_id,
+        resolved_packet_id: null,
+        canonical_packet_id: sourcePacket.header.packet_id,
+        source_packet: sourcePacket,
+        resolved_packet: null,
+        preferred_revision: null,
+        basis: 'same_id_preferred_revision',
+        currentness_status: 'ambiguous',
+        warnings: [
+          `Discussion packet ${sourcePacket.header.packet_id} has multiple head revisions without a preferred revision.`,
+        ],
+      };
+    }
+
+    return {
+      requested_packet_id: input.packet_id,
+      resolved_packet_id: sourcePacket.header.packet_id,
+      canonical_packet_id: sourcePacket.header.packet_id,
+      source_packet: sourcePacket,
+      resolved_packet: sourcePacket,
+      preferred_revision: heads?.preferred_revision ?? toPreferredRevision(sourcePacket),
+      basis: 'native',
+      currentness_status: 'current',
+      warnings: [],
+    };
+  }
+
+  const canonicalPacketId = createCanonicalDiscussionPacketId(
+    sourcePacket.header.packet_id
+  );
+  const canonicalPacket = await input.fetchPacket(canonicalPacketId);
+
+  if (canonicalPacket?.header.family !== 'Discussion') {
+    return {
+      requested_packet_id: input.packet_id,
+      resolved_packet_id: null,
+      canonical_packet_id: canonicalPacketId,
+      source_packet: sourcePacket,
+      resolved_packet: null,
+      preferred_revision: null,
+      basis: 'deterministic_mirror',
+      currentness_status: 'missing',
+      warnings: [],
+    };
+  }
+
+  const heads = input.fetchRevisionHeads
+    ? await input.fetchRevisionHeads(canonicalPacket.header.packet_id)
+    : null;
+
+  if (heads && heads.head_revisions.length > 1 && heads.preferred_revision === null) {
+    return {
+      requested_packet_id: input.packet_id,
+      resolved_packet_id: null,
+      canonical_packet_id: canonicalPacket.header.packet_id,
+      source_packet: sourcePacket,
+      resolved_packet: null,
+      preferred_revision: null,
+      basis: 'deterministic_mirror',
+      currentness_status: 'ambiguous',
+      warnings: [
+        `Canonical discussion target ${canonicalPacket.header.packet_id} has multiple head revisions without a preferred revision.`,
+      ],
+    };
+  }
+
+  const preferredRevision =
+    heads?.preferred_revision ?? toPreferredRevision(canonicalPacket);
+  const warnings: string[] = [];
+  const expectedMirrorRevisionId = createMirrorRevisionId(
+    canonicalPacketId,
+    sourcePacket.header.revision_id
+  );
+
+  if (preferredRevision.revision_id !== expectedMirrorRevisionId) {
+    warnings.push(
+      `Canonical discussion target ${canonicalPacket.header.packet_id} has moved beyond legacy source revision ${sourcePacket.header.revision_id}; using canonical preferred revision ${preferredRevision.revision_id}.`
+    );
+  }
+
+  return {
+    requested_packet_id: input.packet_id,
+    resolved_packet_id: canonicalPacket.header.packet_id,
+    canonical_packet_id: canonicalPacket.header.packet_id,
+    source_packet: sourcePacket,
+    resolved_packet: canonicalPacket,
+    preferred_revision: preferredRevision,
+    basis: 'deterministic_mirror',
+    currentness_status: 'canonicalized',
+    warnings,
+  };
+}
+
+export async function planDiscussionPacketTargetMigration(input: {
+  packet_id: string;
+  fetchPacket: (packetId: string) => Promise<PacketEnvelope | null>;
+  fetchRevisionHeads?: (packetId: string) => Promise<PacketHeadStatus | null>;
+  resolution?: PacketTargetResolution;
+  planned?: Map<string, PacketEnvelopeByType['Discussion']>;
+  visiting?: Set<string>;
+}): Promise<PacketTargetMigrationPlan> {
+  const resolution =
+    input.resolution ??
+    (await resolveDiscussionPacketTarget({
+      packet_id: input.packet_id,
+      fetchPacket: input.fetchPacket,
+      fetchRevisionHeads: input.fetchRevisionHeads,
+    }));
+  const sourcePacket = resolution.source_packet;
+  const planned = input.planned ?? new Map<string, PacketEnvelopeByType['Discussion']>();
+  const visiting = input.visiting ?? new Set<string>();
+
+  if (!sourcePacket) {
+    return {
+      requested_packet_id: input.packet_id,
+      canonical_packet_id: resolution.canonical_packet_id,
+      packets: [...planned.values()],
+      warnings: resolution.warnings,
+      blocked_reason: null,
+      requires_mutation_corridor: true,
+    };
+  }
+
+  if (!isDiscussionSourcePacket(sourcePacket)) {
+    throw new Error(`Packet ${input.packet_id} is not a discussion packet.`);
+  }
+
+  if (resolution.currentness_status === 'ambiguous') {
+    return {
+      requested_packet_id: input.packet_id,
+      canonical_packet_id: resolution.canonical_packet_id,
+      packets: [...planned.values()],
+      warnings: resolution.warnings,
+      blocked_reason: `Discussion packet ${input.packet_id} does not have one defensible operational target.`,
+      requires_mutation_corridor: true,
+    };
+  }
+
+  if (sourcePacket.header.family === 'Discussion') {
+    return {
+      requested_packet_id: input.packet_id,
+      canonical_packet_id: sourcePacket.header.packet_id,
+      packets: [...planned.values()],
+      warnings: resolution.warnings,
+      blocked_reason: null,
+      requires_mutation_corridor: true,
+    };
+  }
+
+  if (!resolution.canonical_packet_id) {
+    return {
+      requested_packet_id: input.packet_id,
+      canonical_packet_id: null,
+      packets: [...planned.values()],
+      warnings: resolution.warnings,
+      blocked_reason: `Discussion packet ${input.packet_id} does not have a canonical target id.`,
+      requires_mutation_corridor: true,
+    };
+  }
+
+  if (planned.has(resolution.canonical_packet_id) || resolution.resolved_packet) {
+    return {
+      requested_packet_id: input.packet_id,
+      canonical_packet_id: resolution.canonical_packet_id,
+      packets: [...planned.values()],
+      warnings: resolution.warnings,
+      blocked_reason: null,
+      requires_mutation_corridor: true,
+    };
+  }
+
+  if (visiting.has(sourcePacket.header.packet_id)) {
+    return {
+      requested_packet_id: input.packet_id,
+      canonical_packet_id: resolution.canonical_packet_id,
+      packets: [...planned.values()],
+      warnings: [
+        ...resolution.warnings,
+        `Cyclic discussion compatibility chain at ${sourcePacket.header.packet_id}.`,
+      ],
+      blocked_reason: `Cyclic discussion compatibility chain at ${sourcePacket.header.packet_id}.`,
+      requires_mutation_corridor: true,
+    };
+  }
+
+  visiting.add(sourcePacket.header.packet_id);
+
+  for (const dependencyId of getLegacyDiscussionDependencyPacketIds(
+    sourcePacket as DiscussionLegacyPacket
+  )) {
+    const dependencyPlan = await planDiscussionPacketTargetMigration({
+      packet_id: dependencyId,
+      fetchPacket: input.fetchPacket,
+      fetchRevisionHeads: input.fetchRevisionHeads,
+      planned,
+      visiting,
+    });
+
+    if (dependencyPlan.blocked_reason) {
+      return dependencyPlan;
+    }
+  }
+
+  planned.set(
+    resolution.canonical_packet_id,
+    createCanonicalDiscussionMirrorPacket(sourcePacket as DiscussionLegacyPacket)
+  );
+  visiting.delete(sourcePacket.header.packet_id);
+
+  return {
+    requested_packet_id: input.packet_id,
+    canonical_packet_id: resolution.canonical_packet_id,
+    packets: [...planned.values()],
+    warnings: resolution.warnings,
+    blocked_reason: null,
+    requires_mutation_corridor: true,
+  };
+}
+
+export async function resolveCanonicalDiscussionTarget(input: {
+  packet_id: string;
+  fetchPacket: (packetId: string) => Promise<PacketEnvelope | null>;
+}): Promise<CanonicalDiscussionTargetResolution> {
+  const resolution = await resolveDiscussionPacketTarget({
+    packet_id: input.packet_id,
+    fetchPacket: input.fetchPacket,
+  });
+  const sourcePacket = resolution.source_packet;
+  const canonicalPacket =
+    resolution.resolved_packet?.header.family === 'Discussion'
+      ? (resolution.resolved_packet as PacketEnvelopeByType['Discussion'])
+      : null;
+
+  if (!sourcePacket) {
+    return {
+      requested_packet_id: input.packet_id,
+      resolved_packet_id: input.packet_id,
+      canonical_packet_id:
+        resolution.canonical_packet_id ?? createCanonicalDiscussionPacketId(input.packet_id),
       source_packet: null,
       canonical_packet: null,
       should_create_mirror: false,
@@ -519,40 +903,17 @@ export async function resolveCanonicalDiscussionTarget(input: {
     throw new Error(`Packet ${input.packet_id} is not a discussion packet.`);
   }
 
-  if (sourcePacket.header.family === 'Discussion') {
-    return {
-      requested_packet_id: input.packet_id,
-      resolved_packet_id: sourcePacket.header.packet_id,
-      canonical_packet_id: sourcePacket.header.packet_id,
-      source_packet: sourcePacket as DiscussionSourcePacket,
-      canonical_packet: sourcePacket as PacketEnvelopeByType['Discussion'],
-      should_create_mirror: false,
-    };
-  }
-
-  const canonicalPacketId = createCanonicalDiscussionPacketId(
-    sourcePacket.header.packet_id
-  );
-  const canonicalPacket = await input.fetchPacket(canonicalPacketId);
-
-  if (canonicalPacket?.header.family === 'Discussion') {
-    return {
-      requested_packet_id: input.packet_id,
-      resolved_packet_id: canonicalPacket.header.packet_id,
-      canonical_packet_id: canonicalPacket.header.packet_id,
-      source_packet: sourcePacket as DiscussionSourcePacket,
-      canonical_packet: canonicalPacket as PacketEnvelopeByType['Discussion'],
-      should_create_mirror: false,
-    };
-  }
-
   return {
     requested_packet_id: input.packet_id,
-    resolved_packet_id: sourcePacket.header.packet_id,
-    canonical_packet_id: canonicalPacketId,
+    resolved_packet_id: resolution.resolved_packet_id ?? sourcePacket.header.packet_id,
+    canonical_packet_id:
+      resolution.canonical_packet_id ?? createCanonicalDiscussionPacketId(input.packet_id),
     source_packet: sourcePacket as DiscussionSourcePacket,
-    canonical_packet: null,
-    should_create_mirror: true,
+    canonical_packet: canonicalPacket,
+    should_create_mirror:
+      sourcePacket.header.family !== 'Discussion' &&
+      canonicalPacket === null &&
+      resolution.currentness_status === 'missing',
   };
 }
 

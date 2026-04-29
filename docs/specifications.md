@@ -787,6 +787,9 @@ Important note:
 - packet compatibility is now target-version aware for supported family versions: callers can request the current family schema or an older supported target, receive structured change/loss metadata, and prepare explicit versioned writes without rewriting raw stored history in place
 - versioned write preparation distinguishes exact, lossy-but-allowed, and blocked targets; lossy downcasts report machine-readable `losses`, `is_lossy`, and `requires_loss_acknowledgement` so future Packet Explorer and guarded-upgrade flows can show what would change before admission
 - packet-family compatibility now includes a family-evolution bridge for discussion: canonical `Discussion` packets are the primary target for new writes, legacy `DiscussionSpace`, `DiscussionForum`, `DiscussionThread`, `DiscussionPost`, and `DiscussionReply` packets remain readable/projectable, and further discussion evolution should continue as additive adapter-backed migration rather than destructive renaming
+- signature verification now treats the raw stored/request packet envelope as the historical signed fact; adapted packets are runtime read views applied only after raw verification succeeds
+- signed historical packets may verify through raw compatibility candidates when later schema evolution introduced additive/defaulted fields that were not part of the original signed bytes
+- auth/runtime failure classification now distinguishes canonicalization mismatch from true signature invalidity, schema failure, and metadata validation failure for protected-write identity verification
 
 ## Current naming patterns
 
@@ -920,8 +923,10 @@ These notes describe current known weaknesses or mismatches in the implemented r
 - Refresh-token rotation now updates the existing persistent session in place rather than creating a new device-session row during refresh.
 - Identity security now defaults to showing active sessions only, with the current session sorted first and explicit empty or error states when session data is unavailable.
 - Person-packet signature verification now remains compatible with older signed identity revisions that were stored before additive defaulted `Element` fields such as `claimed_role_refs: []` and `locality: null`, so claimed sign-in and signed claim/locality mutations do not fail on older stored identities.
+- The same raw-first verification rule now also covers additive header defaults such as `header.metadata.compatibility`, and the runtime no longer treats the adapted/defaulted packet view as the thing that was historically signed.
 - Legacy packet revisions can now be prepared explicitly for adapted saves or explicit supported target versions: old revisions remain readable as raw history, runtime projections use adapted packets, and later writes can target the current family schema or an older supported schema version without silently rewriting stored history in place.
 - Bundle import/export now preserves raw stored revision shapes for legacy packets while still adapting them into the current canonical runtime shape on read.
+- Future signed packet-family migrations must pair additive/defaulted schema changes with both a compatibility adapter and raw-signature compatibility test coverage; old signed packets should continue to verify, while semantic tampering must still fail.
 
 ### Library semantics
 

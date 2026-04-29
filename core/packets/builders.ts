@@ -258,17 +258,13 @@ const DEFAULT_ADAPTER = 'seed';
 
 /**
  * Inputs: a list of edges that may contain duplicates.
- * Output: the same edge list with duplicate edge/type/metadata tuples removed.
+ * Output: the same edge list with duplicate semantic edge tuples removed.
  */
 function dedupeEdges(edges: PacketEdge[]): PacketEdge[] {
   const seen = new Set<string>();
 
   return edges.filter((edge) => {
-    const key = JSON.stringify([
-      edge.edge_type,
-      edge.target.packet_id,
-      edge.metadata,
-    ]);
+    const key = JSON.stringify([edge.edge_type, edge.target.packet_id]);
 
     if (seen.has(key)) {
       return false;

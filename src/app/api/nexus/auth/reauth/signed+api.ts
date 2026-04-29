@@ -7,6 +7,10 @@ import type { RequestHandler } from 'expo-router/server';
 import { z } from 'zod';
 
 import { getNexusPacketServices } from '@runtime/nexus/server/nexus-packet-services';
+import {
+  toNexusAuthFailurePayload,
+  toNexusAuthGatePayload,
+} from '@runtime/nexus/server/auth-service.utils';
 
 const ActorAssertionSchema = z
   .object({
@@ -55,12 +59,17 @@ export const POST: RequestHandler = async (request) => {
 
     return createJsonResponse(payload);
   } catch (error) {
+    const authGate = toNexusAuthGatePayload(error);
+    const authFailure = toNexusAuthFailurePayload(error);
+
     return createJsonResponse(
       {
         error:
           error instanceof Error ? error.message : 'Unable to verify signed re-auth.',
+        ...(authGate ? { auth_gate: authGate } : {}),
+        ...(authFailure ? { auth_failure: authFailure } : {}),
       },
-      500
+      authGate ? 409 : authFailure ? 400 : 500
     );
   }
 };

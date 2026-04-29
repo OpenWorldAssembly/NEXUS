@@ -3,6 +3,11 @@
  * Description: Shared client-side fetch helpers for Nexus query and mutation APIs.
  */
 
+import {
+  isNexusAuthGatePayload,
+  NexusAuthGateError,
+} from '@runtime/nexus/nexus-auth-gate-error';
+
 export class NexusApiError extends Error {
   readonly status: number;
   readonly payload: unknown;
@@ -43,6 +48,21 @@ export async function fetchJsonOrThrow<TPayload>(
       payload = null;
     }
 
+    if (isNexusAuthGatePayload(payload)) {
+      throw new NexusAuthGateError(
+        payload.auth_gate.reason,
+        payload.auth_gate.message ??
+          (await readApiErrorMessage(response)),
+        {
+          retryable: payload.auth_gate.retryable,
+          actorRequired: payload.auth_gate.actor_required,
+          writeApprovalRequired: payload.auth_gate.write_approval_required,
+          failureCode: payload.auth_gate.failure_code,
+          diagnostics: payload.auth_gate.diagnostics,
+        }
+      );
+    }
+
     throw new NexusApiError({
       message: await readApiErrorMessage(response),
       status: response.status,
@@ -57,11 +77,13 @@ export async function fetchMutationJsonOrThrow<TPayload>(input: {
   path: string;
   method: 'POST' | 'PUT';
   body: unknown;
+  headers?: Record<string, string>;
 }): Promise<TPayload> {
   const response = await fetch(input.path, {
     method: input.method,
     headers: {
       'content-type': 'application/json',
+      ...(input.headers ?? {}),
     },
     body: JSON.stringify(input.body),
   });
@@ -73,6 +95,21 @@ export async function fetchMutationJsonOrThrow<TPayload>(input: {
       payload = await response.clone().json();
     } catch {
       payload = null;
+    }
+
+    if (isNexusAuthGatePayload(payload)) {
+      throw new NexusAuthGateError(
+        payload.auth_gate.reason,
+        payload.auth_gate.message ??
+          (await readApiErrorMessage(response)),
+        {
+          retryable: payload.auth_gate.retryable,
+          actorRequired: payload.auth_gate.actor_required,
+          writeApprovalRequired: payload.auth_gate.write_approval_required,
+          failureCode: payload.auth_gate.failure_code,
+          diagnostics: payload.auth_gate.diagnostics,
+        }
+      );
     }
 
     throw new NexusApiError({

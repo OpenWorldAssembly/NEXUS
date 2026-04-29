@@ -16,7 +16,7 @@ export const ACTOR_ASSERTION_TTL_MS = 5 * 60 * 1000;
 export const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 export const RATE_LIMIT_MAX_HITS = 20;
 export const AUTH_RECORD_RETENTION_MS = 45 * 24 * 60 * 60 * 1000;
-export const DEFAULT_SECURITY_MODE: NexusSecurityMode = 'guarded';
+export const DEFAULT_SECURITY_MODE: NexusSecurityMode = 'standard';
 
 const LEGACY_SECURITY_MODE_MAP: Record<string, NexusSecurityMode> = {
   remembered: 'standard',

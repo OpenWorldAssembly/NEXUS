@@ -26,16 +26,56 @@ export const discussionBuildDefinition: PacketFamilyBuildDefinition<
   'Discussion',
   DiscussionPacketInput
 > = {
-  prepareEdges: (input) => {
-    const edges = [];
-
+  validateBody: (input) => {
     if (input.kind === 'space') {
       if (!input.scope_ref) {
         throw new Error('Discussion space packets require scope_ref.');
       }
+      return;
+    }
 
+    if (!input.parent_ref) {
+      throw new Error(`Discussion ${input.kind} packets require parent_ref.`);
+    }
+
+    if (input.kind === 'message' && !input.topic_ref) {
+      throw new Error('Discussion message packets require topic_ref.');
+    }
+  },
+  extractRelationships: (input) => {
+    if (input.kind === 'space') {
+      return {
+        dependencies: [input.scope_ref as PacketRef],
+      };
+    }
+
+    if (input.kind === 'forum') {
+      return {
+        dependencies: [input.parent_ref as PacketRef],
+      };
+    }
+
+    if (input.kind === 'topic') {
+      return {
+        dependencies: [input.parent_ref as PacketRef],
+        references: input.related_refs ?? [],
+      };
+    }
+
+    return {
+      dependencies: [
+        input.parent_ref as PacketRef,
+        input.topic_ref as PacketRef,
+        ...(input.root_message_ref ? [input.root_message_ref] : []),
+      ],
+    };
+  },
+  prepareEdges: (input, relationships) => {
+    const edges = [];
+
+    if (input.kind === 'space') {
       edges.push(
-        createPacketEdge('belongs_to', input.scope_ref, {
+        createPacketEdge('belongs_to', input.scope_ref as PacketRef, {
           source_field: 'scope_ref',
         })
       );
@@ -43,18 +83,14 @@ export const discussionBuildDefinition: PacketFamilyBuildDefinition<
       return edges;
     }
 
-    if (!input.parent_ref) {
-      throw new Error(`Discussion ${input.kind} packets require parent_ref.`);
-    }
-
     edges.push(
-      createPacketEdge('belongs_to', input.parent_ref, {
+      createPacketEdge('belongs_to', input.parent_ref as PacketRef, {
         source_field: 'parent_ref',
       })
     );
 
     if (input.kind === 'topic') {
-      for (const relatedRef of input.related_refs ?? []) {
+      for (const relatedRef of relationships?.references ?? []) {
         edges.push(
           createPacketEdge('references', relatedRef, {
             source_field: 'related_refs',
@@ -69,17 +105,16 @@ export const discussionBuildDefinition: PacketFamilyBuildDefinition<
       return edges;
     }
 
-    if (!input.topic_ref) {
-      throw new Error('Discussion message packets require topic_ref.');
-    }
-
     edges.push(
-      createPacketEdge('references', input.topic_ref, {
+      createPacketEdge('references', input.topic_ref as PacketRef, {
         source_field: 'topic_ref',
       })
     );
 
-    if (input.root_message_ref) {
+    if (
+      input.root_message_ref &&
+      input.root_message_ref.packet_id !== input.parent_ref?.packet_id
+    ) {
       edges.push(
         createPacketEdge('belongs_to', input.root_message_ref, {
           source_field: 'root_message_ref',
@@ -88,14 +123,14 @@ export const discussionBuildDefinition: PacketFamilyBuildDefinition<
     }
 
     edges.push(
-      createPacketEdge('reply_to', input.parent_ref, {
+      createPacketEdge('reply_to', input.parent_ref as PacketRef, {
         source_field: 'parent_ref',
       })
     );
 
     return edges;
   },
-  prepareBody: (input) => {
+  finalizeBody: (input) => {
     if (input.kind === 'space') {
       return {
         kind: 'space',

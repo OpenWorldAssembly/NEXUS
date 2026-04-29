@@ -8,6 +8,10 @@ import {
   importPrivateKeyFromJwk,
   signPacketWithIdentity,
 } from '@runtime/nexus/identity-crypto';
+import {
+  assertClaimedActorPacketReady,
+  resolveClaimedSessionActorPacket,
+} from '@runtime/nexus/claimed-identity-session';
 import type { ActiveIdentityState } from '@runtime/nexus/identity-storage';
 import {
   finalizeNexusMutation,
@@ -18,7 +22,7 @@ import type {
   NexusFinalizedMutationPayload,
 } from '@runtime/nexus/nexus-api-types';
 import type { MutationIntent } from '@core/auth/mutation-corridor';
-import type { PacketEnvelope } from '@core/schema/packet-schema';
+import type { PacketEnvelope, PacketEnvelopeByType } from '@core/schema/packet-schema';
 import type {
   MutationProofMethod,
   WriteProofLevel,
@@ -51,6 +55,28 @@ function requireIdentityKid(identity: ActiveIdentityState): string {
   return kid;
 }
 
+function requireActorPacketKid(
+  actorPacket: PacketEnvelopeByType['Element']
+): string {
+  const kid = actorPacket.body.identity?.public_key_bindings[0]?.kid;
+
+  if (!kid) {
+    throw new Error('The active identity is missing its key binding.');
+  }
+
+  return kid;
+}
+
+function createClientIdentityHeaders(
+  identity: ActiveIdentityState
+): Record<string, string> {
+  return {
+    'x-nexus-client-actor-packet-id': identity.actorPacket.header.packet_id,
+    'x-nexus-client-actor-revision-id': identity.actorPacket.header.revision_id,
+    'x-nexus-client-identity-mode': identity.claimStatus,
+  };
+}
+
 async function signPacketForIdentity<TPacket extends PacketEnvelope>(input: {
   identity: UnlockedIdentity;
   packet: TPacket;
@@ -81,6 +107,7 @@ export function createIdentityShellFortressAdapter(
     }
   ) => {
     const unlockedIdentity = input.requireUnlockedCurrentIdentity();
+    let requestActorPacket = unlockedIdentity.actorPacket;
     let csrfToken: string | null = null;
     let reauthToken = options?.reauthTokenOverride ?? null;
 
@@ -106,6 +133,12 @@ export function createIdentityShellFortressAdapter(
         );
       }
 
+      requestActorPacket = resolveClaimedSessionActorPacket({
+        actorPacket: unlockedIdentity.actorPacket,
+        session: currentSession,
+      });
+      assertClaimedActorPacketReady(requestActorPacket);
+
       const writeRisk = options?.writeRisk ?? 'standard';
 
       if (
@@ -120,13 +153,13 @@ export function createIdentityShellFortressAdapter(
 
     const privateKey = await importPrivateKeyFromJwk(unlockedIdentity.privateJwk);
     const actorAssertion = await createActorAssertion({
-      actorPacketId: unlockedIdentity.actorPacket.header.packet_id,
-      kid: requireIdentityKid(unlockedIdentity),
+      actorPacketId: requestActorPacket.header.packet_id,
+      kid: requireActorPacketKid(requestActorPacket),
       privateKey,
       method,
       path,
       body: {
-        actor_packet: unlockedIdentity.actorPacket,
+        actor_packet: requestActorPacket,
         csrf_token: csrfToken,
         reauth_token: reauthToken,
         ...payload,
@@ -134,7 +167,7 @@ export function createIdentityShellFortressAdapter(
     });
 
     return {
-      actor_packet: unlockedIdentity.actorPacket,
+      actor_packet: requestActorPacket,
       actor_assertion: actorAssertion,
       csrf_token: csrfToken,
       reauth_token: reauthToken,
@@ -151,10 +184,14 @@ export function createIdentityShellFortressAdapter(
     method: 'POST' | 'PUT';
     payload: TPayload;
   }) => {
+    const requestActorPacket = resolveClaimedSessionActorPacket({
+      actorPacket: inputForIdentity.identity.actorPacket,
+      session: inputForIdentity.session,
+    });
+
     if (
       !inputForIdentity.session.is_authenticated ||
-      inputForIdentity.session.actor_packet_id !==
-        inputForIdentity.identity.actorPacket.header.packet_id
+      inputForIdentity.session.actor_packet_id !== requestActorPacket.header.packet_id
     ) {
       throw new NexusAuthGateError(
         'sign_in_required',
@@ -169,15 +206,17 @@ export function createIdentityShellFortressAdapter(
       );
     }
 
+    assertClaimedActorPacketReady(requestActorPacket);
+
     const privateKey = await importPrivateKeyFromJwk(inputForIdentity.identity.privateJwk);
     const actorAssertion = await createActorAssertion({
-      actorPacketId: inputForIdentity.identity.actorPacket.header.packet_id,
-      kid: requireIdentityKid(inputForIdentity.identity),
+      actorPacketId: requestActorPacket.header.packet_id,
+      kid: requireActorPacketKid(requestActorPacket),
       privateKey,
       method: inputForIdentity.method,
       path: inputForIdentity.path,
       body: {
-        actor_packet: inputForIdentity.identity.actorPacket,
+        actor_packet: requestActorPacket,
         csrf_token: inputForIdentity.session.csrf_token,
         reauth_token: null,
         ...inputForIdentity.payload,
@@ -185,7 +224,7 @@ export function createIdentityShellFortressAdapter(
     });
 
     return {
-      actor_packet: inputForIdentity.identity.actorPacket,
+      actor_packet: requestActorPacket,
       actor_assertion: actorAssertion,
       csrf_token: inputForIdentity.session.csrf_token,
       reauth_token: null,
@@ -208,6 +247,7 @@ export function createIdentityShellFortressAdapter(
     intent: MutationIntent;
     writeRisk?: MutationWriteRisk;
   }): Promise<NexusFinalizedMutationPayload & { result: TResult }> => {
+    const unlockedIdentity = input.requireUnlockedCurrentIdentity();
     const prepareRequestBody = await createVerifiedRequestBody(
       '/api/nexus/mutations/prepare',
       'POST',
@@ -221,6 +261,7 @@ export function createIdentityShellFortressAdapter(
     );
     const preparedMutation = await prepareNexusMutation({
       requestBody: prepareRequestBody,
+      headers: createClientIdentityHeaders(unlockedIdentity),
     });
     let reauthToken: string | null = null;
     const requiredProofLevel = preparedMutation.prepared_mutation
@@ -262,6 +303,7 @@ export function createIdentityShellFortressAdapter(
     );
     const finalizedMutation = await finalizeNexusMutation({
       requestBody: finalizeRequestBody,
+      headers: createClientIdentityHeaders(unlockedIdentity),
     });
 
     await input.refreshAuthSession();
@@ -288,6 +330,7 @@ export function createIdentityShellFortressAdapter(
     });
     const preparedMutation = await prepareNexusMutation({
       requestBody: prepareRequestBody,
+      headers: createClientIdentityHeaders(inputForIdentity.identity),
     });
     const signedPackets = await Promise.all(
       preparedMutation.prepared_mutation.prepared_packets.map((candidate) =>
@@ -310,6 +353,7 @@ export function createIdentityShellFortressAdapter(
 
     return (await finalizeNexusMutation({
       requestBody: finalizeRequestBody,
+      headers: createClientIdentityHeaders(inputForIdentity.identity),
     })) as NexusFinalizedMutationPayload & { result: TResult };
   };
 

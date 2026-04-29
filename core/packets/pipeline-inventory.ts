@@ -1,18 +1,22 @@
 /**
  * File: pipeline-inventory.ts
- * Description: Explicit packet-family inventory for builder/interpreter pipeline rollout tracking.
+ * Description: Explicit packet-family inventory for staged builder, adapter, and read-model rollout tracking.
  */
 
-import {
-  PACKET_FAMILIES,
-  type PacketFamily,
-} from '@core/schema/packet-schema';
+import { PACKET_FAMILIES, type PacketFamily } from '@core/schema/packet-schema';
 
 export type PacketPipelineCompatibilityStance =
   | 'current_only'
   | 'legacy_supported'
   | 'forward_only'
   | 'bidirectional_supported';
+
+export type PipelineStatus =
+  | 'none'
+  | 'declared'
+  | 'partial'
+  | 'tested'
+  | 'production';
 
 export interface PacketPipelineInventoryEntry {
   family: PacketFamily;
@@ -22,51 +26,80 @@ export interface PacketPipelineInventoryEntry {
   read_projection_path: string;
   ui_consumers: string[];
   write_paths: string[];
-  manual_assumptions: string[];
-  generic_builder_pipeline: boolean;
-  unified_interpreter_pipeline: boolean;
+  known_manual_assumptions: string[];
+  builder_pipeline_status: PipelineStatus;
+  same_family_adapter_status: PipelineStatus;
+  family_evolution_status: PipelineStatus;
+  read_model_status: PipelineStatus;
+  next_migration_step: string;
 }
 
-function createCurrentOnlyEntry(
+function createEntry(
   family: PacketFamily,
-  input: Omit<PacketPipelineInventoryEntry, 'family' | 'compatibility_stance'>
+  input: Omit<PacketPipelineInventoryEntry, 'family'>
 ): PacketPipelineInventoryEntry {
   return {
     family,
-    compatibility_stance: 'current_only',
     ...input,
   };
+}
+
+function createReservedEntry(
+  family: PacketFamily,
+  assumption: string
+): PacketPipelineInventoryEntry {
+  return createEntry(family, {
+    canonical_structure: family,
+    builder_path: 'none',
+    compatibility_stance: 'current_only',
+    read_projection_path: 'none',
+    ui_consumers: [],
+    write_paths: [],
+    known_manual_assumptions: [assumption],
+    builder_pipeline_status: 'none',
+    same_family_adapter_status: 'declared',
+    family_evolution_status: 'none',
+    read_model_status: 'none',
+    next_migration_step: 'No active migration planned until the family becomes a live Nexus surface.',
+  });
 }
 
 export const PACKET_PIPELINE_INVENTORY: Record<
   PacketFamily,
   PacketPipelineInventoryEntry
 > = {
-  Element: {
-    family: 'Element',
+  Element: createEntry('Element', {
     canonical_structure: 'Element(kind)',
     builder_path: 'core/packets/builders.ts#createElementPacket',
     compatibility_stance: 'bidirectional_supported',
     read_projection_path:
-      'core/schema/packet-schema.ts same-family adapters + runtime query services',
+      'core/schema/packet-schema.ts same-family adapters + runtime identity/query services',
     ui_consumers: ['Shell', 'Trust', 'Roles', 'Library', 'Dashboard'],
     write_paths: ['Identity bootstrap', 'Locality creation', 'Mutation corridor'],
-    manual_assumptions: ['Identity/locality semantics still include family-specific helpers.'],
-    generic_builder_pipeline: false,
-    unified_interpreter_pipeline: true,
-  },
-  Role: createCurrentOnlyEntry('Role', {
+    known_manual_assumptions: [
+      'Identity/locality semantics still depend on family-specific helpers outside the generic builder.',
+    ],
+    builder_pipeline_status: 'declared',
+    same_family_adapter_status: 'production',
+    family_evolution_status: 'none',
+    read_model_status: 'declared',
+    next_migration_step: 'Promote Element into the generic builder pipeline as the next live core family.',
+  }),
+  Role: createEntry('Role', {
     canonical_structure: 'Role',
     builder_path: 'core/packets/builders.ts#createRolePacket',
+    compatibility_stance: 'current_only',
     read_projection_path: 'runtime role projections',
     ui_consumers: ['Roles'],
     write_paths: ['Bootstrap and role query projections only'],
-    manual_assumptions: ['Role surfaces still assume current-only schema.'],
-    generic_builder_pipeline: false,
-    unified_interpreter_pipeline: true,
+    known_manual_assumptions: ['Role surfaces still assume one current schema.'],
+    builder_pipeline_status: 'none',
+    same_family_adapter_status: 'tested',
+    family_evolution_status: 'none',
+    read_model_status: 'none',
+    next_migration_step: 'Leave current-only unless role packets become a broader interactive surface.',
   }),
-  Claim: {
-    family: 'Claim',
+  Claim: createEntry('Claim', {
     canonical_structure: 'Claim(kind)',
     builder_path: 'core/packets/builders.ts#createClaimPacket',
     compatibility_stance: 'bidirectional_supported',
@@ -74,145 +107,98 @@ export const PACKET_PIPELINE_INVENTORY: Record<
       'core/schema/packet-schema.ts same-family adapters + trust/claim helpers',
     ui_consumers: ['Trust', 'Roles', 'Locality'],
     write_paths: ['Mutation corridor', 'Trust surface helpers'],
-    manual_assumptions: ['Claim-kind policy resolution still lives in core/runtime helpers.'],
-    generic_builder_pipeline: false,
-    unified_interpreter_pipeline: true,
-  },
-  Signal: createCurrentOnlyEntry('Signal', {
-    canonical_structure: 'Signal',
-    builder_path: 'none',
-    read_projection_path: 'none',
-    ui_consumers: [],
-    write_paths: [],
-    manual_assumptions: ['Family reserved but not actively surfaced.'],
-    generic_builder_pipeline: false,
-    unified_interpreter_pipeline: true,
+    known_manual_assumptions: [
+      'Claim-kind semantics still resolve through family-specific helpers in core/runtime.',
+    ],
+    builder_pipeline_status: 'declared',
+    same_family_adapter_status: 'production',
+    family_evolution_status: 'none',
+    read_model_status: 'declared',
+    next_migration_step: 'Promote Claim into the generic builder pipeline after Element.',
   }),
-  Proposal: createCurrentOnlyEntry('Proposal', {
+  Signal: createReservedEntry('Signal', 'Family reserved but not actively surfaced.'),
+  Proposal: createEntry('Proposal', {
     canonical_structure: 'Proposal',
     builder_path: 'core/packets/builders.ts#createProposalPacket',
+    compatibility_stance: 'current_only',
     read_projection_path: 'runtime vote/dashboard projections',
     ui_consumers: ['Dashboard', 'Votes'],
     write_paths: ['Bootstrap/seed'],
-    manual_assumptions: ['Proposal lifecycle remains provisional.'],
-    generic_builder_pipeline: false,
-    unified_interpreter_pipeline: true,
+    known_manual_assumptions: ['Proposal lifecycle remains provisional.'],
+    builder_pipeline_status: 'none',
+    same_family_adapter_status: 'tested',
+    family_evolution_status: 'none',
+    read_model_status: 'none',
+    next_migration_step: 'Defer until the governance packet families are migrated.',
   }),
-  Vote: createCurrentOnlyEntry('Vote', {
+  Vote: createEntry('Vote', {
     canonical_structure: 'Vote',
     builder_path: 'core/packets/builders.ts#createVotePacket',
+    compatibility_stance: 'current_only',
     read_projection_path: 'runtime vote projections',
     ui_consumers: ['Votes'],
     write_paths: ['Bootstrap/seed'],
-    manual_assumptions: ['Formal vote packet flows are not the main attestation path yet.'],
-    generic_builder_pipeline: false,
-    unified_interpreter_pipeline: true,
+    known_manual_assumptions: [
+      'Formal Vote packets are not the main discussion attestation path yet.',
+    ],
+    builder_pipeline_status: 'none',
+    same_family_adapter_status: 'tested',
+    family_evolution_status: 'none',
+    read_model_status: 'none',
+    next_migration_step: 'Defer until governance packet work expands beyond seeds/projections.',
   }),
-  Attestation: createCurrentOnlyEntry('Attestation', {
+  Attestation: createEntry('Attestation', {
     canonical_structure: 'Attestation(kind)',
     builder_path: 'core/packets/builders.ts#createAttestationPacket',
+    compatibility_stance: 'current_only',
     read_projection_path: 'attestation service + query services',
     ui_consumers: ['Trust', 'Roles', 'Discussions'],
     write_paths: ['Mutation corridor', 'Attestation service helper'],
-    manual_assumptions: ['Attestation mutation planning still uses family-specific helpers.'],
-    generic_builder_pipeline: false,
-    unified_interpreter_pipeline: true,
+    known_manual_assumptions: [
+      'Attestation mutation planning still uses family-specific helpers and runtime projections.',
+    ],
+    builder_pipeline_status: 'declared',
+    same_family_adapter_status: 'tested',
+    family_evolution_status: 'none',
+    read_model_status: 'declared',
+    next_migration_step: 'Prepare Attestation as the third live family after Element and Claim.',
   }),
-  Decision: createCurrentOnlyEntry('Decision', {
-    canonical_structure: 'Decision',
-    builder_path: 'none',
-    read_projection_path: 'none',
-    ui_consumers: [],
-    write_paths: [],
-    manual_assumptions: ['Family reserved but not actively surfaced.'],
-    generic_builder_pipeline: false,
-    unified_interpreter_pipeline: true,
-  }),
-  Initiative: createCurrentOnlyEntry('Initiative', {
-    canonical_structure: 'Initiative',
-    builder_path: 'none',
-    read_projection_path: 'none',
-    ui_consumers: [],
-    write_paths: [],
-    manual_assumptions: ['Family reserved but not actively surfaced.'],
-    generic_builder_pipeline: false,
-    unified_interpreter_pipeline: true,
-  }),
-  Program: createCurrentOnlyEntry('Program', {
-    canonical_structure: 'Program',
-    builder_path: 'none',
-    read_projection_path: 'none',
-    ui_consumers: [],
-    write_paths: [],
-    manual_assumptions: ['Family reserved but not actively surfaced.'],
-    generic_builder_pipeline: false,
-    unified_interpreter_pipeline: true,
-  }),
-  Campaign: createCurrentOnlyEntry('Campaign', {
-    canonical_structure: 'Campaign',
-    builder_path: 'none',
-    read_projection_path: 'none',
-    ui_consumers: [],
-    write_paths: [],
-    manual_assumptions: ['Family reserved but not actively surfaced.'],
-    generic_builder_pipeline: false,
-    unified_interpreter_pipeline: true,
-  }),
-  MissionTemplate: createCurrentOnlyEntry('MissionTemplate', {
-    canonical_structure: 'MissionTemplate',
-    builder_path: 'none',
-    read_projection_path: 'none',
-    ui_consumers: [],
-    write_paths: [],
-    manual_assumptions: ['Mission family is not part of active Nexus flows yet.'],
-    generic_builder_pipeline: false,
-    unified_interpreter_pipeline: true,
-  }),
-  MissionPlan: createCurrentOnlyEntry('MissionPlan', {
-    canonical_structure: 'MissionPlan',
-    builder_path: 'none',
-    read_projection_path: 'none',
-    ui_consumers: [],
-    write_paths: [],
-    manual_assumptions: ['Mission family is not part of active Nexus flows yet.'],
-    generic_builder_pipeline: false,
-    unified_interpreter_pipeline: true,
-  }),
-  MissionReport: createCurrentOnlyEntry('MissionReport', {
-    canonical_structure: 'MissionReport',
-    builder_path: 'none',
-    read_projection_path: 'none',
-    ui_consumers: [],
-    write_paths: [],
-    manual_assumptions: ['Mission family is not part of active Nexus flows yet.'],
-    generic_builder_pipeline: false,
-    unified_interpreter_pipeline: true,
-  }),
-  Module: createCurrentOnlyEntry('Module', {
-    canonical_structure: 'Module',
-    builder_path: 'none',
-    read_projection_path: 'none',
-    ui_consumers: [],
-    write_paths: [],
-    manual_assumptions: ['Family reserved but not actively surfaced.'],
-    generic_builder_pipeline: false,
-    unified_interpreter_pipeline: true,
-  }),
-  Policy: {
-    family: 'Policy',
+  Decision: createReservedEntry('Decision', 'Family reserved but not actively surfaced.'),
+  Initiative: createReservedEntry('Initiative', 'Family reserved but not actively surfaced.'),
+  Program: createReservedEntry('Program', 'Family reserved but not actively surfaced.'),
+  Campaign: createReservedEntry('Campaign', 'Family reserved but not actively surfaced.'),
+  MissionTemplate: createReservedEntry(
+    'MissionTemplate',
+    'Mission family is not part of active Nexus flows yet.'
+  ),
+  MissionPlan: createReservedEntry(
+    'MissionPlan',
+    'Mission family is not part of active Nexus flows yet.'
+  ),
+  MissionReport: createReservedEntry(
+    'MissionReport',
+    'Mission family is not part of active Nexus flows yet.'
+  ),
+  Module: createReservedEntry('Module', 'Family reserved but not actively surfaced.'),
+  Policy: createEntry('Policy', {
     canonical_structure: 'Policy(kind)',
-    builder_path: 'core/packets/packet-build-pipeline.ts + core/packets/families/policy.ts',
+    builder_path:
+      'core/packets/packet-build-pipeline.ts + core/packets/families/policy.ts',
     compatibility_stance: 'bidirectional_supported',
     read_projection_path:
       'core/schema/packet-schema.ts same-family adapters + auth/write-policy helpers',
     ui_consumers: ['Identity security', 'Trust policy resolution'],
     write_paths: ['Mutation corridor'],
-    manual_assumptions: ['Policy semantics still resolve through core write-policy helpers.'],
-    generic_builder_pipeline: true,
-    unified_interpreter_pipeline: true,
-  },
-  Discussion: {
-    family: 'Discussion',
+    known_manual_assumptions: [
+      'Policy semantics still resolve through specialized write-policy helpers.',
+    ],
+    builder_pipeline_status: 'production',
+    same_family_adapter_status: 'production',
+    family_evolution_status: 'none',
+    read_model_status: 'partial',
+    next_migration_step: 'Keep as the small proof family for the generic builder while read models mature.',
+  }),
+  Discussion: createEntry('Discussion', {
     canonical_structure: 'Discussion(kind, role)',
     builder_path:
       'core/packets/packet-build-pipeline.ts + core/packets/families/discussion.ts',
@@ -221,80 +207,87 @@ export const PACKET_PIPELINE_INVENTORY: Record<
       'core/packets/packet-interpreter.ts + core/packets/discussion-compat.ts',
     ui_consumers: ['Discussions', 'Library labels', 'Attestation packet targets'],
     write_paths: ['Mutation corridor', 'Default discussion surface bootstrap'],
-    manual_assumptions: ['Legacy discussion family projections still bridge current UI payloads.'],
-    generic_builder_pipeline: true,
-    unified_interpreter_pipeline: true,
-  },
-  DiscussionSpace: createCurrentOnlyEntry('DiscussionSpace', {
+    known_manual_assumptions: [
+      'Legacy discussion projections still bridge current API/UI payloads during migration.',
+    ],
+    builder_pipeline_status: 'production',
+    same_family_adapter_status: 'production',
+    family_evolution_status: 'production',
+    read_model_status: 'tested',
+    next_migration_step: 'Finish migrating runtime discussion projections onto the generic read-model contract.',
+  }),
+  DiscussionSpace: createEntry('DiscussionSpace', {
     canonical_structure: 'Legacy discussion space',
     builder_path: 'core/packets/builders.ts#createDiscussionSpacePacket',
-    read_projection_path: 'discussion compatibility legacy bridge',
+    compatibility_stance: 'legacy_supported',
+    read_projection_path: 'discussion compatibility family-evolution bridge',
     ui_consumers: ['Discussions via legacy projection bridge'],
-    write_paths: ['Legacy read-only compatibility', 'Seed fixtures'],
-    manual_assumptions: ['Legacy family retained for back-compat views only.'],
-    generic_builder_pipeline: false,
-    unified_interpreter_pipeline: true,
+    write_paths: ['Legacy read compatibility', 'Seed fixtures'],
+    known_manual_assumptions: ['Legacy family retained for back-compat only.'],
+    builder_pipeline_status: 'none',
+    same_family_adapter_status: 'tested',
+    family_evolution_status: 'production',
+    read_model_status: 'tested',
+    next_migration_step: 'Keep readable while canonical Discussion becomes the only normal write target.',
   }),
-  DiscussionForum: createCurrentOnlyEntry('DiscussionForum', {
+  DiscussionForum: createEntry('DiscussionForum', {
     canonical_structure: 'Legacy discussion forum',
     builder_path: 'core/packets/builders.ts#createDiscussionForumPacket',
-    read_projection_path: 'discussion compatibility legacy bridge',
+    compatibility_stance: 'legacy_supported',
+    read_projection_path: 'discussion compatibility family-evolution bridge',
     ui_consumers: ['Discussions via legacy projection bridge'],
-    write_paths: ['Legacy read-only compatibility', 'Seed fixtures'],
-    manual_assumptions: ['Legacy family retained for back-compat views only.'],
-    generic_builder_pipeline: false,
-    unified_interpreter_pipeline: true,
+    write_paths: ['Legacy read compatibility', 'Seed fixtures'],
+    known_manual_assumptions: ['Legacy family retained for back-compat only.'],
+    builder_pipeline_status: 'none',
+    same_family_adapter_status: 'tested',
+    family_evolution_status: 'production',
+    read_model_status: 'tested',
+    next_migration_step: 'Keep readable while canonical Discussion becomes the only normal write target.',
   }),
-  DiscussionThread: createCurrentOnlyEntry('DiscussionThread', {
+  DiscussionThread: createEntry('DiscussionThread', {
     canonical_structure: 'Legacy discussion thread',
     builder_path: 'core/packets/builders.ts#createDiscussionThreadPacket',
-    read_projection_path: 'discussion compatibility legacy bridge',
+    compatibility_stance: 'legacy_supported',
+    read_projection_path: 'discussion compatibility family-evolution bridge',
     ui_consumers: ['Discussions via legacy projection bridge'],
-    write_paths: ['Legacy read-only compatibility', 'Seed fixtures'],
-    manual_assumptions: ['Legacy family retained for back-compat views only.'],
-    generic_builder_pipeline: false,
-    unified_interpreter_pipeline: true,
+    write_paths: ['Legacy read compatibility', 'Seed fixtures'],
+    known_manual_assumptions: ['Legacy family retained for back-compat only.'],
+    builder_pipeline_status: 'none',
+    same_family_adapter_status: 'tested',
+    family_evolution_status: 'production',
+    read_model_status: 'tested',
+    next_migration_step: 'Keep readable while canonical Discussion becomes the only normal write target.',
   }),
-  DiscussionPost: createCurrentOnlyEntry('DiscussionPost', {
+  DiscussionPost: createEntry('DiscussionPost', {
     canonical_structure: 'Legacy discussion post',
     builder_path: 'core/packets/builders.ts#createDiscussionPostPacket',
-    read_projection_path: 'discussion compatibility legacy bridge',
+    compatibility_stance: 'legacy_supported',
+    read_projection_path: 'discussion compatibility family-evolution bridge',
     ui_consumers: ['Discussions via legacy projection bridge'],
-    write_paths: ['Legacy read-only compatibility', 'Seed fixtures'],
-    manual_assumptions: ['Legacy family retained for back-compat views only.'],
-    generic_builder_pipeline: false,
-    unified_interpreter_pipeline: true,
+    write_paths: ['Legacy read compatibility', 'Seed fixtures'],
+    known_manual_assumptions: ['Legacy family retained for back-compat only.'],
+    builder_pipeline_status: 'none',
+    same_family_adapter_status: 'tested',
+    family_evolution_status: 'production',
+    read_model_status: 'tested',
+    next_migration_step: 'Keep readable while canonical Discussion becomes the only normal write target.',
   }),
-  DiscussionReply: createCurrentOnlyEntry('DiscussionReply', {
+  DiscussionReply: createEntry('DiscussionReply', {
     canonical_structure: 'Legacy discussion reply',
     builder_path: 'core/packets/builders.ts#createDiscussionReplyPacket',
-    read_projection_path: 'discussion compatibility legacy bridge',
+    compatibility_stance: 'legacy_supported',
+    read_projection_path: 'discussion compatibility family-evolution bridge',
     ui_consumers: ['Discussions via legacy projection bridge'],
-    write_paths: ['Legacy read-only compatibility', 'Seed fixtures'],
-    manual_assumptions: ['Legacy family retained for back-compat views only.'],
-    generic_builder_pipeline: false,
-    unified_interpreter_pipeline: true,
+    write_paths: ['Legacy read compatibility', 'Seed fixtures'],
+    known_manual_assumptions: ['Legacy family retained for back-compat only.'],
+    builder_pipeline_status: 'none',
+    same_family_adapter_status: 'tested',
+    family_evolution_status: 'production',
+    read_model_status: 'tested',
+    next_migration_step: 'Keep readable while canonical Discussion becomes the only normal write target.',
   }),
-  Minutes: createCurrentOnlyEntry('Minutes', {
-    canonical_structure: 'Minutes',
-    builder_path: 'none',
-    read_projection_path: 'none',
-    ui_consumers: [],
-    write_paths: [],
-    manual_assumptions: ['Family reserved but not actively surfaced.'],
-    generic_builder_pipeline: false,
-    unified_interpreter_pipeline: true,
-  }),
-  Artifact: createCurrentOnlyEntry('Artifact', {
-    canonical_structure: 'Artifact',
-    builder_path: 'none',
-    read_projection_path: 'none',
-    ui_consumers: [],
-    write_paths: [],
-    manual_assumptions: ['Family reserved but not actively surfaced.'],
-    generic_builder_pipeline: false,
-    unified_interpreter_pipeline: true,
-  }),
+  Minutes: createReservedEntry('Minutes', 'Family reserved but not actively surfaced.'),
+  Artifact: createReservedEntry('Artifact', 'Family reserved but not actively surfaced.'),
 };
 
 export function listPacketPipelineInventory(): PacketPipelineInventoryEntry[] {

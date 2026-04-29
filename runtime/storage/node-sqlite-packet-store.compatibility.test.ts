@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { DatabaseSync } from 'node:sqlite';
 
 import { preparePacketEnvelopeForVersionedWrite } from '@core/schema/packet-schema';
 
@@ -288,6 +289,87 @@ test('packet store can inspect and persist an explicitly prepared older target s
         }
       ).body.locality,
       null
+    );
+  } finally {
+    packetStore.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('packet store audits and repairs simple preferred/head drift with a dry run first', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'owa-packet-store-repair-'));
+  const databasePath = join(directory, 'owa-packets.db');
+  const packetStore = new NodeSQLitePacketStore({
+    databasePath,
+  });
+  const currentPacket = createCurrentElementPacket();
+
+  try {
+    await packetStore.writeRevision(currentPacket as never);
+    await packetStore.publishRevision({
+      packet_id: currentPacket.header.packet_id,
+      revision_id: currentPacket.header.revision_id,
+    });
+
+    const database = new DatabaseSync(databasePath);
+    database
+      .prepare(
+        `
+          UPDATE packets
+          SET preferred_revision_id = ?,
+              preferred_revision_json = ?
+          WHERE packet_id = ?
+        `
+      )
+      .run(
+        `${currentPacket.header.packet_id}@r999`,
+        JSON.stringify({
+          ...currentPacket,
+          header: {
+            ...currentPacket.header,
+            revision_id: `${currentPacket.header.packet_id}@r999`,
+          },
+        }),
+        currentPacket.header.packet_id
+      );
+    database.close();
+
+    const audit = await packetStore.auditPreferredHeadConsistency();
+    const dryRun = await packetStore.repairPreferredHeadConsistency({
+      dryRun: true,
+    });
+
+    assert.equal(audit.issue_count, 1);
+    assert.equal(audit.repairable_count, 1);
+    assert.equal(audit.issues[0]?.issue_kind, 'preferred_not_in_heads');
+    assert.equal(dryRun.repaired_packet_ids.length, 0);
+
+    const repaired = await packetStore.repairPreferredHeadConsistency({
+      dryRun: false,
+    });
+    const revisionHeads = await packetStore.fetchRevisionHeads({
+      packet_id: currentPacket.header.packet_id,
+    });
+    const preferredPacket = await packetStore.readByPacket(
+      {
+        packet_id: currentPacket.header.packet_id,
+      },
+      { mode: 'raw' }
+    );
+
+    assert.equal(repaired.issue_count, 0);
+    assert.deepEqual(repaired.repaired_packet_ids, [currentPacket.header.packet_id]);
+    assert.equal(
+      revisionHeads.preferred_revision?.revision_id,
+      currentPacket.header.revision_id
+    );
+    assert.equal(
+      (
+        preferredPacket as {
+          header: { revision_id: string };
+        }
+      ).header.revision_id,
+      currentPacket.header.revision_id
     );
   } finally {
     packetStore.close();

@@ -8,6 +8,10 @@ import { z } from 'zod';
 
 import { parsePacketEnvelope } from '@core/schema/packet-schema';
 import { getNexusPacketServices } from '@runtime/nexus/server/nexus-packet-services';
+import {
+  toNexusAuthFailurePayload,
+  toNexusAuthGatePayload,
+} from '@runtime/nexus/server/auth-service.utils';
 
 const ActorAssertionSchema = z
   .object({
@@ -78,14 +82,19 @@ export const POST: RequestHandler = async (request) => {
 
     return createJsonResponse(result);
   } catch (error) {
+    const authGate = toNexusAuthGatePayload(error);
+    const authFailure = toNexusAuthFailurePayload(error);
+
     return createJsonResponse(
       {
         error:
           error instanceof Error
             ? error.message
             : 'Unable to finalize the mutation.',
+        ...(authGate ? { auth_gate: authGate } : {}),
+        ...(authFailure ? { auth_failure: authFailure } : {}),
       },
-      400
+      authGate ? 409 : 400
     );
   }
 };

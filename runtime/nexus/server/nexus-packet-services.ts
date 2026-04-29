@@ -31,6 +31,14 @@ export async function getNexusPacketServices(): Promise<NexusPacketServices> {
 
       await ensureNexusPacketBootstrap(queryServices);
       await services.authService.ensureStorage();
+      const preferredHeadAudit =
+        await queryServices.packetStore.auditPreferredHeadConsistency();
+
+      if (preferredHeadAudit.repairable_count > 0) {
+        await queryServices.packetStore.repairPreferredHeadConsistency({
+          dryRun: false,
+        });
+      }
       await services.attestationService.syncDerivedState();
       await services.discussionService.syncDerivedState();
 

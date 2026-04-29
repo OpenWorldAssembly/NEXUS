@@ -67,6 +67,25 @@ interface StoredPacketJsonOverrides {
   preferred_revision_json: string;
 }
 
+export interface PreferredHeadConsistencyIssue {
+  packet_id: string;
+  preferred_revision_id: string | null;
+  head_revision_ids: string[];
+  revision_state: PacketHeadStatus['revision_state'];
+  issue_kind:
+    | 'preferred_not_in_heads'
+    | 'single_head_preferred_missing'
+    | 'preferred_json_mismatch';
+  repairable: boolean;
+  target_preferred_revision_id: string | null;
+}
+
+export interface PreferredHeadConsistencyReport {
+  issue_count: number;
+  repairable_count: number;
+  issues: PreferredHeadConsistencyIssue[];
+}
+
 /**
  * Inputs: a serialized JSON string and a fallback value.
  * Output: parsed JSON when valid, otherwise the fallback.
@@ -558,10 +577,21 @@ export class NodeSQLitePacketStore implements PacketStore {
       );
     }
 
+    const headRevisionIds = this.getRevisionHeadIds(packet.header.packet_id);
+
+    if (
+      headRevisionIds.length > 0 &&
+      !headRevisionIds.includes(packet.header.revision_id)
+    ) {
+      throw new Error(
+        `Cannot publish revision ${revision.revision_id} because it is not a current head for ${revision.packet_id}.`
+      );
+    }
+
     const packetRecord = projectPacketRecord(packet, {
       first_seen_at: this.getPacketRow(packet.header.packet_id)?.created_at,
       preferred_revision_id: packet.header.revision_id,
-      head_revision_ids: this.getRevisionHeadIds(packet.header.packet_id),
+      head_revision_ids: headRevisionIds,
       revision_state: this.getPacketRow(packet.header.packet_id)?.revision_state,
       preferred_revision_json: JSON.stringify(rawPacket),
     });
@@ -803,6 +833,172 @@ export class NodeSQLitePacketStore implements PacketStore {
         revision_id: revisionId,
       })),
       revision_state: row.revision_state,
+    };
+  }
+
+  async auditPreferredHeadConsistency(): Promise<PreferredHeadConsistencyReport> {
+    const rows = this.database
+      .prepare(
+        `
+          SELECT
+            packet_id,
+            preferred_revision_id,
+            head_revision_ids_json,
+            revision_state,
+            preferred_revision_json
+          FROM packets
+        `
+      )
+      .all() as
+      Pick<
+        PacketRow,
+        'packet_id' | 'preferred_revision_id' | 'head_revision_ids_json' | 'revision_state' | 'preferred_revision_json'
+      >[]
+      ;
+    const issues: PreferredHeadConsistencyIssue[] = [];
+
+    for (const row of rows) {
+      const headRevisionIds = parseJson<string[]>(row.head_revision_ids_json, []);
+
+      if (headRevisionIds.length === 0) {
+        continue;
+      }
+
+      const preferredRevisionJson = parseJson<{ header?: { revision_id?: string } } | null>(
+        row.preferred_revision_json,
+        null
+      );
+      const preferredJsonRevisionId = preferredRevisionJson?.header?.revision_id ?? null;
+      const preferredInHeads =
+        row.preferred_revision_id === null ||
+        headRevisionIds.includes(row.preferred_revision_id);
+
+      if (!preferredInHeads) {
+        issues.push({
+          packet_id: row.packet_id,
+          preferred_revision_id: row.preferred_revision_id,
+          head_revision_ids: headRevisionIds,
+          revision_state: row.revision_state,
+          issue_kind: 'preferred_not_in_heads',
+          repairable: headRevisionIds.length === 1,
+          target_preferred_revision_id:
+            headRevisionIds.length === 1 ? headRevisionIds[0] ?? null : null,
+        });
+        continue;
+      }
+
+      if (headRevisionIds.length === 1 && row.preferred_revision_id === null) {
+        issues.push({
+          packet_id: row.packet_id,
+          preferred_revision_id: row.preferred_revision_id,
+          head_revision_ids: headRevisionIds,
+          revision_state: row.revision_state,
+          issue_kind: 'single_head_preferred_missing',
+          repairable: true,
+          target_preferred_revision_id: headRevisionIds[0] ?? null,
+        });
+        continue;
+      }
+
+      if (
+        row.preferred_revision_id &&
+        preferredJsonRevisionId !== row.preferred_revision_id
+      ) {
+        issues.push({
+          packet_id: row.packet_id,
+          preferred_revision_id: row.preferred_revision_id,
+          head_revision_ids: headRevisionIds,
+          revision_state: row.revision_state,
+          issue_kind: 'preferred_json_mismatch',
+          repairable: true,
+          target_preferred_revision_id: row.preferred_revision_id,
+        });
+      }
+    }
+
+    return {
+      issue_count: issues.length,
+      repairable_count: issues.filter((issue) => issue.repairable).length,
+      issues,
+    };
+  }
+
+  async repairPreferredHeadConsistency(input: {
+    dryRun?: boolean;
+  } = {}): Promise<
+    PreferredHeadConsistencyReport & {
+      repaired_packet_ids: string[];
+    }
+  > {
+    const report = await this.auditPreferredHeadConsistency();
+
+    if (input.dryRun ?? false) {
+      return {
+        ...report,
+        repaired_packet_ids: [],
+      };
+    }
+
+    const repairedPacketIds: string[] = [];
+
+    for (const issue of report.issues) {
+      if (!issue.repairable || !issue.target_preferred_revision_id) {
+        continue;
+      }
+
+      const revisionRow = this.database
+        .prepare(
+          `
+            SELECT parent_revision_refs_json
+            FROM packet_revisions
+            WHERE packet_id = ?
+              AND revision_id = ?
+          `
+        )
+        .get(issue.packet_id, issue.target_preferred_revision_id) as
+        | { parent_revision_refs_json: string }
+        | undefined;
+
+      if (!revisionRow) {
+        continue;
+      }
+
+      await this.publishRevision({
+        packet_id: issue.packet_id,
+        revision_id: issue.target_preferred_revision_id,
+      });
+
+      const parentRevisionRefs = parseJson<PacketRevisionRef[]>(
+        revisionRow.parent_revision_refs_json,
+        []
+      );
+      const normalizedRevisionState = getRevisionState(
+        issue.head_revision_ids,
+        parentRevisionRefs.length
+      );
+
+      this.database
+        .prepare(
+          `
+            UPDATE packets
+            SET revision_state = ?,
+                updated_at = ?
+            WHERE packet_id = ?
+          `
+        )
+        .run(
+          normalizedRevisionState,
+          new Date().toISOString(),
+          issue.packet_id
+        );
+      repairedPacketIds.push(issue.packet_id);
+    }
+
+    const nextReport = await this.auditPreferredHeadConsistency();
+
+    return {
+      ...nextReport,
+      repaired_packet_ids: repairedPacketIds,
     };
   }
 

@@ -73,8 +73,16 @@ import {
   isPasskeySupported,
   registerPasskey,
 } from '@runtime/nexus/webauthn';
+import {
+  adoptClaimedSessionActorPacket,
+  assertClaimedActorPacketReady,
+  resolveClaimedSessionActorPacket,
+} from '@runtime/nexus/claimed-identity-session';
+import {
+  isNexusAuthGatePayload,
+  NexusAuthGateError,
+} from '@runtime/nexus/nexus-auth-gate-error';
 import { createIdentityShellFortressAdapter } from '@app/components/nexus/identity-shell-fortress-adapter';
-import { NexusAuthGateError } from '@app/components/nexus/nexus-auth-gate-types';
 const IDENTITY_STORE_NAME = 'identities';
 const FRESH_UNLOCKED_IDENTITY_HANDOFF_MS = 30_000;
 
@@ -170,6 +178,8 @@ type IdentityShellContextValue = {
     packet: TPacket
   ) => Promise<TPacket>;
   refreshAuthSession: () => Promise<NexusAuthSessionPayload>;
+  recoverClaimedSessionInPlace: () => Promise<boolean>;
+  resumeClaimedIdentitySessionWithPassphrase: (passphrase: string) => Promise<void>;
   setRememberClaimedSessions: (rememberClaimedSessions: boolean) => Promise<void>;
 };
 
@@ -231,8 +241,22 @@ async function fetchJsonOrThrow<TValue>(
 
   if (!response.ok) {
     const errorBody = (await response.json().catch(() => null)) as
-      | { error?: string }
+      | { error?: string; auth_gate?: unknown }
       | null;
+
+    if (isNexusAuthGatePayload(errorBody)) {
+      throw new NexusAuthGateError(
+        errorBody.auth_gate.reason,
+        errorBody.auth_gate.message ?? errorBody.error ?? 'Identity request failed.',
+        {
+          retryable: errorBody.auth_gate.retryable,
+          actorRequired: errorBody.auth_gate.actor_required,
+          writeApprovalRequired: errorBody.auth_gate.write_approval_required,
+          failureCode: errorBody.auth_gate.failure_code,
+          diagnostics: errorBody.auth_gate.diagnostics,
+        }
+      );
+    }
 
     throw new Error(errorBody?.error ?? 'Identity request failed.');
   }
@@ -361,6 +385,14 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
   const clearFreshUnlockedIdentity = () => {
     freshUnlockedIdentityRef.current = null;
   };
+
+  const createClientIdentityHeaders = (
+    identity: ActiveIdentityState
+  ): Record<string, string> => ({
+    'x-nexus-client-actor-packet-id': identity.actorPacket.header.packet_id,
+    'x-nexus-client-actor-revision-id': identity.actorPacket.header.revision_id,
+    'x-nexus-client-identity-mode': identity.claimStatus,
+  });
 
   const resolveGuestFallbackIdentity = async (input?: {
     storedRecords?: StoredIdentityRecord[];
@@ -500,24 +532,30 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
       (record) => record.actor_packet_id === nextSession.actor_packet_id
     );
 
-    if (matchingRecord) {
-      const storedIdentity = toActiveIdentityState(matchingRecord);
+      if (matchingRecord) {
+        const storedIdentity = toActiveIdentityState(matchingRecord);
 
-      if (storedIdentity) {
-        setCurrentIdentity((currentValue) =>
-          currentValue?.actorPacket.header.packet_id === storedIdentity.actorPacket.header.packet_id &&
-          currentValue.privateJwk
-            ? {
-                ...storedIdentity,
-                privateJwk: currentValue.privateJwk,
-              }
-            : storedIdentity
-        );
-        return nextSession;
+        if (storedIdentity) {
+          const sessionAlignedIdentity = adoptClaimedSessionActorPacket(
+            storedIdentity,
+            nextSession
+          );
+
+          setCurrentIdentity((currentValue) =>
+            currentValue?.actorPacket.header.packet_id ===
+              sessionAlignedIdentity.actorPacket.header.packet_id &&
+            currentValue.privateJwk
+              ? {
+                  ...sessionAlignedIdentity,
+                  privateJwk: currentValue.privateJwk,
+                }
+              : sessionAlignedIdentity
+          );
+          return nextSession;
+        }
       }
-    }
 
-    const lockedIdentity = createLockedActiveIdentityFromActorPacket(
+      const lockedIdentity = createLockedActiveIdentityFromActorPacket(
       nextSession.actor_packet
     );
 
@@ -534,6 +572,62 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
     }
 
     return nextSession;
+  };
+
+  const adoptUnlockedClaimedIdentity = (input: {
+    identity: UnlockedActiveIdentity;
+    session: NexusAuthSessionPayload;
+  }): UnlockedActiveIdentity => {
+    const adoptedIdentity = adoptClaimedSessionActorPacket(
+      input.identity,
+      input.session
+    );
+
+    stashFreshUnlockedIdentity(adoptedIdentity);
+    setCurrentIdentity(adoptedIdentity);
+
+    return adoptedIdentity;
+  };
+
+  const recoverClaimedSessionInPlace = async (): Promise<boolean> => {
+    if (!currentIdentity || currentIdentity.claimStatus !== 'claimed') {
+      return false;
+    }
+
+    const nextSession = await refreshAuthSession();
+
+    if (!nextSession.is_authenticated || !nextSession.actor_packet_id) {
+      return false;
+    }
+
+    if (nextSession.actor_packet_id !== currentIdentity.actorPacket.header.packet_id) {
+      throw new NexusAuthGateError(
+        'stale_actor_packet',
+        'The authenticated claimed session does not match the active local identity.',
+        {
+          actorRequired: true,
+          failureCode: 'session_actor_mismatch',
+          diagnostics: {
+            client_actor_packet_id: currentIdentity.actorPacket.header.packet_id,
+            server_session_actor_packet_id: nextSession.actor_packet_id,
+          },
+        }
+      );
+    }
+
+    if (!currentIdentity.privateJwk) {
+      return false;
+    }
+
+    adoptUnlockedClaimedIdentity({
+      identity: {
+        ...currentIdentity,
+        privateJwk: currentIdentity.privateJwk,
+      },
+      session: nextSession,
+    });
+
+    return true;
   };
 
   const refreshSessionSummaries = async (csrfToken?: string | null) => {
@@ -610,6 +704,13 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
     }
 
     if (!currentIdentity.privateJwk) {
+      if (currentIdentity.claimStatus !== 'claimed') {
+        throw new NexusAuthGateError(
+          'sign_in_required',
+          'Continue as a signed guest or sign in before Nexus writes from this device.'
+        );
+      }
+
       throw new NexusAuthGateError(
         'unlock_required',
         'Unlock this claimed identity with its passphrase before signing Nexus packets.'
@@ -690,7 +791,11 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
         );
 
         if (authenticatedRecord) {
-          resolvedIdentity = toActiveIdentityState(authenticatedRecord);
+          const storedIdentity = toActiveIdentityState(authenticatedRecord);
+
+          resolvedIdentity = storedIdentity
+            ? adoptClaimedSessionActorPacket(storedIdentity, nextSession)
+            : null;
         } else if (nextSession.actor_packet) {
           resolvedIdentity = createLockedActiveIdentityFromActorPacket(
             nextSession.actor_packet
@@ -882,8 +987,38 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
       storedKind: 'claimed' as const,
     } satisfies UnlockedActiveIdentity;
 
-    stashFreshUnlockedIdentity(unlockedIdentity);
-    setCurrentIdentity(unlockedIdentity);
+    const session = await refreshAuthSession();
+
+    if (!session.is_authenticated || !session.actor_packet_id) {
+      throw new NexusAuthGateError(
+        'sign_in_required',
+        'Sign in with this claimed identity before unlocking protected writes.',
+        {
+          actorRequired: true,
+          failureCode: 'session_missing',
+        }
+      );
+    }
+
+    if (session.actor_packet_id !== unlockedIdentity.actorPacket.header.packet_id) {
+      throw new NexusAuthGateError(
+        'stale_actor_packet',
+        'The authenticated claimed session does not match this local identity bundle.',
+        {
+          actorRequired: true,
+          failureCode: 'session_actor_mismatch',
+          diagnostics: {
+            client_actor_packet_id: unlockedIdentity.actorPacket.header.packet_id,
+            server_session_actor_packet_id: session.actor_packet_id,
+          },
+        }
+      );
+    }
+
+    adoptUnlockedClaimedIdentity({
+      identity: unlockedIdentity,
+      session,
+    });
   };
 
   const readStoredClaimedIdentityRecord = async (
@@ -914,17 +1049,31 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
       unlockedIdentity.actorPacket.header.packet_id !== input.session.actor_packet_id
     ) {
       throw new NexusAuthGateError(
-        'unlock_required',
-        'Unlock the claimed identity that owns this session before approving this action.'
+        'stale_actor_packet',
+        'Refresh or resume the claimed identity that owns this session before approving this action.',
+        {
+          actorRequired: true,
+          failureCode: 'session_actor_mismatch',
+          diagnostics: {
+            client_actor_packet_id: unlockedIdentity.actorPacket.header.packet_id,
+            server_session_actor_packet_id: input.session.actor_packet_id,
+          },
+        }
       );
     }
 
     const proofMethod = input.proofMethod ?? 'signed_reauth';
+    const requestActorPacket = resolveClaimedSessionActorPacket({
+      actorPacket: unlockedIdentity.actorPacket,
+      session: input.session,
+    });
+
+    assertClaimedActorPacketReady(requestActorPacket);
     const privateKey = await importPrivateKeyFromJwk(unlockedIdentity.privateJwk);
     const actorAssertion = await createActorAssertion({
-      actorPacketId: unlockedIdentity.actorPacket.header.packet_id,
+      actorPacketId: requestActorPacket.header.packet_id,
       kid:
-        unlockedIdentity.actorPacket.body.identity?.public_key_bindings[0]?.kid ??
+        requestActorPacket.body.identity?.public_key_bindings[0]?.kid ??
         (() => {
           throw new Error('The active identity is missing its key binding.');
         })(),
@@ -943,11 +1092,12 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
         method: 'POST',
         headers: {
           'x-csrf-token': input.session.csrf_token ?? '',
+          ...createClientIdentityHeaders(unlockedIdentity),
         },
         body: {
           purpose: input.purpose,
           proof_method: proofMethod,
-          actor_packet: unlockedIdentity.actorPacket,
+          actor_packet: requestActorPacket,
           actor_assertion: actorAssertion,
         },
       }
@@ -1070,24 +1220,47 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
       storedKind: 'claimed' as const,
     } satisfies UnlockedActiveIdentity;
 
-    if (!isCurrentIdentityUnlocked) {
-      stashFreshUnlockedIdentity(unlockedIdentity);
-      setCurrentIdentity(unlockedIdentity);
-    } else {
-      clearFreshUnlockedIdentity();
-    }
+    const adoptedIdentity = adoptUnlockedClaimedIdentity({
+      identity: unlockedIdentity,
+      session,
+    });
 
     const verifyPayload = await createSignedReauthToken({
       purpose: 'interaction',
       session,
       proofMethod: 'bundle_passphrase_unlock',
-      identityOverride: unlockedIdentity,
+      identityOverride: adoptedIdentity,
     });
 
     stashPendingInteractionProof({
       reauthToken: verifyPayload.reauth_token,
       proofMethod: verifyPayload.proof_method,
       expiresAt: verifyPayload.expires_at,
+    });
+  };
+
+  const resumeClaimedIdentitySessionWithPassphrase = async (passphrase: string) => {
+    const targetActorPacketId =
+      authSession?.actor_packet_id ??
+      (currentIdentity?.claimStatus === 'claimed'
+        ? currentIdentity.actorPacket.header.packet_id
+        : null);
+
+    if (!targetActorPacketId) {
+      throw new NexusAuthGateError(
+        'sign_in_required',
+        'There is no claimed identity ready to resume on this device.',
+        {
+          actorRequired: true,
+          failureCode: 'session_missing',
+        }
+      );
+    }
+
+    await signInStoredIdentity({
+      actorPacketId: targetActorPacketId,
+      passphrase,
+      keepMeLoggedIn: rememberClaimedSessions,
     });
   };
 
@@ -1471,13 +1644,18 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
     });
 
     await writeCurrentIdentityPreference(targetRecord.actor_packet_id);
-    setCurrentIdentity({
-      actorPacket: bundle.actor_packet,
-      publicJwk: bundle.public_jwk,
-      privateJwk: bundle.private_jwk,
-      claimStatus: 'claimed',
-      storedKind: 'claimed',
-    });
+    setCurrentIdentity(
+      adoptClaimedSessionActorPacket(
+        {
+          actorPacket: bundle.actor_packet,
+          publicJwk: bundle.public_jwk,
+          privateJwk: bundle.private_jwk,
+          claimStatus: 'claimed',
+          storedKind: 'claimed',
+        },
+        verifyResult.session
+      )
+    );
     setAuthSession(verifyResult.session);
     await refreshSessionSummaries(verifyResult.session.csrf_token);
     await refreshPasskeySummaries(verifyResult.session.csrf_token);
@@ -1856,6 +2034,8 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
         createVerifiedRequestBody,
         signCurrentIdentityPacket,
         refreshAuthSession,
+        recoverClaimedSessionInPlace,
+        resumeClaimedIdentitySessionWithPassphrase,
         setRememberClaimedSessions,
       }}
     >

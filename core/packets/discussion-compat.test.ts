@@ -6,10 +6,15 @@ import {
 } from '@core/schema/packet-schema';
 
 import {
+  areDiscussionPacketIdsEquivalent,
   createCanonicalDiscussionMirrorPacket,
   createCanonicalDiscussionPacketId,
+  getDiscussionPacketAliases,
+  isCanonicalDiscussionPacketId,
   interpretDiscussionPacket,
   projectDiscussionPacketToLegacy,
+  resolvePreferredDiscussionPacketId,
+  toDiscussionOperationalPacketId,
 } from './discussion-compat.ts';
 import {
   createDiscussionForumPacket,
@@ -144,4 +149,47 @@ test('legacy discussion mirrors are deterministic canonical Discussion packets',
   assert.equal(mirror.body.parent_ref.packet_id, createCanonicalDiscussionPacketId('nexus:discussion-space/scope-a'));
   assert.equal(mirror.header.metadata.compatibility?.family_history[0]?.family, 'DiscussionForum');
   assert.equal(mirror.header.edges.some((edge) => edge.edge_type === 'derived_from'), true);
+});
+
+test('discussion compatibility helpers treat canonical and legacy aliases as one operational target', () => {
+  const legacyForum = createDiscussionForumPacket({
+    packet_id: 'nexus:discussion-forum/scope-a-general',
+    created_at: '2026-04-28T00:00:00.000Z',
+    title: 'General',
+    summary: null,
+    discussion_space_ref: { packet_id: 'nexus:discussion-space/scope-a' },
+    forum_kind: 'general',
+    status: 'open',
+  });
+  const mirror = createCanonicalDiscussionMirrorPacket(legacyForum);
+  const aliases = getDiscussionPacketAliases(mirror);
+
+  assert.equal(
+    toDiscussionOperationalPacketId(legacyForum.header.packet_id),
+    mirror.header.packet_id
+  );
+  assert.equal(
+    areDiscussionPacketIdsEquivalent(
+      legacyForum.header.packet_id,
+      mirror.header.packet_id
+    ),
+    true
+  );
+  assert.equal(aliases.canonical_packet_id, mirror.header.packet_id);
+  assert.deepEqual(aliases.legacy_source_packet_ids, [legacyForum.header.packet_id]);
+});
+
+test('preferred discussion packet id resolution prefers canonical operational targets', () => {
+  const legacyPostPacketId = 'nexus:discussion-post/scope-a-general-root';
+  const canonicalPostPacketId = createCanonicalDiscussionPacketId(legacyPostPacketId);
+
+  assert.equal(isCanonicalDiscussionPacketId(legacyPostPacketId), false);
+  assert.equal(isCanonicalDiscussionPacketId(canonicalPostPacketId), true);
+  assert.equal(
+    resolvePreferredDiscussionPacketId({
+      candidate_packet_ids: [legacyPostPacketId, canonicalPostPacketId],
+      requested_packet_id: legacyPostPacketId,
+    }),
+    canonicalPostPacketId
+  );
 });

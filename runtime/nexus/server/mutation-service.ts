@@ -32,13 +32,14 @@ import {
 } from '@core/packets/builders';
 import { buildPacketSignalAttestationPacket } from '@core/packets/discussion';
 import {
-  createCanonicalDiscussionMirrorPacket,
   createCanonicalDiscussionPacketId,
   isDiscussionMessagePacket,
   projectDiscussionPacketToLegacy,
-  resolveCanonicalDiscussionTarget,
-  type DiscussionLegacyFamily,
 } from '@core/packets/discussion-compat';
+import {
+  planPacketTargetMigration,
+  resolvePacketTarget,
+} from '@core/packets/packet-target-resolver';
 import {
   describeWriteProofLevel,
   doesProofBundleSatisfyRequirement,
@@ -368,110 +369,34 @@ export class NexusMutationService {
 
   private async planCanonicalDiscussionMirrors(input: {
     packet: PacketEnvelope;
-    planned?: Map<string, PacketEnvelopeByType['Discussion']>;
-    visiting?: Set<string>;
   }): Promise<{
     canonical_packet_id: string;
     packets: PacketEnvelopeByType['Discussion'][];
   }> {
-    // Temporary containment boundary: explicit discussion-family canonicalization
-    // stays inside the fortress mutation layer until the generic interpreter and
-    // builder pipelines can absorb more family-evolution planning centrally.
-    const planned = input.planned ?? new Map<string, PacketEnvelopeByType['Discussion']>();
-    const visiting = input.visiting ?? new Set<string>();
-
-    if (input.packet.header.family === 'Discussion') {
-      return {
-        canonical_packet_id: input.packet.header.packet_id,
-        packets: [...planned.values()],
-      };
-    }
-
-    const legacyFamily = input.packet.header.family as DiscussionLegacyFamily;
-    const isLegacyDiscussion =
-      legacyFamily === 'DiscussionSpace' ||
-      legacyFamily === 'DiscussionForum' ||
-      legacyFamily === 'DiscussionThread' ||
-      legacyFamily === 'DiscussionPost' ||
-      legacyFamily === 'DiscussionReply';
-
-    if (!isLegacyDiscussion) {
-      throw new Error(`Packet ${input.packet.header.packet_id} is not a discussion packet.`);
-    }
-
-    const resolution = await resolveCanonicalDiscussionTarget({
+    const resolution = await resolvePacketTarget({
       packet_id: input.packet.header.packet_id,
       fetchPacket: async (packetId) =>
         this.packetStore.fetchByPacket({ packet_id: packetId }),
+      fetchRevisionHeads: async (packetId) =>
+        this.packetStore.fetchRevisionHeads({ packet_id: packetId }),
+    });
+    const migrationPlan = await planPacketTargetMigration({
+      packet_id: input.packet.header.packet_id,
+      resolution,
+      fetchPacket: async (packetId) =>
+        this.packetStore.fetchByPacket({ packet_id: packetId }),
+      fetchRevisionHeads: async (packetId) =>
+        this.packetStore.fetchRevisionHeads({ packet_id: packetId }),
     });
 
-    if (planned.has(resolution.canonical_packet_id)) {
-      return {
-        canonical_packet_id: resolution.canonical_packet_id,
-        packets: [...planned.values()],
-      };
+    if (migrationPlan.blocked_reason) {
+      throw new Error(migrationPlan.blocked_reason);
     }
-
-    if (resolution.canonical_packet) {
-      return {
-        canonical_packet_id: resolution.canonical_packet_id,
-        packets: [...planned.values()],
-      };
-    }
-
-    if (visiting.has(input.packet.header.packet_id)) {
-      throw new Error(`Cyclic discussion compatibility chain at ${input.packet.header.packet_id}.`);
-    }
-
-    visiting.add(input.packet.header.packet_id);
-    let dependencyIds: string[] = [];
-
-    if (input.packet.header.family === 'DiscussionForum') {
-      const packet = input.packet as PacketEnvelopeByType['DiscussionForum'];
-      dependencyIds = [packet.body.discussion_space_ref.packet_id];
-    } else if (input.packet.header.family === 'DiscussionThread') {
-      const packet = input.packet as PacketEnvelopeByType['DiscussionThread'];
-      dependencyIds = [packet.body.forum_ref.packet_id];
-    } else if (input.packet.header.family === 'DiscussionPost') {
-      const packet = input.packet as PacketEnvelopeByType['DiscussionPost'];
-      dependencyIds = [
-        packet.body.thread_ref.packet_id,
-        ...(packet.body.reply_to_ref ? [packet.body.reply_to_ref.packet_id] : []),
-      ];
-    } else if (input.packet.header.family === 'DiscussionReply') {
-      const packet = input.packet as PacketEnvelopeByType['DiscussionReply'];
-      dependencyIds = [
-        packet.body.thread_ref.packet_id,
-        packet.body.root_post_ref.packet_id,
-        packet.body.reply_to_ref.packet_id,
-      ];
-    }
-
-    for (const dependencyId of dependencyIds) {
-      const dependencyPacket = await this.packetStore.fetchByPacket({
-        packet_id: dependencyId,
-      });
-
-      if (dependencyPacket) {
-        await this.planCanonicalDiscussionMirrors({
-          packet: dependencyPacket,
-          planned,
-          visiting,
-        });
-      }
-    }
-
-    planned.set(
-      resolution.canonical_packet_id,
-      createCanonicalDiscussionMirrorPacket(
-        input.packet as PacketEnvelopeByType[DiscussionLegacyFamily]
-      )
-    );
-    visiting.delete(input.packet.header.packet_id);
 
     return {
-      canonical_packet_id: resolution.canonical_packet_id,
-      packets: [...planned.values()],
+      canonical_packet_id:
+        resolution.canonical_packet_id ?? input.packet.header.packet_id,
+      packets: migrationPlan.packets as PacketEnvelopeByType['Discussion'][],
     };
   }
 

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   getPacketSignatureCanonicalCandidates,
+  getRawPacketSignatureCanonicalCandidates,
   getPacketCompatibilityAuditSummary,
   listPacketCompatibilityAuditSummaries,
   inspectPacketEnvelope,
@@ -471,6 +472,102 @@ test('current signature candidates preserve compatibility for additive current d
   );
   assert.equal(
     Object.prototype.hasOwnProperty.call(candidates[1]?.body ?? {}, 'locality'),
+    false
+  );
+});
+
+test('raw signature candidates preserve omitted additive header fields and combined body compatibility', () => {
+  const rawPacket = {
+    header: {
+      packet_id: 'nexus:element/test-raw-signature-compat',
+      revision_id: 'nexus:element/test-raw-signature-compat@r1',
+      family: 'Element',
+      schema_version: '1.0.0',
+      protocol_version: '0.1.0',
+      created_at: '2026-04-28T00:00:00.000Z',
+      parent_revision_refs: [],
+      merge_strategy: null,
+      authority_scope_ref: null,
+      applicable_scope_refs: [],
+      edges: [],
+      provenance: {
+        created_by: null,
+        submitted_by: null,
+        adapter: 'test',
+        recorded_at: '2026-04-28T00:00:00.000Z',
+        imported_from_revision: null,
+      },
+      integrity: {
+        canonicalization: 'RFC8785',
+        hash_alg: 'sha-256',
+        digest: null,
+        embedded_signatures: [],
+        signature_refs: [],
+      },
+      moderation: {
+        visibility: 'public',
+        moderation_state: 'open',
+        policy_refs: [],
+        content_warning_ids: [],
+      },
+      external_refs: [],
+      metadata: {
+        tags: ['person', 'claimed'],
+        language: null,
+        summary: 'A claimed OWA Nexus person identity.',
+        compatibility: null,
+      },
+      producer: {
+        adapter: 'test',
+        app_version: null,
+      },
+    },
+    body: {
+      kind: 'person',
+      name: 'Raw Compat',
+      subtype: 'claimed_identity',
+      summary: 'A claimed OWA Nexus person identity.',
+      locality_label: null,
+      locality: null,
+      identity: {
+        alias: 'Raw Compat',
+        claim_status: 'claimed',
+        location_disclosure: null,
+        public_key_bindings: [],
+      },
+      tags: ['person', 'claimed'],
+      claimed_role_refs: [],
+    },
+  };
+  const candidates = getRawPacketSignatureCanonicalCandidates(rawPacket);
+
+  assert.equal(candidates.length, 4);
+  assert.equal(
+    Object.prototype.hasOwnProperty.call(
+      (candidates[1]?.header.metadata as Record<string, unknown>) ?? {},
+      'compatibility'
+    ),
+    false
+  );
+  assert.equal(
+    Object.prototype.hasOwnProperty.call(
+      candidates[2]?.body as Record<string, unknown>,
+      'claimed_role_refs'
+    ),
+    false
+  );
+  assert.equal(
+    Object.prototype.hasOwnProperty.call(
+      candidates[3]?.body as Record<string, unknown>,
+      'locality'
+    ),
+    false
+  );
+  assert.equal(
+    Object.prototype.hasOwnProperty.call(
+      (candidates[3]?.header.metadata as Record<string, unknown>) ?? {},
+      'compatibility'
+    ),
     false
   );
 });

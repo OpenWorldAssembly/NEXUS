@@ -11,10 +11,26 @@ import type {
   MutationProofMethod,
   WriteProofLevel,
 } from '@core/auth/proof-types';
-import type { DiscussionActorClass, PacketEnvelopeByType } from '@core/schema/packet-schema';
-import { parsePacketEnvelope } from '@core/schema/packet-schema';
+import { canonicalizeJson } from '@core/crypto/canonical-json';
+import type {
+  DiscussionActorClass,
+  PacketEnvelopeByType,
+  RawPacketEnvelopeInput,
+} from '@core/schema/packet-schema';
+import { parsePacketEnvelope, parseRawPacketEnvelopeInput } from '@core/schema/packet-schema';
 import type { ActorAssertion } from '@runtime/nexus/identity-crypto';
-import { verifyActorAssertion, verifyPacketSignature } from '@runtime/nexus/identity-crypto';
+import {
+  verifyActorAssertion,
+  verifyPacketSignatureDetailed,
+} from '@runtime/nexus/identity-crypto';
+import {
+  NexusAuthFailureError,
+  NexusAuthGateError,
+  isNexusAuthFailureError,
+  type NexusAuthFailureCode,
+  type NexusAuthFailureDiagnostics,
+  type NexusAuthGateReason,
+} from '@runtime/nexus/nexus-auth-gate-error';
 import type {
   NexusAuthSessionPayload,
   NexusPasskeyListPayload,
@@ -67,8 +83,10 @@ import type { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-
 
 export class NexusAuthService {
   private readonly store: NexusAuthStore;
+  private readonly packetStore: NodeSQLitePacketStore;
 
-  constructor(private readonly packetStore: NodeSQLitePacketStore) {
+  constructor(packetStore: NodeSQLitePacketStore) {
+    this.packetStore = packetStore;
     this.store = new NexusAuthStore(packetStore.databasePath);
   }
 
@@ -78,6 +96,101 @@ export class NexusAuthService {
 
   async ensureStorage(): Promise<void> {
     this.store.ensureStorage();
+  }
+
+  private buildAuthDiagnostics(input: {
+    request?: Request | null;
+    sessionRecord?: Pick<
+      AuthSessionRecord,
+      'session_id' | 'actor_packet_id' | 'expires_at' | 'auth_method'
+    > | null;
+    requestActorPacket?: PacketEnvelopeByType['Element'] | null;
+    storedActorPacket?: PacketEnvelopeByType['Element'] | null;
+    expectedActorPacketId?: string | null;
+    resolvedGateReason?: NexusAuthGateReason | null;
+    retryAttempted?: boolean;
+  }): NexusAuthFailureDiagnostics {
+    return {
+      client_actor_packet_id:
+        input.request?.headers.get('x-nexus-client-actor-packet-id') ?? null,
+      client_actor_revision_id:
+        input.request?.headers.get('x-nexus-client-actor-revision-id') ?? null,
+      current_identity_mode:
+        input.request?.headers.get('x-nexus-client-identity-mode') ?? null,
+      request_actor_packet_id: input.requestActorPacket?.header.packet_id ?? null,
+      request_actor_revision_id:
+        input.requestActorPacket?.header.revision_id ?? null,
+      server_session_actor_packet_id: input.sessionRecord?.actor_packet_id ?? null,
+      session_id_present: Boolean(input.sessionRecord?.session_id),
+      session_mode: input.sessionRecord?.auth_method ?? null,
+      session_expires_at: input.sessionRecord?.expires_at ?? null,
+      stored_actor_packet_id: input.storedActorPacket?.header.packet_id ?? null,
+      stored_actor_revision_id:
+        input.storedActorPacket?.header.revision_id ?? null,
+      expected_actor_packet_id: input.expectedActorPacketId ?? null,
+      resolved_gate_reason: input.resolvedGateReason ?? null,
+      retry_attempted: input.retryAttempted ?? false,
+    };
+  }
+
+  private createAuthGateError(input: {
+    reason: NexusAuthGateReason;
+    message: string;
+    failureCode: NexusAuthFailureCode;
+    request?: Request | null;
+    sessionRecord?: Pick<
+      AuthSessionRecord,
+      'session_id' | 'actor_packet_id' | 'expires_at' | 'auth_method'
+    > | null;
+    requestActorPacket?: PacketEnvelopeByType['Element'] | null;
+    storedActorPacket?: PacketEnvelopeByType['Element'] | null;
+    expectedActorPacketId?: string | null;
+    retryAttempted?: boolean;
+    actorRequired?: boolean;
+    writeApprovalRequired?: boolean;
+    retryable?: boolean;
+  }): NexusAuthGateError {
+    return new NexusAuthGateError(input.reason, input.message, {
+      actorRequired: input.actorRequired,
+      writeApprovalRequired: input.writeApprovalRequired,
+      retryable: input.retryable,
+      failureCode: input.failureCode,
+      diagnostics: this.buildAuthDiagnostics({
+        request: input.request,
+        sessionRecord: input.sessionRecord ?? null,
+        requestActorPacket: input.requestActorPacket ?? null,
+        storedActorPacket: input.storedActorPacket ?? null,
+        expectedActorPacketId: input.expectedActorPacketId ?? null,
+        resolvedGateReason: input.reason,
+        retryAttempted: input.retryAttempted,
+      }),
+    });
+  }
+
+  private createAuthFailureError(input: {
+    message: string;
+    failureCode: NexusAuthFailureCode;
+    request?: Request | null;
+    sessionRecord?: Pick<
+      AuthSessionRecord,
+      'session_id' | 'actor_packet_id' | 'expires_at' | 'auth_method'
+    > | null;
+    requestActorPacket?: PacketEnvelopeByType['Element'] | null;
+    storedActorPacket?: PacketEnvelopeByType['Element'] | null;
+    expectedActorPacketId?: string | null;
+    retryAttempted?: boolean;
+  }): NexusAuthFailureError {
+    return new NexusAuthFailureError(input.message, {
+      failureCode: input.failureCode,
+      diagnostics: this.buildAuthDiagnostics({
+        request: input.request,
+        sessionRecord: input.sessionRecord ?? null,
+        requestActorPacket: input.requestActorPacket ?? null,
+        storedActorPacket: input.storedActorPacket ?? null,
+        expectedActorPacketId: input.expectedActorPacketId ?? null,
+        retryAttempted: input.retryAttempted,
+      }),
+    });
   }
 
   private writeAuthEvent(input: {
@@ -303,26 +416,65 @@ export class NexusAuthService {
     const { sessionRecord } = this.getSessionFromCookie(input.request);
 
     if (!sessionRecord) {
-      throw new Error('Claimed actions require an authenticated Nexus session.');
+      throw this.createAuthGateError({
+        reason: 'sign_in_required',
+        message: 'Claimed actions require an authenticated Nexus session.',
+        failureCode: 'session_missing',
+        request: input.request,
+        expectedActorPacketId: input.actorPacketId ?? null,
+        actorRequired: true,
+      });
     }
 
     if (sessionRecord.revoked_at) {
-      throw new Error('That Nexus session has been revoked.');
+      throw this.createAuthGateError({
+        reason: 'session_refresh_required',
+        message: 'That Nexus session has been revoked.',
+        failureCode: 'session_revoked',
+        request: input.request,
+        sessionRecord,
+        expectedActorPacketId: input.actorPacketId ?? null,
+        actorRequired: true,
+      });
     }
 
     if (new Date(sessionRecord.expires_at).getTime() < Date.now()) {
-      throw new Error('That Nexus session has expired. Refresh the session and try again.');
+      throw this.createAuthGateError({
+        reason: 'session_refresh_required',
+        message: 'That Nexus session has expired. Refresh the session and try again.',
+        failureCode: 'session_expired',
+        request: input.request,
+        sessionRecord,
+        expectedActorPacketId: input.actorPacketId ?? null,
+        actorRequired: true,
+      });
     }
 
     if (input.actorPacketId && sessionRecord.actor_packet_id !== input.actorPacketId) {
-      throw new Error('Authenticated session actor does not match the claimed identity.');
+      throw this.createAuthGateError({
+        reason: 'stale_actor_packet',
+        message: 'Authenticated session actor does not match the claimed identity.',
+        failureCode: 'session_actor_mismatch',
+        request: input.request,
+        sessionRecord,
+        expectedActorPacketId: input.actorPacketId,
+        actorRequired: true,
+      });
     }
 
     if (input.requireCsrf ?? true) {
       this.requireSameOrigin(input.request);
 
       if (!input.csrfToken || input.csrfToken !== sessionRecord.csrf_token) {
-        throw new Error('Authenticated mutation CSRF token does not match the active session.');
+        throw this.createAuthGateError({
+          reason: 'session_refresh_required',
+          message: 'Authenticated mutation CSRF token does not match the active session.',
+          failureCode: 'csrf_token_mismatch',
+          request: input.request,
+          sessionRecord,
+          expectedActorPacketId: input.actorPacketId ?? null,
+          actorRequired: true,
+        });
       }
     }
 
@@ -436,36 +588,488 @@ export class NexusAuthService {
     return resolveAuthDeviceLabel(input);
   }
 
-  private async verifyIdentityPacket(
+  private parsePersonIdentityPacket(
     actorPacketInput: unknown
-  ): Promise<PacketEnvelopeByType['Element']> {
+  ): PacketEnvelopeByType['Element'] {
     const packet = parsePacketEnvelope(actorPacketInput);
 
     if (!isPersonElementPacket(packet)) {
       throw new Error('Actor packet must be a person element.');
     }
 
-    const actorPacket = packet;
+    return packet;
+  }
+
+  private parseRawPersonIdentityPacket(
+    actorPacketInput: unknown
+  ): RawPacketEnvelopeInput {
+    const packet = parseRawPacketEnvelopeInput(actorPacketInput);
+    const body =
+      packet.body && typeof packet.body === 'object' && !Array.isArray(packet.body)
+        ? (packet.body as Record<string, unknown>)
+        : null;
+
+    if (packet.header.family !== 'Element' || body?.kind !== 'person') {
+      throw new Error('Actor packet must be a person element.');
+    }
+
+    return packet;
+  }
+
+  private buildRawActorCandidateFingerprint(
+    actorPacketInput: unknown
+  ): {
+    packetId: string;
+    revisionId: string;
+    dedupeKey: string;
+  } {
+    const rawPacket = this.parseRawPersonIdentityPacket(actorPacketInput);
+    const rawHeader = rawPacket.header as RawPacketEnvelopeInput['header'] &
+      Record<string, unknown>;
+    const rawIntegrity =
+      rawHeader.integrity &&
+      typeof rawHeader.integrity === 'object' &&
+      !Array.isArray(rawHeader.integrity)
+        ? (rawHeader.integrity as Record<string, unknown>)
+        : {};
+
+    // Auth resolution dedupes on the historical unsigned packet shape, not only
+    // on revision id, so a reserialized or corrupted stored copy cannot hide a
+    // valid request/session packet with the same revision id.
+    const unsignedPacket = {
+      ...rawPacket,
+      header: {
+        ...rawHeader,
+        integrity: {
+          ...rawIntegrity,
+          digest: null,
+          embedded_signatures: [],
+          signature_refs: [],
+        },
+      },
+    };
+
+    return {
+      packetId: rawPacket.header.packet_id,
+      revisionId: rawPacket.header.revision_id,
+      dedupeKey: `${rawPacket.header.revision_id}:${canonicalizeJson(unsignedPacket)}`,
+    };
+  }
+
+  private getIdentityVerificationFailureCode(
+    source: 'stored' | 'request' | 'session',
+    category: 'signature' | 'canonicalization' | 'metadata' | 'schema'
+  ): NexusAuthFailureCode {
+    if (category === 'signature') {
+      return source === 'stored'
+        ? 'stored_actor_signature_invalid'
+        : source === 'session'
+          ? 'session_actor_signature_invalid'
+          : 'request_actor_signature_invalid';
+    }
+
+    if (category === 'canonicalization') {
+      return source === 'stored'
+        ? 'stored_actor_canonicalization_mismatch'
+        : source === 'session'
+          ? 'session_actor_canonicalization_mismatch'
+          : 'request_actor_canonicalization_mismatch';
+    }
+
+    if (category === 'metadata') {
+      return source === 'stored'
+        ? 'stored_actor_metadata_invalid'
+        : source === 'session'
+          ? 'session_actor_metadata_invalid'
+          : 'request_actor_metadata_invalid';
+    }
+
+    return source === 'stored'
+      ? 'stored_actor_schema_invalid'
+      : source === 'session'
+        ? 'session_actor_schema_invalid'
+        : 'request_actor_schema_invalid';
+  }
+
+  private async verifyIdentityPacket(
+    actorPacketInput: unknown,
+    source: 'stored' | 'request' | 'session' = 'request'
+  ): Promise<PacketEnvelopeByType['Element']> {
+    // Auth verifies the raw signed packet first, then parses the adapted read
+    // view only after the signature is known-good.
+    let rawActorPacket: RawPacketEnvelopeInput;
+
+    try {
+      rawActorPacket = this.parseRawPersonIdentityPacket(actorPacketInput);
+    } catch (error) {
+      throw new NexusAuthFailureError(
+        error instanceof Error
+          ? error.message
+          : 'Actor packet must be a person element.',
+        {
+          failureCode: this.getIdentityVerificationFailureCode(source, 'schema'),
+        }
+      );
+    }
+
+    const rawBody = rawActorPacket.body as Record<string, unknown>;
+    const identity =
+      rawBody.identity &&
+      typeof rawBody.identity === 'object' &&
+      !Array.isArray(rawBody.identity)
+        ? (rawBody.identity as Record<string, unknown>)
+        : null;
+
+    if (!identity) {
+      throw new NexusAuthFailureError(
+        'Person element is missing public key bindings.',
+        {
+          failureCode: this.getIdentityVerificationFailureCode(source, 'schema'),
+        }
+      );
+    }
+
+    const publicKeyBindings = identity.public_key_bindings;
 
     if (
-      !actorPacket.body.identity ||
-      actorPacket.body.identity.public_key_bindings.length === 0
+      !Array.isArray(publicKeyBindings) ||
+      publicKeyBindings.length === 0
     ) {
-      throw new Error('Person element is missing public key bindings.');
+      throw new NexusAuthFailureError(
+        'Person element is missing public key bindings.',
+        {
+          failureCode: this.getIdentityVerificationFailureCode(source, 'schema'),
+        }
+      );
     }
 
-    const signatureIsValid = await verifyPacketSignature({
-      packet: actorPacket,
-      signerPacket: actorPacket,
+    const signatureRecord =
+      rawActorPacket.header.integrity &&
+      typeof rawActorPacket.header.integrity === 'object' &&
+      !Array.isArray(rawActorPacket.header.integrity)
+        ? (
+            rawActorPacket.header.integrity as Record<string, unknown>
+          ).embedded_signatures
+        : null;
+    const signature =
+      Array.isArray(signatureRecord) && signatureRecord.length > 0
+        ? signatureRecord[0]
+        : null;
+
+    if (!signature) {
+      throw new NexusAuthFailureError(
+        'Person element is missing its embedded signature.',
+        {
+          failureCode: this.getIdentityVerificationFailureCode(source, 'signature'),
+        }
+      );
+    }
+
+    const signatureObject =
+      signature && typeof signature === 'object' && !Array.isArray(signature)
+        ? (signature as Record<string, unknown>)
+        : null;
+    const signerPacketRef =
+      signatureObject?.signer_packet_ref &&
+      typeof signatureObject.signer_packet_ref === 'object' &&
+      !Array.isArray(signatureObject.signer_packet_ref)
+        ? (signatureObject.signer_packet_ref as Record<string, unknown>)
+        : null;
+
+    if (
+      signerPacketRef &&
+      typeof signerPacketRef.packet_id === 'string' &&
+      signerPacketRef.packet_id !== rawActorPacket.header.packet_id
+    ) {
+      throw new NexusAuthFailureError(
+        'Person element signature signer does not match this actor packet.',
+        {
+          failureCode: this.getIdentityVerificationFailureCode(source, 'signature'),
+        }
+      );
+    }
+
+    const signatureKid =
+      signatureObject && typeof signatureObject.kid === 'string'
+        ? signatureObject.kid
+        : null;
+    const activeKeyBinding = publicKeyBindings.find((binding) => {
+      if (!binding || typeof binding !== 'object' || Array.isArray(binding)) {
+        return false;
+      }
+
+      const bindingRecord = binding as Record<string, unknown>;
+
+      return (
+        typeof bindingRecord.kid === 'string' &&
+        bindingRecord.kid === signatureKid &&
+        (bindingRecord.status ?? 'active') === 'active'
+      );
     });
 
-    if (!signatureIsValid) {
-      throw new Error('Person element signature verification failed.');
+    if (!activeKeyBinding) {
+      throw new NexusAuthFailureError(
+        'Person element signature key is not active for this identity.',
+        {
+          failureCode: this.getIdentityVerificationFailureCode(source, 'signature'),
+        }
+      );
     }
 
-    validateIdentityPacketMetadata(actorPacket);
+    const verification = await verifyPacketSignatureDetailed({
+      packet: actorPacketInput,
+      signerPacket: actorPacketInput,
+    });
+
+    if (!verification.isValid) {
+      const failureCategory =
+        verification.failureKind === 'canonicalization_mismatch'
+          ? 'canonicalization'
+          : 'signature';
+      const message =
+        verification.failureKind === 'canonicalization_mismatch'
+          ? 'Person element canonical signature bytes no longer match the signed packet shape.'
+          : 'Person element cryptographic signature verification failed.';
+
+      throw new NexusAuthFailureError(message, {
+        failureCode: this.getIdentityVerificationFailureCode(
+          source,
+          failureCategory
+        ),
+      });
+    }
+
+    let actorPacket: PacketEnvelopeByType['Element'];
+
+    try {
+      actorPacket = this.parsePersonIdentityPacket(actorPacketInput);
+    } catch (error) {
+      throw new NexusAuthFailureError(
+        error instanceof Error
+          ? error.message
+          : 'Actor packet must be a person element.',
+        {
+          failureCode: this.getIdentityVerificationFailureCode(source, 'schema'),
+        }
+      );
+    }
+
+    try {
+      validateIdentityPacketMetadata(actorPacket);
+    } catch (error) {
+      throw new NexusAuthFailureError(
+        error instanceof Error
+          ? error.message
+          : 'Identity packet metadata validation failed.',
+        {
+          failureCode: this.getIdentityVerificationFailureCode(source, 'metadata'),
+        }
+      );
+    }
 
     return actorPacket;
+  }
+
+  private getActiveIdentityKeyBinding(input: {
+    actorPacket: PacketEnvelopeByType['Element'];
+    kid: string;
+  }): NonNullable<
+    NonNullable<PacketEnvelopeByType['Element']['body']['identity']>['public_key_bindings']
+  >[number] | null {
+    return (
+      input.actorPacket.body.identity?.public_key_bindings.find(
+        (binding) => binding.kid === input.kid && binding.status === 'active'
+      ) ?? null
+    );
+  }
+
+  private async resolveVerifiedSessionActorCandidate(input: {
+    request?: Request | null;
+    sessionRecord?: Pick<
+      AuthSessionRecord,
+      'session_id' | 'actor_packet_id' | 'expires_at' | 'auth_method'
+    > | null;
+    expectedActorPacketId: string;
+    actorAssertionKid: string;
+    requestActorPacketInput?: unknown;
+    requestActorPacket?: PacketEnvelopeByType['Element'] | null;
+    sessionActorPacket?: PacketEnvelopeByType['Element'] | null;
+  }): Promise<{
+    packet: PacketEnvelopeByType['Element'];
+    parsedActor: PacketEnvelopeByType['Element'];
+    activeSigningKey: NonNullable<
+      NonNullable<PacketEnvelopeByType['Element']['body']['identity']>['public_key_bindings']
+    >[number];
+    source: 'stored' | 'request' | 'session';
+  }> {
+    const candidates: {
+      source: 'stored' | 'request' | 'session';
+      packetInput: unknown;
+      packet: PacketEnvelopeByType['Element'] | null;
+    }[] = [];
+    const storedActorPacketInput = await this.getPersonPacketRevisionInput(
+      input.expectedActorPacketId
+    );
+    const seenCandidateKeys = new Set<string>();
+
+    const pushCandidate = (
+      source: 'stored' | 'request' | 'session',
+      packetInput: unknown | null | undefined,
+      packet: PacketEnvelopeByType['Element'] | null | undefined
+    ) => {
+      if (!packetInput || !packet) {
+        return;
+      }
+
+      const fingerprint = this.buildRawActorCandidateFingerprint(packetInput);
+
+      if (
+        fingerprint.packetId !== input.expectedActorPacketId ||
+        seenCandidateKeys.has(fingerprint.dedupeKey)
+      ) {
+        return;
+      }
+
+      seenCandidateKeys.add(fingerprint.dedupeKey);
+      candidates.push({
+        source,
+        packetInput,
+        packet,
+      });
+    };
+
+    if (storedActorPacketInput) {
+      try {
+        pushCandidate(
+          'stored',
+          storedActorPacketInput,
+          this.parsePersonIdentityPacket(storedActorPacketInput)
+        );
+      } catch {
+        candidates.push({
+          source: 'stored',
+          packetInput: storedActorPacketInput,
+          packet: null,
+        });
+      }
+    }
+
+    pushCandidate(
+      'request',
+      input.requestActorPacketInput ?? input.requestActorPacket ?? null,
+      input.requestActorPacket ?? null
+    );
+    pushCandidate(
+      'session',
+      input.sessionActorPacket ?? null,
+      input.sessionActorPacket ?? null
+    );
+
+    const candidateErrors: Error[] = [];
+    let storedActorPacket: PacketEnvelopeByType['Element'] | null = null;
+
+    if (storedActorPacketInput) {
+      try {
+        storedActorPacket = this.parsePersonIdentityPacket(storedActorPacketInput);
+      } catch {
+        storedActorPacket = null;
+      }
+    }
+
+    for (const candidate of candidates) {
+      let candidatePacketId: string | null = null;
+
+      try {
+        candidatePacketId = this.buildRawActorCandidateFingerprint(
+          candidate.packetInput
+        ).packetId;
+      } catch {
+        candidatePacketId = null;
+      }
+
+      if (!candidatePacketId || candidatePacketId !== input.expectedActorPacketId) {
+        candidateErrors.push(
+          this.createAuthGateError({
+            reason: 'stale_actor_packet',
+            message: 'Authenticated session actor does not match the claimed identity.',
+            failureCode: 'session_actor_mismatch',
+            request: input.request,
+            sessionRecord: input.sessionRecord ?? null,
+            requestActorPacket: input.requestActorPacket ?? null,
+            storedActorPacket,
+            expectedActorPacketId: input.expectedActorPacketId,
+            actorRequired: true,
+          })
+        );
+        continue;
+      }
+
+      try {
+        const verifiedPacket = await this.verifyIdentityPacket(
+          candidate.packetInput,
+          candidate.source
+        );
+        const activeSigningKey = this.getActiveIdentityKeyBinding({
+          actorPacket: verifiedPacket,
+          kid: input.actorAssertionKid,
+        });
+
+        if (!activeSigningKey) {
+          candidateErrors.push(
+            this.createAuthFailureError({
+              message: 'Actor assertion key is not active for that identity.',
+              failureCode:
+                candidate.source === 'request'
+                  ? 'request_actor_revision_stale'
+                  : 'actor_assertion_key_inactive',
+              request: input.request,
+              sessionRecord: input.sessionRecord ?? null,
+              requestActorPacket: input.requestActorPacket ?? null,
+              storedActorPacket,
+              expectedActorPacketId: input.expectedActorPacketId,
+            })
+          );
+          continue;
+        }
+
+        return {
+          packet: verifiedPacket,
+          parsedActor: verifiedPacket,
+          activeSigningKey,
+          source: candidate.source,
+        };
+      } catch (error) {
+        const failureCode =
+          isNexusAuthFailureError(error)
+            ? error.failureCode
+            : candidate.source === 'stored'
+              ? 'stored_actor_signature_invalid'
+              : candidate.source === 'session'
+                ? 'session_actor_signature_invalid'
+                : 'request_actor_signature_invalid';
+        const message =
+          error instanceof Error
+            ? error.message
+            : 'Unable to verify the claimed identity packet.';
+
+        candidateErrors.push(
+          this.createAuthFailureError({
+            message,
+            failureCode,
+            request: input.request,
+            sessionRecord: input.sessionRecord ?? null,
+            requestActorPacket: input.requestActorPacket ?? null,
+            storedActorPacket,
+            expectedActorPacketId: input.expectedActorPacketId,
+          })
+        );
+      }
+    }
+
+    throw (
+      candidateErrors[0] ??
+      new Error('Unable to verify the claimed identity packet.')
+    );
   }
 
   private async persistVerifiedIdentityPacket(
@@ -581,94 +1185,96 @@ export class NexusAuthService {
   }> {
     assertRecentAssertion(input.actorAssertion.issued_at);
 
-    const parsedActorPacket = parsePacketEnvelope(input.actorPacket);
-
-    if (!isPersonElementPacket(parsedActorPacket)) {
-      throw new Error('Actor packet must be a person element.');
-    }
-
+    const parsedActorPacket = this.parsePersonIdentityPacket(input.actorPacket);
     const storedActorPacketInput = await this.getPersonPacketRevisionInput(
       parsedActorPacket.header.packet_id
     );
-    let storedActorPacket: PacketEnvelopeByType['Element'];
-    let providedActorPacket: PacketEnvelopeByType['Element'] | null = null;
 
-    if (storedActorPacketInput) {
-      try {
-        storedActorPacket = await this.verifyIdentityPacket(storedActorPacketInput);
-      } catch {
-        providedActorPacket = await this.verifyIdentityPacket(parsedActorPacket);
-        storedActorPacket = providedActorPacket;
+    if (!storedActorPacketInput) {
+      const verifiedProvidedActorPacket = await this.verifyIdentityPacket(
+        input.actorPacket,
+        'request'
+      );
+
+      if (verifiedProvidedActorPacket.body.identity?.claim_status !== 'claimed') {
+        await this.persistVerifiedIdentityPacket(verifiedProvidedActorPacket);
       }
-    } else {
-      providedActorPacket = await this.verifyIdentityPacket(parsedActorPacket);
-
-      if (providedActorPacket.body.identity?.claim_status !== 'claimed') {
-        await this.persistVerifiedIdentityPacket(providedActorPacket);
-      }
-
-      storedActorPacket = providedActorPacket;
     }
+
+    const sessionRecord =
+      parsedActorPacket.body.identity?.claim_status === 'claimed'
+        ? this.requireAuthenticatedSession({
+            request: input.request,
+            actorPacketId: parsedActorPacket.header.packet_id,
+            csrfToken: input.csrfToken,
+          })
+        : null;
+
+    const resolvedActor = await this.resolveVerifiedSessionActorCandidate({
+      request: input.request,
+      expectedActorPacketId: parsedActorPacket.header.packet_id,
+      actorAssertionKid: input.actorAssertion.kid,
+      requestActorPacketInput: input.actorPacket,
+      requestActorPacket: parsedActorPacket,
+      sessionRecord: sessionRecord ?? undefined,
+    });
+    const storedActorPacket = resolvedActor.packet;
 
     if (
       input.actorAssertion.actor_packet_id !==
       storedActorPacket.header.packet_id
     ) {
-      throw new Error('Actor assertion packet id does not match the actor packet.');
-    }
-
-    const actorPacketCandidates = [storedActorPacket];
-
-    if (
-      providedActorPacket &&
-      providedActorPacket.header.revision_id !== storedActorPacket.header.revision_id
-    ) {
-      actorPacketCandidates.push(providedActorPacket);
-    }
-
-    const assertionSigner =
-      actorPacketCandidates
-        .map((candidatePacket) => ({
-          packet: candidatePacket,
-          keyBinding: candidatePacket.body.identity?.public_key_bindings.find(
-            (binding) =>
-              binding.kid === input.actorAssertion.kid &&
-              binding.status === 'active'
-          ),
-        }))
-        .find(
-          (
-            candidate
-          ): candidate is {
-            packet: PacketEnvelopeByType['Element'];
-            keyBinding: NonNullable<
-              NonNullable<
-                PacketEnvelopeByType['Element']['body']['identity']
-              >['public_key_bindings']
-            >[number];
-          } => Boolean(candidate.keyBinding)
-        ) ?? null;
-
-    if (!assertionSigner) {
-      throw new Error('Actor assertion key is not active for that identity.');
+      throw this.createAuthFailureError({
+        message: 'Actor assertion packet id does not match the actor packet.',
+        failureCode: 'actor_assertion_packet_mismatch',
+        request: input.request,
+        sessionRecord,
+        requestActorPacket: parsedActorPacket,
+        storedActorPacket,
+        expectedActorPacketId: storedActorPacket.header.packet_id,
+      });
     }
 
     const assertionIsValid = await verifyActorAssertion({
       assertion: input.actorAssertion,
-      publicJwk: assertionSigner.keyBinding.public_jwk as JsonWebKey,
+      publicJwk: resolvedActor.activeSigningKey.public_jwk as JsonWebKey,
       body: input.body,
     });
 
     if (!assertionIsValid) {
-      throw new Error('Actor assertion verification failed.');
+      throw this.createAuthFailureError({
+        message: 'Actor assertion verification failed.',
+        failureCode: 'assertion_signature_invalid',
+        request: input.request,
+        sessionRecord,
+        requestActorPacket: parsedActorPacket,
+        storedActorPacket,
+        expectedActorPacketId: storedActorPacket.header.packet_id,
+      });
     }
 
     if (input.actorAssertion.method.toUpperCase() !== input.method) {
-      throw new Error('Actor assertion method does not match this request.');
+      throw this.createAuthFailureError({
+        message: 'Actor assertion method does not match this request.',
+        failureCode: 'assertion_signature_invalid',
+        request: input.request,
+        sessionRecord,
+        requestActorPacket: parsedActorPacket,
+        storedActorPacket,
+        expectedActorPacketId: storedActorPacket.header.packet_id,
+      });
     }
 
     if (input.actorAssertion.path !== input.path) {
-      throw new Error('Actor assertion path does not match this request.');
+      throw this.createAuthFailureError({
+        message: 'Actor assertion path does not match this request.',
+        failureCode: 'assertion_signature_invalid',
+        request: input.request,
+        sessionRecord,
+        requestActorPacket: parsedActorPacket,
+        storedActorPacket,
+        expectedActorPacketId: storedActorPacket.header.packet_id,
+      });
     }
 
     let hasRecentReauth = false;
@@ -676,11 +1282,13 @@ export class NexusAuthService {
     let reauthProofMethod: ReauthProofMethod | null = null;
 
     if (storedActorPacket.body.identity?.claim_status === 'claimed') {
-      const sessionRecord = this.requireAuthenticatedSession({
-        request: input.request,
-        actorPacketId: storedActorPacket.header.packet_id,
-        csrfToken: input.csrfToken,
-      });
+      const claimedSessionRecord =
+        sessionRecord ??
+        this.requireAuthenticatedSession({
+          request: input.request,
+          actorPacketId: storedActorPacket.header.packet_id,
+          csrfToken: input.csrfToken,
+        });
       const securityMode = await this.resolveEffectiveSecurityMode(
         storedActorPacket.header.packet_id
       );
@@ -693,12 +1301,35 @@ export class NexusAuthService {
               (input.writeRisk ?? 'standard') === 'high_impact')));
 
       if (requiresFreshReauth) {
-        const consumedToken = this.consumeReauthToken({
-          actorPacketId: storedActorPacket.header.packet_id,
-          sessionId: sessionRecord.session_id,
-          reauthToken: input.reauthToken,
-          purpose: 'interaction',
-        });
+        let consumedToken;
+
+        try {
+          consumedToken = this.consumeReauthToken({
+            actorPacketId: storedActorPacket.header.packet_id,
+            sessionId: claimedSessionRecord.session_id,
+            reauthToken: input.reauthToken,
+            purpose: 'interaction',
+          });
+        } catch (error) {
+          throw this.createAuthGateError({
+            reason: 'write_approval_required',
+            message:
+              error instanceof Error
+                ? error.message
+                : 'This action requires a fresh re-auth token.',
+            failureCode: input.reauthToken
+              ? 'reauth_token_actor_mismatch'
+              : 'reauth_token_missing',
+            request: input.request,
+            sessionRecord: claimedSessionRecord,
+            requestActorPacket: parsedActorPacket,
+            storedActorPacket,
+            expectedActorPacketId: storedActorPacket.header.packet_id,
+            retryable: true,
+            actorRequired: true,
+            writeApprovalRequired: true,
+          });
+        }
         hasRecentReauth = true;
         hasPasskeyConfirmation =
           consumedToken.proof_method === 'passkey_confirmation';
@@ -881,7 +1512,6 @@ export class NexusAuthService {
         .run(now.toISOString(), input.challengeId);
     });
 
-    const hasPasskey = this.countActivePasskeys(actorPacket.header.packet_id) > 0;
     const createdSession = this.createSessionRecord({
       actorPacketId: actorPacket.header.packet_id,
       keepMeLoggedIn: input.keepMeLoggedIn,
@@ -1395,27 +2025,25 @@ export class NexusAuthService {
     proofMethod?: ReauthProofMethod;
   }): Promise<NexusReauthVerifyPayload> {
     assertRecentAssertion(input.actorAssertion.issued_at);
-
-    const actorPacket = await this.verifyAndPersistIdentityPacket({
-      actorPacket: input.actorPacket,
-    });
+    const providedActorPacket = this.parsePersonIdentityPacket(input.actorPacket);
     const sessionRecord = this.requireAuthenticatedSession({
       request: input.request,
-      actorPacketId: actorPacket.header.packet_id,
+      actorPacketId: providedActorPacket.header.packet_id,
       csrfToken: input.csrfToken,
     });
-    const activeKeyBinding = actorPacket.body.identity?.public_key_bindings.find(
-      (binding) =>
-        binding.kid === input.actorAssertion.kid && binding.status === 'active'
-    );
-
-    if (!activeKeyBinding) {
-      throw new Error('Actor assertion key is not active for that identity.');
-    }
+    const resolvedActor = await this.resolveVerifiedSessionActorCandidate({
+      request: input.request,
+      expectedActorPacketId: sessionRecord.actor_packet_id,
+      actorAssertionKid: input.actorAssertion.kid,
+      requestActorPacketInput: input.actorPacket,
+      requestActorPacket: providedActorPacket,
+      sessionRecord,
+    });
+    const actorPacket = resolvedActor.packet;
 
     const assertionIsValid = await verifyActorAssertion({
       assertion: input.actorAssertion,
-      publicJwk: activeKeyBinding.public_jwk as JsonWebKey,
+      publicJwk: resolvedActor.activeSigningKey.public_jwk as JsonWebKey,
       body: {
         purpose: input.purpose,
         proof_method: input.proofMethod ?? 'signed_reauth',
@@ -1423,19 +2051,51 @@ export class NexusAuthService {
     });
 
     if (!assertionIsValid) {
-      throw new Error('Signed re-auth assertion verification failed.');
+      throw this.createAuthFailureError({
+        message: 'Signed re-auth assertion verification failed.',
+        failureCode: 'assertion_signature_invalid',
+        request: input.request,
+        sessionRecord,
+        requestActorPacket: providedActorPacket,
+        storedActorPacket: actorPacket,
+        expectedActorPacketId: actorPacket.header.packet_id,
+      });
     }
 
     if (input.actorAssertion.method.toUpperCase() !== 'POST') {
-      throw new Error('Signed re-auth assertion method does not match this request.');
+      throw this.createAuthFailureError({
+        message: 'Signed re-auth assertion method does not match this request.',
+        failureCode: 'assertion_signature_invalid',
+        request: input.request,
+        sessionRecord,
+        requestActorPacket: providedActorPacket,
+        storedActorPacket: actorPacket,
+        expectedActorPacketId: actorPacket.header.packet_id,
+      });
     }
 
     if (input.actorAssertion.path !== '/api/nexus/auth/reauth/signed') {
-      throw new Error('Signed re-auth assertion path does not match this request.');
+      throw this.createAuthFailureError({
+        message: 'Signed re-auth assertion path does not match this request.',
+        failureCode: 'assertion_signature_invalid',
+        request: input.request,
+        sessionRecord,
+        requestActorPacket: providedActorPacket,
+        storedActorPacket: actorPacket,
+        expectedActorPacketId: actorPacket.header.packet_id,
+      });
     }
 
     if (input.actorAssertion.actor_packet_id !== actorPacket.header.packet_id) {
-      throw new Error('Signed re-auth assertion actor does not match the actor packet.');
+      throw this.createAuthFailureError({
+        message: 'Signed re-auth assertion actor does not match the actor packet.',
+        failureCode: 'reauth_token_actor_mismatch',
+        request: input.request,
+        sessionRecord,
+        requestActorPacket: providedActorPacket,
+        storedActorPacket: actorPacket,
+        expectedActorPacketId: actorPacket.header.packet_id,
+      });
     }
 
     const token = this.createReauthToken({

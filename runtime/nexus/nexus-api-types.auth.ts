@@ -13,6 +13,10 @@ import type {
   NexusLocationCreateCandidate,
   NexusLocationSearchResult,
 } from '@runtime/nexus/location-search';
+export type {
+  NexusAuthGatePayload,
+  NexusAuthGateReason,
+} from '@runtime/nexus/nexus-auth-gate-error';
 
 export type NexusSecurityMode =
   | 'standard'

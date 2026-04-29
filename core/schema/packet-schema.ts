@@ -1048,6 +1048,17 @@ export interface PacketCompatibilityAuditSummary {
   has_write_preparation: boolean;
 }
 
+export type PacketSignatureCandidateSource =
+  | 'exact'
+  | 'header_compatibility'
+  | 'family_compatibility'
+  | 'combined_compatibility';
+
+export interface PacketSignatureCanonicalCandidate<TPacket> {
+  packet: TPacket;
+  source: PacketSignatureCandidateSource;
+}
+
 const RESERVED_BODY_KEYS = new Set([
   'packet_id',
   'revision_id',
@@ -1911,12 +1922,25 @@ export function inspectPacketEnvelopeForTarget(
 export function getPacketSignatureCanonicalCandidates(
   packet: PacketEnvelope
 ): PacketEnvelope[] {
+  return getPacketSignatureCanonicalCandidateDetails(packet).map(
+    (candidate) => candidate.packet
+  );
+}
+
+export function getPacketSignatureCanonicalCandidateDetails(
+  packet: PacketEnvelope
+): PacketSignatureCanonicalCandidate<PacketEnvelope>[] {
   const sourceSchemaVersion = packet.header.schema_version ?? DEFAULT_SCHEMA_VERSION;
   const versionDefinition = getPacketVersionDefinition(
     packet.header.family,
     sourceSchemaVersion
   );
-  const candidates = [packet];
+  const candidates: PacketSignatureCanonicalCandidate<PacketEnvelope>[] = [
+    {
+      packet,
+      source: 'exact',
+    },
+  ];
   const compatibilityCandidate = versionDefinition.createUnsignedPacketCandidate?.(
     packet as PacketEnvelopeByType[PacketFamily]
   );
@@ -1926,12 +1950,146 @@ export function getPacketSignatureCanonicalCandidates(
     const compatibilityCanonicalPacket = JSON.stringify(compatibilityCandidate);
 
     if (compatibilityCanonicalPacket !== currentCanonicalPacket) {
-      candidates.push(compatibilityCandidate as PacketEnvelope);
+      candidates.push({
+        packet: compatibilityCandidate as PacketEnvelope,
+        source: 'family_compatibility',
+      });
     }
   }
 
   return candidates;
 }
+
+function createRawHeaderCompatibilityCandidate(
+  packet: RawPacketEnvelopeInput
+): RawPacketEnvelopeInput | null {
+  const metadata = packet.header.metadata;
+
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
+    return null;
+  }
+
+  const metadataRecord = metadata as Record<string, unknown>;
+
+  if (
+    !Object.prototype.hasOwnProperty.call(metadataRecord, 'compatibility') ||
+    metadataRecord.compatibility !== null
+  ) {
+    return null;
+  }
+
+  const { compatibility: _compatibility, ...nextMetadata } = metadataRecord;
+  const nextHeader = {
+    ...packet.header,
+  } as RawPacketHeaderInput & Record<string, unknown>;
+
+  if (Object.keys(nextMetadata).length > 0) {
+    nextHeader.metadata = nextMetadata;
+  } else {
+    delete nextHeader.metadata;
+  }
+
+  return {
+    ...packet,
+    header: nextHeader,
+  };
+}
+
+function createRawFamilyCompatibilityBodyCandidate(
+  packet: RawPacketEnvelopeInput
+): unknown | null {
+  try {
+    const adaptedPacket = inspectPacketEnvelope(packet).adapted_packet;
+    const sourceSchemaVersion =
+      packet.header.schema_version ?? DEFAULT_SCHEMA_VERSION;
+    const versionDefinition = getPacketVersionDefinition(
+      packet.header.family,
+      sourceSchemaVersion
+    );
+    const compatibilityCandidate = versionDefinition.createUnsignedPacketCandidate?.(
+      adaptedPacket as PacketEnvelopeByType[PacketFamily]
+    );
+
+    return compatibilityCandidate?.body ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function getRawPacketSignatureCanonicalCandidates(
+  packetInput: unknown
+): RawPacketEnvelopeInput[] {
+  return getRawPacketSignatureCanonicalCandidateDetails(packetInput).map(
+    (candidate) => candidate.packet
+  );
+}
+
+export function getRawPacketSignatureCanonicalCandidateDetails(
+  packetInput: unknown
+): PacketSignatureCanonicalCandidate<RawPacketEnvelopeInput>[] {
+  // Signature verification must start from the stored/request raw envelope.
+  // Adapted packets are runtime read views, while raw packets are the
+  // historical signed fact that may omit later additive defaults.
+  const packet = parseRawPacketEnvelopeInput(packetInput);
+  const candidates: PacketSignatureCanonicalCandidate<RawPacketEnvelopeInput>[] = [];
+  const seenPackets = new Set<string>();
+  const pushCandidate = (
+    candidatePacket: RawPacketEnvelopeInput,
+    source: PacketSignatureCandidateSource
+  ) => {
+    const serializedCandidate = JSON.stringify(candidatePacket);
+
+    if (seenPackets.has(serializedCandidate)) {
+      return;
+    }
+
+    seenPackets.add(serializedCandidate);
+    candidates.push({
+      packet: candidatePacket,
+      source,
+    });
+  };
+
+  pushCandidate(packet, 'exact');
+
+  const headerCompatibilityCandidate =
+    createRawHeaderCompatibilityCandidate(packet);
+
+  if (headerCompatibilityCandidate) {
+    pushCandidate(headerCompatibilityCandidate, 'header_compatibility');
+  }
+
+  const familyCompatibilityBody =
+    createRawFamilyCompatibilityBodyCandidate(packet);
+
+  if (familyCompatibilityBody) {
+    pushCandidate(
+      {
+        ...packet,
+        body: familyCompatibilityBody,
+      },
+      'family_compatibility'
+    );
+
+    if (headerCompatibilityCandidate) {
+      pushCandidate(
+        {
+          ...headerCompatibilityCandidate,
+          body: familyCompatibilityBody,
+        },
+        'combined_compatibility'
+      );
+    }
+  }
+
+  return candidates;
+}
+
+// Migration checklist for additive/defaulted fields on signed packet families:
+// add the compatibility adapter, add a raw signature candidate rule when old
+// signed packets may omit the field, prove old packets still verify, prove
+// semantic tampering still fails, and keep next revisions unsigned until the
+// final signing step.
 
 export function preparePacketEnvelopeForAdaptedWrite(
   input: unknown
