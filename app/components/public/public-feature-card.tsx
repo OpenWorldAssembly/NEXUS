@@ -2,7 +2,9 @@
  * File: public-feature-card.tsx
  * Description: Renders a reusable informational card for public page grids.
  */
-import { Text, View } from 'react-native';
+import { Text } from 'react-native';
+
+import PublicSurface from './public-surface';
 
 type PublicFeatureCardProps = {
   eyebrow: string;
@@ -22,12 +24,12 @@ export default function PublicFeatureCard({
   eyebrowClassName,
 }: PublicFeatureCardProps) {
   return (
-    <View className="min-w-[260px] flex-1 rounded-[1.75rem] border border-public-line/70 bg-public-panel/55 p-6">
+    <PublicSurface baseClassName="min-w-[260px] flex-1 rounded-[1.75rem] border border-public-line/70 bg-public-panel/55 p-6">
       <Text className={["text-xs font-bold uppercase tracking-[0.28em]", eyebrowClassName].join(' ')}>
         {eyebrow}
       </Text>
       <Text className="mt-3 text-2xl font-bold text-public-text">{title}</Text>
       <Text className="mt-3 text-base leading-7 text-public-muted">{body}</Text>
-    </View>
+    </PublicSurface>
   );
 }

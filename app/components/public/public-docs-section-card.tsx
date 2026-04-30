@@ -2,6 +2,8 @@ import { Text, View } from "react-native";
 
 import type { CharterPrincipleCard } from "@/app/public/content-types";
 
+import PublicSurface from "./public-surface";
+
 type PublicDocsSectionCardProps = {
   section: CharterPrincipleCard;
 };
@@ -17,12 +19,16 @@ export function PublicDocsSectionCard({ section }: PublicDocsSectionCardProps) {
   const hairlineClassName = isRightAnchored ? "self-end" : "self-start";
 
   return (
-    <View className="min-w-[280px] flex-1 self-stretch rounded-[28px] border border-[#1c4f79] bg-[#031129] px-7 py-7">
-      <View className="pointer-events-none absolute left-0 top-0 h-full w-full overflow-hidden rounded-[28px]">
-        <View className="absolute -left-12 -top-12 h-40 w-40 rounded-full bg-[#14355c]/45" />
-        <View className="absolute -bottom-14 right-[-10%] h-44 w-44 rounded-full bg-[#102c4d]/35" />
-      </View>
-
+    <PublicSurface
+      baseClassName="min-w-[280px] flex-1 self-stretch rounded-[28px] border border-[#1c4f79] bg-[#031129] px-7 py-7"
+      contentClassName="flex-1"
+      background={
+        <View className="pointer-events-none absolute left-0 top-0 h-full w-full overflow-hidden rounded-[28px]">
+          <View className="absolute -left-12 -top-12 h-40 w-40 rounded-full bg-[#14355c]/45" />
+          <View className="absolute -bottom-14 right-[-10%] h-44 w-44 rounded-full bg-[#102c4d]/35" />
+        </View>
+      }
+    >
       <View className="flex-1 justify-between gap-10">
         <View className={titleWrapClassName}>
           <View className={["mb-5 w-full max-w-[92%] border-t border-[#244e77]", hairlineClassName].join(" ")} />
@@ -56,7 +62,7 @@ export function PublicDocsSectionCard({ section }: PublicDocsSectionCardProps) {
           <View className={["mt-5 w-full max-w-[92%] border-t border-[#244e77]", hairlineClassName].join(" ")} />
         </View>
       </View>
-    </View>
+    </PublicSurface>
   );
 }
 

@@ -4,6 +4,8 @@
  */
 import { Text, View } from 'react-native';
 
+import PublicSurface from './public-surface';
+
 type PublicPageHeroProps = {
   eyebrow: string;
   title: string;
@@ -32,10 +34,15 @@ export default function PublicPageHero({
   glowSecondaryClassName,
 }: PublicPageHeroProps) {
   return (
-    <View className="overflow-hidden rounded-[2rem] border border-public-line/70 bg-public-shell/70 px-6 py-10 shadow-public md:px-10">
-      <View className={["absolute -right-10 top-0 h-44 w-44 rounded-full blur-3xl", glowPrimaryClassName].join(' ')} />
-      <View className={["absolute left-8 top-16 h-40 w-40 rounded-full blur-3xl", glowSecondaryClassName].join(' ')} />
-
+    <PublicSurface
+      baseClassName="overflow-hidden rounded-[2rem] border border-public-line/70 bg-public-shell/70 px-6 py-10 shadow-public md:px-10"
+      background={
+        <>
+          <View className={["absolute -right-10 top-0 h-44 w-44 rounded-full blur-3xl", glowPrimaryClassName].join(' ')} />
+          <View className={["absolute left-8 top-16 h-40 w-40 rounded-full blur-3xl", glowSecondaryClassName].join(' ')} />
+        </>
+      }
+    >
       <Text className={["text-sm font-bold uppercase tracking-[0.35em]", eyebrowClassName].join(' ')}>
         {eyebrow}
       </Text>
@@ -50,6 +57,6 @@ export default function PublicPageHero({
         </Text>
         <Text className="mt-3 text-base leading-7 text-public-muted md:text-lg">{calloutBody}</Text>
       </View>
-    </View>
+    </PublicSurface>
   );
 }
