@@ -5,6 +5,7 @@
 
 export * from '@runtime/nexus/nexus-query-api.assemblies';
 export * from '@runtime/nexus/nexus-query-api.discussions';
+export * from '@runtime/nexus/nexus-query-api.explorer';
 export * from '@runtime/nexus/nexus-query-api.identity';
 export * from '@runtime/nexus/nexus-query-api.roles';
 export * from '@runtime/nexus/nexus-query-api.shell';

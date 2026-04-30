@@ -227,7 +227,11 @@ async function comparePacketsByRevision(
  * Output: a browser query service for packet-level lookup, link traversal, and revision comparison.
  */
 export class PacketStoreBrowserQueryService implements BrowserQueryService {
-  constructor(private readonly packetStore: PacketStore) {}
+  private readonly packetStore: PacketStore;
+
+  constructor(packetStore: PacketStore) {
+    this.packetStore = packetStore;
+  }
 
   async getPacket(packet: PacketRef): Promise<BrowserPacketProjection | null> {
     const preferredRevision = await this.packetStore.fetchPreferredRevision(packet);
@@ -265,7 +269,11 @@ export class PacketStoreBrowserQueryService implements BrowserQueryService {
  * Output: a nexus query service for scope-lens projections across dashboard, votes, discussions, and library.
  */
 export class PacketStoreNexusQueryService implements NexusQueryService {
-  constructor(private readonly searchReader: PacketSearchReader) {}
+  private readonly searchReader: PacketSearchReader;
+
+  constructor(searchReader: PacketSearchReader) {
+    this.searchReader = searchReader;
+  }
 
   private async listCardsByFamilies(
     lens: NexusScopeLens,

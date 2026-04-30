@@ -1093,6 +1093,7 @@ export default function NexusSidebar({
     togglePreferencesDrawer,
     togglePrimaryRailCollapsed,
     toggleSecondaryRailCollapsed,
+    openExplorer,
     branchNodes,
   } = useNexusShell();
   const {
@@ -1364,6 +1365,26 @@ export default function NexusSidebar({
                     Back to Home
                   </Text>
                 </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                className={joinClasses(
+                  'items-center rounded-full border',
+                  isLargeUi ? 'px-4 py-3' : 'px-3 py-2.5',
+                  homeButtonClass,
+                )}
+                onPress={openExplorer}
+              >
+                <Text
+                  className={joinClasses(
+                    isLargeUi
+                      ? 'text-sm font-semibold uppercase tracking-[2px]'
+                      : 'text-xs font-semibold uppercase tracking-[2px]',
+                    titleTextClass,
+                  )}
+                >
+                  Packet Explorer
+                </Text>
+              </Pressable>
               {hasActiveClaimedSession && !isCurrentIdentityUnlocked ? (
                 <Pressable
                   accessibilityRole="button"

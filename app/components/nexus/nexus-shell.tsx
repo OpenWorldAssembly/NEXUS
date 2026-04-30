@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
+import NexusPacketExplorer from '@app/components/nexus/nexus-packet-explorer';
 import NexusSidebar from '@app/components/nexus/nexus-sidebar';
 import {
   getNexusRailWidth,
@@ -162,6 +163,8 @@ export default function NexusShell({ children }: PropsWithChildren) {
           />
         </View>
       ) : null}
+
+      <NexusPacketExplorer />
     </View>
   );
 }

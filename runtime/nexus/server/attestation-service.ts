@@ -235,8 +235,11 @@ function toLegacyDiscussionEntry(
 
 export class SQLiteAttestationService implements AttestationService {
   private state: AttestationState | null = null;
+  private readonly packetStore: NodeSQLitePacketStore;
 
-  constructor(private readonly packetStore: NodeSQLitePacketStore) {}
+  constructor(packetStore: NodeSQLitePacketStore) {
+    this.packetStore = packetStore;
+  }
 
   async syncDerivedState(): Promise<void> {
     const [attestationPackets, allPackets] = await Promise.all([

@@ -624,11 +624,16 @@ export class SQLiteDiscussionService
   implements DiscussionQueryService
 {
   private state: DiscussionState | null = null;
+  private readonly packetStore: NodeSQLitePacketStore;
+  private readonly attestationService: AttestationService;
 
   constructor(
-    private readonly packetStore: NodeSQLitePacketStore,
-    private readonly attestationService: AttestationService
-  ) {}
+    packetStore: NodeSQLitePacketStore,
+    attestationService: AttestationService
+  ) {
+    this.packetStore = packetStore;
+    this.attestationService = attestationService;
+  }
 
   async syncDerivedState(): Promise<void> {
     await this.attestationService.syncDerivedState();
@@ -1379,7 +1384,117 @@ export class SQLiteDiscussionService
               : 'none',
         root_post_packet_id: threadRoot?.packet.packet_id ?? null,
         reply_target_packet_id: replyTargetPacketId,
-      },
+        },
+      };
+    }
+
+  async inspectPacketActionsForExplorer(input: {
+    packet_id: string;
+    viewer_actor_key: string | null;
+  }): Promise<{
+    actions: NexusActionMap;
+    action_descriptors: typeof DISCUSSION_ACTION_DESCRIPTORS;
+  }> {
+    if (!this.state) {
+      await this.syncDerivedState();
+    }
+
+    if (!this.state) {
+      return {
+        actions: {},
+        action_descriptors: DISCUSSION_ACTION_DESCRIPTORS,
+      };
+    }
+
+    const actorIdentity = getActorIdentity(
+      input.viewer_actor_key,
+      this.state.packetMap
+    );
+    const entryPacket =
+      resolveOperationalDiscussionPacket({
+        packetMap: this.state.entryMap,
+        operationalMap: this.state.entryOperationalMap,
+        packetId: input.packet_id,
+      }) ??
+      (await getDiscussionEntryById(this.packetStore, input.packet_id));
+
+    if (entryPacket) {
+      const threadPacket = resolveOperationalDiscussionPacket({
+        packetMap: this.state.threadMap,
+        operationalMap: this.state.threadOperationalMap,
+        packetId: entryPacket.body.thread_ref.packet_id,
+      });
+      const forumPacket = threadPacket
+        ? resolveOperationalDiscussionPacket({
+            packetMap: this.state.forumMap,
+            operationalMap: this.state.forumOperationalMap,
+            packetId: threadPacket.body.forum_ref.packet_id,
+          })
+        : null;
+      const viewer = forumPacket
+        ? await this.buildViewerContext(forumPacket, actorIdentity, threadPacket)
+        : null;
+      const projection =
+        entryPacket.header.family === 'DiscussionReply'
+          ? this.toDiscussionReplyProjection(
+              entryPacket as PacketEnvelopeByType['DiscussionReply'],
+              actorIdentity.actor_key,
+              viewer
+            )
+          : this.toDiscussionPostProjection(
+              entryPacket,
+              actorIdentity.actor_key,
+              viewer
+            );
+
+      return {
+        actions: projection.actions,
+        action_descriptors: DISCUSSION_ACTION_DESCRIPTORS,
+      };
+    }
+
+    const forumPacket =
+      resolveOperationalDiscussionPacket({
+        packetMap: this.state.forumMap,
+        operationalMap: this.state.forumOperationalMap,
+        packetId: input.packet_id,
+      }) ?? (await getDiscussionForumById(this.packetStore, input.packet_id));
+
+    if (forumPacket) {
+      const discussionSpacePacket = resolveOperationalDiscussionPacket({
+        packetMap: this.state.discussionSpaceMap,
+        operationalMap: this.state.discussionSpaceOperationalMap,
+        packetId: forumPacket.body.discussion_space_ref.packet_id,
+      });
+
+      if (!discussionSpacePacket) {
+        return {
+          actions: {},
+          action_descriptors: DISCUSSION_ACTION_DESCRIPTORS,
+        };
+      }
+
+      const viewer = await this.buildViewerContext(forumPacket, actorIdentity);
+      const forumProjection = this.toDiscussionForumProjection(
+        discussionSpacePacket,
+        forumPacket,
+        forumPacket.body.title
+      );
+
+      return {
+        actions: this.createDiscussionWorkspaceActions({
+          viewer,
+          selectedForum: forumProjection,
+          selectedThreadPacketId: null,
+          feedHasMore: false,
+        }),
+        action_descriptors: DISCUSSION_ACTION_DESCRIPTORS,
+      };
+    }
+
+    return {
+      actions: {},
+      action_descriptors: DISCUSSION_ACTION_DESCRIPTORS,
     };
   }
 

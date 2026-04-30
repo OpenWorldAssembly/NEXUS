@@ -2,7 +2,8 @@
  * File: library.tsx
  * Description: Renders the packet library with typed filters and packet-native previews.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScrollView, Text, View } from 'react-native';
 
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
@@ -29,14 +30,39 @@ const packetFilters: PacketFilter[] = [
  * Output: the packet library view for the current scope lens.
  */
 export default function NexusLibraryPage() {
-  const { activeScope, currentActorPacketId } = useNexusShell();
+  const { activeScope, currentActorPacketId, openPacketInExplorer } =
+    useNexusShell();
   const appearance = useNexusAppearance();
+  const router = useRouter();
+  const scrollViewRef = useRef<ScrollView | null>(null);
+  const localParams = useLocalSearchParams<{
+    family?: string | string[];
+    packet_id?: string | string[];
+  }>();
+  const requestedFamilyFilter =
+    typeof localParams.family === 'string' &&
+    PACKET_FAMILIES.includes(localParams.family as PacketFamily)
+      ? (localParams.family as PacketFamily)
+      : null;
+  const highlightedPacketId =
+    typeof localParams.packet_id === 'string' ? localParams.packet_id : null;
   const [packetFilter, setPacketFilter] = useState<PacketFilter>('all');
   const [libraryPayload, setLibraryPayload] = useState<NexusLibraryPayload | null>(
     null,
   );
   const [isLoadingLibrary, setIsLoadingLibrary] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [cardOffsets, setCardOffsets] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (requestedFamilyFilter) {
+      setPacketFilter(requestedFamilyFilter);
+    }
+  }, [requestedFamilyFilter]);
+
+  useEffect(() => {
+    setCardOffsets({});
+  }, [packetFilter, activeScope.id]);
 
   useEffect(() => {
     let isMounted = true;
@@ -82,6 +108,41 @@ export default function NexusLibraryPage() {
   }, [activeScope.id, currentActorPacketId, packetFilter]);
 
   const visiblePackets = libraryPayload?.packets ?? [];
+  const highlightedPacketIsVisible =
+    highlightedPacketId !== null &&
+    visiblePackets.some((packet) => packet.packet.packet_id === highlightedPacketId);
+
+  useEffect(() => {
+    if (
+      !highlightedPacketId ||
+      isLoadingLibrary ||
+      loadError ||
+      !highlightedPacketIsVisible
+    ) {
+      return;
+    }
+
+    const targetOffset = cardOffsets[highlightedPacketId];
+
+    if (typeof targetOffset !== 'number') {
+      return;
+    }
+
+    const timeoutHandle = setTimeout(() => {
+      scrollViewRef.current?.scrollTo({
+        y: Math.max(targetOffset - 24, 0),
+        animated: true,
+      });
+    }, 0);
+
+    return () => clearTimeout(timeoutHandle);
+  }, [
+    cardOffsets,
+    highlightedPacketId,
+    highlightedPacketIsVisible,
+    isLoadingLibrary,
+    loadError,
+  ]);
 
   function formatFilterLabel(filter: PacketFilter): string {
     if (filter === 'all') {
@@ -92,7 +153,11 @@ export default function NexusLibraryPage() {
   }
 
   return (
-    <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+    <ScrollView
+      ref={scrollViewRef}
+      className="flex-1"
+      showsVerticalScrollIndicator={false}
+    >
       <View className={appearance.pageContainerClass}>
         <NexusSectionHeader
           eyebrow="Library"
@@ -144,30 +209,73 @@ export default function NexusLibraryPage() {
 
         <View className="gap-4">
           {visiblePackets.map((packet) => (
-            <NexusCard key={packet.packet.packet_id} className="gap-4">
-              <View className="gap-2 lg:flex-row lg:items-start lg:justify-between">
-                <View className="flex-1 gap-2">
-                  <View className="flex-row flex-wrap items-center gap-2">
-                    <Text className={appearance.surfaceTitleClass}>
-                      {packet.title}
-                    </Text>
-                    <NexusBadge label={packet.family} tone="sky" />
-                  </View>
-                  <Text className={appearance.sectionBodyClass}>
-                    {packet.summary ?? 'No packet summary available.'}
-                  </Text>
-                  <Text className={appearance.itemMetaClass}>
-                    {packet.status ?? packet.label}
-                  </Text>
-                </View>
+            <View
+              key={packet.packet.packet_id}
+              onLayout={(event) => {
+                const nextOffset = event.nativeEvent.layout.y;
 
-                <View className="flex-row flex-wrap gap-3">
-                  <NexusActionButton label="Open packet" disabled />
-                  <NexusActionButton label="Fork draft" disabled />
-                  <NexusActionButton label="Trace lineage" disabled />
+                setCardOffsets((currentOffsets) =>
+                  currentOffsets[packet.packet.packet_id] === nextOffset
+                    ? currentOffsets
+                    : {
+                        ...currentOffsets,
+                        [packet.packet.packet_id]: nextOffset,
+                      }
+                );
+              }}
+            >
+              <NexusCard
+                className={`gap-4 ${
+                  packet.packet.packet_id === highlightedPacketId
+                    ? 'border-nexus-sky/60 bg-nexus-sky/10'
+                    : ''
+                }`}
+              >
+                <View className="gap-2 lg:flex-row lg:items-start lg:justify-between">
+                  <View className="flex-1 gap-2">
+                    <View className="flex-row flex-wrap items-center gap-2">
+                      <Text className={appearance.surfaceTitleClass}>
+                        {packet.title}
+                      </Text>
+                      <NexusBadge label={packet.family} tone="sky" />
+                      {packet.packet.packet_id === highlightedPacketId ? (
+                        <NexusBadge label="Selected in Explorer" tone="gold" />
+                      ) : null}
+                    </View>
+                    <Text className={appearance.sectionBodyClass}>
+                      {packet.summary ?? 'No packet summary available.'}
+                    </Text>
+                    <Text className={appearance.itemMetaClass}>
+                      {packet.status ?? packet.label}
+                    </Text>
+                  </View>
+
+                  <View className="flex-row flex-wrap gap-3">
+                    <NexusActionButton
+                      label="Open packet"
+                      onPress={() => {
+                        router.setParams({
+                          packet_id: packet.packet.packet_id,
+                          family: packet.family,
+                        });
+                        openPacketInExplorer({
+                          packetId: packet.packet.packet_id,
+                          preferredRevisionId: packet.revision.revision_id,
+                          titleSnapshot: packet.title,
+                          seedSummary: {
+                            family: packet.family,
+                            summary: packet.summary,
+                            label: packet.label,
+                          },
+                        });
+                      }}
+                    />
+                    <NexusActionButton label="Fork draft" disabled />
+                    <NexusActionButton label="Trace lineage" disabled />
+                  </View>
                 </View>
-              </View>
-            </NexusCard>
+              </NexusCard>
+            </View>
           ))}
         </View>
       </View>

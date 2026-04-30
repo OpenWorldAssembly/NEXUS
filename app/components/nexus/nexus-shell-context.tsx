@@ -8,6 +8,21 @@ import type { Href } from 'expo-router';
 import { usePathname, useRouter } from 'expo-router';
 
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
+import type {
+  PacketExplorerSession,
+  PacketExplorerTab,
+  PacketExplorerViewMode,
+} from '@runtime/nexus/packet-explorer-session';
+import {
+  closePacketExplorer,
+  closePacketExplorerTab,
+  focusPacketExplorerTab,
+  openPacketExplorerHome,
+  openPacketExplorerPacket,
+  persistPacketExplorerSession,
+  readPacketExplorerSession,
+  setPacketExplorerTabViewMode,
+} from '@runtime/nexus/packet-explorer-session';
 import {
   NEXUS_GUEST_CAPABILITIES,
 } from '@runtime/nexus/nexus-content';
@@ -43,6 +58,7 @@ type NexusShellContextValue = NexusShellState & {
   isPreferencesDrawerOpen: boolean;
   isPrimaryRailCollapsed: boolean;
   isSecondaryRailCollapsed: boolean;
+  packetExplorerSession: PacketExplorerSession;
   setNavigationMode: (mode: NexusNavMode) => void;
   setThemeMode: (mode: NexusThemeMode) => void;
   setUiDensity: (density: NexusUiDensity) => void;
@@ -56,6 +72,25 @@ type NexusShellContextValue = NexusShellState & {
   toggleSecondaryRailCollapsed: () => void;
   collapseOuterRail: () => void;
   expandInnerRail: () => void;
+  openExplorer: () => void;
+  openPacketInExplorer: (input: {
+    packetId: string;
+    preferredRevisionId?: string | null;
+    titleSnapshot?: string | null;
+    seedSummary?: {
+      family: string | null;
+      summary: string | null;
+      label: string | null;
+    } | null;
+  }) => void;
+  focusExplorerTab: (tabId: string) => void;
+  closeExplorer: () => void;
+  closeExplorerTab: (tabId: string) => void;
+  setExplorerTabViewMode: (input: {
+    tabId: string;
+    viewMode: PacketExplorerViewMode;
+  }) => void;
+  getActiveExplorerTab: () => PacketExplorerTab | null;
 };
 
 const NexusShellContext = createContext<NexusShellContextValue | null>(null);
@@ -150,6 +185,8 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
   const [isPreferencesDrawerOpen, setIsPreferencesDrawerOpen] = useState(false);
   const [isPrimaryRailCollapsed, setIsPrimaryRailCollapsed] = useState(false);
   const [isSecondaryRailCollapsed, setIsSecondaryRailCollapsed] = useState(false);
+  const [packetExplorerSession, setPacketExplorerSession] =
+    useState<PacketExplorerSession>(() => readPacketExplorerSession());
 
   const activeSection = getNexusSectionFromPathname(pathname);
   const activeScope =
@@ -256,6 +293,10 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
     };
   }, [refreshShellData]);
 
+  useEffect(() => {
+    persistPacketExplorerSession(packetExplorerSession);
+  }, [packetExplorerSession]);
+
   /**
    * Inputs: a new scope id.
    * Output: updates the active scope and ensures the scope lineage remains expanded.
@@ -357,6 +398,59 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
     }
   };
 
+  const openExplorer = () => {
+    setPacketExplorerSession((currentSession) =>
+      openPacketExplorerHome(currentSession)
+    );
+  };
+
+  const openPacketInExplorer = (input: {
+    packetId: string;
+    preferredRevisionId?: string | null;
+    titleSnapshot?: string | null;
+    seedSummary?: {
+      family: string | null;
+      summary: string | null;
+      label: string | null;
+    } | null;
+  }) => {
+    setPacketExplorerSession((currentSession) =>
+      openPacketExplorerPacket(currentSession, input)
+    );
+  };
+
+  const focusExplorerTab = (tabId: string) => {
+    setPacketExplorerSession((currentSession) =>
+      focusPacketExplorerTab(currentSession, tabId)
+    );
+  };
+
+  const closeExplorer = () => {
+    setPacketExplorerSession((currentSession) =>
+      closePacketExplorer(currentSession)
+    );
+  };
+
+  const closeExplorerTabById = (tabId: string) => {
+    setPacketExplorerSession((currentSession) =>
+      closePacketExplorerTab(currentSession, tabId)
+    );
+  };
+
+  const setExplorerTabView = (input: {
+    tabId: string;
+    viewMode: PacketExplorerViewMode;
+  }) => {
+    setPacketExplorerSession((currentSession) =>
+      setPacketExplorerTabViewMode(currentSession, input)
+    );
+  };
+
+  const getActiveExplorerTab = () =>
+    packetExplorerSession.tabs.find(
+      (tab) => tab.id === packetExplorerSession.active_tab_id
+    ) ?? null;
+
   return (
     <NexusShellContext.Provider
       value={{
@@ -378,6 +472,7 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
         isPreferencesDrawerOpen,
         isPrimaryRailCollapsed,
         isSecondaryRailCollapsed,
+        packetExplorerSession,
         setNavigationMode,
         setThemeMode,
         setUiDensity,
@@ -391,6 +486,13 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
         toggleSecondaryRailCollapsed,
         collapseOuterRail,
         expandInnerRail,
+        openExplorer,
+        openPacketInExplorer,
+        focusExplorerTab,
+        closeExplorer,
+        closeExplorerTab: closeExplorerTabById,
+        setExplorerTabViewMode: setExplorerTabView,
+        getActiveExplorerTab,
       }}
     >
       {children}
