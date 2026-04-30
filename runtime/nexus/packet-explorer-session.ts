@@ -8,10 +8,16 @@ export const PACKET_EXPLORER_VIEW_MODES = [
   'raw',
   'adapted',
   'read_model',
+ ] as const;
+
+export const PACKET_EXPLORER_PRIMARY_TABS = [
+  'data',
   'lineage',
   'links',
   'actions',
 ] as const;
+
+export const MAX_PACKET_EXPLORER_PACKET_TABS = 100;
 
 export const PACKET_EXPLORER_LIVE_VIEW_MODES = [
   'summary',
@@ -25,6 +31,9 @@ export const PACKET_EXPLORER_LIVE_VIEW_MODES = [
 
 export type PacketExplorerViewMode =
   (typeof PACKET_EXPLORER_VIEW_MODES)[number];
+
+export type PacketExplorerPrimaryTab =
+  (typeof PACKET_EXPLORER_PRIMARY_TABS)[number];
 
 export type PacketExplorerReadMode = 'raw' | 'adapted' | 'read_model';
 
@@ -40,7 +49,8 @@ export type PacketExplorerTab = {
   title_snapshot: string;
   packet_id: string | null;
   preferred_revision_id: string | null;
-  active_view_mode: PacketExplorerViewMode;
+  active_primary_tab: PacketExplorerPrimaryTab;
+  selected_data_view_mode: PacketExplorerViewMode;
   selected_read_mode: PacketExplorerReadMode;
   selected_target_schema_version: string | null;
   seed_summary: PacketExplorerSeedSummary | null;
@@ -50,6 +60,8 @@ export type PacketExplorerSession = {
   is_open: boolean;
   active_tab_id: string | null;
   tabs: PacketExplorerTab[];
+  panel_width: number | null;
+  notice: string | null;
 };
 
 export type PacketExplorerRequestIdentity = {
@@ -60,6 +72,23 @@ export type PacketExplorerRequestIdentity = {
 };
 
 const EXPLORER_SESSION_STORAGE_KEY = 'owa.packet-explorer.session.v1';
+
+function ensureHomeTabFirst(tabs: PacketExplorerTab[]): PacketExplorerTab[] {
+  const homeTab = tabs.find((tab) => tab.kind === 'home') ?? null;
+
+  if (!homeTab) {
+    return tabs;
+  }
+
+  return [
+    homeTab,
+    ...tabs.filter((tab) => tab.id !== homeTab.id),
+  ];
+}
+
+function countPacketTabs(tabs: PacketExplorerTab[]): number {
+  return tabs.filter((tab) => tab.kind === 'packet').length;
+}
 
 export function createPacketExplorerRequestKey(
   input: PacketExplorerRequestIdentity
@@ -97,6 +126,13 @@ function isExplorerViewMode(value: unknown): value is PacketExplorerViewMode {
   );
 }
 
+function isExplorerPrimaryTab(value: unknown): value is PacketExplorerPrimaryTab {
+  return (
+    typeof value === 'string' &&
+    (PACKET_EXPLORER_PRIMARY_TABS as readonly string[]).includes(value)
+  );
+}
+
 function isExplorerReadMode(value: unknown): value is PacketExplorerReadMode {
   return value === 'raw' || value === 'adapted' || value === 'read_model';
 }
@@ -112,7 +148,8 @@ function sanitizeExplorerTab(value: unknown): PacketExplorerTab | null {
     typeof candidate.id !== 'string' ||
     (candidate.kind !== 'home' && candidate.kind !== 'packet') ||
     typeof candidate.title_snapshot !== 'string' ||
-    !isExplorerViewMode(candidate.active_view_mode) ||
+    !isExplorerPrimaryTab(candidate.active_primary_tab) ||
+    !isExplorerViewMode(candidate.selected_data_view_mode) ||
     !isExplorerReadMode(candidate.selected_read_mode)
   ) {
     return null;
@@ -128,7 +165,8 @@ function sanitizeExplorerTab(value: unknown): PacketExplorerTab | null {
       typeof candidate.preferred_revision_id === 'string'
         ? candidate.preferred_revision_id
         : null,
-    active_view_mode: candidate.active_view_mode,
+    active_primary_tab: candidate.active_primary_tab,
+    selected_data_view_mode: candidate.selected_data_view_mode,
     selected_read_mode: candidate.selected_read_mode,
     selected_target_schema_version:
       typeof candidate.selected_target_schema_version === 'string'
@@ -191,7 +229,13 @@ function sanitizeExplorerSession(value: unknown): PacketExplorerSession | null {
   return {
     is_open: candidate.is_open && tabs.length > 0,
     active_tab_id: resolvedActiveTabId,
-    tabs,
+    tabs: ensureHomeTabFirst(tabs),
+    panel_width:
+      typeof candidate.panel_width === 'number' &&
+      Number.isFinite(candidate.panel_width)
+        ? candidate.panel_width
+        : null,
+    notice: typeof candidate.notice === 'string' ? candidate.notice : null,
   };
 }
 
@@ -200,6 +244,8 @@ export function createEmptyPacketExplorerSession(): PacketExplorerSession {
     is_open: false,
     active_tab_id: null,
     tabs: [],
+    panel_width: null,
+    notice: null,
   };
 }
 
@@ -210,7 +256,8 @@ export function createPacketExplorerHomeTab(): PacketExplorerTab {
     title_snapshot: 'Explorer',
     packet_id: null,
     preferred_revision_id: null,
-    active_view_mode: 'summary',
+    active_primary_tab: 'data',
+    selected_data_view_mode: 'summary',
     selected_read_mode: 'raw',
     selected_target_schema_version: null,
     seed_summary: null,
@@ -229,7 +276,8 @@ export function createPacketExplorerPacketTab(input: {
     title_snapshot: input.titleSnapshot?.trim() || input.packetId,
     packet_id: input.packetId,
     preferred_revision_id: input.preferredRevisionId ?? null,
-    active_view_mode: 'summary',
+    active_primary_tab: 'data',
+    selected_data_view_mode: 'summary',
     selected_read_mode: 'raw',
     selected_target_schema_version: null,
     seed_summary: input.seedSummary ?? null,
@@ -241,12 +289,16 @@ export function openPacketExplorerHome(
 ): PacketExplorerSession {
   const existingHomeTab = session.tabs.find((tab) => tab.kind === 'home') ?? null;
   const homeTab = existingHomeTab ?? createPacketExplorerHomeTab();
-  const tabs = existingHomeTab ? session.tabs : [...session.tabs, homeTab];
+  const tabs = ensureHomeTabFirst(
+    existingHomeTab ? session.tabs : [homeTab, ...session.tabs]
+  );
 
   return {
     is_open: true,
     active_tab_id: homeTab.id,
     tabs,
+    panel_width: session.panel_width,
+    notice: null,
   };
 }
 
@@ -269,6 +321,7 @@ export function openPacketExplorerPacket(
       ...session,
       is_open: true,
       active_tab_id: existingTab.id,
+      notice: null,
       tabs: session.tabs.map((tab) =>
         tab.id === existingTab.id
           ? {
@@ -283,12 +336,29 @@ export function openPacketExplorerPacket(
     };
   }
 
+  const homeTab = session.tabs.find((tab) => tab.kind === 'home') ?? createPacketExplorerHomeTab();
+  const baseTabs = session.tabs.some((tab) => tab.kind === 'home')
+    ? session.tabs
+    : [homeTab, ...session.tabs];
+
+  if (countPacketTabs(baseTabs) >= MAX_PACKET_EXPLORER_PACKET_TABS) {
+    return {
+      ...session,
+      is_open: true,
+      tabs: ensureHomeTabFirst(baseTabs),
+      active_tab_id: session.active_tab_id ?? homeTab.id,
+      notice: `Packet tab cap reached (${MAX_PACKET_EXPLORER_PACKET_TABS}). Close some packet tabs before opening more.`,
+    };
+  }
+
   const nextTab = createPacketExplorerPacketTab(input);
 
   return {
     is_open: true,
     active_tab_id: nextTab.id,
-    tabs: [...session.tabs, nextTab],
+    tabs: ensureHomeTabFirst([...baseTabs, nextTab]),
+    panel_width: session.panel_width,
+    notice: null,
   };
 }
 
@@ -304,6 +374,40 @@ export function focusPacketExplorerTab(
     ...session,
     is_open: true,
     active_tab_id: tabId,
+    notice: null,
+  };
+}
+
+export function retargetActivePacketExplorerTab(
+  session: PacketExplorerSession,
+  input: {
+    packetId: string;
+    preferredRevisionId?: string | null;
+    titleSnapshot?: string | null;
+    seedSummary?: PacketExplorerSeedSummary | null;
+  }
+): PacketExplorerSession {
+  const activeTab = session.tabs.find((tab) => tab.id === session.active_tab_id) ?? null;
+
+  if (!activeTab || activeTab.kind !== 'packet') {
+    return openPacketExplorerPacket(session, input);
+  }
+
+  return {
+    ...session,
+    is_open: true,
+    notice: null,
+    tabs: session.tabs.map((tab) =>
+      tab.id === activeTab.id
+        ? {
+            ...tab,
+            packet_id: input.packetId,
+            preferred_revision_id: input.preferredRevisionId ?? null,
+            title_snapshot: input.titleSnapshot?.trim() || input.packetId,
+            seed_summary: input.seedSummary ?? null,
+          }
+        : tab
+    ),
   };
 }
 
@@ -313,6 +417,7 @@ export function closePacketExplorer(
   return {
     ...session,
     is_open: false,
+    notice: null,
   };
 }
 
@@ -323,7 +428,10 @@ export function closePacketExplorerTab(
   const nextTabs = session.tabs.filter((tab) => tab.id !== tabId);
 
   if (nextTabs.length === 0) {
-    return createEmptyPacketExplorerSession();
+    return {
+      ...createEmptyPacketExplorerSession(),
+      panel_width: session.panel_width,
+    };
   }
 
   const currentActiveIndex = session.tabs.findIndex((tab) => tab.id === tabId);
@@ -336,7 +444,24 @@ export function closePacketExplorerTab(
       session.active_tab_id === tabId
         ? (fallbackTab?.id ?? null)
         : session.active_tab_id,
-    tabs: nextTabs,
+    tabs: ensureHomeTabFirst(nextTabs),
+    panel_width: session.panel_width,
+    notice: null,
+  };
+}
+
+export function closePacketExplorerTabs(
+  session: PacketExplorerSession
+): PacketExplorerSession {
+  const existingHomeTab = session.tabs.find((tab) => tab.kind === 'home') ?? null;
+  const homeTab = existingHomeTab ?? createPacketExplorerHomeTab();
+
+  return {
+    is_open: session.is_open,
+    active_tab_id: homeTab.id,
+    tabs: [homeTab],
+    panel_width: session.panel_width,
+    notice: null,
   };
 }
 
@@ -353,20 +478,59 @@ export function setPacketExplorerTabViewMode(
 
   return {
     ...session,
-      tabs: session.tabs.map((tab) =>
-        tab.id === input.tabId
-          ? {
-              ...tab,
-              active_view_mode: input.viewMode,
-              selected_read_mode:
-                input.viewMode === 'raw' ||
-                input.viewMode === 'adapted' ||
-                input.viewMode === 'read_model'
-                  ? input.viewMode
-                  : tab.selected_read_mode,
+    notice: null,
+    tabs: session.tabs.map((tab) =>
+      tab.id === input.tabId
+        ? {
+            ...tab,
+            selected_data_view_mode: input.viewMode,
+            selected_read_mode:
+              input.viewMode === 'raw' ||
+              input.viewMode === 'adapted' ||
+              input.viewMode === 'read_model'
+                ? input.viewMode
+                : tab.selected_read_mode,
           }
         : tab
     ),
+  };
+}
+
+export function setPacketExplorerPrimaryTab(
+  session: PacketExplorerSession,
+  input: {
+    tabId: string;
+    primaryTab: PacketExplorerPrimaryTab;
+  }
+): PacketExplorerSession {
+  if (!session.tabs.some((tab) => tab.id === input.tabId)) {
+    return session;
+  }
+
+  return {
+    ...session,
+    notice: null,
+    tabs: session.tabs.map((tab) =>
+      tab.id === input.tabId
+        ? {
+            ...tab,
+            active_primary_tab: input.primaryTab,
+          }
+        : tab
+    ),
+  };
+}
+
+export function setPacketExplorerPanelWidth(
+  session: PacketExplorerSession,
+  panelWidth: number | null
+): PacketExplorerSession {
+  return {
+    ...session,
+    panel_width:
+      typeof panelWidth === 'number' && Number.isFinite(panelWidth)
+        ? panelWidth
+        : null,
   };
 }
 

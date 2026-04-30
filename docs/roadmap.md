@@ -270,6 +270,7 @@ Default direction:
 - do not block this on graph visualization
 - use the shared interpreter pipeline rather than packet-family-specific readers, so Packet Explorer can ask for `raw`, `canonical`, `legacy`, or UI-targeted packet views through one contract
 - show structured adapter `changes`, `losses`, `requires_guarded_migration`, and `requires_loss_acknowledgement` directly from the compatibility layer instead of re-deriving them in UI code
+- keep Explorer read-only until governance, trust, and action execution seams are explicit enough to avoid accidental side-write workflows
 
 Compatibility / packet-dynamics direction:
 
@@ -277,6 +278,15 @@ Compatibility / packet-dynamics direction:
 - long-term packet evolution should keep the envelope, mutation corridor, proof rules, and signature law rigid while letting packet families, kinds, relationships, policies, and interpreters stay extensible
 - preferred future shape is packet-policy/dependency-informed compatibility: packet metadata can declare family history, target families/versions, omitted features, and migration policy, while core still interprets and enforces every transform
 - backward compatibility should default to virtual downcast where possible; explicit shadow writes or export bridges remain guarded interoperability tools rather than the normal write path
+
+Immediate Explorer backlog to keep visible:
+
+- packet-id and revision-id search from the Home tab
+- import packet and import bundle flows
+- `Fork`, `Adapt`, `Export`, and `Follow` semantics
+- lens-aware diff views and revision compare
+- richer link grouping, filtering, and packet traversal controls
+- eventual action execution from Explorer through the fortress corridor rather than route-local writes
 
 ### 8. Governance loop
 
@@ -291,11 +301,22 @@ This track should eventually deliver:
 - timed voting
 - decision publication
 - decision-to-action linkage
+- packet-backed proposal, vote, and decision write flows through the shared mutation corridor
+- governance visibility inside Packet Explorer, Library, Trust, and later action surfaces
 
 Default direction:
 
 - treat OWA governance as an app-layer implementation on top of Nexus primitives
 - keep revisions inspectable and tied to proposal history
+- make proposals, votes, and decisions real user-facing workflows only after their trust, policy, and review gates are explicit
+
+Trust and governance integration that still needs design and implementation:
+
+- which trust thresholds gate proposing, reviewing, objecting, or voting
+- how role claims and support/dispute evidence affect governance checkpoints
+- how scope policy governs review lanes, decision thresholds, and lifecycle state
+- how `NexusActionState` and packet-policy/dependency inputs should unify across discussions, votes, trust, and Explorer
+- how governance writes stay fortress-backed and packet-inspectable end to end
 
 ### 9. Actions, reports, and learning loops
 
@@ -370,6 +391,25 @@ Produce one design pass that settles:
 
 Only after those briefs are stable should implementation begin on the next major feature wave.
 
+### Chunk E: Packet Explorer finish pass
+
+Produce one implementation-focused design pass that settles:
+
+- search and open-by-id behavior
+- import/export scope and guardrails
+- fork versus adapt semantics
+- diff and compare behavior across lenses and schema targets
+- eventual read-only to action-capable transition boundaries
+
+### Chunk F: Governance and trust integration brief
+
+Produce one design pass that settles:
+
+- proposal, vote, and decision lifecycle semantics
+- trust and role gating for governance actions
+- policy inputs for governance review and thresholds
+- which governance affordances should surface first in Votes, Trust, Roles, and Explorer
+
 ## Recorded priorities from repo analysis
 
 The recent repo analysis and planning review sharpened several priorities that should stay visible in the roadmap until resolved.
@@ -432,6 +472,8 @@ These issues should be treated as active stabilization work, not as background w
 - Role claiming can still error and should be treated as an active stabilization target even after the first roles workspace pass.
 - Location claiming is still incomplete and should be treated as a dedicated later subsystem, not assumed to be a simple bugfix.
 - Assembly creation exists but remains rough and under-tested.
+- Packet Explorer still needs search, import/export, fork/adapt, diff, compare, and eventual action-execution planning before it can be treated as the fully realized packet workstation.
+- Proposals, votes, and decisions are represented in packets and read surfaces, but governance is not yet a fully interactive trusted workflow.
 
 ## Practical next-phase sequence
 
@@ -470,6 +512,9 @@ These questions are still live and should be answered in the next planning passe
 - Which packet families should remain append-only versus mergeable?
 - How should schema migration tooling work for long-lived bundles and offline nodes?
 - When `Mission -> Action` happens, should that be a compatibility alias, a formal family rename, or a new family generation with upcasters?
+- What exact `Fork`, `Adapt`, `Diff`, `Export`, and `Follow` semantics should Packet Explorer expose first, and which of those belong in Explorer versus Library or later governance/action surfaces?
+- How should proposal, vote, and decision lifecycle states map onto trust gates, role-aware review, and packet policies without duplicating the same rules in UI code?
+- Which governance interactions should be visible-but-disabled first versus actually wired end to end through fortress and runtime policy evaluation?
 
 ## Working rule
 

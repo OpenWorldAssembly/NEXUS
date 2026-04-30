@@ -2,8 +2,14 @@
  * File: nexus-ui.tsx
  * Description: Provides shared NativeWind UI primitives for the guest nexus screens.
  */
-import type { PropsWithChildren, ReactNode } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type PropsWithChildren,
+  type ReactNode,
+} from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import type { NexusCardTone } from '@runtime/nexus/nexus-content';
@@ -44,6 +50,29 @@ type NexusSegmentedPillProps = {
   onSelect: (optionId: string) => void;
   disabled?: boolean;
   compact?: boolean;
+};
+
+type NexusAttachedTabRailProps = {
+  tabs: {
+    id: string;
+    title: string;
+    detail?: string;
+  }[];
+  activeId: string;
+  onSelect: (tabId: string) => void;
+  compact?: boolean;
+};
+
+type NexusInlineSelectProps = {
+  label?: string;
+  valueLabel: string;
+  options: {
+    id: string;
+    label: string;
+  }[];
+  onSelect: (optionId: string) => void;
+  disabled?: boolean;
+  menuLayerClassName?: string;
 };
 
 type NexusAppearance = {
@@ -439,6 +468,163 @@ export function NexusSegmentedPill({
           </Pressable>
         );
       })}
+    </View>
+  );
+}
+
+export function NexusAttachedTabRail({
+  tabs,
+  activeId,
+  onSelect,
+  compact = false,
+}: NexusAttachedTabRailProps) {
+  const { themeMode } = useNexusShell();
+  const appearance = useNexusAppearance();
+  const inactiveTabClass =
+    themeMode === 'dark'
+      ? 'border-nexus-line/70 bg-white/5'
+      : 'border-slate-300 bg-slate-100';
+  const activeTabClass =
+    themeMode === 'dark'
+      ? 'border-nexus-line/70 border-b-nexus-panel bg-nexus-panel'
+      : 'border-slate-300 border-b-white bg-white';
+
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      className="flex-grow-0"
+    >
+      <View className="flex-row items-end gap-2">
+        {tabs.map((tab) => {
+          const isActive = tab.id === activeId;
+
+          return (
+            <Pressable
+              key={tab.id}
+              accessibilityRole="button"
+              className={`min-w-[140px] border px-4 ${
+                compact ? 'rounded-t-[18px] py-2.5' : 'rounded-t-[20px] py-3'
+              } ${isActive ? `${activeTabClass} -mb-px` : inactiveTabClass}`}
+              onPress={() => onSelect(tab.id)}
+            >
+              <Text className={appearance.itemTitleClass}>{tab.title}</Text>
+              {tab.detail ? (
+                <Text className={appearance.itemMetaClass}>{tab.detail}</Text>
+              ) : null}
+            </Pressable>
+          );
+        })}
+      </View>
+    </ScrollView>
+  );
+}
+
+export function NexusInlineSelect({
+  label,
+  valueLabel,
+  options,
+  onSelect,
+  disabled = false,
+  menuLayerClassName,
+}: NexusInlineSelectProps) {
+  const { themeMode, uiDensity } = useNexusShell();
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<View | null>(null);
+  const triggerClass =
+    themeMode === 'dark'
+      ? 'border-nexus-line bg-white/5'
+      : 'border-slate-300 bg-slate-100';
+  const menuClass =
+    themeMode === 'dark'
+      ? 'border-nexus-line/70 bg-nexus-panel'
+      : 'border-slate-300 bg-white';
+  const textClass =
+    themeMode === 'dark' ? 'text-nexus-text' : 'text-slate-900';
+  const metaClass =
+    themeMode === 'dark' ? 'text-nexus-muted' : 'text-slate-600';
+
+  useEffect(() => {
+    if (!isOpen || typeof document === 'undefined') {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const containerNode = containerRef.current as unknown as {
+        contains?: (node: Node | null) => boolean;
+      } | null;
+
+      if (containerNode?.contains?.(event.target as Node | null)) {
+        return;
+      }
+
+      setIsOpen(false);
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+    };
+  }, [isOpen]);
+
+  return (
+    <View
+      ref={containerRef}
+      className={joinClasses('relative gap-2', isOpen ? 'z-40' : undefined)}
+    >
+      {label ? <Text className={`text-xs uppercase tracking-[3px] ${metaClass}`}>{label}</Text> : null}
+      <View className="relative">
+        <Pressable
+          accessibilityRole="button"
+          className={joinClasses(
+            'min-w-[190px] rounded-full border px-4 py-3',
+            triggerClass,
+            disabled ? 'opacity-45' : ''
+          )}
+          disabled={disabled}
+          onPress={() => setIsOpen((currentValue) => !currentValue)}
+        >
+          <Text
+            className={joinClasses(
+              uiDensity === 'large' ? 'text-base' : 'text-sm',
+              'font-semibold',
+              textClass
+            )}
+          >
+            {valueLabel}
+          </Text>
+        </Pressable>
+
+        {isOpen && !disabled ? (
+          <View
+            className={joinClasses(
+              'absolute left-0 top-full z-50 mt-2 min-w-[220px] rounded-[22px] border p-2 shadow-nexus',
+              menuClass,
+              menuLayerClassName
+            )}
+          >
+            {options.map((option) => (
+              <Pressable
+                key={option.id}
+                accessibilityRole="button"
+                className={joinClasses(
+                  'rounded-[16px] px-3 py-3',
+                  themeMode === 'dark' ? 'bg-transparent' : 'bg-transparent'
+                )}
+                onPress={() => {
+                  setIsOpen(false);
+                  onSelect(option.id);
+                }}
+              >
+                <Text className={joinClasses('text-sm font-semibold', textClass)}>
+                  {option.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+      </View>
     </View>
   );
 }

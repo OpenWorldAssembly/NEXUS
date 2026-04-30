@@ -25,6 +25,7 @@ export const GET: RequestHandler = async (request) => {
     const requestUrl = new URL(request.url);
     const packetId = requestUrl.searchParams.get('packet_id');
     const viewerActorPacketId = requestUrl.searchParams.get('actor_packet_id');
+    const inspectionLens = requestUrl.searchParams.get('inspection_lens');
 
     if (!packetId) {
       return createJsonResponse(
@@ -36,6 +37,13 @@ export const GET: RequestHandler = async (request) => {
     const explorerPayload = await getNexusPacketExplorerPayload({
       packetId,
       viewerActorPacketId,
+      inspectionLens:
+        inspectionLens === 'summary' ||
+        inspectionLens === 'raw' ||
+        inspectionLens === 'adapted' ||
+        inspectionLens === 'read_model'
+          ? inspectionLens
+          : undefined,
     });
 
     return createJsonResponse(explorerPayload);

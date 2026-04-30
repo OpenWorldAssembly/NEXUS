@@ -124,16 +124,25 @@ test('explorer payload returns raw, adapted, read-model, and link data for packe
       services: harness.services,
       packetId: claimPacket.header.packet_id,
       viewerActorPacketId: actorPacket.header.packet_id,
+      inspectionLens: 'raw',
     });
 
+    assert.equal(payload.inspection_lens, 'raw');
     assert.equal(payload.packet_summary.packet.packet_id, claimPacket.header.packet_id);
     assert.equal(payload.preferred_revision.revision_id, claimPacket.header.revision_id);
     assert.equal(payload.revision_state, 'linear');
     assert.equal(payload.adapted_view !== null, true);
     assert.equal(payload.read_model_view !== null, true);
+    assert.equal(payload.outgoing_link_groups.length > 0, true);
     assert.equal(payload.outgoing_links.length > 0, true);
     assert.equal(
       payload.incoming_links.some((link) => link.packet_id === attestationPacket.header.packet_id),
+      true
+    );
+    assert.equal(
+      payload.incoming_link_groups.some(
+        (group) => group.packet_id === attestationPacket.header.packet_id
+      ),
       true
     );
     assert.equal(
@@ -222,6 +231,7 @@ test('explorer payload projects discussion action state for a viewer packet', as
       viewerActorPacketId: actorPacket.header.packet_id,
     });
 
+    assert.equal(payload.actions_basis, 'runtime_operational');
     assert.equal(
       payload.action_descriptors.some(
         (descriptor) => descriptor.id === 'discussion.reply'

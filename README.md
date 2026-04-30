@@ -1,13 +1,28 @@
 # OWA
 
-OWA is an Expo Router application with a public website shell, a dedicated `/nexus/*` workspace, local packet-backed API routes, and a Node SQLite runtime for the current web deployment path.
+Open World Assembly is a web-first civic coordination app built on a packet-backed Nexus runtime. The repo includes a public site, a dedicated `/nexus/*` workspace, local API routes, and a SQLite-backed packet store for the current deployment path.
 
-Source layout:
+Today the live Nexus slice includes:
 
-- `core/*` for portable packet and schema logic
-- `runtime/*` for storage and runtime services
-- `app/*` for application-layer UI/content/support code
-- `src/app/*` for the Expo Router route shell
+- packet-backed discussions with signed actor writes
+- scoped trust and roles surfaces
+- a read-only votes workspace
+- a scoped Library browse surface
+- a shell-level Packet Explorer overlay for deep packet inspection
+
+Packet Explorer is currently:
+
+- separate from Library
+- opened from the Nexus shell and packet cards
+- read-only in the current implementation phase
+- focused on inspection, lineage, links, and runtime action visibility
+
+## Source layout
+
+- `core/*` for portable packet logic, schemas, builders, interpreters, and contracts
+- `runtime/*` for storage adapters, runtime services, and API-facing glue
+- `app/*` for application-layer UI, hooks, and shared state
+- `src/app/*` for the Expo Router route shell and API entrypoints
 
 ## Local development
 
@@ -64,10 +79,14 @@ The repo includes `railway.toml` for the Railway build and start commands:
 - start: `npm run railway:start`
 - healthcheck: `/health`
 
-Recommended Railway settings for this pass:
+Recommended Railway settings for the current deployment shape:
 
 - use Node `24.x`
 - mount a persistent volume and set `NEXUS_DATA_DIR`
 - run a single replica
 
-This pass intentionally keeps the current single-service Expo Router server shape and does not split the backend or migrate away from SQLite.
+## Docs
+
+- [Current Specifications](docs/specifications.md)
+- [Implementation Guide](docs/implementation-guide.md)
+- [Roadmap](docs/roadmap.md)

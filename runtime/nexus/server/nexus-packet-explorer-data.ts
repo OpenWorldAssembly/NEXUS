@@ -15,6 +15,8 @@ import type {
 } from '@core/schema/packet-schema';
 import type {
   NexusPacketExplorerAdaptationSummary,
+  NexusPacketExplorerInspectionLens,
+  NexusPacketExplorerLinkGroup,
   NexusPacketExplorerLinkRow,
   NexusPacketExplorerPayload,
   NexusPacketExplorerScopeSummary,
@@ -194,6 +196,14 @@ function toAdaptationSummary(
   };
 }
 
+function getLinksBasis(): NexusPacketExplorerPayload['links_basis'] {
+  return 'current_indexed_graph';
+}
+
+function getActionsBasis(): NexusPacketExplorerPayload['actions_basis'] {
+  return 'runtime_operational';
+}
+
 async function resolveExplorerLinks(input: {
   services: PacketExplorerDataServices;
   packetId: string;
@@ -245,6 +255,64 @@ async function resolveExplorerLinks(input: {
   });
 }
 
+function groupExplorerLinks(
+  links: NexusPacketExplorerLinkRow[]
+): NexusPacketExplorerLinkGroup[] {
+  const groups = new Map<string, NexusPacketExplorerLinkGroup>();
+
+  for (const link of links) {
+    const existingGroup = groups.get(link.packet_id);
+
+    if (!existingGroup) {
+      groups.set(link.packet_id, {
+        direction: link.direction,
+        packet_id: link.packet_id,
+        family: link.family,
+        label: link.label,
+        title: link.title,
+        total_count: 1,
+        edge_type_counts: [
+          {
+            edge_type: link.edge_type,
+            count: 1,
+          },
+        ],
+        rows: [link],
+      });
+      continue;
+    }
+
+    existingGroup.total_count += 1;
+    existingGroup.rows.push(link);
+    const existingEdgeType = existingGroup.edge_type_counts.find(
+      (edgeType) => edgeType.edge_type === link.edge_type
+    );
+
+    if (existingEdgeType) {
+      existingEdgeType.count += 1;
+    } else {
+      existingGroup.edge_type_counts.push({
+        edge_type: link.edge_type,
+        count: 1,
+      });
+    }
+  }
+
+  return Array.from(groups.values()).map((group) => ({
+    ...group,
+    edge_type_counts: [...group.edge_type_counts].sort((left, right) =>
+      left.edge_type.localeCompare(right.edge_type)
+    ),
+    rows: [...group.rows].sort((left, right) => {
+      if (left.edge_type !== right.edge_type) {
+        return left.edge_type.localeCompare(right.edge_type);
+      }
+
+      return (left.revision_id ?? '').localeCompare(right.revision_id ?? '');
+    }),
+  }));
+}
+
 async function resolveExplorerActions(input: {
   services: PacketExplorerDataServices;
   packetId: string;
@@ -279,6 +347,7 @@ export async function buildNexusPacketExplorerPayload(input: {
   services: PacketExplorerDataServices;
   packetId: string;
   viewerActorPacketId?: string | null;
+  inspectionLens?: NexusPacketExplorerInspectionLens;
 }): Promise<NexusPacketExplorerPayload> {
   const { services, packetId } = input;
   const packetProjection = await runExplorerStage({
@@ -420,8 +489,12 @@ export async function buildNexusPacketExplorerPayload(input: {
   const readModelWarnings = readModelResult.warning
     ? [readModelResult.warning]
     : [];
+  const inspectionLens = input.inspectionLens ?? 'summary';
+  const incomingLinkGroups = groupExplorerLinks(incomingLinks);
+  const outgoingLinkGroups = groupExplorerLinks(outgoingLinks);
 
   return {
+    inspection_lens: inspectionLens,
     packet_summary: packetSummary,
     preferred_revision: preferredRevision,
     head_revisions: revisionHeads.head_revisions,
@@ -434,8 +507,12 @@ export async function buildNexusPacketExplorerPayload(input: {
       readModelResult.interpretation,
       readModelWarnings
     ),
+    links_basis: getLinksBasis(),
+    actions_basis: getActionsBasis(),
     incoming_links: incomingLinks,
     outgoing_links: outgoingLinks,
+    incoming_link_groups: incomingLinkGroups,
+    outgoing_link_groups: outgoingLinkGroups,
     actions: actionInspection.actions,
     action_descriptors: actionInspection.actionDescriptors,
   };
@@ -448,6 +525,7 @@ export async function buildNexusPacketExplorerPayload(input: {
 export async function getNexusPacketExplorerPayload(input: {
   packetId: string;
   viewerActorPacketId?: string | null;
+  inspectionLens?: NexusPacketExplorerInspectionLens;
 }): Promise<NexusPacketExplorerPayload> {
   const { getNexusPacketServices } = await import(
     '@runtime/nexus/server/nexus-packet-services'
@@ -458,5 +536,6 @@ export async function getNexusPacketExplorerPayload(input: {
     services,
     packetId: input.packetId,
     viewerActorPacketId: input.viewerActorPacketId ?? null,
+    inspectionLens: input.inspectionLens,
   });
 }

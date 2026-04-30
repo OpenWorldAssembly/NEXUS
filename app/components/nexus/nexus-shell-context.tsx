@@ -11,16 +11,21 @@ import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
 import type {
   PacketExplorerSession,
   PacketExplorerTab,
+  PacketExplorerPrimaryTab,
   PacketExplorerViewMode,
 } from '@runtime/nexus/packet-explorer-session';
 import {
   closePacketExplorer,
+  closePacketExplorerTabs,
   closePacketExplorerTab,
   focusPacketExplorerTab,
   openPacketExplorerHome,
   openPacketExplorerPacket,
   persistPacketExplorerSession,
   readPacketExplorerSession,
+  retargetActivePacketExplorerTab,
+  setPacketExplorerPanelWidth,
+  setPacketExplorerPrimaryTab,
   setPacketExplorerTabViewMode,
 } from '@runtime/nexus/packet-explorer-session';
 import {
@@ -85,11 +90,27 @@ type NexusShellContextValue = NexusShellState & {
   }) => void;
   focusExplorerTab: (tabId: string) => void;
   closeExplorer: () => void;
+  closeExplorerTabs: () => void;
   closeExplorerTab: (tabId: string) => void;
+  retargetActiveExplorerPacket: (input: {
+    packetId: string;
+    preferredRevisionId?: string | null;
+    titleSnapshot?: string | null;
+    seedSummary?: {
+      family: string | null;
+      summary: string | null;
+      label: string | null;
+    } | null;
+  }) => void;
   setExplorerTabViewMode: (input: {
     tabId: string;
     viewMode: PacketExplorerViewMode;
   }) => void;
+  setExplorerPrimaryTab: (input: {
+    tabId: string;
+    primaryTab: PacketExplorerPrimaryTab;
+  }) => void;
+  setExplorerPanelWidth: (panelWidth: number | null) => void;
   getActiveExplorerTab: () => PacketExplorerTab | null;
 };
 
@@ -437,6 +458,12 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
     );
   };
 
+  const closeExplorerTabsByMode = () => {
+    setPacketExplorerSession((currentSession) =>
+      closePacketExplorerTabs(currentSession)
+    );
+  };
+
   const setExplorerTabView = (input: {
     tabId: string;
     viewMode: PacketExplorerViewMode;
@@ -446,10 +473,40 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
     );
   };
 
+  const setExplorerPrimaryTab = (input: {
+    tabId: string;
+    primaryTab: PacketExplorerPrimaryTab;
+  }) => {
+    setPacketExplorerSession((currentSession) =>
+      setPacketExplorerPrimaryTab(currentSession, input)
+    );
+  };
+
+  const retargetActiveExplorerPacket = (input: {
+    packetId: string;
+    preferredRevisionId?: string | null;
+    titleSnapshot?: string | null;
+    seedSummary?: {
+      family: string | null;
+      summary: string | null;
+      label: string | null;
+    } | null;
+  }) => {
+    setPacketExplorerSession((currentSession) =>
+      retargetActivePacketExplorerTab(currentSession, input)
+    );
+  };
+
   const getActiveExplorerTab = () =>
     packetExplorerSession.tabs.find(
       (tab) => tab.id === packetExplorerSession.active_tab_id
     ) ?? null;
+
+  const setExplorerPanelWidthValue = (panelWidth: number | null) => {
+    setPacketExplorerSession((currentSession) =>
+      setPacketExplorerPanelWidth(currentSession, panelWidth)
+    );
+  };
 
   return (
     <NexusShellContext.Provider
@@ -490,8 +547,12 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
         openPacketInExplorer,
         focusExplorerTab,
         closeExplorer,
+        closeExplorerTabs: closeExplorerTabsByMode,
         closeExplorerTab: closeExplorerTabById,
+        retargetActiveExplorerPacket,
         setExplorerTabViewMode: setExplorerTabView,
+        setExplorerPrimaryTab,
+        setExplorerPanelWidth: setExplorerPanelWidthValue,
         getActiveExplorerTab,
       }}
     >

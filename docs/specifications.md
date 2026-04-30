@@ -28,6 +28,7 @@ Implemented scope today:
 - a Nexus-shell locality creation page for controlled canonical geographic assembly creation
 - a dedicated nexus layout for `/nexus/*`
 - nexus routes for `Dashboard`, `Discussions`, `Votes`, `Roles`, `Trust`, and `Library`
+- a shell-level Packet Explorer overlay for packet inspection and traversal
 - a hidden wrapper-level `/nexus/account` route for identity custody and local assembly continuity, reached from the profile area rather than the primary function navigation
 - nexus shell state for scope selection, section selection, guest capabilities, and function-first vs scope-first mode
 - packet-backed shell and scope query APIs feeding dashboard, discussions, votes, library, and trust surfaces
@@ -56,11 +57,10 @@ Not implemented today:
 
 - persistent form submission or saved nexus actions
 - remote multi-node sync beyond the local SQLite packet store
-- real packet detail routes
+- dedicated routed packet detail pages outside the shell overlay
 - real-time chat
 - protected/private spaces
 - trust-weighted ranking, delegation, or moderation workflows
-- packet explorer/detail routes
 
 ## Current routes and screens
 
@@ -191,6 +191,7 @@ Status:
 - discussion thread detail is loaded from `/api/nexus/scopes/[scopeId]/discussions/thread` with `post_packet_id` plus optional `reply_sort`, `show_hidden`, `viewer_actor_packet_id`, `cursor`, and `limit` query parameters
 - direct child replies for any post are loaded from `/api/nexus/scopes/[scopeId]/discussions/replies` with `thread_post_packet_id`, `parent_post_packet_id`, and optional `reply_sort`, `show_hidden`, `viewer_actor_packet_id`, `cursor`, and `limit` query parameters
 - local workspace state on `/nexus/discussions` is route-driven through `view` (`feed | thread | post`), `post`, `replyTo`, `sort`, `replySort`, and `showHidden` query parameters
+- discussion runtime now also exposes an additive workspace/action projection layer so reply, vote, expand, load-more, and create-top-level affordances do not have to be re-derived entirely in the page component
 - discussion tabs and top-level feeds now project only `DiscussionSpace` and `DiscussionForum` packets whose native authority scope is the active scope; ancestor forum inheritance is intentionally disabled so newly created localities start with local clean-slate forums instead of parent threads
 - scopes with no local discussion forums show an explicit empty state rather than a persistent loading message, and eligible home-branch geographic scopes can backfill the empty OWA discussion bundle through the shared fortress mutation corridor
 - discussion writers now act through cryptographic person elements, including memory-only temporary guests, session-only temporary guests, saved guests, and claimed identities; top-level posting is no longer point-gated, visitor lobbies accept any signed actor, non-lobby forums require the active scope to be inside the actor's active home-locality branch, and the same universal `Attestation(kind: "packet_signal")` model powers `+1/-1` controls on root posts and replies
@@ -227,6 +228,7 @@ Status:
 - discussion sort bars now stay on one line by default with adjacent action pills, while `Show moderated` is allowed to wrap only when the viewport becomes too narrow to keep the full control set visible
 - the top-right route header shows the current actor label plus point balance and no longer repeats a redundant guest-status badge
 - when a claimed session is active but the local signing bundle is still locked, the discussions route shows an informational unlock prompt, but write controls stay clickable and rely on the shared auth/signing layer to surface unlock or re-approval failures consistently
+- the shared action-contract direction is now partially live here: discussion nodes can project `NexusActionState` plus `NexusActionIntentDescriptor` data, and Packet Explorer can inspect those action states without executing them
 
 ### `/nexus/votes`
 
@@ -259,7 +261,29 @@ Status:
 - packet-backed
 - library cards load from `/api/nexus/scopes/[scopeId]/library` with optional family filtering
 - the default Library view is now local-only and returns packets whose native authority scope matches the active scope
-- packet actions are visible as placeholders and remain disabled
+- Library remains the scoped browse surface rather than the deep inspection tool
+- `Open packet` launches Packet Explorer without navigating away from Library
+- packet actions on Library cards remain intentionally narrow; deeper packet inspection lives in Explorer
+
+### Packet Explorer
+
+Screen component: `NexusPacketExplorer`
+
+Role:
+
+- shell-level inspect-and-traverse surface for packets opened from Library, link rows, and the Nexus shell launcher
+- exposes packet data, lineage, grouped links, and runtime action inspection without acting as a write surface
+
+Status:
+
+- implemented as a right-side overlay on desktop and a full-screen overlay on smaller screens
+- launched from the sidebar `Packet Explorer` control or from Library packet cards
+- uses session-persistent tabs with an auto-created Home tab and per-packet remembered inspector state
+- supports `View as` inspection lenses for `Summary`, `Raw`, `Adapted`, and `Read Model`
+- primary inspector rails are `Data`, `Lineage`, `Links`, and `Actions`
+- `Links` separates grouped `Incoming` and `Outgoing` relationships by related packet, with expandable underlying edge rows
+- `Actions` shows read-only `NexusActionState` and `NexusActionIntentDescriptor` projections where available
+- Explorer is read-only in the current phase; visible controls such as `Follow`, `Fork`, `Adapt`, `Export`, and `Diff` remain disabled placeholders
 
 ### `/nexus/trust`
 
@@ -780,16 +804,18 @@ Important note:
 - claimed Nexus auth now uses encrypted local signing bundles with optional passkeys as extra protection
 - claimed sessions now expose CSRF tokens, rotating refresh sessions, passkey-upgrade state, device/session listings, explicit cookie-backed remembered-login choice, and `standard` / `guarded` / `every_write` write-approval preferences
 - packet parsing now runs through family compatibility checks, explicit upcasters, and family `revision_mode` metadata instead of treating `schema_version` as a dormant header field
+- live and near-live packet families now share more of one generic packet builder floor through family-owned build definitions and a common packet-build pipeline, rather than each family staying on an entirely separate helper path
 - packet compatibility now distinguishes raw stored revisions from adapted runtime reads: packet-store default fetches return canonical adapted packets, while internal compatibility reads can return raw packets plus machine-readable adaptation summaries for debug or future packet-browser work
 - compatibility interpretation now distinguishes declared schema version from effective source profile, so packets stamped as current but still missing older additive fields are adapted and signature-verified through the correct legacy profile instead of skipping compatibility handling
 - legacy packet-signature verification now uses schema-owned compatibility canonicalization rather than auth-local field stripping, so older signed packets remain verifiable without scattering schema knowledge into runtime auth helpers
-- packet-family compatibility coverage is now classified explicitly: `Element`, `Claim`, and `Policy` are the families with intentional legacy support plus adapted-write preparation, while most remaining families are intentionally `current_only` until a concrete migration need exists
+- packet-family compatibility coverage is now classified explicitly: `Element` and `Claim` retain intentional legacy support plus adapted-write preparation, while `Attestation`, `Role`, `Proposal`, `Vote`, and `Decision` are represented in the compatibility inventory with current-schema support and family-owned builder definitions
 - packet compatibility is now target-version aware for supported family versions: callers can request the current family schema or an older supported target, receive structured change/loss metadata, and prepare explicit versioned writes without rewriting raw stored history in place
 - versioned write preparation distinguishes exact, lossy-but-allowed, and blocked targets; lossy downcasts report machine-readable `losses`, `is_lossy`, and `requires_loss_acknowledgement` so future Packet Explorer and guarded-upgrade flows can show what would change before admission
 - packet-family compatibility now includes a family-evolution bridge for discussion: canonical `Discussion` packets are the primary target for new writes, legacy `DiscussionSpace`, `DiscussionForum`, `DiscussionThread`, `DiscussionPost`, and `DiscussionReply` packets remain readable/projectable, and further discussion evolution should continue as additive adapter-backed migration rather than destructive renaming
 - signature verification now treats the raw stored/request packet envelope as the historical signed fact; adapted packets are runtime read views applied only after raw verification succeeds
 - signed historical packets may verify through raw compatibility candidates when later schema evolution introduced additive/defaulted fields that were not part of the original signed bytes
 - auth/runtime failure classification now distinguishes canonicalization mismatch from true signature invalidity, schema failure, and metadata validation failure for protected-write identity verification
+- Explorer reads now compose additive packet payloads with inspection lens, grouped links, adaptation summaries, and action-descriptor state, while the shell keeps session-persistent Explorer tab state outside route-level page state
 
 ## Current naming patterns
 
@@ -848,7 +874,7 @@ What is implemented:
 - public header/footer shell
 - redesigned public splash, about, and charter destination pages
 - dedicated nexus shell under `/nexus/*`
-- first-slice nexus surfaces for dashboard, discussions, votes, library, and trust
+- first-slice nexus surfaces for dashboard, discussions, votes, library, trust, and the shell-level Packet Explorer
 - hidden wrapper-level account and identity/security flows separate from the primary function navigation
 - cryptographic identity continuity across guest, saved-guest, and claimed nexus actors
 - passkey-optional claimed-session authentication with passkey sign-in, passkey registration, short-lived single-use passkey re-auth tokens, rotating refresh cookies, and server-side device/session revocation
@@ -865,6 +891,7 @@ What is implemented:
 - a packet-backed discussion and attestation engine that stores canonical `Discussion` and `Attestation` packets in the local SQLite packet store, keeps legacy discussion families readable through bidirectional compatibility projection, projects derived reply/attestation/ledger indexes, and reseeds local dev discussion data deterministically by seed version
 - a first trust/runtime slice that projects scope-local trust stages, policy gates, assembly association claims, role-claim summaries, and role evidence through `/api/nexus/scopes/[scopeId]/trust`
 - a first roles/runtime slice that projects scope-relevant role claimants from scoped claim packets, scoped role trust posture, inline evidence lists, real self claim/unclaim writes, and real support/dispute writes through `/api/nexus/scopes/[scopeId]/roles`
+- a read-only Packet Explorer overlay with session-backed tabs, raw/adapted/read-model packet views, grouped links, lineage inspection, and runtime action inspection
 - derived packet label helpers for future browser and nexus projections
 
 What remains unimplemented but is still referenced by docs or shell affordances:
@@ -876,7 +903,7 @@ What remains unimplemented but is still referenced by docs or shell affordances:
 - notifications
 - protected assemblies and trust-gated spaces
 - moderation workflows
-- packet detail routes and cross-surface navigation from card projections into packet inspectors
+- dedicated packet detail routes outside the current shell overlay
 
 ## Known current issues and semantic gaps
 

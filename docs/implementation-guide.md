@@ -1244,6 +1244,30 @@ Examples of decisions worth logging early:
 - Why: stored raw envelopes are historical fact, adapted packets are runtime reading views, and migrated packets are newly written revisions. Only the historical fact can be used for signature verification without breaking old valid packets as schemas grow additive defaults.
 - Consequences / follow-ups: future packet-family migrations must treat raw-signature compatibility as a checklist item whenever additive/defaulted fields are introduced. For signed historical families, each migration now needs the compatibility adapter, the raw signature candidate rule, a test proving old signed packets still verify, a test proving semantic tampering still fails, and confirmation that next revisions remain unsigned until the final signing step.
 
+### 2026-04-29 - Live and near-live packet families now share one generic builder floor
+
+- Context: the first generic packet-builder pass had proven itself on `Discussion` and `Policy`, but the repo was still carrying a split world where active families such as `Element`, `Claim`, `Attestation`, `Role`, `Proposal`, `Vote`, and `Decision` mixed generic pipeline behavior with one-off helper-only construction paths.
+- Options considered: leave those helpers in place until later governance work, migrate only the current auth-discussion families, or finish a compatibility-close-out pass for every live or near-live family before Packet Explorer and governance surfaces grow further.
+- Decision: extend the generic builder floor to `Element`, `Claim`, `Attestation`, `Role`, `Proposal`, `Vote`, and `Decision`, add family-owned build definitions for them, register them in the packet-build pipeline, and route their public helpers through `buildPacket(...)` while preserving ids, revisions, defaults, edge generation, metadata fallback, signing flow, and raw-signature compatibility behavior.
+- Why: Packet Explorer, later governance writes, and future family evolution need one trustworthy packet-construction floor rather than a growing mix of special-case builders and helper folklore.
+- Consequences / follow-ups: `Element` and `Claim` retain explicit legacy compatibility coverage, `Decision` now exists as infrastructure-only builder support without expanding governance workflow semantics, and the pipeline inventory can now describe a much truer migration state for the families that already matter to Nexus surfaces.
+
+### 2026-04-30 - Discussion workspaces now project action affordances through a shared contract
+
+- Context: the discussions surface had become too dependent on page-local booleans and packet-shape assumptions for reply, vote, expand, and create-post behavior, while later surfaces and headless consumers needed one reusable way to inspect what an item can do.
+- Options considered: keep discussion affordances UI-derived, move all behavior into raw packet metadata, or introduce a runtime-owned action contract that combines packet semantics, policy context, viewer state, and workspace state into explicit projected affordances.
+- Decision: keep packet family and kind as the source of structural meaning, treat policy and dependency refs as rule inputs, and let runtime project explicit `NexusActionState` plus `NexusActionIntentDescriptor` values for discussion workspaces and nodes. The UI now renders those affordances instead of inventing them, while mutation execution still stays on the fortress corridor.
+- Why: this keeps the rule engine out of the page layer, makes discussion behavior more portable to future surfaces and headless clients, and creates a reusable seam for roles, trust, votes, and Packet Explorer.
+- Consequences / follow-ups: the current implementation is still discussion-first and runtime-owned rather than packet-executable; future packet policies can widen the rule inputs, but UI should continue to consume projected action state instead of deriving write authority from raw packet shape.
+
+### 2026-04-30 - Packet Explorer is now a shell-level read-only inspection workspace
+
+- Context: Library had become the obvious entry point for packet inspection, but it remained the wrong conceptual home for full packet traversal, schema-lens inspection, lineage, grouped links, and action visibility.
+- Options considered: make Library absorb packet detail behavior, add a standalone routed packet page first, or create a shell-level Explorer overlay that can grow into the inspect-and-traverse surface while keeping Library as the scoped browse surface.
+- Decision: add Packet Explorer as a shell-level overlay with session-persistent tabs, a left-anchored Home tab, read-only `View as` inspection lenses (`Summary`, `Raw`, `Adapted`, `Read Model`), `Data / Lineage / Links / Actions` inspector rails, grouped incoming/outgoing links by related packet, and read-only action inspection sourced from the shared runtime action contract.
+- Why: this gives Nexus one truthful inspection workspace for raw envelopes, adapted packets, read-model projections, compatibility summaries, links, and affordances without overloading Library or pretending write workflows are ready.
+- Consequences / follow-ups: Explorer remains read-only for now; visible seams such as `Adapt`, `Diff`, `Fork`, `Follow`, and `Export` stay intentionally disabled; Library remains the browse-and-collect surface; and future governance, trust, and action work should expose deeper packet semantics through the same Explorer payload rather than inventing route-specific inspectors.
+
 ### 2026-04-10 - Railway cutover keeps the Expo server app intact and adds a local production-parity Node server
 
 - Context: the repo had been running through Expo's server features, but the Railway move needed a real exported-server runtime, a persistent SQLite path that works outside the repo root, and a safer bootstrap rule that would not destructively reseed hosted data.

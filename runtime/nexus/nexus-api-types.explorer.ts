@@ -16,6 +16,19 @@ import type {
   PacketRevisionRef,
 } from '@core/schema/packet-schema';
 
+export type NexusPacketExplorerInspectionLens =
+  | 'summary'
+  | 'raw'
+  | 'adapted'
+  | 'read_model';
+
+export type NexusPacketExplorerSectionBasis =
+  | 'historical_raw_packet'
+  | 'current_adapted_packet'
+  | 'read_model_projection'
+  | 'current_indexed_graph'
+  | 'runtime_operational';
+
 export interface NexusPacketExplorerScopeSummary {
   packet_id: string;
   label: string | null;
@@ -30,6 +43,20 @@ export interface NexusPacketExplorerLinkRow {
   label: string | null;
   title: string | null;
   metadata: Record<string, unknown>;
+}
+
+export interface NexusPacketExplorerLinkGroup {
+  direction: 'incoming' | 'outgoing';
+  packet_id: string;
+  family: PacketFamily | null;
+  label: string | null;
+  title: string | null;
+  total_count: number;
+  edge_type_counts: {
+    edge_type: string;
+    count: number;
+  }[];
+  rows: NexusPacketExplorerLinkRow[];
 }
 
 export interface NexusPacketExplorerAdaptationSummary {
@@ -61,6 +88,7 @@ export interface NexusPacketExplorerSummary {
 }
 
 export interface NexusPacketExplorerPayload {
+  inspection_lens: NexusPacketExplorerInspectionLens;
   packet_summary: NexusPacketExplorerSummary;
   preferred_revision: PacketRevisionRef;
   head_revisions: PacketRevisionRef[];
@@ -69,8 +97,12 @@ export interface NexusPacketExplorerPayload {
   adapted_view: unknown;
   read_model_view: unknown | null;
   adaptation_summary: NexusPacketExplorerAdaptationSummary;
+  links_basis: NexusPacketExplorerSectionBasis;
+  actions_basis: NexusPacketExplorerSectionBasis;
   incoming_links: NexusPacketExplorerLinkRow[];
   outgoing_links: NexusPacketExplorerLinkRow[];
+  incoming_link_groups: NexusPacketExplorerLinkGroup[];
+  outgoing_link_groups: NexusPacketExplorerLinkGroup[];
   actions: NexusActionMap;
   action_descriptors: NexusActionIntentDescriptor[];
 }
