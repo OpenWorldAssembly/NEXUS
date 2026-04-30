@@ -1,4 +1,8 @@
-import type { PublicHref } from "@/app/public/public-routes";
+/**
+ * File: content-types.ts
+ * Description: Defines shared public content model types.
+ */
+import type { PublicHref } from "@app/public/public-routes";
 
 export type CharterPrincipleCard = {
   principle: string;

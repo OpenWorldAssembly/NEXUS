@@ -1,8 +1,12 @@
+/**
+ * File: public-docs-hero.tsx
+ * Description: Renders the hero panel for public document pages.
+ */
 import { Text, View } from "react-native";
 
-import type { PublicDocumentHero } from "@/app/public/content-types";
-import { PublicPageActions } from "@/app/components/public/public-page-actions";
-import { PublicPanelShell } from "@/app/components/public/public-panel-shell";
+import type { PublicDocumentHero } from "@app/public/content-types";
+import { PublicPageActions } from "@app/components/public/public-page-actions";
+import { PublicPanelShell } from "@app/components/public/public-panel-shell";
 
 type PublicDocsHeroProps = {
   hero: PublicDocumentHero;

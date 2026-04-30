@@ -1,7 +1,11 @@
+/**
+ * File: public-docs-section-grid.tsx
+ * Description: Renders the adaptive public document section grid.
+ */
 import { Platform, View } from "react-native";
 
-import type { CharterPrincipleCard } from "@/app/public/content-types";
-import { PublicDocsSectionCard } from "@/app/components/public/public-docs-section-card";
+import type { CharterPrincipleCard } from "@app/public/content-types";
+import { PublicDocsSectionCard } from "@app/components/public/public-docs-section-card";
 
 type PublicDocsSectionGridProps = {
   sections: CharterPrincipleCard[];

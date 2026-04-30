@@ -1,6 +1,10 @@
+/**
+ * File: public-docs-section-card.tsx
+ * Description: Renders a public document principle card.
+ */
 import { Text, View } from "react-native";
 
-import type { CharterPrincipleCard } from "@/app/public/content-types";
+import type { CharterPrincipleCard } from "@app/public/content-types";
 
 import PublicSurface from "./public-surface";
 

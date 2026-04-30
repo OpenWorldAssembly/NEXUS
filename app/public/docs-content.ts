@@ -1,8 +1,12 @@
+/**
+ * File: docs-content.ts
+ * Description: Defines the public document content used by the docs route.
+ */
 import type {
   CharterPrincipleCard,
   PublicDocumentEntry,
   PublicDocumentResource,
-} from "@/app/public/content-types";
+} from "@app/public/content-types";
 
 const CHARTER_PAIRS: Array<[string, string]> = [
   ["I", "The People Are the Source"],
