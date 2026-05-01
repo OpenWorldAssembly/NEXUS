@@ -31,8 +31,8 @@ const WEB_GRID_STYLE =
 
 export function PublicDocsSectionGrid({
   sections,
-  animationEnabled = false,
-  animationPreset = "none",
+  animationEnabled,
+  animationPreset,
 }: PublicDocsSectionGridProps) {
   const parentOffsetY = usePublicLayoutOffset();
   const [layoutOffsetY, setLayoutOffsetY] = useState(parentOffsetY);

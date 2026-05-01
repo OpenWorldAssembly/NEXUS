@@ -42,6 +42,7 @@ export type PublicAnimatedSurfaceProps = PublicAnimatedSurfaceBaseProps & {
   layoutOffsetY?: number;
   layoutClassName?: string;
   layoutStyle?: StyleProp<ViewStyle>;
+  surfaceAnimated?: boolean;
   onMeasuredLayoutChange?: (
     layout: PublicMeasuredLayout,
     identity?: PublicAnimatedSurfaceIdentity,
@@ -89,6 +90,7 @@ export function PublicAnimatedSurface({
   layoutOffsetY,
   layoutClassName,
   layoutStyle,
+  surfaceAnimated = false,
   onMeasuredLayoutChange,
   onLayout,
   style,
@@ -158,7 +160,14 @@ export function PublicAnimatedSurface({
     ? getPublicAnimationStyle({ presetName: animationPreset, progress })
     : undefined;
 
-  const surface = <PublicSurface {...surfaceProps} onLayout={layoutClassName ? undefined : handleLayout} style={style} />;
+  const surface = (
+    <PublicSurface
+      {...surfaceProps}
+      animated={surfaceAnimated}
+      onLayout={layoutClassName ? undefined : handleLayout}
+      style={style}
+    />
+  );
 
   const animationWrapperStyle = layoutClassName
     ? [styles.layoutAnimationWrapper, animationStyle]

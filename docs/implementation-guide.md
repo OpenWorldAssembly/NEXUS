@@ -1353,3 +1353,59 @@ If you want the next pass to be maximally productive: I can now take all the upl
 
 1. the full inventory of relevant nuggets we already have
 2. a normalized, conflict-free current recommendation for OWA
+
+### 2026-05-01 - Public surface contract absorbs shared actions and section shells
+
+- Context: public cards, support hero panels, action pills, and scroll sections were beginning to share Tailwind public tokens, but some route-level components still carried bespoke shell, button, and text classes outside the surface contract.
+- Options considered: migrate every public chrome element at once, leave home/about sections outside the surface primitive until later, or move only reusable card/action/section seams onto the existing public surface contract first.
+- Decision: `PUBLIC_SURFACE_CLASSES` now includes shared action pill classes; `PublicPageActions`, homepage single actions, feature cards, and the support hero consume those classes and semantic text slots. `PublicSectionShell` now renders through `PublicSurface` while preserving its existing animated background, accent overlay, and slotted content structure.
+- Why: public theming should remain tunable from `tailwind.config.js` through one small component contract, not through repeated hardcoded page classes.
+- Consequences / follow-ups: header/footer chrome and secondary navigation still have their own local styling and should be migrated in later passes only after the shared card/action/section seams remain visually stable.
+
+### 2026-05-01 - Public card frame separates graphic treatment from content layout
+
+- Context: public page cards had begun sharing tokens and the `PublicSurface` primitive, but each page still expressed its graphic card language through local wrappers. Support cards were plain, docs cards had stronger rule/glow decoration, about highlight tiles carried hover polish, and home sections carried generated background motifs.
+- Options considered: force all cards through one content component, keep page-specific cards with shared tokens only, or introduce a shared frame layer that owns graphic treatment while leaving internal content layouts page-owned.
+- Decision: add `PublicCardFrame` as the shared public card graphic layer. The frame composes the existing surface/animation stack, owns reusable rule/glow/sheen/background treatment, and leaves typography arrangement, grid behavior, and card-specific content structure to the caller. `PublicFeatureCard` now uses this frame as the first low-risk consumer.
+- Why: the site needs one recognizable card language without flattening Docs, About, Home, and Support into identical internal layouts.
+- Consequences / follow-ups: Docs principle cards, About highlight tiles, and Home rail sections can migrate onto `PublicCardFrame` variants later, after the default frame remains visually stable.
+
+### 2026-05-01 - Support and Docs converge on the public frame/panel system
+
+- Context: `PublicCardFrame` existed and Support feature cards consumed it, but Docs principle cards and page panels still mixed local shell decorations with the newer shared frame system. Support hero panels also used local glow hooks, leaving Support and Docs visually related but not fully governed by the same public graphic contract.
+- Options considered: flatten Docs and Support into identical card components, leave richer Docs decoration local, or route both pages through shared frame/panel primitives while preserving page-owned internal layouts.
+- Decision: extend `PublicCardFrame` with a `panel` variant path, route `PublicPanelShell` through that frame, move Docs principle cards onto the `decorated` frame variant, and move the Support page hero/callout onto the same `PublicPanelShell`/`PublicCardFrame` pair.
+- Why: Support and Docs should share one card/panel graphic language while Docs keeps its document-specific internal structure and Support keeps its simpler feature-card content rhythm.
+- Consequences / follow-ups: About highlight tiles and Home rail sections remain separate frame-migration targets. Future polish should tune frame variant strength centrally instead of adding page-local decorative shell code.
+
+
+### 2026-05-01 - Public card frames gain ambient generated backgrounds
+
+- Context: Support and Docs had converged on the shared public frame/panel system, but the generated wave/glow background language from the About sections still lived outside the reusable card frame path.
+- Options considered: copy About background generation into each Docs/Support card, add another page-specific prop layer, or let the shared frame resolve an ambient generated background preset by default.
+- Decision: `PublicCardFrame` now supports background presets and resolves an ambient generated background through `buildPublicBackgroundImageUri` for normal card and panel variants. `PublicPanelShell` no longer paints an opaque local base layer over the frame background, allowing the shared ambient artwork to show through while preserving its panel glows and rules.
+- Why: generated public artwork should be selected through the shared frame contract, not duplicated in Docs/Support components or hidden behind page-local panel backgrounds.
+- Consequences / follow-ups: card/background strength and positioning can now be tuned centrally through `PublicCardFrame` and `public-graphics.ts`. Home motif placement and About highlight-tile migration remain separate passes.
+
+### 2026-05-01 - About surfaces join the shared public frame without absorbing card animation
+
+- Context: Docs and Support had converged on `PublicCardFrame`, while About still carried a route-specific page background and section shells that did not receive the same shared frame decoration.
+- Options considered: rewrite About around the default card component, copy the Docs decoration into About locally, or route only the About section shell's graphic frame through the shared public frame while preserving its existing section layout and scroll-driven focus motion.
+- Decision: About now inherits the shared public page background, `PublicSectionShell` composes `PublicCardFrame` with the `background` variant for section-card decoration, and the secondary nav rail uses the themed panel frame with its own nav animation still separate from card animation.
+- Why: About should share the public site's surface language without turning its section choreography or reusable secondary navigation into card-specific animation machinery.
+- Consequences / follow-ups: the secondary nav remains a standalone reusable navigation system; future global card animation should continue through `PublicAnimatedSurface` / frame animation presets rather than through secondary-nav item state.
+
+### 2026-05-01 - Public sections use the universal card animation path
+
+- Context: Home and About had adopted the shared public card frame visually, but still carried older section-specific scroll math for shell color, background parallax, overlay opacity, detail fade, and text color transitions.
+- Options considered: preserve the older per-page animation layers, migrate those effects into new universal presets immediately, or remove the non-generic animation hooks first and let the existing `PublicAnimatedSurface` default card preset own section motion.
+- Decision: Home and About sections now route through the same default public card animation path used by the shared frame system. The older `getSectionProgress` helper and About-only rail adapter were removed; secondary navigation remains a separate reusable nav system with its own motion constants.
+- Why: the public site should have one default card animation language before adding optional page-specific animation presets later.
+- Consequences / follow-ups: richer effects such as text color transitions, background parallax, or accent intensity should return only as named `PublicAnimatedSurface` / `PublicCardFrame` presets, not as route-local scroll math.
+
+### 2026-05-01 - Public theme cleanup checkpoint
+
+- Context: the public surface migration left a few small styling seams outside the shared theme contract, including the public shell background, home rail dot color, secondary-nav motion literals, and section shadow color.
+- Decision: the public route shell now uses the shared `bg-public-canvas` token; the home rail dot and section shadow are named through the public surface contract; secondary-nav animation color/range values are centralized in `public-secondary-nav.constants.ts`.
+- Why: visual tuning should happen through public theme/config seams rather than scattered local literals.
+- Consequences / follow-ups: remaining raw colors inside text shadows and specialized graphics can stay local until they become repeated or need central tuning.

@@ -6,6 +6,7 @@ import React, { useMemo } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { resolvePublicSecondaryNavItemState } from '@app/components/public/public-secondary-nav.helpers';
+import { PUBLIC_SURFACE_CLASSES } from '@app/components/public/public-surface';
 import {
   SECTION_TOPBAR_COMPACT_BREAKPOINT,
   SECTION_TOPBAR_PILL_GAP,
@@ -37,6 +38,7 @@ export function PublicSecondaryNavTopbar({
 
   return (
     <View
+      className={PUBLIC_SURFACE_CLASSES.navigation.topbarShellClassName}
       style={[
         styles.container,
         isCompactTopbar ? styles.containerCompact : null,
@@ -65,7 +67,10 @@ export function PublicSecondaryNavTopbar({
                 onPress={() => onItemPress(item.id)}
                 style={({ pressed }) => [styles.pressable, pressed ? styles.pressablePressed : null]}
               >
-                <Animated.View style={[itemStyles.plate, animatedState?.plateAnimatedStyle]}>
+                <Animated.View
+                  className={PUBLIC_SURFACE_CLASSES.navigation.itemPlateClassName}
+                  style={[itemStyles.plate, animatedState?.plateAnimatedStyle]}
+                >
                   <View pointerEvents="none" style={styles.itemContent}>
                     <Animated.Text
                       numberOfLines={1}
@@ -110,8 +115,7 @@ function buildTopbarItemStyles(isCompactTopbar: boolean) {
       width: '100%',
       height: '100%',
       borderRadius: 12,
-      borderWidth: 0,
-      backgroundColor: 'rgba(10, 18, 30, 0.88)',
+      borderWidth: 1,
       overflow: 'hidden',
     },
   });
@@ -153,7 +157,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 40,
-    backgroundColor: 'rgba(2, 13, 38, 0.96)',
   },
   containerCompact: {
     paddingTop: 6,

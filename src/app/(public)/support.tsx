@@ -24,8 +24,6 @@ export default function SupportPage() {
         calloutBody={supportPageContent.calloutBody}
         eyebrowClassName="text-public-accentSoft"
         calloutEyebrowClassName="text-public-sand"
-        glowPrimaryClassName="bg-public-accent/10"
-        glowSecondaryClassName="bg-public-cyan/15"
       />
 
       <PublicCardGrid>
@@ -36,8 +34,6 @@ export default function SupportPage() {
             title={priority.title}
             body={priority.body}
             eyebrowClassName="text-public-cyan"
-            animationEnabled
-            animationPreset="focusLift"
           />
         ))}
       </PublicCardGrid>
@@ -50,8 +46,6 @@ export default function SupportPage() {
             title={path.title}
             body={path.body}
             eyebrowClassName="text-public-sand"
-            animationEnabled
-            animationPreset="focusLift"
           />
         ))}
       </PublicCardGrid>

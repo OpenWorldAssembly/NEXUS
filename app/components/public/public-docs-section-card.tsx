@@ -7,7 +7,7 @@ import { Text, View } from "react-native";
 import type { PublicAnimationPresetName } from "@app/components/public/animation/public-animation-presets";
 import type { CharterPrincipleCard } from "@app/public/content-types";
 
-import PublicAnimatedSurface from "./public-animated-surface";
+import PublicCardFrame from "./public-card-frame";
 import { PUBLIC_SURFACE_CLASSES } from "./public-surface";
 
 type PublicDocsSectionCardProps = {
@@ -18,8 +18,8 @@ type PublicDocsSectionCardProps = {
 
 export function PublicDocsSectionCard({
   section,
-  animationEnabled = false,
-  animationPreset = "none",
+  animationEnabled,
+  animationPreset,
 }: PublicDocsSectionCardProps) {
   const isRightAnchored = section.anchor === "right";
 
@@ -31,29 +31,13 @@ export function PublicDocsSectionCard({
   const hairlineClassName = isRightAnchored ? "self-end" : "self-start";
 
   return (
-    <PublicAnimatedSurface
+    <PublicCardFrame
       animationEnabled={animationEnabled}
       animationPreset={animationPreset}
-      layoutClassName="min-w-[280px] flex-1 self-stretch"
-      baseClassName={[PUBLIC_SURFACE_CLASSES.standardCardBaseClassName, "px-7 py-7"].join(" ")}
-      className="h-full"
+      className="h-full px-7 py-7"
       contentClassName="flex-1"
-      background={
-        <View className="pointer-events-none absolute left-0 top-0 h-full w-full overflow-hidden rounded-[28px]">
-          <View
-            className={[
-              "absolute -left-12 -top-12 h-40 w-40 rounded-full",
-              PUBLIC_SURFACE_CLASSES.glow.surfaceSoftClassName,
-            ].join(" ")}
-          />
-          <View
-            className={[
-              "absolute -bottom-14 right-[-10%] h-44 w-44 rounded-full",
-              PUBLIC_SURFACE_CLASSES.glow.surfaceDeepSoftClassName,
-            ].join(" ")}
-          />
-        </View>
-      }
+      layoutClassName="min-w-[280px] flex-1 self-stretch"
+      variant="decorated"
     >
       <View className="flex-1 justify-between gap-10">
         <View className={titleWrapClassName}>
@@ -103,7 +87,7 @@ export function PublicDocsSectionCard({
           />
         </View>
       </View>
-    </PublicAnimatedSurface>
+    </PublicCardFrame>
   );
 }
 

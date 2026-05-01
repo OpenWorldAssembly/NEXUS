@@ -4,7 +4,10 @@
  */
 import { Animated } from 'react-native';
 
-import { SECTION_RAIL_WIDTH } from '@app/components/public/public-secondary-nav.constants';
+import {
+  PUBLIC_SECONDARY_NAV_MOTION_THEME,
+  SECTION_RAIL_WIDTH,
+} from '@app/components/public/public-secondary-nav.constants';
 import type {
   PublicSecondaryNavAnimatedState,
   PublicSecondaryNavAnimatedStateResolver,
@@ -75,67 +78,67 @@ export function useSecondaryNavItemState<TSection extends PublicSectionWithId>({
     if (mode === 'topbar') {
       const plateOpacity = distanceProgress.interpolate({
         inputRange: [0, 1],
-        outputRange: [0.82, 1],
+        outputRange: PUBLIC_SECONDARY_NAV_MOTION_THEME.topbarPlateOpacityRange,
         extrapolate: 'clamp',
       });
 
       const plateBorderColor = distanceProgress.interpolate({
         inputRange: [0, 1],
-        outputRange: ['rgba(137, 183, 255, 0.12)', 'rgba(198, 214, 112, 0.82)'],
+        outputRange: PUBLIC_SECONDARY_NAV_MOTION_THEME.plateBorderColorRange,
         extrapolate: 'clamp',
       });
 
       const plateBackgroundColor = distanceProgress.interpolate({
         inputRange: [0, 1],
-        outputRange: ['rgba(255,255,255,0.025)', 'rgba(198, 214, 112, 0.18)'],
+        outputRange: PUBLIC_SECONDARY_NAV_MOTION_THEME.plateBackgroundColorRange,
         extrapolate: 'clamp',
       });
 
       const plateTranslateY = distanceProgress.interpolate({
         inputRange: [0, 1],
-        outputRange: [0, -2],
+        outputRange: PUBLIC_SECONDARY_NAV_MOTION_THEME.topbarPlateTranslateYRange,
         extrapolate: 'clamp',
       });
 
       const plateScale = distanceProgress.interpolate({
         inputRange: [0, 1],
-        outputRange: [1, 1.01],
+        outputRange: PUBLIC_SECONDARY_NAV_MOTION_THEME.topbarPlateScaleRange,
         extrapolate: 'clamp',
       });
 
       const dotScale = distanceProgress.interpolate({
         inputRange: [0, 1],
-        outputRange: [1, 1.08],
+        outputRange: PUBLIC_SECONDARY_NAV_MOTION_THEME.dotScaleRange,
         extrapolate: 'clamp',
       });
 
       const dotColor = distanceProgress.interpolate({
         inputRange: [0, 1],
-        outputRange: ['rgba(142, 202, 230, 0.38)', 'rgba(198, 214, 112, 0.85)'],
+        outputRange: PUBLIC_SECONDARY_NAV_MOTION_THEME.dotColorRange,
         extrapolate: 'clamp',
       });
 
       const titleColor = distanceProgress.interpolate({
         inputRange: [0, 1],
-        outputRange: ['rgba(232, 238, 246, 0.72)', '#f7f4ea'],
+        outputRange: PUBLIC_SECONDARY_NAV_MOTION_THEME.titleColorRange,
         extrapolate: 'clamp',
       });
 
       const subtitleOpacity = distanceProgress.interpolate({
         inputRange: [0, 0.65, 1],
-        outputRange: [0, 0.22, 1],
+        outputRange: PUBLIC_SECONDARY_NAV_MOTION_THEME.topbarSubtitleOpacityRange,
         extrapolate: 'clamp',
       });
 
       const subtitleTranslateY = distanceProgress.interpolate({
         inputRange: [0, 1],
-        outputRange: [3, 0],
+        outputRange: PUBLIC_SECONDARY_NAV_MOTION_THEME.topbarSubtitleTranslateYRange,
         extrapolate: 'clamp',
       });
 
       const subtitleColor = distanceProgress.interpolate({
         inputRange: [0, 1],
-        outputRange: ['rgba(142, 202, 230, 0.35)', 'rgba(243, 196, 92, 0.92)'],
+        outputRange: PUBLIC_SECONDARY_NAV_MOTION_THEME.subtitleColorRange,
         extrapolate: 'clamp',
       });
 
@@ -169,55 +172,55 @@ export function useSecondaryNavItemState<TSection extends PublicSectionWithId>({
 
     const opacity = distanceProgress.interpolate({
       inputRange: [0, 1],
-      outputRange: [0.78, 1],
+      outputRange: PUBLIC_SECONDARY_NAV_MOTION_THEME.railPlateOpacityRange,
       extrapolate: 'clamp',
     });
 
     const borderColor = distanceProgress.interpolate({
       inputRange: [0, 1],
-      outputRange: ['rgba(137, 183, 255, 0.12)', 'rgba(198, 214, 112, 0.82)'],
+      outputRange: PUBLIC_SECONDARY_NAV_MOTION_THEME.plateBorderColorRange,
       extrapolate: 'clamp',
     });
 
     const backgroundColor = distanceProgress.interpolate({
       inputRange: [0, 1],
-      outputRange: ['rgba(255,255,255,0.025)', 'rgba(198, 214, 112, 0.18)'],
+      outputRange: PUBLIC_SECONDARY_NAV_MOTION_THEME.plateBackgroundColorRange,
       extrapolate: 'clamp',
     });
 
     const dotScale = distanceProgress.interpolate({
       inputRange: [0, 1],
-      outputRange: [1, 1.08],
+      outputRange: PUBLIC_SECONDARY_NAV_MOTION_THEME.dotScaleRange,
       extrapolate: 'clamp',
     });
 
     const dotColor = distanceProgress.interpolate({
       inputRange: [0, 1],
-      outputRange: ['rgba(142, 202, 230, 0.38)', 'rgba(198, 214, 112, 0.85)'],
+      outputRange: PUBLIC_SECONDARY_NAV_MOTION_THEME.dotColorRange,
       extrapolate: 'clamp',
     });
 
     const titleColor = distanceProgress.interpolate({
       inputRange: [0, 1],
-      outputRange: ['rgba(232, 238, 246, 0.72)', '#f7f4ea'],
+      outputRange: PUBLIC_SECONDARY_NAV_MOTION_THEME.titleColorRange,
       extrapolate: 'clamp',
     });
 
     const subtitleOpacity = distanceProgress.interpolate({
       inputRange: [0, 0.55, 1],
-      outputRange: [0, 0.18, 1],
+      outputRange: PUBLIC_SECONDARY_NAV_MOTION_THEME.railSubtitleOpacityRange,
       extrapolate: 'clamp',
     });
 
     const subtitleTranslateY = distanceProgress.interpolate({
       inputRange: [0, 1],
-      outputRange: [4, 0],
+      outputRange: PUBLIC_SECONDARY_NAV_MOTION_THEME.railSubtitleTranslateYRange,
       extrapolate: 'clamp',
     });
 
     const subtitleColor = distanceProgress.interpolate({
       inputRange: [0, 1],
-      outputRange: ['rgba(142, 202, 230, 0.35)', 'rgba(243, 196, 92, 0.92)'],
+      outputRange: PUBLIC_SECONDARY_NAV_MOTION_THEME.subtitleColorRange,
       extrapolate: 'clamp',
     });
 

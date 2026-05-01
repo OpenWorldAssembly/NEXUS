@@ -4,7 +4,7 @@
  */
 import { Animated, View } from 'react-native';
 
-import AboutSectionRail from '@app/components/layout/about/about-section-rail';
+import { PublicSecondaryNav } from '@app/components/public/public-secondary-nav';
 import { useAboutPageController } from '@app/components/layout/about/use-about-page-controller';
 import PublicAboutSection from '@app/components/layout/public-about-section';
 import { aboutPageContent } from '@app/public/about-content';
@@ -35,13 +35,11 @@ export default function AboutPage() {
     <View style={{ flex: 1 }} onLayout={handleViewportLayout}>
       {secondaryNav.state.mode === 'topbar' ? (
         <View style={{ height: secondaryNav.state.topbarShellHeight, position: 'relative' }}>
-          <AboutSectionRail
-            config={{
-              ...secondaryNav.config,
-              title: aboutPageContent.railTitle,
-              subtitle: aboutPageContent.railSubtitle,
-            }}
-            state={secondaryNav.state}
+          <PublicSecondaryNav
+            {...secondaryNav.config}
+            {...secondaryNav.state}
+            title={aboutPageContent.railTitle}
+            subtitle={aboutPageContent.railSubtitle}
           />
         </View>
       ) : null}
@@ -51,7 +49,7 @@ export default function AboutPage() {
         contentContainerStyle={{ paddingBottom: bottomRunway }}
         onScroll={scrollEventHandler}
         scrollEventThrottle={16}
-        style={{ flex: 1, backgroundColor: '#020d26' }}
+        style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
       >
         <View
@@ -78,13 +76,11 @@ export default function AboutPage() {
       </Animated.ScrollView>
 
       {secondaryNav.state.mode === 'rail' ? (
-        <AboutSectionRail
-          config={{
-            ...secondaryNav.config,
-            title: aboutPageContent.railTitle,
-            subtitle: aboutPageContent.railSubtitle,
-          }}
-          state={secondaryNav.state}
+        <PublicSecondaryNav
+          {...secondaryNav.config}
+          {...secondaryNav.state}
+          title={aboutPageContent.railTitle}
+          subtitle={aboutPageContent.railSubtitle}
         />
       ) : null}
     </View>

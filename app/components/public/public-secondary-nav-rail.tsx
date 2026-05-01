@@ -4,6 +4,8 @@
  */
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import PublicCardFrame from '@app/components/public/public-card-frame';
+import { PUBLIC_SURFACE_CLASSES } from '@app/components/public/public-surface';
 import { resolvePublicSecondaryNavItemState } from '@app/components/public/public-secondary-nav.helpers';
 import type { PublicSecondaryNavRailProps } from '@app/components/public/public-secondary-nav.types';
 import { SECTION_RAIL_WIDTH } from './public-secondary-nav.constants';
@@ -33,14 +35,17 @@ export default function PublicSecondaryNavRail({
       pointerEvents="box-none"
       style={[styles.railViewportOverlay, { right: railRightOffset ?? 0 }]}
     >
-      <View
-        style={[
-          styles.railShell,
-          {
-            height: railShellHeight ?? 540,
-            width: resolvedRailWidth,
-          },
-        ]}
+      <PublicCardFrame
+        animationEnabled={false}
+        backgroundImageOpacity={0.68}
+        className={PUBLIC_SURFACE_CLASSES.navigation.railShellClassName}
+        contentClassName="flex-1"
+        enableDecorativeAccents={false}
+        style={{
+          height: railShellHeight ?? 540,
+          width: resolvedRailWidth,
+        }}
+        variant="panel"
       >
         <View style={styles.railHeader}>
           <Text style={styles.railEyebrow}>{title}</Text>
@@ -65,6 +70,7 @@ export default function PublicSecondaryNavRail({
               >
                 <View style={[styles.railItemBase, { width: railItemContentWidth }]}>
                   <Animated.View
+                    className={PUBLIC_SURFACE_CLASSES.navigation.itemPlateClassName}
                     pointerEvents="none"
                     style={[styles.railItemPlate, animatedState?.plateAnimatedStyle]}
                   />
@@ -98,19 +104,12 @@ export default function PublicSecondaryNavRail({
             );
           })}
         </View>
-      </View>
+      </PublicCardFrame>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  railShell: {
-    backgroundColor: 'rgba(10, 18, 30, 0.72)',
-    borderRadius: 24,
-    paddingHorizontal: 12,
-    paddingTop: 14,
-    paddingBottom: 14,
-  },
   railHeader: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -139,7 +138,10 @@ const styles = StyleSheet.create({
   },
   railStack: {
     flex: 1,
+    minHeight: 0,
     justifyContent: 'space-between',
+    paddingTop: 8,
+    paddingBottom: 8,
   },
   railItemPressable: {
     alignSelf: 'center',
@@ -155,7 +157,6 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     borderRadius: 16,
-    borderWidth: 0,
   },
   railItemContent: {
     minHeight: 50,

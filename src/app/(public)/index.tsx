@@ -36,7 +36,7 @@ export default function HomePage() {
       scrollEventThrottle={16}
     >
       <View className="mx-auto w-full max-w-6xl px-5 py-8 md:py-10">
-        <View className="gap-48 md:gap-64">
+        <View className="gap-24 md:gap-28">
           {homePageContent.sections.map((section) => (
             <PublicHomeRailSection
               key={section.id}

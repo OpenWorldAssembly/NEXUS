@@ -8,6 +8,11 @@ import type { PublicPositionProgress } from '@app/components/public/animation/pu
 
 export type PublicAnimationPresetName = 'none' | 'focusLift';
 
+export const PUBLIC_CARD_ANIMATION_DEFAULTS = {
+  enabled: true,
+  preset: 'focusLift' as PublicAnimationPresetName,
+} as const;
+
 export type PublicAnimationStyle =
   | StyleProp<ViewStyle>
   | Animated.WithAnimatedValue<StyleProp<ViewStyle>>;

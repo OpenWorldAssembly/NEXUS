@@ -1,6 +1,6 @@
 /**
  * File: public-section-shell.tsx
- * Description: Shared shell for public-page sections with background media, accent overlay, and animated content slots.
+ * Description: Shared shell for public-page sections with background media, accent overlay, and slotted content.
  */
 import { Image } from 'expo-image';
 import type { ReactNode } from 'react';
@@ -9,75 +9,105 @@ import {
   Pressable,
   StyleSheet,
   View,
-  type StyleProp,
-  type ViewStyle,
 } from 'react-native';
 
-type AnimatedSectionStyle = Animated.WithAnimatedValue<ViewStyle> | StyleProp<ViewStyle>;
+import type { PublicAnimationPresetName } from '@app/components/public/animation/public-animation-presets';
+import PublicCardFrame from '@app/components/public/public-card-frame';
+import {
+  PUBLIC_SURFACE_CLASSES,
+  PUBLIC_SURFACE_STYLE_VALUES,
+} from '@app/components/public/public-surface';
 
 type PublicSectionShellProps = {
   backgroundImageUri: string;
+  backgroundMirrored?: boolean;
   contentClassName?: string;
   details?: ReactNode;
-  detailsAnimatedStyle?: AnimatedSectionStyle;
+  enableDecorativeAccents?: boolean;
   header?: ReactNode;
   isActive: boolean;
   isMobile?: boolean;
   onPress?: () => void;
-  shellAnimatedStyle?: AnimatedSectionStyle;
   summary?: ReactNode;
-  backgroundAnimatedStyle?: AnimatedSectionStyle;
-  accentAnimatedStyle?: AnimatedSectionStyle;
+  animationEnabled?: boolean;
+  animationPreset?: PublicAnimationPresetName;
+  focusLineRatio?: number;
+  layoutOffsetY?: number;
+  scrollY?: Animated.Value;
+  viewportHeight?: number;
 };
 
 /**
- * Inputs: animated shell styles, section media, and slotted content blocks.
- * Output: a reusable public-page section shell that preserves the existing visual structure.
+ * Inputs: section media, optional animation settings, and slotted content blocks.
+ * Output: a reusable public-page section shell that preserves page-owned content layout.
  */
 export default function PublicSectionShell({
   backgroundImageUri,
+  backgroundMirrored = false,
   contentClassName = 'flex-1 px-7 py-8 md:px-9 md:py-9',
   details,
-  detailsAnimatedStyle,
+  enableDecorativeAccents = true,
   header,
   isActive,
   isMobile = false,
   onPress,
-  shellAnimatedStyle,
   summary,
-  backgroundAnimatedStyle,
-  accentAnimatedStyle,
+  animationEnabled,
+  animationPreset,
+  focusLineRatio,
+  layoutOffsetY,
+  scrollY,
+  viewportHeight,
 }: PublicSectionShellProps) {
+  const content = onPress ? (
+    <Pressable className={contentClassName} onPress={onPress}>
+      {header ?? null}
+      {summary ?? null}
+      {details ? <View style={styles.detailsArea}>{details}</View> : null}
+    </Pressable>
+  ) : (
+    <View className={contentClassName}>
+      {header ?? null}
+      {summary ?? null}
+      {details ? <View style={styles.detailsArea}>{details}</View> : null}
+    </View>
+  );
+
   return (
     <View style={[styles.chapter, isMobile ? styles.chapterMobile : null]}>
-      <Animated.View
-        style={[styles.shell, shellAnimatedStyle]}
-        className={['overflow-hidden border', isActive ? 'shadow-public' : ''].join(' ')}
+      <PublicCardFrame
+        animationEnabled={animationEnabled}
+        animationPreset={animationPreset}
+        background={
+          <>
+            <View pointerEvents="none" style={styles.parallaxLayer}>
+              <Image
+                source={{ uri: backgroundImageUri }}
+                contentFit="cover"
+                style={[styles.parallaxImage, backgroundMirrored ? styles.parallaxImageMirrored : null]}
+              />
+            </View>
+
+            <View
+              pointerEvents="none"
+              className={PUBLIC_SURFACE_CLASSES.section.accentOverlayClassName}
+              style={styles.accentOverlay}
+            />
+          </>
+        }
+        backgroundPreset="none"
+        className={isActive ? 'shadow-public' : ''}
+        enableDecorativeAccents={enableDecorativeAccents}
+        focusLineRatio={focusLineRatio}
+        layoutOffsetY={layoutOffsetY}
+        scrollY={scrollY}
+        style={styles.shell}
+        surfaceAnimated
+        variant="background"
+        viewportHeight={viewportHeight}
       >
-        <Animated.View pointerEvents="none" style={[styles.parallaxLayer, backgroundAnimatedStyle]}>
-          <Image
-            source={{ uri: backgroundImageUri }}
-            contentFit="cover"
-            style={styles.parallaxImage}
-          />
-        </Animated.View>
-
-        <Animated.View pointerEvents="none" style={[styles.accentOverlay, accentAnimatedStyle]} />
-
-        {onPress ? (
-          <Pressable className={contentClassName} onPress={onPress}>
-            {header ?? null}
-            {summary ?? null}
-            {details ? <Animated.View style={[styles.detailsArea, detailsAnimatedStyle]}>{details}</Animated.View> : null}
-          </Pressable>
-        ) : (
-          <View className={contentClassName}>
-            {header ?? null}
-            {summary ?? null}
-            {details ? <Animated.View style={[styles.detailsArea, detailsAnimatedStyle]}>{details}</Animated.View> : null}
-          </View>
-        )}
-      </Animated.View>
+        {content}
+      </PublicCardFrame>
     </View>
   );
 }
@@ -100,9 +130,12 @@ const styles = StyleSheet.create({
     height: '112%',
     width: '100%',
   },
+  parallaxImageMirrored: {
+    transform: [{ scaleX: -1 }],
+  },
   accentOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#6dd3ff',
+    opacity: 0.08,
   },
   parallaxLayer: {
     ...StyleSheet.absoluteFillObject,
@@ -110,7 +143,7 @@ const styles = StyleSheet.create({
     bottom: -8,
   },
   shell: {
-    shadowColor: '#07121d',
+    shadowColor: PUBLIC_SURFACE_STYLE_VALUES.sectionShadowColor,
     shadowOffset: {
       width: 0,
       height: 18,

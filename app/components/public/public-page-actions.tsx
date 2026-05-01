@@ -6,6 +6,7 @@ import { Link, type Href } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
 import type { PublicPageActionItem } from '@/app/public/content-types';
+import { PUBLIC_SURFACE_CLASSES } from '@app/components/public/public-surface';
 
 type LegacyPublicPageAction = {
   href: Href;
@@ -45,13 +46,13 @@ export function PublicPageActions({ actions, className }: PublicPageActionsProps
 
         const wrapperClassName =
           variant === 'solid'
-            ? 'rounded-full bg-public-accent px-6 py-3'
-            : 'rounded-full border border-public-line bg-public-panel/70 px-6 py-3';
+            ? PUBLIC_SURFACE_CLASSES.action.solidRootClassName
+            : PUBLIC_SURFACE_CLASSES.action.outlineRootClassName;
 
         const textClassName =
           variant === 'solid'
-            ? 'text-sm font-extrabold uppercase tracking-[0.18em] text-public-canvas'
-            : 'text-sm font-bold uppercase tracking-[0.18em] text-public-text';
+            ? PUBLIC_SURFACE_CLASSES.action.solidTextClassName
+            : PUBLIC_SURFACE_CLASSES.action.outlineTextClassName;
 
         const content = (
           <Pressable className={wrapperClassName} disabled={disabled || !href}>

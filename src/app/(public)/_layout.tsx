@@ -14,7 +14,7 @@ import Header from '@app/components/layout/header';
  */
 export default function PublicLayout() {
   return (
-    <View style={styles.appShell}>
+    <View className="bg-public-canvas" style={styles.appShell}>
       <Header />
 
       <View style={styles.mainContent}>
@@ -30,7 +30,6 @@ const styles = StyleSheet.create({
   appShell: {
     flex: 1,
     minHeight: '100%',
-    backgroundColor: '#0b1020',
   },
   mainContent: {
     flex: 1,

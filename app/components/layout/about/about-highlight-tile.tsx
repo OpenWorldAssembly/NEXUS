@@ -2,6 +2,7 @@
  * File: about-highlight-tile.tsx
  * Description: Renders a single about-page highlight tile, optionally as a linked CTA card.
  */
+import PublicSurface, { PUBLIC_SURFACE_CLASSES } from '@app/components/public/public-surface';
 import type { AboutHighlight } from '@app/public/content-types';
 import { Link, type Href } from 'expo-router';
 import { useRef } from 'react';
@@ -91,23 +92,36 @@ export default function AboutHighlightTile({ highlight }: AboutHighlightTileProp
       }
     : undefined;
 
-  const content = (
-    <Animated.View
-      style={animatedTileStyle}
-      className="min-w-[220px] flex-1 overflow-hidden rounded-[1.25rem] bg-public-shell/78 p-5"
-    >
-      {isLink ? (
-        <>
-          <Animated.View pointerEvents="none" style={[styles.highlightGlow, animatedGlowStyle]} />
-          <Animated.View pointerEvents="none" style={[styles.highlightSheen, sheenStyle]} />
-        </>
-      ) : null}
+  const background = isLink ? (
+    <>
+      <Animated.View
+        className={PUBLIC_SURFACE_CLASSES.card.decorativeGlowClassName}
+        pointerEvents="none"
+        style={[styles.highlightGlow, animatedGlowStyle]}
+      />
+      <Animated.View
+        className={PUBLIC_SURFACE_CLASSES.card.decorativeSheenClassName}
+        pointerEvents="none"
+        style={[styles.highlightSheen, sheenStyle]}
+      />
+    </>
+  ) : null;
 
+  const content = (
+    <PublicSurface
+      animated
+      background={background}
+      className={PUBLIC_SURFACE_CLASSES.card.contentTileClassName}
+      style={animatedTileStyle}
+      variant="standardCard"
+    >
       <View className="flex-1 items-center justify-between">
-        <Text className="text-center text-sm font-bold uppercase tracking-[0.18em] text-public-sand">
+        <Text className={`text-center text-sm font-bold uppercase tracking-[0.18em] ${PUBLIC_SURFACE_CLASSES.text.bodyWarmClassName}`}>
           {highlight.title}
         </Text>
-        <Text className="mt-3 text-center text-sm leading-6 text-public-muted">{highlight.body}</Text>
+        <Text className={`mt-3 text-center text-sm leading-6 ${PUBLIC_SURFACE_CLASSES.text.bodyClassName}`}>
+          {highlight.body}
+        </Text>
 
         {highlight.cta ? (
           <View style={styles.highlightCtaWrap}>
@@ -120,7 +134,7 @@ export default function AboutHighlightTile({ highlight }: AboutHighlightTileProp
           </View>
         ) : null}
       </View>
-    </Animated.View>
+    </PublicSurface>
   );
 
   if (!isLink || !highlight.href) {
@@ -160,15 +174,13 @@ const styles = StyleSheet.create({
   },
   highlightGlow: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 20,
+    borderRadius: 28,
   },
   highlightSheen: {
     position: 'absolute',
     top: -40,
     bottom: -40,
     width: 90,
-    backgroundColor: 'rgba(255,255,255,0.14)',
     borderRadius: 999,
   },
   highlightCtaWrap: {

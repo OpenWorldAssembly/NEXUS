@@ -5,7 +5,10 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, type StyleProp, View, type ViewStyle } from 'react-native';
 
-import PublicSurface, { PUBLIC_SURFACE_CLASSES } from './public-surface';
+import type { PublicAnimationPresetName } from '@app/components/public/animation/public-animation-presets';
+
+import PublicCardFrame from './public-card-frame';
+import { PUBLIC_SURFACE_CLASSES } from './public-surface';
 
 type PublicPanelShellProps = {
   children: ReactNode;
@@ -13,6 +16,8 @@ type PublicPanelShellProps = {
   contentClassName?: string;
   style?: StyleProp<ViewStyle>;
   accentOpacity?: number;
+  animationEnabled?: boolean;
+  animationPreset?: PublicAnimationPresetName;
 };
 
 export function PublicPanelShell({
@@ -21,21 +26,20 @@ export function PublicPanelShell({
   contentClassName,
   style,
   accentOpacity = 0.2,
+  animationEnabled,
+  animationPreset,
 }: PublicPanelShellProps) {
   return (
-    <PublicSurface
-      baseClassName={PUBLIC_SURFACE_CLASSES.panelBaseClassName}
+    <PublicCardFrame
+      animationEnabled={animationEnabled}
+      animationPreset={animationPreset}
+      variant="panel"
       className={className}
       contentClassName={contentClassName}
       style={style}
+      enableDecorativeAccents={false}
       background={
         <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-          <View
-            className={[
-              'absolute inset-0',
-              PUBLIC_SURFACE_CLASSES.background.panelBaseClassName,
-            ].join(' ')}
-          />
           <View
             className={[
               'absolute rounded-full',
@@ -94,7 +98,7 @@ export function PublicPanelShell({
       }
     >
       {children}
-    </PublicSurface>
+    </PublicCardFrame>
   );
 }
 

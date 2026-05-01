@@ -23,7 +23,7 @@ export default function DocsScreen() {
       showsVerticalScrollIndicator={false}
     >
       <PublicDocsHero hero={document.hero} />
-      <PublicDocsSectionGrid animationEnabled animationPreset="focusLift" sections={document.sections} />
+      <PublicDocsSectionGrid sections={document.sections} />
       <PublicDocsClosingPanel closing={document.closing} />
       <PublicDocsResourceGrid resources={document.resources} />
     </PublicPageShell>

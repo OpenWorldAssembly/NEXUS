@@ -3,7 +3,7 @@
  * Description: Stores the homepage rail sections, including the leading hero section.
  */
 import type { PublicPageAction } from '@app/components/public/public-page-actions';
-import { buildAboutBackgroundImageUri } from './public-graphics';
+import { buildPublicBackgroundImageUri } from './public-graphics';
 
 export type HomeRailSection = {
   id: string;
@@ -32,12 +32,17 @@ const sections: HomeRailSection[] = [
       'Assemblies sense, think, act, and learn together',
       'Fair decisions, efficient action, coordination without control',
     ],
-    backgroundImageUri: buildAboutBackgroundImageUri({
-      base: '#09131f',
-      accent: '#8ec5ff',
-      accentSoft: '#d7ffbf',
-      glow: '#173651',
-      ridge: '#466176',
+    backgroundImageUri: buildPublicBackgroundImageUri({
+      variant: 'section',
+      motif: 'assembly',
+      motifSide: 'right',
+      palette: {
+        base: '#09131f',
+        accent: '#8ec5ff',
+        accentSoft: '#d7ffbf',
+        glow: '#173651',
+        ridge: '#466176',
+      },
     }),
     align: 'left',
     actions: [
@@ -57,12 +62,17 @@ const sections: HomeRailSection[] = [
       'Encourages peace and unity over outrage and division',
       'Built for discussion, proposals, consent, and coordination',
     ],
-    backgroundImageUri: buildAboutBackgroundImageUri({
-      base: '#0a1422',
-      accent: '#9ecbff',
-      accentSoft: '#d7ffbf',
-      glow: '#18344c',
-      ridge: '#3f5a71',
+    backgroundImageUri: buildPublicBackgroundImageUri({
+      variant: 'section',
+      motif: 'social',
+      motifSide: 'left',
+      palette: {
+        base: '#0a1422',
+        accent: '#9ecbff',
+        accentSoft: '#d7ffbf',
+        glow: '#18344c',
+        ridge: '#3f5a71',
+      },
     }),
     align: 'right',
     action: { href: '/about', label: 'About OWA', variant: 'secondary' },
@@ -78,12 +88,17 @@ const sections: HomeRailSection[] = [
       'Cooperation is open, direct, fair, and efficient',
       'Enables populations to synchronize beyond borders',
     ],
-    backgroundImageUri: buildAboutBackgroundImageUri({
-      base: '#0a1524',
-      accent: '#9ac8ff',
-      accentSoft: '#d7ffbf',
-      glow: '#193a56',
-      ridge: '#4a6278',
+    backgroundImageUri: buildPublicBackgroundImageUri({
+      variant: 'section',
+      motif: 'global',
+      motifSide: 'right',
+      palette: {
+        base: '#0a1524',
+        accent: '#9ac8ff',
+        accentSoft: '#d7ffbf',
+        glow: '#193a56',
+        ridge: '#4a6278',
+      },
     }),
     align: 'left',
     action: { href: '/docs', label: 'Read Charter', variant: 'secondary' },
@@ -99,12 +114,17 @@ const sections: HomeRailSection[] = [
       'Conflict patterns continue trending toward world war',
       'Humanity needs a backchannel to coordinate without control',
     ],
-    backgroundImageUri: buildAboutBackgroundImageUri({
-      base: '#08111d',
-      accent: '#a6d6ff',
-      accentSoft: '#f0d79a',
-      glow: '#16324b',
-      ridge: '#425b70',
+    backgroundImageUri: buildPublicBackgroundImageUri({
+      variant: 'section',
+      motif: 'choice',
+      motifSide: 'left',
+      palette: {
+        base: '#08111d',
+        accent: '#a6d6ff',
+        accentSoft: '#f0d79a',
+        glow: '#16324b',
+        ridge: '#425b70',
+      },
     }),
     align: 'right',
     action: { href: '/nexus/dashboard', label: 'Enter Nexus', variant: 'secondary' },
@@ -120,12 +140,17 @@ const sections: HomeRailSection[] = [
       'Every human deserves for their voice to be heard',
       'A world of peace and prosperity is worth building',
     ],
-    backgroundImageUri: buildAboutBackgroundImageUri({
-      base: '#09131f',
-      accent: '#a2d5ff',
-      accentSoft: '#c6d670',
-      glow: '#17344d',
-      ridge: '#425d73',
+    backgroundImageUri: buildPublicBackgroundImageUri({
+      variant: 'section',
+      motif: 'agency',
+      motifSide: 'right',
+      palette: {
+        base: '#09131f',
+        accent: '#a2d5ff',
+        accentSoft: '#c6d670',
+        glow: '#17344d',
+        ridge: '#425d73',
+      },
     }),
     align: 'left',
     action: { href: '/support', label: 'Support OWA', variant: 'secondary' },

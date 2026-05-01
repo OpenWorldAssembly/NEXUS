@@ -784,6 +784,7 @@ Important note:
 
 - public shell chrome and the landing/about/charter pages now use NativeWind `className` styling
 - public pages use a dedicated public token set layered into `tailwind.config.js`
+- reusable public cards, panels, action pills, and animated section shells route through the shared `PublicSurface` contract where practical
 - the public landing page hero now includes a rotating slider with generated SVG background imagery
 - the public about page uses large scroll-driven chapters with per-section parallax artwork and smooth scroll-based emphasis
 - nexus screens and nexus shell use NativeWind `className` styling
@@ -978,3 +979,39 @@ The following areas should still be treated as provisional:
 - vote execution, delegation, and propagation semantics
 - packet actions that currently appear as disabled placeholders
 - any architecture in `docs/implementation-guide.md` beyond the new packet schema foundation that is not yet represented in executable code
+
+### Public card frame contract
+
+- `PublicSurface` remains the low-level shell for public surfaces.
+- `PublicCardFrame` is the shared graphic card frame for reusable public cards. It standardizes surface, border, clipping, decorative rules, subtle glow/sheen layers, ambient generated background presets, optional custom generated background imagery, and optional public animation presets.
+- Page-specific components keep ownership of their internal content layouts, including grids, text arrangement, section rhythm, and responsive composition.
+- Simple feature cards use `PublicCardFrame`; more complex Docs/About/Home cards may adopt frame variants gradually without losing their page-specific layouts.
+
+### Support and Docs public surface convergence
+
+- Support and Docs cards/panels share the public surface/frame system.
+- `PublicPanelShell` composes `PublicCardFrame` using the `panel` variant, so hero/resource/closing panels use the same public panel route rather than parallel shell implementations. Panel shells allow the frame's ambient generated background to remain visible while layering shared panel glow/rule accents above it.
+- Support feature cards use the default `PublicCardFrame` treatment.
+- Docs principle cards use the decorated `PublicCardFrame` treatment while keeping their document-specific internal content layout and anchor logic.
+- Support and Docs may keep different page layouts, content ordering, and text composition, but their card/panel surface language should be tuned through `PublicSurface`, `PublicCardFrame`, `PublicPanelShell`, and `PUBLIC_SURFACE_CLASSES` instead of page-local color/decorative shell code.
+
+### Public ambient card backgrounds
+
+- `PublicCardFrame` resolves an ambient generated background by default for reusable card and panel variants unless `backgroundPreset="none"` or an explicit `backgroundImageUri` is supplied.
+- Ambient backgrounds are generated through `buildPublicBackgroundImageUri` in `app/public/public-graphics.ts`, keeping artwork defaults centralized instead of embedding SVG/background choices in Docs or Support page components.
+- Content layout remains page-owned; the frame owns the shared graphic background language.
+
+### About surface convergence and secondary navigation
+
+- About uses the shared public page background instead of a route-local background color.
+- About section cards render through the shared public card frame while preserving About-owned content layout, section sizing, static background imagery, and accent overlay.
+- The secondary navigation system remains separate from card animation. Its rail/topbar layout, active-item animation, and responsive mode switching are navigation-owned behavior, while its panel backgrounds and item plates source their surface classes from the shared public theme contract.
+- Future pages may reuse the secondary navigation without adopting page-specific section animations.
+
+### Public section animation and cleanup checkpoint
+
+- Home, About, Docs, and Support card-like public surfaces share the `PublicCardFrame` / `PublicAnimatedSurface` animation route by default.
+- Home and About no longer carry separate route-local section progress math for card motion, shell tint, background parallax, overlay intensity, or text color animation.
+- Secondary navigation remains separate from card animation. Its rail/topbar motion is reusable navigation behavior and keeps its tuning values centralized in `public-secondary-nav.constants.ts`.
+- Future page-specific animation behavior should be added as named shared presets on the public animation/frame system instead of being embedded directly inside individual route components.
+- The public route shell background, home rail dot, section shadow value, reusable card/frame classes, action pills, and secondary-nav panel surfaces now resolve through shared public theme/config seams.
