@@ -19,10 +19,11 @@ export default function DocsScreen() {
       constrainWidth={false}
       contentContainerClassName=""
       contentContainerStyle={styles.scrollContent}
+      enablePositionAnimation
       showsVerticalScrollIndicator={false}
     >
       <PublicDocsHero hero={document.hero} />
-      <PublicDocsSectionGrid sections={document.sections} />
+      <PublicDocsSectionGrid animationEnabled animationPreset="focusLift" sections={document.sections} />
       <PublicDocsClosingPanel closing={document.closing} />
       <PublicDocsResourceGrid resources={document.resources} />
     </PublicPageShell>

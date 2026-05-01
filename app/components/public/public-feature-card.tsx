@@ -4,17 +4,21 @@
  */
 import { Text } from 'react-native';
 
-import PublicSurface from './public-surface';
+import type { PublicAnimationPresetName } from '@app/components/public/animation/public-animation-presets';
+import PublicAnimatedSurface from './public-animated-surface';
+import { PUBLIC_SURFACE_CLASSES } from './public-surface';
 
 type PublicFeatureCardProps = {
   eyebrow: string;
   title: string;
   body: string;
   eyebrowClassName: string;
+  animationEnabled?: boolean;
+  animationPreset?: PublicAnimationPresetName;
 };
 
 /**
- * Inputs: card eyebrow, title, body copy, and eyebrow tone class.
+ * Inputs: card eyebrow, title, body copy, eyebrow tone class, and optional animation settings.
  * Output: a consistent content card used in docs/support feature grids.
  */
 export default function PublicFeatureCard({
@@ -22,14 +26,22 @@ export default function PublicFeatureCard({
   title,
   body,
   eyebrowClassName,
+  animationEnabled = false,
+  animationPreset = 'none',
 }: PublicFeatureCardProps) {
   return (
-    <PublicSurface baseClassName="min-w-[260px] flex-1 rounded-[1.75rem] border border-public-line/70 bg-public-panel/55 p-6">
+    <PublicAnimatedSurface
+      animationEnabled={animationEnabled}
+      animationPreset={animationPreset}
+      layoutClassName="min-w-[260px] flex-1"
+      baseClassName={[PUBLIC_SURFACE_CLASSES.standardCardBaseClassName, 'p-6'].join(' ')}
+      className="h-full"
+    >
       <Text className={["text-xs font-bold uppercase tracking-[0.28em]", eyebrowClassName].join(' ')}>
         {eyebrow}
       </Text>
       <Text className="mt-3 text-2xl font-bold text-public-text">{title}</Text>
       <Text className="mt-3 text-base leading-7 text-public-muted">{body}</Text>
-    </PublicSurface>
+    </PublicAnimatedSurface>
   );
 }

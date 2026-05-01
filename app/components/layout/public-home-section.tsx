@@ -143,6 +143,13 @@ export default function PublicHomeSection({
 
   const isHero = section.variant === 'hero';
   const isRightAligned = section.align === 'right';
+  const isCompactMainPoint = section.mainPointScale === 'compact';
+  const subPointItems = section.subPoints?.length
+    ? section.subPoints
+    : section.subPoint
+      ? section.subPoint.split('\n').map((item) => item.trim()).filter(Boolean)
+      : [];
+  const hasSubPointList = subPointItems.length > 1;
   const { width: windowWidth } = useWindowDimensions();
   const isDesktop = windowWidth >= 768;
 
@@ -157,19 +164,80 @@ export default function PublicHomeSection({
       : 'text-sm font-bold uppercase tracking-[0.18em] text-public-text';
 
   const mainTextStyle = {
-    fontSize: isHero ? (isDesktop ? 78 : 52) : isDesktop ? 64 : 44,
-    lineHeight: isHero ? (isDesktop ? 72 : 48) : isDesktop ? 58 : 40,
+    fontSize: isCompactMainPoint
+      ? isHero
+        ? isDesktop
+          ? 36
+          : 29
+        : isDesktop
+          ? 34
+          : 27
+      : isHero
+        ? isDesktop
+          ? 78
+          : 52
+        : isDesktop
+          ? 64
+          : 44,
+    lineHeight: isCompactMainPoint
+      ? isHero
+        ? isDesktop
+          ? 68
+          : 52
+        : isDesktop
+          ? 66
+          : 50
+      : isHero
+        ? isDesktop
+          ? 114
+          : 82
+        : isDesktop
+          ? 98
+          : 72,
     fontWeight: '900' as const,
-    letterSpacing: isHero ? (isDesktop ? -1.4 : -0.8) : isDesktop ? -1 : -0.5,
-    maxWidth: isHero ? (isDesktop ? 370 : 240) : isDesktop ? 320 : 220,
+    letterSpacing: isCompactMainPoint
+      ? isDesktop
+        ? 0.55
+        : 0.25
+      : isHero
+        ? isDesktop
+          ? -0.35
+          : 0.05
+        : isDesktop
+          ? 0
+          : 0.15,
+    maxWidth: isCompactMainPoint
+      ? isHero
+        ? isDesktop
+          ? 460
+          : 285
+        : isDesktop
+          ? 410
+          : 265
+      : isHero
+        ? isDesktop
+          ? 370
+          : 240
+        : isDesktop
+          ? 320
+          : 220,
+    textShadowColor: 'rgba(2, 7, 14, 0.5)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 10,
   };
 
   const subTextStyle = {
-    fontSize: isHero ? (isDesktop ? 28 : 22) : isDesktop ? 24 : 19,
-    lineHeight: isHero ? (isDesktop ? 32 : 26) : isDesktop ? 28 : 23,
-    fontWeight: '800' as const,
-    letterSpacing: -0.2,
-    maxWidth: isHero ? (isDesktop ? 360 : 260) : isDesktop ? 300 : 230,
+    fontSize: hasSubPointList ? (isDesktop ? 15 : 12.5) : isHero ? (isDesktop ? 24 : 19) : isDesktop ? 21 : 17,
+    lineHeight: hasSubPointList ? (isDesktop ? 24 : 20.5) : isHero ? (isDesktop ? 29 : 23) : isDesktop ? 25 : 21,
+    fontWeight: '700' as const,
+    letterSpacing: 0.05,
+    maxWidth: isHero ? (isDesktop ? 330 : 250) : isDesktop ? 305 : 225,
+    opacity: 0.84,
+    position: 'relative' as const,
+    zIndex: 2,
+    textShadowColor: 'rgba(2, 7, 14, 0.45)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
   };
 
   const mainRowClassName = isRightAligned
@@ -178,7 +246,10 @@ export default function PublicHomeSection({
   const subRowClassName = isRightAligned
     ? 'w-full items-start gap-5 md:pl-2'
     : 'w-full items-end gap-5 md:pr-2';
-  const subRowOverlapClassName = isDesktop ? '-mt-10' : '-mt-4';
+  const subRowOverlapClassName = isDesktop ? '-mt-8' : '-mt-4';
+  const subPointListClassName = isRightAligned ? 'items-start' : 'items-end';
+  const subPointTextClassName = isRightAligned ? 'text-left' : 'text-right';
+  const subPointGap = hasSubPointList ? (isDesktop ? 16 : 11) : 0;
   const contentClassName = 'min-h-[350px] justify-center px-6 py-10 md:min-h-[460px] md:px-10 md:py-12';
 
   const mainBlock = (
@@ -208,12 +279,28 @@ export default function PublicHomeSection({
 
   const subBlock = (
     <View className={`${subRowClassName} ${subRowOverlapClassName}`}>
-      <Animated.Text
-        className={isRightAligned ? 'text-left' : 'text-right'}
-        style={[noBreakTextStyle, subTextStyle, { color: subPointColor }]}
-      >
-        {section.subPoint}
-      </Animated.Text>
+      <View className={subPointListClassName} style={{ maxWidth: subTextStyle.maxWidth }}>
+        {subPointItems.map((subPoint, index) => {
+          const isLastSubPoint = index === subPointItems.length - 1;
+
+          return (
+            <Animated.Text
+              className={subPointTextClassName}
+              key={subPoint}
+              style={[
+                subTextStyle,
+                {
+                  color: subPointColor,
+                  marginBottom: isLastSubPoint ? 0 : subPointGap,
+                  maxWidth: '100%',
+                },
+              ]}
+            >
+              {hasSubPointList ? `• ${subPoint}` : subPoint}
+            </Animated.Text>
+          );
+        })}
+      </View>
       {actionNode}
     </View>
   );

@@ -1043,6 +1043,24 @@ Examples of decisions worth logging early:
 - Why: it keeps the public explanation closer to the project’s actual principles while making the page easier to scan, more visual, and less placeholder-like.
 - Consequences / follow-ups: future about-page revisions should continue to source their section set from public-facing canon/workspace language, and the page now behaves like a set of large scroll chapters whose card height, detail density, and parallax treatment are all driven from one measured midpoint focus line rather than a stack of separate assumptions; the page also now uses an explicit section navigator, measured in-layout viewport height so both active-state logic and animation timing stay centered within the public shell rather than drifting toward the full browser window midpoint, a widened focus band with a short center hold so section motion starts earlier and stays open longer through the scroll, a slower detail reveal so the inner highlight blocks fade and expand in with the same shared progress curve instead of popping in abruptly, and stronger blurred edge strips plus increased spacing between chapters rather than a true mask effect so the public page gets softer image boundaries without adding a heavier graphics dependency.
 
+### 2026-05-01 - Public animated surfaces use layout, motion, surface layering
+
+- Context: the public-site card system now has a reusable `PublicSurface` base plus early `PublicAnimatedSurface` migrations for docs and support cards. During the no-op animated-wrapper migration, putting visual NativeWind card classes directly on an `Animated.View` caused Support cards to lose their border, background, radius, and padding treatment on React Native Web.
+- Options considered: keep animated cards as `Animated.View` roots with visual classes, avoid animated wrappers for public cards, or split animated cards into separate layout, motion, and visual-surface layers.
+- Decision: public animated cards must use a three-layer structure: layout wrapper first, animation wrapper second, and `PublicSurface` third. The layout wrapper owns flex/grid/list participation and measurement. The animation wrapper owns transforms, opacity, and interpolated motion styles only. `PublicSurface` owns visual card styling, including border, radius, background, padding, glow/background slots, and content classes.
+- Why: this preserves one universal public card substrate while preventing animation roots from swallowing NativeWind visual styles. It also keeps future cards portable across straight lists, grids, rail layouts, and expanded reading modes without tying animation logic to a specific page or secondary nav.
+- Consequences / follow-ups: future animated public-card migrations should split sizing/layout classes such as `flex-1`, `min-w-*`, and `self-stretch` onto the layout wrapper, keep visual classes on `PublicSurface`, and apply motion only through an unstyled `Animated.View`. If no layout wrapper or animation style is needed, `PublicAnimatedSurface` may render `PublicSurface` directly to preserve existing static behavior. The canonical shape is:
+
+```tsx
+<View className={layoutClassName} onLayout={handleLayout}>
+  <Animated.View style={animationStyle}>
+    <PublicSurface baseClassName={surfaceClassName}>
+      {children}
+    </PublicSurface>
+  </Animated.View>
+</View>
+```
+
 ### 2026-04-10 - Claimed Nexus auth now requires passkeys, rotating sessions, and explicit write-approval modes
 
 - Context: the initial cryptographic identity loop already supported guest, saved-guest, and claimed person elements with signed challenge-response sign-in, but it still relied on memory-only rate limits, static refresh tokens, and a thinner claimed-session model than we wanted before packettrust work.

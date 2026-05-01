@@ -4,15 +4,23 @@
  */
 import { Text, View } from "react-native";
 
+import type { PublicAnimationPresetName } from "@app/components/public/animation/public-animation-presets";
 import type { CharterPrincipleCard } from "@app/public/content-types";
 
-import PublicSurface from "./public-surface";
+import PublicAnimatedSurface from "./public-animated-surface";
+import { PUBLIC_SURFACE_CLASSES } from "./public-surface";
 
 type PublicDocsSectionCardProps = {
   section: CharterPrincipleCard;
+  animationEnabled?: boolean;
+  animationPreset?: PublicAnimationPresetName;
 };
 
-export function PublicDocsSectionCard({ section }: PublicDocsSectionCardProps) {
+export function PublicDocsSectionCard({
+  section,
+  animationEnabled = false,
+  animationPreset = "none",
+}: PublicDocsSectionCardProps) {
   const isRightAnchored = section.anchor === "right";
 
   const titleWrapClassName = isRightAnchored ? "items-end" : "items-start";
@@ -23,22 +31,43 @@ export function PublicDocsSectionCard({ section }: PublicDocsSectionCardProps) {
   const hairlineClassName = isRightAnchored ? "self-end" : "self-start";
 
   return (
-    <PublicSurface
-      baseClassName="min-w-[280px] flex-1 self-stretch rounded-[28px] border border-[#1c4f79] bg-[#031129] px-7 py-7"
+    <PublicAnimatedSurface
+      animationEnabled={animationEnabled}
+      animationPreset={animationPreset}
+      layoutClassName="min-w-[280px] flex-1 self-stretch"
+      baseClassName={[PUBLIC_SURFACE_CLASSES.standardCardBaseClassName, "px-7 py-7"].join(" ")}
+      className="h-full"
       contentClassName="flex-1"
       background={
         <View className="pointer-events-none absolute left-0 top-0 h-full w-full overflow-hidden rounded-[28px]">
-          <View className="absolute -left-12 -top-12 h-40 w-40 rounded-full bg-[#14355c]/45" />
-          <View className="absolute -bottom-14 right-[-10%] h-44 w-44 rounded-full bg-[#102c4d]/35" />
+          <View
+            className={[
+              "absolute -left-12 -top-12 h-40 w-40 rounded-full",
+              PUBLIC_SURFACE_CLASSES.glow.surfaceSoftClassName,
+            ].join(" ")}
+          />
+          <View
+            className={[
+              "absolute -bottom-14 right-[-10%] h-44 w-44 rounded-full",
+              PUBLIC_SURFACE_CLASSES.glow.surfaceDeepSoftClassName,
+            ].join(" ")}
+          />
         </View>
       }
     >
       <View className="flex-1 justify-between gap-10">
         <View className={titleWrapClassName}>
-          <View className={["mb-5 w-full max-w-[92%] border-t border-[#244e77]", hairlineClassName].join(" ")} />
+          <View
+            className={[
+              "mb-5 w-full max-w-[92%] border-t",
+              PUBLIC_SURFACE_CLASSES.border.ruleClassName,
+              hairlineClassName,
+            ].join(" ")}
+          />
           <Text
             className={[
-              "mb-3 font-[Orbitron_700Bold] text-[10px] uppercase tracking-[3px] text-[#89afe0]",
+              "mb-3 font-[Orbitron_700Bold] text-[10px] uppercase tracking-[3px]",
+              PUBLIC_SURFACE_CLASSES.text.eyebrowClassName,
               eyebrowClassName,
             ].join(" ")}
           >
@@ -46,7 +75,8 @@ export function PublicDocsSectionCard({ section }: PublicDocsSectionCardProps) {
           </Text>
           <Text
             className={[
-              "max-w-[92%] font-[Inter_700Bold] text-[30px] leading-[34px] text-[#b8d7ff]",
+              "max-w-[92%] font-[Inter_700Bold] text-[30px] leading-[34px]",
+              PUBLIC_SURFACE_CLASSES.text.headingClassName,
               titleClassName,
             ].join(" ")}
           >
@@ -57,16 +87,23 @@ export function PublicDocsSectionCard({ section }: PublicDocsSectionCardProps) {
         <View className={detailWrapClassName}>
           <Text
             className={[
-              "max-w-[92%] font-[Inter_500Medium] text-[16px] leading-[24px] text-[#f3f8d6]",
+              "max-w-[92%] font-[Inter_500Medium] text-[16px] leading-[24px]",
+              PUBLIC_SURFACE_CLASSES.text.bodyWarmClassName,
               detailClassName,
             ].join(" ")}
           >
             {section.body}
           </Text>
-          <View className={["mt-5 w-full max-w-[92%] border-t border-[#244e77]", hairlineClassName].join(" ")} />
+          <View
+            className={[
+              "mt-5 w-full max-w-[92%] border-t",
+              PUBLIC_SURFACE_CLASSES.border.ruleClassName,
+              hairlineClassName,
+            ].join(" ")}
+          />
         </View>
       </View>
-    </PublicSurface>
+    </PublicAnimatedSurface>
   );
 }
 

@@ -15,7 +15,7 @@ import { supportPageContent } from '@app/public/support-content';
  */
 export default function SupportPage() {
   return (
-    <PublicPageShell>
+    <PublicPageShell enablePositionAnimation>
       <PublicPageHero
         eyebrow={supportPageContent.eyebrow}
         title={supportPageContent.title}
@@ -36,6 +36,8 @@ export default function SupportPage() {
             title={priority.title}
             body={priority.body}
             eyebrowClassName="text-public-cyan"
+            animationEnabled
+            animationPreset="focusLift"
           />
         ))}
       </PublicCardGrid>
@@ -48,6 +50,8 @@ export default function SupportPage() {
             title={path.title}
             body={path.body}
             eyebrowClassName="text-public-sand"
+            animationEnabled
+            animationPreset="focusLift"
           />
         ))}
       </PublicCardGrid>

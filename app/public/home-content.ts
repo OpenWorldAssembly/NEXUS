@@ -8,11 +8,13 @@ import { buildAboutBackgroundImageUri } from './public-graphics';
 export type HomeRailSection = {
   id: string;
   mainPoint: string;
-  subPoint: string;
+  subPoint?: string;
+  subPoints?: string[];
   backgroundImageUri: string;
   align: 'left' | 'right';
   action?: PublicPageAction;
   actions?: PublicPageAction[];
+  mainPointScale?: 'standard' | 'compact';
   variant?: 'hero' | 'standard';
 };
 
@@ -23,8 +25,13 @@ export type HomePageContent = {
 const sections: HomeRailSection[] = [
   {
     id: 'hero',
-    mainPoint: 'Open World Assembly',
-    subPoint: 'Decentralized human coordination.',
+    mainPoint: 'Open World Assembly aligns local assemblies into global coordination.',
+    subPoints: [
+      'Decentralized direct democracy from local to global',
+      'Participation is consent-based by default',
+      'Assemblies sense, think, act, and learn together',
+      'Fair decisions, efficient action, coordination without control',
+    ],
     backgroundImageUri: buildAboutBackgroundImageUri({
       base: '#09131f',
       accent: '#8ec5ff',
@@ -38,12 +45,18 @@ const sections: HomeRailSection[] = [
       { href: '/nexus/dashboard', label: 'Enter Nexus', variant: 'primary' },
       { href: '/docs', label: 'Read Charter', variant: 'secondary' },
     ],
+    mainPointScale: 'compact',
     variant: 'hero',
   },
   {
-    id: 'unity',
-    mainPoint: 'Unity Is Inevitable',
-    subPoint: 'Nuclear war is not.',
+    id: 'social',
+    mainPoint: 'Social media connects people, but profit systems distort coordination.',
+    subPoints: [
+      'Optimized for truth, trust, and coordinated action',
+      'Feeds are organic, transparent, and customizable',
+      'Encourages peace and unity over outrage and division',
+      'Built for discussion, proposals, consent, and coordination',
+    ],
     backgroundImageUri: buildAboutBackgroundImageUri({
       base: '#0a1422',
       accent: '#9ecbff',
@@ -53,12 +66,18 @@ const sections: HomeRailSection[] = [
     }),
     align: 'right',
     action: { href: '/about', label: 'About OWA', variant: 'secondary' },
+    mainPointScale: 'compact',
     variant: 'standard',
   },
   {
-    id: 'time',
-    mainPoint: 'Our Time Has Come',
-    subPoint: 'No permission required.',
+    id: 'un',
+    mainPoint: 'The UN connects governments; OWA connects people directly.',
+    subPoints: [
+      'Connects people directly, not through governments',
+      'Decisions and funding are local; alignment is global',
+      'Cooperation is open, direct, fair, and efficient',
+      'Enables populations to synchronize beyond borders',
+    ],
     backgroundImageUri: buildAboutBackgroundImageUri({
       base: '#0a1524',
       accent: '#9ac8ff',
@@ -68,12 +87,18 @@ const sections: HomeRailSection[] = [
     }),
     align: 'left',
     action: { href: '/docs', label: 'Read Charter', variant: 'secondary' },
+    mainPointScale: 'compact',
     variant: 'standard',
   },
   {
-    id: 'technology',
-    mainPoint: 'We Have The Technology',
-    subPoint: 'To liberate or to enslave.',
+    id: 'why-now',
+    mainPoint: 'The tools for global coordination exist, and control systems are already using them.',
+    subPoints: [
+      'Exponential technology can enslave us or set us free',
+      'World leaders and institutions are becoming increasingly corrupt',
+      'Conflict patterns continue trending toward world war',
+      'Humanity needs a backchannel to coordinate without control',
+    ],
     backgroundImageUri: buildAboutBackgroundImageUri({
       base: '#08111d',
       accent: '#a6d6ff',
@@ -83,12 +108,18 @@ const sections: HomeRailSection[] = [
     }),
     align: 'right',
     action: { href: '/nexus/dashboard', label: 'Enter Nexus', variant: 'secondary' },
+    mainPointScale: 'compact',
     variant: 'standard',
   },
   {
-    id: 'future',
-    mainPoint: 'The Future Is Ours',
-    subPoint: 'Let’s build it together.',
+    id: 'agency',
+    mainPoint: 'We can begin uniting now, without permission or catastrophe.',
+    subPoints: [
+      'Unity can be achieved without forcing uniformity',
+      'Alignment emerges through consent, not decree',
+      'Every human deserves for their voice to be heard',
+      'A world of peace and prosperity is worth building',
+    ],
     backgroundImageUri: buildAboutBackgroundImageUri({
       base: '#09131f',
       accent: '#a2d5ff',
@@ -98,6 +129,7 @@ const sections: HomeRailSection[] = [
     }),
     align: 'left',
     action: { href: '/support', label: 'Support OWA', variant: 'secondary' },
+    mainPointScale: 'compact',
     variant: 'standard',
   },
 ];
