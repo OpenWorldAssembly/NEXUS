@@ -128,6 +128,7 @@ const styles = StyleSheet.create({
   },
   parallaxImage: {
     height: '112%',
+    opacity: PUBLIC_SURFACE_STYLE_VALUES.sectionBackgroundImageOpacity,
     width: '100%',
   },
   parallaxImageMirrored: {
@@ -135,7 +136,7 @@ const styles = StyleSheet.create({
   },
   accentOverlay: {
     ...StyleSheet.absoluteFillObject,
-    opacity: 0.08,
+    opacity: PUBLIC_SURFACE_STYLE_VALUES.sectionAccentOverlayOpacity,
   },
   parallaxLayer: {
     ...StyleSheet.absoluteFillObject,

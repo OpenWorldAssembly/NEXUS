@@ -102,7 +102,7 @@ export const PUBLIC_SURFACE_CLASSES = {
     defaultClassName: '',
     decoratedClassName: '',
     interactiveClassName: '',
-    backgroundClassName: '',
+    backgroundClassName: 'bg-public-surface',
     compactClassName: '',
     panelClassName: '',
   },
@@ -125,6 +125,8 @@ export const PUBLIC_SURFACE_CLASSES = {
 export const DEFAULT_PUBLIC_SURFACE_CLASS_NAME = PUBLIC_SURFACE_CLASSES.defaultBaseClassName;
 
 export const PUBLIC_SURFACE_STYLE_VALUES = {
+  sectionAccentOverlayOpacity: 0.045,
+  sectionBackgroundImageOpacity: 0.72,
   sectionShadowColor: '#07121d',
 } as const;
 
