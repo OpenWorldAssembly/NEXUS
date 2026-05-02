@@ -123,6 +123,14 @@ const server = createServer((request, response) => {
       serveStaticAsset(request, response, staticAssetPath);
       return;
     }
+
+    if (
+      requestUrl.pathname === '/' ||
+      !requestUrl.pathname.startsWith('/api/')
+    ) {
+      serveClientIndex(request, response);
+      return;
+    }
   }
 
   expoRequestHandler(request, response, (error) => {
@@ -148,6 +156,27 @@ const server = createServer((request, response) => {
   });
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`OWA server listening on http://0.0.0.0:${PORT}`);
 });
+
+function serveClientIndex(request, response) {
+  const indexPath = join(CLIENT_BUILD_DIR, 'index.html');
+
+  if (!existsSync(indexPath)) {
+    response.statusCode = 500;
+    response.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    response.end(`Missing client index at ${indexPath}`);
+    return;
+  }
+
+  response.statusCode = 200;
+  response.setHeader('Content-Type', 'text/html; charset=utf-8');
+
+  if (request.method === 'HEAD') {
+    response.end();
+    return;
+  }
+
+  createReadStream(indexPath).pipe(response);
+}
