@@ -25,12 +25,12 @@ export type HomePageContent = {
 const sections: HomeRailSection[] = [
   {
     id: 'hero',
-    mainPoint: 'Open World Assembly aligns local assemblies into global coordination.',
+    mainPoint: 'Open World Assembly \n- Local Decisions \n- Global Alignment',
     subPoints: [
-      'Decentralized direct democracy from local to global',
-      'Participation is consent-based by default',
-      'Assemblies sense, think, act, and learn together',
-      'Fair decisions, efficient action, coordination without control',
+      'Decentralized organization from local to global',
+      'Consent-based participation open to all humans',
+      'Fractal assemblies sense, think, act, and learn',
+      'Antifragile design survives hostile environments',
     ],
     backgroundImageUri: buildPublicBackgroundImageUri({
       variant: 'section',
@@ -55,12 +55,12 @@ const sections: HomeRailSection[] = [
   },
   {
     id: 'social',
-    mainPoint: 'Social media connects people, but profit systems distort coordination.',
+    mainPoint: 'Media distorts reality \nOWA restores clarity',
     subPoints: [
-      'Optimized for truth, trust, and coordinated action',
-      'Feeds are organic, transparent, and customizable',
-      'Encourages peace and unity over outrage and division',
-      'Built for discussion, proposals, consent, and coordination',
+      'Optimized for truth, trust, and transparency',
+      'Feeds are open, organic, and user-controlled',
+      'Faciliates dialogue over outrage and division',
+      'Peer-verified credibility and accountability',
     ],
     backgroundImageUri: buildPublicBackgroundImageUri({
       variant: 'section',
@@ -81,12 +81,12 @@ const sections: HomeRailSection[] = [
   },
   {
     id: 'un',
-    mainPoint: 'The UN connects governments; OWA connects people directly.',
+    mainPoint: 'Like a grassroots United Nations',
     subPoints: [
-      'Connects people directly, not through governments',
-      'Decisions and funding are local; alignment is global',
+      'A civilizational backchannel for humanity',
+      'Local decisions and funding translate globally',
       'Cooperation is open, direct, fair, and efficient',
-      'Enables populations to synchronize beyond borders',
+      'Enables global decentralized synchronization',
     ],
     backgroundImageUri: buildPublicBackgroundImageUri({
       variant: 'section',
@@ -107,12 +107,12 @@ const sections: HomeRailSection[] = [
   },
   {
     id: 'why-now',
-    mainPoint: 'The tools for global coordination exist, and control systems are already using them.',
+    mainPoint: 'The technology exists \nThe need is urgent',
     subPoints: [
-      'Exponential technology can enslave us or set us free',
-      'World leaders and institutions are becoming increasingly corrupt',
-      'Conflict patterns continue trending toward world war',
-      'Humanity needs a backchannel to coordinate without control',
+      'World leaders are leaving their people behind',
+      'Big Tech is enslaving minds and stealing data',
+      'Nations are sleepwalking toward world war 3',
+      'Humanity may not get another chance to act',
     ],
     backgroundImageUri: buildPublicBackgroundImageUri({
       variant: 'section',
@@ -133,12 +133,12 @@ const sections: HomeRailSection[] = [
   },
   {
     id: 'agency',
-    mainPoint: 'We can begin uniting now, without permission or catastrophe.',
+    mainPoint: 'Unity is achievable \nNo permission required',
     subPoints: [
-      'Unity can be achieved without forcing uniformity',
-      'Alignment emerges through consent, not decree',
-      'Every human deserves for their voice to be heard',
-      'A world of peace and prosperity is worth building',
+      'Unity is possible without forcing uniformity',
+      'Alignment through consent, not decree',
+      'Every voice deserves to be heard clearly',
+      'Peace and prosperity for all of humanity',
     ],
     backgroundImageUri: buildPublicBackgroundImageUri({
       variant: 'section',
