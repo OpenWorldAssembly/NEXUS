@@ -1,6 +1,6 @@
 /**
  * File: server.cjs
- * Description: Serves the exported Expo client bundle and forwards dynamic web and API requests to the Expo server build.
+ * Description: Serves the exported Expo client bundle and forwards API requests to the Expo server build when available.
  */
 
 const { createReadStream, existsSync, statSync } = require('node:fs');
@@ -9,14 +9,18 @@ const { extname, join, normalize, resolve } = require('node:path');
 
 const { createRequestHandler } = require('expo-server/adapter/http');
 
-const CLIENT_BUILD_DIR = join(process.cwd(), 'dist', 'client');
-const SERVER_BUILD_DIR = join(process.cwd(), 'dist', 'server');
+const DIST_DIR = join(process.cwd(), 'dist');
+const CLIENT_BUILD_DIR = existsSync(join(DIST_DIR, 'client')) ? join(DIST_DIR, 'client') : DIST_DIR;
+const SERVER_BUILD_DIR = join(DIST_DIR, 'server');
+const HAS_SERVER_BUILD = existsSync(SERVER_BUILD_DIR);
 const PORT = Number.parseInt(process.env.PORT ?? '3000', 10);
 const NODE_ENV = process.env.NODE_ENV ?? 'production';
-const expoRequestHandler = createRequestHandler({
-  build: SERVER_BUILD_DIR,
-  environment: NODE_ENV,
-});
+const expoRequestHandler = HAS_SERVER_BUILD
+  ? createRequestHandler({
+      build: SERVER_BUILD_DIR,
+      environment: NODE_ENV,
+    })
+  : null;
 
 const MIME_TYPES = {
   '.css': 'text/css; charset=utf-8',
@@ -34,16 +38,19 @@ const MIME_TYPES = {
   '.webp': 'image/webp',
 };
 
-/**
- * Inputs: a request pathname.
- * Output: the absolute static file path when the client build contains that file, otherwise `null`.
- */
 function resolveStaticAssetPath(pathname) {
   if (pathname === '/' || pathname.length === 0) {
     return null;
   }
 
-  const decodedPathname = decodeURIComponent(pathname);
+  let decodedPathname;
+
+  try {
+    decodedPathname = decodeURIComponent(pathname);
+  } catch (_error) {
+    return null;
+  }
+
   const relativePath = normalize(decodedPathname).replace(/^([/\\])+/, '');
   const absolutePath = resolve(CLIENT_BUILD_DIR, relativePath);
 
@@ -64,18 +71,10 @@ function resolveStaticAssetPath(pathname) {
   return absolutePath;
 }
 
-/**
- * Inputs: a static asset path.
- * Output: the content type header value for the file extension.
- */
 function getContentType(filePath) {
   return MIME_TYPES[extname(filePath).toLowerCase()] ?? 'application/octet-stream';
 }
 
-/**
- * Inputs: a request and response pair.
- * Output: serves a static client asset into the response.
- */
 function serveStaticAsset(request, response, filePath) {
   response.statusCode = 200;
   response.setHeader('Content-Type', getContentType(filePath));
@@ -95,6 +94,43 @@ function serveStaticAsset(request, response, filePath) {
   fileStream.pipe(response);
 }
 
+function serveClientIndex(request, response) {
+  const indexPath = join(CLIENT_BUILD_DIR, 'index.html');
+
+  if (!existsSync(indexPath)) {
+    response.statusCode = 500;
+    response.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    response.end(`Missing client index at ${indexPath}`);
+    return;
+  }
+
+  response.statusCode = 200;
+  response.setHeader('Content-Type', 'text/html; charset=utf-8');
+
+  if (request.method === 'HEAD') {
+    response.end();
+    return;
+  }
+
+  createReadStream(indexPath).pipe(response);
+}
+
+function serveHealth(response) {
+  response.statusCode = 200;
+  response.setHeader('Content-Type', 'application/json; charset=utf-8');
+  response.end(
+    JSON.stringify({
+      ok: true,
+      environment: NODE_ENV,
+      distDir: DIST_DIR,
+      clientBuildDir: CLIENT_BUILD_DIR,
+      serverBuildDir: SERVER_BUILD_DIR,
+      hasClientIndex: existsSync(join(CLIENT_BUILD_DIR, 'index.html')),
+      hasServerBuild: HAS_SERVER_BUILD,
+    })
+  );
+}
+
 const server = createServer((request, response) => {
   if (!request.url || !request.method) {
     response.statusCode = 400;
@@ -105,14 +141,7 @@ const server = createServer((request, response) => {
   const requestUrl = new URL(request.url, `http://${request.headers.host ?? 'localhost'}`);
 
   if (requestUrl.pathname === '/health') {
-    response.statusCode = 200;
-    response.setHeader('Content-Type', 'application/json; charset=utf-8');
-    response.end(
-      JSON.stringify({
-        ok: true,
-        environment: NODE_ENV,
-      })
-    );
+    serveHealth(response);
     return;
   }
 
@@ -124,13 +153,17 @@ const server = createServer((request, response) => {
       return;
     }
 
-    if (
-      requestUrl.pathname === '/' ||
-      !requestUrl.pathname.startsWith('/api/')
-    ) {
+    if (requestUrl.pathname === '/' || !requestUrl.pathname.startsWith('/api/')) {
       serveClientIndex(request, response);
       return;
     }
+  }
+
+  if (!expoRequestHandler) {
+    response.statusCode = 404;
+    response.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    response.end('Not found.');
+    return;
   }
 
   expoRequestHandler(request, response, (error) => {
@@ -158,25 +191,6 @@ const server = createServer((request, response) => {
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`OWA server listening on http://0.0.0.0:${PORT}`);
+  console.log(`OWA client build dir: ${CLIENT_BUILD_DIR}`);
+  console.log(`OWA server build available: ${HAS_SERVER_BUILD}`);
 });
-
-function serveClientIndex(request, response) {
-  const indexPath = join(CLIENT_BUILD_DIR, 'index.html');
-
-  if (!existsSync(indexPath)) {
-    response.statusCode = 500;
-    response.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    response.end(`Missing client index at ${indexPath}`);
-    return;
-  }
-
-  response.statusCode = 200;
-  response.setHeader('Content-Type', 'text/html; charset=utf-8');
-
-  if (request.method === 'HEAD') {
-    response.end();
-    return;
-  }
-
-  createReadStream(indexPath).pipe(response);
-}
