@@ -59,7 +59,7 @@ const sections: HomeRailSection[] = [
     subPoints: [
       'Optimized for truth, trust, and transparency',
       'Feeds are open, organic, and user-controlled',
-      'Faciliates dialogue over outrage and division',
+      'Facilitates dialogue over outrage and division',
       'Peer-verified credibility and accountability',
     ],
     backgroundImageUri: buildPublicBackgroundImageUri({

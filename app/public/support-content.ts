@@ -2,8 +2,8 @@
  * File: support-content.ts
  * Description: Stores the public support page copy and structured content blocks.
  */
-import type { Href } from 'expo-router';
 import type { PublicPageAction } from '@app/components/public/public-page-actions';
+import type { Href } from 'expo-router';
 
 export type SupportCard = {
   title: string;
@@ -29,44 +29,44 @@ const supportActions: PublicPageAction[] = [
 
 export const supportPageContent: SupportPageContent = {
   eyebrow: 'Support',
-  title: 'Help accelerate the buildout.',
+  title: 'Help build the future together.',
   body:
-    'Open World Assembly is still in its build phase. Support at this stage helps turn the current public site, Nexus shell, and core architecture into a cleaner, stronger, more usable system.',
-  calloutEyebrow: 'Current posture',
+    'Open World Assembly is in early development. Support helps move the project toward a stable open beta: clearer tools, stronger infrastructure, better writing, and wider testing.',
+  calloutEyebrow: 'Current need',
   calloutBody:
-    'This page is the support destination for the public site. Specific contribution channels, supporter options, and updates can be layered in here as the support model solidifies.',
+    'The project currently needs practical and/or financial support for: server hosting, code development, systems testing, and feedback integration',
   priorities: [
     {
       title: 'Infrastructure',
       body:
-        'Support helps cover the practical foundation: hosting, testing, deployment, and the baseline tooling required to keep the public site and Nexus moving toward a stable open beta.',
+        'Keep the foundation stable and decentralized: hosting, deployment, testing, monitoring, and the baseline systems needed for a public coordination tool people can trust.',
     },
     {
       title: 'Development',
       body:
-        'It also buys time and momentum for design, implementation, bug fixing, content architecture, and the slow unglamorous work of turning a large idea into a durable system.',
+        'Participate in the open-source work that makes the idea real: implementation, bug fixing, interface polish, content architecture, and the core logic behind OWA Nexus.',
     },
     {
       title: 'Distribution',
       body:
-        'As the project matures, support can expand the public-facing surface through clearer writing, visual polish, onboarding materials, and launch preparation for wider adoption.',
+        'Help the project become legible to diverse populations through localization of core literature, onboarding materials, demos, launch preparations, and accessibility options.',
     },
   ],
   waysToHelp: [
     {
       title: 'Financial support',
       body:
-        'Direct support is meant to accelerate development without turning the project into a product treadmill. This route is the public placeholder for those options as they are finalized.',
+        'Monetary support helps with all facets of project development, especially allowing for the aquisition of technological infrastructure and professional services.',
     },
     {
       title: 'Signal boosting',
       body:
-        'Sharing the project, discussing the idea seriously, and helping the right people find it can matter almost as much as money at this stage.',
+        'Share the project with anyone who might care about civic technology, decentralization, peace on Earth, regaining public trust, building open systems, or large-scale human coordination.',
     },
     {
       title: 'Feedback and testing',
       body:
-        'Clear feedback on messaging, structure, usability, and public trust signals helps sharpen both the site and the system behind it before the beta opens wider.',
+        'Test the site, challenge the language, report bugs and areas of friction, and help sharpen the project to ensure it becomes a tool truly of, by and for the people it serves.',
     },
   ],
   actions: supportActions,

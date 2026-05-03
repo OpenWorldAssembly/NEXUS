@@ -62,11 +62,8 @@ export const PUBLIC_DOCUMENTS: PublicDocumentEntry[] = [
       title: "The Charter of the Open World Assembly",
       summary: [
         "Humanity now possesses the means to communicate, coordinate, and act together across the planet.",
-        "We need not wait for kings, parties, corporations, or catastrophes to decide our future. We declare these principles.",
+        "We need not wait for kings, parties, corporations, or catastrophes to decide our future. We declare the following principles:",
       ],
-      noteTitle: "Structured as a readable, reusable set of principles for every scope.",
-      noteBody:
-        "The page now reads as an adaptive field of panels that can grow as the document library expands.",
       actions: [
         { label: "About OWA", href: "/about", variant: "outline" },
         { label: "Support OWA", href: "/support", variant: "outline" },
