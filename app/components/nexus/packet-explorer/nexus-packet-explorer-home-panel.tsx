@@ -1,20 +1,30 @@
 import { Text, TextInput, View } from 'react-native';
 
 import {
+  NexusAttachedTabRail,
   NexusActionButton,
   NexusCard,
   useNexusAppearance,
 } from '@app/components/nexus/nexus-ui';
+import { NexusPacketExplorerExportPanel } from '@app/components/nexus/packet-explorer/nexus-packet-explorer-export-panel';
+import type { PacketExplorerHomeSubtab } from '@runtime/nexus/packet-explorer-session';
 
 type NexusPacketExplorerHomePanelProps = {
+  activeHomeSubtab: PacketExplorerHomeSubtab;
+  selectedPacketId: string | null;
+  selectedPacketTitle: string | null;
   searchValue: string;
   onChangeSearchValue: (value: string) => void;
+  onSelectHomeSubtab: (subtab: PacketExplorerHomeSubtab) => void;
 };
 
-export function NexusPacketExplorerHomePanel({
+function NexusPacketExplorerSearchPanel({
   searchValue,
   onChangeSearchValue,
-}: NexusPacketExplorerHomePanelProps) {
+}: Pick<
+  NexusPacketExplorerHomePanelProps,
+  'searchValue' | 'onChangeSearchValue'
+>) {
   const appearance = useNexusAppearance();
 
   return (
@@ -28,8 +38,8 @@ export function NexusPacketExplorerHomePanel({
             Global Packet Workspace
           </Text>
           <Text className={appearance.sectionBodyClass}>
-            Open packets from Library to inspect them here. Search, import, and
-            bundle tools are visible now and will be wired in later passes.
+            Open packets from Library to inspect them here. Search is still
+            visible as the future direct lookup seam.
           </Text>
         </View>
 
@@ -67,10 +77,48 @@ export function NexusPacketExplorerHomePanel({
 
       <NexusCard tone="gold">
         <Text className={appearance.itemBodyClass}>
-          Search and import flows remain visible but read-only in this phase.
-          Use the live Library `Open packet` action to inspect packet data now.
+          Search and import remain visible but are not live in this export-first
+          phase. Use Library `Open packet` to inspect data and `Export` to open
+          the new portability workspace.
         </Text>
       </NexusCard>
+    </View>
+  );
+}
+
+export function NexusPacketExplorerHomePanel({
+  activeHomeSubtab,
+  selectedPacketId,
+  selectedPacketTitle,
+  searchValue,
+  onChangeSearchValue,
+  onSelectHomeSubtab,
+}: NexusPacketExplorerHomePanelProps) {
+  return (
+    <View className="gap-4">
+      <NexusAttachedTabRail
+        tabs={[
+          { id: 'search', title: 'Search' },
+          { id: 'export', title: 'Export' },
+        ]}
+        activeId={activeHomeSubtab}
+        compact
+        onSelect={(tabId) =>
+          onSelectHomeSubtab(tabId as PacketExplorerHomeSubtab)
+        }
+      />
+
+      {activeHomeSubtab === 'search' ? (
+        <NexusPacketExplorerSearchPanel
+          searchValue={searchValue}
+          onChangeSearchValue={onChangeSearchValue}
+        />
+      ) : (
+        <NexusPacketExplorerExportPanel
+          selectedPacketId={selectedPacketId}
+          selectedPacketTitle={selectedPacketTitle}
+        />
+      )}
     </View>
   );
 }

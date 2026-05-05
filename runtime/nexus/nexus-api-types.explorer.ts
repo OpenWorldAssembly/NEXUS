@@ -22,6 +22,39 @@ export type NexusPacketExplorerInspectionLens =
   | 'adapted'
   | 'read_model';
 
+export type NexusPacketExplorerExportArtifactMode = 'raw_packet' | 'bundle';
+export type NexusPacketExplorerBundleExportMode =
+  | 'packet_history'
+  | 'with_references'
+  | 'with_referrers'
+  | 'with_scope_stack'
+  | 'with_references_referrers_scope_stack'
+  | 'full_store';
+
+export interface NexusPacketExplorerExportRequest {
+  artifact_mode: NexusPacketExplorerExportArtifactMode;
+  root_packet_id?: string | null;
+  bundle_mode?: NexusPacketExplorerBundleExportMode | null;
+  title?: string | null;
+  note?: string | null;
+}
+
+export interface NexusPacketExplorerExportPreviewPayload {
+  artifact_mode: NexusPacketExplorerExportArtifactMode;
+  export_mode:
+    | 'raw_current_preferred'
+    | NexusPacketExplorerBundleExportMode;
+  root_packet_refs: PacketRef[];
+  title: string | null;
+  note: string | null;
+  packet_count: number;
+  revision_count: number;
+  byte_count: number;
+  file_name: string;
+  preview_suppressed: boolean;
+  preview_json: string | null;
+}
+
 export type NexusPacketExplorerSectionBasis =
   | 'historical_raw_packet'
   | 'current_adapted_packet'

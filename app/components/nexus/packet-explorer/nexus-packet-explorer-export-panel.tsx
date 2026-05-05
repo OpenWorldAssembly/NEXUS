@@ -1,0 +1,489 @@
+import { useEffect, useState } from 'react';
+import { Text, TextInput, View } from 'react-native';
+
+import {
+  NexusActionButton,
+  NexusBadge,
+  NexusCard,
+  NexusInlineSelect,
+  NexusSegmentedPill,
+  useNexusAppearance,
+} from '@app/components/nexus/nexus-ui';
+import type {
+  NexusPacketExplorerBundleExportMode,
+  NexusPacketExplorerExportPreviewPayload,
+  NexusPacketExplorerExportRequest,
+} from '@runtime/nexus/nexus-api-types';
+import {
+  downloadNexusPacketExplorerExport,
+  previewNexusPacketExplorerExport,
+} from '@runtime/nexus/nexus-query-api';
+
+type NexusPacketExplorerExportPanelProps = {
+  selectedPacketId: string | null;
+  selectedPacketTitle: string | null;
+};
+
+type ExportWorkflowState = {
+  preview: NexusPacketExplorerExportPreviewPayload | null;
+  error: string | null;
+  isLoadingPreview: boolean;
+  isDownloading: boolean;
+};
+
+const BUNDLE_SCOPE_OPTIONS: {
+  id: NexusPacketExplorerBundleExportMode;
+  label: string;
+}[] = [
+  { id: 'packet_history', label: 'Packet history' },
+  { id: 'with_references', label: 'With references' },
+  { id: 'with_referrers', label: 'With referrers' },
+  { id: 'with_scope_stack', label: 'With scope stack' },
+  {
+    id: 'with_references_referrers_scope_stack',
+    label: 'With references + referrers + scope stack',
+  },
+];
+
+function createIdleWorkflowState(): ExportWorkflowState {
+  return {
+    preview: null,
+    error: null,
+    isLoadingPreview: false,
+    isDownloading: false,
+  };
+}
+
+function buildPacketExportRequest(input: {
+  selectedPacketId: string;
+  artifactMode: 'raw_packet' | 'bundle';
+  bundleMode: NexusPacketExplorerBundleExportMode;
+  title: string;
+  note: string;
+}): NexusPacketExplorerExportRequest {
+  return {
+    artifact_mode: input.artifactMode,
+    root_packet_id: input.selectedPacketId,
+    bundle_mode: input.artifactMode === 'bundle' ? input.bundleMode : null,
+    title: input.artifactMode === 'bundle' ? input.title : null,
+    note: input.artifactMode === 'bundle' ? input.note : null,
+  };
+}
+
+function buildStoreExportRequest(input: {
+  title: string;
+  note: string;
+}): NexusPacketExplorerExportRequest {
+  return {
+    artifact_mode: 'bundle',
+    bundle_mode: 'full_store',
+    root_packet_id: null,
+    title: input.title,
+    note: input.note,
+  };
+}
+
+function ExportPreviewCard({
+  preview,
+}: {
+  preview: NexusPacketExplorerExportPreviewPayload;
+}) {
+  const appearance = useNexusAppearance();
+
+  return (
+    <NexusCard className="gap-4">
+      <View className="flex-row flex-wrap gap-2">
+        <NexusBadge
+          label={preview.artifact_mode === 'raw_packet' ? 'Raw packet' : 'Bundle'}
+          tone="sky"
+        />
+        <NexusBadge label={`${preview.packet_count} packets`} />
+        <NexusBadge label={`${preview.revision_count} revisions`} />
+        <NexusBadge label={`${preview.byte_count} bytes`} tone="gold" />
+      </View>
+
+      <View className="gap-2">
+        <Text className={appearance.itemMetaClass}>Export mode</Text>
+        <Text className={appearance.itemBodyClass}>{preview.export_mode}</Text>
+      </View>
+
+      {preview.root_packet_refs.length > 0 ? (
+        <View className="gap-2">
+          <Text className={appearance.itemMetaClass}>Root packet refs</Text>
+          {preview.root_packet_refs.map((packetRef) => (
+            <Text
+              key={packetRef.packet_id}
+              className={appearance.itemBodyClass}
+            >
+              {packetRef.packet_id}
+            </Text>
+          ))}
+        </View>
+      ) : null}
+
+      {preview.preview_suppressed ? (
+        <NexusCard tone="gold" className="gap-2">
+          <Text className={appearance.itemBodyClass}>
+            This export is too large to preview inline. Download the JSON instead.
+          </Text>
+        </NexusCard>
+      ) : preview.preview_json ? (
+        <NexusCard className="gap-3">
+          <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
+            Export JSON
+          </Text>
+          <Text className={`text-xs leading-6 ${appearance.itemMetaClass}`} selectable>
+            {preview.preview_json}
+          </Text>
+        </NexusCard>
+      ) : null}
+    </NexusCard>
+  );
+}
+
+export function NexusPacketExplorerExportPanel({
+  selectedPacketId,
+  selectedPacketTitle,
+}: NexusPacketExplorerExportPanelProps) {
+  const appearance = useNexusAppearance();
+  const [packetArtifactMode, setPacketArtifactMode] = useState<
+    'raw_packet' | 'bundle'
+  >('raw_packet');
+  const [packetBundleMode, setPacketBundleMode] =
+    useState<NexusPacketExplorerBundleExportMode>('packet_history');
+  const [packetTitle, setPacketTitle] = useState('');
+  const [packetNote, setPacketNote] = useState('');
+  const [packetWorkflow, setPacketWorkflow] = useState<ExportWorkflowState>(
+    createIdleWorkflowState
+  );
+  const [storeTitle, setStoreTitle] = useState('');
+  const [storeNote, setStoreNote] = useState('');
+  const [storeWorkflow, setStoreWorkflow] = useState<ExportWorkflowState>(
+    createIdleWorkflowState
+  );
+
+  useEffect(() => {
+    setPacketWorkflow(createIdleWorkflowState());
+  }, [selectedPacketId, packetArtifactMode, packetBundleMode, packetTitle, packetNote]);
+
+  useEffect(() => {
+    setStoreWorkflow(createIdleWorkflowState());
+  }, [storeTitle, storeNote]);
+
+  const handlePacketPreview = async () => {
+    if (!selectedPacketId) {
+      return;
+    }
+
+    const requestBody = buildPacketExportRequest({
+      selectedPacketId,
+      artifactMode: packetArtifactMode,
+      bundleMode: packetBundleMode,
+      title: packetTitle,
+      note: packetNote,
+    });
+
+    setPacketWorkflow((currentState) => ({
+      ...currentState,
+      error: null,
+      isLoadingPreview: true,
+    }));
+
+    try {
+      const preview = await previewNexusPacketExplorerExport(requestBody);
+
+      setPacketWorkflow({
+        preview,
+        error: null,
+        isLoadingPreview: false,
+        isDownloading: false,
+      });
+    } catch (error) {
+      setPacketWorkflow({
+        preview: null,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unable to preview this packet export.',
+        isLoadingPreview: false,
+        isDownloading: false,
+      });
+    }
+  };
+
+  const handlePacketDownload = async () => {
+    if (!selectedPacketId) {
+      return;
+    }
+
+    const requestBody = buildPacketExportRequest({
+      selectedPacketId,
+      artifactMode: packetArtifactMode,
+      bundleMode: packetBundleMode,
+      title: packetTitle,
+      note: packetNote,
+    });
+
+    setPacketWorkflow((currentState) => ({
+      ...currentState,
+      error: null,
+      isDownloading: true,
+    }));
+
+    try {
+      await downloadNexusPacketExplorerExport(requestBody);
+      setPacketWorkflow((currentState) => ({
+        ...currentState,
+        isDownloading: false,
+      }));
+    } catch (error) {
+      setPacketWorkflow((currentState) => ({
+        ...currentState,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unable to download this packet export.',
+        isDownloading: false,
+      }));
+    }
+  };
+
+  const handleStorePreview = async () => {
+    const requestBody = buildStoreExportRequest({
+      title: storeTitle,
+      note: storeNote,
+    });
+
+    setStoreWorkflow((currentState) => ({
+      ...currentState,
+      error: null,
+      isLoadingPreview: true,
+    }));
+
+    try {
+      const preview = await previewNexusPacketExplorerExport(requestBody);
+
+      setStoreWorkflow({
+        preview,
+        error: null,
+        isLoadingPreview: false,
+        isDownloading: false,
+      });
+    } catch (error) {
+      setStoreWorkflow({
+        preview: null,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unable to preview the local store export.',
+        isLoadingPreview: false,
+        isDownloading: false,
+      });
+    }
+  };
+
+  const handleStoreDownload = async () => {
+    const requestBody = buildStoreExportRequest({
+      title: storeTitle,
+      note: storeNote,
+    });
+
+    setStoreWorkflow((currentState) => ({
+      ...currentState,
+      error: null,
+      isDownloading: true,
+    }));
+
+    try {
+      await downloadNexusPacketExplorerExport(requestBody);
+      setStoreWorkflow((currentState) => ({
+        ...currentState,
+        isDownloading: false,
+      }));
+    } catch (error) {
+      setStoreWorkflow((currentState) => ({
+        ...currentState,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unable to download the local store export.',
+        isDownloading: false,
+      }));
+    }
+  };
+
+  return (
+    <View className="gap-4">
+      <NexusCard className="gap-4">
+        <View className="gap-2">
+          <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
+            Packet Export
+          </Text>
+          <Text className={appearance.surfaceTitleClass}>Export packet data</Text>
+          <Text className={appearance.sectionBodyClass}>
+            Generate raw packet JSON or a bounded transport bundle from the
+            currently selected packet.
+          </Text>
+        </View>
+
+        {selectedPacketId ? (
+          <>
+            <View className="gap-2">
+              <Text className={appearance.itemMetaClass}>Selected packet</Text>
+              <Text className={appearance.itemTitleClass}>
+                {selectedPacketTitle ?? selectedPacketId}
+              </Text>
+              <Text className={appearance.itemBodyClass}>{selectedPacketId}</Text>
+            </View>
+
+            <View className="gap-3">
+              <Text className={appearance.itemMetaClass}>Artifact</Text>
+              <NexusSegmentedPill
+                options={[
+                  { id: 'raw_packet', label: 'RAW PACKET' },
+                  { id: 'bundle', label: 'AS BUNDLE' },
+                ]}
+                activeId={packetArtifactMode}
+                onSelect={(optionId) =>
+                  setPacketArtifactMode(optionId as 'raw_packet' | 'bundle')
+                }
+              />
+            </View>
+
+            {packetArtifactMode === 'bundle' ? (
+              <View className="gap-4">
+                <NexusInlineSelect
+                  label="Bundle scope"
+                  valueLabel={
+                    BUNDLE_SCOPE_OPTIONS.find(
+                      (option) => option.id === packetBundleMode
+                    )?.label ?? 'Packet history'
+                  }
+                  options={BUNDLE_SCOPE_OPTIONS}
+                  onSelect={(optionId) =>
+                    setPacketBundleMode(
+                      optionId as NexusPacketExplorerBundleExportMode
+                    )
+                  }
+                />
+
+                <TextInput
+                  className={`rounded-[22px] border px-4 py-3 ${appearance.textInputClass}`}
+                  onChangeText={setPacketTitle}
+                  placeholder="Optional bundle title"
+                  placeholderTextColor={appearance.textInputPlaceholderColor}
+                  value={packetTitle}
+                />
+
+                <TextInput
+                  className={`rounded-[22px] border px-4 py-3 ${appearance.textInputClass}`}
+                  multiline
+                  onChangeText={setPacketNote}
+                  placeholder="Optional bundle note"
+                  placeholderTextColor={appearance.textInputPlaceholderColor}
+                  style={{ minHeight: 108, textAlignVertical: 'top' }}
+                  value={packetNote}
+                />
+              </View>
+            ) : null}
+
+            <View className="flex-row flex-wrap gap-3">
+              <NexusActionButton
+                label={
+                  packetWorkflow.isLoadingPreview ? 'Previewing...' : 'Preview JSON'
+                }
+                onPress={() => void handlePacketPreview()}
+                disabled={packetWorkflow.isLoadingPreview || packetWorkflow.isDownloading}
+              />
+              <NexusActionButton
+                label={
+                  packetWorkflow.isDownloading ? 'Downloading...' : 'Download JSON'
+                }
+                variant="primary"
+                onPress={() => void handlePacketDownload()}
+                disabled={packetWorkflow.isLoadingPreview || packetWorkflow.isDownloading}
+              />
+            </View>
+          </>
+        ) : (
+          <NexusCard tone="gold">
+            <Text className={appearance.itemBodyClass}>
+              Open a packet first, then use the Export action to preload it here.
+            </Text>
+          </NexusCard>
+        )}
+
+        {packetWorkflow.error ? (
+          <NexusCard tone="rose">
+            <Text className={appearance.itemBodyClass}>
+              {packetWorkflow.error}
+            </Text>
+          </NexusCard>
+        ) : null}
+
+        {packetWorkflow.preview ? (
+          <ExportPreviewCard preview={packetWorkflow.preview} />
+        ) : null}
+      </NexusCard>
+
+      <NexusCard className="gap-4">
+        <View className="gap-2">
+          <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
+            Local Store Export
+          </Text>
+          <Text className={appearance.surfaceTitleClass}>
+            Export full local store
+          </Text>
+          <Text className={appearance.sectionBodyClass}>
+            Create a node-level raw bundle snapshot of every known packet and
+            revision in this local store.
+          </Text>
+        </View>
+
+        <TextInput
+          className={`rounded-[22px] border px-4 py-3 ${appearance.textInputClass}`}
+          onChangeText={setStoreTitle}
+          placeholder="Optional bundle title"
+          placeholderTextColor={appearance.textInputPlaceholderColor}
+          value={storeTitle}
+        />
+
+        <TextInput
+          className={`rounded-[22px] border px-4 py-3 ${appearance.textInputClass}`}
+          multiline
+          onChangeText={setStoreNote}
+          placeholder="Optional bundle note"
+          placeholderTextColor={appearance.textInputPlaceholderColor}
+          style={{ minHeight: 108, textAlignVertical: 'top' }}
+          value={storeNote}
+        />
+
+        <View className="flex-row flex-wrap gap-3">
+          <NexusActionButton
+            label={storeWorkflow.isLoadingPreview ? 'Previewing...' : 'Preview JSON'}
+            onPress={() => void handleStorePreview()}
+            disabled={storeWorkflow.isLoadingPreview || storeWorkflow.isDownloading}
+          />
+          <NexusActionButton
+            label={storeWorkflow.isDownloading ? 'Downloading...' : 'Download JSON'}
+            variant="primary"
+            onPress={() => void handleStoreDownload()}
+            disabled={storeWorkflow.isLoadingPreview || storeWorkflow.isDownloading}
+          />
+        </View>
+
+        {storeWorkflow.error ? (
+          <NexusCard tone="rose">
+            <Text className={appearance.itemBodyClass}>
+              {storeWorkflow.error}
+            </Text>
+          </NexusCard>
+        ) : null}
+
+        {storeWorkflow.preview ? (
+          <ExportPreviewCard preview={storeWorkflow.preview} />
+        ) : null}
+      </NexusCard>
+    </View>
+  );
+}

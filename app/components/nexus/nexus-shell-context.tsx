@@ -17,6 +17,7 @@ import {
 } from '@runtime/nexus/nexus-shell-gates';
 import type {
   PacketExplorerSession,
+  PacketExplorerHomeSubtab,
   PacketExplorerTab,
   PacketExplorerPrimaryTab,
   PacketExplorerViewMode,
@@ -31,6 +32,7 @@ import {
   persistPacketExplorerSession,
   readPacketExplorerSession,
   retargetActivePacketExplorerTab,
+  setPacketExplorerHomeSubtab,
   setPacketExplorerPanelWidth,
   setPacketExplorerPrimaryTab,
   setPacketExplorerTabViewMode,
@@ -87,7 +89,17 @@ type NexusShellContextValue = NexusShellState & {
   collapseOuterRail: () => void;
   expandInnerRail: () => void;
   expandAllRails: () => void;
-  openExplorer: () => void;
+  openExplorer: (input?: {
+    subtab?: PacketExplorerHomeSubtab;
+    packetId?: string | null;
+    preferredRevisionId?: string | null;
+    titleSnapshot?: string | null;
+    seedSummary?: {
+      family: string | null;
+      summary: string | null;
+      label: string | null;
+    } | null;
+  }) => void;
   openPacketInExplorer: (input: {
     packetId: string;
     preferredRevisionId?: string | null;
@@ -119,6 +131,10 @@ type NexusShellContextValue = NexusShellState & {
   setExplorerPrimaryTab: (input: {
     tabId: string;
     primaryTab: PacketExplorerPrimaryTab;
+  }) => void;
+  setExplorerHomeSubtab: (input: {
+    tabId: string;
+    subtab: PacketExplorerHomeSubtab;
   }) => void;
   setExplorerPanelWidth: (panelWidth: number | null) => void;
   getActiveExplorerTab: () => PacketExplorerTab | null;
@@ -459,9 +475,19 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
     setIsSecondaryRailCollapsed(false);
   };
 
-  const openExplorer = () => {
+  const openExplorer = (input?: {
+    subtab?: PacketExplorerHomeSubtab;
+    packetId?: string | null;
+    preferredRevisionId?: string | null;
+    titleSnapshot?: string | null;
+    seedSummary?: {
+      family: string | null;
+      summary: string | null;
+      label: string | null;
+    } | null;
+  }) => {
     setPacketExplorerSession((currentSession) =>
-      openPacketExplorerHome(currentSession)
+      openPacketExplorerHome(currentSession, input)
     );
   };
 
@@ -519,6 +545,15 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
   }) => {
     setPacketExplorerSession((currentSession) =>
       setPacketExplorerPrimaryTab(currentSession, input)
+    );
+  };
+
+  const setExplorerHomeSubtab = (input: {
+    tabId: string;
+    subtab: PacketExplorerHomeSubtab;
+  }) => {
+    setPacketExplorerSession((currentSession) =>
+      setPacketExplorerHomeSubtab(currentSession, input)
     );
   };
 
@@ -595,6 +630,7 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
         retargetActiveExplorerPacket,
         setExplorerTabViewMode: setExplorerTabView,
         setExplorerPrimaryTab,
+        setExplorerHomeSubtab,
         setExplorerPanelWidth: setExplorerPanelWidthValue,
         getActiveExplorerTab,
       }}

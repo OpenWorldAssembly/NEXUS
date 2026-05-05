@@ -12,6 +12,7 @@ import {
   openPacketExplorerHome,
   openPacketExplorerPacket,
   retargetActivePacketExplorerTab,
+  setPacketExplorerHomeSubtab,
   setPacketExplorerPanelWidth,
   setPacketExplorerPrimaryTab,
   setPacketExplorerTabViewMode,
@@ -337,4 +338,21 @@ test('panel width persists inside the session model', () => {
   );
 
   assert.equal(session.panel_width, 860);
+});
+
+test('home tabs can persist their active workspace subtab', () => {
+  const opened = openPacketExplorerHome(createEmptyPacketExplorerSession(), {
+    subtab: 'export',
+    packetId: 'nexus:discussion-thread/example',
+    titleSnapshot: 'Example',
+  });
+  const homeTabId = opened.active_tab_id ?? '';
+  const updated = setPacketExplorerHomeSubtab(opened, {
+    tabId: homeTabId,
+    subtab: 'search',
+  });
+
+  assert.equal(opened.tabs[0]?.active_home_subtab, 'export');
+  assert.equal(opened.tabs[0]?.packet_id, 'nexus:discussion-thread/example');
+  assert.equal(updated.tabs[0]?.active_home_subtab, 'search');
 });

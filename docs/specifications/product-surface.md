@@ -40,9 +40,12 @@ Library is the scoped browse surface.
 Packet Explorer is the inspect-and-traverse surface.
 
 - it opens as a shell-level overlay
-- it is read-only in the current phase
+- it is still read-only for packet mutation, but its Home workspace now includes a live export workbench
 - it is separate from Library
 - it supports session-persistent tabs with an auto-created Home tab
+- its Home workspace now splits into `Search` and `Export` sub-tabs
+- `Search` currently preserves the existing placeholder lookup workspace for later phases
+- `Export` now supports raw preferred-revision packet export, bounded bundle export, and full local-store bundle export
 - it now uses shared packet display-title normalization instead of exposing raw encoded packet ids as loaded titles where a human title can be derived
 - it supports `View as` inspection lenses for `Summary`, `Raw`, `Adapted`, and `Read Model`
 - it exposes `Data`, `Lineage`, `Links`, and `Actions` inspector rails
@@ -56,7 +59,6 @@ Visible but disabled Explorer affordances are still placeholders:
 - `Follow`
 - `Fork`
 - `Adapt`
-- `Export`
 - `Diff`
 
 These disabled Explorer controls now use compact inline status markers that open a shared explainer card instead of failing silently.

@@ -1220,6 +1220,24 @@ export class NodeSQLitePacketStore implements PacketStore {
 
   /**
    * Inputs: none.
+   * Output: all known packet ids in the local store.
+   */
+  async listPacketIds(): Promise<string[]> {
+    const rows = this.database
+      .prepare(
+        `
+          SELECT packet_id
+          FROM packets
+          ORDER BY packet_id ASC
+        `
+      )
+      .all() as { packet_id: string }[];
+
+    return rows.map((row) => row.packet_id);
+  }
+
+  /**
+   * Inputs: none.
    * Output: all flattened packet search/index rows ordered from newest to oldest.
    */
   async listSearchRows(): Promise<PacketSearchIndexRecord[]> {

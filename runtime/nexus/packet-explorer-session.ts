@@ -38,6 +38,9 @@ export type PacketExplorerPrimaryTab =
   (typeof PACKET_EXPLORER_PRIMARY_TABS)[number];
 
 export type PacketExplorerReadMode = 'raw' | 'adapted' | 'read_model';
+export const PACKET_EXPLORER_HOME_SUBTABS = ['search', 'export'] as const;
+export type PacketExplorerHomeSubtab =
+  (typeof PACKET_EXPLORER_HOME_SUBTABS)[number];
 
 export type PacketExplorerSeedSummary = {
   family: string | null;
@@ -55,6 +58,7 @@ export type PacketExplorerTab = {
   selected_data_view_mode: PacketExplorerViewMode;
   selected_read_mode: PacketExplorerReadMode;
   selected_target_schema_version: string | null;
+  active_home_subtab: PacketExplorerHomeSubtab;
   seed_summary: PacketExplorerSeedSummary | null;
 };
 
@@ -139,6 +143,13 @@ function isExplorerReadMode(value: unknown): value is PacketExplorerReadMode {
   return value === 'raw' || value === 'adapted' || value === 'read_model';
 }
 
+function isExplorerHomeSubtab(value: unknown): value is PacketExplorerHomeSubtab {
+  return (
+    typeof value === 'string' &&
+    (PACKET_EXPLORER_HOME_SUBTABS as readonly string[]).includes(value)
+  );
+}
+
 function sanitizeExplorerTab(value: unknown): PacketExplorerTab | null {
   if (!value || typeof value !== 'object') {
     return null;
@@ -174,6 +185,9 @@ function sanitizeExplorerTab(value: unknown): PacketExplorerTab | null {
       typeof candidate.selected_target_schema_version === 'string'
         ? candidate.selected_target_schema_version
         : null,
+    active_home_subtab: isExplorerHomeSubtab(candidate.active_home_subtab)
+      ? candidate.active_home_subtab
+      : 'search',
     seed_summary:
       candidate.seed_summary &&
       typeof candidate.seed_summary === 'object' &&
@@ -262,6 +276,7 @@ export function createPacketExplorerHomeTab(): PacketExplorerTab {
     selected_data_view_mode: 'summary',
     selected_read_mode: 'raw',
     selected_target_schema_version: null,
+    active_home_subtab: 'search',
     seed_summary: null,
   };
 }
@@ -285,17 +300,35 @@ export function createPacketExplorerPacketTab(input: {
     selected_data_view_mode: 'summary',
     selected_read_mode: 'raw',
     selected_target_schema_version: null,
+    active_home_subtab: 'search',
     seed_summary: input.seedSummary ?? null,
   };
 }
 
 export function openPacketExplorerHome(
-  session: PacketExplorerSession
+  session: PacketExplorerSession,
+  input?: {
+    subtab?: PacketExplorerHomeSubtab;
+    packetId?: string | null;
+    preferredRevisionId?: string | null;
+    titleSnapshot?: string | null;
+    seedSummary?: PacketExplorerSeedSummary | null;
+  }
 ): PacketExplorerSession {
   const existingHomeTab = session.tabs.find((tab) => tab.kind === 'home') ?? null;
-  const homeTab = existingHomeTab ?? createPacketExplorerHomeTab();
+  const baseHomeTab = existingHomeTab ?? createPacketExplorerHomeTab();
+  const homeTab: PacketExplorerTab = {
+    ...baseHomeTab,
+    packet_id: input?.packetId ?? baseHomeTab.packet_id,
+    preferred_revision_id:
+      input?.preferredRevisionId ?? baseHomeTab.preferred_revision_id,
+    active_home_subtab: input?.subtab ?? baseHomeTab.active_home_subtab,
+    seed_summary: input?.seedSummary ?? baseHomeTab.seed_summary,
+  };
   const tabs = ensureHomeTabFirst(
-    existingHomeTab ? session.tabs : [homeTab, ...session.tabs]
+    existingHomeTab
+      ? session.tabs.map((tab) => (tab.kind === 'home' ? homeTab : tab))
+      : [homeTab, ...session.tabs]
   );
 
   return {
@@ -526,6 +559,31 @@ export function setPacketExplorerPrimaryTab(
         ? {
             ...tab,
             active_primary_tab: input.primaryTab,
+          }
+        : tab
+    ),
+  };
+}
+
+export function setPacketExplorerHomeSubtab(
+  session: PacketExplorerSession,
+  input: {
+    tabId: string;
+    subtab: PacketExplorerHomeSubtab;
+  }
+): PacketExplorerSession {
+  if (!session.tabs.some((tab) => tab.id === input.tabId)) {
+    return session;
+  }
+
+  return {
+    ...session,
+    notice: null,
+    tabs: session.tabs.map((tab) =>
+      tab.id === input.tabId
+        ? {
+            ...tab,
+            active_home_subtab: input.subtab,
           }
         : tab
     ),

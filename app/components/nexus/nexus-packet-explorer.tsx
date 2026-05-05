@@ -52,6 +52,7 @@ export default function NexusPacketExplorer() {
     closeExplorerTabs,
     focusExplorerTab,
     retargetActiveExplorerPacket,
+    setExplorerHomeSubtab,
     setExplorerPanelWidth,
     setExplorerPrimaryTab,
     setExplorerTabViewMode,
@@ -341,7 +342,7 @@ export default function NexusPacketExplorer() {
               title={activeTitle}
               showPacketsButton={isPacketShellBandCollapsed}
               showViewsButton={isInspectorBandCollapsed}
-              onOpenHomeTab={openExplorer}
+              onOpenHomeTab={() => openExplorer()}
               onCloseExplorer={closeExplorer}
               onOpenPacketsBand={() => setIsPacketShellBandCollapsed(false)}
               onOpenViewsBand={() => setIsInspectorBandCollapsed(false)}
@@ -393,6 +394,15 @@ export default function NexusPacketExplorer() {
                     activeTab={activeTab}
                     activePacketId={activePacketId}
                     activePacketFamily={activePacketFamily}
+                    onExportPacket={(input) =>
+                      openExplorer({
+                        subtab: 'export',
+                        packetId: input.packetId,
+                        preferredRevisionId: input.preferredRevisionId ?? null,
+                        titleSnapshot: input.titleSnapshot ?? null,
+                        seedSummary: input.seedSummary ?? null,
+                      })
+                    }
                     viewModes={VIEW_AS_MODES}
                     onSelectViewMode={(viewMode) =>
                       setExplorerTabViewMode({
@@ -436,6 +446,12 @@ export default function NexusPacketExplorer() {
               rawCodeCardClass={rawCodeCardClass}
               headingTextClass={headingTextClass}
               onChangeSearchValue={setSearchValue}
+              onSelectHomeSubtab={(subtab) =>
+                setExplorerHomeSubtab({
+                  tabId: activeTab.id,
+                  subtab,
+                })
+              }
               onRetryActivePacket={handleRetryActivePacket}
               onOpenPacketInExplorer={retargetActiveExplorerPacket}
               onViewInLibrary={handleOpenPacketInLibrary}

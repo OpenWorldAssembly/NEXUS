@@ -15,6 +15,16 @@ type NexusPacketExplorerToolbarProps = {
   activePacketId: string | null;
   activePacketFamily: string | null;
   viewModes: PacketExplorerViewMode[];
+  onExportPacket: (input: {
+    packetId: string;
+    preferredRevisionId?: string | null;
+    titleSnapshot?: string | null;
+    seedSummary?: {
+      family: string | null;
+      summary: string | null;
+      label: string | null;
+    } | null;
+  }) => void;
   onSelectViewMode: (viewMode: PacketExplorerViewMode) => void;
   onViewInLibrary: (packetId: string, family?: string | null) => void;
 };
@@ -24,6 +34,7 @@ export function NexusPacketExplorerToolbar({
   activePacketId,
   activePacketFamily,
   viewModes,
+  onExportPacket,
   onSelectViewMode,
   onViewInLibrary,
 }: NexusPacketExplorerToolbarProps) {
@@ -60,8 +71,17 @@ export function NexusPacketExplorerToolbar({
       />
       <NexusActionButton
         label="Export"
-        disabled
-        featureStatusId="explorer.export"
+        disabled={activeTab.kind !== 'packet' || !activePacketId}
+        onPress={() =>
+          activeTab.kind === 'packet' && activePacketId
+            ? onExportPacket({
+                packetId: activePacketId,
+                preferredRevisionId: activeTab.preferred_revision_id,
+                titleSnapshot: activeTab.title_snapshot,
+                seedSummary: activeTab.seed_summary,
+              })
+            : undefined
+        }
       />
       <NexusActionButton
         label="View in Library"

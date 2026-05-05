@@ -32,6 +32,7 @@ type NexusPacketExplorerContentProps = {
   rawCodeCardClass: string;
   headingTextClass: string;
   onChangeSearchValue: (value: string) => void;
+  onSelectHomeSubtab: (subtab: PacketExplorerTab['active_home_subtab']) => void;
   onRetryActivePacket: () => void;
   onOpenPacketInExplorer: (input: {
     packetId: string;
@@ -297,6 +298,7 @@ export function NexusPacketExplorerContent({
   rawCodeCardClass,
   headingTextClass,
   onChangeSearchValue,
+  onSelectHomeSubtab,
   onRetryActivePacket,
   onOpenPacketInExplorer,
   onViewInLibrary,
@@ -316,8 +318,12 @@ export function NexusPacketExplorerContent({
   if (activeTab.kind === 'home') {
     return renderScrollableContent(
       <NexusPacketExplorerHomePanel
+        activeHomeSubtab={activeTab.active_home_subtab}
+        selectedPacketId={activeTab.packet_id}
+        selectedPacketTitle={activeTab.seed_summary?.label ?? null}
         searchValue={searchValue}
         onChangeSearchValue={onChangeSearchValue}
+        onSelectHomeSubtab={onSelectHomeSubtab}
       />
     );
   }
