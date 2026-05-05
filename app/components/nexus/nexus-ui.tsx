@@ -3,14 +3,22 @@
  * Description: Provides shared NativeWind UI primitives for the guest nexus screens.
  */
 import {
-  useEffect,
   useRef,
   useState,
   type PropsWithChildren,
   type ReactNode,
 } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import {
+  Modal,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 
+import type { NexusFeatureStatusId } from '@app/components/nexus/nexus-feature-status-registry';
+import { useNexusFeatureStatus } from '@app/components/nexus/nexus-feature-status-context';
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import type { NexusCardTone } from '@runtime/nexus/nexus-content';
 import type { NexusThemeMode, NexusUiDensity } from '@runtime/nexus/nexus-shell';
@@ -34,11 +42,17 @@ type NexusBadgeProps = {
   textClassName?: string;
 };
 
+type NexusChevronIconProps = {
+  isOpen: boolean;
+  className?: string;
+};
+
 type NexusActionButtonProps = {
   label: string;
   onPress?: () => void;
   disabled?: boolean;
   variant?: 'primary' | 'secondary' | 'ghost';
+  featureStatusId?: NexusFeatureStatusId;
 };
 
 type NexusSegmentedPillProps = {
@@ -364,6 +378,47 @@ export function NexusBadge({
 }
 
 /**
+ * Inputs: whether the chevron is open plus optional wrapper classes.
+ * Output: a small vertical chevron icon that matches the Nexus drawer language.
+ */
+export function NexusChevronIcon({
+  isOpen,
+  className,
+}: NexusChevronIconProps) {
+  const { themeMode, uiDensity } = useNexusShell();
+  const lineClass =
+    themeMode === 'dark' ? 'bg-nexus-text' : 'bg-slate-900';
+  const sizeClass = uiDensity === 'large' ? 'w-2.5' : 'w-2';
+
+  return (
+    <View
+      className={joinClasses(
+        'h-4 w-4 items-center justify-center',
+        isOpen ? 'rotate-180' : '',
+        className,
+      )}
+    >
+      <View className="flex-row items-center justify-center gap-[1px]">
+        <View
+          className={joinClasses(
+            sizeClass,
+            'h-[2px] rotate-45 rounded-full',
+            lineClass,
+          )}
+        />
+        <View
+          className={joinClasses(
+            sizeClass,
+            'h-[2px] -rotate-45 rounded-full',
+            lineClass,
+          )}
+        />
+      </View>
+    </View>
+  );
+}
+
+/**
  * Inputs: button label, optional press handler, disabled flag, and variant.
  * Output: a shared nexus action button.
  */
@@ -372,8 +427,12 @@ export function NexusActionButton({
   onPress,
   disabled = false,
   variant = 'secondary',
+  featureStatusId,
 }: NexusActionButtonProps) {
   const { themeMode, uiDensity } = useNexusShell();
+  const featureStatus = useNexusFeatureStatus();
+  const [isHovered, setIsHovered] = useState(false);
+  const pressableRef = useRef<View | null>(null);
   const variantClasses =
     variant === 'primary'
       ? 'border-nexus-sky bg-nexus-sky'
@@ -389,24 +448,89 @@ export function NexusActionButton({
       : themeMode === 'dark'
         ? 'text-nexus-text'
         : 'text-slate-900';
+  const markerWrapperClass =
+    themeMode === 'dark'
+      ? isHovered
+        ? 'border-nexus-rose bg-nexus-rose/18'
+        : 'border-nexus-rose/70 bg-nexus-rose/10'
+      : isHovered
+        ? 'border-rose-500 bg-rose-100'
+        : 'border-rose-300 bg-rose-50';
+  const markerTextClass =
+    themeMode === 'dark'
+      ? isHovered
+        ? 'text-nexus-rose'
+        : 'text-nexus-rose/90'
+      : isHovered
+        ? 'text-rose-600'
+        : 'text-rose-500';
+  const isExplainableDisabled = disabled && Boolean(featureStatusId) && Boolean(featureStatus);
+  const isActuallyDisabled = disabled && !isExplainableDisabled;
+
+  const handlePress = () => {
+    if (
+      isExplainableDisabled &&
+      featureStatusId &&
+      featureStatus &&
+      pressableRef.current?.measureInWindow
+    ) {
+      pressableRef.current.measureInWindow((x, y, width, height) => {
+        featureStatus.openFeatureStatus(featureStatusId, {
+          x,
+          y,
+          width,
+          height,
+        });
+      });
+      return;
+    }
+
+    onPress?.();
+  };
 
   return (
-    <Pressable
-      accessibilityRole="button"
-      className={joinClasses(
-        uiDensity === 'large'
-          ? 'self-start rounded-full border px-5 py-3.5'
-          : 'self-start rounded-full border px-4 py-3',
-        variantClasses,
-        disabled ? 'opacity-45' : '',
-      )}
-      disabled={disabled}
-      onPress={onPress}
-    >
-      <Text className={joinClasses('text-sm font-semibold', textClasses)}>
-        {label}
-      </Text>
-    </Pressable>
+    <View ref={pressableRef} collapsable={false}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={disabled ? { disabled: true } : undefined}
+        className={joinClasses(
+          uiDensity === 'large'
+            ? 'self-start rounded-full border px-5 py-3.5'
+            : 'self-start rounded-full border px-4 py-3',
+          variantClasses,
+          disabled ? 'opacity-45' : '',
+        )}
+        disabled={isActuallyDisabled}
+        onHoverIn={
+          isExplainableDisabled ? () => setIsHovered(true) : undefined
+        }
+        onHoverOut={
+          isExplainableDisabled ? () => setIsHovered(false) : undefined
+        }
+        onPress={handlePress}
+      >
+        <View className="flex-row items-center gap-2">
+          <Text className={joinClasses('text-sm font-semibold', textClasses)}>
+            {label}
+          </Text>
+          {isExplainableDisabled ? (
+            <View
+              className={joinClasses(
+                'h-4.5 w-4.5 items-center justify-center rounded-full border',
+                markerWrapperClass
+              )}
+              style={{
+                transform: [{ scale: isHovered ? 1.08 : 1 }],
+              }}
+            >
+              <Text className={joinClasses('text-[10px] font-bold', markerTextClass)}>
+                !
+              </Text>
+            </View>
+          ) : null}
+        </View>
+      </Pressable>
+    </View>
   );
 }
 
@@ -529,8 +653,15 @@ export function NexusInlineSelect({
   menuLayerClassName,
 }: NexusInlineSelectProps) {
   const { themeMode, uiDensity } = useNexusShell();
+  const { width: viewportWidth, height: viewportHeight } = useWindowDimensions();
   const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<View | null>(null);
+  const [anchorRect, setAnchorRect] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  const triggerRef = useRef<View | null>(null);
   const triggerClass =
     themeMode === 'dark'
       ? 'border-nexus-line bg-white/5'
@@ -543,38 +674,50 @@ export function NexusInlineSelect({
     themeMode === 'dark' ? 'text-nexus-text' : 'text-slate-900';
   const metaClass =
     themeMode === 'dark' ? 'text-nexus-muted' : 'text-slate-600';
+  const menuWidth = Math.min(260, Math.max(220, viewportWidth - 32));
+  const horizontalPadding = 16;
+  const verticalPadding = 16;
+  const overlayLeft = anchorRect
+    ? Math.min(
+        Math.max(anchorRect.x, horizontalPadding),
+        viewportWidth - menuWidth - horizontalPadding
+      )
+    : horizontalPadding;
+  const overlayTop = anchorRect
+    ? Math.max(
+        verticalPadding,
+        Math.min(
+          Math.max(anchorRect.y + anchorRect.height + 8, verticalPadding),
+          viewportHeight - 240
+        )
+      )
+    : verticalPadding;
 
-  useEffect(() => {
-    if (!isOpen || typeof document === 'undefined') {
+  const handleToggleMenu = () => {
+    if (disabled) {
       return;
     }
 
-    const handlePointerDown = (event: MouseEvent) => {
-      const containerNode = containerRef.current as unknown as {
-        contains?: (node: Node | null) => boolean;
-      } | null;
-
-      if (containerNode?.contains?.(event.target as Node | null)) {
-        return;
-      }
-
+    if (isOpen) {
       setIsOpen(false);
-    };
+      return;
+    }
 
-    document.addEventListener('mousedown', handlePointerDown);
+    if (!triggerRef.current?.measureInWindow) {
+      setIsOpen(true);
+      return;
+    }
 
-    return () => {
-      document.removeEventListener('mousedown', handlePointerDown);
-    };
-  }, [isOpen]);
+    triggerRef.current.measureInWindow((x, y, width, height) => {
+      setAnchorRect({ x, y, width, height });
+      setIsOpen(true);
+    });
+  };
 
   return (
-    <View
-      ref={containerRef}
-      className={joinClasses('relative gap-2', isOpen ? 'z-40' : undefined)}
-    >
+    <View className="gap-2">
       {label ? <Text className={`text-xs uppercase tracking-[3px] ${metaClass}`}>{label}</Text> : null}
-      <View className="relative">
+      <View ref={triggerRef} collapsable={false}>
         <Pressable
           accessibilityRole="button"
           className={joinClasses(
@@ -583,7 +726,7 @@ export function NexusInlineSelect({
             disabled ? 'opacity-45' : ''
           )}
           disabled={disabled}
-          onPress={() => setIsOpen((currentValue) => !currentValue)}
+          onPress={handleToggleMenu}
         >
           <Text
             className={joinClasses(
@@ -595,23 +738,36 @@ export function NexusInlineSelect({
             {valueLabel}
           </Text>
         </Pressable>
-
-        {isOpen && !disabled ? (
+      </View>
+      <Modal
+        animationType="none"
+        onRequestClose={() => setIsOpen(false)}
+        transparent
+        visible={isOpen && !disabled}
+      >
+        <View className="flex-1">
+          <Pressable
+            accessibilityRole="button"
+            className="absolute inset-0"
+            onPress={() => setIsOpen(false)}
+          />
           <View
             className={joinClasses(
-              'absolute left-0 top-full z-50 mt-2 min-w-[220px] rounded-[22px] border p-2 shadow-nexus',
+              'absolute rounded-[22px] border p-2 shadow-nexus',
               menuClass,
               menuLayerClassName
             )}
+            style={{
+              left: overlayLeft,
+              top: overlayTop,
+              width: menuWidth,
+            }}
           >
             {options.map((option) => (
               <Pressable
                 key={option.id}
                 accessibilityRole="button"
-                className={joinClasses(
-                  'rounded-[16px] px-3 py-3',
-                  themeMode === 'dark' ? 'bg-transparent' : 'bg-transparent'
-                )}
+                className="rounded-[16px] px-3 py-3"
                 onPress={() => {
                   setIsOpen(false);
                   onSelect(option.id);
@@ -623,8 +779,8 @@ export function NexusInlineSelect({
               </Pressable>
             ))}
           </View>
-        ) : null}
-      </View>
+        </View>
+      </Modal>
     </View>
   );
 }

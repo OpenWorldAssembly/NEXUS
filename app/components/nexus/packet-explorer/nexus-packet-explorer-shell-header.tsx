@@ -2,26 +2,27 @@ import { Text, View } from 'react-native';
 
 import {
   NexusActionButton,
-  NexusCard,
   useNexusAppearance,
 } from '@app/components/nexus/nexus-ui';
 
 type NexusPacketExplorerShellHeaderProps = {
   title: string;
-  isConfirmingCloseTabs: boolean;
-  onToggleCloseTabsConfirmation: () => void;
-  onConfirmCloseTabs: () => void;
+  showPacketsButton: boolean;
+  showViewsButton: boolean;
   onOpenHomeTab: () => void;
   onCloseExplorer: () => void;
+  onOpenPacketsBand: () => void;
+  onOpenViewsBand: () => void;
 };
 
 export function NexusPacketExplorerShellHeader({
   title,
-  isConfirmingCloseTabs,
-  onToggleCloseTabsConfirmation,
-  onConfirmCloseTabs,
+  showPacketsButton,
+  showViewsButton,
   onOpenHomeTab,
   onCloseExplorer,
+  onOpenPacketsBand,
+  onOpenViewsBand,
 }: NexusPacketExplorerShellHeaderProps) {
   const appearance = useNexusAppearance();
 
@@ -36,27 +37,16 @@ export function NexusPacketExplorerShellHeader({
         </View>
 
         <View className="flex-row flex-wrap gap-2">
-          <NexusActionButton label="Home tab" onPress={onOpenHomeTab} />
-          <NexusActionButton
-            label={isConfirmingCloseTabs ? 'Cancel close tabs' : 'Close tabs'}
-            onPress={onToggleCloseTabsConfirmation}
-          />
-          <NexusActionButton label="Close Explorer" onPress={onCloseExplorer} />
+          {showPacketsButton ? (
+            <NexusActionButton label="Packets" onPress={onOpenPacketsBand} />
+          ) : null}
+          {showViewsButton ? (
+            <NexusActionButton label="Views" onPress={onOpenViewsBand} />
+          ) : null}
+          <NexusActionButton label="Home" onPress={onOpenHomeTab} />
+          <NexusActionButton label="Close" onPress={onCloseExplorer} />
         </View>
       </View>
-
-      {isConfirmingCloseTabs ? (
-        <NexusCard tone="gold" className="gap-3">
-          <Text className={appearance.itemBodyClass}>
-            Close all packet tabs and return to Home? The Explorer session will stay
-            restorable after close.
-          </Text>
-          <View className="flex-row flex-wrap gap-2">
-            <NexusActionButton label="Keep tabs" onPress={onToggleCloseTabsConfirmation} />
-            <NexusActionButton label="Close packet tabs" onPress={onConfirmCloseTabs} />
-          </View>
-        </NexusCard>
-      ) : null}
     </View>
   );
 }

@@ -30,7 +30,7 @@ const packetFilters: PacketFilter[] = [
  * Output: the packet library view for the current scope lens.
  */
 export default function NexusLibraryPage() {
-  const { activeScope, currentActorPacketId, openPacketInExplorer } =
+  const { activeScope, currentActorPacketId, openPacketInExplorer, packetExplorerSession } =
     useNexusShell();
   const appearance = useNexusAppearance();
   const router = useRouter();
@@ -108,9 +108,24 @@ export default function NexusLibraryPage() {
   }, [activeScope.id, currentActorPacketId, packetFilter]);
 
   const visiblePackets = libraryPayload?.packets ?? [];
+  const highlightedPacketHasExplorerTab =
+    highlightedPacketId !== null &&
+    packetExplorerSession.tabs.some(
+      (tab) => tab.kind === 'packet' && tab.packet_id === highlightedPacketId
+    );
   const highlightedPacketIsVisible =
     highlightedPacketId !== null &&
     visiblePackets.some((packet) => packet.packet.packet_id === highlightedPacketId);
+
+  useEffect(() => {
+    if (!highlightedPacketId || highlightedPacketHasExplorerTab) {
+      return;
+    }
+
+    router.setParams({
+      packet_id: undefined,
+    });
+  }, [highlightedPacketHasExplorerTab, highlightedPacketId, router]);
 
   useEffect(() => {
     if (
@@ -270,8 +285,16 @@ export default function NexusLibraryPage() {
                         });
                       }}
                     />
-                    <NexusActionButton label="Fork draft" disabled />
-                    <NexusActionButton label="Trace lineage" disabled />
+                    <NexusActionButton
+                      label="Fork draft"
+                      disabled
+                      featureStatusId="library.fork_draft"
+                    />
+                    <NexusActionButton
+                      label="Trace lineage"
+                      disabled
+                      featureStatusId="library.trace_lineage"
+                    />
                   </View>
                 </View>
               </NexusCard>

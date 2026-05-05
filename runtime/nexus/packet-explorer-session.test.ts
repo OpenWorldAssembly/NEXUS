@@ -76,6 +76,15 @@ test('closing the active tab falls back to the previous remaining tab', () => {
   assert.equal(closedSession.active_tab_id, closedSession.tabs[0]?.id ?? null);
 });
 
+test('packet tabs use a human-readable fallback title when no snapshot is provided', () => {
+  const session = openPacketExplorerPacket(createEmptyPacketExplorerSession(), {
+    packetId:
+      'nexus:claim/role_association/nexus%3Aelement%2Ftesty-mcgee--nexus%3Arole%2Fcoordinator--nexus%3Aelement%2Fglobal-commons',
+  });
+
+  assert.equal(session.tabs[1]?.title_snapshot, 'Role Association claim');
+});
+
 test('view mode changes only affect the targeted tab', () => {
   const session = openPacketExplorerPacket(
     createEmptyPacketExplorerSession(),

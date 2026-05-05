@@ -43,8 +43,11 @@ Packet Explorer is the inspect-and-traverse surface.
 - it is read-only in the current phase
 - it is separate from Library
 - it supports session-persistent tabs with an auto-created Home tab
+- it now uses shared packet display-title normalization instead of exposing raw encoded packet ids as loaded titles where a human title can be derived
 - it supports `View as` inspection lenses for `Summary`, `Raw`, `Adapted`, and `Read Model`
 - it exposes `Data`, `Lineage`, `Links`, and `Actions` inspector rails
+- its main content region now reads as one primary scroll surface inside the drawer instead of trapping long packet reads inside tiny inner scroll panes
+- its packet-shell and inspector-control header bands can now collapse locally to reclaim vertical space without leaving helper rows behind, and collapsed bands are restored from the top command row
 - it groups `Incoming` and `Outgoing` links by related packet
 - it surfaces read-only `NexusActionState` and `NexusActionIntentDescriptor` data where available
 

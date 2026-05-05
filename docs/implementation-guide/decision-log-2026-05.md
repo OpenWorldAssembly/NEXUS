@@ -37,3 +37,6 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - That same mobile tray now sizes itself to the currently visible rails and closes entirely when both rails are minimized.
 - Library packet highlighting is now treated as Explorer-linked state rather than a permanently sticky URL-only cue, so stale selection clears when the corresponding Explorer packet tab disappears.
 - Explorer resize now lives in a dedicated Explorer-specific desktop drag controller rather than the main overlay coordinator, and uses global window mouse tracking plus temporary drag capture instead of a moving `PanResponder` handle.
+- Shared browser packet projections now route through the core packet-title projection path instead of falling back directly to raw packet ids, which keeps Explorer and other packet-inspection surfaces from flipping loaded titles into percent-encoded route strings.
+- Explorer reading now uses one primary content scroll surface with local collapsible header bands, while `Close tabs` has moved out of the shell command row and into the packet-tab deck as a packet-management utility.
+- Explorer collapse controls were then tightened so the bands do not reserve their own chevron rows: collapsed sections disappear fully, and their restore actions move into the top shell command row as `Packets` and `Views`.

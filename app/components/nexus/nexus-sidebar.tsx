@@ -17,7 +17,12 @@ import {
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
 import { useNexusAuthGate } from '@app/components/nexus/nexus-auth-gate';
-import { NexusBadge, NexusCard, NexusSegmentedPill } from '@app/components/nexus/nexus-ui';
+import {
+  NexusBadge,
+  NexusCard,
+  NexusChevronIcon,
+  NexusSegmentedPill,
+} from '@app/components/nexus/nexus-ui';
 import type { NexusSecurityMode } from '@runtime/nexus/nexus-api-types';
 import {
   NEXUS_COMING_SOON_SURFACES,
@@ -170,44 +175,6 @@ function NexusGuestAvatar({
       >
         AG
       </Text>
-    </View>
-  );
-}
-
-/**
- * Inputs: whether the chevron points upward, plus theme and density.
- * Output: a small chevron icon for collapsible guest-header controls.
- */
-function NexusChevronIcon({
-  isOpen,
-  themeMode,
-  uiDensity,
-}: {
-  isOpen: boolean;
-  themeMode: NexusThemeMode;
-  uiDensity: NexusUiDensity;
-}) {
-  const lineClass =
-    themeMode === 'dark' ? 'bg-nexus-text' : 'bg-slate-900';
-  const sizeClass = uiDensity === 'large' ? 'w-2.5' : 'w-2';
-
-  return (
-    <View
-      className={joinClasses(
-        'h-4 w-4 items-center justify-center',
-        isOpen ? 'rotate-180' : '',
-      )}
-    >
-      <View className="flex-row items-center justify-center gap-[1px]">
-        <View className={joinClasses(sizeClass, 'h-[2px] rotate-45 rounded-full', lineClass)} />
-        <View
-          className={joinClasses(
-            sizeClass,
-            'h-[2px] -rotate-45 rounded-full',
-            lineClass,
-          )}
-        />
-      </View>
     </View>
   );
 }
@@ -1365,15 +1332,21 @@ export default function NexusSidebar({
                     Back to Home
                   </Text>
                 </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                className={joinClasses(
-                  'items-center rounded-full border',
-                  isLargeUi ? 'px-4 py-3' : 'px-3 py-2.5',
-                  homeButtonClass,
-                )}
-                onPress={openExplorer}
-              >
+                <Pressable
+                  accessibilityRole="button"
+                  className={joinClasses(
+                    'items-center rounded-full border',
+                    isLargeUi ? 'px-4 py-3' : 'px-3 py-2.5',
+                    homeButtonClass,
+                  )}
+                  onPress={() => {
+                    openExplorer();
+
+                    if (!isDesktop) {
+                      onRequestClose();
+                    }
+                  }}
+                >
                 <Text
                   className={joinClasses(
                     isLargeUi
@@ -1601,8 +1574,6 @@ export default function NexusSidebar({
                   </Text>
                   <NexusChevronIcon
                     isOpen={isPreferencesDrawerOpen}
-                    themeMode={themeMode}
-                    uiDensity={uiDensity}
                   />
                 </Pressable>
               </View>

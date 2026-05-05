@@ -148,9 +148,21 @@ export default function NexusVotesPage() {
                 </View>
 
                 <View className="flex-row flex-wrap gap-3">
-                  <NexusActionButton label="Support petition" disabled />
-                  <NexusActionButton label="Object" disabled />
-                  <NexusActionButton label="Compare lineages" disabled />
+                  <NexusActionButton
+                    label="Support petition"
+                    disabled
+                    featureStatusId="votes.support_petition"
+                  />
+                  <NexusActionButton
+                    label="Object"
+                    disabled
+                    featureStatusId="votes.object"
+                  />
+                  <NexusActionButton
+                    label="Compare lineages"
+                    disabled
+                    featureStatusId="votes.compare_lineages"
+                  />
                 </View>
               </NexusCard>
             ))}

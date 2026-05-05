@@ -1,4 +1,4 @@
-import { ScrollView, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import {
   NexusBadge,
@@ -28,15 +28,13 @@ function renderJsonCard(input: {
   headingTextClass: string;
 }) {
   return (
-    <NexusCard className={`flex-1 gap-3 ${input.rawCodeCardClass}`}>
+    <NexusCard className={`gap-3 ${input.rawCodeCardClass}`}>
       <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
         {input.title}
       </Text>
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        <Text className={`text-xs leading-6 ${input.headingTextClass}`} selectable>
-          {formatJson(input.value)}
-        </Text>
-      </ScrollView>
+      <Text className={`text-xs leading-6 ${input.headingTextClass}`} selectable>
+        {formatJson(input.value)}
+      </Text>
     </NexusCard>
   );
 }
@@ -101,7 +99,7 @@ export function NexusPacketExplorerDataPanel({
 
   if (viewMode === 'summary') {
     return (
-      <ScrollView className="flex-1" contentContainerClassName="gap-4 pb-4">
+      <View className="gap-4">
         <NexusCard className="gap-4">
           <View className="flex-row flex-wrap items-center gap-2">
             <Text className={appearance.surfaceTitleClass}>
@@ -162,7 +160,7 @@ export function NexusPacketExplorerDataPanel({
             )}
           </View>
         </NexusCard>
-      </ScrollView>
+      </View>
     );
   }
 
@@ -177,7 +175,7 @@ export function NexusPacketExplorerDataPanel({
 
   if (viewMode === 'adapted') {
     return (
-      <View className="flex-1 gap-4">
+      <View className="gap-4">
         {renderAdaptationSummary(payload, appearance)}
         {renderJsonCard({
           title: 'Current Adapted Packet',
@@ -190,7 +188,7 @@ export function NexusPacketExplorerDataPanel({
   }
 
   return (
-    <View className="flex-1 gap-4">
+    <View className="gap-4">
       {renderAdaptationSummary(payload, appearance)}
       {payload.read_model_view !== null ? (
         renderJsonCard({

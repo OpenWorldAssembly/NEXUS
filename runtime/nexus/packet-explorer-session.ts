@@ -3,6 +3,8 @@
  * Description: Defines the shell-level Packet Explorer session model and session-storage helpers.
  */
 
+import { getPacketTitleFallbackFromPacketId } from '@core/projections/labels';
+
 export const PACKET_EXPLORER_VIEW_MODES = [
   'summary',
   'raw',
@@ -273,7 +275,10 @@ export function createPacketExplorerPacketTab(input: {
   return {
     id: createExplorerTabId('packet'),
     kind: 'packet',
-    title_snapshot: input.titleSnapshot?.trim() || input.packetId,
+    title_snapshot:
+      input.titleSnapshot?.trim() ||
+      input.seedSummary?.label?.trim() ||
+      getPacketTitleFallbackFromPacketId(input.packetId),
     packet_id: input.packetId,
     preferred_revision_id: input.preferredRevisionId ?? null,
     active_primary_tab: 'data',
@@ -326,7 +331,10 @@ export function openPacketExplorerPacket(
         tab.id === existingTab.id
           ? {
               ...tab,
-              title_snapshot: input.titleSnapshot?.trim() || tab.title_snapshot,
+              title_snapshot:
+                input.titleSnapshot?.trim() ||
+                input.seedSummary?.label?.trim() ||
+                tab.title_snapshot,
               preferred_revision_id:
                 input.preferredRevisionId ?? tab.preferred_revision_id,
               seed_summary: input.seedSummary ?? tab.seed_summary,
@@ -403,7 +411,10 @@ export function retargetActivePacketExplorerTab(
             ...tab,
             packet_id: input.packetId,
             preferred_revision_id: input.preferredRevisionId ?? null,
-            title_snapshot: input.titleSnapshot?.trim() || input.packetId,
+            title_snapshot:
+              input.titleSnapshot?.trim() ||
+              input.seedSummary?.label?.trim() ||
+              getPacketTitleFallbackFromPacketId(input.packetId),
             seed_summary: input.seedSummary ?? null,
           }
         : tab

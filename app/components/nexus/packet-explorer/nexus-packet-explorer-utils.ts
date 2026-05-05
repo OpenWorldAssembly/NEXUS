@@ -6,6 +6,7 @@ import type {
 } from '@runtime/nexus/nexus-api-types';
 import type {
   PacketExplorerTab,
+  PacketExplorerPrimaryTab,
   PacketExplorerViewMode,
 } from '@runtime/nexus/packet-explorer-session';
 
@@ -52,6 +53,10 @@ export function getViewModeLabel(viewMode: PacketExplorerViewMode): string {
   return viewMode
     .replace(/_/g, ' ')
     .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+export function getPrimaryTabLabel(primaryTab: PacketExplorerPrimaryTab): string {
+  return primaryTab.replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
 export function formatActionLabel(actionId: string): string {

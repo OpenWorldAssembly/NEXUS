@@ -43,6 +43,42 @@ function titleCase(value: string): string {
     .join(' ');
 }
 
+function safeDecodePacketId(packetId: string): string {
+  try {
+    return decodeURIComponent(packetId);
+  } catch {
+    return packetId;
+  }
+}
+
+/**
+ * Inputs: a canonical packet id string.
+ * Output: a display-only fallback title when no better packet title exists.
+ */
+export function getPacketTitleFallbackFromPacketId(packetId: string): string {
+  const decodedPacketId = safeDecodePacketId(packetId);
+  const normalizedPath = decodedPacketId.startsWith('nexus:')
+    ? decodedPacketId.slice('nexus:'.length)
+    : decodedPacketId;
+  const [familySegment = '', subtypeSegment = ''] = normalizedPath.split('/');
+
+  if (familySegment === 'claim' && subtypeSegment) {
+    return `${titleCase(subtypeSegment)} claim`;
+  }
+
+  if (familySegment === 'attestation' && subtypeSegment) {
+    return `${titleCase(subtypeSegment)} attestation`;
+  }
+
+  if (familySegment === 'role' && subtypeSegment) {
+    return `${titleCase(subtypeSegment)} role`;
+  }
+
+  const trailingSegment = normalizedPath.split('/').pop() ?? normalizedPath;
+
+  return titleCase(trailingSegment);
+}
+
 export function getPacketDisplayLabel(packet: PacketEnvelope): string {
   switch (packet.header.family) {
     case 'Element': {
@@ -123,8 +159,19 @@ export function getPacketTitle(packet: PacketEnvelope): string {
     }
     case 'DiscussionReply':
       return 'Reply';
-    default:
-      return (packet.body as { title: string }).title;
+    default: {
+      const body = packet.body as { title?: string; name?: string };
+
+      if (typeof body.title === 'string' && body.title.trim().length > 0) {
+        return body.title;
+      }
+
+      if (typeof body.name === 'string' && body.name.trim().length > 0) {
+        return body.name;
+      }
+
+      return getPacketTitleFallbackFromPacketId(packet.header.packet_id);
+    }
   }
 }
 

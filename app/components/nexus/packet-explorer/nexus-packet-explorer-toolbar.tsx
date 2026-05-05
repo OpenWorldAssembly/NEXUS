@@ -47,10 +47,22 @@ export function NexusPacketExplorerToolbar({
       ) : (
         <NexusBadge label="Read-only preview" tone="gold" />
       )}
-      <NexusActionButton label="Follow" disabled />
-      <NexusActionButton label="Fork" disabled />
-      <NexusActionButton label="Adapt" disabled />
-      <NexusActionButton label="Export" disabled />
+      <NexusActionButton
+        label="Follow"
+        disabled
+        featureStatusId="explorer.follow"
+      />
+      <NexusActionButton label="Fork" disabled featureStatusId="explorer.fork" />
+      <NexusActionButton
+        label="Adapt"
+        disabled
+        featureStatusId="explorer.adapt"
+      />
+      <NexusActionButton
+        label="Export"
+        disabled
+        featureStatusId="explorer.export"
+      />
       <NexusActionButton
         label="View in Library"
         disabled={activeTab.kind !== 'packet'}

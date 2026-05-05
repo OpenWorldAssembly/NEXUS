@@ -19,6 +19,11 @@ import {
   type PacketRef,
   type PacketRevisionRef,
 } from '@core/schema/packet-schema';
+import {
+  getPacketDisplayLabel,
+  getPacketSummary,
+  getPacketTitle,
+} from '@core/projections/labels';
 import type { PacketSearchIndexRecord } from '@runtime/storage/sqlite-records';
 
 interface PacketSearchReader {
@@ -45,14 +50,9 @@ function toBrowserProjection(
     },
     revision,
     family: packet.header.family,
-    label: packet.header.metadata.summary ?? packet.header.family,
-    title:
-      'name' in packet.body && typeof packet.body.name === 'string'
-        ? packet.body.name
-        : 'title' in packet.body && typeof packet.body.title === 'string'
-          ? packet.body.title
-          : packet.header.packet_id,
-    summary: packet.header.metadata.summary ?? null,
+    label: getPacketDisplayLabel(packet),
+    title: getPacketTitle(packet),
+    summary: getPacketSummary(packet),
   };
 }
 

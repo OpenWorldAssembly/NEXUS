@@ -42,10 +42,26 @@ export function NexusPacketExplorerHomePanel({
         />
 
         <View className="flex-row flex-wrap gap-2">
-          <NexusActionButton label="Search packets" disabled />
-          <NexusActionButton label="Import packet" disabled />
-          <NexusActionButton label="Import bundle" disabled />
-          <NexusActionButton label="Open recent" disabled />
+          <NexusActionButton
+            label="Search packets"
+            disabled
+            featureStatusId="explorer.home.search_packets"
+          />
+          <NexusActionButton
+            label="Import packet"
+            disabled
+            featureStatusId="explorer.home.import_packet"
+          />
+          <NexusActionButton
+            label="Import bundle"
+            disabled
+            featureStatusId="explorer.home.import_bundle"
+          />
+          <NexusActionButton
+            label="Open recent"
+            disabled
+            featureStatusId="explorer.home.open_recent"
+          />
         </View>
       </NexusCard>
 

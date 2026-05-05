@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
 import {
@@ -103,7 +104,7 @@ function NexusPacketExplorerLineagePanel({
   const appearance = useNexusAppearance();
 
   return (
-    <ScrollView className="flex-1" contentContainerClassName="gap-4 pb-4">
+    <View className="gap-4">
       <NexusCard className="gap-3">
         <View className="flex-row flex-wrap items-center gap-2">
           <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
@@ -125,8 +126,16 @@ function NexusPacketExplorerLineagePanel({
           {getViewModeLabel(payload.inspection_lens)}.
         </Text>
         <View className="flex-row flex-wrap gap-2">
-          <NexusActionButton label="Compare revisions" disabled />
-          <NexusActionButton label="Diff" disabled />
+          <NexusActionButton
+            label="Compare revisions"
+            disabled
+            featureStatusId="explorer.lineage.compare_revisions"
+          />
+          <NexusActionButton
+            label="Diff"
+            disabled
+            featureStatusId="explorer.lineage.diff"
+          />
         </View>
       </NexusCard>
 
@@ -140,7 +149,7 @@ function NexusPacketExplorerLineagePanel({
           </Text>
         ))}
       </NexusCard>
-    </ScrollView>
+    </View>
   );
 }
 
@@ -152,7 +161,7 @@ function NexusPacketExplorerActionsPanel({
   const appearance = useNexusAppearance();
 
   return (
-    <ScrollView className="flex-1" contentContainerClassName="gap-4 pb-4">
+    <View className="gap-4">
       <NexusCard className="gap-3">
         <View className="flex-row flex-wrap items-center gap-2">
           <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
@@ -239,7 +248,7 @@ function NexusPacketExplorerActionsPanel({
           );
         })
       )}
-    </ScrollView>
+    </View>
   );
 }
 
@@ -294,8 +303,18 @@ export function NexusPacketExplorerContent({
 }: NexusPacketExplorerContentProps) {
   const appearance = useNexusAppearance();
 
+  const renderScrollableContent = (content: ReactNode) => (
+    <ScrollView
+      className="flex-1 min-h-0"
+      contentContainerClassName="gap-4 pb-6"
+      showsVerticalScrollIndicator
+    >
+      {content}
+    </ScrollView>
+  );
+
   if (activeTab.kind === 'home') {
-    return (
+    return renderScrollableContent(
       <NexusPacketExplorerHomePanel
         searchValue={searchValue}
         onChangeSearchValue={onChangeSearchValue}
@@ -304,15 +323,19 @@ export function NexusPacketExplorerContent({
   }
 
   if (!activePacketId || !activePacketState) {
-    return <NexusPacketExplorerSeededSummary activeTab={activeTab} />;
+    return renderScrollableContent(
+      <NexusPacketExplorerSeededSummary activeTab={activeTab} />
+    );
   }
 
   if (activePacketState.status === 'loading' && !activePacketState.payload) {
-    return <NexusPacketExplorerSeededSummary activeTab={activeTab} />;
+    return renderScrollableContent(
+      <NexusPacketExplorerSeededSummary activeTab={activeTab} />
+    );
   }
 
   if (activePacketState.status === 'error' && !activePacketState.payload) {
-    return (
+    return renderScrollableContent(
       <View className="gap-4">
         <NexusPacketExplorerSeededSummary activeTab={activeTab} />
         <NexusCard tone="rose" className="gap-3">
@@ -328,7 +351,9 @@ export function NexusPacketExplorerContent({
   const payload = activePacketState.payload;
 
   if (!payload) {
-    return <NexusPacketExplorerSeededSummary activeTab={activeTab} />;
+    return renderScrollableContent(
+      <NexusPacketExplorerSeededSummary activeTab={activeTab} />
+    );
   }
 
   const content = renderPayloadPanel({
@@ -342,9 +367,9 @@ export function NexusPacketExplorerContent({
   });
 
   if (activePacketState.status === 'error') {
-    return (
-      <View className="flex-1 gap-4">
-        <View className="flex-1 min-h-0">{content}</View>
+    return renderScrollableContent(
+      <View className="gap-4">
+        {content}
         <NexusCard tone="rose" className="gap-3">
           <Text className={appearance.itemBodyClass}>{activePacketState.error}</Text>
           <View className="flex-row flex-wrap gap-2">
@@ -356,9 +381,9 @@ export function NexusPacketExplorerContent({
   }
 
   if (activePacketState.status === 'loading') {
-    return (
-      <View className="flex-1 gap-4">
-        <View className="flex-1 min-h-0">{content}</View>
+    return renderScrollableContent(
+      <View className="gap-4">
+        {content}
         <NexusCard tone="gold">
           <Text className={appearance.itemBodyClass}>
             Refreshing packet details...
@@ -368,5 +393,5 @@ export function NexusPacketExplorerContent({
     );
   }
 
-  return <View className="flex-1 min-h-0">{content}</View>;
+  return renderScrollableContent(content);
 }

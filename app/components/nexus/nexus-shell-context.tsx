@@ -8,6 +8,13 @@ import type { Href } from 'expo-router';
 import { usePathname, useRouter } from 'expo-router';
 
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
+import type { NexusShellGateSession } from '@runtime/nexus/nexus-shell-gates';
+import {
+  dismissNexusShellGate,
+  isNexusShellGateDismissed,
+  persistNexusShellGateSession,
+  readNexusShellGateSession,
+} from '@runtime/nexus/nexus-shell-gates';
 import type {
   PacketExplorerSession,
   PacketExplorerTab,
@@ -63,6 +70,7 @@ type NexusShellContextValue = NexusShellState & {
   isPreferencesDrawerOpen: boolean;
   isPrimaryRailCollapsed: boolean;
   isSecondaryRailCollapsed: boolean;
+  isEarlyAccessGateOpen: boolean;
   packetExplorerSession: PacketExplorerSession;
   setNavigationMode: (mode: NexusNavMode) => void;
   setThemeMode: (mode: NexusThemeMode) => void;
@@ -73,10 +81,12 @@ type NexusShellContextValue = NexusShellState & {
   setScopeFollowed: (scopeId: string, isFollowed: boolean) => Promise<void>;
   refreshShellData: () => Promise<void>;
   togglePreferencesDrawer: () => void;
+  dismissEarlyAccessGate: () => void;
   togglePrimaryRailCollapsed: () => void;
   toggleSecondaryRailCollapsed: () => void;
   collapseOuterRail: () => void;
   expandInnerRail: () => void;
+  expandAllRails: () => void;
   openExplorer: () => void;
   openPacketInExplorer: (input: {
     packetId: string;
@@ -206,6 +216,9 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
   const [isPreferencesDrawerOpen, setIsPreferencesDrawerOpen] = useState(false);
   const [isPrimaryRailCollapsed, setIsPrimaryRailCollapsed] = useState(false);
   const [isSecondaryRailCollapsed, setIsSecondaryRailCollapsed] = useState(false);
+  const [shellGateSession, setShellGateSession] = useState<NexusShellGateSession>(
+    () => readNexusShellGateSession()
+  );
   const [packetExplorerSession, setPacketExplorerSession] =
     useState<PacketExplorerSession>(() => readPacketExplorerSession());
 
@@ -225,6 +238,10 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
   );
   const followedScopes = scopeSummaries.filter((scope) =>
     followedScopeIds.includes(scope.id),
+  );
+  const isEarlyAccessGateOpen = !isNexusShellGateDismissed(
+    shellGateSession,
+    'early_access'
   );
 
   const refreshShellData = useCallback(async () => {
@@ -315,6 +332,10 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
   }, [refreshShellData]);
 
   useEffect(() => {
+    persistNexusShellGateSession(shellGateSession);
+  }, [shellGateSession]);
+
+  useEffect(() => {
     persistPacketExplorerSession(packetExplorerSession);
   }, [packetExplorerSession]);
 
@@ -375,6 +396,16 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
 
   /**
    * Inputs: none.
+   * Output: dismisses the shell-level early-access gate for the current browser session.
+   */
+  const dismissEarlyAccessGate = () => {
+    setShellGateSession((currentSession) =>
+      dismissNexusShellGate(currentSession, 'early_access')
+    );
+  };
+
+  /**
+   * Inputs: none.
    * Output: toggles the primary rail open state while preserving the secondary preference.
    */
   const togglePrimaryRailCollapsed = () => {
@@ -417,6 +448,15 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
     if (isSecondaryRailCollapsed) {
       setIsSecondaryRailCollapsed(false);
     }
+  };
+
+  /**
+   * Inputs: none.
+   * Output: forces both rails open, used by the narrow-screen tray entry path.
+   */
+  const expandAllRails = () => {
+    setIsPrimaryRailCollapsed(false);
+    setIsSecondaryRailCollapsed(false);
   };
 
   const openExplorer = () => {
@@ -529,6 +569,7 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
         isPreferencesDrawerOpen,
         isPrimaryRailCollapsed,
         isSecondaryRailCollapsed,
+        isEarlyAccessGateOpen,
         packetExplorerSession,
         setNavigationMode,
         setThemeMode,
@@ -539,10 +580,12 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
         setScopeFollowed,
         refreshShellData,
         togglePreferencesDrawer,
+        dismissEarlyAccessGate,
         togglePrimaryRailCollapsed,
         toggleSecondaryRailCollapsed,
         collapseOuterRail,
         expandInnerRail,
+        expandAllRails,
         openExplorer,
         openPacketInExplorer,
         focusExplorerTab,

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import {
   NexusActionButton,
@@ -142,30 +142,28 @@ function NexusPacketExplorerLinkDirectionSection({
                   <Text className={appearance.itemMetaClass}>
                     Showing {visibleRows.length} of {group.rows.length} underlying links.
                   </Text>
-                  <ScrollView className="max-h-[260px] flex-grow-0">
-                    <View className="gap-2">
-                      {visibleRows.map((link, index) => (
-                        <View
-                          key={`${groupKey}:${link.edge_type}:${link.revision_id ?? 'current'}:${index}`}
-                          className="gap-1 rounded-[18px] border border-nexus-line/60 px-3 py-3"
-                        >
-                          <View className="flex-row flex-wrap items-center gap-2">
-                            <NexusBadge label={link.edge_type} tone="sky" />
-                            {link.revision_id ? (
-                              <Text className={appearance.itemMetaClass}>
-                                Revision: {link.revision_id}
-                              </Text>
-                            ) : null}
-                          </View>
-                          {Object.keys(link.metadata).length > 0 ? (
-                            <Text className={appearance.itemMetaClass} selectable>
-                              {formatJson(link.metadata)}
+                  <View className="gap-2">
+                    {visibleRows.map((link, index) => (
+                      <View
+                        key={`${groupKey}:${link.edge_type}:${link.revision_id ?? 'current'}:${index}`}
+                        className="gap-1 rounded-[18px] border border-nexus-line/60 px-3 py-3"
+                      >
+                        <View className="flex-row flex-wrap items-center gap-2">
+                          <NexusBadge label={link.edge_type} tone="sky" />
+                          {link.revision_id ? (
+                            <Text className={appearance.itemMetaClass}>
+                              Revision: {link.revision_id}
                             </Text>
                           ) : null}
                         </View>
-                      ))}
-                    </View>
-                  </ScrollView>
+                        {Object.keys(link.metadata).length > 0 ? (
+                          <Text className={appearance.itemMetaClass} selectable>
+                            {formatJson(link.metadata)}
+                          </Text>
+                        ) : null}
+                      </View>
+                    ))}
+                  </View>
 
                   {visibleRows.length < group.rows.length ? (
                     <View className="flex-row flex-wrap gap-2">
@@ -209,7 +207,7 @@ export function NexusPacketExplorerLinksPanel({
   );
 
   return (
-    <ScrollView className="flex-1" contentContainerClassName="gap-4 pb-4">
+    <View className="gap-4">
       <NexusCard className="gap-3">
         <View className="flex-row flex-wrap items-center gap-2">
           <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
@@ -225,8 +223,16 @@ export function NexusPacketExplorerLinksPanel({
         </Text>
         <View className="flex-row flex-wrap gap-2">
           <NexusBadge label="By packet" tone="sky" />
-          <NexusActionButton label="By edge type" disabled />
-          <NexusActionButton label="By family" disabled />
+          <NexusActionButton
+            label="By edge type"
+            disabled
+            featureStatusId="explorer.links.by_edge_type"
+          />
+          <NexusActionButton
+            label="By family"
+            disabled
+            featureStatusId="explorer.links.by_family"
+          />
         </View>
       </NexusCard>
 
@@ -255,6 +261,6 @@ export function NexusPacketExplorerLinksPanel({
           onViewInLibrary={onViewInLibrary}
         />
       ))}
-    </ScrollView>
+    </View>
   );
 }

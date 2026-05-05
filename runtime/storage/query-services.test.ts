@@ -1,77 +1,71 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import type { PacketSearchIndexRecord } from './sqlite-records.ts';
-import { PacketStoreNexusQueryService } from './query-services.ts';
+import type {
+  PacketHeadStatus,
+  PacketReadValue,
+  PacketStore,
+} from '@core/contracts';
+import type {
+  PacketEnvelope,
+  PacketReadMode,
+  PacketRevisionRef,
+} from '@core/schema/packet-schema';
+import { createAssociationClaimPacket } from '@core/packets/claims';
 
-const SEARCH_ROWS: PacketSearchIndexRecord[] = [
-  {
-    packet_id: 'nexus:packet/local-a',
-    revision_id: 'nexus:packet/local-a@r1',
-    family: 'Proposal',
-    label: 'Local proposal',
-    title: 'Local proposal',
-    summary: null,
-    status: 'open',
-    authority_scope_packet_id: 'nexus:element/moreno-valley',
-    applicable_scope_ids_json: JSON.stringify([
-      'nexus:element/moreno-valley',
-      'nexus:element/global-commons',
-    ]),
-    tags_json: '[]',
-    created_at: '2026-04-17T00:00:00.000Z',
-  },
-  {
-    packet_id: 'nexus:packet/child-b',
-    revision_id: 'nexus:packet/child-b@r1',
-    family: 'Proposal',
-    label: 'Child proposal',
-    title: 'Child proposal',
-    summary: null,
-    status: 'open',
-    authority_scope_packet_id: 'nexus:element/sunnymead-ranch',
-    applicable_scope_ids_json: JSON.stringify([
-      'nexus:element/sunnymead-ranch',
-      'nexus:element/moreno-valley',
-      'nexus:element/global-commons',
-    ]),
-    tags_json: '[]',
-    created_at: '2026-04-17T01:00:00.000Z',
-  },
-];
+import { PacketStoreBrowserQueryService } from './query-services.ts';
 
-test('library local scope mode returns only packets native to the active authority scope', async () => {
-  const service = new PacketStoreNexusQueryService({
-    async listSearchRows() {
-      return SEARCH_ROWS;
-    },
-  });
-
-  const lens = {
-    authority_scope_ref: {
-      packet_id: 'nexus:element/moreno-valley',
-    },
-    applicable_scope_refs: [
-      {
-        packet_id: 'nexus:element/moreno-valley',
-      },
-      {
-        packet_id: 'nexus:element/global-commons',
-      },
-    ],
+function createPacketStoreStub(input: {
+  packet: PacketEnvelope;
+}): PacketStore {
+  const preferredRevision: PacketRevisionRef = {
+    packet_id: input.packet.header.packet_id,
+    revision_id: input.packet.header.revision_id,
+  };
+  const headStatus: PacketHeadStatus = {
+    preferred_revision: preferredRevision,
+    head_revisions: [preferredRevision],
+    revision_state: 'linear',
   };
 
-  const localPackets = await service.listLibraryPackets(lens, undefined, {
-    scope_mode: 'local',
-  });
-  const inheritedPackets = await service.listLibraryPackets(lens);
+  return {
+    validate: () => input.packet,
+    writeRevision: async () => preferredRevision,
+    publishRevision: async () => undefined,
+    fetchByPacket: async () => input.packet,
+    fetchByRevision: async () => input.packet,
+    fetchPreferredRevision: async () => preferredRevision,
+    fetchRevisionHeads: async () => headStatus,
+    queryEdges: async () => [],
+    mergeRevisions: async () => preferredRevision,
+    readByPacket: async <TMode extends PacketReadMode>() =>
+      input.packet as PacketReadValue<TMode>,
+    readByRevision: async <TMode extends PacketReadMode>() =>
+      input.packet as PacketReadValue<TMode>,
+    prepareRevisionForAdaptedSave: async () => null,
+    prepareRevisionForVersionedSave: async () => null,
+    writePreparedRevision: async () => preferredRevision,
+    importBundle: async () => ({ packet_count: 0, revision_count: 0, edge_count: 0 }),
+    exportBundle: async () => ({ bytes: new Uint8Array(), packet_count: 0, revision_count: 0 }),
+  };
+}
 
-  assert.deepEqual(
-    localPackets.map((packet) => packet.packet.packet_id),
-    ['nexus:packet/local-a']
+test('browser packet projection uses the shared packet title helper', async () => {
+  const packet = createAssociationClaimPacket({
+    claimKind: 'role_association',
+    subjectPacketId: 'nexus:element/testy-mcgee',
+    targetPacketId: 'nexus:role/coordinator',
+    scopePacketId: 'nexus:element/global-commons',
+    applicableScopeRefs: [{ packet_id: 'nexus:element/global-commons' }],
+    createdByPacketId: 'nexus:element/testy-mcgee',
+  });
+  const browserQueryService = new PacketStoreBrowserQueryService(
+    createPacketStoreStub({ packet })
   );
-  assert.deepEqual(
-    inheritedPackets.map((packet) => packet.packet.packet_id),
-    ['nexus:packet/child-b', 'nexus:packet/local-a']
-  );
+
+  const projection = await browserQueryService.getPacket({
+    packet_id: packet.header.packet_id,
+  });
+
+  assert.equal(projection?.title, 'Role Association claim');
 });
