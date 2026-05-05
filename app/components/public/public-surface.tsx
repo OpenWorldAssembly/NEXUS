@@ -1,6 +1,6 @@
 /**
  * File: public-surface.tsx
- * Description: Base public-site surface primitive for reusable card, panel, and section shells.
+ * Description: Base public-site surface primitive for reusable cards and panels.
  */
 import { Image } from 'expo-image';
 import type { ReactNode } from 'react';
@@ -17,7 +17,7 @@ type PublicSurfaceStyle =
   | StyleProp<ViewStyle>
   | Animated.WithAnimatedValue<StyleProp<ViewStyle>>;
 
-export type PublicSurfaceVariant = 'default' | 'standardCard' | 'panel' | 'section';
+export type PublicSurfaceVariant = 'default' | 'standardCard' | 'panel';
 
 export type PublicSurfaceBackgroundFit = 'cover' | 'contain' | 'fill' | 'none' | 'scale-down';
 
@@ -58,17 +58,12 @@ export const PUBLIC_SURFACE_CLASSES = {
     default: 'overflow-hidden rounded-[30px] border border-public-surfaceBorderSoft bg-public-surfaceBase',
     standardCard: 'overflow-hidden rounded-[28px] border border-public-surfaceBorder bg-public-surface',
     panel: 'overflow-hidden rounded-[30px] border border-public-surfaceBorderSoft bg-public-surfaceBase',
-    section: 'overflow-hidden border',
   },
   background: {
     panelBaseClassName: 'bg-public-surfaceBase',
   },
   border: {
     ruleClassName: 'border-public-surfaceRule',
-  },
-  section: {
-    baseClassName: 'overflow-hidden border',
-    accentOverlayClassName: 'bg-public-cyan',
   },
   glow: {
     surfaceClassName: 'bg-public-surfaceGlow',
@@ -125,8 +120,6 @@ export const PUBLIC_SURFACE_CLASSES = {
 export const DEFAULT_PUBLIC_SURFACE_CLASS_NAME = PUBLIC_SURFACE_CLASSES.defaultBaseClassName;
 
 export const PUBLIC_SURFACE_STYLE_VALUES = {
-  sectionAccentOverlayOpacity: 0.045,
-  sectionBackgroundImageOpacity: 0.72,
   sectionShadowColor: '#07121d',
 } as const;
 

@@ -33,7 +33,7 @@ const sections: HomeRailSection[] = [
       'Antifragile design survives hostile environments',
     ],
     backgroundImageUri: buildPublicBackgroundImageUri({
-      variant: 'section',
+      variant: 'card',
       motif: 'assembly',
       motifSide: 'right',
       palette: {
@@ -63,7 +63,7 @@ const sections: HomeRailSection[] = [
       'Peer-verified credibility and accountability',
     ],
     backgroundImageUri: buildPublicBackgroundImageUri({
-      variant: 'section',
+      variant: 'card',
       motif: 'social',
       motifSide: 'left',
       palette: {
@@ -89,7 +89,7 @@ const sections: HomeRailSection[] = [
       'Enables global decentralized synchronization',
     ],
     backgroundImageUri: buildPublicBackgroundImageUri({
-      variant: 'section',
+      variant: 'card',
       motif: 'global',
       motifSide: 'right',
       palette: {
@@ -115,7 +115,7 @@ const sections: HomeRailSection[] = [
       'Humanity may not get another chance to act',
     ],
     backgroundImageUri: buildPublicBackgroundImageUri({
-      variant: 'section',
+      variant: 'card',
       motif: 'choice',
       motifSide: 'left',
       palette: {
@@ -141,7 +141,7 @@ const sections: HomeRailSection[] = [
       'Peace and prosperity for all of humanity',
     ],
     backgroundImageUri: buildPublicBackgroundImageUri({
-      variant: 'section',
+      variant: 'card',
       motif: 'agency',
       motifSide: 'right',
       palette: {

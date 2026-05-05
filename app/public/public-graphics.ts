@@ -323,12 +323,12 @@ export function buildHeroBackgroundImageUri(palette: HeroPalette) {
 }
 
 /**
- * Inputs: a color palette for the generated about-section background artwork.
- * Output: a data URI pointing to an abstract SVG image for a single about section.
+ * Inputs: a color palette for generated about-card background artwork.
+ * Output: a data URI pointing to abstract SVG card artwork for a single about section.
  */
 export function buildAboutBackgroundImageUri(palette: AboutPalette) {
   return buildPublicBackgroundImageUri({
-    variant: 'section',
+    variant: 'card',
     motif: 'none',
     palette,
   });

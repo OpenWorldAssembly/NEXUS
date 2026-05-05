@@ -1,15 +1,18 @@
 /**
  * File: public-home-section.tsx
- * Description: Renders a single homepage rail section by mapping Home content into the shared public section shell.
+ * Description: Renders a single homepage rail section through the shared public card frame.
  */
 import { Link } from 'expo-router';
-import { Pressable, Text, View, Animated, useWindowDimensions } from 'react-native';
+import { Animated, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
+import PublicCardFrame from '@app/components/public/public-card-frame';
 import PublicPageActions from '@app/components/public/public-page-actions';
-import { PUBLIC_SURFACE_CLASSES } from '@app/components/public/public-surface';
+import {
+  PUBLIC_SURFACE_CLASSES,
+  PUBLIC_SURFACE_STYLE_VALUES,
+} from '@app/components/public/public-surface';
 import { PUBLIC_SECTION_FOCUS_LINE_RATIO } from '@app/components/public/sections/public-section.constants';
 import type { SectionLayout } from '@app/components/public/sections/public-section.types';
-import PublicSectionShell from '@app/components/public/sections/public-section-shell';
 import type { HomeRailSection } from '@app/public/home-content';
 
 type PublicHomeSectionProps = {
@@ -157,14 +160,20 @@ export default function PublicHomeSection({
   ) : null;
 
   return (
-    <PublicSectionShell
-      backgroundImageUri={section.backgroundImageUri}
-      enableDecorativeAccents={false}
-      focusLineRatio={PUBLIC_SECTION_FOCUS_LINE_RATIO}
-      layoutOffsetY={sectionLayout?.y}
-      scrollY={scrollY}
-      contentClassName={contentClassName}
-      header={
+    <View style={styles.chapter}>
+      <PublicCardFrame
+        backgroundImageUri={section.backgroundImageUri}
+        backgroundPreset="none"
+        className={isActive ? 'shadow-public' : ''}
+        contentClassName={contentClassName}
+        enableDecorativeAccents={false}
+        focusLineRatio={PUBLIC_SECTION_FOCUS_LINE_RATIO}
+        layoutOffsetY={sectionLayout?.y}
+        scrollY={scrollY}
+        style={styles.shell}
+        variant="default"
+        viewportHeight={viewportHeight}
+      >
         <View className={textStackClassName}>
           <Text
             className={`${textAlignClassName} ${PUBLIC_SURFACE_CLASSES.text.headingClassName}`}
@@ -199,9 +208,28 @@ export default function PublicHomeSection({
 
           {actionNode ? <View className="mt-8">{actionNode}</View> : null}
         </View>
-      }
-      isActive={isActive}
-      viewportHeight={viewportHeight}
-    />
+      </PublicCardFrame>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  chapter: {
+    justifyContent: 'flex-start',
+    width: '100%',
+    paddingHorizontal: 4,
+    marginBottom: 14,
+  },
+  shell: {
+    shadowColor: PUBLIC_SURFACE_STYLE_VALUES.sectionShadowColor,
+    shadowOffset: {
+      width: 0,
+      height: 18,
+    },
+    shadowOpacity: 0.22,
+    shadowRadius: 26,
+    width: '100%',
+    borderRadius: 30,
+    overflow: 'hidden',
+  },
+});

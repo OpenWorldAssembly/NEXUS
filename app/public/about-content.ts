@@ -35,7 +35,6 @@ export const aboutSections: AboutSection[] = [
       },
     ],
     backgroundImageUri: buildAboutBackgroundImageUri({
-      base: '#102233',
       accent: '#6dd3ff',
       accentSoft: '#d7ffbf',
       glow: '#245d7d',
@@ -63,7 +62,6 @@ export const aboutSections: AboutSection[] = [
       },
     ],
     backgroundImageUri: buildAboutBackgroundImageUri({
-      base: '#1a1f2e',
       accent: '#ff9b6a',
       accentSoft: '#ffd6bf',
       glow: '#6a3f2f',
@@ -91,7 +89,6 @@ export const aboutSections: AboutSection[] = [
       },
     ],
     backgroundImageUri: buildAboutBackgroundImageUri({
-      base: '#241f2f',
       accent: '#f7d995',
       accentSoft: '#9fe870',
       glow: '#704f7d',
@@ -119,7 +116,6 @@ export const aboutSections: AboutSection[] = [
       },
     ],
     backgroundImageUri: buildAboutBackgroundImageUri({
-      base: '#1a2333',
       accent: '#9fe870',
       accentSoft: '#f7d995',
       glow: '#4d6931',
@@ -147,7 +143,6 @@ export const aboutSections: AboutSection[] = [
       },
     ],
     backgroundImageUri: buildAboutBackgroundImageUri({
-      base: '#162734',
       accent: '#9fe870',
       accentSoft: '#f7d995',
       glow: '#395f3a',
@@ -175,7 +170,6 @@ export const aboutSections: AboutSection[] = [
       },
     ],
     backgroundImageUri: buildAboutBackgroundImageUri({
-      base: '#202033',
       accent: '#6dd3ff',
       accentSoft: '#f7d995',
       glow: '#473f75',
@@ -203,7 +197,6 @@ export const aboutSections: AboutSection[] = [
       },
     ],
     backgroundImageUri: buildAboutBackgroundImageUri({
-      base: '#1f2a2f',
       accent: '#6dd3ff',
       accentSoft: '#9fe870',
       glow: '#3f6f75',
@@ -231,7 +224,6 @@ export const aboutSections: AboutSection[] = [
       },
     ],
     backgroundImageUri: buildAboutBackgroundImageUri({
-      base: '#1f2a2f',
       accent: '#f7d995',
       accentSoft: '#6dd3ff',
       glow: '#5a6f7a',
@@ -268,7 +260,6 @@ export const aboutSections: AboutSection[] = [
       },
     ],
     backgroundImageUri: buildAboutBackgroundImageUri({
-      base: '#1f2a2f',
       accent: '#6dd3ff',
       accentSoft: '#9fe870',
       glow: '#3f6f75',
