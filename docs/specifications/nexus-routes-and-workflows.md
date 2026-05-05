@@ -64,6 +64,7 @@ The Nexus shell currently provides:
 - a dedicated Nexus layout separate from the public shell
 - a two-column left-side navigation model on desktop
 - a mobile overlay tray that opens the real menu rails immediately, uses `Open menu` as the visible trigger label, shrinks with rail collapse, and closes when both rails are minimized
+- a desktop Packet Explorer drawer that keeps its width session-persistent and uses a dedicated drag-resize seam
 - a session-scoped early-access welcome gate that blocks shell interaction until dismissed
 - function-first versus scope-first as a shell preference
 - `You` as a first-class personal scope lens
