@@ -22,6 +22,8 @@ import {
   NexusCard,
   NexusChevronIcon,
   NexusSegmentedPill,
+  NexusThemedBevelEdges,
+  getNexusChromeClasses,
 } from '@app/components/nexus/nexus-ui';
 import type { NexusSecurityMode } from '@runtime/nexus/nexus-api-types';
 import {
@@ -320,15 +322,15 @@ function NexusRailToggle({
   uiDensity,
   onPress,
 }: NexusRailToggleProps) {
+  const chrome = getNexusChromeClasses(themeMode, uiDensity);
+
   return (
     <Pressable
       accessibilityRole="button"
       className={joinClasses(
         'absolute right-[-14px] top-1/2 z-10 -translate-y-5 items-center justify-center rounded-full border',
         uiDensity === 'large' ? 'h-11 w-11' : 'h-10 w-10',
-        themeMode === 'dark'
-          ? 'border-nexus-line bg-nexus-ink'
-          : 'border-slate-300 bg-white',
+        chrome.railToggleClass,
       )}
       onPress={onPress}
     >
@@ -363,6 +365,7 @@ function NexusPreferenceSwitch<TOption extends string>({
 }: NexusPreferenceSwitchProps<TOption>) {
   const isRightSelected = selectedValue === rightValue;
   const selectedLabel = isRightSelected ? rightLabel : leftLabel;
+  const chrome = getNexusChromeClasses(themeMode, uiDensity);
 
   return (
     <View className="self-center flex-row items-center justify-center gap-3">
@@ -383,13 +386,9 @@ function NexusPreferenceSwitch<TOption extends string>({
           uiDensity === 'large'
             ? 'w-[64px] rounded-full border p-1'
             : 'w-[58px] rounded-full border p-1',
-          themeMode === 'dark'
-            ? isRightSelected
-              ? 'border-nexus-sky bg-nexus-sky/10'
-              : 'border-nexus-line bg-white/5'
-            : isRightSelected
-              ? 'border-sky-400 bg-sky-50'
-              : 'border-slate-300 bg-slate-100',
+          isRightSelected
+            ? chrome.preferenceSwitchTrackActiveClass
+            : chrome.preferenceSwitchTrackClass,
         )}
         onPress={() => onSelect(isRightSelected ? leftValue : rightValue)}
       >
@@ -436,14 +435,13 @@ function NexusCurrentContextCard({
 }: NexusCurrentContextCardProps) {
   const snapshotMetrics = getScopeSnapshotMetrics(scope, activeSection);
   const compactScopePath = truncateScopeCopy(scopePath, 36);
+  const chrome = getNexusChromeClasses(themeMode, uiDensity);
 
   return (
     <NexusCard
       className={joinClasses(
         'min-h-[228px] gap-4 overflow-hidden',
-        themeMode === 'dark'
-          ? 'bg-white/5'
-          : 'border-slate-300 bg-slate-50',
+        chrome.cardInsetClass,
         uiDensity === 'large' ? 'p-5' : 'p-4',
       )}
     >
@@ -501,12 +499,7 @@ function NexusCurrentContextCard({
         {snapshotMetrics.map((metric) => (
           <View
             key={metric.label}
-            className={joinClasses(
-              'flex-1 items-center rounded-[18px] border px-2 py-3',
-              themeMode === 'dark'
-                ? 'border-nexus-line bg-nexus-ink/40'
-                : 'border-slate-300 bg-white',
-            )}
+            className={joinClasses('items-center', chrome.statChipClass)}
           >
             <Text className="text-center text-[10px] font-semibold uppercase tracking-[1.4px] text-nexus-sky">
               {metric.label}
@@ -521,6 +514,7 @@ function NexusCurrentContextCard({
             >
               {metric.value}
             </Text>
+            <NexusThemedBevelEdges themeMode={themeMode} subtle />
           </View>
         ))}
       </View>
@@ -577,19 +571,14 @@ function NexusPrimaryNavItem({
   uiDensity,
   onPress,
 }: NexusPrimaryNavItemProps) {
+  const chrome = getNexusChromeClasses(themeMode, uiDensity);
+
   return (
     <Pressable
       accessibilityRole="button"
       className={joinClasses(
-        'rounded-[24px] border',
+        isActive ? chrome.navItemActiveClass : chrome.navItemClass,
         uiDensity === 'large' ? 'px-5 py-5' : 'px-4 py-4',
-        themeMode === 'dark'
-          ? isActive
-            ? 'border-nexus-sky bg-nexus-sky/10'
-            : 'border-nexus-line bg-white/5'
-          : isActive
-            ? 'border-sky-400 bg-sky-50'
-            : 'border-slate-300 bg-slate-100',
       )}
       onPress={onPress}
     >
@@ -613,6 +602,7 @@ function NexusPrimaryNavItem({
       >
         {detail}
       </Text>
+      <NexusThemedBevelEdges themeMode={themeMode} subtle />
     </Pressable>
   );
 }
@@ -636,6 +626,7 @@ function NexusScopeMenuRow({
   const indicatorSize = Math.max(6, Math.round(depthWidth / 4));
   const connectorStart = 8;
   const connectorOffset = connectorStart + depthWidth;
+  const chrome = getNexusChromeClasses(themeMode, uiDensity);
 
   return (
     <View className="flex-row items-center gap-3">
@@ -669,15 +660,8 @@ function NexusScopeMenuRow({
       <Pressable
         accessibilityRole="button"
         className={joinClasses(
-          'flex-1 rounded-[18px] border',
+          isActive ? chrome.scopeRowActiveClass : chrome.scopeRowClass,
           uiDensity === 'large' ? 'px-4 py-3.5' : 'px-3 py-3',
-          themeMode === 'dark'
-            ? isActive
-              ? 'border-nexus-sky bg-nexus-sky/10'
-              : 'border-nexus-line bg-white/5'
-            : isActive
-              ? 'border-sky-400 bg-sky-50'
-              : 'border-slate-300 bg-slate-100',
         )}
         onPress={onPress}
       >
@@ -703,6 +687,7 @@ function NexusScopeMenuRow({
         >
           {scopeMeta}
         </Text>
+        <NexusThemedBevelEdges themeMode={themeMode} subtle />
       </Pressable>
     </View>
   );
@@ -794,6 +779,7 @@ function NexusScopeMenuContent({
     0,
     filteredDiscoverableScopes.length - visibleDiscoverableScopes.length,
   );
+  const chrome = getNexusChromeClasses(themeMode, uiDensity);
 
   return (
     <>
@@ -846,16 +832,9 @@ function NexusScopeMenuContent({
             <View
               key={scope.id}
               className={joinClasses(
-                uiDensity === 'large'
-                  ? 'rounded-full border px-3.5 py-2.5'
-                  : 'rounded-full border px-3 py-2',
-                themeMode === 'dark'
-                  ? scope.id === activeScopeId
-                    ? 'border-nexus-mint bg-nexus-mint/10'
-                    : 'border-nexus-line bg-white/5'
-                  : scope.id === activeScopeId
-                    ? 'border-emerald-400 bg-emerald-50'
-                    : 'border-slate-300 bg-slate-100',
+                scope.id === activeScopeId
+                  ? chrome.scopeChipActiveClass
+                  : chrome.scopeChipClass,
               )}
             >
               <View className="flex-row items-center gap-2">
@@ -887,6 +866,7 @@ function NexusScopeMenuContent({
                   </Text>
                 </Pressable>
               </View>
+              <NexusThemedBevelEdges themeMode={themeMode} subtle />
             </View>
           ))}
           {hiddenFollowedCount > 0 ? (
@@ -932,10 +912,7 @@ function NexusScopeMenuContent({
                 <View
                   key={scope.id}
                   className={joinClasses(
-                    'rounded-[18px] border px-3 py-3',
-                    themeMode === 'dark'
-                      ? 'border-nexus-line bg-white/5'
-                      : 'border-slate-300 bg-slate-100',
+                    chrome.discoverableScopeClass,
                   )}
                 >
                   <Text
@@ -962,10 +939,7 @@ function NexusScopeMenuContent({
                     <Pressable
                       accessibilityRole="button"
                       className={joinClasses(
-                        'rounded-full border px-3 py-2',
-                        themeMode === 'dark'
-                          ? 'border-nexus-line bg-nexus-ink/50'
-                          : 'border-slate-300 bg-white',
+                        chrome.compactButtonClass,
                       )}
                       onPress={() => onScopePress(scope.id)}
                     >
@@ -981,14 +955,12 @@ function NexusScopeMenuContent({
                       >
                         Explore
                       </Text>
+                      <NexusThemedBevelEdges themeMode={themeMode} subtle />
                     </Pressable>
                     <Pressable
                       accessibilityRole="button"
                       className={joinClasses(
-                        'rounded-full border px-3 py-2',
-                        themeMode === 'dark'
-                          ? 'border-nexus-mint bg-nexus-mint/10'
-                          : 'border-emerald-400 bg-emerald-50',
+                        chrome.compactButtonActiveClass,
                       )}
                       onPress={() => onScopeFollowPress(scope.id, true)}
                     >
@@ -1004,8 +976,10 @@ function NexusScopeMenuContent({
                       >
                         Follow
                       </Text>
+                      <NexusThemedBevelEdges themeMode={themeMode} subtle />
                     </Pressable>
                   </View>
+                  <NexusThemedBevelEdges themeMode={themeMode} subtle />
                 </View>
               ))}
               {hiddenDiscoverableCount > 0 ? (
@@ -1115,44 +1089,24 @@ export default function NexusSidebar({
   const currentScopePath = branchPathScopes
     .map((scope) => scope.shortLabel)
     .join(' / ');
+  const chrome = getNexusChromeClasses(themeMode, uiDensity);
   const railBorderClass =
     themeMode === 'dark' ? 'border-nexus-line' : 'border-slate-300';
   const primaryRailClass =
     themeMode === 'dark' ? 'bg-nexus-ink' : 'bg-slate-100';
   const secondaryRailClass =
     themeMode === 'dark' ? 'bg-nexus-panel' : 'bg-slate-50';
-  const profileCardClass =
-    themeMode === 'dark'
-      ? 'border-nexus-line/70 bg-nexus-panel'
-      : 'border-slate-300 bg-white';
-  const panelCardClass =
-    themeMode === 'dark'
-      ? 'border-nexus-line/70 bg-nexus-panel'
-      : 'border-slate-300 bg-white';
+  const profileCardClass = chrome.panelCardClass;
+  const panelCardClass = chrome.panelCardClass;
   const titleTextClass =
     themeMode === 'dark' ? 'text-nexus-text' : 'text-slate-900';
   const mutedTextClass =
     themeMode === 'dark' ? 'text-nexus-muted' : 'text-slate-600';
-  const homeButtonClass =
-    themeMode === 'dark'
-      ? 'border-nexus-line bg-white/5'
-      : 'border-slate-300 bg-slate-100';
-  const signInButtonClass =
-    themeMode === 'dark'
-      ? 'border-nexus-line bg-white/5'
-      : 'border-slate-300 bg-slate-100';
-  const signUpButtonClass =
-    themeMode === 'dark'
-      ? 'border-nexus-sky bg-nexus-sky'
-      : 'border-sky-500 bg-sky-500';
-  const preferencesPanelClass =
-    themeMode === 'dark'
-      ? 'border-nexus-line bg-white/5'
-      : 'border-slate-300 bg-slate-50';
-  const preferencesButtonClass =
-    themeMode === 'dark'
-      ? 'border-nexus-line/80 bg-nexus-ink/40'
-      : 'border-slate-300 bg-slate-100';
+  const homeButtonClass = chrome.navItemClass;
+  const signInButtonClass = chrome.topToggleButtonClass;
+  const signUpButtonClass = chrome.topToggleButtonPrimaryClass;
+  const preferencesPanelClass = chrome.preferencePanelClass;
+  const preferencesButtonClass = chrome.preferenceButtonClass;
   const preferencesAnimation = useRef(
     new Animated.Value(isPreferencesDrawerOpen ? 1 : 0),
   ).current;
@@ -1259,9 +1213,6 @@ export default function NexusSidebar({
                 <Pressable
                   accessibilityRole="button"
                   className={joinClasses(
-                    isLargeUi
-                      ? 'rounded-full border px-4 py-2.5'
-                      : 'rounded-full border px-3 py-2',
                     signInButtonClass,
                   )}
                   onPress={() =>
@@ -1282,13 +1233,11 @@ export default function NexusSidebar({
                   >
                     {hasActiveClaimedSession ? 'Security' : 'Sign In'}
                   </Text>
+                  <NexusThemedBevelEdges themeMode={themeMode} subtle />
                 </Pressable>
                 <Pressable
                   accessibilityRole="button"
                   className={joinClasses(
-                    isLargeUi
-                      ? 'rounded-full border px-4 py-2.5'
-                      : 'rounded-full border px-3 py-2',
                     signUpButtonClass,
                   )}
                   onPress={() =>
@@ -1309,15 +1258,16 @@ export default function NexusSidebar({
                   >
                     {hasActiveClaimedSession ? 'Profile' : 'Claim'}
                   </Text>
+                  <NexusThemedBevelEdges themeMode={themeMode} subtle />
                 </Pressable>
               </View>
 
               <Pressable
                 accessibilityRole="button"
                 className={joinClasses(
-                  'items-center rounded-full border',
-                  isLargeUi ? 'px-4 py-3' : 'px-3 py-2.5',
+                  'items-center',
                   homeButtonClass,
+                  isLargeUi ? 'px-4 py-3' : 'px-3 py-2.5',
                 )}
                 onPress={() => router.push('/' as Href)}
               >
@@ -1331,13 +1281,14 @@ export default function NexusSidebar({
                   >
                     Back to Home
                   </Text>
+                  <NexusThemedBevelEdges themeMode={themeMode} subtle />
                 </Pressable>
                 <Pressable
                   accessibilityRole="button"
                   className={joinClasses(
-                    'items-center rounded-full border',
-                    isLargeUi ? 'px-4 py-3' : 'px-3 py-2.5',
+                    'items-center',
                     homeButtonClass,
+                    isLargeUi ? 'px-4 py-3' : 'px-3 py-2.5',
                   )}
                   onPress={() => {
                     openExplorer();
@@ -1357,14 +1308,15 @@ export default function NexusSidebar({
                 >
                   Packet Explorer
                 </Text>
+                <NexusThemedBevelEdges themeMode={themeMode} subtle />
               </Pressable>
               {hasActiveClaimedSession && !isCurrentIdentityUnlocked ? (
                 <Pressable
                   accessibilityRole="button"
                   className={joinClasses(
-                    'items-center rounded-full border',
-                    isLargeUi ? 'px-4 py-3' : 'px-3 py-2.5',
+                    'items-center',
                     homeButtonClass,
+                    isLargeUi ? 'px-4 py-3' : 'px-3 py-2.5',
                   )}
                   onPress={() => openNexusAuthGate('unlock_required')}
                 >
@@ -1378,12 +1330,12 @@ export default function NexusSidebar({
                   >
                     Unlock This Identity
                   </Text>
+                  <NexusThemedBevelEdges themeMode={themeMode} subtle />
                 </Pressable>
               ) : null}
 
               <View
                 className={joinClasses(
-                  'overflow-hidden rounded-[22px] border',
                   preferencesPanelClass,
                 )}
               >
@@ -1576,6 +1528,7 @@ export default function NexusSidebar({
                     isOpen={isPreferencesDrawerOpen}
                   />
                 </Pressable>
+                <NexusThemedBevelEdges themeMode={themeMode} subtle />
               </View>
             </NexusCard>
 

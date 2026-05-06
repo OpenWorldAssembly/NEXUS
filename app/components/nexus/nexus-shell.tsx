@@ -18,6 +18,10 @@ import NexusPacketExplorer from '@app/components/nexus/nexus-packet-explorer';
 import NexusShellEntryGate from '@app/components/nexus/nexus-shell-entry-gate';
 import NexusSidebar from '@app/components/nexus/nexus-sidebar';
 import {
+  NexusBevelEdges,
+  useNexusChrome,
+} from '@app/components/nexus/nexus-ui';
+import {
   getNexusRailWidth,
   NEXUS_COLLAPSED_RAIL_WIDTH,
 } from '@runtime/nexus/nexus-shell';
@@ -41,6 +45,7 @@ export default function NexusShell({ children }: PropsWithChildren) {
     isSecondaryRailCollapsed,
   } = useNexusShell();
   const { width } = useWindowDimensions();
+  const chrome = useNexusChrome();
   const isDesktop = width >= 1100;
   const [isSidebarOpen, setIsSidebarOpen] = useState(isDesktop);
   const railWidth = getNexusRailWidth(uiDensity);
@@ -61,10 +66,6 @@ export default function NexusShell({ children }: PropsWithChildren) {
     themeMode === 'dark' ? 'text-nexus-text' : 'text-slate-900';
   const mobileMetaClass =
     themeMode === 'dark' ? 'text-nexus-muted' : 'text-slate-600';
-  const mobileButtonClass =
-    themeMode === 'dark'
-      ? 'border-nexus-line bg-white/5'
-      : 'border-slate-300 bg-slate-100';
   const sidebarBorderClass =
     themeMode === 'dark' ? 'border-nexus-line' : 'border-slate-300';
   const overlayBackdropClass =
@@ -167,12 +168,13 @@ export default function NexusShell({ children }: PropsWithChildren) {
 
               <Pressable
                 accessibilityRole="button"
-                className={`rounded-full border px-4 py-3 ${mobileButtonClass}`}
+                className={chrome.mobileMenuButtonClass}
                 onPress={openMobileMenu}
               >
                 <Text className={`text-sm font-semibold ${mobileHeadingClass}`}>
                   Open menu
                 </Text>
+                <NexusBevelEdges subtle />
               </Pressable>
             </View>
           </View>

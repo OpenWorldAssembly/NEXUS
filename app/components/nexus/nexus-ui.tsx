@@ -105,12 +105,260 @@ type NexusAppearance = {
   textInputPlaceholderColor: string;
 };
 
+type NexusChromeClasses = {
+  actionButtonFrameClass: string;
+  attachedTabActiveClass: string;
+  attachedTabClass: string;
+  badgeFrameClass: string;
+  cardFrameClass: string;
+  cardInsetClass: string;
+  compactButtonActiveClass: string;
+  compactButtonClass: string;
+  discoverableScopeClass: string;
+  ghostActionSurfaceClass: string;
+  inlineSelectMenuClass: string;
+  inlineSelectOptionClass: string;
+  inlineSelectTriggerClass: string;
+  mobileMenuButtonClass: string;
+  navItemActiveClass: string;
+  navItemClass: string;
+  panelCardClass: string;
+  preferenceButtonClass: string;
+  preferencePanelClass: string;
+  preferenceSwitchTrackActiveClass: string;
+  preferenceSwitchTrackClass: string;
+  primaryActionSurfaceClass: string;
+  railToggleClass: string;
+  secondaryActionSurfaceClass: string;
+  segmentedActiveClass: string;
+  segmentedContainerClass: string;
+  scopeChipActiveClass: string;
+  scopeChipClass: string;
+  scopeRowActiveClass: string;
+  scopeRowClass: string;
+  statChipClass: string;
+  textInputClass: string;
+  topToggleButtonClass: string;
+  topToggleButtonPrimaryClass: string;
+};
+
 /**
  * Inputs: any number of class names.
  * Output: a single space-delimited className string.
  */
 function joinClasses(...classes: (string | undefined)[]): string {
   return classes.filter(Boolean).join(' ');
+}
+
+/**
+ * Inputs: the active Nexus theme mode and optional subtle flag.
+ * Output: non-interactive edge highlights that create a hard beveled frame.
+ */
+export function NexusThemedBevelEdges({
+  themeMode,
+  subtle = false,
+}: {
+  themeMode: NexusThemeMode;
+  subtle?: boolean;
+}) {
+  const topEdgeClass =
+    themeMode === 'dark'
+      ? subtle
+        ? 'bg-white/10'
+        : 'bg-white/20'
+      : subtle
+        ? 'bg-white/60'
+        : 'bg-white/100';
+  const bottomEdgeClass =
+    themeMode === 'dark'
+      ? subtle
+        ? 'bg-black/30'
+        : 'bg-black/40'
+      : subtle
+        ? 'bg-slate-400/30'
+        : 'bg-slate-500/30';
+
+  return (
+    <View pointerEvents="none" className="absolute inset-0">
+      <View
+        className={joinClasses('absolute inset-x-0 top-0 h-px', topEdgeClass)}
+      />
+      <View
+        className={joinClasses(
+          'absolute inset-x-0 bottom-0 h-px',
+          bottomEdgeClass,
+        )}
+      />
+      <View
+        className={joinClasses('absolute inset-y-0 left-0 w-px', topEdgeClass)}
+      />
+      <View
+        className={joinClasses(
+          'absolute inset-y-0 right-0 w-px',
+          bottomEdgeClass,
+        )}
+      />
+    </View>
+  );
+}
+
+/**
+ * Inputs: optional subtle flag.
+ * Output: non-interactive edge highlights using the current Nexus shell theme.
+ */
+export function NexusBevelEdges({ subtle = false }: { subtle?: boolean }) {
+  const { themeMode } = useNexusShell();
+
+  return <NexusThemedBevelEdges themeMode={themeMode} subtle={subtle} />;
+}
+
+/**
+ * Inputs: the active Nexus shell theme and density.
+ * Output: shared class recipes for sharp Nexus chrome surfaces.
+ */
+export function getNexusChromeClasses(
+  themeMode: NexusThemeMode,
+  uiDensity: NexusUiDensity,
+): NexusChromeClasses {
+  const darkSurface = themeMode === 'dark';
+  const defaultSurfaceClass = darkSurface
+    ? 'border-nexus-line bg-white/5'
+    : 'border-slate-300 bg-slate-100';
+  const panelSurfaceClass = darkSurface
+    ? 'border-nexus-line/70 bg-nexus-panel'
+    : 'border-slate-300 bg-white';
+  const mutedPanelSurfaceClass = darkSurface
+    ? 'border-nexus-line/70 bg-white/5'
+    : 'border-slate-300 bg-slate-50';
+  const activeSkySurfaceClass = darkSurface
+    ? 'border-nexus-sky bg-nexus-sky/10'
+    : 'border-sky-400 bg-sky-50';
+  const activeMintSurfaceClass = darkSurface
+    ? 'border-nexus-mint bg-nexus-mint/10'
+    : 'border-emerald-400 bg-emerald-50';
+  const compactControlSizeClass =
+    uiDensity === 'large' ? 'px-4 py-2.5' : 'px-3 py-2';
+  const actionButtonSizeClass =
+    uiDensity === 'large' ? 'px-5 py-3.5' : 'px-4 py-3';
+
+  return {
+    actionButtonFrameClass: joinClasses(
+      'relative self-start overflow-hidden rounded-nexus border',
+      actionButtonSizeClass,
+    ),
+    attachedTabActiveClass: darkSurface
+      ? 'border-nexus-line/70 border-b-nexus-panel bg-nexus-panel'
+      : 'border-slate-300 border-b-white bg-white',
+    attachedTabClass: darkSurface
+      ? 'border-nexus-line/70 bg-white/5'
+      : 'border-slate-300 bg-slate-100',
+    badgeFrameClass: joinClasses('rounded-nexus border', compactControlSizeClass),
+    cardFrameClass: 'relative overflow-hidden rounded-nexus border shadow-none',
+    cardInsetClass: darkSurface
+      ? 'rounded-nexus border border-nexus-line/60 bg-white/5'
+      : 'rounded-nexus border border-slate-300 bg-slate-100',
+    compactButtonActiveClass: joinClasses(
+      'relative overflow-hidden rounded-nexus border',
+      compactControlSizeClass,
+      activeMintSurfaceClass,
+    ),
+    compactButtonClass: joinClasses(
+      'relative overflow-hidden rounded-nexus border',
+      compactControlSizeClass,
+      darkSurface ? 'border-nexus-line bg-nexus-ink/50' : 'border-slate-300 bg-white',
+    ),
+    discoverableScopeClass: joinClasses(
+      'relative overflow-hidden rounded-nexus border px-3 py-3',
+      defaultSurfaceClass,
+    ),
+    ghostActionSurfaceClass: 'border-transparent bg-transparent',
+    inlineSelectMenuClass: darkSurface
+      ? 'border-nexus-line/70 bg-nexus-panel'
+      : 'border-slate-300 bg-white',
+    inlineSelectOptionClass: 'rounded-nexus-sm px-3 py-3',
+    inlineSelectTriggerClass: joinClasses(
+      'relative min-w-[190px] overflow-hidden rounded-nexus border px-4 py-3',
+      defaultSurfaceClass,
+    ),
+    mobileMenuButtonClass: joinClasses(
+      'relative overflow-hidden rounded-nexus border px-4 py-3',
+      defaultSurfaceClass,
+    ),
+    navItemActiveClass: joinClasses(
+      'relative overflow-hidden rounded-nexus border',
+      activeSkySurfaceClass,
+    ),
+    navItemClass: joinClasses(
+      'relative overflow-hidden rounded-nexus border',
+      defaultSurfaceClass,
+    ),
+    panelCardClass: panelSurfaceClass,
+    preferenceButtonClass: darkSurface
+      ? 'border-nexus-line/80 bg-nexus-ink/40'
+      : 'border-slate-300 bg-slate-100',
+    preferencePanelClass: joinClasses(
+      'relative overflow-hidden rounded-nexus border',
+      mutedPanelSurfaceClass,
+    ),
+    preferenceSwitchTrackActiveClass: darkSurface
+      ? 'border-nexus-sky bg-nexus-sky/10'
+      : 'border-sky-400 bg-sky-50',
+    preferenceSwitchTrackClass: defaultSurfaceClass,
+    primaryActionSurfaceClass: 'border-nexus-sky bg-nexus-sky',
+    railToggleClass: darkSurface
+      ? 'border-nexus-line bg-nexus-ink'
+      : 'border-slate-300 bg-white',
+    secondaryActionSurfaceClass: defaultSurfaceClass,
+    segmentedActiveClass: darkSurface ? 'bg-nexus-sky/10' : 'bg-sky-100',
+    segmentedContainerClass: joinClasses(
+      'relative flex-row self-start overflow-hidden rounded-nexus border',
+      defaultSurfaceClass,
+    ),
+    scopeChipActiveClass: joinClasses(
+      'relative overflow-hidden rounded-nexus border',
+      compactControlSizeClass,
+      activeMintSurfaceClass,
+    ),
+    scopeChipClass: joinClasses(
+      'relative overflow-hidden rounded-nexus border',
+      compactControlSizeClass,
+      defaultSurfaceClass,
+    ),
+    scopeRowActiveClass: joinClasses(
+      'relative flex-1 overflow-hidden rounded-nexus border',
+      activeSkySurfaceClass,
+    ),
+    scopeRowClass: joinClasses(
+      'relative flex-1 overflow-hidden rounded-nexus border',
+      defaultSurfaceClass,
+    ),
+    statChipClass: darkSurface
+      ? 'relative flex-1 overflow-hidden rounded-nexus border border-nexus-line bg-nexus-ink/40 px-2 py-3'
+      : 'relative flex-1 overflow-hidden rounded-nexus border border-slate-300 bg-white px-2 py-3',
+    textInputClass: darkSurface
+      ? 'rounded-nexus border-nexus-line bg-white/5 text-nexus-text'
+      : 'rounded-nexus border-slate-300 bg-slate-100 text-slate-900',
+    topToggleButtonClass: joinClasses(
+      'relative overflow-hidden rounded-nexus border',
+      compactControlSizeClass,
+      defaultSurfaceClass,
+    ),
+    topToggleButtonPrimaryClass: joinClasses(
+      'relative overflow-hidden rounded-nexus border',
+      compactControlSizeClass,
+      darkSurface ? 'border-nexus-sky bg-nexus-sky' : 'border-sky-500 bg-sky-500',
+    ),
+  };
+}
+
+/**
+ * Inputs: none.
+ * Output: shared class recipes for the current Nexus chrome theme.
+ */
+export function useNexusChrome(): NexusChromeClasses {
+  const { themeMode, uiDensity } = useNexusShell();
+
+  return getNexusChromeClasses(themeMode, uiDensity);
 }
 
 /**
@@ -215,11 +463,11 @@ export function useNexusAppearance(): NexusAppearance {
     themeMode === 'dark' ? 'text-nexus-text' : 'text-slate-900';
   const bodyTextClass =
     themeMode === 'dark' ? 'text-nexus-muted' : 'text-slate-600';
+  const chrome = getNexusChromeClasses(themeMode, uiDensity);
 
   return {
     bodyTextClass,
-    cardInsetClass:
-      themeMode === 'dark' ? 'bg-white/5' : 'border-slate-300 bg-slate-100',
+    cardInsetClass: chrome.cardInsetClass,
     headingTextClass,
     itemBodyClass: joinClasses(
       uiDensity === 'large' ? 'text-base leading-7' : 'text-sm leading-6',
@@ -261,9 +509,7 @@ export function useNexusAppearance(): NexusAppearance {
       headingTextClass,
     ),
     textInputClass: joinClasses(
-      themeMode === 'dark'
-        ? 'border-nexus-line bg-white/5 text-nexus-text'
-        : 'border-slate-300 bg-slate-100 text-slate-900',
+      chrome.textInputClass,
       uiDensity === 'large' ? 'text-lg' : 'text-base',
     ),
     textInputPlaceholderColor: themeMode === 'dark' ? '#8fa7ba' : '#64748b',
@@ -280,17 +526,19 @@ export function NexusCard({
   tone = 'default',
 }: NexusCardProps) {
   const { themeMode, uiDensity } = useNexusShell();
+  const chrome = getNexusChromeClasses(themeMode, uiDensity);
 
   return (
     <View
       className={joinClasses(
-        'rounded-[28px] border shadow-nexus',
+        chrome.cardFrameClass,
         getNexusCardPaddingClass(uiDensity),
         getNexusToneClasses(themeMode, tone),
         className,
       )}
     >
       {children}
+      <NexusThemedBevelEdges themeMode={themeMode} />
     </View>
   );
 }
@@ -353,13 +601,12 @@ export function NexusBadge({
   textClassName,
 }: NexusBadgeProps) {
   const { themeMode, uiDensity } = useNexusShell();
+  const chrome = getNexusChromeClasses(themeMode, uiDensity);
 
   return (
     <View
       className={joinClasses(
-        uiDensity === 'large'
-          ? 'rounded-full border px-3.5 py-2'
-          : 'rounded-full border px-3 py-1.5',
+        chrome.badgeFrameClass,
         getNexusBadgeWrapperClasses(themeMode, tone),
         className,
       )}
@@ -430,17 +677,16 @@ export function NexusActionButton({
   featureStatusId,
 }: NexusActionButtonProps) {
   const { themeMode, uiDensity } = useNexusShell();
+  const chrome = getNexusChromeClasses(themeMode, uiDensity);
   const featureStatus = useNexusFeatureStatus();
   const [isHovered, setIsHovered] = useState(false);
   const pressableRef = useRef<View | null>(null);
   const variantClasses =
     variant === 'primary'
-      ? 'border-nexus-sky bg-nexus-sky'
+      ? chrome.primaryActionSurfaceClass
       : variant === 'ghost'
-        ? 'border-transparent bg-transparent'
-        : themeMode === 'dark'
-          ? 'border-nexus-line bg-white/5'
-          : 'border-slate-300 bg-slate-100';
+        ? chrome.ghostActionSurfaceClass
+        : chrome.secondaryActionSurfaceClass;
 
   const textClasses =
     variant === 'primary'
@@ -451,7 +697,7 @@ export function NexusActionButton({
   const markerWrapperClass =
     themeMode === 'dark'
       ? isHovered
-        ? 'border-nexus-rose bg-nexus-rose/18'
+        ? 'border-nexus-rose bg-nexus-rose/20'
         : 'border-nexus-rose/70 bg-nexus-rose/10'
       : isHovered
         ? 'border-rose-500 bg-rose-100'
@@ -494,9 +740,7 @@ export function NexusActionButton({
         accessibilityRole="button"
         accessibilityState={disabled ? { disabled: true } : undefined}
         className={joinClasses(
-          uiDensity === 'large'
-            ? 'self-start rounded-full border px-5 py-3.5'
-            : 'self-start rounded-full border px-4 py-3',
+          chrome.actionButtonFrameClass,
           variantClasses,
           disabled ? 'opacity-45' : '',
         )}
@@ -529,6 +773,7 @@ export function NexusActionButton({
             </View>
           ) : null}
         </View>
+        <NexusThemedBevelEdges themeMode={themeMode} subtle />
       </Pressable>
     </View>
   );
@@ -542,12 +787,8 @@ export function NexusSegmentedPill({
   compact = false,
 }: NexusSegmentedPillProps) {
   const { themeMode, uiDensity } = useNexusShell();
-  const containerClass =
-    themeMode === 'dark'
-      ? 'border-nexus-line bg-white/5'
-      : 'border-slate-300 bg-slate-100';
-  const activeSegmentClass =
-    themeMode === 'dark' ? 'bg-nexus-sky/14' : 'bg-sky-100';
+  const chrome = getNexusChromeClasses(themeMode, uiDensity);
+  const activeSegmentClass = chrome.segmentedActiveClass;
   const activeTextClass =
     themeMode === 'dark' ? 'text-nexus-sky' : 'text-sky-700';
   const inactiveTextClass =
@@ -558,8 +799,7 @@ export function NexusSegmentedPill({
   return (
     <View
       className={joinClasses(
-        'flex-row self-start overflow-hidden rounded-full border',
-        containerClass,
+        chrome.segmentedContainerClass,
         disabled ? 'opacity-45' : '',
       )}
     >
@@ -592,6 +832,7 @@ export function NexusSegmentedPill({
           </Pressable>
         );
       })}
+      <NexusThemedBevelEdges themeMode={themeMode} subtle />
     </View>
   );
 }
@@ -602,16 +843,11 @@ export function NexusAttachedTabRail({
   onSelect,
   compact = false,
 }: NexusAttachedTabRailProps) {
-  const { themeMode } = useNexusShell();
+  const { themeMode, uiDensity } = useNexusShell();
   const appearance = useNexusAppearance();
-  const inactiveTabClass =
-    themeMode === 'dark'
-      ? 'border-nexus-line/70 bg-white/5'
-      : 'border-slate-300 bg-slate-100';
-  const activeTabClass =
-    themeMode === 'dark'
-      ? 'border-nexus-line/70 border-b-nexus-panel bg-nexus-panel'
-      : 'border-slate-300 border-b-white bg-white';
+  const chrome = getNexusChromeClasses(themeMode, uiDensity);
+  const inactiveTabClass = chrome.attachedTabClass;
+  const activeTabClass = chrome.attachedTabActiveClass;
 
   return (
     <ScrollView
@@ -627,8 +863,8 @@ export function NexusAttachedTabRail({
             <Pressable
               key={tab.id}
               accessibilityRole="button"
-              className={`min-w-[140px] border px-4 ${
-                compact ? 'rounded-t-[18px] py-2.5' : 'rounded-t-[20px] py-3'
+              className={`relative min-w-[140px] overflow-hidden border px-4 ${
+                compact ? 'rounded-t-nexus py-2.5' : 'rounded-t-nexus py-3'
               } ${isActive ? `${activeTabClass} -mb-px` : inactiveTabClass}`}
               onPress={() => onSelect(tab.id)}
             >
@@ -636,6 +872,7 @@ export function NexusAttachedTabRail({
               {tab.detail ? (
                 <Text className={appearance.itemMetaClass}>{tab.detail}</Text>
               ) : null}
+              <NexusThemedBevelEdges themeMode={themeMode} subtle />
             </Pressable>
           );
         })}
@@ -653,6 +890,7 @@ export function NexusInlineSelect({
   menuLayerClassName,
 }: NexusInlineSelectProps) {
   const { themeMode, uiDensity } = useNexusShell();
+  const chrome = getNexusChromeClasses(themeMode, uiDensity);
   const { width: viewportWidth, height: viewportHeight } = useWindowDimensions();
   const [isOpen, setIsOpen] = useState(false);
   const [anchorRect, setAnchorRect] = useState<{
@@ -662,14 +900,8 @@ export function NexusInlineSelect({
     height: number;
   } | null>(null);
   const triggerRef = useRef<View | null>(null);
-  const triggerClass =
-    themeMode === 'dark'
-      ? 'border-nexus-line bg-white/5'
-      : 'border-slate-300 bg-slate-100';
-  const menuClass =
-    themeMode === 'dark'
-      ? 'border-nexus-line/70 bg-nexus-panel'
-      : 'border-slate-300 bg-white';
+  const triggerClass = chrome.inlineSelectTriggerClass;
+  const menuClass = chrome.inlineSelectMenuClass;
   const textClass =
     themeMode === 'dark' ? 'text-nexus-text' : 'text-slate-900';
   const metaClass =
@@ -721,7 +953,6 @@ export function NexusInlineSelect({
         <Pressable
           accessibilityRole="button"
           className={joinClasses(
-            'min-w-[190px] rounded-full border px-4 py-3',
             triggerClass,
             disabled ? 'opacity-45' : ''
           )}
@@ -737,6 +968,7 @@ export function NexusInlineSelect({
           >
             {valueLabel}
           </Text>
+          <NexusThemedBevelEdges themeMode={themeMode} subtle />
         </Pressable>
       </View>
       <Modal
@@ -753,7 +985,7 @@ export function NexusInlineSelect({
           />
           <View
             className={joinClasses(
-              'absolute rounded-[22px] border p-2 shadow-nexus',
+              'absolute overflow-hidden rounded-nexus border p-2 shadow-none',
               menuClass,
               menuLayerClassName
             )}
@@ -767,7 +999,7 @@ export function NexusInlineSelect({
               <Pressable
                 key={option.id}
                 accessibilityRole="button"
-                className="rounded-[16px] px-3 py-3"
+                className={chrome.inlineSelectOptionClass}
                 onPress={() => {
                   setIsOpen(false);
                   onSelect(option.id);
@@ -778,6 +1010,7 @@ export function NexusInlineSelect({
                 </Text>
               </Pressable>
             ))}
+            <NexusThemedBevelEdges themeMode={themeMode} />
           </View>
         </View>
       </Modal>
