@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Platform, Text, TextInput, View } from 'react-native';
+import { Modal, Platform, Pressable, Text, TextInput, View } from 'react-native';
 
 import {
   NexusActionButton,
@@ -43,6 +43,12 @@ type ImportWorkflowState = {
   isAnalyzing: boolean;
   isCommitting: boolean;
 };
+
+type ImportOutcomeModalState = {
+  title: string;
+  body: string;
+  tone: 'mint' | 'gold' | 'rose';
+} | null;
 
 function createIdleWorkflowState(): ImportWorkflowState {
   return {
@@ -137,10 +143,41 @@ function canCommitResult(
     | null
 ): boolean {
   return (
-    result?.status === 'ready' ||
-    result?.status === 'duplicates_only' ||
-    result?.status === 'partial_risk'
+    (result?.status === 'ready' || result?.status === 'partial_risk') &&
+    result.new_revision_count > 0
   );
+}
+
+function buildNonCommittableAnalysisModal(
+  result: NexusPacketExplorerImportPreviewPayload
+): ImportOutcomeModalState {
+  if (result.status === 'duplicates_only') {
+    return {
+      title: 'No new revisions to import',
+      body:
+        result.duplicate_revision_count > 0
+          ? `Everything in this source already exists locally. ${result.duplicate_revision_count} duplicate revision${result.duplicate_revision_count === 1 ? '' : 's'} were detected, so there is nothing new to commit.`
+          : 'This source does not contain any new revisions to commit.',
+      tone: 'gold',
+    };
+  }
+
+  if (result.blocking_errors.length > 0) {
+    return {
+      title: 'Import cannot be committed',
+      body: result.blocking_errors[0],
+      tone: 'rose',
+    };
+  }
+
+  return {
+    title: 'Import cannot be committed',
+    body:
+      result.status === 'invalid_json'
+        ? 'This source is not valid JSON yet. Fix the JSON and analyze again.'
+        : 'This import is not ready to commit yet. Review the analysis details and try again.',
+    tone: result.status === 'invalid_json' ? 'rose' : 'gold',
+  };
 }
 
 function getStatusTone(
@@ -189,6 +226,7 @@ function ImportResultCard(input: {
   onOpenPacketInExplorer: NexusPacketExplorerImportPanelProps['onOpenPacketInExplorer'];
 }) {
   const appearance = useNexusAppearance();
+  const [isAffectedPacketListOpen, setIsAffectedPacketListOpen] = useState(false);
   const openLabel =
     'committed' in input.result && input.result.committed
       ? input.result.root_packet_refs.length === 1
@@ -289,18 +327,31 @@ function ImportResultCard(input: {
 
       {input.result.affected_packet_ids.length > 0 ? (
         <View className="gap-2">
-          <Text className={appearance.itemMetaClass}>Affected packets</Text>
-          {input.result.affected_packet_ids.map((packetId) => (
-            <Text key={packetId} className={appearance.itemBodyClass}>
-              {packetId}
+          <View className="flex-row flex-wrap items-center justify-between gap-2">
+            <Text className={appearance.itemMetaClass}>
+              Affected packets ({input.result.affected_packet_count})
             </Text>
-          ))}
-          {input.result.affected_packet_count > input.result.affected_packet_ids.length ? (
+            <NexusActionButton
+              label={isAffectedPacketListOpen ? 'Hide list' : 'Show list'}
+              variant="ghost"
+              onPress={() => setIsAffectedPacketListOpen((currentValue) => !currentValue)}
+            />
+          </View>
+          {isAffectedPacketListOpen ? (
+            <View className="gap-1">
+              {input.result.affected_packet_ids.map((packetId) => (
+                <Text key={packetId} className={appearance.itemBodyClass}>
+                  {packetId}
+                </Text>
+              ))}
+            </View>
+          ) : (
             <Text className={appearance.itemBodyClass}>
-              +{input.result.affected_packet_count - input.result.affected_packet_ids.length}{' '}
-              more packet ids
+              {input.result.affected_packet_count === 1
+                ? '1 packet will be affected.'
+                : `${input.result.affected_packet_count} packets are part of this import. Expand the list to inspect every packet id.`}
             </Text>
-          ) : null}
+          )}
         </View>
       ) : null}
 
@@ -355,6 +406,7 @@ export function NexusPacketExplorerImportPanel({
   const [workflow, setWorkflow] = useState<ImportWorkflowState>(
     createIdleWorkflowState
   );
+  const [outcomeModal, setOutcomeModal] = useState<ImportOutcomeModalState>(null);
 
   useEffect(() => {
     setWorkflow(createIdleWorkflowState());
@@ -409,6 +461,9 @@ export function NexusPacketExplorerImportPanel({
         isAnalyzing: false,
         isCommitting: false,
       });
+      if (!canCommitResult(result)) {
+        setOutcomeModal(buildNonCommittableAnalysisModal(result));
+      }
     } catch (error) {
       setWorkflow({
         result: null,
@@ -418,6 +473,14 @@ export function NexusPacketExplorerImportPanel({
             : 'Unable to analyze this import source.',
         isAnalyzing: false,
         isCommitting: false,
+      });
+      setOutcomeModal({
+        title: 'Import analysis failed',
+        body:
+          error instanceof Error
+            ? error.message
+            : 'Unable to analyze this import source.',
+        tone: 'rose',
       });
     }
   };
@@ -443,6 +506,33 @@ export function NexusPacketExplorerImportPanel({
         isAnalyzing: false,
         isCommitting: false,
       });
+      setOutcomeModal(
+        result.committed
+          ? result.imported_revision_count > 0
+            ? {
+                title: 'Import complete',
+                body:
+                  result.open_packet_id
+                    ? `Imported ${result.imported_revision_count} new revision${result.imported_revision_count === 1 ? '' : 's'}. You can review the result card below or open the imported packet now.`
+                    : `Imported ${result.imported_revision_count} new revision${result.imported_revision_count === 1 ? '' : 's'} across ${result.affected_packet_count} packet${result.affected_packet_count === 1 ? '' : 's'}.`,
+                tone: 'mint',
+              }
+            : {
+                title: 'No new revisions imported',
+                body:
+                  result.skipped_duplicate_count > 0
+                    ? `Everything in this import already exists locally. ${result.skipped_duplicate_count} duplicate revision${result.skipped_duplicate_count === 1 ? '' : 's'} were skipped.`
+                    : 'This import did not add any new revisions.',
+                tone: 'gold',
+              }
+          : {
+              title: 'Import blocked',
+              body:
+                result.blocking_errors[0] ??
+                'This import could not be committed. Review the blocking details below.',
+              tone: 'rose',
+            }
+      );
     } catch (error) {
       setWorkflow((currentState) => ({
         ...currentState,
@@ -452,6 +542,14 @@ export function NexusPacketExplorerImportPanel({
             : 'Unable to commit this import source.',
         isCommitting: false,
       }));
+      setOutcomeModal({
+        title: 'Import failed',
+        body:
+          error instanceof Error
+            ? error.message
+            : 'Unable to commit this import source.',
+        tone: 'rose',
+      });
     }
   };
 
@@ -572,6 +670,41 @@ export function NexusPacketExplorerImportPanel({
           onOpenPacketInExplorer={onOpenPacketInExplorer}
         />
       ) : null}
+
+      <Modal
+        animationType="fade"
+        onRequestClose={() => setOutcomeModal(null)}
+        transparent
+        visible={outcomeModal !== null}
+      >
+        <View className="flex-1">
+          <Pressable
+            accessibilityRole="button"
+            className="absolute inset-0 bg-black/55"
+            onPress={() => setOutcomeModal(null)}
+          />
+          <View className="flex-1 items-center justify-center px-4">
+            <NexusCard
+              className="w-full max-w-[520px] gap-4"
+              tone={outcomeModal?.tone ?? 'default'}
+            >
+              <Text className={appearance.surfaceTitleClass}>
+                {outcomeModal?.title ?? ''}
+              </Text>
+              <Text className={appearance.itemBodyClass}>
+                {outcomeModal?.body ?? ''}
+              </Text>
+              <View className="flex-row flex-wrap justify-end gap-3">
+                <NexusActionButton
+                  label="Close"
+                  variant="primary"
+                  onPress={() => setOutcomeModal(null)}
+                />
+              </View>
+            </NexusCard>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

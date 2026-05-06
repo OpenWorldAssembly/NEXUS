@@ -45,8 +45,6 @@ type PreferredSnapshot = {
   headRevisionIds: string[];
 };
 
-const AFFECTED_PACKET_PREVIEW_LIMIT = 20;
-
 function trimOptionalString(value: string | null | undefined): string | null {
   if (typeof value !== 'string') {
     return null;
@@ -493,7 +491,7 @@ async function analyzeImportRequest(input: {
       new_revision_count: newRevisionCount,
       duplicate_revision_count: duplicateRevisionCount,
       affected_packet_count: affectedPacketIds.length,
-      affected_packet_ids: affectedPacketIds.slice(0, AFFECTED_PACKET_PREVIEW_LIMIT),
+      affected_packet_ids: affectedPacketIds,
       missing_parent_count: missingParentCount,
       invalid_entry_count: invalidEntryCount,
       family_conflict_count: familyConflictCount,

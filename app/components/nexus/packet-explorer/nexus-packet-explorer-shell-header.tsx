@@ -36,14 +36,14 @@ export function NexusPacketExplorerShellHeader({
           <Text className={appearance.surfaceTitleClass}>{title}</Text>
         </View>
 
-        <View className="flex-row flex-wrap gap-2">
+        <View className="min-w-0 flex-row flex-wrap items-start justify-end gap-2">
+          <NexusActionButton label="Home" onPress={onOpenHomeTab} />
           {showPacketsButton ? (
             <NexusActionButton label="Packets" onPress={onOpenPacketsBand} />
           ) : null}
           {showViewsButton ? (
             <NexusActionButton label="Views" onPress={onOpenViewsBand} />
           ) : null}
-          <NexusActionButton label="Home" onPress={onOpenHomeTab} />
           <NexusActionButton label="Close" onPress={onCloseExplorer} />
         </View>
       </View>
