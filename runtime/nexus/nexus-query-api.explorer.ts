@@ -4,6 +4,9 @@
  */
 
 import type {
+  NexusPacketExplorerImportCommitPayload,
+  NexusPacketExplorerImportPreviewPayload,
+  NexusPacketExplorerImportRequest,
   NexusPacketExplorerExportPreviewPayload,
   NexusPacketExplorerExportRequest,
   NexusPacketExplorerInspectionLens,
@@ -44,6 +47,26 @@ export function previewNexusPacketExplorerExport(
 ): Promise<NexusPacketExplorerExportPreviewPayload> {
   return fetchMutationJsonOrThrow<NexusPacketExplorerExportPreviewPayload>({
     path: '/api/nexus/packets/explorer?action=export_preview',
+    method: 'POST',
+    body: requestBody,
+  });
+}
+
+export function previewNexusPacketExplorerImport(
+  requestBody: NexusPacketExplorerImportRequest
+): Promise<NexusPacketExplorerImportPreviewPayload> {
+  return fetchMutationJsonOrThrow<NexusPacketExplorerImportPreviewPayload>({
+    path: '/api/nexus/packets/explorer?action=import_preview',
+    method: 'POST',
+    body: requestBody,
+  });
+}
+
+export function commitNexusPacketExplorerImport(
+  requestBody: NexusPacketExplorerImportRequest
+): Promise<NexusPacketExplorerImportCommitPayload> {
+  return fetchMutationJsonOrThrow<NexusPacketExplorerImportCommitPayload>({
+    path: '/api/nexus/packets/explorer?action=import_commit',
     method: 'POST',
     body: requestBody,
   });

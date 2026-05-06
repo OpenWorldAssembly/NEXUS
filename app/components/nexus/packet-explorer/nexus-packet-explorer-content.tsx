@@ -324,6 +324,7 @@ export function NexusPacketExplorerContent({
         searchValue={searchValue}
         onChangeSearchValue={onChangeSearchValue}
         onSelectHomeSubtab={onSelectHomeSubtab}
+        onOpenPacketInExplorer={onOpenPacketInExplorer}
       />
     );
   }

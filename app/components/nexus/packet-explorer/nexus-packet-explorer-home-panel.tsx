@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Text, TextInput, View } from 'react-native';
 
 import {
@@ -7,6 +8,7 @@ import {
   useNexusAppearance,
 } from '@app/components/nexus/nexus-ui';
 import { NexusPacketExplorerExportPanel } from '@app/components/nexus/packet-explorer/nexus-packet-explorer-export-panel';
+import { NexusPacketExplorerImportPanel } from '@app/components/nexus/packet-explorer/nexus-packet-explorer-import-panel';
 import type { PacketExplorerHomeSubtab } from '@runtime/nexus/packet-explorer-session';
 
 type NexusPacketExplorerHomePanelProps = {
@@ -16,15 +18,28 @@ type NexusPacketExplorerHomePanelProps = {
   searchValue: string;
   onChangeSearchValue: (value: string) => void;
   onSelectHomeSubtab: (subtab: PacketExplorerHomeSubtab) => void;
+  onOpenPacketInExplorer: (input: {
+    packetId: string;
+    preferredRevisionId?: string | null;
+    titleSnapshot?: string | null;
+    seedSummary?: {
+      family: string | null;
+      summary: string | null;
+      label: string | null;
+    } | null;
+  }) => void;
 };
 
 function NexusPacketExplorerSearchPanel({
   searchValue,
   onChangeSearchValue,
+  onActivateImportShortcut,
 }: Pick<
   NexusPacketExplorerHomePanelProps,
   'searchValue' | 'onChangeSearchValue'
->) {
+> & {
+  onActivateImportShortcut: (intent: 'packet' | 'bundle') => void;
+}) {
   const appearance = useNexusAppearance();
 
   return (
@@ -59,13 +74,11 @@ function NexusPacketExplorerSearchPanel({
           />
           <NexusActionButton
             label="Import packet"
-            disabled
-            featureStatusId="explorer.home.import_packet"
+            onPress={() => onActivateImportShortcut('packet')}
           />
           <NexusActionButton
             label="Import bundle"
-            disabled
-            featureStatusId="explorer.home.import_bundle"
+            onPress={() => onActivateImportShortcut('bundle')}
           />
           <NexusActionButton
             label="Open recent"
@@ -77,9 +90,8 @@ function NexusPacketExplorerSearchPanel({
 
       <NexusCard tone="gold">
         <Text className={appearance.itemBodyClass}>
-          Search and import remain visible but are not live in this export-first
-          phase. Use Library `Open packet` to inspect data and `Export` to open
-          the new portability workspace.
+          Search is still visible but not live in this phase. Use Import for
+          structural JSON ingest and Export for portability workflows.
         </Text>
       </NexusCard>
     </View>
@@ -93,18 +105,37 @@ export function NexusPacketExplorerHomePanel({
   searchValue,
   onChangeSearchValue,
   onSelectHomeSubtab,
+  onOpenPacketInExplorer,
 }: NexusPacketExplorerHomePanelProps) {
+  const [importShortcutIntent, setImportShortcutIntent] = useState<
+    'packet' | 'bundle' | null
+  >(null);
+
+  const handleActivateImportShortcut = (intent: 'packet' | 'bundle') => {
+    setImportShortcutIntent(intent);
+    onSelectHomeSubtab('import');
+  };
+
+  const handleSelectHomeSubtab = (subtab: PacketExplorerHomeSubtab) => {
+    if (subtab !== 'import') {
+      setImportShortcutIntent(null);
+    }
+
+    onSelectHomeSubtab(subtab);
+  };
+
   return (
     <View className="gap-4">
       <NexusAttachedTabRail
         tabs={[
           { id: 'search', title: 'Search' },
+          { id: 'import', title: 'Import' },
           { id: 'export', title: 'Export' },
         ]}
         activeId={activeHomeSubtab}
         compact
         onSelect={(tabId) =>
-          onSelectHomeSubtab(tabId as PacketExplorerHomeSubtab)
+          handleSelectHomeSubtab(tabId as PacketExplorerHomeSubtab)
         }
       />
 
@@ -112,6 +143,12 @@ export function NexusPacketExplorerHomePanel({
         <NexusPacketExplorerSearchPanel
           searchValue={searchValue}
           onChangeSearchValue={onChangeSearchValue}
+          onActivateImportShortcut={handleActivateImportShortcut}
+        />
+      ) : activeHomeSubtab === 'import' ? (
+        <NexusPacketExplorerImportPanel
+          shortcutIntent={importShortcutIntent}
+          onOpenPacketInExplorer={onOpenPacketInExplorer}
         />
       ) : (
         <NexusPacketExplorerExportPanel

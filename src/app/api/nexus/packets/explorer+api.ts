@@ -11,6 +11,11 @@ import {
   getNexusPacketExplorerExportPreview,
   parseNexusPacketExplorerExportRequest,
 } from '@runtime/nexus/server/nexus-packet-export';
+import {
+  getNexusPacketExplorerImportCommit,
+  getNexusPacketExplorerImportPreview,
+  parseNexusPacketExplorerImportRequest,
+} from '@runtime/nexus/server/nexus-packet-import';
 
 function createJsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -67,13 +72,14 @@ export const POST: RequestHandler = async (request) => {
   const action = requestUrl.searchParams.get('action');
 
   try {
-    const requestBody = parseNexusPacketExplorerExportRequest(
-      await request.json()
-    );
+    const requestBody = await request.json();
 
     if (action === 'export_download') {
-      const downloadPayload = await getNexusPacketExplorerExportDownload(
+      const exportRequestBody = parseNexusPacketExplorerExportRequest(
         requestBody
+      );
+      const downloadPayload = await getNexusPacketExplorerExportDownload(
+        exportRequestBody
       );
 
       return new Response(downloadPayload.bytes, {
@@ -86,11 +92,36 @@ export const POST: RequestHandler = async (request) => {
     }
 
     if (action === 'export_preview') {
-      const previewPayload = await getNexusPacketExplorerExportPreview(
+      const exportRequestBody = parseNexusPacketExplorerExportRequest(
         requestBody
+      );
+      const previewPayload = await getNexusPacketExplorerExportPreview(
+        exportRequestBody
       );
 
       return createJsonResponse(previewPayload);
+    }
+
+    if (action === 'import_preview') {
+      const importRequestBody = parseNexusPacketExplorerImportRequest(
+        requestBody
+      );
+      const previewPayload = await getNexusPacketExplorerImportPreview(
+        importRequestBody
+      );
+
+      return createJsonResponse(previewPayload);
+    }
+
+    if (action === 'import_commit') {
+      const importRequestBody = parseNexusPacketExplorerImportRequest(
+        requestBody
+      );
+      const commitPayload = await getNexusPacketExplorerImportCommit(
+        importRequestBody
+      );
+
+      return createJsonResponse(commitPayload);
     }
 
     return createJsonResponse(
@@ -103,7 +134,11 @@ export const POST: RequestHandler = async (request) => {
         ? error.message
         : action === 'export_download'
           ? 'Unable to download the Packet Explorer export.'
-          : 'Unable to preview the Packet Explorer export.';
+          : action === 'import_commit'
+            ? 'Unable to commit the Packet Explorer import.'
+            : action === 'import_preview'
+              ? 'Unable to preview the Packet Explorer import.'
+              : 'Unable to preview the Packet Explorer export.';
 
     return createJsonResponse({ error: message }, 400);
   }

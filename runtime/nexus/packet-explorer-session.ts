@@ -38,7 +38,7 @@ export type PacketExplorerPrimaryTab =
   (typeof PACKET_EXPLORER_PRIMARY_TABS)[number];
 
 export type PacketExplorerReadMode = 'raw' | 'adapted' | 'read_model';
-export const PACKET_EXPLORER_HOME_SUBTABS = ['search', 'export'] as const;
+export const PACKET_EXPLORER_HOME_SUBTABS = ['search', 'import', 'export'] as const;
 export type PacketExplorerHomeSubtab =
   (typeof PACKET_EXPLORER_HOME_SUBTABS)[number];
 

@@ -40,11 +40,12 @@ Library is the scoped browse surface.
 Packet Explorer is the inspect-and-traverse surface.
 
 - it opens as a shell-level overlay
-- it is still read-only for packet mutation, but its Home workspace now includes a live export workbench
+- it is still read-only for packet mutation, but its Home workspace now includes live import and export workbenches
 - it is separate from Library
 - it supports session-persistent tabs with an auto-created Home tab
-- its Home workspace now splits into `Search` and `Export` sub-tabs
+- its Home workspace now splits into `Search`, `Import`, and `Export` sub-tabs
 - `Search` currently preserves the existing placeholder lookup workspace for later phases
+- `Import` now supports two-step packet and bundle ingest through `Analyze` then `Commit`, with paste-first JSON input plus web-only `.json` file upload
 - `Export` now supports raw preferred-revision packet export, bounded bundle export, and full local-store bundle export
 - it now uses shared packet display-title normalization instead of exposing raw encoded packet ids as loaded titles where a human title can be derived
 - it supports `View as` inspection lenses for `Summary`, `Raw`, `Adapted`, and `Read Model`

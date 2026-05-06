@@ -31,12 +31,29 @@ export type NexusPacketExplorerBundleExportMode =
   | 'with_references_referrers_scope_stack'
   | 'full_store';
 
+export type NexusPacketExplorerImportArtifactType =
+  | 'raw_packet'
+  | 'bundle'
+  | 'revision_array';
+
+export type NexusPacketExplorerImportStatus =
+  | 'ready'
+  | 'duplicates_only'
+  | 'partial_risk'
+  | 'blocked'
+  | 'invalid_json';
+
 export interface NexusPacketExplorerExportRequest {
   artifact_mode: NexusPacketExplorerExportArtifactMode;
   root_packet_id?: string | null;
   bundle_mode?: NexusPacketExplorerBundleExportMode | null;
   title?: string | null;
   note?: string | null;
+}
+
+export interface NexusPacketExplorerImportRequest {
+  source_text: string;
+  file_name?: string | null;
 }
 
 export interface NexusPacketExplorerExportPreviewPayload {
@@ -53,6 +70,40 @@ export interface NexusPacketExplorerExportPreviewPayload {
   file_name: string;
   preview_suppressed: boolean;
   preview_json: string | null;
+}
+
+export interface NexusPacketExplorerImportPreviewPayload {
+  artifact_type: NexusPacketExplorerImportArtifactType | null;
+  bundle_version: string | number | null;
+  title: string | null;
+  note: string | null;
+  export_mode: string | null;
+  root_packet_refs: PacketRef[];
+  packet_count: number;
+  revision_count: number;
+  unique_packet_count: number;
+  unique_revision_count: number;
+  new_revision_count: number;
+  duplicate_revision_count: number;
+  affected_packet_count: number;
+  affected_packet_ids: string[];
+  missing_parent_count: number;
+  invalid_entry_count: number;
+  family_conflict_count: number;
+  status: NexusPacketExplorerImportStatus;
+  blocking_errors: string[];
+  warnings: string[];
+  open_packet_id: string | null;
+  source_file_name: string | null;
+}
+
+export interface NexusPacketExplorerImportCommitPayload
+  extends NexusPacketExplorerImportPreviewPayload {
+  committed: boolean;
+  imported_revision_count: number;
+  skipped_duplicate_count: number;
+  restored_preferred_packet_count: number;
+  diverged_packet_count: number;
 }
 
 export type NexusPacketExplorerSectionBasis =
