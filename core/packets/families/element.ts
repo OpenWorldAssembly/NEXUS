@@ -24,10 +24,16 @@ export const elementBuildDefinition: PacketFamilyBuildDefinition<
   ElementPacketInput
 > = {
   finalizeBody: (input) => ({
+    type: 'element',
     kind: input.kind,
     name: input.name,
     subtype: input.subtype ?? null,
     summary: input.summary ?? null,
+    scope_kind: input.scope_kind ?? null,
+    scope_system: input.scope_system ?? null,
+    status: input.status ?? null,
+    aliases: input.aliases ?? [],
+    display_aliases: input.display_aliases ?? [],
     locality_label: input.locality_label ?? null,
     locality: input.locality
       ? {
@@ -38,6 +44,7 @@ export const elementBuildDefinition: PacketFamilyBuildDefinition<
         }
       : null,
     identity: normalizeIdentity(input),
+    custody_hints: input.custody_hints ?? null,
     tags: input.tags ?? [],
     claimed_role_refs: input.claimed_role_refs ?? [],
   }),

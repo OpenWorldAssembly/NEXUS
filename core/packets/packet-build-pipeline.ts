@@ -4,29 +4,38 @@
  */
 
 import type {
+  ActionPacketInput,
   AttestationPacketInput,
+  CausePacketInput,
   ClaimPacketInput,
   DecisionPacketInput,
   DiscussionPacketInput,
   ElementPacketInput,
+  LocationPacketInput,
   PacketBuilderBaseInput,
   PolicyPacketInput,
   ProposalPacketInput,
+  RelationPacketInput,
   RolePacketInput,
   VotePacketInput,
 } from '@core/packets/builders';
+import { actionBuildDefinition } from '@core/packets/families/action';
 import { attestationBuildDefinition } from '@core/packets/families/attestation';
+import { causeBuildDefinition } from '@core/packets/families/cause';
 import { claimBuildDefinition } from '@core/packets/families/claim';
 import { decisionBuildDefinition } from '@core/packets/families/decision';
 import { discussionBuildDefinition } from '@core/packets/families/discussion';
 import { elementBuildDefinition } from '@core/packets/families/element';
+import { locationBuildDefinition } from '@core/packets/families/location';
 import { policyBuildDefinition } from '@core/packets/families/policy';
 import { proposalBuildDefinition } from '@core/packets/families/proposal';
+import { relationBuildDefinition } from '@core/packets/families/relation';
 import { roleBuildDefinition } from '@core/packets/families/role';
 import { voteBuildDefinition } from '@core/packets/families/vote';
 import { createInitialRevisionId } from '@core/packets/packet-build-helpers';
 import {
   createPacketEnvelope,
+  getPacketCurrentSchemaVersion,
   type PacketRef,
   type PacketEdge,
   type PacketEnvelopeByType,
@@ -128,12 +137,16 @@ type PacketBuildHeaderInput = {
 
 export const GENERIC_PACKET_BUILD_FAMILIES = [
   'Element',
+  'Location',
   'Role',
   'Claim',
+  'Relation',
   'Proposal',
   'Vote',
   'Attestation',
   'Decision',
+  'Cause',
+  'Action',
   'Discussion',
   'Policy',
 ] as const;
@@ -167,7 +180,8 @@ function finalizeBuiltPacket<TFamily extends PacketFamily>(input: {
       revision_id:
         input.header.revision_id ?? createInitialRevisionId(input.header.packet_id),
       family: input.family,
-      schema_version: input.header.schema_version,
+      schema_version:
+        input.header.schema_version ?? getPacketCurrentSchemaVersion(input.family),
       protocol_version: input.header.protocol_version,
       created_at: createdAt,
       parent_revision_refs: input.header.parent_revision_refs ?? [],
@@ -253,11 +267,17 @@ export function buildPacket(
   request: PacketBuildRequest<'Element', ElementPacketInput>
 ): PacketEnvelopeByType['Element'];
 export function buildPacket(
+  request: PacketBuildRequest<'Location', LocationPacketInput>
+): PacketEnvelopeByType['Location'];
+export function buildPacket(
   request: PacketBuildRequest<'Role', RolePacketInput>
 ): PacketEnvelopeByType['Role'];
 export function buildPacket(
   request: PacketBuildRequest<'Claim', ClaimPacketInput>
 ): PacketEnvelopeByType['Claim'];
+export function buildPacket(
+  request: PacketBuildRequest<'Relation', RelationPacketInput>
+): PacketEnvelopeByType['Relation'];
 export function buildPacket(
   request: PacketBuildRequest<'Proposal', ProposalPacketInput>
 ): PacketEnvelopeByType['Proposal'];
@@ -270,6 +290,12 @@ export function buildPacket(
 export function buildPacket(
   request: PacketBuildRequest<'Decision', DecisionPacketInput>
 ): PacketEnvelopeByType['Decision'];
+export function buildPacket(
+  request: PacketBuildRequest<'Cause', CausePacketInput>
+): PacketEnvelopeByType['Cause'];
+export function buildPacket(
+  request: PacketBuildRequest<'Action', ActionPacketInput>
+): PacketEnvelopeByType['Action'];
 export function buildPacket(
   request: PacketBuildRequest<'Discussion', DiscussionPacketInput>
 ): PacketEnvelopeByType['Discussion'];
@@ -285,6 +311,11 @@ export function buildPacket(
         request as PacketBuildRequest<'Element', ElementPacketInput>,
         elementBuildDefinition
       );
+    case 'Location':
+      return buildPacketWithDefinition(
+        request as PacketBuildRequest<'Location', LocationPacketInput>,
+        locationBuildDefinition
+      );
     case 'Role':
       return buildPacketWithDefinition(
         request as PacketBuildRequest<'Role', RolePacketInput>,
@@ -294,6 +325,11 @@ export function buildPacket(
       return buildPacketWithDefinition(
         request as PacketBuildRequest<'Claim', ClaimPacketInput>,
         claimBuildDefinition
+      );
+    case 'Relation':
+      return buildPacketWithDefinition(
+        request as PacketBuildRequest<'Relation', RelationPacketInput>,
+        relationBuildDefinition
       );
     case 'Proposal':
       return buildPacketWithDefinition(
@@ -314,6 +350,16 @@ export function buildPacket(
       return buildPacketWithDefinition(
         request as PacketBuildRequest<'Decision', DecisionPacketInput>,
         decisionBuildDefinition
+      );
+    case 'Cause':
+      return buildPacketWithDefinition(
+        request as PacketBuildRequest<'Cause', CausePacketInput>,
+        causeBuildDefinition
+      );
+    case 'Action':
+      return buildPacketWithDefinition(
+        request as PacketBuildRequest<'Action', ActionPacketInput>,
+        actionBuildDefinition
       );
     case 'Discussion':
       return buildPacketWithDefinition(

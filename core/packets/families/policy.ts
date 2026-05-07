@@ -38,6 +38,21 @@ export const policyBuildDefinition: PacketFamilyBuildDefinition<
           action_overrides: input.write_policy.action_overrides ?? {},
         }
       : null,
+    dependency_policy: input.dependency_policy
+      ? {
+          required_refs: input.dependency_policy.required_refs ?? [],
+          optional_refs: input.dependency_policy.optional_refs ?? [],
+          required_relation_subtypes:
+            input.dependency_policy.required_relation_subtypes ?? [],
+        }
+      : null,
+    alignment_policy: input.alignment_policy
+      ? {
+          required_cause_refs: input.alignment_policy.required_cause_refs ?? [],
+          accepted_relation_subtypes:
+            input.alignment_policy.accepted_relation_subtypes ?? [],
+        }
+      : null,
   }),
   prepareMetadataSummary: (input) =>
     input.summary ?? createTextExcerpt(input.body_markdown),

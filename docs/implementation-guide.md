@@ -65,3 +65,14 @@ The current product stack is still best understood as:
 - Document directory actions can render in a stacked layout so `Download .md` and disabled PDF placeholders do not overflow narrow cards.
 - The readable document view returned to one continuous card with an internal outline and section dividers, rather than giving each document section its own card.
 - The public footer now uses an opaque `bg-public-shell` background so it does not visually blend with scrolled content behind it.
+
+### Core schema stabilization for scopes, causes, actions, and relation claims (2026-05)
+
+- Forward ontology work should now describe packet shapes in `type/subtype` terms, even while `header.family` remains the compatibility wire field for live packets.
+- `Claim` remains meaningful as the assertional and disputable layer over relationships; it should not be treated as dead legacy just because `Relation` now exists as a broader connection substrate.
+- `Relation` is the forward home for actual adopted graph facts such as follows, dependency, policy adoption, locality definition, containment, overlap, and equivalence.
+- `Cause` is the forward coordination-purpose family and should absorb new initiative-style modeling through subtypes such as `initiative`, `campaign`, `program`, and `movement`.
+- `Action` is the forward execution family and should absorb mission-style modeling through subtypes such as `mission`, `task`, `event`, `operation`, `route`, and `delivery`.
+- `Location` is now a first-class packet family for portable spatial definitions rather than leaving all geographic structure embedded only inside `Element`.
+- Dependency and alignment requirements belong in `Policy`; the actual followed, adopted, or dependent links belong in `Relation`.
+- The current implementation only establishes schema, builders, compatibility adapters, and narrow read-model helpers for this ontology shift. Product workflows, dynamic scope-graph behavior, and locality-provider resolution remain a later consumer-migration chapter.

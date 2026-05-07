@@ -9,13 +9,17 @@ import { WRITE_PROOF_LEVELS } from '@core/auth/proof-types';
 
 export const PACKET_FAMILIES = [
   'Element',
+  'Location',
   'Role',
   'Claim',
+  'Relation',
   'Signal',
   'Proposal',
   'Vote',
   'Attestation',
   'Decision',
+  'Cause',
+  'Action',
   'Initiative',
   'Program',
   'Campaign',
@@ -39,8 +43,14 @@ export const ELEMENT_KINDS = [
   'team',
   'node',
   'person',
+  'locality',
   'organization',
   'service',
+  'working_group',
+  'digital_space',
+  'building',
+  'container',
+  'operator',
 ] as const;
 
 export const PERSON_CLAIM_STATUSES = [
@@ -106,6 +116,7 @@ export const CLAIM_KINDS = [
 ] as const;
 
 export const CLAIM_STATUSES = ['active', 'withdrawn'] as const;
+export const RELATION_STATUSES = ['active', 'inactive', 'withdrawn'] as const;
 
 export const TRUST_STAGES = [
   'self_claimed',
@@ -205,6 +216,7 @@ export const TrustStageSchema = z.enum(TRUST_STAGES);
 export const PacketRevisionModeSchema = z.enum(PACKET_REVISION_MODES);
 export const ClaimKindSchema = z.enum(CLAIM_KINDS);
 export const ClaimStatusSchema = z.enum(CLAIM_STATUSES);
+export const RelationStatusSchema = z.enum(RELATION_STATUSES);
 
 export type PacketFamily = z.infer<typeof PacketFamilySchema>;
 export type ElementKind = z.infer<typeof ElementKindSchema>;
@@ -223,6 +235,7 @@ export type TrustStage = z.infer<typeof TrustStageSchema>;
 export type PacketRevisionMode = z.infer<typeof PacketRevisionModeSchema>;
 export type ClaimKind = z.infer<typeof ClaimKindSchema>;
 export type ClaimStatus = z.infer<typeof ClaimStatusSchema>;
+export type RelationStatus = z.infer<typeof RelationStatusSchema>;
 export type PacketReadMode = (typeof PACKET_READ_MODES)[number];
 export type PacketAdaptationDirection =
   (typeof PACKET_ADAPTATION_DIRECTIONS)[number];
@@ -496,10 +509,16 @@ export const TemplateFieldSchema = z
 
 export const ElementBodySchema = z
   .object({
+    type: z.literal('element').default('element'),
     kind: ElementKindSchema,
     name: z.string().min(1),
     subtype: z.string().min(1).nullable().optional(),
     summary: z.string().min(1).nullable().optional(),
+    scope_kind: z.string().min(1).nullable().default(null),
+    scope_system: z.string().min(1).nullable().default(null),
+    status: z.string().min(1).nullable().default(null),
+    aliases: z.array(z.string().min(1)).default([]),
+    display_aliases: z.array(z.string().min(1)).default([]),
     locality_label: z.string().min(1).nullable().optional(),
     locality: z
       .object({
@@ -543,8 +562,25 @@ export const ElementBodySchema = z
       .strict()
       .nullable()
       .default(null),
+    custody_hints: z
+      .record(z.string(), z.unknown())
+      .nullable()
+      .default(null),
     tags: z.array(z.string().min(1)).default([]),
     claimed_role_refs: z.array(PacketRefSchema).default([]),
+  })
+  .strict();
+
+export const LocationBodySchema = z
+  .object({
+    type: z.literal('location').default('location'),
+    subtype: z.string().min(1),
+    title: z.string().min(1),
+    summary: z.string().min(1).nullable().optional(),
+    status: z.string().min(1).default('active'),
+    location_label: z.string().min(1).nullable().default(null),
+    descriptor_markdown: z.string().min(1).nullable().default(null),
+    spatial_payload: z.record(z.string(), z.unknown()).default({}),
   })
   .strict();
 
@@ -566,6 +602,23 @@ export const ClaimBodySchema = z
     scope_ref: PacketRefSchema,
     status: ClaimStatusSchema.default('active'),
     note: z.string().min(1).nullable().default(null),
+  })
+  .strict();
+
+export const RelationBodySchema = z
+  .object({
+    type: z.literal('relation').default('relation'),
+    subtype: z.string().min(1),
+    subject_ref: PacketRefSchema,
+    target_ref: PacketRefSchema,
+    scope_ref: PacketRefSchema.nullable().default(null),
+    status: RelationStatusSchema.default('active'),
+    policy_ref: PacketRefSchema.nullable().default(null),
+    terms_ref: PacketRefSchema.nullable().default(null),
+    supporting_refs: z.array(PacketRefSchema).default([]),
+    note: z.string().min(1).nullable().default(null),
+    effective_from: z.string().min(1).nullable().default(null),
+    effective_until: z.string().min(1).nullable().default(null),
   })
   .strict();
 
@@ -621,6 +674,34 @@ export const DecisionBodySchema = z
     outcome: z.string().min(1),
     proposal_ref: PacketRefSchema.nullable().optional(),
     vote_ref: PacketRefSchema.nullable().optional(),
+  })
+  .strict();
+
+export const CauseBodySchema = z
+  .object({
+    type: z.literal('cause').default('cause'),
+    subtype: z.string().min(1),
+    title: z.string().min(1),
+    summary: z.string().min(1).nullable().optional(),
+    status: z.string().min(1),
+    purpose_markdown: z.string().min(1).nullable().default(null),
+    policy_refs: z.array(PacketRefSchema).default([]),
+    template_refs: z.array(PacketRefSchema).default([]),
+    module_refs: z.array(PacketRefSchema).default([]),
+  })
+  .strict();
+
+export const ActionBodySchema = z
+  .object({
+    type: z.literal('action').default('action'),
+    subtype: z.string().min(1),
+    title: z.string().min(1),
+    summary: z.string().min(1).nullable().optional(),
+    status: z.string().min(1),
+    objective_markdown: z.string().min(1).nullable().default(null),
+    cause_refs: z.array(PacketRefSchema).default([]),
+    location_refs: z.array(PacketRefSchema).default([]),
+    action_refs: z.array(PacketRefSchema).default([]),
   })
   .strict();
 
@@ -757,6 +838,23 @@ export const PolicyBodySchema = z
       .object({
         default_proof_level: z.enum(WRITE_PROOF_LEVELS).default('session'),
         action_overrides: z.record(z.string().min(1), z.enum(WRITE_PROOF_LEVELS)).default({}),
+      })
+      .strict()
+      .nullable()
+      .default(null),
+    dependency_policy: z
+      .object({
+        required_refs: z.array(PacketRefSchema).default([]),
+        optional_refs: z.array(PacketRefSchema).default([]),
+        required_relation_subtypes: z.array(z.string().min(1)).default([]),
+      })
+      .strict()
+      .nullable()
+      .default(null),
+    alignment_policy: z
+      .object({
+        required_cause_refs: z.array(PacketRefSchema).default([]),
+        accepted_relation_subtypes: z.array(z.string().min(1)).default([]),
       })
       .strict()
       .nullable()
@@ -928,13 +1026,17 @@ export const ArtifactBodySchema = z
 
 export const PACKET_BODY_SCHEMAS = {
   Element: ElementBodySchema,
+  Location: LocationBodySchema,
   Role: RoleBodySchema,
   Claim: ClaimBodySchema,
+  Relation: RelationBodySchema,
   Signal: SignalBodySchema,
   Proposal: ProposalBodySchema,
   Vote: VoteBodySchema,
   Attestation: AttestationBodySchema,
   Decision: DecisionBodySchema,
+  Cause: CauseBodySchema,
+  Action: ActionBodySchema,
   Initiative: InitiativeBodySchema,
   Program: ProgramBodySchema,
   Campaign: CampaignBodySchema,
@@ -986,13 +1088,17 @@ export interface RawPacketEnvelopeInput {
 
 export const PACKET_FAMILY_REVISION_MODES = {
   Element: 'replaceable',
+  Location: 'replaceable',
   Role: 'replaceable',
   Claim: 'replaceable',
+  Relation: 'replaceable',
   Signal: 'append_only',
   Proposal: 'replaceable',
   Vote: 'append_only',
   Attestation: 'append_only',
   Decision: 'append_only',
+  Cause: 'replaceable',
+  Action: 'replaceable',
   Initiative: 'replaceable',
   Program: 'replaceable',
   Campaign: 'replaceable',
@@ -1096,14 +1202,29 @@ const RawPacketEnvelopeInputSchema = z
   })
   .strict();
 
-const LegacyElementBodySchema = ElementBodySchema.omit({
+const ElementBodySchemaV1_0 = ElementBodySchema.omit({
+  type: true,
+  scope_kind: true,
+  scope_system: true,
+  status: true,
+  aliases: true,
+  display_aliases: true,
+  custody_hints: true,
+});
+
+const LegacyElementBodySchema = ElementBodySchemaV1_0.omit({
   claimed_role_refs: true,
   locality: true,
 }).extend({
   claimed_role_refs: z.array(PacketRefSchema).optional(),
 });
 
-const LegacyPolicyBodySchema = PolicyBodySchema.omit({
+const PolicyBodySchemaV1_0 = PolicyBodySchema.omit({
+  dependency_policy: true,
+  alignment_policy: true,
+});
+
+const LegacyPolicyBodySchema = PolicyBodySchemaV1_0.omit({
   trust_policy: true,
   write_policy: true,
 }).extend({
@@ -1122,6 +1243,23 @@ const LegacyPolicyBodySchema = PolicyBodySchema.omit({
     .object({
       default_proof_level: z.enum(WRITE_PROOF_LEVELS).default('session'),
       action_overrides: z.record(z.string().min(1), z.enum(WRITE_PROOF_LEVELS)).default({}),
+    })
+    .strict()
+    .nullable()
+    .optional(),
+  dependency_policy: z
+    .object({
+      required_refs: z.array(PacketRefSchema).default([]),
+      optional_refs: z.array(PacketRefSchema).default([]),
+      required_relation_subtypes: z.array(z.string().min(1)).default([]),
+    })
+    .strict()
+    .nullable()
+    .optional(),
+  alignment_policy: z
+    .object({
+      required_cause_refs: z.array(PacketRefSchema).default([]),
+      accepted_relation_subtypes: z.array(z.string().min(1)).default([]),
     })
     .strict()
     .nullable()
@@ -1194,11 +1332,82 @@ function bodyHasOwnProperty(body: unknown, key: string): boolean {
   return isRecord(body) && Object.prototype.hasOwnProperty.call(body, key);
 }
 
-function stripCurrentElementCompatibilityFields(
+function stripElementV1_1CompatibilityFields(
   body: Record<string, unknown>
 ): Record<string, unknown> | null {
   let nextBody = body;
   let changed = false;
+
+  if (
+    Object.prototype.hasOwnProperty.call(nextBody, 'type') &&
+    nextBody.type === 'element'
+  ) {
+    const { type: _type, ...withoutType } = nextBody;
+    nextBody = withoutType;
+    changed = true;
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(nextBody, 'scope_kind') &&
+    nextBody.scope_kind === null
+  ) {
+    const { scope_kind: _scopeKind, ...withoutScopeKind } = nextBody;
+    nextBody = withoutScopeKind;
+    changed = true;
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(nextBody, 'scope_system') &&
+    nextBody.scope_system === null
+  ) {
+    const { scope_system: _scopeSystem, ...withoutScopeSystem } = nextBody;
+    nextBody = withoutScopeSystem;
+    changed = true;
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(nextBody, 'status') &&
+    nextBody.status === null
+  ) {
+    const { status: _status, ...withoutStatus } = nextBody;
+    nextBody = withoutStatus;
+    changed = true;
+  }
+
+  if (Array.isArray(nextBody.aliases) && nextBody.aliases.length === 0) {
+    const { aliases: _aliases, ...withoutAliases } = nextBody;
+    nextBody = withoutAliases;
+    changed = true;
+  }
+
+  if (
+    Array.isArray(nextBody.display_aliases) &&
+    nextBody.display_aliases.length === 0
+  ) {
+    const { display_aliases: _displayAliases, ...withoutDisplayAliases } =
+      nextBody;
+    nextBody = withoutDisplayAliases;
+    changed = true;
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(nextBody, 'custody_hints') &&
+    nextBody.custody_hints === null
+  ) {
+    const { custody_hints: _custodyHints, ...withoutCustodyHints } = nextBody;
+    nextBody = withoutCustodyHints;
+    changed = true;
+  }
+
+  return changed ? nextBody : null;
+}
+
+function stripElementV1_0CompatibilityFields(
+  body: Record<string, unknown>
+): Record<string, unknown> | null {
+  const v11StrippedBody = stripElementV1_1CompatibilityFields(body) ?? body;
+  let nextBody = v11StrippedBody;
+  let changed = nextBody !== body;
 
   if (
     Array.isArray(nextBody.claimed_role_refs) &&
@@ -1236,11 +1445,41 @@ function stripCurrentClaimCompatibilityFields(
   return null;
 }
 
-function stripCurrentPolicyCompatibilityFields(
+function stripPolicyV1_1CompatibilityFields(
   body: Record<string, unknown>
 ): Record<string, unknown> | null {
   let nextBody = body;
   let changed = false;
+
+  if (
+    Object.prototype.hasOwnProperty.call(nextBody, 'dependency_policy') &&
+    nextBody.dependency_policy === null
+  ) {
+    const { dependency_policy: _dependencyPolicy, ...withoutDependencyPolicy } =
+      nextBody;
+    nextBody = withoutDependencyPolicy;
+    changed = true;
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(nextBody, 'alignment_policy') &&
+    nextBody.alignment_policy === null
+  ) {
+    const { alignment_policy: _alignmentPolicy, ...withoutAlignmentPolicy } =
+      nextBody;
+    nextBody = withoutAlignmentPolicy;
+    changed = true;
+  }
+
+  return changed ? nextBody : null;
+}
+
+function stripPolicyV1_0CompatibilityFields(
+  body: Record<string, unknown>
+): Record<string, unknown> | null {
+  const v11StrippedBody = stripPolicyV1_1CompatibilityFields(body) ?? body;
+  let nextBody = v11StrippedBody;
+  let changed = nextBody !== body;
 
   if (
     Object.prototype.hasOwnProperty.call(nextBody, 'trust_policy') &&
@@ -1265,7 +1504,7 @@ function stripCurrentPolicyCompatibilityFields(
 
 export const PACKET_COMPATIBILITY_REGISTRY = {
   Element: {
-    current_schema_version: DEFAULT_SCHEMA_VERSION,
+    current_schema_version: '1.1.0',
     revision_mode: PACKET_FAMILY_REVISION_MODES.Element,
     support_level: 'legacy_supported',
     write_target_policy: 'supported_versions',
@@ -1278,7 +1517,7 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
         matchesDeclaredCurrentBodyShape: (body) =>
           !bodyHasOwnProperty(body, 'claimed_role_refs') ||
           !bodyHasOwnProperty(body, 'locality'),
-        next_schema_version: DEFAULT_SCHEMA_VERSION,
+        next_schema_version: '1.0.0',
         adaptToNext: (body) => {
           const legacyBody = body as z.infer<typeof LegacyElementBodySchema>;
           const changes: PacketAdaptationChange[] = [];
@@ -1303,7 +1542,7 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
               fromSchemaVersion: '0.9.0',
               toSchemaVersion: DEFAULT_SCHEMA_VERSION,
               message:
-                'Added locality field with null default for canonical Element compatibility.',
+                  'Added locality field with null default for canonical Element compatibility.',
             })
           );
 
@@ -1316,45 +1555,41 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
             changes,
           };
         },
-        createUnsignedPacketCandidate: (packet) => {
-          const body = packet.body as Record<string, unknown>;
-          const nextBody = stripCurrentElementCompatibilityFields(body);
-
-          if (!nextBody) {
-            return null;
-          }
-
-          return {
-            ...packet,
-            body: nextBody,
-          } as PacketEnvelopeByType['Element'];
-        },
       },
-      [DEFAULT_SCHEMA_VERSION]: {
+      '1.0.0': {
         parseBody: (body) => {
           rejectHeaderBodyCollisions(body, 'Element');
-          return ElementBodySchema.parse(body);
+          return ElementBodySchemaV1_0.parse(body);
         },
+        matchesDeclaredCurrentBodyShape: (body) =>
+          bodyHasOwnProperty(body, 'claimed_role_refs') &&
+          bodyHasOwnProperty(body, 'locality') &&
+          (!bodyHasOwnProperty(body, 'type') ||
+            !bodyHasOwnProperty(body, 'scope_kind') ||
+            !bodyHasOwnProperty(body, 'scope_system') ||
+            !bodyHasOwnProperty(body, 'status') ||
+            !bodyHasOwnProperty(body, 'aliases') ||
+            !bodyHasOwnProperty(body, 'display_aliases') ||
+            !bodyHasOwnProperty(body, 'custody_hints')),
         previous_schema_version: '0.9.0',
         adaptToPrevious: (body) => {
-          const currentBody = ElementBodySchema.parse(body);
-          const currentBodyRecord = currentBody as Record<string, unknown>;
-          const strippedBody =
-            stripCurrentElementCompatibilityFields(currentBodyRecord);
-          const nextBody =
-            (strippedBody ?? currentBodyRecord) as Record<string, unknown>;
+          const currentBody = ElementBodySchemaV1_0.parse(body);
+          const nextBody = stripElementV1_0CompatibilityFields(
+            currentBody as Record<string, unknown>
+          );
           const losses: PacketAdaptationLoss[] = [];
 
           if (
-            Object.prototype.hasOwnProperty.call(nextBody, 'locality') &&
-            nextBody.locality !== null
+            Object.prototype.hasOwnProperty.call(nextBody ?? currentBody, 'locality') &&
+            (nextBody ?? currentBody as Record<string, unknown>).locality !== null
           ) {
-            const { locality: _locality, ...withoutLocality } = nextBody;
+            const bodyRecord = (nextBody ?? currentBody) as Record<string, unknown>;
+            const { locality: _locality, ...withoutLocality } = bodyRecord;
             losses.push(
               createAdaptationLoss({
                 kind: 'unsupported_target_feature_omission',
                 path: 'body.locality',
-                fromSchemaVersion: DEFAULT_SCHEMA_VERSION,
+                fromSchemaVersion: '1.0.0',
                 toSchemaVersion: '0.9.0',
                 message:
                   'Dropped non-null locality metadata because schema version 0.9.0 does not support Element locality.',
@@ -1374,8 +1609,115 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
             losses,
           };
         },
+        next_schema_version: '1.1.0',
+        adaptToNext: (body) => {
+          const currentBody = ElementBodySchemaV1_0.parse(body);
+
+          return {
+            body: {
+              type: 'element',
+              ...currentBody,
+              scope_kind: null,
+              scope_system: null,
+              status: null,
+              aliases: [],
+              display_aliases: [],
+              custody_hints: null,
+            },
+            changes: [
+              createAdaptationChange({
+                kind: 'added_default_field',
+                path: 'body.type',
+                fromSchemaVersion: '1.0.0',
+                toSchemaVersion: '1.1.0',
+                message:
+                  'Added canonical element type field for forward ontology compatibility.',
+              }),
+              createAdaptationChange({
+                kind: 'normalized_null_default',
+                path: 'body.scope_kind',
+                fromSchemaVersion: '1.0.0',
+                toSchemaVersion: '1.1.0',
+                message:
+                  'Added scope_kind field with null default for forward scope compatibility.',
+              }),
+              createAdaptationChange({
+                kind: 'normalized_null_default',
+                path: 'body.scope_system',
+                fromSchemaVersion: '1.0.0',
+                toSchemaVersion: '1.1.0',
+                message:
+                  'Added scope_system field with null default for forward scope compatibility.',
+              }),
+              createAdaptationChange({
+                kind: 'normalized_null_default',
+                path: 'body.status',
+                fromSchemaVersion: '1.0.0',
+                toSchemaVersion: '1.1.0',
+                message:
+                  'Added status field with null default for forward entity compatibility.',
+              }),
+              createAdaptationChange({
+                kind: 'added_default_field',
+                path: 'body.aliases',
+                fromSchemaVersion: '1.0.0',
+                toSchemaVersion: '1.1.0',
+                message:
+                  'Added empty aliases array for forward element compatibility.',
+              }),
+              createAdaptationChange({
+                kind: 'added_default_field',
+                path: 'body.display_aliases',
+                fromSchemaVersion: '1.0.0',
+                toSchemaVersion: '1.1.0',
+                message:
+                  'Added empty display_aliases array for forward element compatibility.',
+              }),
+              createAdaptationChange({
+                kind: 'normalized_null_default',
+                path: 'body.custody_hints',
+                fromSchemaVersion: '1.0.0',
+                toSchemaVersion: '1.1.0',
+                message:
+                  'Added custody_hints field with null default for forward element compatibility.',
+              }),
+            ],
+          };
+        },
         createUnsignedPacketCandidate: (packet) => {
-          const nextBody = stripCurrentElementCompatibilityFields(
+          const nextBody = stripElementV1_0CompatibilityFields(
+            packet.body as Record<string, unknown>
+          );
+
+          if (!nextBody) {
+            return null;
+          }
+
+          return {
+            ...packet,
+            body: nextBody,
+          } as PacketEnvelopeByType['Element'];
+        },
+      },
+      '1.1.0': {
+        parseBody: (body) => {
+          rejectHeaderBodyCollisions(body, 'Element');
+          return ElementBodySchema.parse(body);
+        },
+        previous_schema_version: '1.0.0',
+        adaptToPrevious: (body) => {
+          const currentBody = ElementBodySchema.parse(body);
+          const nextBody = stripElementV1_0CompatibilityFields(
+            currentBody as Record<string, unknown>
+          );
+          return {
+            body: nextBody ?? currentBody,
+            changes: [],
+            losses: [],
+          };
+        },
+        createUnsignedPacketCandidate: (packet) => {
+          const nextBody = stripElementV1_0CompatibilityFields(
             packet.body as Record<string, unknown>
           );
 
@@ -1392,6 +1734,7 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
     },
   },
   Role: createDefaultCompatibilityEntry('Role'),
+  Location: createDefaultCompatibilityEntry('Location'),
   Claim: {
     current_schema_version: DEFAULT_SCHEMA_VERSION,
     revision_mode: PACKET_FAMILY_REVISION_MODES.Claim,
@@ -1464,11 +1807,14 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
       },
     },
   },
+  Relation: createDefaultCompatibilityEntry('Relation'),
   Signal: createDefaultCompatibilityEntry('Signal'),
   Proposal: createDefaultCompatibilityEntry('Proposal'),
   Vote: createDefaultCompatibilityEntry('Vote'),
   Attestation: createDefaultCompatibilityEntry('Attestation'),
   Decision: createDefaultCompatibilityEntry('Decision'),
+  Cause: createDefaultCompatibilityEntry('Cause'),
+  Action: createDefaultCompatibilityEntry('Action'),
   Initiative: createDefaultCompatibilityEntry('Initiative'),
   Program: createDefaultCompatibilityEntry('Program'),
   Campaign: createDefaultCompatibilityEntry('Campaign'),
@@ -1477,7 +1823,7 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
   MissionReport: createDefaultCompatibilityEntry('MissionReport'),
   Module: createDefaultCompatibilityEntry('Module'),
   Policy: {
-    current_schema_version: DEFAULT_SCHEMA_VERSION,
+    current_schema_version: '1.1.0',
     revision_mode: PACKET_FAMILY_REVISION_MODES.Policy,
     support_level: 'legacy_supported',
     write_target_policy: 'supported_versions',
@@ -1490,7 +1836,7 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
         matchesDeclaredCurrentBodyShape: (body) =>
           !bodyHasOwnProperty(body, 'trust_policy') ||
           !bodyHasOwnProperty(body, 'write_policy'),
-        next_schema_version: DEFAULT_SCHEMA_VERSION,
+        next_schema_version: '1.0.0',
         adaptToNext: (body) => {
           const legacyBody = body as z.infer<typeof LegacyPolicyBodySchema>;
 
@@ -1530,15 +1876,83 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
           };
         },
       },
-      [DEFAULT_SCHEMA_VERSION]: {
+      '1.0.0': {
+        parseBody: (body) => {
+          rejectHeaderBodyCollisions(body, 'Policy');
+          return PolicyBodySchemaV1_0.parse(body);
+        },
+        matchesDeclaredCurrentBodyShape: (body) =>
+          bodyHasOwnProperty(body, 'trust_policy') &&
+          bodyHasOwnProperty(body, 'write_policy') &&
+          (!bodyHasOwnProperty(body, 'dependency_policy') ||
+            !bodyHasOwnProperty(body, 'alignment_policy')),
+        previous_schema_version: '0.9.0',
+        adaptToPrevious: (body) => {
+          const currentBody = PolicyBodySchemaV1_0.parse(body);
+          const nextBody = stripPolicyV1_0CompatibilityFields(
+            currentBody as Record<string, unknown>
+          );
+
+          return {
+            body: nextBody ?? currentBody,
+            changes: [],
+            losses: [],
+          };
+        },
+        next_schema_version: '1.1.0',
+        adaptToNext: (body) => {
+          const currentBody = PolicyBodySchemaV1_0.parse(body);
+
+          return {
+            body: {
+              ...currentBody,
+              dependency_policy: null,
+              alignment_policy: null,
+            },
+            changes: [
+              createAdaptationChange({
+                kind: 'normalized_null_default',
+                path: 'body.dependency_policy',
+                fromSchemaVersion: '1.0.0',
+                toSchemaVersion: '1.1.0',
+                message:
+                  'Normalized missing dependency_policy field to explicit null.',
+              }),
+              createAdaptationChange({
+                kind: 'normalized_null_default',
+                path: 'body.alignment_policy',
+                fromSchemaVersion: '1.0.0',
+                toSchemaVersion: '1.1.0',
+                message:
+                  'Normalized missing alignment_policy field to explicit null.',
+              }),
+            ],
+          };
+        },
+        createUnsignedPacketCandidate: (packet) => {
+          const nextBody = stripPolicyV1_0CompatibilityFields(
+            packet.body as Record<string, unknown>
+          );
+
+          if (!nextBody) {
+            return null;
+          }
+
+          return {
+            ...packet,
+            body: nextBody,
+          } as PacketEnvelopeByType['Policy'];
+        },
+      },
+      '1.1.0': {
         parseBody: (body) => {
           rejectHeaderBodyCollisions(body, 'Policy');
           return PolicyBodySchema.parse(body);
         },
-        previous_schema_version: '0.9.0',
+        previous_schema_version: '1.0.0',
         adaptToPrevious: (body) => {
           const currentBody = PolicyBodySchema.parse(body);
-          const nextBody = stripCurrentPolicyCompatibilityFields(
+          const nextBody = stripPolicyV1_0CompatibilityFields(
             currentBody as Record<string, unknown>
           );
 
@@ -1549,7 +1963,7 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
           };
         },
         createUnsignedPacketCandidate: (packet) => {
-          const nextBody = stripCurrentPolicyCompatibilityFields(
+          const nextBody = stripPolicyV1_0CompatibilityFields(
             packet.body as Record<string, unknown>
           );
 
@@ -1655,17 +2069,27 @@ function resolveEffectiveSourceSchemaVersion<TFamily extends PacketFamily>(input
 }): string {
   const familyEntry = PACKET_COMPATIBILITY_REGISTRY[input.family];
 
-  if (input.declaredSchemaVersion !== familyEntry.current_schema_version) {
+  if (
+    !Object.prototype.hasOwnProperty.call(
+      familyEntry.versions,
+      input.declaredSchemaVersion
+    )
+  ) {
     return input.declaredSchemaVersion;
   }
 
-  for (const [schemaVersion, versionDefinition] of Object.entries(
-    familyEntry.versions
-  )) {
-    if (
-      schemaVersion !== familyEntry.current_schema_version &&
-      versionDefinition.matchesDeclaredCurrentBodyShape?.(input.body)
-    ) {
+  const candidateVersions = Object.keys(familyEntry.versions)
+    .filter(
+      (schemaVersion) =>
+        schemaVersion !== input.declaredSchemaVersion &&
+        schemaVersion.localeCompare(input.declaredSchemaVersion) < 0
+    )
+    .sort((left, right) => right.localeCompare(left));
+
+  for (const schemaVersion of candidateVersions) {
+    const versionDefinition = familyEntry.versions[schemaVersion];
+
+    if (versionDefinition?.matchesDeclaredCurrentBodyShape?.(input.body)) {
       return schemaVersion;
     }
   }

@@ -69,7 +69,7 @@ export const PACKET_PIPELINE_INVENTORY: Record<
   PacketPipelineInventoryEntry
 > = {
   Element: createEntry('Element', {
-    canonical_structure: 'Element(kind)',
+    canonical_structure: 'Element(type, subtype, legacy kind)',
     builder_path:
       'core/packets/packet-build-pipeline.ts + core/packets/families/element.ts',
     compatibility_stance: 'bidirectional_supported',
@@ -85,6 +85,24 @@ export const PACKET_PIPELINE_INVENTORY: Record<
     family_evolution_status: 'none',
     read_model_status: 'declared',
     next_migration_step: 'Keep Element as the identity proof family while later runtime read models converge.',
+  }),
+  Location: createEntry('Location', {
+    canonical_structure: 'Location(type, subtype)',
+    builder_path:
+      'core/packets/packet-build-pipeline.ts + core/packets/families/location.ts',
+    compatibility_stance: 'current_only',
+    read_projection_path:
+      'core/projections/forward-ontology.ts + future runtime scope/location read helpers',
+    ui_consumers: [],
+    write_paths: ['Forward packet builders only'],
+    known_manual_assumptions: [
+      'Location is a new forward family and is not yet surfaced directly in Nexus UI.',
+    ],
+    builder_pipeline_status: 'production',
+    same_family_adapter_status: 'tested',
+    family_evolution_status: 'none',
+    read_model_status: 'declared',
+    next_migration_step: 'Use Location as the portable spatial definition family before broader locality/runtime consumer migration.',
   }),
   Role: createEntry('Role', {
     canonical_structure: 'Role',
@@ -102,7 +120,7 @@ export const PACKET_PIPELINE_INVENTORY: Record<
     next_migration_step: 'Keep current-only compatibility unless older signed role packets become a live migration concern.',
   }),
   Claim: createEntry('Claim', {
-    canonical_structure: 'Claim(kind)',
+    canonical_structure: 'Claim(claim_kind, relation assertion)',
     builder_path:
       'core/packets/packet-build-pipeline.ts + core/packets/families/claim.ts',
     compatibility_stance: 'bidirectional_supported',
@@ -118,6 +136,24 @@ export const PACKET_PIPELINE_INVENTORY: Record<
     family_evolution_status: 'none',
     read_model_status: 'declared',
     next_migration_step: 'Keep Claim as the scoped-association proof family while downstream runtime surfaces mature.',
+  }),
+  Relation: createEntry('Relation', {
+    canonical_structure: 'Relation(type, subtype)',
+    builder_path:
+      'core/packets/packet-build-pipeline.ts + core/packets/families/relation.ts',
+    compatibility_stance: 'current_only',
+    read_projection_path:
+      'core/projections/forward-ontology.ts + runtime/nexus/server/claim-utils.ts',
+    ui_consumers: [],
+    write_paths: ['Forward packet builders only'],
+    known_manual_assumptions: [
+      'Relation is the forward connective family, while Claim remains the current assertional layer.',
+    ],
+    builder_pipeline_status: 'production',
+    same_family_adapter_status: 'tested',
+    family_evolution_status: 'none',
+    read_model_status: 'declared',
+    next_migration_step: 'Route new relation-aware read models through Relation while keeping Claim interoperable during migration.',
   }),
   Signal: createReservedEntry('Signal', 'Family reserved but not actively surfaced.'),
   Proposal: createEntry('Proposal', {
@@ -186,24 +222,97 @@ export const PACKET_PIPELINE_INVENTORY: Record<
     read_model_status: 'none',
     next_migration_step: 'Keep current-only compatibility until formal governance workflows require versioned Decision packets.',
   }),
-  Initiative: createReservedEntry('Initiative', 'Family reserved but not actively surfaced.'),
-  Program: createReservedEntry('Program', 'Family reserved but not actively surfaced.'),
-  Campaign: createReservedEntry('Campaign', 'Family reserved but not actively surfaced.'),
+  Cause: createEntry('Cause', {
+    canonical_structure: 'Cause(type, subtype)',
+    builder_path:
+      'core/packets/packet-build-pipeline.ts + core/packets/families/cause.ts',
+    compatibility_stance: 'current_only',
+    read_projection_path: 'core/projections/forward-ontology.ts',
+    ui_consumers: [],
+    write_paths: ['Forward packet builders only'],
+    known_manual_assumptions: [
+      'Cause is the forward purpose/alignment family; legacy initiative-family packets remain readable separately.',
+    ],
+    builder_pipeline_status: 'production',
+    same_family_adapter_status: 'tested',
+    family_evolution_status: 'none',
+    read_model_status: 'declared',
+    next_migration_step: 'Use Cause as the forward home for initiative/campaign/program semantics before UI/workflow rollout.',
+  }),
+  Action: createEntry('Action', {
+    canonical_structure: 'Action(type, subtype)',
+    builder_path:
+      'core/packets/packet-build-pipeline.ts + core/packets/families/action.ts',
+    compatibility_stance: 'current_only',
+    read_projection_path: 'core/projections/forward-ontology.ts',
+    ui_consumers: [],
+    write_paths: ['Forward packet builders only'],
+    known_manual_assumptions: [
+      'Action is the forward execution family; legacy mission-family packets remain readable separately.',
+    ],
+    builder_pipeline_status: 'production',
+    same_family_adapter_status: 'tested',
+    family_evolution_status: 'none',
+    read_model_status: 'declared',
+    next_migration_step: 'Use Action as the forward home for mission/task/event semantics before workflow rollout.',
+  }),
+  Initiative: createEntry('Initiative', {
+    canonical_structure: 'Legacy initiative packet',
+    builder_path: 'none',
+    compatibility_stance: 'forward_only',
+    read_projection_path: 'core/projections/forward-ontology.ts cause projection bridge',
+    ui_consumers: [],
+    write_paths: ['Legacy read compatibility only'],
+    known_manual_assumptions: ['Legacy family retained as migration input while Cause becomes the forward vocabulary.'],
+    builder_pipeline_status: 'none',
+    same_family_adapter_status: 'declared',
+    family_evolution_status: 'declared',
+    read_model_status: 'declared',
+    next_migration_step: 'Project legacy Initiative packets into Cause(subtype: initiative) reads and avoid new forward writes here.',
+  }),
+  Program: createEntry('Program', {
+    canonical_structure: 'Legacy program packet',
+    builder_path: 'none',
+    compatibility_stance: 'forward_only',
+    read_projection_path: 'core/projections/forward-ontology.ts cause projection bridge',
+    ui_consumers: [],
+    write_paths: ['Legacy read compatibility only'],
+    known_manual_assumptions: ['Legacy family retained as migration input while Cause becomes the forward vocabulary.'],
+    builder_pipeline_status: 'none',
+    same_family_adapter_status: 'declared',
+    family_evolution_status: 'declared',
+    read_model_status: 'declared',
+    next_migration_step: 'Project legacy Program packets into Cause(subtype: program) reads and avoid new forward writes here.',
+  }),
+  Campaign: createEntry('Campaign', {
+    canonical_structure: 'Legacy campaign packet',
+    builder_path: 'none',
+    compatibility_stance: 'forward_only',
+    read_projection_path: 'core/projections/forward-ontology.ts cause projection bridge',
+    ui_consumers: [],
+    write_paths: ['Legacy read compatibility only'],
+    known_manual_assumptions: ['Legacy family retained as migration input while Cause becomes the forward vocabulary.'],
+    builder_pipeline_status: 'none',
+    same_family_adapter_status: 'declared',
+    family_evolution_status: 'declared',
+    read_model_status: 'declared',
+    next_migration_step: 'Project legacy Campaign packets into Cause(subtype: campaign) reads and avoid new forward writes here.',
+  }),
   MissionTemplate: createReservedEntry(
     'MissionTemplate',
-    'Mission family is not part of active Nexus flows yet.'
+    'Legacy mission-family packet retained as migration input while Action becomes the forward vocabulary.'
   ),
   MissionPlan: createReservedEntry(
     'MissionPlan',
-    'Mission family is not part of active Nexus flows yet.'
+    'Legacy mission-family packet retained as migration input while Action becomes the forward vocabulary.'
   ),
   MissionReport: createReservedEntry(
     'MissionReport',
-    'Mission family is not part of active Nexus flows yet.'
+    'Legacy mission-family packet retained as migration input while Action becomes the forward vocabulary.'
   ),
   Module: createReservedEntry('Module', 'Family reserved but not actively surfaced.'),
   Policy: createEntry('Policy', {
-    canonical_structure: 'Policy(kind)',
+    canonical_structure: 'Policy(kind, requirement domains)',
     builder_path:
       'core/packets/packet-build-pipeline.ts + core/packets/families/policy.ts',
     compatibility_stance: 'bidirectional_supported',

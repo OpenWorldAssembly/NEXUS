@@ -67,3 +67,12 @@ Current source split:
 - Reader outline items scroll within the public page shell rather than using browser-level document scrolling.
 - Markdown downloads use static files generated into `public/downloads/` and should be triggered as browser downloads on web.
 - PDF actions remain disabled placeholders until the PDF pipeline is added.
+
+### Core packet ontology foundation
+
+- `core/schema/packet-schema.ts` now supports four additional forward packet families: `Cause`, `Action`, `Relation`, and `Location`.
+- `Element` bodies now support broader scope/entity metadata, including `type`, `scope_kind`, `scope_system`, `status`, alias arrays, and optional custody hints, while preserving legacy locality and identity fields.
+- `Policy` bodies now support structured `dependency_policy` and `alignment_policy` sections in addition to the older trust and write policy fields.
+- `core/packets/*` now includes forward builders and family-owned build definitions for `Cause`, `Action`, `Relation`, and `Location`.
+- `core/projections/forward-ontology.ts` provides narrow forward projections so legacy `Initiative` / `Program` / `Campaign` packets can be read as cause-shaped projections, mission-family packets can be read as action-shaped projections, and claim packets can be read as relation assertions.
+- Existing stored packet families remain readable through compatibility handling; this pass does not add new routes or visible product workflows.

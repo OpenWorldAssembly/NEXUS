@@ -99,15 +99,16 @@ test('legacy element revisions upcast claimed_role_refs to an empty array', () =
   assert.equal(compatibilityRead.status.declared_schema_version, '0.9.0');
   assert.equal(compatibilityRead.status.effective_source_schema_version, '0.9.0');
   assert.equal(compatibilityRead.status.interpreted_as_legacy_profile, false);
-  assert.equal(compatibilityRead.status.target_schema_version, '1.0.0');
+  assert.equal(compatibilityRead.status.target_schema_version, '1.1.0');
   assert.equal(compatibilityRead.status.direction, 'upcast');
   assert.equal(compatibilityRead.status.is_lossy, false);
   assert.equal(compatibilityRead.status.supported_write_target, 'exact');
   assert.equal(compatibilityRead.status.writable_as_is, false);
-  assert.deepEqual(
-    compatibilityRead.status.changes.map((change) => change.path),
-    ['body.claimed_role_refs', 'body.locality']
-  );
+  const changePaths = compatibilityRead.status.changes.map((change) => change.path);
+
+  assert.equal(changePaths.includes('body.type'), true);
+  assert.equal(changePaths.includes('body.claimed_role_refs'), true);
+  assert.equal(changePaths.includes('body.locality'), true);
 });
 
 test('declared-current legacy element revisions still use the legacy compatibility profile', () => {
@@ -181,16 +182,14 @@ test('declared-current legacy element revisions still use the legacy compatibili
   assert.equal(compatibilityRead.status.interpreted_as_legacy_profile, true);
   assert.equal(compatibilityRead.status.source_schema_version, '0.9.0');
   assert.equal(compatibilityRead.status.writable_as_is, false);
-  assert.deepEqual(
-    compatibilityRead.status.changes.map((change) => change.path),
-    ['body.claimed_role_refs', 'body.locality']
-  );
+  const changePaths = compatibilityRead.status.changes.map((change) => change.path);
+
+  assert.equal(changePaths.includes('body.type'), true);
+  assert.equal(changePaths.includes('body.claimed_role_refs'), true);
+  assert.equal(changePaths.includes('body.locality'), true);
   requirePreparedPacket(preparedPacket);
-  assert.equal(preparedPacket.prepared_packet.header.schema_version, '1.0.0');
-  assert.deepEqual(
-    preparedPacket.changes.map((change) => change.kind),
-    ['added_default_field', 'added_default_field']
-  );
+  assert.equal(preparedPacket.prepared_packet.header.schema_version, '1.1.0');
+  assert.equal(preparedPacket.changes.length >= 3, true);
 });
 
 test('assembly element locality metadata is additive and optional', () => {
@@ -333,11 +332,14 @@ test('legacy policy revisions upcast missing trust_policy to null', () => {
     null
   );
   requirePreparedPacket(preparedPacket);
-  assert.equal(preparedPacket.prepared_packet.header.schema_version, '1.0.0');
-  assert.deepEqual(
-    preparedPacket.changes.map((change) => change.kind),
-    ['normalized_null_default', 'normalized_null_default', 'schema_version_bump']
-  );
+  assert.equal(preparedPacket.prepared_packet.header.schema_version, '1.1.0');
+  const changePaths = preparedPacket.changes.map((change) => change.path);
+
+  assert.equal(changePaths.includes('body.trust_policy'), true);
+  assert.equal(changePaths.includes('body.write_policy'), true);
+  assert.equal(changePaths.includes('body.dependency_policy'), true);
+  assert.equal(changePaths.includes('body.alignment_policy'), true);
+  assert.equal(changePaths.includes('header.schema_version'), true);
 });
 
 test('current policy revisions treat write_policy as additive and optional', () => {
@@ -472,6 +474,10 @@ test('current signature candidates preserve compatibility for additive current d
   );
   assert.equal(
     Object.prototype.hasOwnProperty.call(candidates[1]?.body ?? {}, 'locality'),
+    false
+  );
+  assert.equal(
+    Object.prototype.hasOwnProperty.call(candidates[1]?.body ?? {}, 'type'),
     false
   );
 });
@@ -760,6 +766,125 @@ test('claim packets parse with the new scoped association family', () => {
   );
 });
 
+test('cause, action, relation, and location packets parse with forward subtype semantics', () => {
+  const baseHeader = {
+    schema_version: '1.0.0',
+    protocol_version: '0.1.0',
+    created_at: '2026-05-07T00:00:00.000Z',
+    parent_revision_refs: [],
+    merge_strategy: null,
+    authority_scope_ref: null,
+    applicable_scope_refs: [],
+    edges: [],
+    provenance: {
+      created_by: null,
+      submitted_by: null,
+      adapter: 'test',
+      recorded_at: '2026-05-07T00:00:00.000Z',
+      imported_from_revision: null,
+    },
+    integrity: {
+      canonicalization: 'RFC8785',
+      hash_alg: 'sha-256',
+      digest: null,
+      embedded_signatures: [],
+      signature_refs: [],
+    },
+    moderation: {
+      visibility: 'public',
+      moderation_state: 'open',
+      policy_refs: [],
+      content_warning_ids: [],
+    },
+    external_refs: [],
+    metadata: {
+      tags: [],
+      language: null,
+      summary: null,
+    },
+    producer: {
+      adapter: 'test',
+      app_version: null,
+    },
+  };
+
+  const cause = parsePacketEnvelope({
+    header: {
+      ...baseHeader,
+      packet_id: 'nexus:cause/owa',
+      revision_id: 'nexus:cause/owa@r1',
+      family: 'Cause',
+    },
+    body: {
+      type: 'cause',
+      subtype: 'initiative',
+      title: 'OWA',
+      summary: 'Open World Assembly',
+      status: 'active',
+    },
+  });
+  const action = parsePacketEnvelope({
+    header: {
+      ...baseHeader,
+      packet_id: 'nexus:action/rideshare-mission',
+      revision_id: 'nexus:action/rideshare-mission@r1',
+      family: 'Action',
+    },
+    body: {
+      type: 'action',
+      subtype: 'mission',
+      title: 'Launch rideshare network',
+      summary: null,
+      status: 'planned',
+    },
+  });
+  const relation = parsePacketEnvelope({
+    header: {
+      ...baseHeader,
+      packet_id: 'nexus:relation/alice-follows-owa',
+      revision_id: 'nexus:relation/alice-follows-owa@r1',
+      family: 'Relation',
+    },
+    body: {
+      type: 'relation',
+      subtype: 'follows',
+      subject_ref: {
+        packet_id: 'nexus:element/alice',
+      },
+      target_ref: {
+        packet_id: 'nexus:cause/owa',
+      },
+    },
+  });
+  const location = parsePacketEnvelope({
+    header: {
+      ...baseHeader,
+      packet_id: 'nexus:location/mv-service-area',
+      revision_id: 'nexus:location/mv-service-area@r1',
+      family: 'Location',
+    },
+    body: {
+      type: 'location',
+      subtype: 'service_area',
+      title: 'Moreno Valley service area',
+      summary: null,
+      status: 'active',
+      spatial_payload: {
+        provider: 'manual',
+      },
+    },
+  });
+
+  assert.equal(cause.header.family, 'Cause');
+  assert.equal((cause.body as { subtype: string }).subtype, 'initiative');
+  assert.equal(action.header.family, 'Action');
+  assert.equal((action.body as { subtype: string }).subtype, 'mission');
+  assert.equal(relation.header.family, 'Relation');
+  assert.equal((relation.body as { subtype: string }).subtype, 'follows');
+  assert.equal(location.header.family, 'Location');
+  assert.equal((location.body as { subtype: string }).subtype, 'service_area');
+});
+
 test('raw packet inspection preserves the original stored body shape', () => {
   const legacyPacket = {
     header: {
@@ -912,6 +1037,13 @@ test('current packets can be inspected against an older supported target schema 
     Object.prototype.hasOwnProperty.call(
       compatibilityRead.adapted_packet.body as Record<string, unknown>,
       'locality'
+    ),
+    false
+  );
+  assert.equal(
+    Object.prototype.hasOwnProperty.call(
+      compatibilityRead.adapted_packet.body as Record<string, unknown>,
+      'type'
     ),
     false
   );

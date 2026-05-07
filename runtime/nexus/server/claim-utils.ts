@@ -3,6 +3,10 @@
  * Description: Shared runtime helpers for reading scoped association claims from preferred packets.
  */
 
+import {
+  projectClaimAsRelationAssertion,
+  type ClaimRelationAssertionProjection,
+} from '@core/projections/forward-ontology';
 import type { PacketEnvelopeByType } from '@core/schema/packet-schema';
 import type { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store';
 
@@ -60,3 +64,14 @@ export function filterClaimPackets(input: {
   });
 }
 
+export function projectClaimPacketAsRelationAssertion(
+  claimPacket: ClaimPacket
+): ClaimRelationAssertionProjection {
+  return projectClaimAsRelationAssertion(claimPacket);
+}
+
+export function projectClaimPacketsAsRelationAssertions(
+  claims: ClaimPacket[]
+): ClaimRelationAssertionProjection[] {
+  return claims.map(projectClaimPacketAsRelationAssertion);
+}

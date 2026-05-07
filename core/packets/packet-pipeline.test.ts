@@ -5,15 +5,19 @@ import type { PacketEnvelope } from '@core/schema/packet-schema';
 
 import { buildPacket } from './packet-build-pipeline.ts';
 import {
+  createActionPacket,
   createPacket,
   createPacketEdge,
   createAttestationPacket,
+  createCausePacket,
   createDecisionPacket,
   createDiscussionPacket,
   createDiscussionPostPacket,
   createDiscussionThreadPacket,
   createElementPacket,
+  createLocationPacket,
   createProposalPacket,
+  createRelationPacket,
   createRolePacket,
   createVotePacket,
 } from './builders.ts';
@@ -175,6 +179,59 @@ test('generic builder pipeline builds canonical Claim packets', () => {
   assert.equal(packet.header.family, 'Claim');
   assert.equal(packet.header.edges.length, 3);
   assert.equal(packet.body.note, 'Facilitator in Global.');
+});
+
+test('generic builder pipeline builds canonical Cause, Action, Relation, and Location packets', () => {
+  const cause = createCausePacket({
+    packet_id: 'nexus:cause/owa',
+    created_at: '2026-05-07T00:00:00.000Z',
+    subtype: 'initiative',
+    title: 'OWA',
+    status: 'active',
+    policy_refs: [{ packet_id: 'nexus:policy/owa-baseline' }],
+  });
+  const action = createActionPacket({
+    packet_id: 'nexus:action/rideshare-launch',
+    created_at: '2026-05-07T00:01:00.000Z',
+    subtype: 'mission',
+    title: 'Launch rideshare network',
+    status: 'planned',
+    cause_refs: [{ packet_id: cause.header.packet_id }],
+  });
+  const relation = createRelationPacket({
+    packet_id: 'nexus:relation/alice-follows-owa',
+    created_at: '2026-05-07T00:02:00.000Z',
+    subtype: 'follows',
+    subject_ref: { packet_id: 'nexus:element/person/alice' },
+    target_ref: { packet_id: cause.header.packet_id },
+  });
+  const location = createLocationPacket({
+    packet_id: 'nexus:location/mv-service-area',
+    created_at: '2026-05-07T00:03:00.000Z',
+    subtype: 'service_area',
+    title: 'Moreno Valley service area',
+    status: 'active',
+    spatial_payload: {
+      provider: 'manual',
+    },
+  });
+
+  assert.equal(cause.header.family, 'Cause');
+  assert.equal(cause.body.type, 'cause');
+  assert.equal(action.header.family, 'Action');
+  assert.equal(action.body.type, 'action');
+  assert.equal(relation.header.family, 'Relation');
+  assert.equal(relation.body.type, 'relation');
+  assert.equal(location.header.family, 'Location');
+  assert.equal(location.body.type, 'location');
+  assert.equal(
+    cause.header.edges.some((edge) => edge.edge_type === 'governed_by'),
+    true
+  );
+  assert.equal(
+    action.header.edges.some((edge) => edge.edge_type === 'references'),
+    true
+  );
 });
 
 test('generic builder pipeline builds canonical Attestation packets', () => {

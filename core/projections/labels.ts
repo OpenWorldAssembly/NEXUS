@@ -10,13 +10,17 @@ import type {
 
 const FAMILY_LABELS: Record<PacketEnvelope['header']['family'], string> = {
   Element: 'element packet',
+  Location: 'location packet',
   Role: 'role packet',
   Claim: 'claim packet',
+  Relation: 'relation packet',
   Signal: 'signal packet',
   Proposal: 'proposal packet',
   Vote: 'vote packet',
   Attestation: 'attestation',
   Decision: 'decision packet',
+  Cause: 'cause packet',
+  Action: 'action packet',
   Initiative: 'initiative packet',
   Program: 'program packet',
   Campaign: 'campaign packet',
@@ -85,6 +89,22 @@ export function getPacketDisplayLabel(packet: PacketEnvelope): string {
       const body = packet.body as PacketBodyByType['Element'];
       return `${body.kind} packet`;
     }
+    case 'Cause': {
+      const body = packet.body as PacketBodyByType['Cause'];
+      return `${titleCase(body.subtype)} cause`;
+    }
+    case 'Action': {
+      const body = packet.body as PacketBodyByType['Action'];
+      return `${titleCase(body.subtype)} action`;
+    }
+    case 'Location': {
+      const body = packet.body as PacketBodyByType['Location'];
+      return `${titleCase(body.subtype)} location`;
+    }
+    case 'Relation': {
+      const body = packet.body as PacketBodyByType['Relation'];
+      return `${titleCase(body.subtype)} relation`;
+    }
     case 'Policy': {
       const body = packet.body as PacketBodyByType['Policy'];
       if (body.policy_kind === 'charter') {
@@ -143,6 +163,22 @@ export function getPacketTitle(packet: PacketEnvelope): string {
       const body = packet.body as PacketBodyByType['Element'];
       return body.name;
     }
+    case 'Cause': {
+      const body = packet.body as PacketBodyByType['Cause'];
+      return body.title;
+    }
+    case 'Action': {
+      const body = packet.body as PacketBodyByType['Action'];
+      return body.title;
+    }
+    case 'Location': {
+      const body = packet.body as PacketBodyByType['Location'];
+      return body.title;
+    }
+    case 'Relation': {
+      const body = packet.body as PacketBodyByType['Relation'];
+      return `${titleCase(body.subtype)} relation`;
+    }
     case 'Role': {
       const body = packet.body as PacketBodyByType['Role'];
       return body.title;
@@ -180,6 +216,18 @@ export function getPacketSummary(packet: PacketEnvelope): string | null {
     case 'Element': {
       const body = packet.body as PacketBodyByType['Element'];
       return body.summary ?? null;
+    }
+    case 'Cause': {
+      const body = packet.body as PacketBodyByType['Cause'];
+      return body.summary ?? body.purpose_markdown ?? null;
+    }
+    case 'Action': {
+      const body = packet.body as PacketBodyByType['Action'];
+      return body.summary ?? body.objective_markdown ?? null;
+    }
+    case 'Location': {
+      const body = packet.body as PacketBodyByType['Location'];
+      return body.summary ?? body.descriptor_markdown ?? null;
     }
     case 'Vote':
     case 'Attestation':
@@ -223,6 +271,14 @@ export function getPacketStatus(packet: PacketEnvelope): string | null {
   switch (packet.header.family) {
     case 'Element':
       return null;
+    case 'Location': {
+      const body = packet.body as PacketBodyByType['Location'];
+      return body.status;
+    }
+    case 'Relation': {
+      const body = packet.body as PacketBodyByType['Relation'];
+      return body.status;
+    }
     case 'Decision': {
       const body = packet.body as PacketBodyByType['Decision'];
       return body.outcome;

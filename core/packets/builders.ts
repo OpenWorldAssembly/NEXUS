@@ -14,12 +14,14 @@ import { buildPacket } from '@core/packets/packet-build-pipeline';
 import {
   PACKET_BODY_SCHEMAS,
   createPacketEnvelope,
+  getPacketCurrentSchemaVersion,
   type PacketBodyByType,
   type ClaimKind,
   type DiscussionActorClass,
   type DiscussionKind,
   type DiscussionSort,
   type ElementKind,
+  type RelationStatus,
   type PersonClaimStatus,
   type AttestationKind,
   type PacketEdge,
@@ -86,6 +88,11 @@ export interface ElementPacketInput extends PacketBuilderBaseInput {
   name: string;
   subtype?: string | null;
   summary?: string | null;
+  scope_kind?: string | null;
+  scope_system?: string | null;
+  status?: string | null;
+  aliases?: string[];
+  display_aliases?: string[];
   locality_label?: string | null;
   locality?: {
     level: LocalityLevel;
@@ -111,8 +118,19 @@ export interface ElementPacketInput extends PacketBuilderBaseInput {
       revoked_at?: string | null;
     }[];
   } | null;
+  custody_hints?: Record<string, unknown> | null;
   tags?: string[];
   claimed_role_refs?: PacketRef[];
+}
+
+export interface LocationPacketInput extends PacketBuilderBaseInput {
+  subtype: string;
+  title: string;
+  summary?: string | null;
+  status?: string;
+  location_label?: string | null;
+  descriptor_markdown?: string | null;
+  spatial_payload?: Record<string, unknown>;
 }
 
 export interface RolePacketInput extends PacketBuilderBaseInput {
@@ -130,6 +148,20 @@ export interface ClaimPacketInput extends PacketBuilderBaseInput {
   scope_ref: PacketRef;
   status?: 'active' | 'withdrawn';
   note?: string | null;
+}
+
+export interface RelationPacketInput extends PacketBuilderBaseInput {
+  subtype: string;
+  subject_ref: PacketRef;
+  target_ref: PacketRef;
+  scope_ref?: PacketRef | null;
+  status?: RelationStatus;
+  policy_ref?: PacketRef | null;
+  terms_ref?: PacketRef | null;
+  supporting_refs?: PacketRef[];
+  note?: string | null;
+  effective_from?: string | null;
+  effective_until?: string | null;
 }
 
 export interface DiscussionThreadPacketInput extends PacketBuilderBaseInput {
@@ -231,6 +263,8 @@ export interface PolicyPacketInput extends PacketBuilderBaseInput {
     review_gate?: TrustStage;
   } | null;
   write_policy?: PacketBodyByType['Policy']['write_policy'];
+  dependency_policy?: PacketBodyByType['Policy']['dependency_policy'];
+  alignment_policy?: PacketBodyByType['Policy']['alignment_policy'];
 }
 
 export interface VotePacketInput extends PacketBuilderBaseInput {
@@ -248,6 +282,28 @@ export interface DecisionPacketInput extends PacketBuilderBaseInput {
   outcome: string;
   proposal_ref?: PacketRef | null;
   vote_ref?: PacketRef | null;
+}
+
+export interface CausePacketInput extends PacketBuilderBaseInput {
+  subtype: string;
+  title: string;
+  summary?: string | null;
+  status: string;
+  purpose_markdown?: string | null;
+  policy_refs?: PacketRef[];
+  template_refs?: PacketRef[];
+  module_refs?: PacketRef[];
+}
+
+export interface ActionPacketInput extends PacketBuilderBaseInput {
+  subtype: string;
+  title: string;
+  summary?: string | null;
+  status: string;
+  objective_markdown?: string | null;
+  cause_refs?: PacketRef[];
+  location_refs?: PacketRef[];
+  action_refs?: PacketRef[];
 }
 
 export interface AttestationPacketInput extends PacketBuilderBaseInput {
@@ -299,7 +355,8 @@ export function createPacket<TFamily extends PacketFamily>(
       revision_id:
         input.revision_id ?? createInitialRevisionId(input.packet_id),
       family: input.family,
-      schema_version: input.schema_version,
+      schema_version:
+        input.schema_version ?? getPacketCurrentSchemaVersion(input.family),
       protocol_version: input.protocol_version,
       created_at: createdAt,
       parent_revision_refs: input.parent_revision_refs ?? [],
@@ -355,6 +412,23 @@ export function createElementPacket(
 }
 
 /**
+ * Inputs: common packet header fields plus the location-specific body data.
+ * Output: a validated location packet.
+ */
+export function createLocationPacket(
+  input: LocationPacketInput
+): PacketEnvelopeByType['Location'] {
+  return buildPacket({
+    family: 'Location',
+    body: input,
+    header: {
+      ...input,
+      metadata_summary: input.metadata_summary ?? input.summary ?? null,
+    },
+  });
+}
+
+/**
  * Inputs: common packet header fields plus the role body data.
  * Output: a validated role packet.
  */
@@ -380,6 +454,23 @@ export function createClaimPacket(
 ): PacketEnvelopeByType['Claim'] {
   return buildPacket({
     family: 'Claim',
+    body: input,
+    header: {
+      ...input,
+      metadata_summary: input.metadata_summary ?? input.note ?? null,
+    },
+  });
+}
+
+/**
+ * Inputs: common packet header fields plus one forward semantic relation body.
+ * Output: a validated relation packet.
+ */
+export function createRelationPacket(
+  input: RelationPacketInput
+): PacketEnvelopeByType['Relation'] {
+  return buildPacket({
+    family: 'Relation',
     body: input,
     header: {
       ...input,
@@ -672,6 +763,42 @@ export function createDecisionPacket(
     header: {
       ...input,
       metadata_summary: input.metadata_summary ?? input.summary ?? null,
+    },
+  });
+}
+
+/**
+ * Inputs: common packet header fields plus the cause body data.
+ * Output: a validated cause packet.
+ */
+export function createCausePacket(
+  input: CausePacketInput
+): PacketEnvelopeByType['Cause'] {
+  return buildPacket({
+    family: 'Cause',
+    body: input,
+    header: {
+      ...input,
+      metadata_summary:
+        input.metadata_summary ?? input.summary ?? input.purpose_markdown ?? null,
+    },
+  });
+}
+
+/**
+ * Inputs: common packet header fields plus the action body data.
+ * Output: a validated action packet.
+ */
+export function createActionPacket(
+  input: ActionPacketInput
+): PacketEnvelopeByType['Action'] {
+  return buildPacket({
+    family: 'Action',
+    body: input,
+    header: {
+      ...input,
+      metadata_summary:
+        input.metadata_summary ?? input.summary ?? input.objective_markdown ?? null,
     },
   });
 }
