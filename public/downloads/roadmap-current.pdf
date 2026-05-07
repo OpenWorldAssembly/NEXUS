@@ -1,0 +1,250 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [6 0 R 8 0 R 10 0 R 12 0 R 14 0 R 16 0 R] /Count 6 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+5 0 obj
+<< /Length 3478 >>
+stream
+0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
+BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Roadmap - 1) Tj ET
+BT 0.040 0.380 0.620 rg /F2 27 Tf 1 0 0 1 54.00 734.00 Tm (Roadmap) Tj ET
+BT 0.090 0.160 0.240 rg /F1 12.5 Tf 1 0 0 1 54.00 696.00 Tm (Near-term priorities, deferred decisions, and next development milestones.) Tj ET
+BT 0.330 0.430 0.530 rg /F2 9 Tf 1 0 0 1 54.00 675.00 Tm (Working draft) Tj ET
+0.720 0.820 0.900 RG 0.90 w 54.00 646.00 m 558.00 646.00 l S
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 626.00 Tm (Near-term priorities, deferred decisions, and next development milestones.) Tj ET
+0.720 0.820 0.900 RG 0.80 w 54.00 593.75 m 558.00 593.75 l S
+BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 584.75 Tm (Purpose) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 552.75 Tm (This index records planned direction, sequencing, backlog, and open questions.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 529.50 Tm (Use the docs this way:) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 506.25 Tm (- docs/specifications.md = what exists in code today) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 487.00 Tm (- docs/implementation-guide.md = architecture, decisions, and canon-candidate direction) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 467.75 Tm (- docs/roadmap.md = planned work, sequencing, and open questions) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 448.50 Tm (- docs/concepts.md = shared term reference) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 429.25 Tm (This roadmap is intentionally forward-looking. It should not imply that planned naming,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 414.00 Tm (routes, moderation behavior, initiative filtering, or governance execution are already) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 398.75 Tm (implemented.) Tj ET
+0.720 0.820 0.900 RG 0.80 w 54.00 366.50 m 558.00 366.50 l S
+BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 357.50 Tm (Current planning frame) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 325.50 Tm (The current stack is still:) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 302.25 Tm (- FCF = principles and coordination physics) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 283.00 Tm (- Nexus = portable substrate and packet engine) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 263.75 Tm (- OWA = geography-first civic implementation running on Nexus) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 244.50 Tm (The repo is past the "prove the concept exists" phase. The next priority remains semantic) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 229.25 Tm (stabilization, not another broad structural refactor.) Tj ET
+0.720 0.820 0.900 RG 0.80 w 54.00 197.00 m 558.00 197.00 l S
+BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 188.00 Tm (Chapters) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 156.00 Tm (- Stabilization And Surface Polish) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 136.75 Tm (- Initiatives, Locality, And Subscriptions) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 117.50 Tm (- Trust, Policy, And Moderation) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 98.25 Tm (- Governance And Execution) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 79.00 Tm (- Open Questions And Deferred Decisions) Tj ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 5 0 R >>
+endobj
+7 0 obj
+<< /Length 3523 >>
+stream
+0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
+BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Roadmap - 2) Tj ET
+0.720 0.820 0.900 RG 0.80 w 54.00 725.00 m 558.00 725.00 l S
+BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 716.00 Tm (Stabilization And Surface Polish) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 670.00 Tm (Current baseline) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 644.00 Tm (The repo already has:) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 620.75 Tm (- the core / runtime / app / src/app split) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 601.50 Tm (- packet schema and builder foundations) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 582.25 Tm (- SQLite-backed packet and revision storage) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 563.00 Tm (- cryptographic identity continuity) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 543.75 Tm (- packet-backed discussions and attestations) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 524.50 Tm (- a functional Nexus shell) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 505.25 Tm (- a read-only Packet Explorer) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 486.00 Tm (The next planning focus is still catch-up and semantic stabilization.) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 448.75 Tm (Near-term priorities) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 422.75 Tm (- keep identity/auth and discussions as the strongest reference verticals) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 403.50 Tm (- harden roles, trust, library, and votes around truthful current behavior) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 384.25 Tm (- keep Packet Explorer read-only while its semantics, filters, and action seams are) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 369.00 Tm (clarified) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 349.75 Tm (- improve surface honesty through warnings, disabled-placeholder clarity, and route-state) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 334.50 Tm (cleanup where needed) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 301.25 Tm (Packet Explorer follow-up backlog) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 275.25 Tm (- packet-id and revision-id search from the Home tab) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 256.00 Tm (- import packet and import bundle flows) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 236.75 Tm (- Fork, Adapt, Export, and Follow semantics) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 217.50 Tm (- diff views and revision compare) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 198.25 Tm (- richer link grouping and filtering) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 179.00 Tm (- eventual action execution through the fortress corridor rather than route-local writes) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 145.75 Tm (Working order) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 119.75 Tm (1. stabilize blocked-in surfaces 2. clarify scope visibility and surface semantics 3.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 104.50 Tm (tighten trust, role, and relationship modeling 4. only then widen into deeper policy-heavy) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 89.25 Tm (and governance-heavy workflows) Tj ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 7 0 R >>
+endobj
+9 0 obj
+<< /Length 3507 >>
+stream
+0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
+BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Roadmap - 3) Tj ET
+0.720 0.820 0.900 RG 0.80 w 54.00 725.00 m 558.00 725.00 l S
+BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 716.00 Tm (Initiatives, Locality, And Subscriptions) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 670.00 Tm (Initiative direction) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 644.00 Tm (Initiatives should be treated as generic Nexus policy and template lineages rather than) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 628.75 Tm (OWA-specific hardcoding.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 605.50 Tm (Working direction:) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 582.25 Tm (- OWA is one initiative inside Nexus) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 563.00 Tm (- assemblies can follow recognized OWA dependencies and templates while remaining valid) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 547.75 Tm (Nexus objects if they fork) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 528.50 Tm (- official versus unofficial initiative lineage should be inspectable, not mystical) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 495.25 Tm (Initiative backlog) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 469.25 Tm (- initiative versions and subscription or update behavior) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 450.00 Tm (- current official versus older official version support) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 430.75 Tm (- official versus unofficial visibility modes) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 411.50 Tm (- feed, search, Library, and Explorer filtering by initiative and version) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 392.25 Tm (- actor-level or client-level preferences for what initiative visibility modes to show) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 359.00 Tm (Locality and scope backlog) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 333.00 Tm (- continue refining the Global + You baseline) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 313.75 Tm (- keep homelocality distinct from assemblyassociation) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 294.50 Tm (- improve canonical locality directory behavior and creation quality) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 275.25 Tm (- preserve the distinction between mounted scopes, followed scopes, and merely known scopes) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 256.00 Tm (- defer shared assembly custody or keyset work until after semantic foundations are clearer) Tj ET
+0.720 0.820 0.900 RG 0.80 w 54.00 227.75 m 558.00 227.75 l S
+BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 218.75 Tm (Trust, Policy, And Moderation) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 172.75 Tm (Trust and policy) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 146.75 Tm (Trust remains a major product-defining system.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 123.50 Tm (Current direction:) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 100.25 Tm (- trust should stay inspectable and threshold-based) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 81.00 Tm (- roles should remain layered on scoped claims plus support or dispute evidence) Tj ET
+endstream
+endobj
+10 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 9 0 R >>
+endobj
+11 0 obj
+<< /Length 3773 >>
+stream
+0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
+BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Roadmap - 4) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- policies should define defaults where possible instead of hardcoding OWA behavior as) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 718.75 Tm (universal law) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 685.50 Tm (Moderation and automoderation backlog) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 659.50 Tm (- generic automoderation support with element-defined policy baselines) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 640.25 Tm (- actor-level moderation preference controls) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 621.00 Tm (- explainable visibility projection rather than opaque hidden filtering) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 601.75 Tm (- soft visibility controls first, with harder runtime enforcement only where clearly needed) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 568.50 Tm (Packet-model questions to keep visible) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 542.50 Tm (- whether reactions should remain lightweight attestation-like signals or become a distinct) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 527.25 Tm (family) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 508.00 Tm (- whether vouch and flag should become explicit attestation subtypes) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 488.75 Tm (- whether Claim and Attestation should stay split forever or eventually converge) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 469.50 Tm (- how recursive attestation graphs should be summarized safely in UI) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 450.25 Tm (These are active modeling questions, not current implementation commitments.) Tj ET
+0.720 0.820 0.900 RG 0.80 w 54.00 418.00 m 558.00 418.00 l S
+BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 409.00 Tm (Governance And Execution) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 363.00 Tm (Governance direction) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 337.00 Tm (Governance should follow trust, policy, and inspectability rather than racing ahead of them.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 313.75 Tm (Working direction:) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 290.50 Tm (- decisions begin as legitimacy records and civic signals) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 271.25 Tm (- proposals should declare what happens if they pass as explicitly and programmatically as) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 256.00 Tm (possible) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 236.75 Tm (- some proposal shapes may later become effect-bearing through policy) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 203.50 Tm (Governance backlog) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 177.50 Tm (- real proposal drafting, editing, review, and publication flows) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 158.25 Tm (- real vote participation and result flows) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 139.00 Tm (- decision publication and linkage) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 119.75 Tm (- governance writes through the shared fortress corridor) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 100.50 Tm (- role-aware review checkpoints and trust-aware participation gates) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 81.25 Tm (- canonical approval packets or signed execution artifacts) Tj ET
+endstream
+endobj
+12 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 11 0 R >>
+endobj
+13 0 obj
+<< /Length 3648 >>
+stream
+0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
+BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Roadmap - 5) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- multi-key assemblies, custody transition, and decision-to-effect authority) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 700.75 Tm (Proposal and decision shape questions) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 674.75 Tm (- policy adoption proposals) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 655.50 Tm (- mission or coordination plan proposals) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 636.25 Tm (- resolutions) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 617.00 Tm (- signals or polls) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 597.75 Tm (- other explicit action packages) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 578.50 Tm (Automatic execution should remain future work and should be limited to explicitly supported) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 563.25 Tm (built-in handlers or equivalent canonical approval artifacts.) Tj ET
+0.720 0.820 0.900 RG 0.80 w 54.00 531.00 m 558.00 531.00 l S
+BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 522.00 Tm (Open Questions And Deferred Decisions) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 476.00 Tm (Near-term open questions) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 450.00 Tm (- How should initiative conformance and version recognition be represented?) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 430.75 Tm (- Which visibility modes should arrive first for official, unofficial, current-version, and) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 415.50 Tm (older-version packets?) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 396.25 Tm (- How should Packet Explorer expose Fork, Adapt, Diff, Export, and Follow first?) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 377.00 Tm (- Where should moderation preferences live: actor policy, client preference, or both?) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 343.75 Tm (Deeper design questions) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 317.75 Tm (- Should reactions remain separate from higher-meaning vouch or objection signals?) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 298.50 Tm (- Should Claim remain a distinct family long term, or eventually converge with a broader) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 283.25 Tm (attestation umbrella?) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 264.00 Tm (- What exact authority model should govern multi-key assemblies and custody transition?) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 244.75 Tm (- What exact event turns a decision from a signal into an effect-bearing authority artifact?) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 225.50 Tm (- Which built-in action handlers, if any, should Nexus eventually support for automatic) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 210.25 Tm (execution?) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 177.00 Tm (Explicitly deferred) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 151.00 Tm (- another broad architecture rewrite) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 131.75 Tm (- Discord adapter revival) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 112.50 Tm (- mesh transport and federation work) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 93.25 Tm (- real-time chat) Tj ET
+endstream
+endobj
+14 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 13 0 R >>
+endobj
+15 0 obj
+<< /Length 396 >>
+stream
+0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
+BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Roadmap - 6) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- advanced reputation math) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 714.75 Tm (- deep governance automation before the trust and policy seams are clearer) Tj ET
+endstream
+endobj
+16 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 15 0 R >>
+endobj
+xref
+0 17
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000155 00000 n 
+0000000225 00000 n 
+0000000300 00000 n 
+0000003830 00000 n 
+0000003966 00000 n 
+0000007541 00000 n 
+0000007677 00000 n 
+0000011236 00000 n 
+0000011373 00000 n 
+0000015199 00000 n 
+0000015337 00000 n 
+0000019038 00000 n 
+0000019176 00000 n 
+0000019624 00000 n 
+trailer
+<< /Size 17 /Root 1 0 R >>
+startxref
+19762
+%%EOF

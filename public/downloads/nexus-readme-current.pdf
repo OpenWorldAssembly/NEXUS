@@ -1,0 +1,92 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [6 0 R 8 0 R] /Count 2 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+5 0 obj
+<< /Length 3460 >>
+stream
+0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
+BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Nexus README - 1) Tj ET
+BT 0.040 0.380 0.620 rg /F2 27 Tf 1 0 0 1 54.00 734.00 Tm (Nexus README) Tj ET
+BT 0.090 0.160 0.240 rg /F1 12.5 Tf 1 0 0 1 54.00 696.00 Tm (Current overview of the Nexus prototype, posture, and architecture.) Tj ET
+BT 0.330 0.430 0.530 rg /F2 9 Tf 1 0 0 1 54.00 675.00 Tm (Public draft) Tj ET
+0.720 0.820 0.900 RG 0.90 w 54.00 646.00 m 558.00 646.00 l S
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 626.00 Tm (Current overview of the Nexus prototype, posture, and architecture.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 602.75 Tm (Nexus is the portable coordination substrate beneath Open World Assembly. It is still an) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 587.50 Tm (early proof of concept, not a finished public platform.) Tj ET
+0.720 0.820 0.900 RG 0.80 w 54.00 555.25 m 558.00 555.25 l S
+BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 546.25 Tm (Current Status) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 514.25 Tm (Nexus is live enough to demonstrate the core direction, but unstable enough that visitors) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 499.00 Tm (should treat it as a demo.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 475.75 Tm (- Some features are disabled, provisional, or represented by placeholders.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 456.50 Tm (- Data models, routes, interface details, and workflows may change during development.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 437.25 Tm (- The public demo is meant to show direction, not to serve as durable civic infrastructure) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 422.00 Tm (yet.) Tj ET
+0.720 0.820 0.900 RG 0.80 w 54.00 393.75 m 558.00 393.75 l S
+BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 384.75 Tm (What Nexus Is) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 352.75 Tm (Nexus is a packet-based coordination system for people, assemblies, initiatives, policies,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 337.50 Tm (discussions, trust signals, and future governance workflows.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 314.25 Tm (It is designed so communities can coordinate without depending on a single platform as the) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 299.00 Tm (source of truth.) Tj ET
+0.720 0.820 0.900 RG 0.80 w 54.00 266.75 m 558.00 266.75 l S
+BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 257.75 Tm (What Nexus Is Not) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 225.75 Tm (Nexus is not a party, command structure, social network clone, or centralized authority.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 202.50 Tm (It is infrastructure: a portable way to describe coordination, relationships, claims,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 187.25 Tm (decisions, and shared records.) Tj ET
+0.720 0.820 0.900 RG 0.80 w 54.00 155.00 m 558.00 155.00 l S
+BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 146.00 Tm (Core Pattern) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 114.00 Tm (Nexus treats coordination as signed, inspectable records.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 90.75 Tm (- Packets carry structured information.) Tj ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 5 0 R >>
+endobj
+7 0 obj
+<< /Length 1557 >>
+stream
+0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
+BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Nexus README - 2) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- Signatures establish authorship and integrity.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 714.75 Tm (- Relationships and attestations create trust context.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 695.50 Tm (- Policies can define how a scope interprets participation and legitimacy.) Tj ET
+0.720 0.820 0.900 RG 0.80 w 54.00 667.25 m 558.00 667.25 l S
+BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 658.25 Tm (Open World Assembly) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 626.25 Tm (OWA is the first public-facing implementation built on top of Nexus.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 603.00 Tm (The public site explains the vision. Nexus demonstrates the machinery beneath it.) Tj ET
+0.720 0.820 0.900 RG 0.80 w 54.00 570.75 m 558.00 570.75 l S
+BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 561.75 Tm (Development Direction) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 529.75 Tm (The near-term goal is stability before scale.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 506.50 Tm (Priorities include clearer packet contracts, readable docs, safer write flows, better) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 491.25 Tm (import/export tools, stronger trust and policy systems, and a more coherent public surface.) Tj ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 7 0 R >>
+endobj
+xref
+0 9
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000127 00000 n 
+0000000197 00000 n 
+0000000272 00000 n 
+0000003784 00000 n 
+0000003920 00000 n 
+0000005529 00000 n 
+trailer
+<< /Size 9 /Root 1 0 R >>
+startxref
+5665
+%%EOF

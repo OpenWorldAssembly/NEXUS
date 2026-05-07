@@ -7,12 +7,12 @@
 import type { PublicReadableDocument } from '@app/public/content-types';
 
 export const PUBLIC_DOC_DOWNLOADS = {
-  "charter": { markdown: "/downloads/owa-charter-current.md" },
-  "nexus-readme": { markdown: "/downloads/nexus-readme-current.md" },
-  "implementation-guide": { markdown: "/downloads/implementation-guide-current.md" },
-  "specifications": { markdown: "/downloads/specifications-current.md" },
-  "roadmap": { markdown: "/downloads/roadmap-current.md" },
-} satisfies Record<string, { markdown: `/downloads/${string}` }>;
+  "charter": { markdown: "/downloads/owa-charter-current.md", pdf: "/downloads/owa-charter-current.pdf" },
+  "nexus-readme": { markdown: "/downloads/nexus-readme-current.md", pdf: "/downloads/nexus-readme-current.pdf" },
+  "implementation-guide": { markdown: "/downloads/implementation-guide-current.md", pdf: "/downloads/implementation-guide-current.pdf" },
+  "specifications": { markdown: "/downloads/specifications-current.md", pdf: "/downloads/specifications-current.pdf" },
+  "roadmap": { markdown: "/downloads/roadmap-current.md", pdf: "/downloads/roadmap-current.pdf" },
+} satisfies Record<string, { markdown: `/downloads/${string}`; pdf: `/downloads/${string}` }>;
 
 export const PUBLIC_READABLE_DOCUMENTS = {
   "charter": {

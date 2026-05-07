@@ -23,7 +23,11 @@ export const PUBLIC_DOCS_DIRECTORY: PublicDocumentDirectoryItem[] = [
         target: { kind: 'download', href: PUBLIC_DOC_DOWNLOADS.charter.markdown },
         variant: 'outline',
       },
-      { label: 'PDF Soon', variant: 'outline', disabled: true },
+      {
+        label: 'Download PDF',
+        target: { kind: 'download', href: PUBLIC_DOC_DOWNLOADS.charter.pdf },
+        variant: 'outline',
+      },
     ],
   },
   {
@@ -39,7 +43,11 @@ export const PUBLIC_DOCS_DIRECTORY: PublicDocumentDirectoryItem[] = [
         target: { kind: 'download', href: PUBLIC_DOC_DOWNLOADS['nexus-readme'].markdown },
         variant: 'outline',
       },
-      { label: 'PDF Soon', variant: 'outline', disabled: true },
+      {
+        label: 'Download PDF',
+        target: { kind: 'download', href: PUBLIC_DOC_DOWNLOADS['nexus-readme'].pdf },
+        variant: 'outline',
+      },
     ],
   },
   {
@@ -55,7 +63,11 @@ export const PUBLIC_DOCS_DIRECTORY: PublicDocumentDirectoryItem[] = [
         target: { kind: 'download', href: PUBLIC_DOC_DOWNLOADS['implementation-guide'].markdown },
         variant: 'outline',
       },
-      { label: 'PDF Soon', variant: 'outline', disabled: true },
+      {
+        label: 'Download PDF',
+        target: { kind: 'download', href: PUBLIC_DOC_DOWNLOADS['implementation-guide'].pdf },
+        variant: 'outline',
+      },
     ],
   },
   {
@@ -71,7 +83,11 @@ export const PUBLIC_DOCS_DIRECTORY: PublicDocumentDirectoryItem[] = [
         target: { kind: 'download', href: PUBLIC_DOC_DOWNLOADS.specifications.markdown },
         variant: 'outline',
       },
-      { label: 'PDF Soon', variant: 'outline', disabled: true },
+      {
+        label: 'Download PDF',
+        target: { kind: 'download', href: PUBLIC_DOC_DOWNLOADS.specifications.pdf },
+        variant: 'outline',
+      },
     ],
   },
   {
@@ -87,7 +103,11 @@ export const PUBLIC_DOCS_DIRECTORY: PublicDocumentDirectoryItem[] = [
         target: { kind: 'download', href: PUBLIC_DOC_DOWNLOADS.roadmap.markdown },
         variant: 'outline',
       },
-      { label: 'PDF Soon', variant: 'outline', disabled: true },
+      {
+        label: 'Download PDF',
+        target: { kind: 'download', href: PUBLIC_DOC_DOWNLOADS.roadmap.pdf },
+        variant: 'outline',
+      },
     ],
   },
 ];
@@ -102,8 +122,7 @@ const PUBLIC_DOC_RESOURCES: PublicDocumentResource[] = [
   {
     slug: 'pdf-pipeline',
     title: 'PDF Pipeline',
-    summary: 'PDF exports are intentionally deferred until the Markdown reader and source pipeline are stable.',
-    disabled: true,
+    summary: 'Static PDFs are generated from the same Markdown source as the readable web docs during the public docs build step.',
   },
 ];
 
@@ -113,11 +132,11 @@ export const docsPageContent: PublicDocsPageContent = {
     title: 'Read the core documents.',
     summary: [
       'Open World Assembly is documented in public: founding principles, Nexus architecture, implementation notes, specifications, and roadmap work.',
-      'The page now reads generated Markdown directly as clean web documents, with per-document Markdown downloads available from the directory.',
+      'The page now reads generated Markdown directly as clean web documents, with per-document Markdown and PDF downloads available from the directory.',
     ],
     noteTitle: 'Current status',
     noteBody:
-      'The Charter, Nexus README, Implementation Guide, Specifications, and Roadmap are readable on this page now. PDF generation comes after the Markdown pipeline is settled.',
+      'The Charter, Nexus README, Implementation Guide, Specifications, and Roadmap are readable here and available as static Markdown or PDF downloads.',
     actions: [
       { label: 'Read Charter', href: '/docs', variant: 'outline' },
       { label: 'Support OWA', href: '/support', variant: 'outline' },
