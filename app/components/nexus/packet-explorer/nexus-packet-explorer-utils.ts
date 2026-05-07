@@ -13,6 +13,7 @@ import type {
 export const PACKET_FETCH_TIMEOUT_MS = 15000;
 export const LINK_GROUP_INITIAL_VISIBLE_COUNT = 25;
 export const EXPLORER_CLIENT_DEBUG_ENABLED = process.env.NODE_ENV !== 'production';
+export const PACKET_TAB_LABEL_MAX_CHARACTERS = 56;
 
 export function logExplorerClientEvent(packetId: string, message: string): void {
   if (!EXPLORER_CLIENT_DEBUG_ENABLED) {
@@ -56,7 +57,7 @@ export function getExplorerTabLabel(tab: PacketExplorerTab): string {
     return 'Home';
   }
 
-  return middleTruncateText(tab.title_snapshot, 36);
+  return middleTruncateText(tab.title_snapshot, PACKET_TAB_LABEL_MAX_CHARACTERS);
 }
 
 export function getViewModeLabel(viewMode: PacketExplorerViewMode): string {

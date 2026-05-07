@@ -166,7 +166,10 @@ export function NexusPacketExplorerTabDeck({
                 }
                 onPress={() => onFocusTab(tab.id)}
               >
-                <Text className={`text-sm font-semibold ${headingTextClass}`}>
+                <Text
+                  className={`text-sm font-semibold ${headingTextClass}`}
+                  numberOfLines={2}
+                >
                   {getExplorerTabLabel(tab)}
                 </Text>
               </Pressable>
