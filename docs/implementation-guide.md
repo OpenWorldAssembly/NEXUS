@@ -43,3 +43,10 @@ The current product stack is still best understood as:
 - `PublicLinkTarget` supports route, external, and static download targets while preserving legacy route `href` fields for existing content.
 - External public links are centralized in `app/public/public-links.ts` so Support, footer, and future document/download passes have one place to wire real URLs.
 
+
+### Docs directory and readable document shell (Pass 10B)
+
+- The public `/docs` route now uses a directory-first shape instead of rendering the OWA Charter as a grid of principle cards.
+- Readable documents are consumed from `app/public/generated/public-docs.generated.ts`, which is intentionally shaped as future build output from public Markdown source files.
+- The current generated-style module is maintained by hand until the public docs build pipeline compiles Markdown, downloadable artifacts, and reader data.
+- The old docs principle-grid components were removed from active use so the docs page can evolve around document directory entries, readable web documents, and static download links.

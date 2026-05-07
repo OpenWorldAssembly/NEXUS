@@ -1,87 +1,95 @@
 /**
  * File: docs-content.ts
- * Description: Defines the public document content used by the docs route.
+ * Description: Defines the public docs directory and document-page metadata.
  */
 import type {
-  CharterPrincipleCard,
-  PublicDocumentEntry,
+  PublicDocsPageContent,
+  PublicDocumentDirectoryItem,
   PublicDocumentResource,
-} from "@app/public/content-types";
+} from '@app/public/content-types';
 
-const CHARTER_PAIRS: Array<[string, string]> = [
-  ["I", "The People Are the Source"],
-  ["II", "Consent Above Control"],
-  ["III", "Power Must Be Limited"],
-  ["IV", "Participation Over Passivity"],
-  ["V", "Decentralize What Can Be Local"],
-  ["VI", "Coordinate What Must Be Shared"],
-  ["VII", "Unity Without Uniformity"],
-  ["VIII", "Nonviolence Is Strength"],
-  ["IX", "Truth Must Be Visible"],
-  ["X", "Fatalism Is Folly"],
-];
-
-const CHARTER_BODIES = [
-  "All legitimate power rises from the people and remains answerable to them.",
-  "No authority is just without consent. No consent is real without the freedom to refuse.",
-  "Any power not checked will drift toward abuse.",
-  "Those affected by decisions should have a voice in them.",
-  "What can be decided locally should never be captured from afar.",
-  "What concerns many may be aligned by many through open cooperation.",
-  "People may differ in culture, belief, and way of life while building peace together.",
-  "Violence breeds the systems it claims to defeat. Disciplined peace outlasts fear.",
-  "Transparency builds trust. Hidden power corrodes it.",
-  "We need not wait for war, collapse, or nuclear fire to become wise.",
-];
-
-const CHARTER_RESOURCES: PublicDocumentResource[] = [
+export const PUBLIC_DOCS_DIRECTORY: PublicDocumentDirectoryItem[] = [
   {
-    slug: "charter-pdf",
-    title: "Download PDF",
-    summary: "Printable public release placeholder for the charter.",
+    slug: 'charter',
+    title: 'OWA Charter',
+    summary: 'Founding principles for Open World Assembly and peaceful decentralized coordination.',
+    status: 'available',
+    typeLabel: 'Founding document',
+    readableDocumentSlug: 'charter',
+    actions: [
+      { label: 'Read Below', href: '/docs', variant: 'outline' },
+      { label: 'PDF Soon', variant: 'outline', disabled: true },
+    ],
+  },
+  {
+    slug: 'nexus-readme',
+    title: 'Nexus README',
+    summary: 'A practical overview of the Nexus prototype, current posture, and system architecture.',
+    status: 'draft',
+    typeLabel: 'System overview',
+    actions: [{ label: 'Download Soon', variant: 'outline', disabled: true }],
+  },
+  {
+    slug: 'implementation-guide',
+    title: 'Implementation Guide',
+    summary: 'Working notes on project structure, conventions, key decisions, and implementation seams.',
+    status: 'draft',
+    typeLabel: 'Technical guide',
+    actions: [{ label: 'Download Soon', variant: 'outline', disabled: true }],
+  },
+  {
+    slug: 'specifications',
+    title: 'Specifications',
+    summary: 'Current intended behavior for public surfaces, Nexus workflows, packets, and system contracts.',
+    status: 'draft',
+    typeLabel: 'Reference spec',
+    actions: [{ label: 'Download Soon', variant: 'outline', disabled: true }],
+  },
+  {
+    slug: 'roadmap',
+    title: 'Roadmap',
+    summary: 'Near-term priorities, known gaps, deferred work, and next development milestones.',
+    status: 'draft',
+    typeLabel: 'Planning document',
+    actions: [{ label: 'Download Soon', variant: 'outline', disabled: true }],
+  },
+];
+
+const PUBLIC_DOC_RESOURCES: PublicDocumentResource[] = [
+  {
+    slug: 'charter-pdf',
+    title: 'Charter PDF',
+    summary: 'Printable public-release PDF for the OWA Charter. Generated artifact pipeline pending.',
+    disabled: true,
+  },
+  {
+    slug: 'compiled-markdown',
+    title: 'Compiled Markdown',
+    summary: 'Markdown downloads will be generated from public source chapters in the next docs pipeline pass.',
     disabled: true,
   },
 ];
 
-export const CHARTER_PRINCIPLE_CARDS: CharterPrincipleCard[] = CHARTER_PAIRS.map(
-  ([principle, title], index) => ({
-    principle,
-    title,
-    body: CHARTER_BODIES[index] ?? "",
-    anchor: index % 2 === 0 ? "left" : "right",
-  }),
-);
-
-export const PUBLIC_DOCUMENTS: PublicDocumentEntry[] = [
-  {
-    slug: "charter",
-    title: "The Charter of the Open World Assembly",
-    description: "Founding document for the public site.",
-    hero: {
-      eyebrow: "Founding Documents",
-      title: "The Charter of the Open World Assembly",
-      summary: [
-        "Humanity now possesses the means to communicate, coordinate, and act together across the planet.",
-        "We need not wait for kings, parties, corporations, or catastrophes to decide our future. We declare the following principles:",
-      ],
-      actions: [
-        { label: "About OWA", href: "/about", variant: "outline" },
-        { label: "Support OWA", href: "/support", variant: "outline" },
-        { label: "Enter Nexus", href: "/nexus/dashboard", variant: "outline" },
-        { label: "Download PDF", variant: "outline", disabled: true },
-      ],
-    },
-    sections: CHARTER_PRINCIPLE_CARDS,
-    closing: {
-      title: "Closing",
-      body: [
-        "The future is not owned by tyrants, algorithms, or inherited power.",
-        "The future belongs to free peoples who choose to build it together.",
-        "Let assemblies rise wherever people are. Let consent become visible. Let cooperation outrun coercion. Let the age of participation begin.",
-      ],
-    },
-    resources: CHARTER_RESOURCES,
+export const docsPageContent: PublicDocsPageContent = {
+  hero: {
+    eyebrow: 'Public Documents',
+    title: 'Read the core documents.',
+    summary: [
+      'Open World Assembly is being documented in public: founding principles, Nexus architecture, implementation notes, specifications, and roadmap work.',
+      'The document system is being prepared for generated Markdown, readable web pages, and downloadable PDFs from the same source material.',
+    ],
+    noteTitle: 'Current status',
+    noteBody:
+      'The Charter is readable on this page now. Additional downloads and document readers will be wired as the public docs pipeline comes online.',
+    actions: [
+      { label: 'Read Charter', href: '/docs', variant: 'outline' },
+      { label: 'Support OWA', href: '/support', variant: 'outline' },
+      { label: 'Explore Nexus Demo', href: '/nexus/dashboard', variant: 'outline' },
+    ],
   },
-];
+  directory: PUBLIC_DOCS_DIRECTORY,
+  featuredDocumentSlug: 'charter',
+  resources: PUBLIC_DOC_RESOURCES,
+};
 
-export const DEFAULT_PUBLIC_DOCUMENT = PUBLIC_DOCUMENTS[0];
+export const DEFAULT_PUBLIC_DOCUMENT_SLUG = docsPageContent.featuredDocumentSlug;

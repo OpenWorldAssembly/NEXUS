@@ -1,18 +1,19 @@
 /**
  * File: docs.tsx
- * Description: Composes the public document page for the OWA charter.
+ * Description: Composes the public docs directory and readable document page.
  */
 import { StyleSheet } from 'react-native';
 
-import { PublicDocsClosingPanel } from '@app/components/public/public-docs-closing-panel';
+import { PublicDocsDirectory } from '@app/components/public/public-docs-directory';
 import { PublicDocsHero } from '@app/components/public/public-docs-hero';
 import { PublicDocsResourceGrid } from '@app/components/public/public-docs-resource-grid';
-import { PublicDocsSectionGrid } from '@app/components/public/public-docs-section-grid';
+import { PublicDocumentReader } from '@app/components/public/public-document-reader';
 import PublicPageShell from '@app/components/public/public-page-shell';
-import { DEFAULT_PUBLIC_DOCUMENT } from '@app/public/docs-content';
+import { docsPageContent } from '@app/public/docs-content';
+import { PUBLIC_READABLE_DOCUMENTS } from '@app/public/generated/public-docs.generated';
 
 export default function DocsScreen() {
-  const document = DEFAULT_PUBLIC_DOCUMENT;
+  const featuredDocument = PUBLIC_READABLE_DOCUMENTS[docsPageContent.featuredDocumentSlug];
 
   return (
     <PublicPageShell
@@ -22,10 +23,10 @@ export default function DocsScreen() {
       enablePositionAnimation
       showsVerticalScrollIndicator={false}
     >
-      <PublicDocsHero hero={document.hero} />
-      <PublicDocsSectionGrid sections={document.sections} />
-      <PublicDocsClosingPanel closing={document.closing} />
-      <PublicDocsResourceGrid resources={document.resources} />
+      <PublicDocsHero hero={docsPageContent.hero} />
+      <PublicDocsDirectory documents={docsPageContent.directory} />
+      <PublicDocumentReader document={featuredDocument} />
+      <PublicDocsResourceGrid resources={docsPageContent.resources} />
     </PublicPageShell>
   );
 }

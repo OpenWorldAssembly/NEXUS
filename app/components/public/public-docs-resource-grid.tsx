@@ -2,15 +2,15 @@
  * File: public-docs-resource-grid.tsx
  * Description: Renders public document resource actions and download placeholders.
  */
-import { Text, View } from "react-native";
+import { Text, View } from 'react-native';
 
-import { PublicPageActions } from "@app/components/public/public-page-actions";
-import { PublicPanelShell } from "@app/components/public/public-panel-shell";
-import { PUBLIC_SURFACE_CLASSES } from "@app/components/public/public-surface";
-import type { PublicDocumentEntry } from "@app/public/content-types";
+import { PublicPageActions } from '@app/components/public/public-page-actions';
+import { PublicPanelShell } from '@app/components/public/public-panel-shell';
+import { PUBLIC_SURFACE_CLASSES } from '@app/components/public/public-surface';
+import type { PublicDocumentResource } from '@app/public/content-types';
 
 type PublicDocsResourceGridProps = {
-  resources: PublicDocumentEntry["resources"];
+  resources?: PublicDocumentResource[];
 };
 
 export function PublicDocsResourceGrid({ resources }: PublicDocsResourceGridProps) {
@@ -24,27 +24,28 @@ export function PublicDocsResourceGrid({ resources }: PublicDocsResourceGridProp
         <View className="gap-2">
           <Text
             className={[
-              "font-[Orbitron_700Bold] text-[10px] uppercase tracking-[3px]",
+              'font-[Orbitron_700Bold] text-[10px] uppercase tracking-[3px]',
               PUBLIC_SURFACE_CLASSES.text.eyebrowClassName,
-            ].join(" ")}
+            ].join(' ')}
           >
-            Document Library
+            Downloads
           </Text>
           <Text
             className={[
-              "font-[Inter_700Bold] text-[28px] leading-[34px]",
+              'font-[Inter_700Bold] text-[28px] leading-[34px]',
               PUBLIC_SURFACE_CLASSES.text.headingClassName,
-            ].join(" ")}
+            ].join(' ')}
           >
-            Downloads and alternate formats
+            Public artifact pipeline
           </Text>
           <Text
             className={[
-              "max-w-[760px] font-[Inter_400Regular] text-[16px] leading-[26px]",
+              'max-w-[760px] font-[Inter_400Regular] text-[16px] leading-[26px]',
               PUBLIC_SURFACE_CLASSES.text.bodyClassName,
-            ].join(" ")}
+            ].join(' ')}
           >
-            Placeholder for hosted PDFs, print-friendly exports, and future document routes.
+            Download links will point to generated Markdown and PDF artifacts once the public docs
+            build pipeline is wired in.
           </Text>
         </View>
         <PublicPageActions
@@ -52,7 +53,7 @@ export function PublicDocsResourceGrid({ resources }: PublicDocsResourceGridProp
             label: resource.title,
             target: resource.target,
             href: resource.href,
-            variant: "outline",
+            variant: 'outline',
             disabled: resource.disabled,
           }))}
           className="lg:justify-end"

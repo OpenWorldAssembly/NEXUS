@@ -40,13 +40,6 @@ export type AboutSection = {
   backgroundImageUri: string;
 };
 
-export type CharterPrincipleCard = {
-  principle: string;
-  title: string;
-  body: string;
-  anchor: 'left' | 'right';
-};
-
 export type PublicDocumentHero = {
   eyebrow: string;
   title: string;
@@ -56,9 +49,35 @@ export type PublicDocumentHero = {
   actions: PublicPageAction[];
 };
 
-export type PublicDocumentClosing = {
+export type PublicReadableDocumentSection = {
+  id: string;
+  eyebrow?: string;
   title: string;
   body: string[];
+};
+
+export type PublicReadableDocument = {
+  slug: string;
+  title: string;
+  subtitle?: string;
+  version?: string;
+  updatedLabel?: string;
+  intro?: string[];
+  sections: PublicReadableDocumentSection[];
+  closing?: {
+    title: string;
+    body: string[];
+  };
+};
+
+export type PublicDocumentDirectoryItem = {
+  slug: string;
+  title: string;
+  summary: string;
+  status: 'available' | 'draft' | 'planned';
+  typeLabel: string;
+  readableDocumentSlug?: string;
+  actions?: PublicPageAction[];
 };
 
 export type PublicDocumentResource = {
@@ -71,12 +90,9 @@ export type PublicDocumentResource = {
   disabled?: boolean;
 };
 
-export type PublicDocumentEntry = {
-  slug: string;
-  title: string;
-  description: string;
+export type PublicDocsPageContent = {
   hero: PublicDocumentHero;
-  sections: CharterPrincipleCard[];
-  closing: PublicDocumentClosing;
+  directory: PublicDocumentDirectoryItem[];
+  featuredDocumentSlug: string;
   resources?: PublicDocumentResource[];
 };

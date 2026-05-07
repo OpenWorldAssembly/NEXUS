@@ -45,3 +45,10 @@ Current source split:
 - Actions may target internal public routes, external URLs, or static download paths under `/downloads/`.
 - Existing internal route `href` usage remains supported as a compatibility bridge while newer content should prefer explicit `target` objects.
 
+
+### Public docs page structure
+
+- The `/docs` route renders a public docs hero, document directory, readable featured document, and downloads/resources panel.
+- The Charter is currently readable on-page through `PublicDocumentReader` and `PUBLIC_READABLE_DOCUMENTS.charter`.
+- Directory entries currently include the OWA Charter, Nexus README, Implementation Guide, Specifications, and Roadmap.
+- Download actions for generated Markdown/PDF artifacts are present as disabled placeholders until the public docs artifact pipeline is implemented.
