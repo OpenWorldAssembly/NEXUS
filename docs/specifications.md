@@ -38,3 +38,10 @@ Current source split:
 - [Nexus Routes And Workflows](specifications/nexus-routes-and-workflows.md)
 - [Architecture And State](specifications/architecture-and-state.md)
 - [Known Gaps And Provisional Notes](specifications/known-gaps-and-provisional.md)
+
+### Public action/link model
+
+- Public content actions are represented by `PublicPageAction` in `app/public/content-types.ts`.
+- Actions may target internal public routes, external URLs, or static download paths under `/downloads/`.
+- Existing internal route `href` usage remains supported as a compatibility bridge while newer content should prefer explicit `target` objects.
+

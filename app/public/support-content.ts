@@ -2,8 +2,7 @@
  * File: support-content.ts
  * Description: Stores the public support page copy and structured content blocks.
  */
-import type { PublicPageAction } from '@app/components/public/public-page-actions';
-import type { Href } from 'expo-router';
+import type { PublicPageAction } from '@app/public/content-types';
 
 export type SupportCard = {
   title: string;
@@ -22,9 +21,9 @@ export type SupportPageContent = {
 };
 
 const supportActions: PublicPageAction[] = [
-  { href: '/about' as Href, label: 'Learn More', variant: 'primary' },
-  { href: '/docs' as Href, label: 'Read the Charter', variant: 'secondary' },
-  { href: '/nexus/dashboard' as Href, label: 'Browse the Nexus', variant: 'secondary' },
+  { href: '/about', label: 'Learn More', variant: 'primary' },
+  { href: '/docs', label: 'Read the Charter', variant: 'secondary' },
+  { href: '/nexus/dashboard', label: 'Browse the Nexus', variant: 'secondary' },
 ];
 
 export const supportPageContent: SupportPageContent = {

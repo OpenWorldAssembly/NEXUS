@@ -54,11 +54,11 @@ export default function PublicHomeSection({
 
   const actionAlignmentClassName = isRightAligned ? 'items-end' : 'items-start';
   const actionWrapperClassName =
-    section.action?.variant === 'primary'
+    section.action?.variant === 'primary' || section.action?.variant === 'solid'
       ? PUBLIC_SURFACE_CLASSES.action.solidRootClassName
       : PUBLIC_SURFACE_CLASSES.action.outlineRootClassName;
   const actionTextClassName =
-    section.action?.variant === 'primary'
+    section.action?.variant === 'primary' || section.action?.variant === 'solid'
       ? PUBLIC_SURFACE_CLASSES.action.solidTextClassName
       : PUBLIC_SURFACE_CLASSES.action.outlineTextClassName;
 
@@ -149,7 +149,7 @@ export default function PublicHomeSection({
     <View className={actionAlignmentClassName}>
       <PublicPageActions actions={section.actions} />
     </View>
-  ) : section.action ? (
+  ) : section.action?.href ? (
     <View className={actionAlignmentClassName}>
       <Link href={section.action.href} asChild>
         <Pressable className={actionWrapperClassName}>

@@ -36,3 +36,10 @@ The current product stack is still best understood as:
 - [Governance, Initiatives, And Decisions](implementation-guide/governance-initiatives-and-decisions.md)
 - [Decision Log 2026-04](implementation-guide/decision-log-2026-04.md)
 - [Decision Log 2026-05](implementation-guide/decision-log-2026-05.md)
+
+### Public content link contract cleanup (Pass 10A)
+
+- Public-site actions now use shared content types from `app/public/content-types.ts` rather than component-owned action types.
+- `PublicLinkTarget` supports route, external, and static download targets while preserving legacy route `href` fields for existing content.
+- External public links are centralized in `app/public/public-links.ts` so Support, footer, and future document/download passes have one place to wire real URLs.
+

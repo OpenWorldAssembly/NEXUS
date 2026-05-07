@@ -50,6 +50,7 @@ export function PublicDocsResourceGrid({ resources }: PublicDocsResourceGridProp
         <PublicPageActions
           actions={resources.map((resource) => ({
             label: resource.title,
+            target: resource.target,
             href: resource.href,
             variant: "outline",
             disabled: resource.disabled,

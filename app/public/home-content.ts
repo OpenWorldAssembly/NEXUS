@@ -2,7 +2,7 @@
  * File: home-content.ts
  * Description: Stores the homepage rail sections, including the leading hero section.
  */
-import type { PublicPageAction } from '@app/components/public/public-page-actions';
+import type { PublicPageAction } from '@app/public/content-types';
 import { buildPublicBackgroundImageUri } from './public-graphics';
 
 export type HomeRailSection = {
