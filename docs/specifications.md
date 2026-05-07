@@ -48,14 +48,22 @@ Current source split:
 
 ### Public docs page structure
 
-- The `/docs` route renders a public docs hero, document directory, readable featured document, and downloads/resources panel.
-- The Charter is currently readable on-page through `PublicDocumentReader` and `PUBLIC_READABLE_DOCUMENTS.charter`.
+- The `/docs` route renders a public docs hero, document directory, selected readable document, and downloads/resources panel.
+- The Charter, Nexus README, Implementation Guide, Specifications, and Roadmap are currently selectable and readable on-page through `PublicDocumentReader` and `PUBLIC_READABLE_DOCUMENTS`.
 - Directory entries currently include the OWA Charter, Nexus README, Implementation Guide, Specifications, and Roadmap.
-- Download actions for generated Markdown/PDF artifacts are present as disabled placeholders until the public docs artifact pipeline is implemented.
+- Generated Markdown download actions point at `/downloads/*` artifacts and trigger browser downloads on web. PDF actions remain disabled placeholders until the PDF export pipeline is implemented.
 
 ### Public docs generated artifacts
 
 - The `/docs` page can switch its readable panel between Charter, Nexus README, Implementation Guide, Specifications, and Roadmap entries.
-- Directory read buttons select the readable document in-page; Markdown download buttons point at generated static files under `/downloads/`.
+- Directory read buttons select the readable document in-page and scroll to the reader anchor; Markdown download buttons point at generated static files under `/downloads/`.
 - `scripts/build-public-docs.mjs` is the current source of truth for compiling public Markdown sources into generated reader data and static Markdown downloads.
 - Generated PDF actions remain disabled placeholders until a PDF export step is added.
+- The document reader displays a local outline and anchored section cards for long generated documents; this is separate from the reusable secondary navigation system for now.
+
+### Public Docs Reader Behavior
+
+- Public document cards may expose a `Read Below` action that selects the current document and scrolls the Docs page shell to the readable document panel.
+- Reader outline items scroll within the public page shell rather than using browser-level document scrolling.
+- Markdown downloads use static files generated into `public/downloads/` and should be triggered as browser downloads on web.
+- PDF actions remain disabled placeholders until the PDF pipeline is added.

@@ -28,6 +28,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
     sections: [
       {
         id: "charter-i-the-people-are-the-source",
+        level: 2,
         eyebrow: "I",
         title: "The People Are the Source",
         body: [
@@ -36,6 +37,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "charter-ii-consent-above-control",
+        level: 2,
         eyebrow: "II",
         title: "Consent Above Control",
         body: [
@@ -44,6 +46,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "charter-iii-power-must-be-limited",
+        level: 2,
         eyebrow: "III",
         title: "Power Must Be Limited",
         body: [
@@ -52,6 +55,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "charter-iv-participation-over-passivity",
+        level: 2,
         eyebrow: "IV",
         title: "Participation Over Passivity",
         body: [
@@ -60,6 +64,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "charter-v-decentralize-what-can-be-local",
+        level: 2,
         eyebrow: "V",
         title: "Decentralize What Can Be Local",
         body: [
@@ -68,6 +73,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "charter-vi-coordinate-what-must-be-shared",
+        level: 2,
         eyebrow: "VI",
         title: "Coordinate What Must Be Shared",
         body: [
@@ -76,6 +82,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "charter-vii-unity-without-uniformity",
+        level: 2,
         eyebrow: "VII",
         title: "Unity Without Uniformity",
         body: [
@@ -84,6 +91,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "charter-viii-nonviolence-is-strength",
+        level: 2,
         eyebrow: "VIII",
         title: "Nonviolence Is Strength",
         body: [
@@ -92,6 +100,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "charter-ix-truth-must-be-visible",
+        level: 2,
         eyebrow: "IX",
         title: "Truth Must Be Visible",
         body: [
@@ -100,6 +109,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "charter-x-fatalism-is-folly",
+        level: 2,
         eyebrow: "X",
         title: "Fatalism Is Folly",
         body: [
@@ -108,6 +118,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "charter-closing",
+        level: 2,
         title: "Closing",
         body: [
           "The future is not owned by tyrants, algorithms, or inherited power.",
@@ -129,6 +140,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
     sections: [
       {
         id: "nexus-readme-current-status",
+        level: 2,
         title: "Current Status",
         body: [
           "Nexus is live enough to demonstrate the core direction, but unstable enough that visitors should treat it as a demo.",
@@ -139,6 +151,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "nexus-readme-what-nexus-is",
+        level: 2,
         title: "What Nexus Is",
         body: [
           "Nexus is a packet-based coordination system for people, assemblies, initiatives, policies, discussions, trust signals, and future governance workflows.",
@@ -147,6 +160,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "nexus-readme-what-nexus-is-not",
+        level: 2,
         title: "What Nexus Is Not",
         body: [
           "Nexus is not a party, command structure, social network clone, or centralized authority.",
@@ -155,6 +169,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "nexus-readme-core-pattern",
+        level: 2,
         title: "Core Pattern",
         body: [
           "Nexus treats coordination as signed, inspectable records.",
@@ -166,6 +181,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "nexus-readme-open-world-assembly",
+        level: 2,
         title: "Open World Assembly",
         body: [
           "OWA is the first public-facing implementation built on top of Nexus.",
@@ -174,6 +190,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "nexus-readme-development-direction",
+        level: 2,
         title: "Development Direction",
         body: [
           "The near-term goal is stability before scale.",
@@ -190,13 +207,8 @@ export const PUBLIC_READABLE_DOCUMENTS = {
     updatedLabel: "Generated from current public Markdown source.",
     sections: [
       {
-        id: "implementation-guide-open-world-assembly-implementation-guide",
-        title: "Open World Assembly Implementation Guide",
-        body: [
-        ],
-      },
-      {
         id: "implementation-guide-purpose-and-scope",
+        level: 2,
         title: "Purpose and scope",
         body: [
           "This index is the durable architecture and decision reference for OWA and Nexus.",
@@ -210,6 +222,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "implementation-guide-current-summary",
+        level: 2,
         title: "Current summary",
         body: [
           "The active architecture is:",
@@ -225,6 +238,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "implementation-guide-chapters",
+        level: 2,
         title: "Chapters",
         body: [
           "• Architecture And Layers",
@@ -233,16 +247,34 @@ export const PUBLIC_READABLE_DOCUMENTS = {
           "• Governance, Initiatives, And Decisions",
           "• Decision Log 2026-04",
           "• Decision Log 2026-05",
-          "### Public content link contract cleanup (Pass 10A)",
+        ],
+      },
+      {
+        id: "implementation-guide-public-content-link-contract-cleanup-pass-10a",
+        level: 3,
+        title: "Public content link contract cleanup (Pass 10A)",
+        body: [
           "• Public-site actions now use shared content types from app/public/content-types.ts rather than component-owned action types.",
           "• PublicLinkTarget supports route, external, and static download targets while preserving legacy route href fields for existing content.",
           "• External public links are centralized in app/public/public-links.ts so Support, footer, and future document/download passes have one place to wire real URLs.",
-          "### Docs directory and readable document shell (Pass 10B)",
+        ],
+      },
+      {
+        id: "implementation-guide-docs-directory-and-readable-document-shell-pass-10b",
+        level: 3,
+        title: "Docs directory and readable document shell (Pass 10B)",
+        body: [
           "• The public /docs route now uses a directory-first shape instead of rendering the OWA Charter as a grid of principle cards.",
           "• Readable documents are consumed from app/public/generated/public-docs.generated.ts, which is intentionally shaped as future build output from public Markdown source files.",
           "• The current generated-style module is maintained by hand until the public docs build pipeline compiles Markdown, downloadable artifacts, and reader data.",
           "• The old docs principle-grid components were removed from active use so the docs page can evolve around document directory entries, readable web documents, and static download links.",
-          "### Public docs Markdown build pipeline (Pass 10C)",
+        ],
+      },
+      {
+        id: "implementation-guide-public-docs-markdown-build-pipeline-pass-10c",
+        level: 3,
+        title: "Public docs Markdown build pipeline (Pass 10C)",
+        body: [
           "• Public docs source is now declared in docs/public/public-docs.manifest.json and compiled by scripts/build-public-docs.mjs.",
           "• The build script creates readable document data in app/public/generated/public-docs.generated.ts, static Markdown downloads in public/downloads/, and hash-based internal version records in docs/public/version-records/.",
           "• Source documents may be defined by sourceDir or ordered sourceFiles, allowing chapter-split docs to compile into one current public artifact per document.",
@@ -251,29 +283,60 @@ export const PUBLIC_READABLE_DOCUMENTS = {
         ],
       },
       {
+        id: "implementation-guide-docs-reader-scroll-and-action-cleanup-pass-10e",
+        level: 3,
+        title: "Docs reader scroll and action cleanup (Pass 10E)",
+        body: [
+          "• The Docs page scroll controls now target the shared PublicPageShell scroll view directly instead of using browser scrollIntoView, avoiding outer-page scroll jumps that made the footer appear to float over content.",
+          "• Document directory actions can render in a stacked layout so Download .md and disabled PDF placeholders do not overflow narrow cards.",
+          "• The readable document view returned to one continuous card with an internal outline and section dividers, rather than giving each document section its own card.",
+          "• The public footer now uses an opaque bg-public-shell background so it does not visually blend with scrolled content behind it.",
+        ],
+      },
+      {
         id: "implementation-guide-architecture-and-layers",
+        level: 2,
         title: "Architecture And Layers",
         body: [
         ],
       },
       {
         id: "implementation-guide-product-layers",
+        level: 3,
         title: "Product layers",
         body: [
           "The long-term architecture remains a three-layer stack with strict boundaries:",
-          "### OWA App",
+        ],
+      },
+      {
+        id: "implementation-guide-owa-app",
+        level: 4,
+        title: "OWA App",
+        body: [
           "The public-facing civic surface.",
           "• OWA-native framing and navigation",
           "• geography-first assembly experience",
           "• place -> assembly -> deliberation -> proposals or votes -> actions -> record -> learning",
-          "### Nexus Browser",
+        ],
+      },
+      {
+        id: "implementation-guide-nexus-browser",
+        level: 4,
+        title: "Nexus Browser",
+        body: [
           "The packet and graph surface.",
           "• inspect packets",
           "• follow links",
           "• inspect provenance",
           "• search and filter",
           "• browse incoming and outgoing references",
-          "### Nexus Core",
+        ],
+      },
+      {
+        id: "implementation-guide-nexus-core",
+        level: 4,
+        title: "Nexus Core",
+        body: [
           "The portable engine with no UI assumptions.",
           "• packet typing and validation",
           "• graph building",
@@ -287,6 +350,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "implementation-guide-repository-boundaries",
+        level: 3,
         title: "Repository boundaries",
         body: [
           "The active repo split is:",
@@ -298,15 +362,28 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "implementation-guide-core-versus-adapters",
+        level: 3,
         title: "Core versus adapters",
         body: [
-          "### Core owns",
+        ],
+      },
+      {
+        id: "implementation-guide-core-owns",
+        level: 4,
+        title: "Core owns",
+        body: [
           "• packet schemas and validation",
           "• graph relationships and traversal",
           "• import/export/merge rules",
           "• signing and verification law",
           "• policy evaluation hooks and deterministic business logic",
-          "### Adapters own",
+        ],
+      },
+      {
+        id: "implementation-guide-adapters-own",
+        level: 4,
+        title: "Adapters own",
+        body: [
           "• routing and navigation",
           "• rendering and layout",
           "• input UX",
@@ -317,6 +394,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "implementation-guide-navigation-and-shell-model",
+        level: 3,
         title: "Navigation and shell model",
         body: [
           "The intended navigation model still uses three mental axes:",
@@ -336,12 +414,14 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "implementation-guide-core-entities-and-packet-model",
+        level: 2,
         title: "Core Entities And Packet Model",
         body: [
         ],
       },
       {
         id: "implementation-guide-packet-graph-foundation",
+        level: 3,
         title: "Packet graph foundation",
         body: [
           "The packet graph remains the most robust unifying model.",
@@ -358,9 +438,16 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "implementation-guide-core-entities",
+        level: 3,
         title: "Core entities",
         body: [
-          "### Element",
+        ],
+      },
+      {
+        id: "implementation-guide-element",
+        level: 4,
+        title: "Element",
+        body: [
           "The universal identity anchor.",
           "• person",
           "• assembly",
@@ -368,13 +455,37 @@ export const PUBLIC_READABLE_DOCUMENTS = {
           "• service",
           "• overlay or coordination group",
           "• initiative",
-          "### Scope",
+        ],
+      },
+      {
+        id: "implementation-guide-scope",
+        level: 4,
+        title: "Scope",
+        body: [
           "The context or lens around an element. Every person can be treated as their own scope lens through You.",
-          "### Assembly",
+        ],
+      },
+      {
+        id: "implementation-guide-assembly",
+        level: 4,
+        title: "Assembly",
+        body: [
           "A policy-governed civic or geographic element subtype, not a separate storage primitive.",
-          "### Initiative",
+        ],
+      },
+      {
+        id: "implementation-guide-initiative",
+        level: 4,
+        title: "Initiative",
+        body: [
           "A generic Nexus concept for policy and template lineage. OWA should be modeled as an initiative inside Nexus rather than as a hardcoded exception.",
-          "### Claim",
+        ],
+      },
+      {
+        id: "implementation-guide-claim",
+        level: 4,
+        title: "Claim",
+        body: [
           "The current canonical packet family for scoped social assertions, including:",
           "• role_association",
           "• assembly_association",
@@ -382,21 +493,46 @@ export const PUBLIC_READABLE_DOCUMENTS = {
           "Current code truth:",
           "• Claim remains a distinct packet family today",
           "• the docs should continue to describe that as current architecture",
-          "### Attestation",
+        ],
+      },
+      {
+        id: "implementation-guide-attestation",
+        level: 4,
+        title: "Attestation",
+        body: [
           "The current packet family for support, dispute, and other evidence-oriented signals.",
           "Current code truth:",
           "• claim support and dispute currently stay on Attestation",
           "• Attestation and Claim are still distinct in code",
-          "### Role",
+        ],
+      },
+      {
+        id: "implementation-guide-role",
+        level: 4,
+        title: "Role",
+        body: [
           "A reusable role definition packet family. Exact-scope role assertions are currently represented through Claim(kind: \"role_association\").",
-          "### Policy",
+        ],
+      },
+      {
+        id: "implementation-guide-policy",
+        level: 4,
+        title: "Policy",
+        body: [
           "The configuration and legitimacy family for defaults, thresholds, and later execution rules.",
-          "### Decision",
+        ],
+      },
+      {
+        id: "implementation-guide-decision",
+        level: 4,
+        title: "Decision",
+        body: [
           "A governance artifact family that exists in infrastructure and read surfaces, but whose real workflow semantics are still developing.",
         ],
       },
       {
         id: "implementation-guide-relationships-and-graph-semantics",
+        level: 3,
         title: "Relationships and graph semantics",
         body: [
           "The graph should continue to express relationships through typed refs and edges rather than UI-only linkage. Important relationship categories remain:",
@@ -412,12 +548,14 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "implementation-guide-trust-moderation-and-policy",
+        level: 2,
         title: "Trust, Moderation, And Policy",
         body: [
         ],
       },
       {
         id: "implementation-guide-trust-direction",
+        level: 3,
         title: "Trust direction",
         body: [
           "Trust should remain layered, inspectable, and threshold-based rather than collapsing into a hidden score.",
@@ -433,19 +571,38 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "implementation-guide-moderation-and-automoderation",
+        level: 3,
         title: "Moderation and automoderation",
         body: [
           "Status: canon candidate",
-          "### Current code truth",
+        ],
+      },
+      {
+        id: "implementation-guide-current-code-truth",
+        level: 4,
+        title: "Current code truth",
+        body: [
           "• moderation workflows are not yet fully implemented",
           "• some read surfaces already expose packet-backed evidence and action visibility",
           "• disabled placeholders are visible in several surfaces",
-          "### Direction",
+        ],
+      },
+      {
+        id: "implementation-guide-direction",
+        level: 4,
+        title: "Direction",
+        body: [
           "• automoderation should be a generic feature, not a route-local trick",
           "• default moderation baselines should come from the relevant element's policy",
           "• user-level moderation preferences should be available as adjustable policy or settings choices, similar in spirit to write protection preferences",
           "• moderation should primarily act as visibility projection over packet and attestation graphs before it becomes hard rejection logic",
-          "### Unresolved",
+        ],
+      },
+      {
+        id: "implementation-guide-unresolved",
+        level: 4,
+        title: "Unresolved",
+        body: [
           "• which moderation controls belong in generic policy versus OWA default policy",
           "• which interactions should remain soft projection versus hard runtime enforcement",
           "• how much moderation preference state should be actor-level policy versus client-level shell preference",
@@ -453,14 +610,27 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "implementation-guide-attestations-reactions-and-claims",
+        level: 3,
         title: "Attestations, reactions, and claims",
         body: [
           "Status: canon candidate",
-          "### Current code truth",
+        ],
+      },
+      {
+        id: "implementation-guide-current-code-truth",
+        level: 4,
+        title: "Current code truth",
+        body: [
           "• Claim is still its own packet family",
           "• Attestation is still its own packet family",
           "• current discussion voting uses packet-signal attestations rather than a separate reaction family",
-          "### Direction",
+        ],
+      },
+      {
+        id: "implementation-guide-direction",
+        level: 4,
+        title: "Direction",
+        body: [
           "• keep the current Claim split in code for now",
           "• record a live design question about whether the long-term model should converge toward a broader attestation umbrella with subtypes such as:",
           "• reaction",
@@ -468,7 +638,13 @@ export const PUBLIC_READABLE_DOCUMENTS = {
           "• objection",
           "• claim",
           "• keep the semantics distinction clear even if the long-term storage model converges",
-          "### Unresolved",
+        ],
+      },
+      {
+        id: "implementation-guide-unresolved",
+        level: 4,
+        title: "Unresolved",
+        body: [
           "• whether reactions deserve their own base family or should remain an attestation-like subtype",
           "• whether vouch and flag should become explicit attestation subtypes",
           "• whether claims should ever collapse into a generalized attestation family",
@@ -477,34 +653,61 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "implementation-guide-governance-initiatives-and-decisions",
+        level: 2,
         title: "Governance, Initiatives, And Decisions",
         body: [
         ],
       },
       {
         id: "implementation-guide-initiatives",
+        level: 3,
         title: "Initiatives",
         body: [
           "Status: canon candidate",
-          "### Current code truth",
+        ],
+      },
+      {
+        id: "implementation-guide-current-code-truth",
+        level: 4,
+        title: "Current code truth",
+        body: [
           "• initiative-specific filtering, subscriptions, and version visibility are not yet active product behavior",
           "• current code does not yet implement initiative-version subscriptions or official versus unofficial filtering",
-          "### Direction",
+        ],
+      },
+      {
+        id: "implementation-guide-direction",
+        level: 4,
+        title: "Direction",
+        body: [
           "• Initiative should be treated as a generic Nexus concept for policy and template lineage",
           "• OWA should be modeled as an initiative element inside Nexus, not as a hardcoded exception",
           "• \"official OWA\" should mean conforming to recognized OWA dependencies, templates, and policies",
           "• assemblies remain valid Nexus objects even when they fork or diverge from canonical OWA lineage",
-          "### Unresolved",
+        ],
+      },
+      {
+        id: "implementation-guide-unresolved",
+        level: 4,
+        title: "Unresolved",
+        body: [
           "• the exact packet/API shape for initiative conformance and recognition",
           "• how official, unofficial, derived, and forked initiative states should be encoded",
         ],
       },
       {
         id: "implementation-guide-initiative-versioning-and-subscriptions",
+        level: 3,
         title: "Initiative versioning and subscriptions",
         body: [
           "Status: canon candidate",
-          "### Direction",
+        ],
+      },
+      {
+        id: "implementation-guide-direction",
+        level: 4,
+        title: "Direction",
+        body: [
           "Initiative lineage should support version-aware adoption and viewing, including:",
           "• current official version",
           "• older official versions",
@@ -515,7 +718,13 @@ export const PUBLIC_READABLE_DOCUMENTS = {
           "• all official versions",
           "• official plus unofficial",
           "• multiple initiatives together",
-          "### Unresolved",
+        ],
+      },
+      {
+        id: "implementation-guide-unresolved",
+        level: 4,
+        title: "Unresolved",
+        body: [
           "• the exact version packet or metadata shape",
           "• whether subscriptions belong primarily to actor policy, shell preference, or both",
           "• how version compatibility and upgrade prompts should surface in Explorer and feeds",
@@ -523,15 +732,28 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "implementation-guide-assemblies-custody-and-legitimacy",
+        level: 3,
         title: "Assemblies, custody, and legitimacy",
         body: [
           "Status: canon candidate",
-          "### Direction",
+        ],
+      },
+      {
+        id: "implementation-guide-direction",
+        level: 4,
+        title: "Direction",
+        body: [
           "• assemblies are elements with policy-governed civic semantics, not owned subsidiaries",
           "• custody, legitimacy, policy authority, and governance outcome should remain distinct concepts",
           "• association should remain a simple claim first; typed categories are deferred",
           "• multi-key assembly authority, custody transition, and protected-state mutation should remain explicit later design work",
-          "### Unresolved",
+        ],
+      },
+      {
+        id: "implementation-guide-unresolved",
+        level: 4,
+        title: "Unresolved",
+        body: [
           "• the exact custody and multi-key packet model",
           "• how authority grants or keyset policies should be represented",
           "• how passed decisions eventually authorize protected state changes",
@@ -539,13 +761,26 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "implementation-guide-proposals-and-decisions",
+        level: 3,
         title: "Proposals and decisions",
         body: [
           "Status: canon candidate",
-          "### Current code truth",
+        ],
+      },
+      {
+        id: "implementation-guide-current-code-truth",
+        level: 4,
+        title: "Current code truth",
+        body: [
           "• votes remain read-only",
           "• proposals, votes, and decisions are not yet a fully interactive trusted workflow",
-          "### Direction",
+        ],
+      },
+      {
+        id: "implementation-guide-direction",
+        level: 4,
+        title: "Direction",
+        body: [
           "• decisions should begin as legitimacy records and civic signals",
           "• policy may later allow some decisions to activate real effects",
           "• proposals should declare their intended outcome as explicitly and programmatically as possible",
@@ -556,7 +791,13 @@ export const PUBLIC_READABLE_DOCUMENTS = {
           "• signal or poll",
           "• other explicit action packages",
           "Automatic execution should only be described as future behavior for explicitly supported built-in action handlers or canonical approval artifacts.",
-          "### Unresolved",
+        ],
+      },
+      {
+        id: "implementation-guide-unresolved",
+        level: 4,
+        title: "Unresolved",
+        body: [
           "• which decision types can become effect-bearing first",
           "• how multi-key assembly authority interacts with execution",
           "• whether execution produces direct mutations, canonical approval packets, or both",
@@ -564,6 +805,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "implementation-guide-decision-log-2026-04",
+        level: 2,
         title: "Decision Log 2026-04",
         body: [
           "This monthly log condenses the April 2026 decisions that remain most important for current implementation and future migration work.",
@@ -571,6 +813,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "implementation-guide-2026-04-08-foundations",
+        level: 3,
         title: "2026-04-08 foundations",
         body: [
           "• Packet identity uses stable packet_id plus immutable revision_id.",
@@ -583,6 +826,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "implementation-guide-2026-04-09-shell-and-discussion-shape",
+        level: 3,
         title: "2026-04-09 shell and discussion shape",
         body: [
           "• Shared browser and Nexus query services over the packet graph became the projection seam.",
@@ -594,6 +838,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "implementation-guide-2026-04-10-identity-and-auth",
+        level: 3,
         title: "2026-04-10 identity and auth",
         body: [
           "• Every graph-writing actor became a cryptographic Element(kind: \"person\"), including guests.",
@@ -605,6 +850,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "implementation-guide-2026-04-17-architecture-and-trust-pivot",
+        level: 3,
         title: "2026-04-17 architecture and trust pivot",
         body: [
           "• The final source roots became core, runtime, and app, with src/app as the Expo Router shell.",
@@ -616,6 +862,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "implementation-guide-2026-04-18-to-2026-04-20-locality-and-identity-hardening",
+        level: 3,
         title: "2026-04-18 to 2026-04-20 locality and identity hardening",
         body: [
           "• Legacy signed identities remained valid after the roles-and-claims refactor.",
@@ -626,6 +873,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "implementation-guide-2026-04-23-and-2026-04-24-compatibility-and-fortress-corrid",
+        level: 3,
         title: "2026-04-23 and 2026-04-24 compatibility and fortress corridor",
         body: [
           "• Schema compatibility moved into a real raw/adapted/read-for-write pipeline.",
@@ -635,6 +883,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "implementation-guide-2026-04-25-to-2026-04-29-packet-floor-and-verification",
+        level: 3,
         title: "2026-04-25 to 2026-04-29 packet floor and verification",
         body: [
           "• Packet compatibility coverage is now classified explicitly.",
@@ -645,6 +894,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "implementation-guide-2026-04-30-surface-level-runtime-contracts",
+        level: 3,
         title: "2026-04-30 surface-level runtime contracts",
         body: [
           "• Discussion workspaces now project action affordances through the shared NexusActionState and NexusActionIntentDescriptor contract.",
@@ -653,6 +903,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "implementation-guide-decision-log-2026-05",
+        level: 2,
         title: "Decision Log 2026-05",
         body: [
           "This monthly log condenses the May 2026 decisions that remain most important for current public-surface and documentation shape.",
@@ -660,6 +911,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "implementation-guide-2026-05-01-public-surface-convergence",
+        level: 3,
         title: "2026-05-01 public surface convergence",
         body: [
           "• Shared public actions and section shells now route through one surface contract.",
@@ -673,6 +925,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "implementation-guide-2026-05-chaptering-follow-up",
+        level: 3,
         title: "2026-05 chaptering follow-up",
         body: [
           "• Canon docs are being split into index files plus shallow chapter folders to reduce edit cost, preserve top-level link stability, and keep current truth, durable architecture, and roadmap work separated cleanly.",
@@ -680,6 +933,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "implementation-guide-2026-05-shell-honesty-foundation",
+        level: 3,
         title: "2026-05 shell honesty foundation",
         body: [
           "• Nexus now uses a shell-level early-access gate as a session-scoped entry warning rather than leaving public-facing instability as unstated product lore.",
@@ -689,6 +943,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "implementation-guide-2026-05-feature-status-explainers",
+        level: 3,
         title: "2026-05 feature-status explainers",
         body: [
           "• Disabled and partial Nexus controls now route through a centralized feature-status registry instead of scattering one-off placeholder copy through route files.",
@@ -699,6 +954,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "implementation-guide-2026-05-explorer-and-shell-mobile-cleanup",
+        level: 3,
         title: "2026-05 Explorer and shell mobile cleanup",
         body: [
           "• NexusInlineSelect now renders its open menu on a true overlay layer instead of trusting local stacking order, so Explorer View as menus can sit above adjacent header controls.",
@@ -714,6 +970,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "implementation-guide-2026-05-packet-explorer-export-workbench",
+        level: 3,
         title: "2026-05 Packet Explorer export workbench",
         body: [
           "• Packet Explorer Home is now explicitly split into Search and Export sub-tabs so future Explorer capabilities can grow from one stable workspace without collapsing back into the main packet inspector.",
@@ -726,6 +983,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "implementation-guide-2026-05-packet-explorer-import-workbench",
+        level: 3,
         title: "2026-05 Packet Explorer import workbench",
         body: [
           "• Packet Explorer Home now expands to Search, Import, and Export, with Search-card import shortcuts routing into the new Import workspace rather than spawning separate packet-vs-bundle pages.",
@@ -738,6 +996,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "implementation-guide-2026-05-packet-explorer-live-search-and-export-lookup",
+        level: 3,
         title: "2026-05 Packet Explorer live search and export lookup",
         body: [
           "• Packet Explorer Search is now a real manual discovery workspace instead of a placeholder card, and its state stays Home-owned so query text, grouped results, and the active category survive normal Explorer tab movement while the session stays open.",
@@ -749,6 +1008,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "implementation-guide-2026-05-packet-explorer-workspace-cleanup",
+        level: 3,
         title: "2026-05 Packet Explorer workspace cleanup",
         body: [
           "• Home workspace navigation has now moved out of the Home body and into the shared inspector row, so Search, Import, and Export behave like first-class Explorer modes rather than nested content tabs.",
@@ -760,6 +1020,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "implementation-guide-2026-05-packet-explorer-final-polish",
+        level: 3,
         title: "2026-05 Packet Explorer final polish",
         body: [
           "• Link traversal in Explorer is now explicit instead of ambiguous: grouped links expose Open in new tab, Open in current tab, and View in Library, while current-tab retargeting preserves the existing inspector state and refreshes the active packet identity fields.",
@@ -778,13 +1039,8 @@ export const PUBLIC_READABLE_DOCUMENTS = {
     updatedLabel: "Generated from current public Markdown source.",
     sections: [
       {
-        id: "specifications-open-world-assembly-specifications",
-        title: "Open World Assembly Specifications",
-        body: [
-        ],
-      },
-      {
         id: "specifications-document-status",
+        level: 2,
         title: "Document status",
         body: [
           "This index describes the repo as it exists in code today.",
@@ -798,6 +1054,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "specifications-current-summary",
+        level: 2,
         title: "Current summary",
         body: [
           "The app is an Expo Router application with a public OWA site and a dedicated Nexus shell under /nexus/*.",
@@ -816,36 +1073,69 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "specifications-chapters",
+        level: 2,
         title: "Chapters",
         body: [
           "• Product Surface",
           "• Nexus Routes And Workflows",
           "• Architecture And State",
           "• Known Gaps And Provisional Notes",
-          "### Public action/link model",
+        ],
+      },
+      {
+        id: "specifications-public-action-link-model",
+        level: 3,
+        title: "Public action/link model",
+        body: [
           "• Public content actions are represented by PublicPageAction in app/public/content-types.ts.",
           "• Actions may target internal public routes, external URLs, or static download paths under /downloads/.",
           "• Existing internal route href usage remains supported as a compatibility bridge while newer content should prefer explicit target objects.",
-          "### Public docs page structure",
-          "• The /docs route renders a public docs hero, document directory, readable featured document, and downloads/resources panel.",
-          "• The Charter is currently readable on-page through PublicDocumentReader and PUBLIC_READABLE_DOCUMENTS.charter.",
+        ],
+      },
+      {
+        id: "specifications-public-docs-page-structure",
+        level: 3,
+        title: "Public docs page structure",
+        body: [
+          "• The /docs route renders a public docs hero, document directory, selected readable document, and downloads/resources panel.",
+          "• The Charter, Nexus README, Implementation Guide, Specifications, and Roadmap are currently selectable and readable on-page through PublicDocumentReader and PUBLIC_READABLE_DOCUMENTS.",
           "• Directory entries currently include the OWA Charter, Nexus README, Implementation Guide, Specifications, and Roadmap.",
-          "• Download actions for generated Markdown/PDF artifacts are present as disabled placeholders until the public docs artifact pipeline is implemented.",
-          "### Public docs generated artifacts",
+          "• Generated Markdown download actions point at /downloads/* artifacts and trigger browser downloads on web. PDF actions remain disabled placeholders until the PDF export pipeline is implemented.",
+        ],
+      },
+      {
+        id: "specifications-public-docs-generated-artifacts",
+        level: 3,
+        title: "Public docs generated artifacts",
+        body: [
           "• The /docs page can switch its readable panel between Charter, Nexus README, Implementation Guide, Specifications, and Roadmap entries.",
-          "• Directory read buttons select the readable document in-page; Markdown download buttons point at generated static files under /downloads/.",
+          "• Directory read buttons select the readable document in-page and scroll to the reader anchor; Markdown download buttons point at generated static files under /downloads/.",
           "• scripts/build-public-docs.mjs is the current source of truth for compiling public Markdown sources into generated reader data and static Markdown downloads.",
           "• Generated PDF actions remain disabled placeholders until a PDF export step is added.",
+          "• The document reader displays a local outline and anchored section cards for long generated documents; this is separate from the reusable secondary navigation system for now.",
+        ],
+      },
+      {
+        id: "specifications-public-docs-reader-behavior",
+        level: 3,
+        title: "Public Docs Reader Behavior",
+        body: [
+          "• Public document cards may expose a Read Below action that selects the current document and scrolls the Docs page shell to the readable document panel.",
+          "• Reader outline items scroll within the public page shell rather than using browser-level document scrolling.",
+          "• Markdown downloads use static files generated into public/downloads/ and should be triggered as browser downloads on web.",
+          "• PDF actions remain disabled placeholders until the PDF pipeline is added.",
         ],
       },
       {
         id: "specifications-product-surface",
+        level: 2,
         title: "Product Surface",
         body: [
         ],
       },
       {
         id: "specifications-scope-today",
+        level: 3,
         title: "Scope today",
         body: [
           "The product currently has two visible layers:",
@@ -868,15 +1158,28 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "specifications-current-surface-roles",
+        level: 3,
         title: "Current surface roles",
         body: [
-          "### Library",
+        ],
+      },
+      {
+        id: "specifications-library",
+        level: 4,
+        title: "Library",
+        body: [
           "Library is the scoped browse surface.",
           "• it is packet-backed",
           "• it defaults to a local-only view keyed to the active authority scope",
           "• Open packet launches Packet Explorer without navigating away from Library",
           "• packet actions on Library cards remain intentionally narrow",
-          "### Packet Explorer",
+        ],
+      },
+      {
+        id: "specifications-packet-explorer",
+        level: 4,
+        title: "Packet Explorer",
+        body: [
           "Packet Explorer is the inspect-and-traverse surface.",
           "• it opens as a shell-level overlay",
           "• it is still read-only for packet mutation, but its Home workspace now includes live search, import, and export workbenches",
@@ -894,13 +1197,25 @@ export const PUBLIC_READABLE_DOCUMENTS = {
           "• its packet-shell and inspector-control header bands can now collapse locally to reclaim vertical space without leaving helper rows behind, and collapsed bands are restored from the top command row",
           "• it groups Incoming and Outgoing links by related packet, with explicit Open in new tab, Open in current tab, and View in Library actions for graph traversal",
           "• it surfaces read-only NexusActionState and NexusActionIntentDescriptor data where available",
-          "### Discussions",
+        ],
+      },
+      {
+        id: "specifications-discussions",
+        level: 4,
+        title: "Discussions",
+        body: [
           "Discussions are the most mature interactive Nexus surface today.",
           "• discussion feed, thread, and post workspaces are packet-backed",
           "• reply, vote, expand, and create actions are now runtime-projected instead of being only page-local heuristics",
           "• interactive writes use the shared fortress prepare/sign/finalize corridor",
           "• compatibility still keeps legacy discussion family shapes readable while canonical discussion packets drive current writes",
-          "### Votes",
+        ],
+      },
+      {
+        id: "specifications-votes",
+        level: 4,
+        title: "Votes",
+        body: [
           "Votes are currently read-only.",
           "• the route is packet-backed",
           "• guests can inspect governance visibility cues and proposal or vote cards",
@@ -910,6 +1225,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "specifications-current-caveats",
+        level: 3,
         title: "Current caveats",
         body: [
           "The following behaviors are not active product truth yet:",
@@ -921,12 +1237,14 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "specifications-nexus-routes-and-workflows",
+        level: 2,
         title: "Nexus Routes And Workflows",
         body: [
         ],
       },
       {
         id: "specifications-public-routes",
+        level: 3,
         title: "Public routes",
         body: [
           "• / = landing page for OWA",
@@ -938,6 +1256,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "specifications-nexus-routes",
+        level: 3,
         title: "Nexus routes",
         body: [
           "• /nexus redirects to /nexus/dashboard",
@@ -954,22 +1273,54 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "specifications-core-workflows",
+        level: 3,
         title: "Core workflows",
         body: [
-          "### Nexus entry",
+        ],
+      },
+      {
+        id: "specifications-nexus-entry",
+        level: 4,
+        title: "Nexus entry",
+        body: [
           "1. User enters /nexus. 2. The route redirects to /nexus/dashboard. 3. The shell loads in Global Guest state. 4. The initial mounted baseline is Global + You.",
-          "### Scope selection",
+        ],
+      },
+      {
+        id: "specifications-scope-selection",
+        level: 4,
+        title: "Scope selection",
+        body: [
           "1. User opens the scope menu or followed scopes. 2. The shell updates the active scope lens. 3. Dashboard, discussions, votes, roles, trust, and Library re-project against that scope.",
-          "### Discussion posting",
+        ],
+      },
+      {
+        id: "specifications-discussion-posting",
+        level: 4,
+        title: "Discussion posting",
+        body: [
           "1. The route loads packet-backed discussion state. 2. The actor is a real Element(kind: \"person\"), including temporary guests. 3. The browser prepares a canonical mutation through the shared fortress corridor. 4. The active web identity shell signs the prepared packets locally. 5. Finalize re-verifies digest, signature, proof level, authority, and policy before persistence.",
-          "### Trust and role review",
+        ],
+      },
+      {
+        id: "specifications-trust-and-role-review",
+        level: 4,
+        title: "Trust and role review",
+        body: [
           "1. Trust loads scope-local trust posture and relationship state. 2. Roles loads exact-scope role claims, claimants, and support or dispute evidence. 3. Protected guest actions open the shared auth-gate flow instead of trying raw writes.",
-          "### Packet inspection",
+        ],
+      },
+      {
+        id: "specifications-packet-inspection",
+        level: 4,
+        title: "Packet inspection",
+        body: [
           "1. User opens Packet Explorer from the shell, Library, or link traversal. 2. Explorer loads packet summary, raw data, adapted data, read model, lineage, grouped links, and runtime action visibility. 3. Explorer stays read-only and uses session-backed tab state. 4. Library packet highlighting now clears itself when the highlighted packet is no longer represented by an Explorer packet tab.",
         ],
       },
       {
         id: "specifications-shell-behavior",
+        level: 3,
         title: "Shell behavior",
         body: [
           "The Nexus shell currently provides:",
@@ -986,12 +1337,14 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "specifications-architecture-and-state",
+        level: 2,
         title: "Architecture And State",
         body: [
         ],
       },
       {
         id: "specifications-active-source-split",
+        level: 3,
         title: "Active source split",
         body: [
           "• core/* holds portable packet logic, schemas, builders, interpreters, contracts, and pure projections",
@@ -1002,6 +1355,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "specifications-current-runtime-and-state-patterns",
+        level: 3,
         title: "Current runtime and state patterns",
         body: [
           "• public pages are still mostly stateless",
@@ -1014,6 +1368,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "specifications-packet-and-compatibility-foundations-in-active-use",
+        level: 3,
         title: "Packet and compatibility foundations in active use",
         body: [
           "Current packet behavior in code includes:",
@@ -1034,6 +1389,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "specifications-query-and-surface-boundaries",
+        level: 3,
         title: "Query and surface boundaries",
         body: [
           "• packet storage, compatibility, import/export, and merge remain below the route layer",
@@ -1043,6 +1399,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "specifications-current-naming-and-structure-notes",
+        level: 3,
         title: "Current naming and structure notes",
         body: [
           "• route file names are lowercase and match path segments directly",
@@ -1054,12 +1411,14 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "specifications-known-gaps-and-provisional-notes",
+        level: 2,
         title: "Known Gaps And Provisional Notes",
         body: [
         ],
       },
       {
         id: "specifications-current-known-gaps",
+        level: 3,
         title: "Current known gaps",
         body: [
           "• identity/auth and discussions remain the two strongest end-to-end verticals",
@@ -1071,6 +1430,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "specifications-location-and-relationship-caveats",
+        level: 3,
         title: "Location and relationship caveats",
         body: [
           "• home_locality is now the packet-backed source of mounted geographic ancestry",
@@ -1081,6 +1441,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "specifications-explorer-caveats",
+        level: 3,
         title: "Explorer caveats",
         body: [
           "• Packet Explorer is read-only",
@@ -1091,6 +1452,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "specifications-moderation-and-governance-caveats",
+        level: 3,
         title: "Moderation and governance caveats",
         body: [
           "• moderation workflows are not yet implemented as live user-facing policy systems",
@@ -1101,6 +1463,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "specifications-provisional-guidance",
+        level: 3,
         title: "Provisional guidance",
         body: [
           "The following areas should still be treated as provisional:",
@@ -1123,13 +1486,8 @@ export const PUBLIC_READABLE_DOCUMENTS = {
     updatedLabel: "Generated from current public Markdown source.",
     sections: [
       {
-        id: "roadmap-open-world-assembly-roadmap",
-        title: "Open World Assembly Roadmap",
-        body: [
-        ],
-      },
-      {
         id: "roadmap-purpose",
+        level: 2,
         title: "Purpose",
         body: [
           "This index records planned direction, sequencing, backlog, and open questions.",
@@ -1143,6 +1501,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "roadmap-current-planning-frame",
+        level: 2,
         title: "Current planning frame",
         body: [
           "The current stack is still:",
@@ -1154,6 +1513,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "roadmap-chapters",
+        level: 2,
         title: "Chapters",
         body: [
           "• Stabilization And Surface Polish",
@@ -1165,12 +1525,14 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "roadmap-stabilization-and-surface-polish",
+        level: 2,
         title: "Stabilization And Surface Polish",
         body: [
         ],
       },
       {
         id: "roadmap-current-baseline",
+        level: 3,
         title: "Current baseline",
         body: [
           "The repo already has:",
@@ -1186,6 +1548,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "roadmap-near-term-priorities",
+        level: 3,
         title: "Near-term priorities",
         body: [
           "• keep identity/auth and discussions as the strongest reference verticals",
@@ -1196,6 +1559,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "roadmap-packet-explorer-follow-up-backlog",
+        level: 3,
         title: "Packet Explorer follow-up backlog",
         body: [
           "• packet-id and revision-id search from the Home tab",
@@ -1208,6 +1572,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "roadmap-working-order",
+        level: 3,
         title: "Working order",
         body: [
           "1. stabilize blocked-in surfaces 2. clarify scope visibility and surface semantics 3. tighten trust, role, and relationship modeling 4. only then widen into deeper policy-heavy and governance-heavy workflows",
@@ -1215,12 +1580,14 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "roadmap-initiatives-locality-and-subscriptions",
+        level: 2,
         title: "Initiatives, Locality, And Subscriptions",
         body: [
         ],
       },
       {
         id: "roadmap-initiative-direction",
+        level: 3,
         title: "Initiative direction",
         body: [
           "Initiatives should be treated as generic Nexus policy and template lineages rather than OWA-specific hardcoding.",
@@ -1232,6 +1599,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "roadmap-initiative-backlog",
+        level: 3,
         title: "Initiative backlog",
         body: [
           "• initiative versions and subscription or update behavior",
@@ -1243,6 +1611,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "roadmap-locality-and-scope-backlog",
+        level: 3,
         title: "Locality and scope backlog",
         body: [
           "• continue refining the Global + You baseline",
@@ -1254,12 +1623,14 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "roadmap-trust-policy-and-moderation",
+        level: 2,
         title: "Trust, Policy, And Moderation",
         body: [
         ],
       },
       {
         id: "roadmap-trust-and-policy",
+        level: 3,
         title: "Trust and policy",
         body: [
           "Trust remains a major product-defining system.",
@@ -1271,6 +1642,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "roadmap-moderation-and-automoderation-backlog",
+        level: 3,
         title: "Moderation and automoderation backlog",
         body: [
           "• generic automoderation support with element-defined policy baselines",
@@ -1281,6 +1653,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "roadmap-packet-model-questions-to-keep-visible",
+        level: 3,
         title: "Packet-model questions to keep visible",
         body: [
           "• whether reactions should remain lightweight attestation-like signals or become a distinct family",
@@ -1292,12 +1665,14 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "roadmap-governance-and-execution",
+        level: 2,
         title: "Governance And Execution",
         body: [
         ],
       },
       {
         id: "roadmap-governance-direction",
+        level: 3,
         title: "Governance direction",
         body: [
           "Governance should follow trust, policy, and inspectability rather than racing ahead of them.",
@@ -1309,6 +1684,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "roadmap-governance-backlog",
+        level: 3,
         title: "Governance backlog",
         body: [
           "• real proposal drafting, editing, review, and publication flows",
@@ -1322,6 +1698,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "roadmap-proposal-and-decision-shape-questions",
+        level: 3,
         title: "Proposal and decision shape questions",
         body: [
           "• policy adoption proposals",
@@ -1334,12 +1711,14 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "roadmap-open-questions-and-deferred-decisions",
+        level: 2,
         title: "Open Questions And Deferred Decisions",
         body: [
         ],
       },
       {
         id: "roadmap-near-term-open-questions",
+        level: 3,
         title: "Near-term open questions",
         body: [
           "• How should initiative conformance and version recognition be represented?",
@@ -1350,6 +1729,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "roadmap-deeper-design-questions",
+        level: 3,
         title: "Deeper design questions",
         body: [
           "• Should reactions remain separate from higher-meaning vouch or objection signals?",
@@ -1361,6 +1741,7 @@ export const PUBLIC_READABLE_DOCUMENTS = {
       },
       {
         id: "roadmap-explicitly-deferred",
+        level: 3,
         title: "Explicitly deferred",
         body: [
           "• another broad architecture rewrite",

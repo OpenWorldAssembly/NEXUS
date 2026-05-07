@@ -2,23 +2,25 @@
  * File: docs.tsx
  * Description: Public docs route with a directory shelf and readable document panel.
  */
-import { useMemo, useState } from 'react';
-import { StyleSheet } from 'react-native';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { ScrollView, View, type LayoutChangeEvent } from 'react-native';
 
 import PublicDocumentReader from '@app/components/public/public-document-reader';
 import PublicDocsDirectory from '@app/components/public/public-docs-directory';
 import PublicDocsHero from '@app/components/public/public-docs-hero';
 import PublicDocsResourceGrid from '@app/components/public/public-docs-resource-grid';
 import PublicPageShell from '@app/components/public/public-page-shell';
-import { DEFAULT_PUBLIC_DOCUMENT_SLUG, docsPageContent } from '@app/public/docs-content';
 import { PUBLIC_READABLE_DOCUMENTS } from '@app/public/generated/public-docs.generated';
+import { DEFAULT_PUBLIC_DOCUMENT_SLUG, docsPageContent } from '@app/public/docs-content';
 
-/**
- * Inputs: none.
- * Output: the public docs page with a selectable directory and generated readable document panel.
- */
+const DOCUMENT_SCROLL_OFFSET = 20;
+
 export default function PublicDocsPage() {
+  const scrollViewRef = useRef<ScrollView | null>(null);
+  const sectionOffsetsRef = useRef<Record<string, number>>({});
   const [selectedDocumentSlug, setSelectedDocumentSlug] = useState(DEFAULT_PUBLIC_DOCUMENT_SLUG);
+  const [readerOffsetY, setReaderOffsetY] = useState(0);
+  const [sectionsOffsetY, setSectionsOffsetY] = useState(0);
 
   const selectedDocument = useMemo(
     () =>
@@ -27,31 +29,75 @@ export default function PublicDocsPage() {
     [selectedDocumentSlug],
   );
 
+  const scrollToContentOffset = useCallback((offsetY: number) => {
+    const scrollAction = () => {
+      scrollViewRef.current?.scrollTo({
+        y: Math.max(offsetY - DOCUMENT_SCROLL_OFFSET, 0),
+        animated: true,
+      });
+    };
+
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(scrollAction);
+      return;
+    }
+
+    setTimeout(scrollAction, 0);
+  }, []);
+
+  const handleSelectDocument = useCallback(
+    (documentSlug: string) => {
+      sectionOffsetsRef.current = {};
+      setSelectedDocumentSlug(documentSlug);
+      scrollToContentOffset(readerOffsetY);
+    },
+    [readerOffsetY, scrollToContentOffset],
+  );
+
+  const handleReaderLayout = useCallback((event: LayoutChangeEvent) => {
+    setReaderOffsetY(event.nativeEvent.layout.y);
+  }, []);
+
+  const handleSectionsLayout = useCallback((offsetY: number) => {
+    setSectionsOffsetY(offsetY);
+  }, []);
+
+  const handleSectionLayout = useCallback((sectionId: string, offsetY: number) => {
+    sectionOffsetsRef.current[sectionId] = offsetY;
+  }, []);
+
+  const handleSelectSection = useCallback(
+    (sectionId: string) => {
+      const sectionOffset = sectionOffsetsRef.current[sectionId] ?? 0;
+      scrollToContentOffset(readerOffsetY + sectionsOffsetY + sectionOffset);
+    },
+    [readerOffsetY, scrollToContentOffset, sectionsOffsetY],
+  );
+
   return (
-    <PublicPageShell
-      constrainWidth={false}
-      contentContainerClassName=""
-      contentContainerStyle={styles.scrollContent}
-      enablePositionAnimation
-      showsVerticalScrollIndicator={false}
-    >
-      <PublicDocsHero hero={docsPageContent.hero} />
-      <PublicDocsDirectory
-        documents={docsPageContent.directory}
-        selectedDocumentSlug={selectedDocument.slug}
-        onSelectDocument={setSelectedDocumentSlug}
-      />
-      <PublicDocumentReader document={selectedDocument} />
-      <PublicDocsResourceGrid resources={docsPageContent.resources} />
-    </PublicPageShell>
+    <View className="min-h-screen flex-1 bg-public-canvas">
+      <PublicPageShell
+        contentContainerClassName="gap-6 px-5 pb-24 pt-8 lg:px-8"
+        constrainWidth={false}
+        enablePositionAnimation
+        scrollViewRef={scrollViewRef}
+      >
+        <PublicDocsHero hero={docsPageContent.hero} />
+        <PublicDocsDirectory
+          documents={docsPageContent.directory}
+          selectedDocumentSlug={selectedDocument.slug}
+          onSelectDocument={handleSelectDocument}
+        />
+        <View onLayout={handleReaderLayout}>
+          <PublicDocumentReader
+            document={selectedDocument}
+            onSectionsLayout={handleSectionsLayout}
+            onSectionLayout={handleSectionLayout}
+            onSelectSection={handleSelectSection}
+          />
+        </View>
+        <PublicDocsResourceGrid resources={docsPageContent.resources} />
+      </PublicPageShell>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  scrollContent: {
-    paddingHorizontal: 24,
-    paddingTop: 28,
-    paddingBottom: 96,
-    gap: 24,
-  },
-});

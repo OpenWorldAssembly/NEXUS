@@ -18,7 +18,7 @@ export default function Footer() {
   const isCompactFooter = width < 760;
 
   return (
-    <View className="w-full border-t border-public-line/70 bg-public-shell/80">
+    <View className="w-full border-t border-public-line/70 bg-public-shell">
       <View className={["mx-auto w-full max-w-6xl px-5", isCompactFooter ? 'py-4' : 'py-5'].join(' ')}>
         <View className="flex-row flex-wrap items-center justify-between gap-4">
           {isCompactFooter ? (

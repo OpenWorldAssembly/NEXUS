@@ -58,3 +58,10 @@ The current product stack is still best understood as:
 - Source documents may be defined by `sourceDir` or ordered `sourceFiles`, allowing chapter-split docs to compile into one current public artifact per document.
 - `npm run docs:build` is wired into `npm run export:web` so Railway/web exports rebuild generated docs before the Expo web build.
 - Version records are for internal record-keeping only; the public docs page exposes only the current readable/downloadable document versions.
+
+### Docs reader scroll and action cleanup (Pass 10E)
+
+- The Docs page scroll controls now target the shared `PublicPageShell` scroll view directly instead of using browser `scrollIntoView`, avoiding outer-page scroll jumps that made the footer appear to float over content.
+- Document directory actions can render in a stacked layout so `Download .md` and disabled PDF placeholders do not overflow narrow cards.
+- The readable document view returned to one continuous card with an internal outline and section dividers, rather than giving each document section its own card.
+- The public footer now uses an opaque `bg-public-shell` background so it does not visually blend with scrolled content behind it.

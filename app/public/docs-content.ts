@@ -19,7 +19,7 @@ export const PUBLIC_DOCS_DIRECTORY: PublicDocumentDirectoryItem[] = [
     readableDocumentSlug: 'charter',
     actions: [
       {
-        label: 'Download Markdown',
+        label: 'Download .md',
         target: { kind: 'download', href: PUBLIC_DOC_DOWNLOADS.charter.markdown },
         variant: 'outline',
       },
@@ -35,7 +35,7 @@ export const PUBLIC_DOCS_DIRECTORY: PublicDocumentDirectoryItem[] = [
     readableDocumentSlug: 'nexus-readme',
     actions: [
       {
-        label: 'Download Markdown',
+        label: 'Download .md',
         target: { kind: 'download', href: PUBLIC_DOC_DOWNLOADS['nexus-readme'].markdown },
         variant: 'outline',
       },
@@ -51,7 +51,7 @@ export const PUBLIC_DOCS_DIRECTORY: PublicDocumentDirectoryItem[] = [
     readableDocumentSlug: 'implementation-guide',
     actions: [
       {
-        label: 'Download Markdown',
+        label: 'Download .md',
         target: { kind: 'download', href: PUBLIC_DOC_DOWNLOADS['implementation-guide'].markdown },
         variant: 'outline',
       },
@@ -67,7 +67,7 @@ export const PUBLIC_DOCS_DIRECTORY: PublicDocumentDirectoryItem[] = [
     readableDocumentSlug: 'specifications',
     actions: [
       {
-        label: 'Download Markdown',
+        label: 'Download .md',
         target: { kind: 'download', href: PUBLIC_DOC_DOWNLOADS.specifications.markdown },
         variant: 'outline',
       },
@@ -83,7 +83,7 @@ export const PUBLIC_DOCS_DIRECTORY: PublicDocumentDirectoryItem[] = [
     readableDocumentSlug: 'roadmap',
     actions: [
       {
-        label: 'Download Markdown',
+        label: 'Download .md',
         target: { kind: 'download', href: PUBLIC_DOC_DOWNLOADS.roadmap.markdown },
         variant: 'outline',
       },

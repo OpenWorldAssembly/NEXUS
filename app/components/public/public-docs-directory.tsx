@@ -142,7 +142,7 @@ export function PublicDocsDirectory({
                   </Text>
                 </View>
 
-                <View className="flex-row flex-wrap gap-3">
+                <View className="gap-3">
                   <Pressable
                     className={readButtonRootClassName}
                     disabled={!canRead}
@@ -160,7 +160,7 @@ export function PublicDocsDirectory({
                   </Pressable>
 
                   {!!document.actions?.length && (
-                    <PublicPageActions actions={document.actions} className="mt-0" />
+                    <PublicPageActions actions={document.actions} className="mt-0" layout="column" />
                   )}
                 </View>
               </View>

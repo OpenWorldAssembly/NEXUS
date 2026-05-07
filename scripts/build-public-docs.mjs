@@ -32,6 +32,20 @@ function escapeTsString(value) {
   return JSON.stringify(value);
 }
 
+function normalizeTitleForComparison(value) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function isDuplicateDocumentTitle(sourceTitle, documentTitle) {
+  const source = normalizeTitleForComparison(sourceTitle);
+  const target = normalizeTitleForComparison(documentTitle);
+
+  return source === target || source.endsWith(target) || target.endsWith(source);
+}
+
 async function readJson(filePath) {
   const raw = await readFile(filePath, 'utf8');
   return JSON.parse(raw);
@@ -81,12 +95,21 @@ function normalizeSourceMarkdown(markdown, { documentTitle, documentSubtitle, is
         hasHandledLeadingTitle = true;
         const sourceTitle = h1Match[1].trim();
 
-        if (isFirstFile && sourceTitle.toLowerCase() === documentTitle.toLowerCase()) {
+        if (isFirstFile && isDuplicateDocumentTitle(sourceTitle, documentTitle)) {
           canSkipDuplicateSubtitle = !!documentSubtitle;
           return '';
         }
 
         return `## ${sourceTitle}`;
+      }
+
+      if (!isFirstFile) {
+        const nestedHeadingMatch = line.match(/^(#{2,5})\s+(.+)$/);
+
+        if (nestedHeadingMatch) {
+          const nextLevel = Math.min(nestedHeadingMatch[1].length + 1, 6);
+          return `${'#'.repeat(nextLevel)} ${nestedHeadingMatch[2].trim()}`;
+        }
       }
 
       if (canSkipDuplicateSubtitle) {
@@ -175,6 +198,25 @@ function parseReadableDocument(markdown, documentConfig) {
 
   const getCurrentBody = () => (currentSection ? currentSection.body : intro);
 
+  const startSection = ({ title, level }) => {
+    flushParagraph(paragraphLines, getCurrentBody());
+
+    currentSection = {
+      id: makeSlug(`${documentConfig.slug}-${title}`),
+      level,
+      title,
+      body: [],
+    };
+
+    const romanMatch = title.match(/^([IVXLCDM]+)\.\s+(.+)$/i);
+    if (romanMatch) {
+      currentSection.eyebrow = romanMatch[1].toUpperCase();
+      currentSection.title = romanMatch[2].trim();
+    }
+
+    sections.push(currentSection);
+  };
+
   for (const rawLine of lines) {
     const line = rawLine.trim();
 
@@ -192,35 +234,26 @@ function parseReadableDocument(markdown, documentConfig) {
 
     const h2Match = line.match(/^##\s+(.+)$/);
     if (h2Match) {
-      flushParagraph(paragraphLines, getCurrentBody());
-      const title = stripInlineMarkdown(h2Match[1]);
-      currentSection = {
-        id: makeSlug(`${documentConfig.slug}-${title}`),
-        title,
-        body: [],
-      };
-
-      const romanMatch = title.match(/^([IVXLCDM]+)\.\s+(.+)$/i);
-      if (romanMatch) {
-        currentSection.eyebrow = romanMatch[1].toUpperCase();
-        currentSection.title = romanMatch[2].trim();
-      }
-
-      sections.push(currentSection);
+      startSection({ title: stripInlineMarkdown(h2Match[1]), level: 2 });
       continue;
     }
 
     const h3Match = line.match(/^###\s+(.+)$/);
     if (h3Match) {
-      flushParagraph(paragraphLines, getCurrentBody());
-      getCurrentBody().push(`### ${stripInlineMarkdown(h3Match[1])}`);
+      startSection({ title: stripInlineMarkdown(h3Match[1]), level: 3 });
       continue;
     }
 
     const h4Match = line.match(/^####\s+(.+)$/);
     if (h4Match) {
+      startSection({ title: stripInlineMarkdown(h4Match[1]), level: 4 });
+      continue;
+    }
+
+    const h5Match = line.match(/^#####\s+(.+)$/);
+    if (h5Match) {
       flushParagraph(paragraphLines, getCurrentBody());
-      getCurrentBody().push(`### ${stripInlineMarkdown(h4Match[1])}`);
+      getCurrentBody().push(`#### ${stripInlineMarkdown(h5Match[1])}`);
       continue;
     }
 
@@ -282,6 +315,9 @@ function formatReadableDocument(document) {
   for (const section of document.sections) {
     lines.push('      {');
     lines.push(`        id: ${escapeTsString(section.id)},`);
+    if (section.level) {
+      lines.push(`        level: ${section.level},`);
+    }
     if (section.eyebrow) {
       lines.push(`        eyebrow: ${escapeTsString(section.eyebrow)},`);
     }

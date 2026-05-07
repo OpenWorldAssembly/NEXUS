@@ -2,7 +2,7 @@
  * File: public-page-shell.tsx
  * Description: Provides the shared outer scroll container and width constraints for public-site content pages.
  */
-import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useRef, useState, type ReactNode, type Ref } from 'react';
 import {
   Animated,
   type LayoutChangeEvent,
@@ -26,6 +26,7 @@ type PublicPageShellProps = {
   innerClassName?: string;
   enablePositionAnimation?: boolean;
   focusLineRatio?: number;
+  scrollViewRef?: Ref<ScrollView>;
 };
 
 /**
@@ -41,6 +42,7 @@ export default function PublicPageShell({
   innerClassName = 'mx-auto w-full max-w-6xl px-5 py-8',
   enablePositionAnimation = false,
   focusLineRatio = PUBLIC_SCROLL_ANIMATION_DEFAULTS.focusLineRatio,
+  scrollViewRef,
 }: PublicPageShellProps) {
   const scrollY = useRef(new Animated.Value(0)).current;
   const [viewportHeight, setViewportHeight] = useState(0);
@@ -81,6 +83,7 @@ export default function PublicPageShell({
 
   return (
     <ScrollView
+      ref={scrollViewRef}
       className="flex-1"
       contentContainerClassName={contentContainerClassName}
       contentContainerStyle={contentContainerStyle}

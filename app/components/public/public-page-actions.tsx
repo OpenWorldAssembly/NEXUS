@@ -3,7 +3,7 @@
  * Description: Renders a reusable action row for public-site content pages.
  */
 import { Link, type Href } from 'expo-router';
-import { Linking, Pressable, Text, View } from 'react-native';
+import { Linking, Platform, Pressable, Text, View } from 'react-native';
 
 import type { PublicLinkTarget, PublicPageAction } from '@/app/public/content-types';
 import { PUBLIC_SURFACE_CLASSES } from '@app/components/public/public-surface';
@@ -11,6 +11,7 @@ import { PUBLIC_SURFACE_CLASSES } from '@app/components/public/public-surface';
 type PublicPageActionsProps = {
   actions: PublicPageAction[];
   className?: string;
+  layout?: 'row' | 'column';
 };
 
 function normalizeVariant(action: PublicPageAction): 'solid' | 'outline' {
@@ -58,9 +59,35 @@ function getExternalTargetUri(target: Extract<PublicLinkTarget, { kind: 'externa
   return target.kind === 'external' ? target.url : target.href;
 }
 
-export function PublicPageActions({ actions, className }: PublicPageActionsProps) {
+function getDownloadFileName(href: `/downloads/${string}`) {
+  return href.split('/').pop() ?? 'download.md';
+}
+
+/**
+ * Inputs: a public static download target.
+ * Output: browser download on web, URL open fallback elsewhere.
+ */
+function handleExternalOrDownloadTarget(target: Extract<PublicLinkTarget, { kind: 'external' | 'download' }>) {
+  if (target.kind === 'download' && Platform.OS === 'web' && typeof document !== 'undefined') {
+    const anchor = document.createElement('a');
+    anchor.href = target.href;
+    anchor.download = getDownloadFileName(target.href);
+    anchor.rel = 'noopener';
+    anchor.style.display = 'none';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    return;
+  }
+
+  void Linking.openURL(getExternalTargetUri(target));
+}
+
+export function PublicPageActions({ actions, className, layout = 'row' }: PublicPageActionsProps) {
+  const layoutClassName = layout === 'column' ? 'gap-3' : 'flex-row flex-wrap gap-3';
+
   return (
-    <View className={`mt-10 flex-row flex-wrap gap-3 ${className ?? ''}`.trim()}>
+    <View className={`mt-10 ${layoutClassName} ${className ?? ''}`.trim()}>
       {actions.map((action) => {
         const variant = normalizeVariant(action);
         const target = resolveActionTarget(action);
@@ -82,9 +109,7 @@ export function PublicPageActions({ actions, className }: PublicPageActionsProps
             disabled={disabled}
             onPress={
               target?.kind === 'external' || target?.kind === 'download'
-                ? () => {
-                    void Linking.openURL(getExternalTargetUri(target));
-                  }
+                ? () => handleExternalOrDownloadTarget(target)
                 : undefined
             }
           >

@@ -49,8 +49,11 @@ export type PublicDocumentHero = {
   actions: PublicPageAction[];
 };
 
+export type PublicReadableDocumentSectionLevel = 2 | 3 | 4;
+
 export type PublicReadableDocumentSection = {
   id: string;
+  level?: PublicReadableDocumentSectionLevel;
   eyebrow?: string;
   title: string;
   body: string[];
