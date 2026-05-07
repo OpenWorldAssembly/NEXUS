@@ -107,7 +107,7 @@ const sections: HomeRailSection[] = [
   },
   {
     id: 'why-now',
-    mainPoint: 'The technology exists \nThe need is urgent',
+    mainPoint: 'The technology exists \nWe can do better',
     subPoints: [
       'World leaders are leaving their people behind',
       'Big Tech is enslaving minds and stealing data',
