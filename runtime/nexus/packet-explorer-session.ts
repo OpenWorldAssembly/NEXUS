@@ -317,13 +317,17 @@ export function openPacketExplorerHome(
 ): PacketExplorerSession {
   const existingHomeTab = session.tabs.find((tab) => tab.kind === 'home') ?? null;
   const baseHomeTab = existingHomeTab ?? createPacketExplorerHomeTab();
+  const hasPacketId = Boolean(input && 'packetId' in input);
+  const hasPreferredRevisionId = Boolean(input && 'preferredRevisionId' in input);
+  const hasSeedSummary = Boolean(input && 'seedSummary' in input);
   const homeTab: PacketExplorerTab = {
     ...baseHomeTab,
-    packet_id: input?.packetId ?? baseHomeTab.packet_id,
-    preferred_revision_id:
-      input?.preferredRevisionId ?? baseHomeTab.preferred_revision_id,
+    packet_id: hasPacketId ? (input?.packetId ?? null) : baseHomeTab.packet_id,
+    preferred_revision_id: hasPreferredRevisionId
+      ? (input?.preferredRevisionId ?? null)
+      : baseHomeTab.preferred_revision_id,
     active_home_subtab: input?.subtab ?? baseHomeTab.active_home_subtab,
-    seed_summary: input?.seedSummary ?? baseHomeTab.seed_summary,
+    seed_summary: hasSeedSummary ? (input?.seedSummary ?? null) : baseHomeTab.seed_summary,
   };
   const tabs = ensureHomeTabFirst(
     existingHomeTab

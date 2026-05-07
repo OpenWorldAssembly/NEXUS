@@ -719,6 +719,35 @@ export class NodeSQLitePacketStore implements PacketStore {
     })) as PacketEnvelope | null;
   }
 
+  /**
+   * Inputs: a revision id string.
+   * Output: the owning packet + revision ref tuple when that revision exists.
+   */
+  async resolveRevisionRef(
+    revisionId: string
+  ): Promise<PacketRevisionRef | null> {
+    const row = this.database
+      .prepare(
+        `
+          SELECT packet_id, revision_id
+          FROM packet_revisions
+          WHERE revision_id = ?
+        `
+      )
+      .get(revisionId) as
+      | { packet_id: string; revision_id: string }
+      | undefined;
+
+    if (!row) {
+      return null;
+    }
+
+    return {
+      packet_id: row.packet_id,
+      revision_id: row.revision_id,
+    };
+  }
+
   async readByRevision<TMode extends PacketReadMode>(
     revision: PacketRevisionRef,
     options: {

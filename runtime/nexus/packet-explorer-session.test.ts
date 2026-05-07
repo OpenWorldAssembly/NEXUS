@@ -356,3 +356,28 @@ test('home tabs can persist their active workspace subtab', () => {
   assert.equal(opened.tabs[0]?.packet_id, 'nexus:discussion-thread/example');
   assert.equal(updated.tabs[0]?.active_home_subtab, 'search');
 });
+
+test('opening explorer home with explicit null packet fields clears export target state', () => {
+  const opened = openPacketExplorerHome(createEmptyPacketExplorerSession(), {
+    subtab: 'export',
+    packetId: 'nexus:discussion-thread/example',
+    preferredRevisionId: 'nexus:discussion-thread/example@r2',
+    titleSnapshot: 'Example',
+    seedSummary: {
+      family: 'DiscussionThread',
+      summary: 'Example packet.',
+      label: 'Example',
+    },
+  });
+  const cleared = openPacketExplorerHome(opened, {
+    subtab: 'export',
+    packetId: null,
+    preferredRevisionId: null,
+    seedSummary: null,
+  });
+
+  assert.equal(cleared.tabs[0]?.active_home_subtab, 'export');
+  assert.equal(cleared.tabs[0]?.packet_id, null);
+  assert.equal(cleared.tabs[0]?.preferred_revision_id, null);
+  assert.equal(cleared.tabs[0]?.seed_summary, null);
+});

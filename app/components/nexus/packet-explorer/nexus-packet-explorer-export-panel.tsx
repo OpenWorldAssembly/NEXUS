@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Text, TextInput, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { Pressable, Text, TextInput, View } from 'react-native';
 
 import {
   NexusActionButton,
@@ -13,15 +13,29 @@ import type {
   NexusPacketExplorerBundleExportMode,
   NexusPacketExplorerExportPreviewPayload,
   NexusPacketExplorerExportRequest,
+  NexusPacketExplorerSearchPayload,
+  NexusPacketExplorerSearchResultRow,
 } from '@runtime/nexus/nexus-api-types';
 import {
   downloadNexusPacketExplorerExport,
   previewNexusPacketExplorerExport,
+  searchNexusPacketExplorerPackets,
 } from '@runtime/nexus/nexus-query-api';
 
 type NexusPacketExplorerExportPanelProps = {
   selectedPacketId: string | null;
   selectedPacketTitle: string | null;
+  onSelectPacketForExport: (input: {
+    packetId: string;
+    preferredRevisionId?: string | null;
+    titleSnapshot?: string | null;
+    seedSummary?: {
+      family: string | null;
+      summary: string | null;
+      label: string | null;
+    } | null;
+  }) => void;
+  onClearPacketExportTarget: () => void;
 };
 
 type ExportWorkflowState = {
@@ -52,6 +66,28 @@ function createIdleWorkflowState(): ExportWorkflowState {
     isLoadingPreview: false,
     isDownloading: false,
   };
+}
+
+function normalizeLookupQuery(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function flattenSearchResults(
+  searchPayload: NexusPacketExplorerSearchPayload | null
+): NexusPacketExplorerSearchResultRow[] {
+  if (!searchPayload) {
+    return [];
+  }
+
+  return searchPayload.groups
+    .flatMap((group) => group.results)
+    .sort((left, right) => {
+      if (left.score !== right.score) {
+        return right.score - left.score;
+      }
+
+      return right.created_at.localeCompare(left.created_at);
+    });
 }
 
 function buildPacketExportRequest(input: {
@@ -111,10 +147,7 @@ function ExportPreviewCard({
         <View className="gap-2">
           <Text className={appearance.itemMetaClass}>Root packet refs</Text>
           {preview.root_packet_refs.map((packetRef) => (
-            <Text
-              key={packetRef.packet_id}
-              className={appearance.itemBodyClass}
-            >
+            <Text key={packetRef.packet_id} className={appearance.itemBodyClass}>
               {packetRef.packet_id}
             </Text>
           ))}
@@ -144,6 +177,8 @@ function ExportPreviewCard({
 export function NexusPacketExplorerExportPanel({
   selectedPacketId,
   selectedPacketTitle,
+  onSelectPacketForExport,
+  onClearPacketExportTarget,
 }: NexusPacketExplorerExportPanelProps) {
   const appearance = useNexusAppearance();
   const [packetArtifactMode, setPacketArtifactMode] = useState<
@@ -161,14 +196,146 @@ export function NexusPacketExplorerExportPanel({
   const [storeWorkflow, setStoreWorkflow] = useState<ExportWorkflowState>(
     createIdleWorkflowState
   );
+  const [lookupQuery, setLookupQuery] = useState('');
+  const [lookupResults, setLookupResults] = useState<
+    NexusPacketExplorerSearchResultRow[]
+  >([]);
+  const [lookupError, setLookupError] = useState<string | null>(null);
+  const [isLookupLoading, setIsLookupLoading] = useState(false);
+  const [activeLookupIndex, setActiveLookupIndex] = useState(0);
 
   useEffect(() => {
     setPacketWorkflow(createIdleWorkflowState());
   }, [selectedPacketId, packetArtifactMode, packetBundleMode, packetTitle, packetNote]);
 
   useEffect(() => {
+    if (!selectedPacketId) {
+      setPacketArtifactMode('raw_packet');
+      setPacketBundleMode('packet_history');
+      setPacketTitle('');
+      setPacketNote('');
+      setPacketWorkflow(createIdleWorkflowState());
+    }
+  }, [selectedPacketId]);
+
+  useEffect(() => {
     setStoreWorkflow(createIdleWorkflowState());
   }, [storeTitle, storeNote]);
+
+  useEffect(() => {
+    if (selectedPacketId) {
+      setLookupQuery('');
+      setLookupResults([]);
+      setLookupError(null);
+      setIsLookupLoading(false);
+      setActiveLookupIndex(0);
+    }
+  }, [selectedPacketId]);
+
+  useEffect(() => {
+    if (selectedPacketId) {
+      return;
+    }
+
+    const trimmedQuery = lookupQuery.trim();
+    const isIdentifierLike =
+      trimmedQuery.includes(':') ||
+      trimmedQuery.includes('@') ||
+      trimmedQuery.includes('/');
+
+    if ((!isIdentifierLike && trimmedQuery.length < 2) || trimmedQuery.length === 0) {
+      setLookupResults([]);
+      setLookupError(null);
+      setIsLookupLoading(false);
+      setActiveLookupIndex(0);
+      return;
+    }
+
+    let isMounted = true;
+    const timeoutHandle = setTimeout(() => {
+      setIsLookupLoading(true);
+      setLookupError(null);
+
+      void searchNexusPacketExplorerPackets({
+        query: trimmedQuery,
+        limit_per_group: 5,
+        scope_mode: 'all_known',
+      })
+        .then((payload) => {
+          if (!isMounted) {
+            return;
+          }
+
+          setLookupResults(flattenSearchResults(payload).slice(0, 5));
+          setLookupError(null);
+          setActiveLookupIndex(0);
+        })
+        .catch((error) => {
+          if (!isMounted) {
+            return;
+          }
+
+          setLookupResults([]);
+          setLookupError(
+            error instanceof Error
+              ? error.message
+              : 'Unable to search export targets right now.'
+          );
+        })
+        .finally(() => {
+          if (isMounted) {
+            setIsLookupLoading(false);
+          }
+        });
+    }, 180);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutHandle);
+    };
+  }, [lookupQuery, selectedPacketId]);
+
+  const lookupSelection = useMemo(() => {
+    if (lookupResults.length === 0) {
+      return null;
+    }
+
+    const normalizedQuery = normalizeLookupQuery(lookupQuery);
+    const exactPacketMatch =
+      lookupResults.find(
+        (result) => normalizeLookupQuery(result.packet_id) === normalizedQuery
+      ) ?? null;
+
+    if (exactPacketMatch) {
+      return exactPacketMatch;
+    }
+
+    const exactTitleOrLabelMatch =
+      lookupResults.find(
+        (result) =>
+          normalizeLookupQuery(result.title) === normalizedQuery ||
+          normalizeLookupQuery(result.label) === normalizedQuery
+      ) ?? null;
+
+    if (exactTitleOrLabelMatch) {
+      return exactTitleOrLabelMatch;
+    }
+
+    return lookupResults[activeLookupIndex] ?? lookupResults[0] ?? null;
+  }, [activeLookupIndex, lookupQuery, lookupResults]);
+
+  const handleSelectLookupResult = (result: NexusPacketExplorerSearchResultRow) => {
+    onSelectPacketForExport({
+      packetId: result.packet_id,
+      preferredRevisionId: result.revision_id,
+      titleSnapshot: result.title,
+      seedSummary: {
+        family: result.family,
+        summary: result.summary,
+        label: result.label,
+      },
+    });
+  };
 
   const handlePacketPreview = async () => {
     if (!selectedPacketId) {
@@ -321,8 +488,7 @@ export function NexusPacketExplorerExportPanel({
           </Text>
           <Text className={appearance.surfaceTitleClass}>Export packet data</Text>
           <Text className={appearance.sectionBodyClass}>
-            Generate raw packet JSON or a bounded transport bundle from the
-            currently selected packet.
+            Generate raw packet JSON or a bounded bundle from the selected packet.
           </Text>
         </View>
 
@@ -403,14 +569,104 @@ export function NexusPacketExplorerExportPanel({
                 onPress={() => void handlePacketDownload()}
                 disabled={packetWorkflow.isLoadingPreview || packetWorkflow.isDownloading}
               />
+              <NexusActionButton
+                label="Cancel"
+                variant="ghost"
+                onPress={() => {
+                  setPacketArtifactMode('raw_packet');
+                  setPacketBundleMode('packet_history');
+                  setPacketTitle('');
+                  setPacketNote('');
+                  setPacketWorkflow(createIdleWorkflowState());
+                  onClearPacketExportTarget();
+                }}
+                disabled={packetWorkflow.isLoadingPreview || packetWorkflow.isDownloading}
+              />
             </View>
           </>
         ) : (
-          <NexusCard tone="gold">
-            <Text className={appearance.itemBodyClass}>
-              Open a packet first, then use the Export action to preload it here.
-            </Text>
-          </NexusCard>
+          <View className="gap-4">
+            <View className="gap-3">
+              <Text className={appearance.itemMetaClass}>Enter packet id/etc</Text>
+              <TextInput
+                className={`rounded-[22px] border px-4 py-3 ${appearance.textInputClass}`}
+                onChangeText={setLookupQuery}
+                onKeyPress={(event) => {
+                  if (lookupResults.length === 0) {
+                    return;
+                  }
+
+                  if (event.nativeEvent.key === 'ArrowDown') {
+                    setActiveLookupIndex((currentValue) =>
+                      Math.min(currentValue + 1, lookupResults.length - 1)
+                    );
+                    return;
+                  }
+
+                  if (event.nativeEvent.key === 'ArrowUp') {
+                    setActiveLookupIndex((currentValue) =>
+                      Math.max(currentValue - 1, 0)
+                    );
+                    return;
+                  }
+
+                  if (event.nativeEvent.key === 'Escape') {
+                    setLookupResults([]);
+                  }
+                }}
+                onSubmitEditing={() => {
+                  if (lookupSelection) {
+                    handleSelectLookupResult(lookupSelection);
+                  }
+                }}
+                placeholder="Load a packet by packet id or exact title"
+                placeholderTextColor={appearance.textInputPlaceholderColor}
+                returnKeyType="search"
+                value={lookupQuery}
+              />
+              <Text className={appearance.itemBodyClass}>
+                Use Search for broader packet lookup.
+              </Text>
+
+              {isLookupLoading ? (
+                <Text className={appearance.itemMetaClass}>
+                  Searching packets...
+                </Text>
+              ) : null}
+
+              {lookupError ? (
+                <NexusCard tone="rose">
+                  <Text className={appearance.itemBodyClass}>{lookupError}</Text>
+                </NexusCard>
+              ) : null}
+
+              {lookupResults.length > 0 ? (
+                <NexusCard className="gap-2">
+                  {lookupResults.map((result, resultIndex) => (
+                    <Pressable
+                      key={`${result.packet_id}:${result.match_type}:${result.matched_revision_id ?? result.revision_id ?? 'none'}`}
+                      className={`rounded-[3px] border px-3 py-3 ${
+                        resultIndex === activeLookupIndex
+                          ? appearance.cardInsetClass
+                          : 'border-transparent'
+                      }`}
+                      onPress={() => handleSelectLookupResult(result)}
+                    >
+                      <Text className={appearance.itemTitleClass}>
+                        {result.title}
+                      </Text>
+                      <Text className={appearance.itemMetaClass}>
+                        {result.match_reason}
+                      </Text>
+                      <Text className={appearance.itemBodyClass}>
+                        {result.packet_id}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </NexusCard>
+              ) : null}
+            </View>
+          </View>
         )}
 
         {packetWorkflow.error ? (

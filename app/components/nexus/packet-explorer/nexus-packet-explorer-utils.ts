@@ -39,14 +39,24 @@ export function formatJson(value: unknown): string {
   }
 }
 
-export function getExplorerTabLabel(tab: PacketExplorerTab): string {
-  if (tab.kind === 'home') {
-    return 'Explorer';
+function middleTruncateText(value: string, maxLength: number): string {
+  if (value.length <= maxLength) {
+    return value;
   }
 
-  return tab.title_snapshot.length > 36
-    ? `${tab.title_snapshot.slice(0, 33)}...`
-    : tab.title_snapshot;
+  const visibleCharacterCount = Math.max(1, maxLength - 3);
+  const leadingCount = Math.ceil(visibleCharacterCount / 2);
+  const trailingCount = Math.floor(visibleCharacterCount / 2);
+
+  return `${value.slice(0, leadingCount)}...${value.slice(value.length - trailingCount)}`;
+}
+
+export function getExplorerTabLabel(tab: PacketExplorerTab): string {
+  if (tab.kind === 'home') {
+    return 'Home';
+  }
+
+  return middleTruncateText(tab.title_snapshot, 36);
 }
 
 export function getViewModeLabel(viewMode: PacketExplorerViewMode): string {

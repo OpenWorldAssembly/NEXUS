@@ -7,12 +7,16 @@ import {
   NexusCard,
   useNexusAppearance,
 } from '@app/components/nexus/nexus-ui';
-import type { NexusPacketExplorerPayload } from '@runtime/nexus/nexus-api-types';
+import type {
+  NexusPacketExplorerPayload,
+  NexusPacketExplorerSearchPayload,
+} from '@runtime/nexus/nexus-api-types';
 import type {
   PacketExplorerPrimaryTab,
   PacketExplorerTab,
 } from '@runtime/nexus/packet-explorer-session';
 
+import type { NexusPacketExplorerSearchCategory } from './nexus-packet-explorer-search-panel';
 import type { ExplorerPacketLoadState } from './nexus-packet-explorer-types';
 import { NexusPacketExplorerDataPanel } from './nexus-packet-explorer-data-panel';
 import { NexusPacketExplorerHomePanel } from './nexus-packet-explorer-home-panel';
@@ -24,26 +28,41 @@ import {
   getViewModeLabel,
 } from './nexus-packet-explorer-utils';
 
+type PacketExplorerRoutePacketInput = {
+  packetId: string;
+  preferredRevisionId?: string | null;
+  titleSnapshot?: string | null;
+  seedSummary?: {
+    family: string | null;
+    summary: string | null;
+    label: string | null;
+  } | null;
+};
+
 type NexusPacketExplorerContentProps = {
   activeTab: PacketExplorerTab;
   activePacketId: string | null;
   activePacketState: ExplorerPacketLoadState | undefined;
   searchValue: string;
+  searchResult: NexusPacketExplorerSearchPayload | null;
+  searchError: string | null;
+  isSearching: boolean;
+  activeSearchCategory: NexusPacketExplorerSearchCategory;
   rawCodeCardClass: string;
   headingTextClass: string;
   onChangeSearchValue: (value: string) => void;
-  onSelectHomeSubtab: (subtab: PacketExplorerTab['active_home_subtab']) => void;
+  onSearchPackets: () => void;
+  onClearSearch: () => void;
+  onSelectSearchCategory: (category: NexusPacketExplorerSearchCategory) => void;
+  onChangeSearchCategoryPage: (
+    category: Exclude<NexusPacketExplorerSearchCategory, 'all'>,
+    nextPage: number
+  ) => void;
   onRetryActivePacket: () => void;
-  onOpenPacketInExplorer: (input: {
-    packetId: string;
-    preferredRevisionId?: string | null;
-    titleSnapshot?: string | null;
-    seedSummary?: {
-      family: string | null;
-      summary: string | null;
-      label: string | null;
-    } | null;
-  }) => void;
+  onOpenPacketInNewTab: (input: PacketExplorerRoutePacketInput) => void;
+  onOpenPacketInCurrentTab: (input: PacketExplorerRoutePacketInput) => void;
+  onRoutePacketToExport: (input: PacketExplorerRoutePacketInput) => void;
+  onClearExportTarget: () => void;
   onViewInLibrary: (packetId: string, family?: string | null) => void;
 };
 
@@ -259,7 +278,8 @@ function renderPayloadPanel(input: {
   selectedDataViewMode: PacketExplorerTab['selected_data_view_mode'];
   rawCodeCardClass: string;
   headingTextClass: string;
-  onOpenPacketInExplorer: NexusPacketExplorerContentProps['onOpenPacketInExplorer'];
+  onOpenPacketInNewTab: NexusPacketExplorerContentProps['onOpenPacketInNewTab'];
+  onOpenPacketInCurrentTab: NexusPacketExplorerContentProps['onOpenPacketInCurrentTab'];
   onViewInLibrary: NexusPacketExplorerContentProps['onViewInLibrary'];
 }) {
   if (input.activePrimaryTab === 'data') {
@@ -281,7 +301,8 @@ function renderPayloadPanel(input: {
     return (
       <NexusPacketExplorerLinksPanel
         payload={input.payload}
-        onOpenPacketInExplorer={input.onOpenPacketInExplorer}
+        onOpenPacketInNewTab={input.onOpenPacketInNewTab}
+        onOpenPacketInCurrentTab={input.onOpenPacketInCurrentTab}
         onViewInLibrary={input.onViewInLibrary}
       />
     );
@@ -295,12 +316,22 @@ export function NexusPacketExplorerContent({
   activePacketId,
   activePacketState,
   searchValue,
+  searchResult,
+  searchError,
+  isSearching,
+  activeSearchCategory,
   rawCodeCardClass,
   headingTextClass,
   onChangeSearchValue,
-  onSelectHomeSubtab,
+  onSearchPackets,
+  onClearSearch,
+  onSelectSearchCategory,
+  onChangeSearchCategoryPage,
   onRetryActivePacket,
-  onOpenPacketInExplorer,
+  onOpenPacketInNewTab,
+  onOpenPacketInCurrentTab,
+  onRoutePacketToExport,
+  onClearExportTarget,
   onViewInLibrary,
 }: NexusPacketExplorerContentProps) {
   const appearance = useNexusAppearance();
@@ -322,9 +353,18 @@ export function NexusPacketExplorerContent({
         selectedPacketId={activeTab.packet_id}
         selectedPacketTitle={activeTab.seed_summary?.label ?? null}
         searchValue={searchValue}
+        searchResult={searchResult}
+        searchError={searchError}
+        isSearching={isSearching}
+        activeSearchCategory={activeSearchCategory}
         onChangeSearchValue={onChangeSearchValue}
-        onSelectHomeSubtab={onSelectHomeSubtab}
-        onOpenPacketInExplorer={onOpenPacketInExplorer}
+        onSearchPackets={onSearchPackets}
+        onClearSearch={onClearSearch}
+        onSelectSearchCategory={onSelectSearchCategory}
+        onChangeSearchCategoryPage={onChangeSearchCategoryPage}
+        onOpenPacketInExplorer={onOpenPacketInNewTab}
+        onRoutePacketToExport={onRoutePacketToExport}
+        onClearExportTarget={onClearExportTarget}
       />
     );
   }
@@ -369,7 +409,8 @@ export function NexusPacketExplorerContent({
     selectedDataViewMode: activeTab.selected_data_view_mode,
     rawCodeCardClass,
     headingTextClass,
-    onOpenPacketInExplorer,
+    onOpenPacketInNewTab,
+    onOpenPacketInCurrentTab,
     onViewInLibrary,
   });
 

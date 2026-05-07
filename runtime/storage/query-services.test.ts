@@ -34,6 +34,7 @@ function createPacketStoreStub(input: {
     publishRevision: async () => undefined,
     fetchByPacket: async () => input.packet,
     fetchByRevision: async () => input.packet,
+    resolveRevisionRef: async () => preferredRevision,
     fetchPreferredRevision: async () => preferredRevision,
     fetchRevisionHeads: async () => headStatus,
     queryEdges: async () => [],

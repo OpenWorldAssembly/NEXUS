@@ -16,6 +16,10 @@ import {
   getNexusPacketExplorerImportPreview,
   parseNexusPacketExplorerImportRequest,
 } from '@runtime/nexus/server/nexus-packet-import';
+import {
+  getNexusPacketExplorerSearchPayload,
+  parseNexusPacketExplorerSearchRequest,
+} from '@runtime/nexus/server/nexus-packet-search';
 
 function createJsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -124,6 +128,17 @@ export const POST: RequestHandler = async (request) => {
       return createJsonResponse(commitPayload);
     }
 
+    if (action === 'search') {
+      const searchRequestBody = parseNexusPacketExplorerSearchRequest(
+        requestBody
+      );
+      const searchPayload = await getNexusPacketExplorerSearchPayload(
+        searchRequestBody
+      );
+
+      return createJsonResponse(searchPayload);
+    }
+
     return createJsonResponse(
       { error: 'Unknown Packet Explorer POST action.' },
       404
@@ -138,7 +153,9 @@ export const POST: RequestHandler = async (request) => {
             ? 'Unable to commit the Packet Explorer import.'
             : action === 'import_preview'
               ? 'Unable to preview the Packet Explorer import.'
-              : 'Unable to preview the Packet Explorer export.';
+              : action === 'search'
+                ? 'Unable to search Packet Explorer packets.'
+                : 'Unable to preview the Packet Explorer export.';
 
     return createJsonResponse({ error: message }, 400);
   }

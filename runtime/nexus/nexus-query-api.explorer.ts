@@ -11,6 +11,8 @@ import type {
   NexusPacketExplorerExportRequest,
   NexusPacketExplorerInspectionLens,
   NexusPacketExplorerPayload,
+  NexusPacketExplorerSearchPayload,
+  NexusPacketExplorerSearchRequest,
 } from '@runtime/nexus/nexus-api-types';
 import {
   NexusApiError,
@@ -67,6 +69,16 @@ export function commitNexusPacketExplorerImport(
 ): Promise<NexusPacketExplorerImportCommitPayload> {
   return fetchMutationJsonOrThrow<NexusPacketExplorerImportCommitPayload>({
     path: '/api/nexus/packets/explorer?action=import_commit',
+    method: 'POST',
+    body: requestBody,
+  });
+}
+
+export function searchNexusPacketExplorerPackets(
+  requestBody: NexusPacketExplorerSearchRequest
+): Promise<NexusPacketExplorerSearchPayload> {
+  return fetchMutationJsonOrThrow<NexusPacketExplorerSearchPayload>({
+    path: '/api/nexus/packets/explorer?action=search',
     method: 'POST',
     body: requestBody,
   });

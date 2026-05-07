@@ -22,7 +22,16 @@ import {
 
 type NexusPacketExplorerLinksPanelProps = {
   payload: NexusPacketExplorerPayload;
-  onOpenPacketInExplorer: (input: {
+  onOpenPacketInNewTab: (input: {
+    packetId: string;
+    titleSnapshot?: string | null;
+    seedSummary?: {
+      family: string | null;
+      summary: string | null;
+      label: string | null;
+    } | null;
+  }) => void;
+  onOpenPacketInCurrentTab: (input: {
     packetId: string;
     titleSnapshot?: string | null;
     seedSummary?: {
@@ -45,7 +54,8 @@ function NexusPacketExplorerLinkDirectionSection({
   visibleRowsByGroup,
   onToggleGroup,
   onRevealMore,
-  onOpenPacketInExplorer,
+  onOpenPacketInNewTab,
+  onOpenPacketInCurrentTab,
   onViewInLibrary,
 }: {
   title: string;
@@ -54,7 +64,16 @@ function NexusPacketExplorerLinkDirectionSection({
   visibleRowsByGroup: Record<string, number>;
   onToggleGroup: (groupKey: string) => void;
   onRevealMore: (groupKey: string) => void;
-  onOpenPacketInExplorer: (input: {
+  onOpenPacketInNewTab: (input: {
+    packetId: string;
+    titleSnapshot?: string | null;
+    seedSummary?: {
+      family: string | null;
+      summary: string | null;
+      label: string | null;
+    } | null;
+  }) => void;
+  onOpenPacketInCurrentTab: (input: {
     packetId: string;
     titleSnapshot?: string | null;
     seedSummary?: {
@@ -118,9 +137,24 @@ function NexusPacketExplorerLinkDirectionSection({
                   onPress={() => onToggleGroup(groupKey)}
                 />
                 <NexusActionButton
-                  label="Open in Explorer"
+                  label="Open in new tab"
+                  variant="primary"
                   onPress={() =>
-                    onOpenPacketInExplorer({
+                    onOpenPacketInNewTab({
+                      packetId: group.packet_id,
+                      titleSnapshot: group.title ?? group.label ?? group.packet_id,
+                      seedSummary: {
+                        family: group.family,
+                        summary: null,
+                        label: group.label,
+                      },
+                    })
+                  }
+                />
+                <NexusActionButton
+                  label="Open in current tab"
+                  onPress={() =>
+                    onOpenPacketInCurrentTab({
                       packetId: group.packet_id,
                       titleSnapshot: group.title ?? group.label ?? group.packet_id,
                       seedSummary: {
@@ -185,7 +219,8 @@ function NexusPacketExplorerLinkDirectionSection({
 
 export function NexusPacketExplorerLinksPanel({
   payload,
-  onOpenPacketInExplorer,
+  onOpenPacketInNewTab,
+  onOpenPacketInCurrentTab,
   onViewInLibrary,
 }: NexusPacketExplorerLinksPanelProps) {
   const appearance = useNexusAppearance();
@@ -257,7 +292,8 @@ export function NexusPacketExplorerLinksPanel({
                 LINK_GROUP_INITIAL_VISIBLE_COUNT,
             }))
           }
-          onOpenPacketInExplorer={onOpenPacketInExplorer}
+          onOpenPacketInNewTab={onOpenPacketInNewTab}
+          onOpenPacketInCurrentTab={onOpenPacketInCurrentTab}
           onViewInLibrary={onViewInLibrary}
         />
       ))}

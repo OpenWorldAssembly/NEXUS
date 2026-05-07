@@ -35,6 +35,23 @@ export type NexusPacketExplorerImportArtifactType =
   | 'raw_packet'
   | 'bundle'
   | 'revision_array';
+export type NexusPacketExplorerSearchScopeMode = 'all_known';
+export type NexusPacketExplorerSearchGroupKey = 'direct' | 'name' | 'text';
+export type NexusPacketExplorerSearchActiveGroup =
+  | 'all'
+  | NexusPacketExplorerSearchGroupKey;
+export type NexusPacketExplorerSearchMatchType =
+  | 'packet_id_exact'
+  | 'revision_id_exact'
+  | 'packet_id_prefix'
+  | 'revision_id_prefix'
+  | 'title_exact'
+  | 'label_exact'
+  | 'title_contains'
+  | 'label_contains'
+  | 'summary_contains'
+  | 'tag_contains'
+  | 'family_contains';
 
 export type NexusPacketExplorerImportStatus =
   | 'ready'
@@ -54,6 +71,16 @@ export interface NexusPacketExplorerExportRequest {
 export interface NexusPacketExplorerImportRequest {
   source_text: string;
   file_name?: string | null;
+}
+
+export interface NexusPacketExplorerSearchRequest {
+  query: string;
+  limit_per_group?: number | null;
+  active_group?: NexusPacketExplorerSearchActiveGroup | null;
+  page?: number | null;
+  page_size?: number | null;
+  scope_mode?: NexusPacketExplorerSearchScopeMode | null;
+  selected_packet_id?: string | null;
 }
 
 export interface NexusPacketExplorerExportPreviewPayload {
@@ -104,6 +131,46 @@ export interface NexusPacketExplorerImportCommitPayload
   skipped_duplicate_count: number;
   restored_preferred_packet_count: number;
   diverged_packet_count: number;
+}
+
+export interface NexusPacketExplorerSearchResultRow {
+  packet_id: string;
+  revision_id: string | null;
+  family: PacketFamily;
+  title: string;
+  label: string;
+  summary: string | null;
+  status: string | null;
+  authority_scope_packet_id: string | null;
+  applicable_scope_ids: string[];
+  match_group: NexusPacketExplorerSearchGroupKey;
+  match_type: NexusPacketExplorerSearchMatchType;
+  match_reason: string;
+  score: number;
+  matched_revision_id: string | null;
+  created_at: string;
+}
+
+export interface NexusPacketExplorerSearchGroup {
+  key: NexusPacketExplorerSearchGroupKey;
+  label: string;
+  count: number;
+  truncated: boolean;
+  current_page: number;
+  page_size: number;
+  total_pages: number;
+  results: NexusPacketExplorerSearchResultRow[];
+}
+
+export interface NexusPacketExplorerSearchPayload {
+  query: string;
+  active_group: NexusPacketExplorerSearchActiveGroup;
+  page: number;
+  page_size: number;
+  scope_mode: NexusPacketExplorerSearchScopeMode;
+  limit_per_group: number;
+  total_result_count: number;
+  groups: NexusPacketExplorerSearchGroup[];
 }
 
 export type NexusPacketExplorerSectionBasis =

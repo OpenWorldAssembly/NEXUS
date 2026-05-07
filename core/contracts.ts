@@ -66,6 +66,7 @@ export interface PacketStore {
   publishRevision(revision: PacketRevisionRef): Promise<void>;
   fetchByPacket(packet: PacketRef): Promise<PacketEnvelope | null>;
   fetchByRevision(revision: PacketRevisionRef): Promise<PacketEnvelope | null>;
+  resolveRevisionRef(revision_id: string): Promise<PacketRevisionRef | null>;
   fetchPreferredRevision(packet: PacketRef): Promise<PacketRevisionRef | null>;
   fetchRevisionHeads(packet: PacketRef): Promise<PacketHeadStatus>;
   queryEdges(packet: PacketRef, query?: PacketEdgeQuery): Promise<PacketEdge[]>;

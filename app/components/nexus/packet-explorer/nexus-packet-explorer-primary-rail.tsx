@@ -6,27 +6,22 @@ import type { PacketExplorerPrimaryTab } from '@runtime/nexus/packet-explorer-se
 const PRIMARY_TAB_OPTIONS: {
   id: PacketExplorerPrimaryTab;
   title: string;
-  detail: string;
 }[] = [
   {
     id: 'data',
     title: 'Data',
-    detail: 'Inspect current read lens.',
   },
   {
     id: 'lineage',
     title: 'Lineage',
-    detail: 'Preferred and head revisions.',
   },
   {
     id: 'links',
     title: 'Links',
-    detail: 'Incoming and outgoing edges.',
   },
   {
     id: 'actions',
     title: 'Actions',
-    detail: 'Projected runtime affordances.',
   },
 ];
 

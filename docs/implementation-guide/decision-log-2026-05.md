@@ -58,3 +58,26 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - Web import now includes a browser `.json` file picker, but paste remains the universal fallback so the workflow still works outside the browser without adding a cross-platform file abstraction in this pass.
 - Import analysis is structural rather than trust-verifying: it reports invalid entries, duplicates, missing parent revisions, family conflicts, affected packets, and likely open targets, then blocks commit on unsafe inputs instead of offering partial-import toggles.
 - Post-import repair now preserves local preferred-head intent when divergence appears: if a newly imported branch creates multiple heads and the old preferred head still exists, Explorer restores that preferred revision instead of silently replacing it with the last imported head.
+
+## 2026-05 Packet Explorer live search and export lookup
+
+- Packet Explorer `Search` is now a real manual discovery workspace instead of a placeholder card, and its state stays Home-owned so query text, grouped results, and the active category survive normal Explorer tab movement while the session stays open.
+- Search intentionally stays preferred/current only in this pass: it reads from the shared packet search index rather than adding FTS, graph traversal search, or historical revision fanout into the main result set.
+- Exact revision-id search is still supported through a separate revision resolver seam on the packet store, which lets Explorer map historical revision IDs back to the owning packet while keeping the displayed packet card anchored to the current preferred revision surface.
+- Search results are grouped into `Direct`, `Name`, and `Text`, with deterministic ranking and lightweight `Open` / `Export` routing instead of turning the first live pass into a broader action hub.
+- Export now includes a compact active lookup when no packet target is preloaded, but that lookup intentionally remains narrower than the full Search workspace so Explorer keeps one discovery-oriented search surface and one operational packet-picker.
+
+## 2026-05 Packet Explorer workspace cleanup
+
+- Home workspace navigation has now moved out of the Home body and into the shared inspector row, so `Search`, `Import`, and `Export` behave like first-class Explorer modes rather than nested content tabs.
+- The packet primary rail and the Home workspace rail now share one compact attached-tab treatment, dropping the previous secondary tab copy so the inspector band can stay horizontally accessible without running off-screen.
+- Home-only dead controls were removed instead of being left as placeholder chrome, and the Search workspace now keeps only its core manual finder actions rather than duplicating Import navigation through extra shortcut buttons.
+- Packet export was re-centered around direct packet lookup when no target is preloaded, with the packet-picker promoted ahead of explanatory copy so the export workspace feels operational instead of instructional.
+- Search now defensively tolerates a missing runtime revision resolver by falling back to the preferred/current packet index path instead of failing the whole search request.
+
+## 2026-05 Packet Explorer final polish
+
+- Link traversal in Explorer is now explicit instead of ambiguous: grouped links expose `Open in new tab`, `Open in current tab`, and `View in Library`, while current-tab retargeting preserves the existing inspector state and refreshes the active packet identity fields.
+- Packet tab decks now present `Home` as the workspace tab label, use middle truncation for packet titles, and surface desktop hover metadata so long packet titles and revision context stay discoverable without widening the deck.
+- Home Export now includes an explicit `Cancel` reset path for packet-scoped export so preloaded packet targets can be cleared without leaving the Export workspace or disturbing the separate full local store export surface.
+- Search preview caps and category browsing are now separated: `All` remains an 8-result grouped preview surface, while focused `Direct`, `Name`, and `Text` views page through larger result sets with server-backed 25-item pages.

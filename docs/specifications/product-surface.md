@@ -40,29 +40,21 @@ Library is the scoped browse surface.
 Packet Explorer is the inspect-and-traverse surface.
 
 - it opens as a shell-level overlay
-- it is still read-only for packet mutation, but its Home workspace now includes live import and export workbenches
+- it is still read-only for packet mutation, but its Home workspace now includes live search, import, and export workbenches
 - it is separate from Library
 - it supports session-persistent tabs with an auto-created Home tab
-- its Home workspace now splits into `Search`, `Import`, and `Export` sub-tabs
-- `Search` currently preserves the existing placeholder lookup workspace for later phases
+- its Home workspace now splits into `Search`, `Import`, and `Export` sub-tabs rendered directly in the shared inspector row
+- `Search` is now a manual grouped packet finder over the current preferred packet index, with `All`, `Direct`, `Name`, and `Text` result groupings, capped preview slices inside `All`, and paged category views for deeper result review
 - `Import` now supports two-step packet and bundle ingest through `Analyze` then `Commit`, with paste-first JSON input plus web-only `.json` file upload
-- `Export` now supports raw preferred-revision packet export, bounded bundle export, and full local-store bundle export
+- `Export` now supports raw preferred-revision packet export, bounded bundle export, full local-store bundle export, a compact direct packet lookup when no export target is preloaded, and an explicit cancel/reset path when a packet export target was preloaded earlier
 - it now uses shared packet display-title normalization instead of exposing raw encoded packet ids as loaded titles where a human title can be derived
 - it supports `View as` inspection lenses for `Summary`, `Raw`, `Adapted`, and `Read Model`
-- it exposes `Data`, `Lineage`, `Links`, and `Actions` inspector rails
+- it exposes `Data`, `Lineage`, `Links`, and `Actions` inspector rails using the same compact attached-tab style as the Home workspace tabs
+- its packet tab deck now presents `Home` as the leftmost workspace tab, uses middle truncation for packet labels, and exposes desktop hover metadata for full packet titles and revision context
 - its main content region now reads as one primary scroll surface inside the drawer instead of trapping long packet reads inside tiny inner scroll panes
 - its packet-shell and inspector-control header bands can now collapse locally to reclaim vertical space without leaving helper rows behind, and collapsed bands are restored from the top command row
-- it groups `Incoming` and `Outgoing` links by related packet
+- it groups `Incoming` and `Outgoing` links by related packet, with explicit `Open in new tab`, `Open in current tab`, and `View in Library` actions for graph traversal
 - it surfaces read-only `NexusActionState` and `NexusActionIntentDescriptor` data where available
-
-Visible but disabled Explorer affordances are still placeholders:
-
-- `Follow`
-- `Fork`
-- `Adapt`
-- `Diff`
-
-These disabled Explorer controls now use compact inline status markers that open a shared explainer card instead of failing silently.
 
 ### Discussions
 

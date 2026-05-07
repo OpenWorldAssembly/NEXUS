@@ -11,6 +11,7 @@ import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import { NexusChevronIcon } from '@app/components/nexus/nexus-ui';
 import { NexusPacketExplorerContent } from '@app/components/nexus/packet-explorer/nexus-packet-explorer-content';
 import { NexusPacketExplorerPrimaryRail } from '@app/components/nexus/packet-explorer/nexus-packet-explorer-primary-rail';
+import type { NexusPacketExplorerSearchCategory } from '@app/components/nexus/packet-explorer/nexus-packet-explorer-search-panel';
 import { NexusPacketExplorerShellHeader } from '@app/components/nexus/packet-explorer/nexus-packet-explorer-shell-header';
 import { NexusPacketExplorerTabDeck } from '@app/components/nexus/packet-explorer/nexus-packet-explorer-tab-deck';
 import { NexusPacketExplorerToolbar } from '@app/components/nexus/packet-explorer/nexus-packet-explorer-toolbar';
@@ -18,6 +19,7 @@ import type {
   ExplorerPacketLoadState,
   ExplorerPacketStateMap,
 } from '@app/components/nexus/packet-explorer/nexus-packet-explorer-types';
+import type { NexusPacketExplorerSearchPayload } from '@runtime/nexus/nexus-api-types';
 import {
   EXPLORER_DESKTOP_BREAKPOINT,
 } from '@app/components/nexus/packet-explorer/nexus-packet-explorer-resize-math';
@@ -26,7 +28,10 @@ import {
   PACKET_FETCH_TIMEOUT_MS,
   logExplorerClientEvent,
 } from '@app/components/nexus/packet-explorer/nexus-packet-explorer-utils';
-import { fetchNexusPacketExplorerPayload } from '@runtime/nexus/nexus-query-api';
+import {
+  fetchNexusPacketExplorerPayload,
+  searchNexusPacketExplorerPackets,
+} from '@runtime/nexus/nexus-query-api';
 import {
   createPacketExplorerRequestKey,
   type PacketExplorerViewMode,
@@ -38,6 +43,19 @@ const VIEW_AS_MODES: PacketExplorerViewMode[] = [
   'adapted',
   'read_model',
 ];
+
+const SEARCH_CATEGORY_PAGE_SIZE = 25;
+
+function createDefaultSearchPageState(): Record<
+  Exclude<NexusPacketExplorerSearchCategory, 'all'>,
+  number
+> {
+  return {
+    direct: 1,
+    name: 1,
+    text: 1,
+  };
+}
 
 /**
  * Inputs: none.
@@ -51,6 +69,7 @@ export default function NexusPacketExplorer() {
     closeExplorerTab,
     closeExplorerTabs,
     focusExplorerTab,
+    openPacketInExplorer,
     retargetActiveExplorerPacket,
     setExplorerHomeSubtab,
     setExplorerPanelWidth,
@@ -63,6 +82,16 @@ export default function NexusPacketExplorer() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const [searchValue, setSearchValue] = useState('');
+  const [searchResult, setSearchResult] =
+    useState<NexusPacketExplorerSearchPayload | null>(null);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [isSearchingPackets, setIsSearchingPackets] = useState(false);
+  const [activeSearchCategory, setActiveSearchCategory] =
+    useState<NexusPacketExplorerSearchCategory>('all');
+  const [searchPageByCategory, setSearchPageByCategory] = useState<
+    Record<Exclude<NexusPacketExplorerSearchCategory, 'all'>, number>
+  >(createDefaultSearchPageState);
+  const [submittedSearchQuery, setSubmittedSearchQuery] = useState<string | null>(null);
   const [packetStates, setPacketStates] = useState<ExplorerPacketStateMap>({});
   const [retryNonceByPacketId, setRetryNonceByPacketId] = useState<
     Record<string, number>
@@ -144,6 +173,13 @@ export default function NexusPacketExplorer() {
   useEffect(() => {
     setPacketStates({});
     setRetryNonceByPacketId({});
+    setSearchValue('');
+    setSearchResult(null);
+    setSearchError(null);
+    setIsSearchingPackets(false);
+    setActiveSearchCategory('all');
+    setSearchPageByCategory(createDefaultSearchPageState());
+    setSubmittedSearchQuery(null);
   }, [currentActorPacketId]);
 
   useEffect(() => {
@@ -302,6 +338,178 @@ export default function NexusPacketExplorer() {
     closeExplorer();
   };
 
+  const handleRoutePacketToExport = (input: {
+    packetId: string;
+    preferredRevisionId?: string | null;
+    titleSnapshot?: string | null;
+    seedSummary?: {
+      family: string | null;
+      summary: string | null;
+      label: string | null;
+    } | null;
+  }) => {
+    openExplorer({
+      subtab: 'export',
+      packetId: input.packetId,
+      preferredRevisionId: input.preferredRevisionId ?? null,
+      titleSnapshot: input.titleSnapshot ?? null,
+      seedSummary: input.seedSummary ?? null,
+    });
+  };
+
+  const handleClearExportTarget = () => {
+    openExplorer({
+      subtab: 'export',
+      packetId: null,
+      preferredRevisionId: null,
+      titleSnapshot: null,
+      seedSummary: null,
+    });
+  };
+
+  const runPacketSearch = async (input: {
+    query: string;
+    category: NexusPacketExplorerSearchCategory;
+    pageByCategory?: Record<Exclude<NexusPacketExplorerSearchCategory, 'all'>, number>;
+  }) => {
+    const nextPageByCategory = input.pageByCategory ?? searchPageByCategory;
+    const activeGroup = input.category;
+    const page = activeGroup === 'all' ? 1 : nextPageByCategory[activeGroup];
+    const pageSize =
+      activeGroup === 'all' ? 8 : SEARCH_CATEGORY_PAGE_SIZE;
+
+    return searchNexusPacketExplorerPackets({
+      query: input.query,
+      active_group: activeGroup,
+      page,
+      page_size: pageSize,
+      limit_per_group: 8,
+      scope_mode: 'all_known',
+      selected_packet_id: null,
+    });
+  };
+
+  const handleSearchPackets = async () => {
+    const trimmedQuery = searchValue.trim();
+    const isIdentifierLike =
+      trimmedQuery.includes(':') ||
+      trimmedQuery.includes('@') ||
+      trimmedQuery.includes('/');
+
+    if ((!isIdentifierLike && trimmedQuery.length < 2) || trimmedQuery.length === 0) {
+      setSearchError(
+        trimmedQuery.length === 0
+          ? 'Enter a packet clue before searching.'
+          : 'Search text must be at least 2 characters long.'
+      );
+      setSearchResult(null);
+      setActiveSearchCategory('all');
+      return;
+    }
+
+    setIsSearchingPackets(true);
+    setSearchError(null);
+
+    try {
+      const nextPageByCategory = createDefaultSearchPageState();
+      const nextSearchResult = await runPacketSearch({
+        query: trimmedQuery,
+        category: 'all',
+        pageByCategory: nextPageByCategory,
+      });
+
+      setSearchResult(nextSearchResult);
+      setActiveSearchCategory('all');
+      setSearchPageByCategory(nextPageByCategory);
+      setSubmittedSearchQuery(trimmedQuery);
+    } catch (error) {
+      setSearchResult(null);
+      setSearchError(
+        error instanceof Error
+          ? error.message
+          : 'Unable to search Packet Explorer packets right now.'
+      );
+    } finally {
+      setIsSearchingPackets(false);
+    }
+  };
+
+  const handleClearSearch = () => {
+    setSearchValue('');
+    setSearchResult(null);
+    setSearchError(null);
+    setActiveSearchCategory('all');
+    setSearchPageByCategory(createDefaultSearchPageState());
+    setSubmittedSearchQuery(null);
+  };
+
+  const handleSelectSearchCategory = async (
+    category: NexusPacketExplorerSearchCategory
+  ) => {
+    setActiveSearchCategory(category);
+
+    if (!submittedSearchQuery) {
+      return;
+    }
+
+    setIsSearchingPackets(true);
+    setSearchError(null);
+
+    try {
+      const nextSearchResult = await runPacketSearch({
+        query: submittedSearchQuery,
+        category,
+      });
+
+      setSearchResult(nextSearchResult);
+    } catch (error) {
+      setSearchError(
+        error instanceof Error
+          ? error.message
+          : 'Unable to search Packet Explorer packets right now.'
+      );
+    } finally {
+      setIsSearchingPackets(false);
+    }
+  };
+
+  const handleChangeSearchCategoryPage = async (
+    category: Exclude<NexusPacketExplorerSearchCategory, 'all'>,
+    nextPage: number
+  ) => {
+    if (!submittedSearchQuery) {
+      return;
+    }
+
+    const nextPageByCategory = {
+      ...searchPageByCategory,
+      [category]: nextPage,
+    };
+
+    setSearchPageByCategory(nextPageByCategory);
+    setActiveSearchCategory(category);
+    setIsSearchingPackets(true);
+    setSearchError(null);
+
+    try {
+      const nextSearchResult = await runPacketSearch({
+        query: submittedSearchQuery,
+        category,
+        pageByCategory: nextPageByCategory,
+      });
+
+      setSearchResult(nextSearchResult);
+    } catch (error) {
+      setSearchError(
+        error instanceof Error
+          ? error.message
+          : 'Unable to change Packet Explorer search pages right now.'
+      );
+    } finally {
+      setIsSearchingPackets(false);
+    }
+  };
+
   return (
     <View className="absolute inset-0 z-30 flex-row justify-end">
       {isDraggingResizeHandle ? (
@@ -394,6 +602,9 @@ export default function NexusPacketExplorer() {
                     activeTab={activeTab}
                     activePacketId={activePacketId}
                     activePacketFamily={activePacketFamily}
+                    activeHomeSubtab={
+                      activeTab.kind === 'home' ? activeTab.active_home_subtab : undefined
+                    }
                     onExportPacket={(input) =>
                       openExplorer({
                         subtab: 'export',
@@ -401,6 +612,12 @@ export default function NexusPacketExplorer() {
                         preferredRevisionId: input.preferredRevisionId ?? null,
                         titleSnapshot: input.titleSnapshot ?? null,
                         seedSummary: input.seedSummary ?? null,
+                      })
+                    }
+                    onSelectHomeSubtab={(subtab) =>
+                      setExplorerHomeSubtab({
+                        tabId: activeTab.id,
+                        subtab,
                       })
                     }
                     viewModes={VIEW_AS_MODES}
@@ -437,23 +654,35 @@ export default function NexusPacketExplorer() {
             </View>
           ) : null}
 
-          <View className="flex-1 min-h-0 px-4 py-4">
+        <View className="flex-1 min-h-0 px-4 py-4">
             <NexusPacketExplorerContent
               activeTab={activeTab}
               activePacketId={activePacketId}
               activePacketState={displayPacketState}
               searchValue={searchValue}
+              searchResult={searchResult}
+              searchError={searchError}
+              isSearching={isSearchingPackets}
+              activeSearchCategory={activeSearchCategory}
               rawCodeCardClass={rawCodeCardClass}
               headingTextClass={headingTextClass}
-              onChangeSearchValue={setSearchValue}
-              onSelectHomeSubtab={(subtab) =>
-                setExplorerHomeSubtab({
-                  tabId: activeTab.id,
-                  subtab,
-                })
+              onChangeSearchValue={(value) => {
+                setSearchValue(value);
+                setSearchError(null);
+              }}
+              onSearchPackets={() => void handleSearchPackets()}
+              onClearSearch={handleClearSearch}
+              onSelectSearchCategory={(category) =>
+                void handleSelectSearchCategory(category)
+              }
+              onChangeSearchCategoryPage={(category, nextPage) =>
+                void handleChangeSearchCategoryPage(category, nextPage)
               }
               onRetryActivePacket={handleRetryActivePacket}
-              onOpenPacketInExplorer={retargetActiveExplorerPacket}
+              onOpenPacketInNewTab={openPacketInExplorer}
+              onOpenPacketInCurrentTab={retargetActiveExplorerPacket}
+              onRoutePacketToExport={handleRoutePacketToExport}
+              onClearExportTarget={handleClearExportTarget}
               onViewInLibrary={handleOpenPacketInLibrary}
             />
           </View>
