@@ -1,0 +1,55 @@
+# The Charter of the Open World Assembly
+
+Founding principles for peaceful decentralized coordination.
+
+Humanity now possesses the means to communicate, coordinate, and act together across the planet.
+
+We need not wait for kings, parties, corporations, or catastrophes to decide our future. We declare these principles.
+
+## I. The People Are the Source
+
+All legitimate power rises from the people and remains answerable to them.
+
+## II. Consent Above Control
+
+No authority is just without consent. No consent is real without the freedom to refuse.
+
+## III. Power Must Be Limited
+
+Any power not checked will drift toward abuse.
+
+## IV. Participation Over Passivity
+
+Those affected by decisions should have a voice in them.
+
+## V. Decentralize What Can Be Local
+
+What can be decided locally should never be captured from afar.
+
+## VI. Coordinate What Must Be Shared
+
+What concerns many may be aligned by many through open cooperation.
+
+## VII. Unity Without Uniformity
+
+People may differ in culture, belief, and way of life while building peace together.
+
+## VIII. Nonviolence Is Strength
+
+Violence breeds the systems it claims to defeat. Disciplined peace outlasts fear.
+
+## IX. Truth Must Be Visible
+
+Transparency builds trust. Hidden power corrodes it.
+
+## X. Fatalism Is Folly
+
+We need not wait for war, collapse, or nuclear fire to become wise.
+
+## Closing
+
+The future is not owned by tyrants, algorithms, or inherited power.
+
+The future belongs to free peoples who choose to build it together.
+
+Let assemblies rise wherever people are. Let consent become visible. Let cooperation outrun coercion. Let the age of participation begin.

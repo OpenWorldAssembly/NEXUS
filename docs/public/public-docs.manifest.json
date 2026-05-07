@@ -1,0 +1,95 @@
+{
+  "documents": [
+    {
+      "slug": "charter",
+      "title": "The Charter of the Open World Assembly",
+      "subtitle": "Founding principles for peaceful decentralized coordination.",
+      "version": "Public draft",
+      "updatedLabel": "Generated from current public Markdown source.",
+      "typeLabel": "Founding document",
+      "status": "available",
+      "summary": "Founding principles for Open World Assembly and peaceful decentralized coordination.",
+      "sourceDir": "docs/public/charter",
+      "outputBaseName": "owa-charter-current",
+      "readable": true,
+      "versionRecords": true
+    },
+    {
+      "slug": "nexus-readme",
+      "title": "Nexus README",
+      "subtitle": "Current overview of the Nexus prototype, posture, and architecture.",
+      "version": "Public draft",
+      "updatedLabel": "Generated from current public Markdown source.",
+      "typeLabel": "System overview",
+      "status": "draft",
+      "summary": "A practical overview of the Nexus prototype, current posture, and system architecture.",
+      "sourceDir": "docs/public/nexus-readme",
+      "outputBaseName": "nexus-readme-current",
+      "readable": true,
+      "versionRecords": true
+    },
+    {
+      "slug": "implementation-guide",
+      "title": "Implementation Guide",
+      "subtitle": "Architecture notes, project conventions, implementation seams, and decision records.",
+      "version": "Working draft",
+      "updatedLabel": "Generated from current public Markdown source.",
+      "typeLabel": "Technical guide",
+      "status": "draft",
+      "summary": "Working notes on project structure, conventions, key decisions, and implementation seams.",
+      "sourceFiles": [
+        "docs/implementation-guide.md",
+        "docs/implementation-guide/architecture-and-layers.md",
+        "docs/implementation-guide/core-entities-and-packet-model.md",
+        "docs/implementation-guide/trust-moderation-and-policy.md",
+        "docs/implementation-guide/governance-initiatives-and-decisions.md",
+        "docs/implementation-guide/decision-log-2026-04.md",
+        "docs/implementation-guide/decision-log-2026-05.md"
+      ],
+      "outputBaseName": "implementation-guide-current",
+      "readable": true,
+      "versionRecords": true
+    },
+    {
+      "slug": "specifications",
+      "title": "Specifications",
+      "subtitle": "Current intended behavior and current system structure.",
+      "version": "Working draft",
+      "updatedLabel": "Generated from current public Markdown source.",
+      "typeLabel": "Reference spec",
+      "status": "draft",
+      "summary": "Current intended behavior for public surfaces, Nexus workflows, packets, and system contracts.",
+      "sourceFiles": [
+        "docs/specifications.md",
+        "docs/specifications/product-surface.md",
+        "docs/specifications/nexus-routes-and-workflows.md",
+        "docs/specifications/architecture-and-state.md",
+        "docs/specifications/known-gaps-and-provisional.md"
+      ],
+      "outputBaseName": "specifications-current",
+      "readable": true,
+      "versionRecords": true
+    },
+    {
+      "slug": "roadmap",
+      "title": "Roadmap",
+      "subtitle": "Near-term priorities, deferred decisions, and next development milestones.",
+      "version": "Working draft",
+      "updatedLabel": "Generated from current public Markdown source.",
+      "typeLabel": "Planning document",
+      "status": "draft",
+      "summary": "Near-term priorities, known gaps, deferred work, and next development milestones.",
+      "sourceFiles": [
+        "docs/roadmap.md",
+        "docs/roadmap/stabilization-and-surface-polish.md",
+        "docs/roadmap/initiatives-locality-and-subscriptions.md",
+        "docs/roadmap/trust-policy-and-moderation.md",
+        "docs/roadmap/governance-and-execution.md",
+        "docs/roadmap/open-questions-and-deferred-decisions.md"
+      ],
+      "outputBaseName": "roadmap-current",
+      "readable": true,
+      "versionRecords": true
+    }
+  ]
+}

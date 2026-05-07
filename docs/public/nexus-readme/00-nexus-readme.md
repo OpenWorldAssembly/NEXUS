@@ -1,0 +1,46 @@
+# Nexus README
+
+Current overview of the Nexus prototype, posture, and architecture.
+
+Nexus is the portable coordination substrate beneath Open World Assembly. It is still an early proof of concept, not a finished public platform.
+
+## Current Status
+
+Nexus is live enough to demonstrate the core direction, but unstable enough that visitors should treat it as a demo.
+
+- Some features are disabled, provisional, or represented by placeholders.
+- Data models, routes, interface details, and workflows may change during development.
+- The public demo is meant to show direction, not to serve as durable civic infrastructure yet.
+
+## What Nexus Is
+
+Nexus is a packet-based coordination system for people, assemblies, initiatives, policies, discussions, trust signals, and future governance workflows.
+
+It is designed so communities can coordinate without depending on a single platform as the source of truth.
+
+## What Nexus Is Not
+
+Nexus is not a party, command structure, social network clone, or centralized authority.
+
+It is infrastructure: a portable way to describe coordination, relationships, claims, decisions, and shared records.
+
+## Core Pattern
+
+Nexus treats coordination as signed, inspectable records.
+
+- Packets carry structured information.
+- Signatures establish authorship and integrity.
+- Relationships and attestations create trust context.
+- Policies can define how a scope interprets participation and legitimacy.
+
+## Open World Assembly
+
+OWA is the first public-facing implementation built on top of Nexus.
+
+The public site explains the vision. Nexus demonstrates the machinery beneath it.
+
+## Development Direction
+
+The near-term goal is stability before scale.
+
+Priorities include clearer packet contracts, readable docs, safer write flows, better import/export tools, stronger trust and policy systems, and a more coherent public surface.

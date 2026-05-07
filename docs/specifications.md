@@ -52,3 +52,10 @@ Current source split:
 - The Charter is currently readable on-page through `PublicDocumentReader` and `PUBLIC_READABLE_DOCUMENTS.charter`.
 - Directory entries currently include the OWA Charter, Nexus README, Implementation Guide, Specifications, and Roadmap.
 - Download actions for generated Markdown/PDF artifacts are present as disabled placeholders until the public docs artifact pipeline is implemented.
+
+### Public docs generated artifacts
+
+- The `/docs` page can switch its readable panel between Charter, Nexus README, Implementation Guide, Specifications, and Roadmap entries.
+- Directory read buttons select the readable document in-page; Markdown download buttons point at generated static files under `/downloads/`.
+- `scripts/build-public-docs.mjs` is the current source of truth for compiling public Markdown sources into generated reader data and static Markdown downloads.
+- Generated PDF actions remain disabled placeholders until a PDF export step is added.

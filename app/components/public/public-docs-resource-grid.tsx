@@ -44,8 +44,8 @@ export function PublicDocsResourceGrid({ resources }: PublicDocsResourceGridProp
               PUBLIC_SURFACE_CLASSES.text.bodyClassName,
             ].join(' ')}
           >
-            Download links will point to generated Markdown and PDF artifacts once the public docs
-            build pipeline is wired in.
+            Markdown downloads are now generated from source docs. PDF exports remain deferred until the
+            readable Markdown pipeline is stable.
           </Text>
         </View>
         <PublicPageActions

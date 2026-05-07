@@ -50,3 +50,11 @@ The current product stack is still best understood as:
 - Readable documents are consumed from `app/public/generated/public-docs.generated.ts`, which is intentionally shaped as future build output from public Markdown source files.
 - The current generated-style module is maintained by hand until the public docs build pipeline compiles Markdown, downloadable artifacts, and reader data.
 - The old docs principle-grid components were removed from active use so the docs page can evolve around document directory entries, readable web documents, and static download links.
+
+### Public docs Markdown build pipeline (Pass 10C)
+
+- Public docs source is now declared in `docs/public/public-docs.manifest.json` and compiled by `scripts/build-public-docs.mjs`.
+- The build script creates readable document data in `app/public/generated/public-docs.generated.ts`, static Markdown downloads in `public/downloads/`, and hash-based internal version records in `docs/public/version-records/`.
+- Source documents may be defined by `sourceDir` or ordered `sourceFiles`, allowing chapter-split docs to compile into one current public artifact per document.
+- `npm run docs:build` is wired into `npm run export:web` so Railway/web exports rebuild generated docs before the Expo web build.
+- Version records are for internal record-keeping only; the public docs page exposes only the current readable/downloadable document versions.

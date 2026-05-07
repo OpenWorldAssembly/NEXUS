@@ -12,6 +12,64 @@ type PublicDocumentReaderProps = {
   document: PublicReadableDocument;
 };
 
+type PublicDocumentParagraphProps = {
+  paragraph: string;
+};
+
+function PublicDocumentParagraph({ paragraph }: PublicDocumentParagraphProps) {
+  if (paragraph.startsWith('### ')) {
+    return (
+      <Text
+        className={[
+          'pt-3 font-[Inter_700Bold] text-[18px] leading-[26px]',
+          PUBLIC_SURFACE_CLASSES.text.headingClassName,
+        ].join(' ')}
+      >
+        {paragraph.slice(4)}
+      </Text>
+    );
+  }
+
+  if (paragraph.startsWith('• ')) {
+    return (
+      <Text
+        className={[
+          'pl-3 font-[Inter_400Regular] text-[16px] leading-[28px]',
+          PUBLIC_SURFACE_CLASSES.text.bodyClassName,
+        ].join(' ')}
+      >
+        {paragraph}
+      </Text>
+    );
+  }
+
+  if (paragraph.startsWith('> ')) {
+    return (
+      <View className="border-l border-public-surfaceRule pl-4">
+        <Text
+          className={[
+            'font-[Inter_500Medium] text-[17px] leading-[30px]',
+            PUBLIC_SURFACE_CLASSES.text.bodyWarmClassName,
+          ].join(' ')}
+        >
+          {paragraph.slice(2)}
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <Text
+      className={[
+        'font-[Inter_400Regular] text-[17px] leading-[30px]',
+        PUBLIC_SURFACE_CLASSES.text.bodyClassName,
+      ].join(' ')}
+    >
+      {paragraph}
+    </Text>
+  );
+}
+
 export function PublicDocumentReader({ document }: PublicDocumentReaderProps) {
   return (
     <PublicCardFrame
@@ -65,16 +123,11 @@ export function PublicDocumentReader({ document }: PublicDocumentReaderProps) {
 
           {!!document.intro?.length && (
             <View className="gap-4 border-t border-public-surfaceRule pt-7">
-              {document.intro.map((paragraph) => (
-                <Text
-                  key={paragraph}
-                  className={[
-                    'font-[Inter_400Regular] text-[18px] leading-[32px]',
-                    PUBLIC_SURFACE_CLASSES.text.bodyClassName,
-                  ].join(' ')}
-                >
-                  {paragraph}
-                </Text>
+              {document.intro.map((paragraph, paragraphIndex) => (
+                <PublicDocumentParagraph
+                  key={`intro-${paragraphIndex}-${paragraph.slice(0, 24)}`}
+                  paragraph={paragraph}
+                />
               ))}
             </View>
           )}
@@ -102,16 +155,11 @@ export function PublicDocumentReader({ document }: PublicDocumentReaderProps) {
                 {section.title}
               </Text>
               <View className="gap-3">
-                {section.body.map((paragraph) => (
-                  <Text
-                    key={paragraph}
-                    className={[
-                      'font-[Inter_400Regular] text-[17px] leading-[30px]',
-                      PUBLIC_SURFACE_CLASSES.text.bodyClassName,
-                    ].join(' ')}
-                  >
-                    {paragraph}
-                  </Text>
+                {section.body.map((paragraph, paragraphIndex) => (
+                  <PublicDocumentParagraph
+                    key={`${section.id}-${paragraphIndex}-${paragraph.slice(0, 24)}`}
+                    paragraph={paragraph}
+                  />
                 ))}
               </View>
             </View>
@@ -128,9 +176,9 @@ export function PublicDocumentReader({ document }: PublicDocumentReaderProps) {
             >
               {document.closing.title}
             </Text>
-            {document.closing.body.map((paragraph) => (
+            {document.closing.body.map((paragraph, paragraphIndex) => (
               <Text
-                key={paragraph}
+                key={`closing-${paragraphIndex}-${paragraph.slice(0, 24)}`}
                 className={[
                   'font-[Inter_400Regular] text-[18px] leading-[32px]',
                   PUBLIC_SURFACE_CLASSES.text.bodyWarmClassName,

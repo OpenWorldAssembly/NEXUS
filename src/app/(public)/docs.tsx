@@ -1,19 +1,31 @@
 /**
  * File: docs.tsx
- * Description: Composes the public docs directory and readable document page.
+ * Description: Public docs route with a directory shelf and readable document panel.
  */
+import { useMemo, useState } from 'react';
 import { StyleSheet } from 'react-native';
 
-import { PublicDocsDirectory } from '@app/components/public/public-docs-directory';
-import { PublicDocsHero } from '@app/components/public/public-docs-hero';
-import { PublicDocsResourceGrid } from '@app/components/public/public-docs-resource-grid';
-import { PublicDocumentReader } from '@app/components/public/public-document-reader';
+import PublicDocumentReader from '@app/components/public/public-document-reader';
+import PublicDocsDirectory from '@app/components/public/public-docs-directory';
+import PublicDocsHero from '@app/components/public/public-docs-hero';
+import PublicDocsResourceGrid from '@app/components/public/public-docs-resource-grid';
 import PublicPageShell from '@app/components/public/public-page-shell';
-import { docsPageContent } from '@app/public/docs-content';
+import { DEFAULT_PUBLIC_DOCUMENT_SLUG, docsPageContent } from '@app/public/docs-content';
 import { PUBLIC_READABLE_DOCUMENTS } from '@app/public/generated/public-docs.generated';
 
-export default function DocsScreen() {
-  const featuredDocument = PUBLIC_READABLE_DOCUMENTS[docsPageContent.featuredDocumentSlug];
+/**
+ * Inputs: none.
+ * Output: the public docs page with a selectable directory and generated readable document panel.
+ */
+export default function PublicDocsPage() {
+  const [selectedDocumentSlug, setSelectedDocumentSlug] = useState(DEFAULT_PUBLIC_DOCUMENT_SLUG);
+
+  const selectedDocument = useMemo(
+    () =>
+      PUBLIC_READABLE_DOCUMENTS[selectedDocumentSlug] ??
+      PUBLIC_READABLE_DOCUMENTS[DEFAULT_PUBLIC_DOCUMENT_SLUG],
+    [selectedDocumentSlug],
+  );
 
   return (
     <PublicPageShell
@@ -24,8 +36,12 @@ export default function DocsScreen() {
       showsVerticalScrollIndicator={false}
     >
       <PublicDocsHero hero={docsPageContent.hero} />
-      <PublicDocsDirectory documents={docsPageContent.directory} />
-      <PublicDocumentReader document={featuredDocument} />
+      <PublicDocsDirectory
+        documents={docsPageContent.directory}
+        selectedDocumentSlug={selectedDocument.slug}
+        onSelectDocument={setSelectedDocumentSlug}
+      />
+      <PublicDocumentReader document={selectedDocument} />
       <PublicDocsResourceGrid resources={docsPageContent.resources} />
     </PublicPageShell>
   );

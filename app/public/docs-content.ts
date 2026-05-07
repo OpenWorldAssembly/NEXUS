@@ -7,6 +7,7 @@ import type {
   PublicDocumentDirectoryItem,
   PublicDocumentResource,
 } from '@app/public/content-types';
+import { PUBLIC_DOC_DOWNLOADS } from '@app/public/generated/public-docs.generated';
 
 export const PUBLIC_DOCS_DIRECTORY: PublicDocumentDirectoryItem[] = [
   {
@@ -17,7 +18,11 @@ export const PUBLIC_DOCS_DIRECTORY: PublicDocumentDirectoryItem[] = [
     typeLabel: 'Founding document',
     readableDocumentSlug: 'charter',
     actions: [
-      { label: 'Read Below', href: '/docs', variant: 'outline' },
+      {
+        label: 'Download Markdown',
+        target: { kind: 'download', href: PUBLIC_DOC_DOWNLOADS.charter.markdown },
+        variant: 'outline',
+      },
       { label: 'PDF Soon', variant: 'outline', disabled: true },
     ],
   },
@@ -27,7 +32,15 @@ export const PUBLIC_DOCS_DIRECTORY: PublicDocumentDirectoryItem[] = [
     summary: 'A practical overview of the Nexus prototype, current posture, and system architecture.',
     status: 'draft',
     typeLabel: 'System overview',
-    actions: [{ label: 'Download Soon', variant: 'outline', disabled: true }],
+    readableDocumentSlug: 'nexus-readme',
+    actions: [
+      {
+        label: 'Download Markdown',
+        target: { kind: 'download', href: PUBLIC_DOC_DOWNLOADS['nexus-readme'].markdown },
+        variant: 'outline',
+      },
+      { label: 'PDF Soon', variant: 'outline', disabled: true },
+    ],
   },
   {
     slug: 'implementation-guide',
@@ -35,7 +48,15 @@ export const PUBLIC_DOCS_DIRECTORY: PublicDocumentDirectoryItem[] = [
     summary: 'Working notes on project structure, conventions, key decisions, and implementation seams.',
     status: 'draft',
     typeLabel: 'Technical guide',
-    actions: [{ label: 'Download Soon', variant: 'outline', disabled: true }],
+    readableDocumentSlug: 'implementation-guide',
+    actions: [
+      {
+        label: 'Download Markdown',
+        target: { kind: 'download', href: PUBLIC_DOC_DOWNLOADS['implementation-guide'].markdown },
+        variant: 'outline',
+      },
+      { label: 'PDF Soon', variant: 'outline', disabled: true },
+    ],
   },
   {
     slug: 'specifications',
@@ -43,7 +64,15 @@ export const PUBLIC_DOCS_DIRECTORY: PublicDocumentDirectoryItem[] = [
     summary: 'Current intended behavior for public surfaces, Nexus workflows, packets, and system contracts.',
     status: 'draft',
     typeLabel: 'Reference spec',
-    actions: [{ label: 'Download Soon', variant: 'outline', disabled: true }],
+    readableDocumentSlug: 'specifications',
+    actions: [
+      {
+        label: 'Download Markdown',
+        target: { kind: 'download', href: PUBLIC_DOC_DOWNLOADS.specifications.markdown },
+        variant: 'outline',
+      },
+      { label: 'PDF Soon', variant: 'outline', disabled: true },
+    ],
   },
   {
     slug: 'roadmap',
@@ -51,21 +80,29 @@ export const PUBLIC_DOCS_DIRECTORY: PublicDocumentDirectoryItem[] = [
     summary: 'Near-term priorities, known gaps, deferred work, and next development milestones.',
     status: 'draft',
     typeLabel: 'Planning document',
-    actions: [{ label: 'Download Soon', variant: 'outline', disabled: true }],
+    readableDocumentSlug: 'roadmap',
+    actions: [
+      {
+        label: 'Download Markdown',
+        target: { kind: 'download', href: PUBLIC_DOC_DOWNLOADS.roadmap.markdown },
+        variant: 'outline',
+      },
+      { label: 'PDF Soon', variant: 'outline', disabled: true },
+    ],
   },
 ];
 
 const PUBLIC_DOC_RESOURCES: PublicDocumentResource[] = [
   {
-    slug: 'charter-pdf',
-    title: 'Charter PDF',
-    summary: 'Printable public-release PDF for the OWA Charter. Generated artifact pipeline pending.',
+    slug: 'compiled-markdown',
+    title: 'Compiled Markdown',
+    summary: 'The visible docs are generated from source Markdown and can be downloaded per document from the directory above.',
     disabled: true,
   },
   {
-    slug: 'compiled-markdown',
-    title: 'Compiled Markdown',
-    summary: 'Markdown downloads will be generated from public source chapters in the next docs pipeline pass.',
+    slug: 'pdf-pipeline',
+    title: 'PDF Pipeline',
+    summary: 'PDF exports are intentionally deferred until the Markdown reader and source pipeline are stable.',
     disabled: true,
   },
 ];
@@ -75,12 +112,12 @@ export const docsPageContent: PublicDocsPageContent = {
     eyebrow: 'Public Documents',
     title: 'Read the core documents.',
     summary: [
-      'Open World Assembly is being documented in public: founding principles, Nexus architecture, implementation notes, specifications, and roadmap work.',
-      'The document system is being prepared for generated Markdown, readable web pages, and downloadable PDFs from the same source material.',
+      'Open World Assembly is documented in public: founding principles, Nexus architecture, implementation notes, specifications, and roadmap work.',
+      'The page now reads generated Markdown directly as clean web documents, with per-document Markdown downloads available from the directory.',
     ],
     noteTitle: 'Current status',
     noteBody:
-      'The Charter is readable on this page now. Additional downloads and document readers will be wired as the public docs pipeline comes online.',
+      'The Charter, Nexus README, Implementation Guide, Specifications, and Roadmap are readable on this page now. PDF generation comes after the Markdown pipeline is settled.',
     actions: [
       { label: 'Read Charter', href: '/docs', variant: 'outline' },
       { label: 'Support OWA', href: '/support', variant: 'outline' },

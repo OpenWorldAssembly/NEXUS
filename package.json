@@ -10,10 +10,11 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "test:packets": "node --experimental-strip-types --experimental-specifier-resolution=node --loader ./scripts/ts-paths-loader.mjs --test core/schema/packet-schema.test.ts runtime/storage/node-sqlite-packet-store.compatibility.test.ts",
-    "export:web": "expo export --platform web",
+    "export:web": "npm run docs:build && expo export --platform web",
     "serve:web": "node ./server.cjs",
     "railway:build": "npm run export:web",
-    "railway:start": "node ./server.cjs"
+    "railway:start": "node ./server.cjs",
+    "docs:build": "node scripts/build-public-docs.mjs"
   },
   "engines": {
     "node": "24.x"
