@@ -1,0 +1,208 @@
+name: OWA Discord Notify
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch, tag, or SHA to report (blank = current/default ref)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    name: Notify Discord
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout OWA repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 50
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      - name: Build Discord payload
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+          PROJECT_NAME: Open World Assembly
+          EVENT_NAME: ${{ github.event_name }}
+          REPO: ${{ github.repository }}
+          REF_NAME: ${{ github.ref_name }}
+          REQUESTED_REF: ${{ github.event.inputs.ref }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.event.after }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${DISCORD_WEBHOOK_URL:-}" ]; then
+            echo "Missing secret: DISCORD_WEBHOOK_URL"
+            exit 1
+          fi
+
+          COMMIT_SHA="$(git rev-parse HEAD)"
+          COMMIT_URL="${REPO_URL}/commit/${COMMIT_SHA}"
+          DISPLAY_REF="${REQUESTED_REF:-$REF_NAME}"
+
+          ZERO_SHA="0000000000000000000000000000000000000000"
+
+          COMPARE_URL=""
+          if [ "${EVENT_NAME}" = "push" ] && \
+             [ -n "${BEFORE:-}" ] && \
+             [ -n "${AFTER:-}" ] && \
+             [ "${BEFORE}" != "${ZERO_SHA}" ]; then
+            COMPARE_URL="${REPO_URL}/compare/${BEFORE}...${AFTER}"
+          fi
+
+          COMMITS_RAW=""
+          if [ "${EVENT_NAME}" = "push" ] && \
+             [ -n "${BEFORE:-}" ] && \
+             [ -n "${AFTER:-}" ] && \
+             [ "${BEFORE}" != "${ZERO_SHA}" ]; then
+
+            if ! git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+              git fetch --no-tags --depth=50 origin "${BEFORE}" || true
+            fi
+
+            COMMITS_RAW="$(git log "${BEFORE}..${AFTER}" -n 10 --pretty=format:'%H%x1f%an%x1f%B%x1e' || true)"
+          else
+            COMMITS_RAW="$(git log -n 10 --pretty=format:'%H%x1f%an%x1f%B%x1e' || true)"
+          fi
+
+          export PROJECT_NAME COMMIT_SHA COMMIT_URL COMPARE_URL COMMITS_RAW DISPLAY_REF RUN_URL ACTOR
+
+          python3 - <<'PY' > payload.json
+          import json
+          import os
+          import re
+
+          project_name = os.environ["PROJECT_NAME"]
+          repo = os.environ["REPO"]
+          ref = os.environ.get("DISPLAY_REF") or os.environ["REF_NAME"]
+          event = os.environ["EVENT_NAME"]
+          repo_url = os.environ["REPO_URL"]
+          run_url = os.environ["RUN_URL"]
+          actor = os.environ["ACTOR"]
+
+          commit_sha = os.environ["COMMIT_SHA"]
+          compare_url = os.environ.get("COMPARE_URL", "")
+          commits_raw = os.environ.get("COMMITS_RAW", "")
+
+          EMBED_DESC_MAX = 4096
+          TITLE_MAX = 256
+          DIVIDER = "────────────"
+
+          def squash_ws(s: str) -> str:
+              s = s.replace("\r\n", "\n").replace("\r", "\n")
+              s = re.sub(r"\n{3,}", "\n\n", s)
+              return s.strip()
+
+          def trunc(s: str, max_len: int) -> str:
+              if len(s) <= max_len:
+                  return s
+              return s[: max_len - 1] + "…"
+
+          commits = []
+
+          for rec in commits_raw.split("\x1e"):
+              if not rec.strip():
+                  continue
+
+              parts = rec.split("\x1f")
+              if len(parts) < 3:
+                  continue
+
+              sha, author, body = parts[0].strip(), parts[1].strip(), parts[2]
+              body = squash_ws(body)
+              subject = body.split("\n", 1)[0] if body else "(no message)"
+              rest = body[len(subject):].lstrip("\n") if body else ""
+
+              commits.append({
+                  "sha": sha,
+                  "short": sha[:7],
+                  "author": author or "Unknown",
+                  "subject": subject,
+                  "body": rest,
+                  "url": f"{repo_url}/commit/{sha}",
+              })
+
+          latest = commits[0] if commits else {
+              "subject": "(no commits found)",
+              "author": "Unknown",
+              "url": repo_url,
+              "short": commit_sha[:7],
+              "body": "",
+          }
+
+          title = trunc(f"{project_name} • {event} • {ref}", TITLE_MAX)
+
+          lines = [
+              f"**Repository:** [{repo}]({repo_url})",
+              f"**Latest:** [{latest['subject']}]({latest['url']})",
+              f"**Author:** {latest['author']}",
+              f"**Triggered by:** {actor}",
+              f"**Run:** [view workflow run]({run_url})",
+          ]
+
+          if compare_url:
+              lines.append(f"**Compare:** [view changes]({compare_url})")
+
+          lines.append("")
+          lines.append("**Commits:**")
+
+          for i, commit in enumerate(commits[:10]):
+              block = [
+                  f"**{commit['subject']}** (`{commit['short']}`) by {commit['author']}"
+              ]
+
+              if commit["body"]:
+                  body = trunc(commit["body"], 700)
+                  body = "\n".join("  " + line for line in body.split("\n"))
+                  block.append(body)
+
+              block.append(f"[view commit]({commit['url']})")
+
+              if i < min(len(commits), 10) - 1:
+                  block.append(DIVIDER)
+
+              candidate = "\n".join(lines + ["", "\n".join(block)])
+              if len(candidate) > EMBED_DESC_MAX:
+                  break
+
+              lines += ["", "\n".join(block)]
+
+          description = trunc("\n".join(lines), EMBED_DESC_MAX)
+
+          payload = {
+              "embeds": [{
+                  "title": title,
+                  "url": compare_url or repo_url,
+                  "description": description,
+                  "footer": {"text": f"OWA repo signal • SHA: {commit_sha}"},
+                  "color": 0x9FE870,
+              }]
+          }
+
+          print(json.dumps(payload))
+          PY
+
+      - name: Send Discord notification
+        run: |
+          set -euo pipefail
+
+          echo "Payload:"
+          cat payload.json
+
+          curl -f -sS \
+            -H "Content-Type: application/json" \
+            -d @payload.json \
+            "${{ secrets.DISCORD_WEBHOOK_URL }}"
