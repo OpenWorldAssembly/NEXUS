@@ -212,14 +212,9 @@ function PublicDocumentOutline({ sections, onSelectSection }: PublicDocumentOutl
 
   return (
     <View className="gap-3 rounded-[24px] bg-public-surfaceBase/35 p-4 md:p-5">
-      <View className="gap-1">
-        <Text className="text-xs font-extrabold uppercase tracking-[0.28em] text-public-signal">
-          Document Outline
-        </Text>
-        <Text className="text-sm leading-6 text-public-mutedBlue">
-          Jump through chapters and subsections without hunting through the whole document.
-        </Text>
-      </View>
+      <Text className="text-xs font-extrabold uppercase tracking-[0.28em] text-public-signal">
+        Outline
+      </Text>
 
       <View className="gap-2">
         {outlineItems.map((item, index) => (

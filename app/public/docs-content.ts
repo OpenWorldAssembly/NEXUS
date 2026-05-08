@@ -5,7 +5,6 @@
 import type {
   PublicDocsPageContent,
   PublicDocumentDirectoryItem,
-  PublicDocumentResource,
 } from '@app/public/content-types';
 import { PUBLIC_DOC_DOWNLOADS } from '@app/public/generated/public-docs.generated';
 
@@ -112,40 +111,19 @@ export const PUBLIC_DOCS_DIRECTORY: PublicDocumentDirectoryItem[] = [
   },
 ];
 
-const PUBLIC_DOC_RESOURCES: PublicDocumentResource[] = [
-  {
-    slug: 'compiled-markdown',
-    title: 'Compiled Markdown',
-    summary: 'The visible docs are generated from source Markdown and can be downloaded per document from the directory above.',
-    disabled: true,
-  },
-  {
-    slug: 'pdf-pipeline',
-    title: 'PDF Pipeline',
-    summary: 'Static PDFs are generated from the same Markdown source as the readable web docs during the public docs build step.',
-  },
-];
-
 export const docsPageContent: PublicDocsPageContent = {
   hero: {
     eyebrow: 'Public Documents',
-    title: 'Read the core documents.',
-    summary: [
-      'Open World Assembly is documented in public: founding principles, Nexus architecture, implementation notes, specifications, and roadmap work.',
-      'The page now reads generated Markdown directly as clean web documents, with per-document Markdown and PDF downloads available from the directory.',
-    ],
-    noteTitle: 'Current status',
-    noteBody:
-      'The Charter, Nexus README, Implementation Guide, Specifications, and Roadmap are readable here and available as static Markdown or PDF downloads.',
+    title: 'Core documents.',
+    summary: [],
     actions: [
-      { label: 'Read Charter', href: '/docs', variant: 'outline' },
       { label: 'Support OWA', href: '/support', variant: 'outline' },
       { label: 'Explore Nexus Demo', href: '/nexus/dashboard', variant: 'outline' },
     ],
   },
   directory: PUBLIC_DOCS_DIRECTORY,
   featuredDocumentSlug: 'charter',
-  resources: PUBLIC_DOC_RESOURCES,
+  resources: [],
 };
 
 export const DEFAULT_PUBLIC_DOCUMENT_SLUG = docsPageContent.featuredDocumentSlug;

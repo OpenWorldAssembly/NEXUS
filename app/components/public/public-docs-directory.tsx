@@ -52,34 +52,6 @@ export function PublicDocsDirectory({
 }: PublicDocsDirectoryProps) {
   return (
     <View className="gap-5">
-      <View className="gap-2 px-2 sm:px-3">
-        <Text
-          className={[
-            'font-[Orbitron_700Bold] text-[10px] uppercase tracking-[3px]',
-            PUBLIC_SURFACE_CLASSES.text.eyebrowClassName,
-          ].join(' ')}
-        >
-          Directory
-        </Text>
-        <Text
-          className={[
-            'font-[Inter_700Bold] text-[30px] leading-[36px]',
-            PUBLIC_SURFACE_CLASSES.text.headingClassName,
-          ].join(' ')}
-        >
-          Public document shelf
-        </Text>
-        <Text
-          className={[
-            'max-w-[820px] font-[Inter_400Regular] text-[16px] leading-[26px]',
-            PUBLIC_SURFACE_CLASSES.text.bodyClassName,
-          ].join(' ')}
-        >
-          These documents describe the public principles, technical direction, and near-term
-          development path for Open World Assembly and Nexus.
-        </Text>
-      </View>
-
       <View className="w-full flex-row flex-wrap gap-[18px]" style={WEB_GRID_STYLE as never}>
         {documents.map((document) => {
           const canRead = !!document.readableDocumentSlug && !!onSelectDocument;

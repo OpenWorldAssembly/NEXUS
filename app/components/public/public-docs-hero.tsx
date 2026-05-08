@@ -34,19 +34,21 @@ export function PublicDocsHero({ hero }: PublicDocsHeroProps) {
           >
             {hero.title}
           </Text>
-          <View className="gap-3">
-            {hero.summary.map((paragraph) => (
-              <Text
-                key={paragraph}
-                className={[
-                  "max-w-[760px] font-[Inter_400Regular] text-[18px] leading-[30px]",
-                  PUBLIC_SURFACE_CLASSES.text.bodyClassName,
-                ].join(" ")}
-              >
-                {paragraph}
-              </Text>
-            ))}
-          </View>
+          {hero.summary.length ? (
+            <View className="gap-3">
+              {hero.summary.map((paragraph) => (
+                <Text
+                  key={paragraph}
+                  className={[
+                    "max-w-[760px] font-[Inter_400Regular] text-[18px] leading-[30px]",
+                    PUBLIC_SURFACE_CLASSES.text.bodyClassName,
+                  ].join(" ")}
+                >
+                  {paragraph}
+                </Text>
+              ))}
+            </View>
+          ) : null}
         </View>
 
         <View className="w-full gap-5 lg:max-w-[420px] lg:items-end">
@@ -73,7 +75,7 @@ export function PublicDocsHero({ hero }: PublicDocsHeroProps) {
             </View>
           )}
 
-          <PublicPageActions actions={hero.actions} className="lg:justify-end" />
+          <PublicPageActions actions={hero.actions} className="mt-0 lg:justify-end" />
         </View>
       </View>
     </PublicPanelShell>

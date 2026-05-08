@@ -77,7 +77,7 @@ export default function PublicDocsPage() {
   return (
     <View className="min-h-screen flex-1 bg-public-canvas">
       <PublicPageShell
-        contentContainerClassName="gap-6 px-5 pb-24 pt-8 lg:px-8"
+        contentContainerClassName="gap-6 px-5 pb-40 pt-8 lg:px-8 lg:pb-52"
         constrainWidth={false}
         enablePositionAnimation
         scrollViewRef={scrollViewRef}
