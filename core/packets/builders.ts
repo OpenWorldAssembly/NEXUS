@@ -14,6 +14,9 @@ import { buildPacket } from '@core/packets/packet-build-pipeline';
 import {
   PACKET_BODY_SCHEMAS,
   createPacketEnvelope,
+  type CanonicalAttestationSubtype,
+  type CanonicalClaimSubtype,
+  type CanonicalRelationSubtype,
   getPacketCurrentSchemaVersion,
   type PacketBodyByType,
   type ClaimKind,
@@ -84,7 +87,7 @@ export interface PacketBuilderInput<TFamily extends PacketFamily>
 }
 
 export interface ElementPacketInput extends PacketBuilderBaseInput {
-  kind: ElementKind;
+  kind?: ElementKind | null;
   name: string;
   subtype?: string | null;
   summary?: string | null;
@@ -142,11 +145,20 @@ export interface RolePacketInput extends PacketBuilderBaseInput {
 }
 
 export interface ClaimPacketInput extends PacketBuilderBaseInput {
-  claim_kind: ClaimKind;
-  subject_ref: PacketRef;
+  subtype?: CanonicalClaimSubtype | string | null;
   target_ref: PacketRef;
-  scope_ref: PacketRef;
+  subject_ref?: PacketRef | null;
+  scope_ref?: PacketRef | null;
   status?: 'active' | 'withdrawn';
+  claim_markdown?: string | null;
+  supporting_refs?: PacketRef[];
+  relation_assertion?: {
+    subtype: CanonicalRelationSubtype | ClaimKind | string;
+    subject_ref: PacketRef;
+    target_ref: PacketRef;
+    scope_ref?: PacketRef | null;
+  } | null;
+  claim_kind?: ClaimKind | null;
   note?: string | null;
 }
 
@@ -265,6 +277,7 @@ export interface PolicyPacketInput extends PacketBuilderBaseInput {
   write_policy?: PacketBodyByType['Policy']['write_policy'];
   dependency_policy?: PacketBodyByType['Policy']['dependency_policy'];
   alignment_policy?: PacketBodyByType['Policy']['alignment_policy'];
+  relation_requirements?: PacketBodyByType['Policy']['relation_requirements'];
 }
 
 export interface VotePacketInput extends PacketBuilderBaseInput {
@@ -307,6 +320,7 @@ export interface ActionPacketInput extends PacketBuilderBaseInput {
 }
 
 export interface AttestationPacketInput extends PacketBuilderBaseInput {
+  subtype?: CanonicalAttestationSubtype | string | null;
   target_ref: PacketRef;
   value: AttestationValue;
   status?: 'active' | 'cleared';
@@ -457,7 +471,8 @@ export function createClaimPacket(
     body: input,
     header: {
       ...input,
-      metadata_summary: input.metadata_summary ?? input.note ?? null,
+      metadata_summary:
+        input.metadata_summary ?? input.claim_markdown ?? input.note ?? null,
     },
   });
 }

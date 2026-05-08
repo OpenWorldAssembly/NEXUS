@@ -38,6 +38,8 @@ export const attestationBuildDefinition: PacketFamilyBuildDefinition<
     ];
   },
   finalizeBody: (input) => ({
+    type: 'attestation',
+    subtype: input.subtype ?? input.attestation_kind ?? 'packet_signal',
     target_ref: input.target_ref,
     value: input.value,
     status: input.status ?? 'active',

@@ -200,10 +200,20 @@ test('packet store preserves legacy raw revisions while serving adapted packets 
       null
     );
     assert.ok(preparedWrite.prepared_packet);
-    assert.equal(preparedWrite.prepared_packet.header.schema_version, '1.0.0');
+    assert.equal(preparedWrite.prepared_packet.header.schema_version, '1.1.0');
     assert.deepEqual(
       compatibilityRead.status.changes.map((change) => change.path),
-      ['body.claimed_role_refs', 'body.locality']
+      [
+        'body.claimed_role_refs',
+        'body.locality',
+        'body.type',
+        'body.scope_kind',
+        'body.scope_system',
+        'body.status',
+        'body.aliases',
+        'body.display_aliases',
+        'body.custody_hints',
+      ]
     );
   } finally {
     packetStore.close();
@@ -273,7 +283,7 @@ test('packet store can inspect and persist an explicitly prepared older target s
       (downcastPacket as { header: { schema_version: string } }).header.schema_version,
       '0.9.0'
     );
-    assert.equal(currentPacketRead.header.schema_version, '1.0.0');
+    assert.equal(currentPacketRead.header.schema_version, '1.1.0');
     assert.deepEqual(
       (
         currentPacketRead as {

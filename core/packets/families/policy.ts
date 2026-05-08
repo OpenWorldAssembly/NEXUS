@@ -53,6 +53,18 @@ export const policyBuildDefinition: PacketFamilyBuildDefinition<
             input.alignment_policy.accepted_relation_subtypes ?? [],
         }
       : null,
+    relation_requirements: input.relation_requirements
+      ? {
+          rules: input.relation_requirements.rules.map((rule) => ({
+            relation_subtype: rule.relation_subtype,
+            required_claim_subtypes: rule.required_claim_subtypes ?? [],
+            required_attestation_subtypes:
+              rule.required_attestation_subtypes ?? [],
+            claim_target_mode: rule.claim_target_mode ?? 'relation_packet',
+            subject_match_mode: rule.subject_match_mode ?? 'relation_subject',
+          })),
+        }
+      : null,
   }),
   prepareMetadataSummary: (input) =>
     input.summary ?? createTextExcerpt(input.body_markdown),

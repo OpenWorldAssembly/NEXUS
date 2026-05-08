@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   createCausePacket,
   createClaimPacket,
+  createElementPacket,
   createLocationPacket,
 } from '@core/packets/builders';
 
@@ -98,6 +99,21 @@ test('forward packets project with their canonical type and subtype', () => {
   assert.equal(locationProjection.subtype, 'service_area');
 });
 
+test('element packets project to canonical dotted subtypes even when kind remains as compatibility metadata', () => {
+  const element = createElementPacket({
+    packet_id: 'nexus:element/person/alice',
+    created_at: '2026-05-07T00:01:30.000Z',
+    kind: 'person',
+    subtype: 'claimed_identity',
+    name: 'Alice',
+  });
+
+  const projection = projectPacketToForwardOntology(element);
+
+  assert.equal(projection.type, 'element');
+  assert.equal(projection.subtype, 'person.claimed_identity');
+});
+
 test('claim packets project as relation assertions without losing claim semantics', () => {
   const claim = createClaimPacket({
     packet_id: 'nexus:claim/home-locality/alice',
@@ -111,7 +127,9 @@ test('claim packets project as relation assertions without losing claim semantic
 
   const projection = projectClaimAsRelationAssertion(claim);
 
+  assert.equal(claim.body.subtype, 'relation_assertion');
   assert.equal(projection.relation_subtype, 'home_locality');
+  assert.equal(projection.claim_subtype, 'relation_assertion');
   assert.equal(projection.subject_ref.packet_id, 'nexus:element/alice');
   assert.equal(projection.target_ref.packet_id, 'nexus:element/moreno-valley');
   assert.equal(projection.source_claim_packet_id, claim.header.packet_id);

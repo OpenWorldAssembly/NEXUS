@@ -42,19 +42,21 @@ export function createLocalityCanonicalNameKey(value: string): string {
 export function toLocalitySearchLevel(
   subtype: string | null | undefined
 ): LocalitySearchLevel | null {
-  if (subtype === 'nation') {
+  const normalizedSubtype = subtype?.split('.').filter(Boolean).at(-1) ?? null;
+
+  if (normalizedSubtype === 'nation') {
     return 'nation';
   }
 
-  if (subtype === 'state' || subtype === 'region') {
+  if (normalizedSubtype === 'state' || normalizedSubtype === 'region') {
     return 'region';
   }
 
-  if (subtype === 'city') {
+  if (normalizedSubtype === 'city') {
     return 'city';
   }
 
-  if (subtype === 'district' || subtype === 'neighborhood') {
+  if (normalizedSubtype === 'district' || normalizedSubtype === 'neighborhood') {
     return 'district';
   }
 

@@ -97,16 +97,16 @@ function getPacketKind(packet: PacketEnvelope): string | null {
     return body.role;
   }
 
-  if (typeof body.subtype === 'string') {
-    return body.subtype;
-  }
-
   if (typeof body.claim_kind === 'string') {
     return body.claim_kind;
   }
 
   if (typeof body.attestation_kind === 'string') {
     return body.attestation_kind;
+  }
+
+  if (typeof body.subtype === 'string') {
+    return body.subtype;
   }
 
   if (typeof body.role_kind === 'string') {

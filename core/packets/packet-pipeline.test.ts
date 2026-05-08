@@ -155,7 +155,30 @@ test('generic builder pipeline builds canonical Element packets', () => {
 
   assert.equal(packet.header.family, 'Element');
   assert.equal(packet.body.kind, 'person');
+  assert.equal(packet.body.subtype, 'person');
   assert.deepEqual(packet.body.claimed_role_refs, []);
+});
+
+test('generic builder pipeline derives legacy Element kind from canonical subtype when kind is omitted', () => {
+  const packet = buildPacket({
+    family: 'Element',
+    body: {
+      packet_id: 'nexus:element/assembly/moreno-valley',
+      created_at: '2026-05-08T00:00:00.000Z',
+      subtype: 'assembly.city',
+      name: 'Moreno Valley',
+      locality_label: 'Moreno Valley',
+      tags: ['assembly', 'locality'],
+    },
+    header: {
+      packet_id: 'nexus:element/assembly/moreno-valley',
+      created_at: '2026-05-08T00:00:00.000Z',
+    },
+  });
+
+  assert.equal(packet.header.family, 'Element');
+  assert.equal(packet.body.subtype, 'assembly.city');
+  assert.equal(packet.body.kind, 'assembly');
 });
 
 test('generic builder pipeline builds canonical Claim packets', () => {
@@ -178,6 +201,10 @@ test('generic builder pipeline builds canonical Claim packets', () => {
 
   assert.equal(packet.header.family, 'Claim');
   assert.equal(packet.header.edges.length, 3);
+  assert.equal(packet.body.type, 'claim');
+  assert.equal(packet.body.subtype, 'relation_assertion');
+  assert.equal(packet.body.relation_assertion?.subtype, 'role_association');
+  assert.equal(packet.body.claim_markdown, 'Facilitator in Global.');
   assert.equal(packet.body.note, 'Facilitator in Global.');
 });
 
@@ -251,6 +278,8 @@ test('generic builder pipeline builds canonical Attestation packets', () => {
   });
 
   assert.equal(packet.header.family, 'Attestation');
+  assert.equal(packet.body.type, 'attestation');
+  assert.equal(packet.body.subtype, 'packet_signal');
   assert.equal(packet.body.attestation_kind, 'packet_signal');
   assert.equal(packet.header.edges[0]?.edge_type, 'votes_on');
 });

@@ -9,6 +9,7 @@ import type {
 } from '@core/contracts';
 import {
   PACKET_FAMILIES,
+  getElementSubtypeLeaf,
   type DiscussionReplySort,
   type DiscussionSort,
   type PacketEnvelopeByType,
@@ -200,7 +201,9 @@ function buildPersonalScopeSummary(input: {
  * Output: compact short label used in sidebar rows and badges.
  */
 function toScopeShortLabel(name: string, subtype: string | null): string {
-  if (subtype === 'global') {
+  const subtypeLeaf = getElementSubtypeLeaf(subtype);
+
+  if (subtypeLeaf === 'global') {
     return 'Global';
   }
 
@@ -585,7 +588,7 @@ async function listScopeNodes(): Promise<ScopeNode[]> {
       routeId: toRouteScopeId(packet.header.packet_id),
       packetId: packet.header.packet_id,
       name: packet.body.name,
-      subtype: packet.body.subtype ?? null,
+      subtype: getElementSubtypeLeaf(packet.body.subtype ?? null),
       summary: packet.body.summary ?? null,
       localityLabel: packet.body.locality_label ?? null,
       parentRouteId: (() => {
@@ -1537,8 +1540,17 @@ export async function getNexusRolesPayload(input: {
     });
 
     for (const claimPacket of roleClaims) {
+      const claimantPacketId =
+        claimPacket.body.subject_ref?.packet_id ??
+        claimPacket.body.relation_assertion?.subject_ref.packet_id ??
+        null;
+
+      if (!claimantPacketId) {
+        continue;
+      }
+
       const claimantPacket = eligibleClaimants.find(
-        (packet) => packet.header.packet_id === claimPacket.body.subject_ref.packet_id
+        (packet) => packet.header.packet_id === claimantPacketId
       );
 
       if (!claimantPacket) {
@@ -1657,7 +1669,9 @@ export async function getNexusRolesPayload(input: {
           ? false
           : roleClaims.some(
               (claimPacket) =>
-                claimPacket.body.subject_ref.packet_id === currentActorPacketId
+                (claimPacket.body.subject_ref?.packet_id ??
+                  claimPacket.body.relation_assertion?.subject_ref.packet_id) ===
+                currentActorPacketId
             ),
       claimants,
     });

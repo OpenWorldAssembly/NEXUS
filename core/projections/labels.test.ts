@@ -2,10 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  getPacketStatus,
   getPacketTitle,
   getPacketTitleFallbackFromPacketId,
 } from './labels.ts';
 import { createAssociationClaimPacket } from '@core/packets/claims';
+import { createElementPacket } from '@core/packets/builders';
 
 test('packet-id title fallback humanizes role association claims', () => {
   assert.equal(
@@ -27,4 +29,16 @@ test('claim packet titles stay human-readable through the shared projection help
   });
 
   assert.equal(getPacketTitle(packet), 'Role Association claim');
+});
+
+test('element packet status is exposed through the shared label projection helper', () => {
+  const packet = createElementPacket({
+    packet_id: 'nexus:element/test-operator',
+    created_at: '2026-05-07T00:00:00.000Z',
+    kind: 'operator',
+    name: 'Test Operator',
+    status: 'active',
+  });
+
+  assert.equal(getPacketStatus(packet), 'active');
 });

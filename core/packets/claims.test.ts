@@ -39,6 +39,10 @@ test('association claim packets keep the claim scope as the authority scope', ()
     packet.header.authority_scope_ref?.packet_id,
     'nexus:element/scope-a'
   );
+  assert.equal(packet.header.schema_version, '1.1.0');
+  assert.equal(packet.body.subtype, 'relation_assertion');
+  assert.equal(packet.body.relation_assertion?.subtype, 'assembly_association');
+  assert.equal(packet.body.claim_markdown, 'Lives here.');
   assert.equal(packet.body.status, 'active');
 });
 

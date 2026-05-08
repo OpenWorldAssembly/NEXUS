@@ -9,7 +9,10 @@ import type {
   PacketRevisionRef,
   PacketRef,
 } from '../schema/packet-schema.ts';
-import { createPacketEnvelope } from '../schema/packet-schema.ts';
+import {
+  createPacketEnvelope,
+  getPacketCurrentSchemaVersion,
+} from '../schema/packet-schema.ts';
 
 function encodePacketId(packetId: string): string {
   return encodeURIComponent(packetId);
@@ -79,7 +82,7 @@ export function createAssociationClaimPacket(input: {
       input.parentRevisionRefs?.[0]?.revision_id ?? null
     ),
     family: 'Claim' as const,
-    schema_version: '1.0.0',
+    schema_version: getPacketCurrentSchemaVersion('Claim'),
     protocol_version: '1.0.0',
     created_at: createdAt,
     parent_revision_refs: input.parentRevisionRefs ?? [],
@@ -124,16 +127,32 @@ export function createAssociationClaimPacket(input: {
   return createPacketEnvelope<'Claim'>({
     header,
     body: {
-      claim_kind: input.claimKind,
-      subject_ref: {
-        packet_id: input.subjectPacketId,
-      },
+      type: 'claim',
+      subtype: 'relation_assertion',
       target_ref: {
         packet_id: input.targetPacketId,
+      },
+      subject_ref: {
+        packet_id: input.subjectPacketId,
       },
       scope_ref: {
         packet_id: input.scopePacketId,
       },
+      claim_markdown: input.note ?? null,
+      supporting_refs: [],
+      relation_assertion: {
+        subtype: input.claimKind,
+        subject_ref: {
+          packet_id: input.subjectPacketId,
+        },
+        target_ref: {
+          packet_id: input.targetPacketId,
+        },
+        scope_ref: {
+          packet_id: input.scopePacketId,
+        },
+      },
+      claim_kind: input.claimKind,
       status: input.status ?? 'active',
       note: input.note ?? null,
     },

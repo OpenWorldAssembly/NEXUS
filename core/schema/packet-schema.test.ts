@@ -332,13 +332,14 @@ test('legacy policy revisions upcast missing trust_policy to null', () => {
     null
   );
   requirePreparedPacket(preparedPacket);
-  assert.equal(preparedPacket.prepared_packet.header.schema_version, '1.1.0');
+  assert.equal(preparedPacket.prepared_packet.header.schema_version, '1.2.0');
   const changePaths = preparedPacket.changes.map((change) => change.path);
 
   assert.equal(changePaths.includes('body.trust_policy'), true);
   assert.equal(changePaths.includes('body.write_policy'), true);
   assert.equal(changePaths.includes('body.dependency_policy'), true);
   assert.equal(changePaths.includes('body.alignment_policy'), true);
+  assert.equal(changePaths.includes('body.relation_requirements'), true);
   assert.equal(changePaths.includes('header.schema_version'), true);
 });
 
@@ -1194,5 +1195,231 @@ test('unsupported target schema requests fail with a structured compatibility er
     (error: unknown) =>
       error instanceof PacketCompatibilityError &&
       error.code === 'unsupported_schema_version'
+  );
+});
+
+test('current Claim packets parse with widened assertion fields while preserving legacy claim_kind compatibility', () => {
+  const packet = parsePacketEnvelope({
+    header: {
+      packet_id: 'nexus:claim/home-locality/alice',
+      revision_id: 'nexus:claim/home-locality/alice@r1',
+      family: 'Claim',
+      schema_version: '1.1.0',
+      protocol_version: '0.1.0',
+      created_at: '2026-05-07T00:00:00.000Z',
+      parent_revision_refs: [],
+      merge_strategy: null,
+      authority_scope_ref: null,
+      applicable_scope_refs: [],
+      edges: [],
+      provenance: {
+        created_by: null,
+        submitted_by: null,
+        adapter: 'test',
+        recorded_at: '2026-05-07T00:00:00.000Z',
+        imported_from_revision: null,
+      },
+      integrity: {
+        canonicalization: 'RFC8785',
+        hash_alg: 'sha-256',
+        digest: null,
+        embedded_signatures: [],
+        signature_refs: [],
+      },
+      moderation: {
+        visibility: 'public',
+        moderation_state: 'open',
+        policy_refs: [],
+        content_warning_ids: [],
+      },
+      external_refs: [],
+      metadata: {
+        tags: [],
+        language: null,
+        summary: null,
+      },
+      producer: {
+        adapter: 'test',
+        app_version: null,
+      },
+    },
+    body: {
+      type: 'claim',
+      subtype: 'relation_assertion',
+      target_ref: {
+        packet_id: 'nexus:relation/home-locality/alice',
+      },
+      subject_ref: {
+        packet_id: 'nexus:element/person/alice',
+      },
+      scope_ref: {
+        packet_id: 'nexus:element/moreno-valley',
+      },
+      status: 'active',
+      claim_markdown: 'Alice asserts a home-locality relation.',
+      supporting_refs: [],
+      relation_assertion: {
+        subtype: 'home_locality',
+        subject_ref: {
+          packet_id: 'nexus:element/person/alice',
+        },
+        target_ref: {
+          packet_id: 'nexus:element/moreno-valley',
+        },
+        scope_ref: {
+          packet_id: 'nexus:element/moreno-valley',
+        },
+      },
+      claim_kind: 'home_locality',
+      note: null,
+    },
+  });
+
+  assert.equal(packet.header.family, 'Claim');
+  assert.equal(packet.body.subtype, 'relation_assertion');
+  assert.equal(packet.body.relation_assertion?.subtype, 'home_locality');
+  assert.equal(packet.body.claim_kind, 'home_locality');
+});
+
+test('current Attestation packets parse with canonical subtype semantics', () => {
+  const packet = parsePacketEnvelope({
+    header: {
+      packet_id: 'nexus:attestation/claim-support/a',
+      revision_id: 'nexus:attestation/claim-support/a@r1',
+      family: 'Attestation',
+      schema_version: '1.1.0',
+      protocol_version: '0.1.0',
+      created_at: '2026-05-07T00:01:00.000Z',
+      parent_revision_refs: [],
+      merge_strategy: null,
+      authority_scope_ref: null,
+      applicable_scope_refs: [],
+      edges: [],
+      provenance: {
+        created_by: null,
+        submitted_by: null,
+        adapter: 'test',
+        recorded_at: '2026-05-07T00:01:00.000Z',
+        imported_from_revision: null,
+      },
+      integrity: {
+        canonicalization: 'RFC8785',
+        hash_alg: 'sha-256',
+        digest: null,
+        embedded_signatures: [],
+        signature_refs: [],
+      },
+      moderation: {
+        visibility: 'public',
+        moderation_state: 'open',
+        policy_refs: [],
+        content_warning_ids: [],
+      },
+      external_refs: [],
+      metadata: {
+        tags: [],
+        language: null,
+        summary: null,
+      },
+      producer: {
+        adapter: 'test',
+        app_version: null,
+      },
+    },
+    body: {
+      type: 'attestation',
+      subtype: 'claim_support',
+      target_ref: {
+        packet_id: 'nexus:claim/home-locality/alice',
+      },
+      value: 1,
+      status: 'active',
+      attestation_kind: 'claim_support',
+      context_ref: null,
+      supporting_refs: [],
+      note: null,
+      supersedes_ref: null,
+    },
+  });
+
+  assert.equal(packet.header.family, 'Attestation');
+  assert.equal(packet.body.subtype, 'claim_support');
+  assert.equal(packet.body.attestation_kind, 'claim_support');
+});
+
+test('current Policy packets parse relation requirement rules for supporting claims', () => {
+  const packet = parsePacketEnvelope({
+    header: {
+      packet_id: 'nexus:policy/owa-home-locality',
+      revision_id: 'nexus:policy/owa-home-locality@r1',
+      family: 'Policy',
+      schema_version: '1.2.0',
+      protocol_version: '0.1.0',
+      created_at: '2026-05-07T00:02:00.000Z',
+      parent_revision_refs: [],
+      merge_strategy: null,
+      authority_scope_ref: null,
+      applicable_scope_refs: [],
+      edges: [],
+      provenance: {
+        created_by: null,
+        submitted_by: null,
+        adapter: 'test',
+        recorded_at: '2026-05-07T00:02:00.000Z',
+        imported_from_revision: null,
+      },
+      integrity: {
+        canonicalization: 'RFC8785',
+        hash_alg: 'sha-256',
+        digest: null,
+        embedded_signatures: [],
+        signature_refs: [],
+      },
+      moderation: {
+        visibility: 'public',
+        moderation_state: 'open',
+        policy_refs: [],
+        content_warning_ids: [],
+      },
+      external_refs: [],
+      metadata: {
+        tags: [],
+        language: null,
+        summary: null,
+      },
+      producer: {
+        adapter: 'test',
+        app_version: null,
+      },
+    },
+    body: {
+      title: 'OWA home locality relation policy',
+      summary: null,
+      policy_kind: 'charter',
+      body_markdown: 'Require a supporting relation-assertion claim.',
+      status: 'active',
+      trust_policy: null,
+      write_policy: null,
+      dependency_policy: null,
+      alignment_policy: null,
+      relation_requirements: {
+        rules: [
+          {
+            relation_subtype: 'home_locality',
+            required_claim_subtypes: ['relation_assertion'],
+            required_attestation_subtypes: [],
+            claim_target_mode: 'relation_packet',
+            subject_match_mode: 'relation_subject',
+          },
+        ],
+      },
+    },
+  });
+
+  assert.equal(packet.header.family, 'Policy');
+  assert.equal(packet.body.relation_requirements?.rules.length, 1);
+  assert.equal(
+    packet.body.relation_requirements?.rules[0]?.relation_subtype,
+    'home_locality'
   );
 });

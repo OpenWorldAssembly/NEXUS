@@ -4,11 +4,13 @@
  */
 
 import type {
+  CanonicalRelationSubtype,
   PacketEnvelope,
   PacketEnvelopeByType,
   PacketFamily,
   PacketRef,
 } from '@core/schema/packet-schema';
+import { getCanonicalElementSubtype } from '@core/schema/packet-schema';
 
 import { getPacketStatus, getPacketSummary, getPacketTitle } from './labels.ts';
 
@@ -41,12 +43,13 @@ export type ForwardPacketProjection = {
 };
 
 export type ClaimRelationAssertionProjection = {
-  relation_subtype: PacketEnvelopeByType['Claim']['body']['claim_kind'];
+  relation_subtype: CanonicalRelationSubtype | string;
   subject_ref: PacketRef;
   target_ref: PacketRef;
-  scope_ref: PacketRef;
+  scope_ref: PacketRef | null;
   status: PacketEnvelopeByType['Claim']['body']['status'];
   note: string | null;
+  claim_subtype: PacketEnvelopeByType['Claim']['body']['subtype'];
   source_claim_packet_id: string;
 };
 
@@ -101,14 +104,17 @@ function toForwardType(family: PacketFamily): ForwardPacketType {
 function toForwardSubtype(packet: PacketEnvelope): string | null {
   switch (packet.header.family) {
     case 'Element':
-      return packet.body.subtype ?? packet.body.kind ?? null;
+      return getCanonicalElementSubtype({
+        kind: packet.body.kind ?? null,
+        subtype: packet.body.subtype ?? null,
+      });
     case 'Location':
     case 'Cause':
     case 'Action':
     case 'Relation':
       return packet.body.subtype;
     case 'Claim':
-      return packet.body.claim_kind;
+      return packet.body.subtype ?? packet.body.claim_kind ?? null;
     case 'Policy':
       return packet.body.policy_kind;
     case 'Role':
@@ -118,7 +124,7 @@ function toForwardSubtype(packet: PacketEnvelope): string | null {
     case 'Proposal':
       return packet.body.proposal_kind;
     case 'Attestation':
-      return packet.body.attestation_kind;
+      return packet.body.subtype ?? packet.body.attestation_kind;
     case 'Artifact':
       return packet.body.artifact_kind;
     case 'Discussion':
@@ -170,13 +176,31 @@ export function projectPacketToForwardOntology(
 export function projectClaimAsRelationAssertion(
   claimPacket: PacketEnvelopeByType['Claim']
 ): ClaimRelationAssertionProjection {
+  const relationAssertion =
+    claimPacket.body.relation_assertion ??
+    (claimPacket.body.claim_kind &&
+    claimPacket.body.subject_ref &&
+    claimPacket.body.target_ref
+      ? {
+          subtype: claimPacket.body.claim_kind,
+          subject_ref: claimPacket.body.subject_ref,
+          target_ref: claimPacket.body.target_ref,
+          scope_ref: claimPacket.body.scope_ref ?? null,
+        }
+      : null);
+
+  if (!relationAssertion) {
+    throw new Error('Claim does not carry a relation assertion projection.');
+  }
+
   return {
-    relation_subtype: claimPacket.body.claim_kind,
-    subject_ref: claimPacket.body.subject_ref,
-    target_ref: claimPacket.body.target_ref,
-    scope_ref: claimPacket.body.scope_ref,
+    relation_subtype: relationAssertion.subtype,
+    subject_ref: relationAssertion.subject_ref,
+    target_ref: relationAssertion.target_ref,
+    scope_ref: relationAssertion.scope_ref ?? null,
     status: claimPacket.body.status,
-    note: claimPacket.body.note ?? null,
+    note: claimPacket.body.claim_markdown ?? claimPacket.body.note ?? null,
+    claim_subtype: claimPacket.body.subtype,
     source_claim_packet_id: claimPacket.header.packet_id,
   };
 }

@@ -1210,7 +1210,11 @@ export class NexusMutationService {
       throw new Error('Unknown role claim packet.');
     }
 
-    if (claimPacket.body.subject_ref.packet_id === input.actorPacket.header.packet_id) {
+    if (
+      (claimPacket.body.subject_ref?.packet_id ??
+        claimPacket.body.relation_assertion?.subject_ref.packet_id) ===
+      input.actorPacket.header.packet_id
+    ) {
       throw new Error('Use claim or unclaim for your own role associations.');
     }
 

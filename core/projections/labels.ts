@@ -7,6 +7,10 @@ import type {
   PacketBodyByType,
   PacketEnvelope,
 } from '@core/schema/packet-schema';
+import {
+  getCanonicalElementSubtype,
+  getElementSubtypeLeaf,
+} from '@core/schema/packet-schema';
 
 const FAMILY_LABELS: Record<PacketEnvelope['header']['family'], string> = {
   Element: 'element packet',
@@ -41,7 +45,7 @@ const FAMILY_LABELS: Record<PacketEnvelope['header']['family'], string> = {
 
 function titleCase(value: string): string {
   return value
-    .split(/[_\s-]+/)
+    .split(/[._\s-]+/)
     .filter(Boolean)
     .map((segment) => segment[0].toUpperCase() + segment.slice(1))
     .join(' ');
@@ -53,6 +57,14 @@ function safeDecodePacketId(packetId: string): string {
   } catch {
     return packetId;
   }
+}
+
+function getClaimDisplaySubtype(body: PacketBodyByType['Claim']): string {
+  if (body.subtype === 'relation_assertion' && body.claim_kind) {
+    return body.claim_kind;
+  }
+
+  return body.subtype ?? body.claim_kind ?? 'claim';
 }
 
 /**
@@ -87,7 +99,12 @@ export function getPacketDisplayLabel(packet: PacketEnvelope): string {
   switch (packet.header.family) {
     case 'Element': {
       const body = packet.body as PacketBodyByType['Element'];
-      return `${body.kind} packet`;
+      return `${getElementSubtypeLeaf(
+        getCanonicalElementSubtype({
+          kind: body.kind,
+          subtype: body.subtype ?? null,
+        })
+      ) ?? body.kind} packet`;
     }
     case 'Cause': {
       const body = packet.body as PacketBodyByType['Cause'];
@@ -118,7 +135,7 @@ export function getPacketDisplayLabel(packet: PacketEnvelope): string {
     }
     case 'Claim': {
       const body = packet.body as PacketBodyByType['Claim'];
-      return `${titleCase(body.claim_kind)} claim`;
+      return `${titleCase(getClaimDisplaySubtype(body))} claim`;
     }
     case 'DiscussionForum': {
       const body = packet.body as PacketBodyByType['DiscussionForum'];
@@ -185,10 +202,12 @@ export function getPacketTitle(packet: PacketEnvelope): string {
     }
     case 'Claim': {
       const body = packet.body as PacketBodyByType['Claim'];
-      return `${titleCase(body.claim_kind)} claim`;
+      return `${titleCase(getClaimDisplaySubtype(body))} claim`;
     }
-    case 'Attestation':
-      return 'Attestation';
+    case 'Attestation': {
+      const body = packet.body as PacketBodyByType['Attestation'];
+      return `${titleCase(body.subtype ?? body.attestation_kind)} attestation`;
+    }
     case 'Discussion': {
       const body = packet.body as PacketBodyByType['Discussion'];
       return body.kind === 'message' && body.role === 'reply' ? 'Reply' : body.title;
@@ -246,7 +265,7 @@ export function getPacketSummary(packet: PacketEnvelope): string | null {
     }
     case 'Claim': {
       const body = packet.body as PacketBodyByType['Claim'];
-      return body.note ?? null;
+      return body.claim_markdown ?? body.note ?? null;
     }
     case 'DiscussionForum': {
       const body = packet.body as PacketBodyByType['DiscussionForum'];
@@ -270,7 +289,7 @@ export function getPacketSummary(packet: PacketEnvelope): string | null {
 export function getPacketStatus(packet: PacketEnvelope): string | null {
   switch (packet.header.family) {
     case 'Element':
-      return null;
+      return (packet.body as PacketBodyByType['Element']).status ?? null;
     case 'Location': {
       const body = packet.body as PacketBodyByType['Location'];
       return body.status;
@@ -291,7 +310,7 @@ export function getPacketStatus(packet: PacketEnvelope): string | null {
     case 'DiscussionReply':
       return null;
     case 'Attestation':
-      return null;
+      return (packet.body as PacketBodyByType['Attestation']).status;
     case 'Minutes':
       return null;
     case 'Artifact':

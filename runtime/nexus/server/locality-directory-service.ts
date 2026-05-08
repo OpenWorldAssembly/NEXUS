@@ -10,11 +10,7 @@ import {
   createPacketEdge,
   createPacketRef,
 } from '@core/packets/builders';
-import type {
-  LocalityLevel,
-  PacketEnvelopeByType,
-  PacketRef,
-} from '@core/schema/packet-schema';
+import { getElementSubtypeLeaf, type LocalityLevel, type PacketEnvelopeByType, type PacketRef } from '@core/schema/packet-schema';
 import type { NexusLocationSearchResult } from '@runtime/nexus/location-search';
 import {
   createLocalityCanonicalNameKey,
@@ -109,7 +105,7 @@ function getGlobalAssemblyPacket(
     elementPackets.find(
       (packet) =>
         packet.body.kind === 'assembly' &&
-        (packet.body.subtype === 'global' ||
+        (getElementSubtypeLeaf(packet.body.subtype) === 'global' ||
           packet.header.packet_id === 'nexus:element/global-commons')
     ) ?? null
   );
