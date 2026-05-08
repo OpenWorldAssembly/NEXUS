@@ -2,8 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  buildNexusHomeScopeIds,
   buildNexusBranchNodes,
+  buildNexusScopeSidebarSections,
   getNexusScopeDepthWidth,
+  getNexusScopeLevelGroupLabel,
   getNexusScopeLevelLabel,
   getNexusSectionMenuDetail,
   getNexusSectionMenuTitle,
@@ -198,6 +201,96 @@ test('associated mount reasons stay mounted without joining the geographic tree 
     }),
     false
   );
+});
+
+test('home scope ids are ordered from broadest geography toward the personal root', () => {
+  assert.deepEqual(buildNexusHomeScopeIds([GLOBAL_SCOPE, LOCAL_SCOPE, PERSONAL_SCOPE]), [
+    'global-commons',
+    'moreno-valley',
+    'you',
+  ]);
+});
+
+test('sidebar sections dedupe scopes by home, associated, followed, then discoverable priority', () => {
+  const associatedScope: NexusScopeSummary = {
+    ...LOCAL_SCOPE,
+    id: 'canyon-lake',
+    packetId: 'nexus:element/canyon-lake',
+    name: 'Canyon Lake',
+    shortLabel: 'CL',
+    level: 'city',
+    parentId: undefined,
+    childIds: [],
+    isMounted: true,
+    isDiscoverable: true,
+    isAssociated: true,
+    isFollowed: true,
+    associationKind: 'canonical_relation_assertion',
+    mountReasons: ['associated', 'followed'],
+  };
+  const followedScope: NexusScopeSummary = {
+    ...LOCAL_SCOPE,
+    id: 'sunnymead-ranch',
+    packetId: 'nexus:element/sunnymead-ranch',
+    name: 'Sunnymead Ranch',
+    shortLabel: 'Sunnymead',
+    level: 'district',
+    parentId: undefined,
+    childIds: [],
+    isMounted: true,
+    isDiscoverable: true,
+    isFollowed: true,
+    mountReasons: ['followed'],
+  };
+  const discoverableScope: NexusScopeSummary = {
+    ...LOCAL_SCOPE,
+    id: 'riverside-county',
+    packetId: 'nexus:element/riverside-county',
+    name: 'Riverside County',
+    shortLabel: 'County',
+    level: 'region',
+    parentId: undefined,
+    childIds: [],
+    isMounted: false,
+    isDiscoverable: true,
+    mountReasons: [],
+  };
+  const sections = buildNexusScopeSidebarSections({
+    scopeSummaries: [
+      GLOBAL_SCOPE,
+      LOCAL_SCOPE,
+      PERSONAL_SCOPE,
+      associatedScope,
+      followedScope,
+      discoverableScope,
+    ],
+    homeScopeIds: buildNexusHomeScopeIds([GLOBAL_SCOPE, LOCAL_SCOPE, PERSONAL_SCOPE]),
+  });
+  const associatedSection = sections.find((section) => section.id === 'associated');
+  const followedSection = sections.find((section) => section.id === 'followed');
+  const discoverableSection = sections.find(
+    (section) => section.id === 'discoverable'
+  );
+
+  assert.deepEqual(
+    sections.find((section) => section.id === 'home')?.scopes.map((scope) => scope.id),
+    ['global-commons', 'moreno-valley', 'you']
+  );
+  assert.deepEqual(
+    associatedSection?.scopes.map((scope) => scope.id),
+    ['canyon-lake']
+  );
+  assert.deepEqual(
+    followedSection?.scopes.map((scope) => scope.id),
+    ['sunnymead-ranch']
+  );
+  assert.deepEqual(
+    discoverableSection?.scopes.map((scope) => scope.id),
+    ['riverside-county']
+  );
+  assert.equal(associatedSection?.groups[0]?.title, 'City');
+  assert.equal(followedSection?.groups[0]?.title, 'District');
+  assert.equal(getNexusScopeLevelGroupLabel('global'), 'Global');
 });
 
 test('scope selection routes wrapper-level account and identity pages back to trust', () => {

@@ -46,6 +46,8 @@ Current scope consumer direction in code includes:
 - assembly association now resolves packet-natively from `Relation(subtype: assembly_association)` first, with legacy claim-only reads reduced to explicit compatibility projection and associated scopes treated as mounted related scopes
 - followed, associated, known, discoverable, and home-ancestor semantics are now carried as additive packet-backed scope-summary metadata
 - locality creation now emits provisional `Location(subtype: region)` packets plus `Relation(subtype: defined_by_location)` so linked location packets are part of the live writer path as well as the read seam
+- the active shell sidebar now consumes that metadata through four packet-native groupings: home, associated, followed, and discoverable
+- shell UI actions for follow and association now route through the canonical mutation corridor and refresh scope projection after success instead of relying on local-only toggles
 
 ## Public docs build system
 

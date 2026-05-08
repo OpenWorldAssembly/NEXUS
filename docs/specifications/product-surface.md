@@ -79,6 +79,17 @@ Discussions are the most mature interactive Nexus surface today.
 - interactive writes use the shared fortress prepare/sign/finalize corridor
 - compatibility still keeps legacy discussion family shapes readable while canonical discussion packets drive current writes
 
+### Scope sidebar
+
+The Nexus scope sidebar now reflects the packet-native scope graph more directly.
+
+- it groups scope context into `Home scopes`, `Associated scopes`, `Followed scopes`, and `Discoverable scopes`
+- `Home scopes` render as a projected trunk rooted at the personal `You` scope rather than as a flat mixed scope map
+- associated, followed, and discoverable scopes are grouped by scope level for quick scale scanning
+- scope rows stay click-to-open, while secondary actions move into a compact overflow menu
+- follow and association actions now use the canonical packet-native mutation corridor and then refresh shell projection from the server result
+- guests are routed through the existing identity/auth gate instead of silently writing follow or association state
+
 ### Votes
 
 Votes are currently read-only.

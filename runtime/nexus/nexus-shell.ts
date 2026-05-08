@@ -88,6 +88,26 @@ export type NexusScopeBranchNode = {
   hasChildren: boolean;
 };
 
+export type NexusSidebarScopeSectionId =
+  | 'home'
+  | 'associated'
+  | 'followed'
+  | 'discoverable';
+
+export type NexusSidebarScopeLevelGroup = {
+  id: NexusScopeSummary['level'];
+  title: string;
+  scopes: NexusScopeSummary[];
+};
+
+export type NexusSidebarScopeSection = {
+  id: NexusSidebarScopeSectionId;
+  title: string;
+  count: number;
+  scopes: NexusScopeSummary[];
+  groups: NexusSidebarScopeLevelGroup[];
+};
+
 export type NexusShellState = {
   navigationMode: NexusNavMode;
   themeMode: NexusThemeMode;
@@ -283,6 +303,30 @@ export function getNexusScopeDepthWidth(
 }
 
 /**
+ * Inputs: a scope level string.
+ * Output: a compact grouping label for sidebar scope buckets.
+ */
+export function getNexusScopeLevelGroupLabel(
+  level: NexusScopeSummary['level']
+): string {
+  switch (level) {
+    case 'personal':
+      return 'Personal';
+    case 'global':
+      return 'Global';
+    case 'nation':
+      return 'Nation';
+    case 'region':
+      return 'Region';
+    case 'city':
+      return 'City';
+    case 'district':
+    default:
+      return 'District';
+  }
+}
+
+/**
  * Inputs: a nexus UI density.
  * Output: the consistent width used by each open sidebar rail for that density.
  */
@@ -305,6 +349,135 @@ export function isNexusGeographicTreeScope(
       'personal_default',
     ].includes(mountReason)
   );
+}
+
+/**
+ * Inputs: all known scopes.
+ * Output: the projected home trunk ordered from the broadest geographic scope toward the personal root.
+ */
+export function buildNexusHomeScopeIds(
+  scopes: NexusScopeSummary[]
+): string[] {
+  const personalScope =
+    scopes.find((scope) => scope.level === 'personal') ??
+    scopes.find((scope) => scope.id === 'you');
+
+  if (personalScope) {
+    return [
+      ...getNexusAncestorIds(scopes, personalScope.id),
+      personalScope.id,
+    ];
+  }
+
+  const homeScope =
+    scopes.find((scope) => scope.mountReasons.includes('home_locality')) ??
+    scopes.find((scope) => scope.mountReasons.includes('home_ancestor')) ??
+    scopes.find(
+      (scope) => scope.isMounted && isNexusGeographicTreeScope(scope)
+    );
+
+  if (!homeScope) {
+    return [];
+  }
+
+  return [...getNexusAncestorIds(scopes, homeScope.id), homeScope.id];
+}
+
+function groupNexusScopesByLevel(
+  scopes: NexusScopeSummary[]
+): NexusSidebarScopeLevelGroup[] {
+  const orderedLevels: NexusScopeSummary['level'][] = [
+    'personal',
+    'global',
+    'nation',
+    'region',
+    'city',
+    'district',
+  ];
+
+  return orderedLevels
+    .map((level) => {
+      const levelScopes = scopes.filter((scope) => scope.level === level);
+
+      if (levelScopes.length === 0) {
+        return null;
+      }
+
+      return {
+        id: level,
+        title: getNexusScopeLevelGroupLabel(level),
+        scopes: levelScopes,
+      } satisfies NexusSidebarScopeLevelGroup;
+    })
+    .filter((group): group is NexusSidebarScopeLevelGroup => group !== null);
+}
+
+/**
+ * Inputs: packet-native scope summaries plus the ordered home trunk ids.
+ * Output: deduped sidebar sections ready for the compact shell scope menu.
+ */
+export function buildNexusScopeSidebarSections(input: {
+  scopeSummaries: NexusScopeSummary[];
+  homeScopeIds: string[];
+}): NexusSidebarScopeSection[] {
+  const scopeMap = new Map(
+    input.scopeSummaries.map((scope) => [scope.id, scope])
+  );
+  const homeScopes = input.homeScopeIds
+    .map((scopeId) => scopeMap.get(scopeId) ?? null)
+    .filter((scope): scope is NexusScopeSummary => scope !== null);
+  const homeScopeIds = new Set(homeScopes.map((scope) => scope.id));
+  const associatedScopes = input.scopeSummaries.filter(
+    (scope) => scope.isAssociated && !homeScopeIds.has(scope.id)
+  );
+  const associatedScopeIds = new Set(
+    associatedScopes.map((scope) => scope.id)
+  );
+  const followedScopes = input.scopeSummaries.filter(
+    (scope) =>
+      scope.isFollowed &&
+      !homeScopeIds.has(scope.id) &&
+      !associatedScopeIds.has(scope.id)
+  );
+  const followedScopeIds = new Set(followedScopes.map((scope) => scope.id));
+  const discoverableScopes = input.scopeSummaries.filter(
+    (scope) =>
+      scope.isDiscoverable &&
+      !homeScopeIds.has(scope.id) &&
+      !associatedScopeIds.has(scope.id) &&
+      !followedScopeIds.has(scope.id)
+  );
+
+  return [
+    {
+      id: 'home',
+      title: 'Home scopes',
+      count: homeScopes.length,
+      scopes: homeScopes,
+      groups: [],
+    },
+    {
+      id: 'associated',
+      title: 'Associated scopes',
+      count: associatedScopes.length,
+      scopes: associatedScopes,
+      groups: groupNexusScopesByLevel(associatedScopes),
+    },
+    {
+      id: 'followed',
+      title: 'Followed scopes',
+      count: followedScopes.length,
+      scopes: followedScopes,
+      groups: groupNexusScopesByLevel(followedScopes),
+    },
+    {
+      id: 'discoverable',
+      title: 'Discoverable scopes',
+      count: discoverableScopes.length,
+      scopes: discoverableScopes,
+      groups: groupNexusScopesByLevel(discoverableScopes),
+    },
+  ];
 }
 
 /**

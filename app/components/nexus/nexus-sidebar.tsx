@@ -3,7 +3,8 @@
  * Description: Renders the left-side nexus rails with collapsible primary and secondary navigation panels.
  */
 import { usePathname, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
@@ -17,7 +18,6 @@ import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
 import { useNexusAuthGate } from '@app/components/nexus/nexus-auth-gate';
 import {
-  NexusBadge,
   NexusCard,
   NexusChevronIcon,
   NexusSegmentedPill,
@@ -27,13 +27,15 @@ import {
 import type { NexusSecurityMode } from '@runtime/nexus/nexus-api-types';
 import {
   NEXUS_SECTION_ORDER,
-  getNexusScopeDepthWidth,
+  buildNexusHomeScopeIds,
+  buildNexusScopeSidebarSections,
   getNexusScopeLevelLabel,
   getNexusSectionMenuDetail,
   getNexusSectionMenuTitle,
   getNexusRailWidth,
   getNexusAncestorIds,
   NEXUS_COLLAPSED_RAIL_WIDTH,
+  type NexusSidebarScopeSectionId,
   type NexusScopeBranchNode,
   type NexusScopeSummary,
   type NexusSection,
@@ -75,11 +77,12 @@ type NexusScopeSnapshotMetric = {
   value: string;
 };
 
+type NexusScopeSectionVisibilityState = Record<NexusSidebarScopeSectionId, boolean>;
+
 type NexusScopeMenuRowProps = {
   depth: number;
   isActive: boolean;
-  isLineage: boolean;
-  scopeLevel: NexusScopeSummary['level'];
+  menuButton?: ReactNode;
   scopeMeta: string;
   scopeName: string;
   themeMode: NexusThemeMode;
@@ -98,12 +101,15 @@ type NexusFunctionMenuContentProps = {
 
 type NexusScopeMenuContentProps = {
   activeScopeId: string;
+  associatedScopes: NexusScopeSummary[];
   discoverableScopes: NexusScopeSummary[];
   followedScopes: NexusScopeSummary[];
   scopeMenuNodes: NexusScopeBranchNode[];
   scopeSummaries: NexusScopeSummary[];
   themeMode: NexusThemeMode;
   uiDensity: NexusUiDensity;
+  onOpenInExplorerPress: (scope: NexusScopeSummary) => void;
+  onScopeAssociatePress: (scopeId: string, isAssociated: boolean) => void;
   onScopePress: (scopeId: string) => void;
   onScopeFollowPress: (scopeId: string, isFollowed: boolean) => void;
 };
@@ -121,6 +127,8 @@ type NexusPreferenceSwitchProps<TOption extends string> = {
 };
 
 const SIDEBAR_SCOPE_LIST_LIMIT = 10;
+const SIDEBAR_SCOPE_GROUP_INITIAL_LIMIT = 8;
+const SIDEBAR_SECTION_MAX_HEIGHT = 280;
 
 /**
  * Inputs: any number of class names.
@@ -612,81 +620,70 @@ function NexusPrimaryNavItem({
 function NexusScopeMenuRow({
   depth,
   isActive,
-  isLineage,
-  scopeLevel,
+  menuButton,
   scopeMeta,
   scopeName,
   themeMode,
   uiDensity,
   onPress,
 }: NexusScopeMenuRowProps) {
-  const depthWidth = getNexusScopeDepthWidth(scopeLevel);
-  const indicatorSize = Math.max(6, Math.round(depthWidth / 4));
-  const connectorStart = 8;
-  const connectorOffset = connectorStart + depthWidth;
   const chrome = getNexusChromeClasses(themeMode, uiDensity);
 
   return (
-    <View className="flex-row items-center gap-3">
-      <View className="relative h-12 w-16 justify-center">
-        <View
-          className="absolute bottom-1 left-[8px] top-1 w-px rounded-full bg-nexus-line/20"
-        />
-        <View
-          className={`absolute top-1/2 h-px -translate-y-px rounded-full ${
-            isLineage ? 'bg-nexus-sky/60' : 'bg-nexus-line/60'
-          }`}
-          style={{ left: connectorStart, width: depthWidth }}
-        />
-        <View
-          className={`absolute top-1/2 rounded-full ${
-            isActive
-              ? 'bg-nexus-sky'
-              : isLineage
-                ? 'bg-nexus-sky/60'
-                : 'bg-nexus-line'
-          }`}
-          style={{
-            left: connectorOffset,
-            width: indicatorSize,
-            height: indicatorSize,
-            transform: [{ translateY: -(indicatorSize / 2) }],
-          }}
-        />
-      </View>
-
+    <View className="flex-row items-start gap-2 overflow-visible" style={{ marginLeft: depth * 12 }}>
       <Pressable
         accessibilityRole="button"
         className={joinClasses(
+          'min-w-0 flex-1',
           isActive ? chrome.scopeRowActiveClass : chrome.scopeRowClass,
           uiDensity === 'large' ? 'px-4 py-3.5' : 'px-3 py-3',
         )}
         onPress={onPress}
       >
-        <Text
-          className={joinClasses(
-            uiDensity === 'large'
-              ? 'text-base font-semibold leading-6'
-              : 'text-sm font-semibold leading-5',
-            themeMode === 'dark' ? 'text-nexus-text' : 'text-slate-900',
-          )}
-          numberOfLines={2}
-        >
-          {scopeName}
-        </Text>
-        <Text
-          className={joinClasses(
-            uiDensity === 'large'
-              ? 'mt-1.5 text-[11px] font-semibold uppercase tracking-[1.8px]'
-              : 'mt-1 text-[10px] font-semibold uppercase tracking-[1.6px]',
-            themeMode === 'dark' ? 'text-nexus-muted' : 'text-slate-600',
-          )}
-          numberOfLines={1}
-        >
-          {scopeMeta}
-        </Text>
+        <View className="min-w-0">
+          <Text
+            className={joinClasses(
+              uiDensity === 'large'
+                ? 'text-base font-semibold leading-6'
+                : 'text-sm font-semibold leading-5',
+              themeMode === 'dark' ? 'text-nexus-text' : 'text-slate-900',
+            )}
+            numberOfLines={3}
+          >
+            {scopeName}
+          </Text>
+          <Text
+            className={joinClasses(
+              uiDensity === 'large'
+                ? 'mt-1.5 text-[11px] font-semibold uppercase tracking-[1.8px]'
+                : 'mt-1 text-[10px] font-semibold uppercase tracking-[1.6px]',
+              themeMode === 'dark' ? 'text-nexus-muted' : 'text-slate-600',
+            )}
+            numberOfLines={1}
+          >
+            {scopeMeta}
+          </Text>
+        </View>
         <NexusThemedBevelEdges themeMode={themeMode} subtle />
       </Pressable>
+
+      {menuButton ? <View className="w-9 items-end overflow-visible pt-1">{menuButton}</View> : null}
+    </View>
+  );
+}
+
+function NexusScopeMenuDots({
+  themeMode,
+}: {
+  themeMode: NexusThemeMode;
+}) {
+  const dotClass = themeMode === 'dark' ? 'bg-nexus-muted' : 'bg-slate-500';
+
+  return (
+    <View className="items-center gap-1">
+      <View className={joinClasses('h-1 w-1 rounded-full', dotClass)} />
+      <View className={joinClasses('h-1 w-1 rounded-full', dotClass)} />
+      <View className={joinClasses('h-1 w-1 rounded-full', dotClass)} />
     </View>
   );
 }
@@ -731,258 +728,516 @@ function NexusFunctionMenuContent({
   );
 }
 
+function NexusScopeSectionHeader({
+  count,
+  isOpen,
+  onPress,
+  themeMode,
+  title,
+  uiDensity,
+}: {
+  count: number;
+  isOpen: boolean;
+  onPress: () => void;
+  themeMode: NexusThemeMode;
+  title: string;
+  uiDensity: NexusUiDensity;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      className="flex-row items-center justify-between gap-3"
+      onPress={onPress}
+    >
+      <Text
+        className={joinClasses(
+          uiDensity === 'large'
+            ? 'text-sm font-semibold uppercase tracking-[2.2px]'
+            : 'text-xs font-semibold uppercase tracking-[2px]',
+          themeMode === 'dark' ? 'text-nexus-text' : 'text-slate-900',
+        )}
+      >
+        {title}
+      </Text>
+      <View className="flex-row items-center gap-2">
+        <Text
+          className={joinClasses(
+            uiDensity === 'large' ? 'text-sm font-semibold' : 'text-xs font-semibold',
+            themeMode === 'dark' ? 'text-nexus-muted' : 'text-slate-600',
+          )}
+        >
+          {count}
+        </Text>
+        <NexusChevronIcon isOpen={isOpen} />
+      </View>
+    </Pressable>
+  );
+}
+
+function NexusScopeActionMenu({
+  isOpen,
+  onAssociatePress,
+  onFollowPress,
+  onOpenInExplorerPress,
+  onOpenPress,
+  onToggle,
+  scope,
+  themeMode,
+  uiDensity,
+}: {
+  isOpen: boolean;
+  onAssociatePress: () => void;
+  onFollowPress: () => void;
+  onOpenInExplorerPress: () => void;
+  onOpenPress: () => void;
+  onToggle: () => void;
+  scope: NexusScopeSummary;
+  themeMode: NexusThemeMode;
+  uiDensity: NexusUiDensity;
+}) {
+  const chrome = getNexusChromeClasses(themeMode, uiDensity);
+  const canMutateScope = scope.level !== 'personal';
+
+  return (
+    <View className="relative z-50">
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`More actions for ${scope.name}`}
+        className={joinClasses(
+          chrome.compactButtonClass,
+          uiDensity === 'large' ? 'px-2 py-2' : 'px-1.5 py-1.5'
+        )}
+        onPress={onToggle}
+      >
+        <NexusScopeMenuDots themeMode={themeMode} />
+        <NexusThemedBevelEdges themeMode={themeMode} subtle />
+      </Pressable>
+
+      {isOpen ? (
+        <View
+          className={joinClasses(
+            'absolute right-full top-0 z-50 mr-2 min-w-[180px] gap-1 rounded-2xl border p-2 shadow-lg',
+            themeMode === 'dark'
+              ? 'border-nexus-line bg-nexus-panel'
+              : 'border-slate-300 bg-white'
+          )}
+          style={{ elevation: 50 }}
+        >
+          {[
+            { key: 'open', label: 'Open', onPress: onOpenPress, visible: true },
+            {
+              key: 'follow',
+              label: scope.isFollowed ? 'Unfollow' : 'Follow',
+              onPress: onFollowPress,
+              visible: canMutateScope,
+            },
+            {
+              key: 'associate',
+              label: scope.isAssociated ? 'Disassociate' : 'Associate',
+              onPress: onAssociatePress,
+              visible: canMutateScope,
+            },
+            {
+              key: 'explorer',
+              label: 'Open in Explorer',
+              onPress: onOpenInExplorerPress,
+              visible: true,
+            },
+          ]
+            .filter((action) => action.visible)
+            .map((action) => (
+              <Pressable
+                key={action.key}
+                accessibilityRole="button"
+                className={joinClasses(
+                  chrome.compactButtonClass,
+                  uiDensity === 'large' ? 'px-3 py-2.5' : 'px-2.5 py-2'
+                )}
+                onPress={action.onPress}
+              >
+                <Text
+                  className={joinClasses(
+                    uiDensity === 'large' ? 'text-sm font-semibold' : 'text-xs font-semibold',
+                    themeMode === 'dark' ? 'text-nexus-text' : 'text-slate-900'
+                  )}
+                >
+                  {action.label}
+                </Text>
+                <NexusThemedBevelEdges themeMode={themeMode} subtle />
+              </Pressable>
+            ))}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function NexusScopeListRow({
+  activeScopeId,
+  menuButton,
+  onPress,
+  scope,
+  themeMode,
+  uiDensity,
+}: {
+  activeScopeId: string;
+  menuButton: ReactNode;
+  onPress: () => void;
+  scope: NexusScopeSummary;
+  themeMode: NexusThemeMode;
+  uiDensity: NexusUiDensity;
+}) {
+  const chrome = getNexusChromeClasses(themeMode, uiDensity);
+
+  return (
+    <View
+      className={joinClasses(
+        'flex-row items-start gap-2 overflow-visible',
+      )}
+    >
+      <Pressable
+        accessibilityRole="button"
+        className={joinClasses(
+          'min-w-0 flex-1',
+          activeScopeId === scope.id ? chrome.scopeRowActiveClass : chrome.scopeRowClass,
+          uiDensity === 'large' ? 'px-4 py-3.5' : 'px-3 py-3'
+        )}
+        onPress={onPress}
+      >
+        <View className="min-w-0">
+          <Text
+            className={joinClasses(
+              uiDensity === 'large' ? 'text-base font-semibold leading-6' : 'text-sm font-semibold leading-5',
+              themeMode === 'dark' ? 'text-nexus-text' : 'text-slate-900'
+            )}
+            numberOfLines={3}
+          >
+            {scope.name}
+          </Text>
+        </View>
+        <NexusThemedBevelEdges themeMode={themeMode} subtle />
+      </Pressable>
+
+      <View className="w-9 items-end overflow-visible pt-1">{menuButton}</View>
+    </View>
+  );
+}
+
+function NexusGroupedScopeRows({
+  activeScopeId,
+  groups,
+  onOpenInExplorerPress,
+  onScopeAssociatePress,
+  onScopeFollowPress,
+  onScopePress,
+  openMenuScopeId,
+  scopeSectionId,
+  setOpenMenuScopeId,
+  themeMode,
+  uiDensity,
+}: {
+  activeScopeId: string;
+  groups: { id: NexusScopeSummary['level']; title: string; scopes: NexusScopeSummary[] }[];
+  onOpenInExplorerPress: (scope: NexusScopeSummary) => void;
+  onScopeAssociatePress: (scopeId: string, isAssociated: boolean) => void;
+  onScopeFollowPress: (scopeId: string, isFollowed: boolean) => void;
+  onScopePress: (scopeId: string) => void;
+  openMenuScopeId: string | null;
+  scopeSectionId: NexusSidebarScopeSectionId;
+  setOpenMenuScopeId: (scopeId: string | null) => void;
+  themeMode: NexusThemeMode;
+  uiDensity: NexusUiDensity;
+}) {
+  const [visibleGroupCounts, setVisibleGroupCounts] = useState<Record<string, number>>({});
+
+  return (
+    <ScrollView
+      className="max-h-[280px]"
+      nestedScrollEnabled
+      showsVerticalScrollIndicator={false}
+      style={{ maxHeight: SIDEBAR_SECTION_MAX_HEIGHT }}
+    >
+      <View className="gap-3">
+        {groups.map((group) => {
+          const groupKey = `${scopeSectionId}:${group.id}`;
+          const visibleCount =
+            visibleGroupCounts[groupKey] ?? SIDEBAR_SCOPE_GROUP_INITIAL_LIMIT;
+          const visibleScopes = group.scopes.slice(0, visibleCount);
+          const remainingCount = Math.max(0, group.scopes.length - visibleScopes.length);
+
+          return (
+            <View key={group.id} className="gap-2">
+              <Text
+                className={joinClasses(
+                  uiDensity === 'large'
+                    ? 'text-[11px] font-semibold uppercase tracking-[1.8px]'
+                    : 'text-[10px] font-semibold uppercase tracking-[1.6px]',
+                  themeMode === 'dark' ? 'text-nexus-muted' : 'text-slate-600'
+                )}
+              >
+                {group.title}
+              </Text>
+              <View className="gap-2">
+                {visibleScopes.map((scope) => (
+                  <NexusScopeListRow
+                    key={scope.id}
+                    activeScopeId={activeScopeId}
+                    menuButton={
+                      <NexusScopeActionMenu
+                        isOpen={openMenuScopeId === scope.id}
+                        onAssociatePress={() => {
+                          setOpenMenuScopeId(null);
+                          onScopeAssociatePress(scope.id, !scope.isAssociated);
+                        }}
+                        onFollowPress={() => {
+                          setOpenMenuScopeId(null);
+                          onScopeFollowPress(scope.id, !scope.isFollowed);
+                        }}
+                        onOpenInExplorerPress={() => {
+                          setOpenMenuScopeId(null);
+                          onOpenInExplorerPress(scope);
+                        }}
+                        onOpenPress={() => {
+                          setOpenMenuScopeId(null);
+                          onScopePress(scope.id);
+                        }}
+                        onToggle={() =>
+                          setOpenMenuScopeId(
+                            openMenuScopeId === scope.id ? null : scope.id
+                          )
+                        }
+                        scope={scope}
+                        themeMode={themeMode}
+                        uiDensity={uiDensity}
+                      />
+                    }
+                    onPress={() => onScopePress(scope.id)}
+                    scope={scope}
+                    sectionId={scopeSectionId}
+                    themeMode={themeMode}
+                    uiDensity={uiDensity}
+                  />
+                ))}
+              </View>
+              {remainingCount > 0 ? (
+                <Pressable
+                  accessibilityRole="button"
+                  className="self-start"
+                  onPress={() =>
+                    setVisibleGroupCounts((currentValue) => ({
+                      ...currentValue,
+                      [groupKey]: visibleCount + SIDEBAR_SCOPE_LIST_LIMIT,
+                    }))
+                  }
+                >
+                  <Text
+                    className={joinClasses(
+                      uiDensity === 'large' ? 'text-sm font-semibold' : 'text-xs font-semibold',
+                      themeMode === 'dark' ? 'text-nexus-sky' : 'text-sky-600'
+                    )}
+                  >
+                    Show more ({remainingCount})
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
+          );
+        })}
+      </View>
+    </ScrollView>
+  );
+}
+
 /**
- * Inputs: active scope state, related scope lists, and a click handler.
- * Output: the scope menu content with the current context pinned above the branch navigator.
+ * Inputs: active scope state, related scope lists, and click handlers.
+ * Output: the packet-native grouped scope menu with compact home, associated, followed, and discoverable sections.
  */
 function NexusScopeMenuContent({
   activeScopeId,
+  associatedScopes,
   discoverableScopes,
   followedScopes,
   scopeMenuNodes,
   scopeSummaries,
   themeMode,
   uiDensity,
+  onOpenInExplorerPress,
+  onScopeAssociatePress,
   onScopePress,
   onScopeFollowPress,
 }: NexusScopeMenuContentProps) {
-  const [isExploreOpen, setIsExploreOpen] = useState(false);
-  const branchScopeIds = new Set(scopeMenuNodes.map((node) => node.scopeId));
-  const followedScopeIds = new Set(followedScopes.map((scope) => scope.id));
-  const visibleFollowedScopes = followedScopes.slice(0, SIDEBAR_SCOPE_LIST_LIMIT);
-  const hiddenFollowedCount = Math.max(
-    0,
-    followedScopes.length - visibleFollowedScopes.length,
+  const [sectionVisibility, setSectionVisibility] = useState<NexusScopeSectionVisibilityState>({
+    home: true,
+    associated: true,
+    followed: true,
+    discoverable: false,
+  });
+  const [openMenuScopeId, setOpenMenuScopeId] = useState<string | null>(null);
+  const homeScopeIds = useMemo(
+    () => buildNexusHomeScopeIds(scopeSummaries),
+    [scopeSummaries]
   );
-  const filteredDiscoverableScopes = discoverableScopes.filter(
-    (scope) => !branchScopeIds.has(scope.id) && !followedScopeIds.has(scope.id),
+  const orderedScopeSummaries = useMemo(() => {
+    const scopeMap = new Map<string, NexusScopeSummary>();
+
+    [
+      ...homeScopeIds
+        .map((scopeId) =>
+          scopeSummaries.find((scopeSummary) => scopeSummary.id === scopeId) ?? null
+        )
+        .filter((scope): scope is NexusScopeSummary => scope !== null),
+      ...associatedScopes,
+      ...followedScopes,
+      ...discoverableScopes,
+      ...scopeSummaries,
+    ].forEach((scope) => {
+      if (!scopeMap.has(scope.id)) {
+        scopeMap.set(scope.id, scope);
+      }
+    });
+
+    return Array.from(scopeMap.values());
+  }, [
+    associatedScopes,
+    discoverableScopes,
+    followedScopes,
+    homeScopeIds,
+    scopeSummaries,
+  ]);
+  const sidebarSections = useMemo(
+    () =>
+      buildNexusScopeSidebarSections({
+        scopeSummaries: orderedScopeSummaries,
+        homeScopeIds,
+      }),
+    [homeScopeIds, orderedScopeSummaries]
   );
-  const visibleDiscoverableScopes = filteredDiscoverableScopes.slice(
-    0,
-    SIDEBAR_SCOPE_LIST_LIMIT,
+  const homeSection = sidebarSections.find((section) => section.id === 'home');
+  const associatedSection = sidebarSections.find((section) => section.id === 'associated');
+  const followedSection = sidebarSections.find((section) => section.id === 'followed');
+  const discoverableSection = sidebarSections.find(
+    (section) => section.id === 'discoverable'
   );
-  const hiddenDiscoverableCount = Math.max(
-    0,
-    filteredDiscoverableScopes.length - visibleDiscoverableScopes.length,
-  );
-  const chrome = getNexusChromeClasses(themeMode, uiDensity);
 
   return (
-    <>
+    <View className="gap-4">
       <View className="gap-2">
-        <NexusMenuSectionLabel
-          label="Scope map"
+        <NexusScopeSectionHeader
+          count={homeSection?.count ?? 0}
+          isOpen={sectionVisibility.home}
+          onPress={() =>
+            setSectionVisibility((currentValue) => ({
+              ...currentValue,
+              home: !currentValue.home,
+            }))
+          }
           themeMode={themeMode}
+          title="Home scopes"
           uiDensity={uiDensity}
         />
-        <View className="relative gap-2 pl-1">
-          {scopeMenuNodes.map((node) => {
-            const scope = scopeSummaries.find(
-              (scopeSummary) => scopeSummary.id === node.scopeId,
-            );
+        {sectionVisibility.home ? (
+          <View className="relative gap-2 pl-1">
+            {(homeSection?.scopes ?? []).map((scope, index) => {
+              const node = scopeMenuNodes.find(
+                (scopeNode) => scopeNode.scopeId === scope.id
+              );
 
-            if (!scope) {
-              return null;
-            }
+              if (!scope) {
+                return null;
+              }
 
-            return (
-              <NexusScopeMenuRow
-                key={scope.id}
-                depth={node.depth}
-                isActive={scope.id === activeScopeId}
-                isLineage={
-                  node.relationship === 'global' ||
-                  node.relationship === 'parent' ||
-                  node.relationship === 'current'
-                }
-                onPress={() => onScopePress(scope.id)}
-                scopeLevel={scope.level}
-                scopeMeta={getNexusScopeLevelLabel(scope.level)}
-                scopeName={scope.name}
+              return (
+                <NexusScopeMenuRow
+                  key={scope.id}
+                  depth={node?.depth ?? index}
+                  isActive={scope.id === activeScopeId}
+                  isLineage
+                  menuButton={
+                    <NexusScopeActionMenu
+                      isOpen={openMenuScopeId === scope.id}
+                      onAssociatePress={() => {
+                        setOpenMenuScopeId(null);
+                        onScopeAssociatePress(scope.id, !scope.isAssociated);
+                      }}
+                      onFollowPress={() => {
+                        setOpenMenuScopeId(null);
+                        onScopeFollowPress(scope.id, !scope.isFollowed);
+                      }}
+                      onOpenInExplorerPress={() => {
+                        setOpenMenuScopeId(null);
+                        onOpenInExplorerPress(scope);
+                      }}
+                      onOpenPress={() => {
+                        setOpenMenuScopeId(null);
+                        onScopePress(scope.id);
+                      }}
+                      onToggle={() =>
+                        setOpenMenuScopeId(
+                          openMenuScopeId === scope.id ? null : scope.id
+                        )
+                      }
+                      scope={scope}
+                      themeMode={themeMode}
+                      uiDensity={uiDensity}
+                    />
+                  }
+                  onPress={() => onScopePress(scope.id)}
+                  scopeMeta={getNexusScopeLevelLabel(scope.level)}
+                  scopeName={scope.name}
+                  themeMode={themeMode}
+                  uiDensity={uiDensity}
+                />
+              );
+            })}
+          </View>
+        ) : null}
+      </View>
+
+      {[
+        associatedSection,
+        followedSection,
+        discoverableSection,
+      ].map((section) => {
+        if (!section) {
+          return null;
+        }
+
+        const sectionId = section.id;
+
+        return (
+          <View key={section.id} className="gap-2">
+            <NexusScopeSectionHeader
+              count={section.count}
+              isOpen={sectionVisibility[sectionId]}
+              onPress={() =>
+                setSectionVisibility((currentValue) => ({
+                  ...currentValue,
+                  [sectionId]: !currentValue[sectionId],
+                }))
+              }
+              themeMode={themeMode}
+              title={section.title}
+              uiDensity={uiDensity}
+            />
+            {sectionVisibility[sectionId] && section.groups.length > 0 ? (
+              <NexusGroupedScopeRows
+                activeScopeId={activeScopeId}
+                groups={section.groups}
+                onOpenInExplorerPress={onOpenInExplorerPress}
+                onScopeAssociatePress={onScopeAssociatePress}
+                onScopeFollowPress={onScopeFollowPress}
+                onScopePress={onScopePress}
+                openMenuScopeId={openMenuScopeId}
+                scopeSectionId={section.id}
+                setOpenMenuScopeId={setOpenMenuScopeId}
                 themeMode={themeMode}
                 uiDensity={uiDensity}
               />
-            );
-          })}
-        </View>
-      </View>
-
-      <View className="gap-2 pt-2">
-        <NexusMenuSectionLabel
-          label="Followed scopes"
-          themeMode={themeMode}
-          uiDensity={uiDensity}
-        />
-        <View className="flex-row flex-wrap gap-2">
-          {visibleFollowedScopes.map((scope) => (
-            <View
-              key={scope.id}
-              className={joinClasses(
-                scope.id === activeScopeId
-                  ? chrome.scopeChipActiveClass
-                  : chrome.scopeChipClass,
-              )}
-            >
-              <View className="flex-row items-center gap-2">
-                <Pressable accessibilityRole="button" onPress={() => onScopePress(scope.id)}>
-                  <Text
-                    className={joinClasses(
-                      uiDensity === 'large'
-                        ? 'text-base font-semibold'
-                        : 'text-sm font-semibold',
-                      themeMode === 'dark' ? 'text-nexus-text' : 'text-slate-900',
-                    )}
-                  >
-                    {scope.shortLabel}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() => onScopeFollowPress(scope.id, false)}
-                >
-                  <Text
-                    className={joinClasses(
-                      uiDensity === 'large'
-                        ? 'text-sm font-semibold uppercase'
-                        : 'text-[10px] font-semibold uppercase',
-                      themeMode === 'dark' ? 'text-nexus-muted' : 'text-slate-600',
-                    )}
-                  >
-                    Unfollow
-                  </Text>
-                </Pressable>
-              </View>
-              <NexusThemedBevelEdges themeMode={themeMode} subtle />
-            </View>
-          ))}
-          {hiddenFollowedCount > 0 ? (
-            <Text
-              className={joinClasses(
-                uiDensity === 'large' ? 'text-sm leading-6' : 'text-xs leading-5',
-                themeMode === 'dark' ? 'text-nexus-muted' : 'text-slate-600',
-              )}
-            >
-              {hiddenFollowedCount} more followed scopes will move into the Nexus map.
-            </Text>
-          ) : null}
-        </View>
-      </View>
-
-      {visibleDiscoverableScopes.length > 0 ? (
-        <View className="gap-2 pt-2">
-          <Pressable
-            accessibilityRole="button"
-            className="flex-row items-center justify-between"
-            onPress={() => setIsExploreOpen((currentValue) => !currentValue)}
-          >
-            <NexusMenuSectionLabel
-              label="Explore scopes"
-              themeMode={themeMode}
-              uiDensity={uiDensity}
-            />
-            <Text
-              className={joinClasses(
-                uiDensity === 'large'
-                  ? 'text-sm font-semibold'
-                  : 'text-xs font-semibold',
-                themeMode === 'dark' ? 'text-nexus-muted' : 'text-slate-600',
-              )}
-            >
-              {isExploreOpen ? 'Hide' : 'Show'}
-            </Text>
-          </Pressable>
-
-          {isExploreOpen ? (
-            <View className="gap-2">
-              {visibleDiscoverableScopes.map((scope) => (
-                <View
-                  key={scope.id}
-                  className={joinClasses(
-                    chrome.discoverableScopeClass,
-                  )}
-                >
-                  <Text
-                    className={joinClasses(
-                      uiDensity === 'large'
-                        ? 'text-base font-semibold'
-                        : 'text-sm font-semibold',
-                      themeMode === 'dark' ? 'text-nexus-text' : 'text-slate-900',
-                    )}
-                  >
-                    {scope.name}
-                  </Text>
-                  <Text
-                    className={joinClasses(
-                      uiDensity === 'large'
-                        ? 'mt-1 text-xs font-semibold uppercase tracking-[1.6px]'
-                        : 'mt-1 text-[10px] font-semibold uppercase tracking-[1.4px]',
-                      themeMode === 'dark' ? 'text-nexus-muted' : 'text-slate-600',
-                    )}
-                  >
-                    {getNexusScopeLevelLabel(scope.level)}
-                  </Text>
-                  <View className="mt-3 flex-row flex-wrap gap-2">
-                    <Pressable
-                      accessibilityRole="button"
-                      className={joinClasses(
-                        chrome.compactButtonClass,
-                      )}
-                      onPress={() => onScopePress(scope.id)}
-                    >
-                      <Text
-                        className={joinClasses(
-                          uiDensity === 'large'
-                            ? 'text-sm font-semibold'
-                            : 'text-xs font-semibold',
-                          themeMode === 'dark'
-                            ? 'text-nexus-text'
-                            : 'text-slate-900',
-                        )}
-                      >
-                        Explore
-                      </Text>
-                      <NexusThemedBevelEdges themeMode={themeMode} subtle />
-                    </Pressable>
-                    <Pressable
-                      accessibilityRole="button"
-                      className={joinClasses(
-                        chrome.compactButtonActiveClass,
-                      )}
-                      onPress={() => onScopeFollowPress(scope.id, true)}
-                    >
-                      <Text
-                        className={joinClasses(
-                          uiDensity === 'large'
-                            ? 'text-sm font-semibold'
-                            : 'text-xs font-semibold',
-                          themeMode === 'dark'
-                            ? 'text-nexus-text'
-                            : 'text-slate-900',
-                        )}
-                      >
-                        Follow
-                      </Text>
-                      <NexusThemedBevelEdges themeMode={themeMode} subtle />
-                    </Pressable>
-                  </View>
-                  <NexusThemedBevelEdges themeMode={themeMode} subtle />
-                </View>
-              ))}
-              {hiddenDiscoverableCount > 0 ? (
-                <Text
-                  className={joinClasses(
-                    uiDensity === 'large' ? 'text-sm leading-6' : 'text-xs leading-5',
-                    themeMode === 'dark' ? 'text-nexus-muted' : 'text-slate-600',
-                  )}
-                >
-                  {hiddenDiscoverableCount} more scopes will live in the Nexus map.
-                </Text>
-              ) : null}
-            </View>
-          ) : null}
-        </View>
-      ) : null}
-    </>
+            ) : null}
+          </View>
+        );
+      })}
+    </View>
   );
 }
 
@@ -1000,6 +1255,7 @@ export default function NexusSidebar({
     activeScope,
     activeScopeId,
     activeSection,
+    associatedScopes,
     currentActorLabel,
     currentIdentityMode,
     discoverableScopes,
@@ -1013,6 +1269,7 @@ export default function NexusSidebar({
     isSecondaryRailCollapsed,
     setActiveScopeId,
     setActiveSection,
+    setScopeAssociated,
     setScopeFollowed,
     setNavigationMode,
     setThemeMode,
@@ -1021,6 +1278,7 @@ export default function NexusSidebar({
     togglePrimaryRailCollapsed,
     toggleSecondaryRailCollapsed,
     branchNodes,
+    openPacketInExplorer,
   } = useNexusShell();
   const {
     currentStorageMode,
@@ -1140,6 +1398,53 @@ export default function NexusSidebar({
     if (!isDesktop) {
       onRequestClose();
     }
+  };
+
+  const handleScopeFollowPress = async (scopeId: string, isFollowed: boolean) => {
+    const runScopeFollow = async () => {
+      try {
+        await setScopeFollowed(scopeId, isFollowed);
+      } catch (error: unknown) {
+        if (openNexusAuthGateForError(error, runScopeFollow)) {
+          return;
+        }
+
+        throw error;
+      }
+    };
+
+    await runScopeFollow();
+  };
+
+  const handleScopeAssociatePress = async (
+    scopeId: string,
+    isAssociated: boolean
+  ) => {
+    const runScopeAssociation = async () => {
+      try {
+        await setScopeAssociated(scopeId, isAssociated);
+      } catch (error: unknown) {
+        if (openNexusAuthGateForError(error, runScopeAssociation)) {
+          return;
+        }
+
+        throw error;
+      }
+    };
+
+    await runScopeAssociation();
+  };
+
+  const handleOpenScopeInExplorer = (scope: NexusScopeSummary) => {
+    openPacketInExplorer({
+      packetId: scope.packetId,
+      titleSnapshot: scope.name,
+      seedSummary: {
+        family: 'Element',
+        summary: scope.description,
+        label: scope.shortLabel,
+      },
+    });
   };
 
   return (
@@ -1475,7 +1780,7 @@ export default function NexusSidebar({
 
             <NexusCard
               className={joinClasses(
-                'gap-3',
+                'gap-3 overflow-visible',
                 panelCardClass,
                 isLargeUi ? 'p-5' : 'p-4',
               )}
@@ -1483,14 +1788,16 @@ export default function NexusSidebar({
               <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
                 {primaryTitle}
               </Text>
-              <Text
-                className={joinClasses(
-                  isLargeUi ? 'text-base leading-7' : 'text-sm leading-6',
-                  mutedTextClass,
-                )}
-              >
-                {primaryDescription}
-              </Text>
+              {isFunctionMode ? (
+                <Text
+                  className={joinClasses(
+                    isLargeUi ? 'text-base leading-7' : 'text-sm leading-6',
+                    mutedTextClass,
+                  )}
+                >
+                  {primaryDescription}
+                </Text>
+              ) : null}
 
               <View className="gap-3">
                 {isFunctionMode ? (
@@ -1505,13 +1812,22 @@ export default function NexusSidebar({
                 ) : (
                   <NexusScopeMenuContent
                     activeScopeId={activeScopeId}
+                    associatedScopes={associatedScopes}
                     discoverableScopes={discoverableScopes}
                     followedScopes={followedScopes}
                     scopeMenuNodes={scopeMenuNodes}
                     scopeSummaries={scopeSummaries}
+                    onOpenInExplorerPress={handleOpenScopeInExplorer}
+                    onScopeAssociatePress={(scopeId, isAssociated) => {
+                      void handleScopeAssociatePress(scopeId, isAssociated).catch(
+                        () => undefined
+                      );
+                    }}
                     onScopePress={handleScopePress}
                     onScopeFollowPress={(scopeId, isFollowed) => {
-                      void setScopeFollowed(scopeId, isFollowed).catch(() => undefined);
+                      void handleScopeFollowPress(scopeId, isFollowed).catch(
+                        () => undefined
+                      );
                     }}
                     themeMode={themeMode}
                     uiDensity={uiDensity}
@@ -1568,7 +1884,7 @@ export default function NexusSidebar({
 
             <NexusCard
               className={joinClasses(
-                'gap-4',
+                'gap-4 overflow-visible',
                 panelCardClass,
                 isLargeUi ? 'p-5' : 'p-4',
               )}
@@ -1576,26 +1892,37 @@ export default function NexusSidebar({
               <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
                 {secondaryTitle}
               </Text>
-              <Text
-                className={joinClasses(
-                  isLargeUi ? 'text-base leading-7' : 'text-sm leading-6',
-                  mutedTextClass,
-                )}
-              >
-                {secondaryDescription}
-              </Text>
+              {!isFunctionMode ? (
+                <Text
+                  className={joinClasses(
+                    isLargeUi ? 'text-base leading-7' : 'text-sm leading-6',
+                    mutedTextClass,
+                  )}
+                >
+                  {secondaryDescription}
+                </Text>
+              ) : null}
 
               <View className="gap-3">
                 {isFunctionMode ? (
                   <NexusScopeMenuContent
                     activeScopeId={activeScopeId}
+                    associatedScopes={associatedScopes}
                     discoverableScopes={discoverableScopes}
                     followedScopes={followedScopes}
                     scopeMenuNodes={scopeMenuNodes}
                     scopeSummaries={scopeSummaries}
+                    onOpenInExplorerPress={handleOpenScopeInExplorer}
+                    onScopeAssociatePress={(scopeId, isAssociated) => {
+                      void handleScopeAssociatePress(scopeId, isAssociated).catch(
+                        () => undefined
+                      );
+                    }}
                     onScopePress={handleScopePress}
                     onScopeFollowPress={(scopeId, isFollowed) => {
-                      void setScopeFollowed(scopeId, isFollowed).catch(() => undefined);
+                      void handleScopeFollowPress(scopeId, isFollowed).catch(
+                        () => undefined
+                      );
                     }}
                     themeMode={themeMode}
                     uiDensity={uiDensity}

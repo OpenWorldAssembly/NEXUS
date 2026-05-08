@@ -65,6 +65,7 @@ type NexusShellContextValue = NexusShellState & {
   currentActorPacketId: string | null;
   currentIdentityMode: 'ephemeral_guest' | 'persistent_guest' | 'claimed' | null;
   branchNodes: NexusScopeBranchNode[];
+  associatedScopes: NexusScopeSummary[];
   discoverableScopes: NexusScopeSummary[];
   followedScopes: NexusScopeSummary[];
   scopeSummaries: NexusScopeSummary[];
@@ -271,6 +272,7 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
     activeScope.id,
     expandedScopeIds,
   );
+  const associatedScopes = scopeSummaries.filter((scope) => scope.isAssociated);
   const discoverableScopes = scopeSummaries.filter(
     (scope) => scope.isDiscoverable && (!scope.isMounted || scope.isAssociated)
   );
@@ -667,6 +669,7 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
         currentActorPacketId,
         currentIdentityMode: currentMode,
         branchNodes,
+        associatedScopes,
         discoverableScopes,
         followedScopes,
         scopeSummaries,
