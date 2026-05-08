@@ -152,10 +152,10 @@ Keep routes, payload shapes, and visible behavior stable while splitting respons
 
 ## Naming
 
-- PascalCase → components, types
-- camelCase → variables, functions
-- kebab-case → folders, routes
-- UPPER_SNAKE_CASE → constants
+- PascalCase -> components, types
+- camelCase -> variables, functions
+- kebab-case -> folders, routes
+- UPPER_SNAKE_CASE -> constants
 
 ## Booleans
 
@@ -220,16 +220,68 @@ Avoid obvious narration.
 
 Do not modify canon documents without explicit user permission.
 
-After changes affecting behavior, structure, naming, workflow, or architecture, update:
+After changes affecting behavior, structure, naming, workflow, or architecture, update the relevant chapter files under:
 
-- /docs/implementation-guide.md
-- /docs/specifications.md
+- `/docs/implementation-guide/*`
+- `/docs/specifications/*`
+- `/docs/roadmap/*`
+
+Treat the top-level files:
+
+- `/docs/implementation-guide.md`
+- `/docs/specifications.md`
+- `/docs/roadmap.md`
+
+as short index/shell documents only. Update them only when their index-level content changes, such as chapter links, usage notes, or status framing.
+
+Never hand-edit generated public docs artifacts:
+
+- `/app/public/generated/public-docs.generated.ts`
+- `/public/downloads/*`
+- `/docs/public/version-records/*`
+
+After changing canon doc sources, always validate the source documents:
+
+- `npm run docs:validate`
+
+Only rebuild generated public docs artifacts when needed:
+
+- during site/export builds
+- when intentionally refreshing committed generated outputs
+- when verifying that generated public docs changed as expected
+
+Use:
+
+- `npm run docs:build`
 
 If doc impact is uncertain, flag it explicitly.
 
 No silent decisions.
 
 Record meaningful implementation decisions in the implementation guide.
+
+## Schema evolution guardrail
+
+Before changing packet schemas, read:
+
+- `/docs/implementation-guide/core-entities-and-packet-model.md`
+
+Also read:
+
+- `/docs/implementation-guide/trust-moderation-and-policy.md`
+
+when changing `Claim`, `Attestation`, `Relation`, or `Policy` semantics.
+
+For any packet family schema version change, you must:
+
+- update the active schema/body shape
+- update the family compatibility registry entry
+- add or update upcast/downcast adapters where backward compatibility is intended
+- update current schema version metadata
+- update builders/family build definitions so new writes emit the canonical current shape
+- update signature/write-preparation behavior if additive/defaulted fields affect compatibility or signing
+- add or update tests for parse/read compatibility, adapted reads, write preparation, and any supported upcast/downcast path
+- document the change in the relevant chapter and, when meaningful, the decision log
 
 ---
 

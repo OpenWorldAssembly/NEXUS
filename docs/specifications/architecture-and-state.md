@@ -30,6 +30,22 @@ Current packet behavior in code includes:
 - adapted runtime packets used as the normal read shape
 - target-version-aware compatibility reads for supported families
 
+Forward ontology currently active in code includes:
+
+- `Cause`, `Action`, `Relation`, and `Location` as first-class packet families
+- `Element.subtype` as the forward classifier, with `kind` preserved as compatibility metadata
+- widened `Claim` packets for packet-targeted assertion content plus optional `relation_assertion`
+- widened `Attestation` packets with canonical `type/subtype` semantics and legacy `attestation_kind` compatibility
+- `Policy.relation_requirements` as the packet-backed seam for relation support rules
+
+## Public docs build system
+
+- `docs/public/public-docs.manifest.json` is the source list for generated public docs
+- `scripts/validate-public-docs.mjs` validates manifest and source-of-truth rules before generation
+- `scripts/build-public-docs.mjs` compiles readable docs data into `app/public/generated/public-docs.generated.ts`
+- the same build emits Markdown and PDF downloads under `public/downloads/` and version records under `docs/public/version-records/`
+- the chaptered internal docs use chapter files as canonical source material; the top-level shell docs are not part of the public compiled document content
+
 Current runtime contracts worth keeping visible here:
 
 - `NexusActionState`

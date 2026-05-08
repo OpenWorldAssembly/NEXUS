@@ -32,47 +32,17 @@ Current source split:
 - `app/*` = application-layer components, hooks, constants, public content, and shared UI/state
 - `src/app/*` = Expo Router route shell and API entrypoints
 
+## Chapter workflow
+
+For specifications, the chapter files under `docs/specifications/*` are the canonical content source.
+
+- update the relevant chapter file first when specifications truth changes
+- keep this top-level file as a short index and navigation shell
+- do not hand-edit generated public docs artifacts under `app/public/generated/`, `public/downloads/`, or `docs/public/version-records/`
+
 ## Chapters
 
 - [Product Surface](specifications/product-surface.md)
 - [Nexus Routes And Workflows](specifications/nexus-routes-and-workflows.md)
 - [Architecture And State](specifications/architecture-and-state.md)
 - [Known Gaps And Provisional Notes](specifications/known-gaps-and-provisional.md)
-
-### Public action/link model
-
-- Public content actions are represented by `PublicPageAction` in `app/public/content-types.ts`.
-- Actions may target internal public routes, external URLs, or static download paths under `/downloads/`.
-- Existing internal route `href` usage remains supported as a compatibility bridge while newer content should prefer explicit `target` objects.
-
-
-### Public docs page structure
-
-- The `/docs` route renders a public docs hero, document directory, selected readable document, and downloads/resources panel.
-- The Charter, Nexus README, Implementation Guide, Specifications, and Roadmap are currently selectable and readable on-page through `PublicDocumentReader` and `PUBLIC_READABLE_DOCUMENTS`.
-- Directory entries currently include the OWA Charter, Nexus README, Implementation Guide, Specifications, and Roadmap.
-- Generated Markdown download actions point at `/downloads/*` artifacts and trigger browser downloads on web. PDF actions remain disabled placeholders until the PDF export pipeline is implemented.
-
-### Public docs generated artifacts
-
-- The `/docs` page can switch its readable panel between Charter, Nexus README, Implementation Guide, Specifications, and Roadmap entries.
-- Directory read buttons select the readable document in-page and scroll to the reader anchor; Markdown download buttons point at generated static files under `/downloads/`.
-- `scripts/build-public-docs.mjs` is the current source of truth for compiling public Markdown sources into generated reader data and static Markdown downloads.
-- Generated PDF actions remain disabled placeholders until a PDF export step is added.
-- The document reader displays a local outline and anchored section cards for long generated documents; this is separate from the reusable secondary navigation system for now.
-
-### Public Docs Reader Behavior
-
-- Public document cards may expose a `Read Below` action that selects the current document and scrolls the Docs page shell to the readable document panel.
-- Reader outline items scroll within the public page shell rather than using browser-level document scrolling.
-- Markdown downloads use static files generated into `public/downloads/` and should be triggered as browser downloads on web.
-- PDF actions remain disabled placeholders until the PDF pipeline is added.
-
-### Core packet ontology foundation
-
-- `core/schema/packet-schema.ts` now supports four additional forward packet families: `Cause`, `Action`, `Relation`, and `Location`.
-- `Element` bodies now support broader scope/entity metadata, including `type`, `scope_kind`, `scope_system`, `status`, alias arrays, and optional custody hints, while preserving legacy locality and identity fields.
-- `Policy` bodies now support structured `dependency_policy` and `alignment_policy` sections in addition to the older trust and write policy fields.
-- `core/packets/*` now includes forward builders and family-owned build definitions for `Cause`, `Action`, `Relation`, and `Location`.
-- `core/projections/forward-ontology.ts` provides narrow forward projections so legacy `Initiative` / `Program` / `Campaign` packets can be read as cause-shaped projections, mission-family packets can be read as action-shaped projections, and claim packets can be read as relation assertions.
-- Existing stored packet families remain readable through compatibility handling; this pass does not add new routes or visible product workflows.

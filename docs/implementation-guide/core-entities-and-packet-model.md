@@ -27,7 +27,13 @@ The universal identity anchor.
 - organization
 - service
 - overlay or coordination group
-- initiative
+
+Current direction:
+
+- `Element` remains the durable actor, scope, and container family
+- `Element.subtype` is now the forward classifier surface
+- `Element.kind` remains live only as compatibility metadata for historical packets and current runtime consumers that have not migrated yet
+- dotted subtype forms such as `person.claimed_identity` or `assembly.city` are now the forward model when the older shape previously depended on both `kind` and `subtype`
 
 ### Scope
 
@@ -39,41 +45,70 @@ A policy-governed civic or geographic element subtype, not a separate storage pr
 
 ### Initiative
 
-A generic Nexus concept for policy and template lineage. OWA should be modeled as an initiative inside Nexus rather than as a hardcoded exception.
+A generic Nexus concept for policy and template lineage in legacy/current compatibility terms. Forward ontology work now models this as `Cause(subtype: initiative)`, and OWA should be treated as one such initiative anchor rather than as a hardcoded exception.
 
 ### Claim
 
-The current canonical packet family for scoped social assertions, including:
+The assertion and argument family.
+
+Current forward direction:
+
+- `Claim` can target packets generically
+- `Claim` may carry `claim_markdown` and supporting refs
+- `Claim(subtype: relation_assertion)` is the forward shape for claims specifically asserting a relation
+- legacy `claim_kind` packets such as:
 
 - `role_association`
 - `assembly_association`
 - `home_locality`
 
-Current code truth:
-
-- `Claim` remains a distinct packet family today
-- the docs should continue to describe that as current architecture
+remain readable and are projected into the widened claim shape through compatibility.
 
 ### Attestation
 
-The current packet family for support, dispute, and other evidence-oriented signals.
+The evidence, certification, support, dispute, and packet-signal family.
 
 Current code truth:
 
 - claim support and dispute currently stay on `Attestation`
 - `Attestation` and `Claim` are still distinct in code
+- `Attestation` now also carries forward `type/subtype` semantics while preserving `attestation_kind` compatibility
 
 ### Role
 
-A reusable role definition packet family. Exact-scope role assertions are currently represented through `Claim(kind: "role_association")`.
+A reusable role definition packet family. Exact-scope role assertions are currently represented through `Claim(subtype: "relation_assertion")` with `claim_kind: "role_association"` preserved for compatibility.
 
 ### Policy
 
 The configuration and legitimacy family for defaults, thresholds, and later execution rules.
 
+Current direction:
+
+- actual adopted or followed graph facts belong in `Relation`
+- asserted or disputable statements belong in `Claim`
+- evidence and support/dispute posture belong in `Attestation`
+- legitimacy-sensitive relation rules belong in `Policy.relation_requirements`
+
 ### Decision
 
 A governance artifact family that exists in infrastructure and read surfaces, but whose real workflow semantics are still developing.
+
+## Schema evolution discipline
+
+Before changing packet schemas, read this chapter first.
+
+Also read `docs/implementation-guide/trust-moderation-and-policy.md` before changing `Claim`, `Attestation`, `Relation`, or `Policy` semantics.
+
+For any packet family schema version change, the required checklist is:
+
+- update the active schema or body shape
+- update the family compatibility registry entry
+- add or update upcast and downcast adapters where backward compatibility is intended
+- update current schema version metadata
+- update builders and family build definitions so new writes emit the canonical current shape
+- update signature and write-preparation behavior if additive or defaulted fields affect compatibility or signing
+- add or update tests for parse and read compatibility, adapted read behavior, write preparation, and any supported upcast or downcast path
+- document the change in the relevant chapter and add a decision-log note when the change is architecture-significant
 
 ## Relationships and graph semantics
 

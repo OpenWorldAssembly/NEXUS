@@ -10,7 +10,7 @@
 ## Deeper design questions
 
 - Should reactions remain separate from higher-meaning vouch or objection signals?
-- Should `Claim` remain a distinct family long term, or eventually converge with a broader attestation umbrella?
+- Which future relationship workflows should remain claim-mediated, and which should be written directly as plain relations?
 - What exact authority model should govern multi-key assemblies and custody transition?
 - What exact event turns a decision from a signal into an effect-bearing authority artifact?
 - Which built-in action handlers, if any, should Nexus eventually support for automatic execution?

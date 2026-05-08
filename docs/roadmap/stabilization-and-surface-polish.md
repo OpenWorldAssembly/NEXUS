@@ -23,8 +23,6 @@ The next planning focus is still catch-up and semantic stabilization.
 
 ## Packet Explorer follow-up backlog
 
-- packet-id and revision-id search from the Home tab
-- import packet and import bundle flows
 - `Fork`, `Adapt`, `Export`, and `Follow` semantics
 - diff views and revision compare
 - richer link grouping and filtering

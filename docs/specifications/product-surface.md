@@ -24,6 +24,20 @@ Not implemented today:
 - trust-weighted ranking, moderation enforcement, delegation, or proposal execution
 - dedicated routed packet detail pages outside Packet Explorer
 
+## Public docs surface
+
+- the public `/docs` route renders a docs hero, a document directory, a selected readable document panel, and downloads/resources panels
+- the current directory includes Charter, Nexus README, Implementation Guide, Specifications, and Roadmap
+- readable docs are served from `app/public/generated/public-docs.generated.ts`
+- Markdown and PDF downloads are served from generated artifacts under `/downloads/*`
+- the readable document surface uses one continuous document with an outline and anchored sections
+
+## Public content links
+
+- public content actions are represented by `PublicPageAction` in `app/public/content-types.ts`
+- actions may target internal public routes, external URLs, or static download paths under `/downloads/`
+- existing internal route `href` usage remains supported as a compatibility bridge while newer content should prefer explicit `target` objects
+
 ## Current surface roles
 
 ### Library

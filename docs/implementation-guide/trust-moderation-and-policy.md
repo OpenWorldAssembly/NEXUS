@@ -45,24 +45,21 @@ Status: canon candidate
 
 ### Current code truth
 
-- `Claim` is still its own packet family
-- `Attestation` is still its own packet family
+- `Relation` is the structural family for adopted graph facts
+- `Claim` is its own live packet family for assertions, arguments, and disputable relation claims
+- `Attestation` is its own live packet family for evidence, certification, support/dispute, and packet-signal responses
 - current discussion voting uses packet-signal attestations rather than a separate reaction family
+- current claim support and dispute still run through the attestation service and attestation indexes
 
 ### Direction
 
-- keep the current `Claim` split in code for now
-- record a live design question about whether the long-term model should converge toward a broader attestation umbrella with subtypes such as:
-  - `reaction`
-  - `voucher`
-  - `objection`
-  - `claim`
-- keep the semantics distinction clear even if the long-term storage model converges
+- keep `Claim` and `Attestation` distinct
+- treat `Claim` as the forward layer for relation assertions and other packet-targeted arguments
+- treat `Attestation` as the forward layer for supporting, disputing, certifying, or signaling around packets, including Claims and Relations
+- do not require Claim wrappers for every Relation
+- let policy require supporting Claims for legitimacy-sensitive Relations where needed
 
-### Unresolved
+Current implementation note:
 
-- whether reactions deserve their own base family or should remain an attestation-like subtype
-- whether `vouch` and `flag` should become explicit attestation subtypes
-- whether claims should ever collapse into a generalized attestation family
-
-This is an active modeling question, not a current implementation decision.
+- the new `Policy.relation_requirements` seam exists so rules like OWA home-locality support can be expressed generically instead of being hardcoded as route-only logic
+- this chapter should be read before changing `Claim`, `Attestation`, `Relation`, or `Policy` semantics because it owns the intended separation between assertion, evidence, graph structure, and policy requirements

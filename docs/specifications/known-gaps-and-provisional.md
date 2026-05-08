@@ -18,7 +18,7 @@
 ## Explorer caveats
 
 - Packet Explorer is read-only
-- search, import/export, follow semantics, fork or adapt execution, diff, and compare are not live yet
+- follow semantics, fork or adapt execution, diff, and compare are not live yet
 - official versus unofficial initiative filtering is not active product behavior
 - initiative-version subscription behavior is not active product behavior
 

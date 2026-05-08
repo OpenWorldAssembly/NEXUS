@@ -16,6 +16,12 @@ This monthly log condenses the May 2026 decisions that remain most important for
 
 - Canon docs are being split into index files plus shallow chapter folders to reduce edit cost, preserve top-level link stability, and keep current truth, durable architecture, and roadmap work separated cleanly.
 
+## 2026-05 docs workflow cleanup
+
+- The multi-chapter internal docs now treat chapter files as the canonical content source, while the top-level files remain short local index shells only.
+- Public docs generation for implementation guide, specifications, and roadmap now compiles from chapter files only instead of concatenating the top-level shell files into the public artifact.
+- The docs build now validates chaptered manifest entries, missing or duplicate source files, generated-artifact misuse, and shell-file drift before producing readable or downloadable outputs.
+
 ## 2026-05 shell honesty foundation
 
 - Nexus now uses a shell-level early-access gate as a session-scoped entry warning rather than leaving public-facing instability as unstated product lore.

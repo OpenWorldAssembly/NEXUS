@@ -8,10 +8,13 @@ import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 
+import {
+  loadPublicDocsManifest,
+  validatePublicDocsManifest,
+} from './public-docs-manifest.mjs';
 import { renderMarkdownDocumentToPdf } from './public-docs-pdf.mjs';
 
 const repoRoot = process.cwd();
-const manifestPath = path.join(repoRoot, 'docs/public/public-docs.manifest.json');
 const downloadsDir = path.join(repoRoot, 'public/downloads');
 const generatedDir = path.join(repoRoot, 'app/public/generated');
 const versionRecordsDir = path.join(repoRoot, 'docs/public/version-records');
@@ -46,11 +49,6 @@ function isDuplicateDocumentTitle(sourceTitle, documentTitle) {
   const target = normalizeTitleForComparison(documentTitle);
 
   return source === target || source.endsWith(target) || target.endsWith(source);
-}
-
-async function readJson(filePath) {
-  const raw = await readFile(filePath, 'utf8');
-  return JSON.parse(raw);
 }
 
 async function getMarkdownSourceFiles(documentConfig) {
@@ -261,7 +259,7 @@ function parseReadableDocument(markdown, documentConfig) {
 
     if (/^[-*]\s+/.test(line)) {
       flushParagraph(paragraphLines, getCurrentBody());
-      getCurrentBody().push(`• ${stripInlineMarkdown(line.replace(/^[-*]\s+/, ''))}`);
+      getCurrentBody().push(`- ${stripInlineMarkdown(line.replace(/^[-*]\s+/, ''))}`);
       continue;
     }
 
@@ -387,7 +385,8 @@ async function writeVersionRecord(documentConfig, markdown) {
 }
 
 async function main() {
-  const manifest = await readJson(manifestPath);
+  const { manifest } = await loadPublicDocsManifest({ repoRoot });
+  await validatePublicDocsManifest({ repoRoot, manifest });
   const readableDocuments = [];
   const downloads = {};
 

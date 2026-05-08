@@ -23,6 +23,14 @@ The current stack is still:
 
 The repo is past the "prove the concept exists" phase. The next priority remains semantic stabilization, not another broad structural refactor.
 
+## Chapter workflow
+
+For roadmap planning, the chapter files under `docs/roadmap/*` are the canonical content source.
+
+- update the relevant chapter file first when roadmap content changes
+- keep this top-level file as a short index and navigation shell
+- do not hand-edit generated public docs artifacts under `app/public/generated/`, `public/downloads/`, or `docs/public/version-records/`
+
 ## Chapters
 
 - [Stabilization And Surface Polish](roadmap/stabilization-and-surface-polish.md)

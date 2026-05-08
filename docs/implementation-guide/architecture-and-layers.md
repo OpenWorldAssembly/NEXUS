@@ -45,6 +45,37 @@ The active repo split is:
 - `app/*` for application-layer components, hooks, constants, public content, and shared state
 - `src/app/*` for the Expo Router route shell and API entrypoints
 
+## Documentation system
+
+The multi-chapter internal docs now use a chapter-first source-of-truth model.
+
+Canonical content lives in:
+
+- `docs/implementation-guide/*`
+- `docs/specifications/*`
+- `docs/roadmap/*`
+
+The top-level files:
+
+- `docs/implementation-guide.md`
+- `docs/specifications.md`
+- `docs/roadmap.md`
+
+remain short local index shells only.
+
+Public docs generation is now expected to follow that structure:
+
+- `docs/public/public-docs.manifest.json` owns the ordered public source lists
+- `scripts/validate-public-docs.mjs` validates manifest and shell/source-of-truth rules
+- `scripts/build-public-docs.mjs` compiles readable docs data, Markdown downloads, PDF downloads, and version records
+- generated artifacts under `app/public/generated/`, `public/downloads/`, and `docs/public/version-records/` are derived outputs and should not be edited by hand
+
+Expected workflow:
+
+- update chapter files first
+- run `npm run docs:validate` after canon doc edits
+- rely on `npm run docs:build` during site/export builds or when intentionally refreshing generated public docs artifacts
+
 ## Core versus adapters
 
 ### Core owns
