@@ -2,7 +2,7 @@
  * File: library.tsx
  * Description: Renders the packet library with typed filters and packet-native previews.
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScrollView, Text, View } from 'react-native';
 
@@ -20,10 +20,6 @@ import { fetchNexusLibraryPayload } from '@runtime/nexus/nexus-query-api';
 
 type PacketFilter = 'all' | PacketFamily;
 
-const packetFilters: PacketFilter[] = [
-  'all',
-  ...PACKET_FAMILIES,
-];
 
 /**
  * Inputs: none.
@@ -74,7 +70,7 @@ export default function NexusLibraryPage() {
       try {
         const nextLibraryPayload = await fetchNexusLibraryPayload({
           scopeId: activeScope.id,
-          familyFilter: packetFilter === 'all' ? null : packetFilter,
+          familyFilter: null,
           actorPacketId: currentActorPacketId,
         });
 
@@ -105,9 +101,35 @@ export default function NexusLibraryPage() {
     return () => {
       isMounted = false;
     };
-  }, [activeScope.id, currentActorPacketId, packetFilter]);
+  }, [activeScope.id, currentActorPacketId]);
 
-  const visiblePackets = libraryPayload?.packets ?? [];
+  const allPackets = libraryPayload?.packets ?? [];
+  const availablePacketFilters = useMemo<PacketFilter[]>(() => {
+    const availableFamilies = Array.from(
+      new Set(allPackets.map((packet) => packet.family))
+    )
+      .filter((family): family is PacketFamily =>
+        PACKET_FAMILIES.includes(family as PacketFamily)
+      )
+      .sort((leftFamily, rightFamily) => leftFamily.localeCompare(rightFamily));
+
+    return ['all', ...availableFamilies];
+  }, [allPackets]);
+  const visiblePackets =
+    packetFilter === 'all'
+      ? allPackets
+      : allPackets.filter((packet) => packet.family === packetFilter);
+
+  useEffect(() => {
+    if (
+      !isLoadingLibrary &&
+      packetFilter !== 'all' &&
+      !availablePacketFilters.includes(packetFilter)
+    ) {
+      setPacketFilter('all');
+    }
+  }, [availablePacketFilters, isLoadingLibrary, packetFilter]);
+
   const highlightedPacketHasExplorerTab =
     highlightedPacketId !== null &&
     packetExplorerSession.tabs.some(
@@ -193,7 +215,7 @@ export default function NexusLibraryPage() {
             Filters
           </Text>
           <View className="flex-row flex-wrap gap-3">
-            {packetFilters.map((filter) => {
+            {availablePacketFilters.map((filter) => {
               const isActive = packetFilter === filter;
 
               return (

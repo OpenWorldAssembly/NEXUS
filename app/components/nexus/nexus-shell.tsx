@@ -7,20 +7,16 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   PanResponder,
   Pressable,
-  Text,
   View,
   useWindowDimensions,
 } from 'react-native';
 
 import { NexusFeatureStatusProvider } from '@app/components/nexus/nexus-feature-status-context';
+import { NexusShellChromeProvider } from '@app/components/nexus/nexus-shell-chrome-context';
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import NexusPacketExplorer from '@app/components/nexus/nexus-packet-explorer';
 import NexusShellEntryGate from '@app/components/nexus/nexus-shell-entry-gate';
 import NexusSidebar from '@app/components/nexus/nexus-sidebar';
-import {
-  NexusBevelEdges,
-  useNexusChrome,
-} from '@app/components/nexus/nexus-ui';
 import {
   getNexusRailWidth,
   NEXUS_COLLAPSED_RAIL_WIDTH,
@@ -32,20 +28,18 @@ import {
  */
 export default function NexusShell({ children }: PropsWithChildren) {
   const {
-    activeScope,
-    navigationMode,
     themeMode,
     uiDensity,
     isEarlyAccessGateOpen,
     dismissEarlyAccessGate,
     collapseOuterRail,
+    collapseAllRails,
     expandInnerRail,
     expandAllRails,
     isPrimaryRailCollapsed,
     isSecondaryRailCollapsed,
   } = useNexusShell();
   const { width } = useWindowDimensions();
-  const chrome = useNexusChrome();
   const isDesktop = width >= 1100;
   const [isSidebarOpen, setIsSidebarOpen] = useState(isDesktop);
   const railWidth = getNexusRailWidth(uiDensity);
@@ -58,14 +52,6 @@ export default function NexusShell({ children }: PropsWithChildren) {
   const mobileSidebarWidth = Math.min(width * 0.96, resolvedMobileSidebarWidth);
   const shellCanvasClass =
     themeMode === 'dark' ? 'bg-nexus-canvas' : 'bg-slate-100';
-  const mobileBarClass =
-    themeMode === 'dark'
-      ? 'border-nexus-line bg-nexus-ink'
-      : 'border-slate-300 bg-white';
-  const mobileHeadingClass =
-    themeMode === 'dark' ? 'text-nexus-text' : 'text-slate-900';
-  const mobileMetaClass =
-    themeMode === 'dark' ? 'text-nexus-muted' : 'text-slate-600';
   const sidebarBorderClass =
     themeMode === 'dark' ? 'border-nexus-line' : 'border-slate-300';
   const overlayBackdropClass =
@@ -93,10 +79,48 @@ export default function NexusShell({ children }: PropsWithChildren) {
     isSidebarOpen,
   ]);
 
-  const openMobileMenu = useCallback(() => {
+  const toggleShellMenu = useCallback(() => {
+    if (isDesktop) {
+      if (!isSidebarOpen) {
+        expandAllRails();
+        setIsSidebarOpen(true);
+        return;
+      }
+
+      if (isPrimaryRailCollapsed || isSecondaryRailCollapsed) {
+        expandAllRails();
+        return;
+      }
+
+      collapseAllRails();
+      return;
+    }
+
+    setIsSidebarOpen((currentValue) => {
+      if (currentValue) {
+        return false;
+      }
+
+      expandAllRails();
+      return true;
+    });
+  }, [
+    collapseAllRails,
+    expandAllRails,
+    isDesktop,
+    isSidebarOpen,
+    isPrimaryRailCollapsed,
+    isSecondaryRailCollapsed,
+  ]);
+
+  const openSidebarMenu = useCallback(() => {
     expandAllRails();
     setIsSidebarOpen(true);
   }, [expandAllRails]);
+
+  const closeSidebarMenu = useCallback(() => {
+    setIsSidebarOpen(false);
+  }, []);
 
   const sidebarPanResponder = useMemo(
     () =>
@@ -128,11 +152,11 @@ export default function NexusShell({ children }: PropsWithChildren) {
           Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
         onPanResponderRelease: (_, gestureState) => {
           if (gestureState.dx >= 40) {
-            openMobileMenu();
+            openSidebarMenu();
           }
         },
       }),
-    [isDesktop, isSidebarOpen, openMobileMenu]
+    [isDesktop, isSidebarOpen, openSidebarMenu]
   );
 
   return (
@@ -149,82 +173,63 @@ export default function NexusShell({ children }: PropsWithChildren) {
           }`}
         />
 
-        {!isDesktop ? (
-          <View className={`border-b px-4 pb-4 pt-5 ${mobileBarClass}`}>
-            <View className="flex-row items-center justify-between">
-              <View className="gap-1">
-                <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
-                  Nexus shell
-                </Text>
-                <Text className={`text-xl font-bold ${mobileHeadingClass}`}>
-                  {activeScope.name}
-                </Text>
-                <Text className={`text-sm ${mobileMetaClass}`}>
-                  {navigationMode === 'function'
-                    ? 'Function-first view'
-                    : 'Scope-first view'}
-                </Text>
+        <NexusShellChromeProvider
+          value={{
+            isDesktop,
+            isSidebarOpen,
+            isPrimaryRailCollapsed,
+            isSecondaryRailCollapsed,
+            toggleShellMenu,
+            openShellMenu: openSidebarMenu,
+            closeShellMenu: closeSidebarMenu,
+          }}
+        >
+          <View className="flex-1 lg:flex-row">
+            {isDesktop && isSidebarOpen ? (
+              <View
+                className={`border-r ${sidebarBorderClass}`}
+                style={{ width: desktopSidebarWidth }}
+                {...sidebarPanResponder.panHandlers}
+              >
+                <NexusSidebar
+                  isDesktop={isDesktop}
+                  onRequestClose={() => setIsSidebarOpen(false)}
+                />
+              </View>
+            ) : null}
+
+            <View className="flex-1">{children}</View>
+          </View>
+
+          {!isDesktop && isSidebarOpen ? (
+            <View className="absolute inset-0 z-20 flex-row">
+              <View
+                className={`border-r ${sidebarBorderClass}`}
+                style={{ width: mobileSidebarWidth }}
+                {...sidebarPanResponder.panHandlers}
+              >
+                <NexusSidebar
+                  isDesktop={isDesktop}
+                  onRequestClose={() => setIsSidebarOpen(false)}
+                />
               </View>
 
               <Pressable
                 accessibilityRole="button"
-                className={chrome.mobileMenuButtonClass}
-                onPress={openMobileMenu}
-              >
-                <Text className={`text-sm font-semibold ${mobileHeadingClass}`}>
-                  Open menu
-                </Text>
-                <NexusBevelEdges subtle />
-              </Pressable>
-            </View>
-          </View>
-        ) : null}
-
-        <View className="flex-1 lg:flex-row">
-          {isDesktop ? (
-            <View
-              className={`border-r ${sidebarBorderClass}`}
-              style={{ width: desktopSidebarWidth }}
-              {...sidebarPanResponder.panHandlers}
-            >
-              <NexusSidebar
-                isDesktop={isDesktop}
-                onRequestClose={() => setIsSidebarOpen(false)}
+                className={`flex-1 ${overlayBackdropClass}`}
+                onPress={() => setIsSidebarOpen(false)}
               />
             </View>
           ) : null}
 
-          <View className="flex-1">{children}</View>
-        </View>
-
-        {!isDesktop && isSidebarOpen ? (
-          <View className="absolute inset-0 z-20 flex-row">
+          {!isDesktop && !isSidebarOpen ? (
             <View
-              className={`border-r ${sidebarBorderClass}`}
-              style={{ width: mobileSidebarWidth }}
-              {...sidebarPanResponder.panHandlers}
-            >
-              <NexusSidebar
-                isDesktop={isDesktop}
-                onRequestClose={() => setIsSidebarOpen(false)}
-              />
-            </View>
-
-            <Pressable
-              accessibilityRole="button"
-              className={`flex-1 ${overlayBackdropClass}`}
-              onPress={() => setIsSidebarOpen(false)}
+              className="absolute inset-y-0 left-0 z-10 w-6"
+              pointerEvents="box-only"
+              {...openSidebarPanResponder.panHandlers}
             />
-          </View>
-        ) : null}
-
-        {!isDesktop && !isSidebarOpen ? (
-          <View
-            className="absolute inset-y-0 left-0 z-10 w-6"
-            pointerEvents="box-only"
-            {...openSidebarPanResponder.panHandlers}
-          />
-        ) : null}
+          ) : null}
+        </NexusShellChromeProvider>
 
         <NexusPacketExplorer />
       </NexusFeatureStatusProvider>

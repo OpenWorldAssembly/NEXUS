@@ -215,7 +215,7 @@ export default function NexusIdentitySecurityPage() {
     <IdentityPageShell
       eyebrow="Identity"
       title="Identity security"
-      description="Manage the Nexus shell around the current cryptographic actor: remembered sessions, write approval, passkeys, device sessions, and encrypted bundle export."
+      description="Manage the current identity: remembered sessions, write approval, passkeys, device sessions, and encrypted bundle export."
     >
       <View className="flex-col gap-4 2xl:flex-row">
         <View className="min-w-0 gap-4 2xl:flex-1">
@@ -225,7 +225,7 @@ export default function NexusIdentitySecurityPage() {
                 <Text className={appearance.itemBodyClass}>
                   {welcomeMode === 'create'
                     ? 'Your claimed identity is ready. Export an encrypted bundle soon and store it somewhere safe so this device is not your only copy.'
-                    : 'Your guest actor is now claimed. Export an encrypted bundle soon and store it somewhere safe so you can restore it on another device.'}
+                    : 'Your guest identity is now claimed. Export an encrypted bundle soon and store it somewhere safe so you can restore it on another device.'}
                 </Text>
                 <Text className={appearance.itemMetaClass}>
                   The encrypted bundle contains the private signing material
@@ -241,7 +241,7 @@ export default function NexusIdentitySecurityPage() {
             <View className="flex-row flex-wrap gap-3">
               <NexusBadge
                 label={
-                  currentMode === 'claimed' ? 'Claimed identity' : 'Guest actor'
+                  currentMode === 'claimed' ? 'Claimed identity' : 'Guest identity'
                 }
                 tone={currentMode === 'claimed' ? 'gold' : 'sky'}
               />

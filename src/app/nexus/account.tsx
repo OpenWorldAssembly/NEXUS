@@ -69,7 +69,7 @@ export default function NexusAccountPage() {
         <NexusSectionHeader
           eyebrow="Account"
           title="Account"
-          description="Wrapper-level identity custody, session state, and security tooling stay here rather than in the scoped Trust and Roles workspaces."
+          description="Manage identity, session, and account controls for the Nexus shell."
           trailing={
             <View className="flex-row flex-wrap gap-3">
               <NexusBadge label={currentActorLabel} tone="mint" />
@@ -81,12 +81,12 @@ export default function NexusAccountPage() {
           <View className="flex-1 gap-4">
             <NexusCard className="gap-4">
               <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
-                Current actor
+                Current identity
               </Text>
               <Text className={appearance.surfaceTitleClass}>{currentActorLabel}</Text>
               <View className="flex-row flex-wrap gap-3">
                 <NexusBadge
-                  label={currentIdentityMode === 'claimed' ? 'Claimed identity' : 'Guest actor'}
+                  label={currentIdentityMode === 'claimed' ? 'Claimed identity' : 'Guest identity'}
                   tone={currentIdentityMode === 'claimed' ? 'gold' : 'sky'}
                 />
                 <NexusBadge
@@ -106,7 +106,7 @@ export default function NexusAccountPage() {
                     ? `Remembered claimed sign-ins are currently ${
                         rememberClaimedSessions ? 'enabled' : 'disabled'
                       }, and write approval is set to ${securityMode ?? 'guest-only'}.`
-                    : 'A claimed session is active, but the local identity bundle is locked. Unlock this identity to resume signed writes and identity security tools.'
+                    : 'A claimed session is active, but the local identity bundle is locked. Unlock this identity to resume signed writes and security tools.'
                   : currentIdentityMode === 'claimed'
                     ? 'This claimed identity is saved locally, but no claimed session is active yet. Resume this identity to manage passkeys, sessions, and write approval.'
                     : `Current guest persistence is ${
@@ -135,6 +135,13 @@ export default function NexusAccountPage() {
                     onPress={() => router.push('/nexus/identity/claim')}
                   />
                 ) : null}
+                {currentIdentityMode === 'claimed' &&
+                primaryIdentityActionLabel !== 'Identity security' ? (
+                  <NexusActionButton
+                    label="Identity security"
+                    onPress={() => router.push('/nexus/identity/security')}
+                  />
+                ) : null}
                 <NexusActionButton
                   label={secondaryIdentityActionLabel}
                   onPress={() =>
@@ -148,7 +155,7 @@ export default function NexusAccountPage() {
               </View>
               <View className="flex-row flex-wrap gap-3">
                 <NexusBadge label={`${passkeyCount} passkeys`} tone="sky" />
-                <NexusBadge label={currentActorPacketId ?? 'No actor packet id'} />
+                <NexusBadge label={currentActorPacketId ?? 'No identity packet id'} />
               </View>
             </NexusCard>
           </View>

@@ -8,6 +8,7 @@ import {
   type PropsWithChildren,
   type ReactNode,
 } from 'react';
+import { useRouter } from 'expo-router';
 import {
   Modal,
   Pressable,
@@ -19,9 +20,14 @@ import {
 
 import type { NexusFeatureStatusId } from '@app/components/nexus/nexus-feature-status-registry';
 import { useNexusFeatureStatus } from '@app/components/nexus/nexus-feature-status-context';
+import { useNexusShellChrome } from '@app/components/nexus/nexus-shell-chrome-context';
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import type { NexusCardTone } from '@runtime/nexus/nexus-content';
-import type { NexusThemeMode, NexusUiDensity } from '@runtime/nexus/nexus-shell';
+import {
+  getNexusSectionMenuTitle,
+  type NexusThemeMode,
+  type NexusUiDensity,
+} from '@runtime/nexus/nexus-shell';
 
 type NexusCardProps = PropsWithChildren<{
   className?: string;
@@ -544,48 +550,116 @@ export function NexusCard({
 }
 
 /**
- * Inputs: eyebrow, title, optional description, and optional trailing content.
- * Output: a standard section header block for nexus screens.
+ * Inputs: a route title plus compatibility props from existing callers.
+ * Output: the adaptive Nexus route chrome for the current content column.
  */
-export function NexusSectionHeader({
-  eyebrow,
-  title,
-  description,
-  trailing,
-}: NexusSectionHeaderProps) {
-  const { themeMode, uiDensity } = useNexusShell();
+export function NexusSectionHeader({ title }: NexusSectionHeaderProps) {
+  const router = useRouter();
+  const {
+    activeScope,
+    activeSection,
+    themeMode,
+    uiDensity,
+    currentActorLabel,
+    openExplorer,
+  } = useNexusShell();
+  const {
+    isDesktop,
+    isSidebarOpen,
+    isPrimaryRailCollapsed,
+    isSecondaryRailCollapsed,
+    toggleShellMenu,
+  } = useNexusShellChrome();
+  const chrome = getNexusChromeClasses(themeMode, uiDensity);
+  const headingTextClass = themeMode === 'dark' ? 'text-nexus-text' : 'text-slate-900';
+  const mutedTextClass = themeMode === 'dark' ? 'text-nexus-muted' : 'text-slate-600';
+  const titleSizeClass = uiDensity === 'large' ? 'text-3xl lg:text-4xl' : 'text-2xl lg:text-3xl';
+  const isProfileRailVisible =
+    isDesktop && isSidebarOpen && !isPrimaryRailCollapsed;
+  const isContextRailVisible =
+    isDesktop && isSidebarOpen && !isSecondaryRailCollapsed;
+  const activeSectionTitle = getNexusSectionMenuTitle(activeSection, activeScope);
+  const scopedFunctionTitle = `${activeScope.name} ${activeSectionTitle}`.trim();
+  const isScopedFunctionTitle =
+    title.trim().toLowerCase() === scopedFunctionTitle.toLowerCase();
+  const shouldShowProjectLink = !isProfileRailVisible;
+  const shouldShowActorLabel = !isProfileRailVisible;
+  const shouldShowTitle = !(isContextRailVisible && isScopedFunctionTitle);
 
   return (
-    <View className="gap-3 lg:flex-row lg:items-end lg:justify-between">
-      <View className="min-w-0 flex-1 gap-2">
-        {eyebrow ? (
-          <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
-            {eyebrow}
-          </Text>
-        ) : null}
-        <Text
-          className={joinClasses(
-            uiDensity === 'large' ? 'text-4xl lg:text-5xl' : 'text-3xl lg:text-4xl',
-            'font-bold',
-            themeMode === 'dark' ? 'text-nexus-text' : 'text-slate-900',
-          )}
-        >
-          {title}
-        </Text>
-        {description ? (
-          <Text
-            className={joinClasses(
-              uiDensity === 'large' ? 'text-lg lg:text-xl' : 'text-base lg:text-lg',
-              'leading-7',
-              themeMode === 'dark' ? 'text-nexus-muted' : 'text-slate-600',
-            )}
-          >
-            {description}
-          </Text>
+    <View className="gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <View className="min-w-0 flex-1 flex-row flex-wrap items-center gap-3">
+        {shouldShowProjectLink ? (
+            <Pressable
+              accessibilityRole="link"
+              className={joinClasses(
+                chrome.secondaryActionSurfaceClass,
+                'relative overflow-hidden rounded-nexus border px-3 py-2',
+              )}
+              onPress={() => router.push('/')}
+            >
+              <Text className="text-xs font-bold uppercase tracking-[2.5px] text-nexus-sky">
+                Open World Assembly
+              </Text>
+              <NexusBevelEdges subtle />
+            </Pressable>
+          ) : null}
+
+          {shouldShowTitle ? (
+            <Text
+              className={joinClasses(titleSizeClass, 'min-w-0 flex-1 font-bold', headingTextClass)}
+              numberOfLines={1}
+            >
+              {title}
+            </Text>
         ) : null}
       </View>
 
-      {trailing ? <View className="shrink-0">{trailing}</View> : null}
+      <View className="flex-row flex-wrap items-center justify-end gap-2">
+        {shouldShowActorLabel ? (
+          <View
+            className={joinClasses(
+              chrome.badgeFrameClass,
+              themeMode === 'dark'
+                ? 'border-nexus-line/70 bg-white/5'
+                : 'border-slate-300 bg-slate-100',
+            )}
+          >
+            <Text
+              className={joinClasses(
+                'text-xs font-semibold uppercase tracking-[2px]',
+                mutedTextClass,
+              )}
+              numberOfLines={1}
+            >
+              {currentActorLabel}
+            </Text>
+          </View>
+        ) : null}
+
+        <Pressable
+          accessibilityRole="button"
+          className={chrome.mobileMenuButtonClass}
+          onPress={() => openExplorer()}
+        >
+          <Text className={joinClasses('text-sm font-semibold', headingTextClass)}>
+            Packet Explorer
+          </Text>
+          <NexusBevelEdges subtle />
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ expanded: isSidebarOpen }}
+          className={chrome.mobileMenuButtonClass}
+          onPress={toggleShellMenu}
+        >
+          <Text className={joinClasses('text-sm font-semibold', headingTextClass)}>
+            ☰ Menu
+          </Text>
+          <NexusBevelEdges subtle />
+        </Pressable>
+      </View>
     </View>
   );
 }

@@ -3,7 +3,6 @@
  * Description: Renders the left-side nexus rails with collapsible primary and secondary navigation panels.
  */
 import { usePathname, useRouter } from 'expo-router';
-import type { Href } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
@@ -26,9 +25,6 @@ import {
   getNexusChromeClasses,
 } from '@app/components/nexus/nexus-ui';
 import type { NexusSecurityMode } from '@runtime/nexus/nexus-api-types';
-import {
-  NEXUS_COMING_SOON_SURFACES,
-} from '@runtime/nexus/nexus-content';
 import {
   NEXUS_SECTION_ORDER,
   getNexusScopeDepthWidth,
@@ -110,7 +106,6 @@ type NexusScopeMenuContentProps = {
   uiDensity: NexusUiDensity;
   onScopePress: (scopeId: string) => void;
   onScopeFollowPress: (scopeId: string, isFollowed: boolean) => void;
-  onScopeAssociatePress: (scopeId: string, isAssociated: boolean) => void;
 };
 
 type NexusPreferenceSwitchProps<TOption extends string> = {
@@ -435,6 +430,7 @@ function NexusCurrentContextCard({
   uiDensity,
 }: NexusCurrentContextCardProps) {
   const snapshotMetrics = getScopeSnapshotMetrics(scope, activeSection);
+  const activeFunctionTitle = getNexusSectionMenuTitle(activeSection, scope);
   const compactScopePath = truncateScopeCopy(scopePath, 36);
   const chrome = getNexusChromeClasses(themeMode, uiDensity);
 
@@ -449,10 +445,11 @@ function NexusCurrentContextCard({
       <Text
         className={joinClasses(
           'self-center text-center text-xs font-semibold uppercase tracking-[3px]',
-          themeMode === 'dark' ? 'text-nexus-muted' : 'text-slate-600',
+          themeMode === 'dark' ? 'text-nexus-sky' : 'text-sky-600',
         )}
+        numberOfLines={2}
       >
-        Current Context
+        {scope.name}
       </Text>
 
       <View className="items-center gap-3">
@@ -485,7 +482,7 @@ function NexusCurrentContextCard({
           )}
           numberOfLines={2}
         >
-          {scope.name}
+          {activeFunctionTitle}
         </Text>
 
         <Text
@@ -730,18 +727,6 @@ function NexusFunctionMenuContent({
         ))}
       </View>
 
-      <View className="gap-2 pt-2">
-        <NexusMenuSectionLabel
-          label="Deferred surfaces"
-          themeMode={themeMode}
-          uiDensity={uiDensity}
-        />
-        <View className="flex-row flex-wrap gap-2">
-          {NEXUS_COMING_SOON_SURFACES.map((surface) => (
-            <NexusBadge key={surface} label={surface} tone="default" />
-          ))}
-        </View>
-      </View>
     </>
   );
 }
@@ -760,7 +745,6 @@ function NexusScopeMenuContent({
   uiDensity,
   onScopePress,
   onScopeFollowPress,
-  onScopeAssociatePress,
 }: NexusScopeMenuContentProps) {
   const [isExploreOpen, setIsExploreOpen] = useState(false);
   const branchScopeIds = new Set(scopeMenuNodes.map((node) => node.scopeId));
@@ -937,28 +921,6 @@ function NexusScopeMenuContent({
                   >
                     {getNexusScopeLevelLabel(scope.level)}
                   </Text>
-                  {scope.isAssociated ||
-                  scope.isHomeAncestor ||
-                  scope.associationKind?.includes('compatibility') ||
-                  scope.structuralState !== 'canonical' ? (
-                    <View className="mt-2 flex-row flex-wrap gap-2">
-                      {scope.isAssociated ? (
-                        <NexusBadge label="Associated" tone="default" />
-                      ) : null}
-                      {scope.isHomeAncestor ? (
-                        <NexusBadge label="Home" tone="default" />
-                      ) : null}
-                      {scope.associationKind?.includes('compatibility') ? (
-                        <NexusBadge label="Compatibility" tone="default" />
-                      ) : null}
-                      {scope.structuralState !== 'canonical' ? (
-                        <NexusBadge
-                          label={scope.structuralState.replace(/_/g, ' ')}
-                          tone="default"
-                        />
-                      ) : null}
-                    </View>
-                  ) : null}
                   <View className="mt-3 flex-row flex-wrap gap-2">
                     <Pressable
                       accessibilityRole="button"
@@ -999,29 +961,6 @@ function NexusScopeMenuContent({
                         )}
                       >
                         Follow
-                      </Text>
-                      <NexusThemedBevelEdges themeMode={themeMode} subtle />
-                    </Pressable>
-                    <Pressable
-                      accessibilityRole="button"
-                      className={joinClasses(
-                        scope.isAssociated
-                          ? chrome.compactButtonActiveClass
-                          : chrome.compactButtonClass,
-                      )}
-                      onPress={() => onScopeAssociatePress(scope.id, !scope.isAssociated)}
-                    >
-                      <Text
-                        className={joinClasses(
-                          uiDensity === 'large'
-                            ? 'text-sm font-semibold'
-                            : 'text-xs font-semibold',
-                          themeMode === 'dark'
-                            ? 'text-nexus-text'
-                            : 'text-slate-900',
-                        )}
-                      >
-                        {scope.isAssociated ? 'Unassociate' : 'Associate'}
                       </Text>
                       <NexusThemedBevelEdges themeMode={themeMode} subtle />
                     </Pressable>
@@ -1075,14 +1014,12 @@ export default function NexusSidebar({
     setActiveScopeId,
     setActiveSection,
     setScopeFollowed,
-    setScopeAssociated,
     setNavigationMode,
     setThemeMode,
     setUiDensity,
     togglePreferencesDrawer,
     togglePrimaryRailCollapsed,
     toggleSecondaryRailCollapsed,
-    openExplorer,
     branchNodes,
   } = useNexusShell();
   const {
@@ -1094,7 +1031,7 @@ export default function NexusSidebar({
     setRememberClaimedSessions,
     setSecurityMode,
   } = useIdentityShell();
-  const { authGateModal, guardNexusWrite, openNexusAuthGate, openNexusAuthGateForError } =
+  const { authGateModal, openNexusAuthGate, openNexusAuthGateForError } =
     useNexusAuthGate({
       returnTo: pathname || '/nexus',
       returnScopeId: activeScopeId,
@@ -1230,9 +1167,17 @@ export default function NexusSidebar({
                 isLargeUi ? 'p-5' : 'p-4',
               )}
             >
-              <Text className="self-center text-center text-xs font-semibold uppercase tracking-[4px] text-nexus-sky">
-                OWA Nexus
-              </Text>
+              <Pressable
+                accessibilityRole="link"
+                className={joinClasses(
+                  'self-center px-2 py-1',
+                )}
+                onPress={() => router.push('/')}
+              >
+                <Text className="text-center text-xs font-semibold uppercase tracking-[4px] text-nexus-sky">
+                  Open World Assembly
+                </Text>
+              </Pressable>
               <View className="items-center gap-3">
                 <NexusGuestAvatar themeMode={themeMode} uiDensity={uiDensity} />
                 <Text
@@ -1260,13 +1205,11 @@ export default function NexusSidebar({
               <View className="self-center flex-row gap-2">
                 <Pressable
                   accessibilityRole="button"
-                  className={joinClasses(
-                    signInButtonClass,
-                  )}
+                  className={joinClasses(signInButtonClass)}
                   onPress={() =>
                     router.push(
                       hasActiveClaimedSession
-                        ? '/nexus/identity/security'
+                        ? '/nexus/account'
                         : '/nexus/identity/sign-in'
                     )
                   }
@@ -1279,19 +1222,17 @@ export default function NexusSidebar({
                       titleTextClass,
                     )}
                   >
-                    {hasActiveClaimedSession ? 'Security' : 'Sign In'}
+                    {hasActiveClaimedSession ? 'Account' : 'Sign In'}
                   </Text>
                   <NexusThemedBevelEdges themeMode={themeMode} subtle />
                 </Pressable>
                 <Pressable
                   accessibilityRole="button"
-                  className={joinClasses(
-                    signUpButtonClass,
-                  )}
+                  className={joinClasses(signUpButtonClass)}
                   onPress={() =>
                     router.push(
                       hasActiveClaimedSession
-                        ? '/nexus/account'
+                        ? '/nexus/identity/sign-in'
                         : '/nexus/identity/claim'
                     )
                   }
@@ -1304,60 +1245,12 @@ export default function NexusSidebar({
                       'text-nexus-canvas',
                     )}
                   >
-                    {hasActiveClaimedSession ? 'Profile' : 'Claim'}
+                    {hasActiveClaimedSession ? 'Switch' : 'Claim'}
                   </Text>
                   <NexusThemedBevelEdges themeMode={themeMode} subtle />
                 </Pressable>
               </View>
 
-              <Pressable
-                accessibilityRole="button"
-                className={joinClasses(
-                  'items-center',
-                  homeButtonClass,
-                  isLargeUi ? 'px-4 py-3' : 'px-3 py-2.5',
-                )}
-                onPress={() => router.push('/' as Href)}
-              >
-                <Text
-                  className={joinClasses(
-                    isLargeUi
-                      ? 'text-sm font-semibold uppercase tracking-[2px]'
-                      : 'text-xs font-semibold uppercase tracking-[2px]',
-                    titleTextClass,
-                  )}
-                  >
-                    Back to Home
-                  </Text>
-                  <NexusThemedBevelEdges themeMode={themeMode} subtle />
-                </Pressable>
-                <Pressable
-                  accessibilityRole="button"
-                  className={joinClasses(
-                    'items-center',
-                    homeButtonClass,
-                    isLargeUi ? 'px-4 py-3' : 'px-3 py-2.5',
-                  )}
-                  onPress={() => {
-                    openExplorer();
-
-                    if (!isDesktop) {
-                      onRequestClose();
-                    }
-                  }}
-                >
-                <Text
-                  className={joinClasses(
-                    isLargeUi
-                      ? 'text-sm font-semibold uppercase tracking-[2px]'
-                      : 'text-xs font-semibold uppercase tracking-[2px]',
-                    titleTextClass,
-                  )}
-                >
-                  Packet Explorer
-                </Text>
-                <NexusThemedBevelEdges themeMode={themeMode} subtle />
-              </Pressable>
               {hasActiveClaimedSession && !isCurrentIdentityUnlocked ? (
                 <Pressable
                   accessibilityRole="button"
@@ -1376,7 +1269,7 @@ export default function NexusSidebar({
                       titleTextClass,
                     )}
                   >
-                    Unlock This Identity
+                    Unlock Identity
                   </Text>
                   <NexusThemedBevelEdges themeMode={themeMode} subtle />
                 </Pressable>
@@ -1618,38 +1511,7 @@ export default function NexusSidebar({
                     scopeSummaries={scopeSummaries}
                     onScopePress={handleScopePress}
                     onScopeFollowPress={(scopeId, isFollowed) => {
-                      void guardNexusWrite(
-                        {
-                          requiresClaimedIdentity: true,
-                          writeRisk: 'standard',
-                        },
-                        async () => {
-                          try {
-                            await setScopeFollowed(scopeId, isFollowed);
-                          } catch (error) {
-                            if (!openNexusAuthGateForError(error)) {
-                              throw error;
-                            }
-                          }
-                        },
-                      ).catch(() => undefined);
-                    }}
-                    onScopeAssociatePress={(scopeId, isAssociated) => {
-                      void guardNexusWrite(
-                        {
-                          requiresClaimedIdentity: true,
-                          writeRisk: 'standard',
-                        },
-                        async () => {
-                          try {
-                            await setScopeAssociated(scopeId, isAssociated);
-                          } catch (error) {
-                            if (!openNexusAuthGateForError(error)) {
-                              throw error;
-                            }
-                          }
-                        },
-                      ).catch(() => undefined);
+                      void setScopeFollowed(scopeId, isFollowed).catch(() => undefined);
                     }}
                     themeMode={themeMode}
                     uiDensity={uiDensity}
@@ -1733,38 +1595,7 @@ export default function NexusSidebar({
                     scopeSummaries={scopeSummaries}
                     onScopePress={handleScopePress}
                     onScopeFollowPress={(scopeId, isFollowed) => {
-                      void guardNexusWrite(
-                        {
-                          requiresClaimedIdentity: true,
-                          writeRisk: 'standard',
-                        },
-                        async () => {
-                          try {
-                            await setScopeFollowed(scopeId, isFollowed);
-                          } catch (error) {
-                            if (!openNexusAuthGateForError(error)) {
-                              throw error;
-                            }
-                          }
-                        },
-                      ).catch(() => undefined);
-                    }}
-                    onScopeAssociatePress={(scopeId, isAssociated) => {
-                      void guardNexusWrite(
-                        {
-                          requiresClaimedIdentity: true,
-                          writeRisk: 'standard',
-                        },
-                        async () => {
-                          try {
-                            await setScopeAssociated(scopeId, isAssociated);
-                          } catch (error) {
-                            if (!openNexusAuthGateForError(error)) {
-                              throw error;
-                            }
-                          }
-                        },
-                      ).catch(() => undefined);
+                      void setScopeFollowed(scopeId, isFollowed).catch(() => undefined);
                     }}
                     themeMode={themeMode}
                     uiDensity={uiDensity}

@@ -87,6 +87,7 @@ type NexusShellContextValue = NexusShellState & {
   togglePrimaryRailCollapsed: () => void;
   toggleSecondaryRailCollapsed: () => void;
   collapseOuterRail: () => void;
+  collapseAllRails: () => void;
   expandInnerRail: () => void;
   expandAllRails: () => void;
   openExplorer: (input?: {
@@ -512,6 +513,15 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
 
   /**
    * Inputs: none.
+   * Output: collapses both desktop rails while leaving the sidebar rail slivers mounted.
+   */
+  const collapseAllRails = () => {
+    setIsPrimaryRailCollapsed(true);
+    setIsSecondaryRailCollapsed(true);
+  };
+
+  /**
+   * Inputs: none.
    * Output: expands the primary rail first, then the secondary rail.
    */
   const expandInnerRail = () => {
@@ -679,6 +689,7 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
         togglePrimaryRailCollapsed,
         toggleSecondaryRailCollapsed,
         collapseOuterRail,
+        collapseAllRails,
         expandInnerRail,
         expandAllRails,
         openExplorer,
