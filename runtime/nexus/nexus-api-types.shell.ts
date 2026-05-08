@@ -17,7 +17,11 @@ export interface NexusShellPayload {
   scope_summaries: NexusScopeSummary[];
   default_scope_id: string;
   default_expanded_scope_ids: string[];
+  geographic_mounted_scope_ids: string[];
+  associated_scope_ids: string[];
   followed_scope_ids: string[];
+  known_scope_ids: string[];
+  known_unmounted_scope_ids: string[];
   personal_parent_scope_id: string | null;
   home_scope_id: string | null;
   guest_profile: NexusGuestProfile;

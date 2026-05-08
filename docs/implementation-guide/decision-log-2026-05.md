@@ -87,3 +87,10 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - Packet tab decks now present `Home` as the workspace tab label, use middle truncation for packet titles, and surface desktop hover metadata so long packet titles and revision context stay discoverable without widening the deck.
 - Home Export now includes an explicit `Cancel` reset path for packet-scoped export so preloaded packet targets can be cleared without leaving the Export workspace or disturbing the separate full local store export surface.
 - Search preview caps and category browsing are now separated: `All` remains an 8-result grouped preview surface, while focused `Direct`, `Name`, and `Text` views page through larger result sets with server-backed 25-item pages.
+
+## 2026-05 Dynamic scope graph consumer pass 1
+
+- Home locality is now relation-first in the mutation corridor: canonical writes use `home_locality.relation.set` and produce both `Relation(subtype: home_locality)` and a supporting `Claim(subtype: relation_assertion)`.
+- Legacy `home_locality.claim.set`, legacy `Claim(home_locality)`, and legacy `parent_scope` ancestry remain readable only through named compatibility adapters and projections rather than through mixed main-path shell logic.
+- Mounted scope projection now prefers packet-native structural relations such as `default_ancestry_parent` and `defined_by_location`, while also exposing richer packet-backed shell metadata for later UI graph and dashboard work.
+- OWA home-locality legitimacy now evaluates through `Policy.relation_requirements` sourced from the forward `Cause(subtype: initiative)` anchor path instead of route-local hardcoding.

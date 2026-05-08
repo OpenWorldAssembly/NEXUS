@@ -736,7 +736,7 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
       identity: input.identity,
       session: input.session,
       intent: {
-        kind: 'home_locality.claim.set',
+        kind: 'home_locality.relation.set',
         home_scope_packet_id: input.homeScopePacketId,
       },
     });

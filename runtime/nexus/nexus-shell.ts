@@ -41,6 +41,8 @@ export type NexusScopeSummary = {
   name: string;
   shortLabel: string;
   level: 'personal' | 'global' | 'nation' | 'region' | 'city' | 'district';
+  scopeSubtype: string | null;
+  scopeSystem: string | null;
   description: string;
   localityLabel: string;
   badge: string;
@@ -48,9 +50,17 @@ export type NexusScopeSummary = {
   parentId?: string;
   childIds: string[];
   followedScopeIds: string[];
+  isKnown: boolean;
   isMounted: boolean;
   isDiscoverable: boolean;
+  isFollowed: boolean;
+  isAssociated: boolean;
+  isHomeAncestor: boolean;
+  associationKind: string | null;
   mountReasons: NexusScopeMountReason[];
+  justificationPacketIds: string[];
+  structuralRelationPacketIds: string[];
+  locationPacketIds: string[];
   publicLobbyLabel: string;
   stats: {
     members: number;

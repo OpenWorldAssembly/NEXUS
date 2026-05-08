@@ -29,8 +29,8 @@ export type MutationActionId =
   | 'role_association.attestation.clear'
   | 'assembly_association.claim.set'
   | 'assembly_association.claim.withdraw'
-  | 'home_locality.claim.set'
-  | 'home_locality.claim.clear'
+  | 'home_locality.relation.set'
+  | 'home_locality.relation.clear'
   | 'locality.element.create'
   | 'assembly.element.create'
   | 'discussion.surfaces.ensure'
@@ -60,8 +60,8 @@ function isMutationActionId(value: string): value is MutationActionId {
     value === 'role_association.attestation.clear' ||
     value === 'assembly_association.claim.set' ||
     value === 'assembly_association.claim.withdraw' ||
-    value === 'home_locality.claim.set' ||
-    value === 'home_locality.claim.clear' ||
+    value === 'home_locality.relation.set' ||
+    value === 'home_locality.relation.clear' ||
     value === 'locality.element.create' ||
     value === 'assembly.element.create' ||
     value === 'discussion.surfaces.ensure' ||

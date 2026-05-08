@@ -20,8 +20,8 @@ const GUARDED_ACTION_IDS: MutationActionId[] = [
   'discussion.post.create',
   'locality.element.create',
   'assembly.element.create',
-  'home_locality.claim.set',
-  'home_locality.claim.clear',
+  'home_locality.relation.set',
+  'home_locality.relation.clear',
   'actor.write_policy.update',
 ];
 

@@ -22,6 +22,8 @@ Working direction:
 
 - continue refining the `Global + You` baseline
 - keep `home_locality` distinct from `assembly_association`
+- keep canonical packet-native home locality relation writes and explicit compatibility projections as the base for later shell UI graph work
 - improve canonical locality directory behavior and creation quality
 - preserve the distinction between mounted scopes, followed scopes, and merely known scopes
+- follow the current scope-graph consumer pass with a dedicated shell UI pass and then a dedicated location-creation pass rather than collapsing all three into one change set
 - defer shared assembly custody or keyset work until after semantic foundations are clearer

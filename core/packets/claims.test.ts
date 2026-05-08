@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   createAssociationClaimPacket,
   createClaimPacketId,
+  createRelationAssertionClaimPacket,
 } from './claims.ts';
 
 test('claim packet ids are deterministic by subject, target, scope, and kind', () => {
@@ -82,4 +83,26 @@ test('claim revisions preserve compact parent revision refs', () => {
     },
   ]);
   assert.equal(packet.header.revision_id, 'nexus:claim/home-locality-test@r2');
+});
+
+test('relation assertion claim packets can target a relation packet while preserving the asserted scope target', () => {
+  const packet = createRelationAssertionClaimPacket({
+    claimKind: 'home_locality',
+    subjectPacketId: 'nexus:element/person-a',
+    relationPacketId: 'nexus:relation/home_locality/person-a--scope-a--scope-a',
+    assertedTargetPacketId: 'nexus:element/scope-a',
+    scopePacketId: 'nexus:element/scope-a',
+    applicableScopeRefs: [{ packet_id: 'nexus:element/global-commons' }],
+    createdByPacketId: 'nexus:element/person-a',
+    note: 'I live here.',
+  });
+
+  assert.equal(packet.header.family, 'Claim');
+  assert.equal(
+    packet.body.target_ref.packet_id,
+    'nexus:relation/home_locality/person-a--scope-a--scope-a'
+  );
+  assert.equal(packet.body.relation_assertion?.target_ref.packet_id, 'nexus:element/scope-a');
+  assert.equal(packet.body.claim_kind, 'home_locality');
+  assert.equal(packet.body.claim_markdown, 'I live here.');
 });

@@ -38,6 +38,13 @@ Forward ontology currently active in code includes:
 - widened `Attestation` packets with canonical `type/subtype` semantics and legacy `attestation_kind` compatibility
 - `Policy.relation_requirements` as the packet-backed seam for relation support rules
 
+Current scope consumer direction in code includes:
+
+- shell scope projection now prefers packet-native `Relation(subtype: default_ancestry_parent)` for ancestry
+- home locality now resolves through relation-first projection with explicit compatibility fallback instead of claim-first shell logic
+- followed, associated, known, discoverable, and home-ancestor semantics are now carried as additive packet-backed scope-summary metadata
+- linked `Location` packets are surfaced through `Relation(subtype: defined_by_location)` as a read seam without forcing location-creation UX into the same pass
+
 ## Public docs build system
 
 - `docs/public/public-docs.manifest.json` is the source list for generated public docs

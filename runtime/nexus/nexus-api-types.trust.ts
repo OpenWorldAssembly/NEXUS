@@ -29,7 +29,10 @@ export interface NexusTrustRoleProjection {
 }
 
 export interface NexusHomeLocalityProjection {
+  relation_packet_id: string | null;
   claim_packet_id: string | null;
+  compatibility_source: 'canonical_relation' | 'legacy_home_locality_claim_compatibility' | null;
+  policy_evaluation_state: 'not_applicable' | 'satisfied' | 'unsatisfied' | null;
   scope_packet_id: string | null;
   scope_id: string | null;
   scope_name: string | null;

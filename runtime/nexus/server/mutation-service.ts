@@ -21,7 +21,11 @@ import {
   type MutationDecision,
 } from '@core/auth/mutation-verifier';
 import { getPacketUnsignedDigestCandidates } from '@core/auth/mutation-digests';
-import { createAssociationClaimPacket, createClaimPacketId } from '@core/packets/claims';
+import {
+  createAssociationClaimPacket,
+  createClaimPacketId,
+  createRelationAssertionClaimPacket,
+} from '@core/packets/claims';
 import { createElementPolicyRefsRevision } from '@core/packets/identity';
 import {
   createAssemblyPacket,
@@ -30,6 +34,10 @@ import {
   createPacketRef,
   createPolicyPacket,
 } from '@core/packets/builders';
+import {
+  createRelationPacketId,
+  createScopedRelationPacket,
+} from '@core/packets/relations';
 import { buildPacketSignalAttestationPacket } from '@core/packets/discussion';
 import {
   createCanonicalDiscussionPacketId,
@@ -64,6 +72,10 @@ import {
   filterClaimPackets,
   listClaimPackets,
 } from '@runtime/nexus/server/claim-utils';
+import {
+  filterRelationPackets,
+  listRelationPackets,
+} from '@runtime/nexus/server/relation-utils';
 import {
   planDefaultDiscussionSurfaces,
 } from '@runtime/nexus/server/default-discussion-surfaces';
@@ -259,6 +271,12 @@ function createAttestationPacketId(input: {
 
 function assertNeverMutationKind(kind: never): never {
   throw new Error(`Unsupported mutation kind: ${kind}`);
+}
+
+function isHomeLocalityMutationKind(
+  kind: MutationIntent['kind']
+): kind is 'home_locality.relation.set' | 'home_locality.claim.set' {
+  return kind === 'home_locality.relation.set' || kind === 'home_locality.claim.set';
 }
 
 export class NexusMutationService {
@@ -1021,35 +1039,83 @@ export class NexusMutationService {
     };
   }
 
-  private async prepareHomeLocalityClaim(input: {
-    intent: Extract<MutationIntent, { kind: 'home_locality.claim.set' }>;
+  private async prepareHomeLocalityRelation(input: {
+    intent: Extract<MutationIntent, { kind: 'home_locality.relation.set' }>;
     actorPacket: PacketEnvelopeByType['Element'];
   }): Promise<PreparedMutation> {
-    const claimPackets = await listClaimPackets(this.packetStore);
+    const [claimPackets, relationPackets] = await Promise.all([
+      listClaimPackets(this.packetStore),
+      listRelationPackets(this.packetStore),
+    ]);
     const activeHomeClaims = filterClaimPackets({
       claims: claimPackets,
       claimKind: 'home_locality',
       subjectPacketId: input.actorPacket.header.packet_id,
       activeOnly: true,
     });
+    const activeHomeRelations = filterRelationPackets({
+      relations: relationPackets,
+      relationSubtype: 'home_locality',
+      subjectPacketId: input.actorPacket.header.packet_id,
+      activeOnly: true,
+    });
     const packets: PacketEnvelope[] = [];
 
-    for (const activeHomeClaim of activeHomeClaims) {
+    for (const activeHomeRelation of activeHomeRelations) {
       if (
         input.intent.home_scope_packet_id &&
-        activeHomeClaim.body.target_ref.packet_id === input.intent.home_scope_packet_id
+        activeHomeRelation.body.target_ref.packet_id === input.intent.home_scope_packet_id
       ) {
         continue;
       }
 
       packets.push(
-        createAssociationClaimPacket({
+        createScopedRelationPacket({
+          subtype: 'home_locality',
+          subjectPacketId: input.actorPacket.header.packet_id,
+          targetPacketId: activeHomeRelation.body.target_ref.packet_id,
+          scopePacketId:
+            activeHomeRelation.body.scope_ref?.packet_id ??
+            activeHomeRelation.body.target_ref.packet_id,
+          applicableScopeRefs: activeHomeRelation.header.applicable_scope_refs,
+          createdByPacketId: input.actorPacket.header.packet_id,
+          note: activeHomeRelation.body.note,
+          status: 'withdrawn',
+          packetId: activeHomeRelation.header.packet_id,
+          parentRevisionRefs: [
+            {
+              packet_id: activeHomeRelation.header.packet_id,
+              revision_id: activeHomeRelation.header.revision_id,
+            },
+          ],
+          supportingRefs: activeHomeRelation.body.supporting_refs,
+          policyRef: activeHomeRelation.body.policy_ref,
+          termsRef: activeHomeRelation.body.terms_ref,
+        })
+      );
+    }
+
+    for (const activeHomeClaim of activeHomeClaims) {
+      const activeHomeClaimTargetPacketId =
+        activeHomeClaim.body.relation_assertion?.target_ref.packet_id ??
+        activeHomeClaim.body.target_ref.packet_id;
+      if (
+        input.intent.home_scope_packet_id &&
+        activeHomeClaimTargetPacketId === input.intent.home_scope_packet_id
+      ) {
+        continue;
+      }
+
+      packets.push(
+        createRelationAssertionClaimPacket({
           claimKind: 'home_locality',
           subjectPacketId: input.actorPacket.header.packet_id,
-          targetPacketId: activeHomeClaim.body.target_ref.packet_id,
+          relationPacketId: activeHomeClaim.body.target_ref.packet_id,
+          assertedTargetPacketId: activeHomeClaimTargetPacketId,
           scopePacketId: activeHomeClaim.body.scope_ref.packet_id,
           applicableScopeRefs: activeHomeClaim.header.applicable_scope_refs,
           createdByPacketId: input.actorPacket.header.packet_id,
+          note: activeHomeClaim.body.claim_markdown ?? activeHomeClaim.body.note ?? null,
           status: 'withdrawn',
           packetId: activeHomeClaim.header.packet_id,
           parentRevisionRefs: [
@@ -1069,6 +1135,34 @@ export class NexusMutationService {
         packetId: input.intent.home_scope_packet_id,
         family: 'Element',
       });
+      const applicableScopeRefs =
+        governingScopePacket.header.applicable_scope_refs.length > 0
+          ? governingScopePacket.header.applicable_scope_refs
+          : [{ packet_id: governingScopePacket.header.packet_id }];
+      const homeRelationPacketId = createRelationPacketId({
+        subtype: 'home_locality',
+        subjectPacketId: input.actorPacket.header.packet_id,
+        targetPacketId: governingScopePacket.header.packet_id,
+        scopePacketId: governingScopePacket.header.packet_id,
+      });
+      const existingPreferredRelationRevision = await this.packetStore.fetchPreferredRevision({
+        packet_id: homeRelationPacketId,
+      });
+      packets.push(
+        createScopedRelationPacket({
+          subtype: 'home_locality',
+          subjectPacketId: input.actorPacket.header.packet_id,
+          targetPacketId: governingScopePacket.header.packet_id,
+          scopePacketId: governingScopePacket.header.packet_id,
+          applicableScopeRefs,
+          createdByPacketId: input.actorPacket.header.packet_id,
+          status: 'active',
+          packetId: homeRelationPacketId,
+          parentRevisionRefs: existingPreferredRelationRevision
+            ? [existingPreferredRelationRevision]
+            : [],
+        })
+      );
       const homeClaimPacketId = createClaimPacketId({
         claimKind: 'home_locality',
         subjectPacketId: input.actorPacket.header.packet_id,
@@ -1079,30 +1173,38 @@ export class NexusMutationService {
         packet_id: homeClaimPacketId,
       });
       packets.push(
-        createAssociationClaimPacket({
+        createRelationAssertionClaimPacket({
           claimKind: 'home_locality',
           subjectPacketId: input.actorPacket.header.packet_id,
-          targetPacketId: governingScopePacket.header.packet_id,
+          relationPacketId: homeRelationPacketId,
+          assertedTargetPacketId: governingScopePacket.header.packet_id,
           scopePacketId: governingScopePacket.header.packet_id,
-          applicableScopeRefs:
-            governingScopePacket.header.applicable_scope_refs.length > 0
-              ? governingScopePacket.header.applicable_scope_refs
-              : [{ packet_id: governingScopePacket.header.packet_id }],
+          applicableScopeRefs,
           createdByPacketId: input.actorPacket.header.packet_id,
           status: 'active',
           packetId: homeClaimPacketId,
           parentRevisionRefs: existingPreferredRevision ? [existingPreferredRevision] : [],
         })
       );
-    } else if (activeHomeClaims[0]) {
-      const targetScopePacketId = activeHomeClaims[0].body.target_ref.packet_id;
+    } else if (activeHomeRelations[0] || activeHomeClaims[0]) {
+      const targetScopePacketId =
+        activeHomeRelations[0]?.body.target_ref.packet_id ??
+        activeHomeClaims[0]?.body.relation_assertion?.target_ref.packet_id ??
+        activeHomeClaims[0]?.body.target_ref.packet_id ??
+        null;
+      if (!targetScopePacketId) {
+        governingScopePacket = null;
+      } else {
       const packet = await this.packetStore.fetchByPacket({ packet_id: targetScopePacketId });
       governingScopePacket =
         packet?.header.family === 'Element' ? (packet as PacketEnvelopeByType['Element']) : null;
+      }
     }
 
     const actionIds: MutationActionId[] = [
-      input.intent.home_scope_packet_id ? 'home_locality.claim.set' : 'home_locality.claim.clear',
+      input.intent.home_scope_packet_id
+        ? 'home_locality.relation.set'
+        : 'home_locality.relation.clear',
     ];
     const mergedPolicyDecision = await this.resolveScopePolicyDecision({
       governingScopePacket,
@@ -1126,6 +1228,26 @@ export class NexusMutationService {
       governing_scope_packet_id:
         governingScopePacket?.header.packet_id ?? input.actorPacket.header.packet_id,
       prepared_packets: preparedPackets,
+    };
+  }
+
+  private async prepareHomeLocalityClaimCompatibilityAlias(input: {
+    intent: Extract<MutationIntent, { kind: 'home_locality.claim.set' }>;
+    actorPacket: PacketEnvelopeByType['Element'];
+  }): Promise<PreparedMutation> {
+    const preparedMutation = await this.prepareHomeLocalityRelation({
+      intent: {
+        kind: 'home_locality.relation.set',
+        home_scope_packet_id: input.intent.home_scope_packet_id,
+        created_at: input.intent.created_at,
+        mutation_nonce: input.intent.mutation_nonce,
+      },
+      actorPacket: input.actorPacket,
+    });
+
+    return {
+      ...preparedMutation,
+      kind: input.intent.kind,
     };
   }
 
@@ -1519,30 +1641,35 @@ export class NexusMutationService {
                     intent: input.intent,
                     actorPacket: input.actorPacket,
                   })
-                : input.intent.kind === 'home_locality.claim.set'
-                  ? await this.prepareHomeLocalityClaim({
+                : input.intent.kind === 'home_locality.relation.set'
+                  ? await this.prepareHomeLocalityRelation({
                       intent: input.intent,
                       actorPacket: input.actorPacket,
                     })
-                  : input.intent.kind === 'role_association.claim.set'
-                    ? await this.prepareRoleAssociationClaim({
-                        intent: input.intent,
-                        actorPacket: input.actorPacket,
-                      })
-                    : input.intent.kind === 'role_association.attestation.set'
-                      ? await this.prepareRoleAssociationAttestation({
+                  : input.intent.kind === 'home_locality.claim.set'
+                    ? await this.prepareHomeLocalityClaimCompatibilityAlias({
+                      intent: input.intent,
+                      actorPacket: input.actorPacket,
+                    })
+                    : input.intent.kind === 'role_association.claim.set'
+                      ? await this.prepareRoleAssociationClaim({
                           intent: input.intent,
                           actorPacket: input.actorPacket,
                         })
-                      : input.intent.kind === 'discussion.surfaces.ensure'
-                        ? await this.prepareDiscussionSurfacesEnsure({
+                      : input.intent.kind === 'role_association.attestation.set'
+                        ? await this.prepareRoleAssociationAttestation({
                             intent: input.intent,
                             actorPacket: input.actorPacket,
                           })
-                        : await this.prepareActorWritePolicyUpdate({
-                            intent: input.intent,
-                            actorPacket: input.actorPacket,
-                          });
+                        : input.intent.kind === 'discussion.surfaces.ensure'
+                          ? await this.prepareDiscussionSurfacesEnsure({
+                              intent: input.intent,
+                              actorPacket: input.actorPacket,
+                            })
+                          : await this.prepareActorWritePolicyUpdate({
+                              intent: input.intent,
+                              actorPacket: input.actorPacket,
+                            });
 
     const storedTicket = this.ticketStore.create({
       actor_packet_id: input.actorPacket.header.packet_id,
@@ -1848,7 +1975,7 @@ export class NexusMutationService {
     };
   }
 
-  private async finalizeHomeLocalityClaim(input: {
+  private async finalizeHomeLocalityRelation(input: {
     actorContext: ActorContext;
     signedPackets: PacketEnvelope[];
     storedTicket: ReturnType<MutationTicketStore['consume']>;
@@ -1857,26 +1984,37 @@ export class NexusMutationService {
       actorPacket: input.actorContext.actorPacket,
       signedPackets: input.signedPackets,
     });
-    const activePacket = [...input.signedPackets].reverse().find(
+    const activeRelationPacket = [...input.signedPackets].reverse().find(
+      (packet): packet is PacketEnvelopeByType['Relation'] =>
+        packet.header.family === 'Relation' &&
+        (packet as PacketEnvelopeByType['Relation']).body.status === 'active'
+    );
+    const activeClaimPacket = [...input.signedPackets].reverse().find(
       (packet): packet is PacketEnvelopeByType['Claim'] =>
         packet.header.family === 'Claim' &&
         (packet as PacketEnvelopeByType['Claim']).body.status === 'active'
     );
+    const clearedHomeScopePacketId = isHomeLocalityMutationKind(input.storedTicket.intent.kind)
+      ? input.storedTicket.intent.home_scope_packet_id
+      : null;
 
     return {
       persist_effects: toPersistEffects(input.signedPackets),
       result: {
-        claim_packet_id: activePacket?.header.packet_id ?? null,
+        relation_packet_id: activeRelationPacket?.header.packet_id ?? null,
+        claim_packet_id: activeClaimPacket?.header.packet_id ?? null,
         claim_status:
-          activePacket?.body.status ??
-          (input.storedTicket.intent.kind === 'home_locality.claim.set' &&
-          input.storedTicket.intent.home_scope_packet_id === null
+          activeClaimPacket?.body.status ??
+          (isHomeLocalityMutationKind(input.storedTicket.intent.kind) &&
+          clearedHomeScopePacketId === null
             ? 'withdrawn'
             : null),
         home_scope_packet_id:
-          activePacket?.body.target_ref.packet_id ??
-          (input.storedTicket.intent.kind === 'home_locality.claim.set'
-            ? input.storedTicket.intent.home_scope_packet_id
+          activeRelationPacket?.body.target_ref.packet_id ??
+          activeClaimPacket?.body.relation_assertion?.target_ref.packet_id ??
+          activeClaimPacket?.body.target_ref.packet_id ??
+          (isHomeLocalityMutationKind(input.storedTicket.intent.kind)
+            ? clearedHomeScopePacketId
             : null),
       },
     };
@@ -2044,7 +2182,7 @@ export class NexusMutationService {
       | Awaited<ReturnType<typeof this.finalizePacketSignal>>
       | Awaited<ReturnType<typeof this.finalizeAssemblyElementCreate>>
       | Awaited<ReturnType<typeof this.finalizeAssociationClaimUpdate>>
-      | Awaited<ReturnType<typeof this.finalizeHomeLocalityClaim>>
+      | Awaited<ReturnType<typeof this.finalizeHomeLocalityRelation>>
       | Awaited<ReturnType<typeof this.finalizeRoleAssociationAttestation>>
       | Awaited<ReturnType<typeof this.finalizeLocalityPathCreate>>
       | Awaited<ReturnType<typeof this.finalizeDiscussionSurfacesEnsure>>
@@ -2086,8 +2224,9 @@ export class NexusMutationService {
           signedPackets: input.request.signed_packets as [PacketEnvelope],
         });
         break;
+      case 'home_locality.relation.set':
       case 'home_locality.claim.set':
-        finalized = await this.finalizeHomeLocalityClaim({
+        finalized = await this.finalizeHomeLocalityRelation({
           actorContext: input.actorContext,
           signedPackets: input.request.signed_packets,
           storedTicket,

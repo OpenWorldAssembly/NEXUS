@@ -10,9 +10,11 @@
 
 ## Location and relationship caveats
 
-- `home_locality` is now the packet-backed source of mounted geographic ancestry
+- `home_locality` is now the packet-backed source of mounted geographic ancestry, with canonical writes producing both a relation and supporting claim
 - `identity.location_disclosure` remains optional profile metadata rather than mounted-scope truth
 - `assembly_association` remains distinct from `home_locality`
+- followed scopes remain shell-preference backed in the current pass even though scope projection now exposes them more explicitly
+- `Location` is currently a read seam in scope projection, not yet a full creation and provider-resolution workflow
 - generic abstract assembly creation and richer locality governance are still later work
 
 ## Explorer caveats

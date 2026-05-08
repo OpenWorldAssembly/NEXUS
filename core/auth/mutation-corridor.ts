@@ -63,7 +63,14 @@ export type AssemblyAssociationClaimMutationIntent = {
   mutation_nonce?: string | null;
 };
 
-export type HomeLocalityClaimMutationIntent = {
+export type HomeLocalityRelationMutationIntent = {
+  kind: 'home_locality.relation.set';
+  home_scope_packet_id: string | null;
+  created_at?: string | null;
+  mutation_nonce?: string | null;
+};
+
+export type HomeLocalityClaimCompatibilityMutationIntent = {
   kind: 'home_locality.claim.set';
   home_scope_packet_id: string | null;
   created_at?: string | null;
@@ -125,7 +132,8 @@ export type MutationIntent =
   | PacketSignalMutationIntent
   | AssemblyElementCreateMutationIntent
   | AssemblyAssociationClaimMutationIntent
-  | HomeLocalityClaimMutationIntent
+  | HomeLocalityRelationMutationIntent
+  | HomeLocalityClaimCompatibilityMutationIntent
   | RoleAssociationClaimMutationIntent
   | RoleAssociationAttestationMutationIntent
   | LocalityPathCreateMutationIntent

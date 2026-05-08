@@ -13,6 +13,7 @@ import {
   createPacketEnvelope,
   getPacketCurrentSchemaVersion,
 } from '../schema/packet-schema.ts';
+import { createClaimPacket } from './builders.ts';
 
 function encodePacketId(packetId: string): string {
   return encodeURIComponent(packetId);
@@ -20,6 +21,17 @@ function encodePacketId(packetId: string): string {
 
 export function createClaimPacketId(input: {
   claimKind: ClaimKind;
+  subjectPacketId: string;
+  targetPacketId: string;
+  scopePacketId: string;
+}): string {
+  return `nexus:claim/${input.claimKind}/${encodePacketId(
+    input.subjectPacketId
+  )}--${encodePacketId(input.targetPacketId)}--${encodePacketId(input.scopePacketId)}`;
+}
+
+function createGenericRelationAssertionClaimPacketId(input: {
+  claimKind: string;
   subjectPacketId: string;
   targetPacketId: string;
   scopePacketId: string;
@@ -156,5 +168,85 @@ export function createAssociationClaimPacket(input: {
       status: input.status ?? 'active',
       note: input.note ?? null,
     },
+  });
+}
+
+export function createRelationAssertionClaimPacket(input: {
+  claimKind: ClaimKind | string;
+  subjectPacketId: string;
+  relationPacketId: string;
+  assertedTargetPacketId: string;
+  scopePacketId: string;
+  applicableScopeRefs: PacketRef[];
+  createdByPacketId: string;
+  createdAt?: string;
+  note?: string | null;
+  status?: 'active' | 'withdrawn';
+  packetId?: string;
+  parentRevisionRefs?: PacketRevisionRef[];
+}): PacketEnvelopeByType['Claim'] {
+  const packetId =
+    input.packetId ??
+    createGenericRelationAssertionClaimPacketId({
+      claimKind: input.claimKind,
+      subjectPacketId: input.subjectPacketId,
+      targetPacketId: input.assertedTargetPacketId,
+      scopePacketId: input.scopePacketId,
+    });
+  const createdAt = input.createdAt ?? new Date().toISOString();
+
+  return createClaimPacket({
+    packet_id: packetId,
+    revision_id: createClaimRevisionId(
+      packetId,
+      input.parentRevisionRefs?.[0]?.revision_id ?? null
+    ),
+    created_at: createdAt,
+    parent_revision_refs: input.parentRevisionRefs ?? [],
+    authority_scope_ref: {
+      packet_id: input.scopePacketId,
+    },
+    applicable_scope_refs: dedupeScopeRefs([
+      {
+        packet_id: input.scopePacketId,
+      },
+      ...input.applicableScopeRefs,
+    ]),
+    created_by: {
+      packet_id: input.createdByPacketId,
+    },
+    metadata_tags: ['claim', String(input.claimKind).replace(/_/g, '-')],
+    subtype: 'relation_assertion',
+    target_ref: {
+      packet_id: input.relationPacketId,
+    },
+    subject_ref: {
+      packet_id: input.subjectPacketId,
+    },
+    scope_ref: {
+      packet_id: input.scopePacketId,
+    },
+    claim_markdown: input.note ?? null,
+    supporting_refs: [],
+    relation_assertion: {
+      subtype: input.claimKind,
+      subject_ref: {
+        packet_id: input.subjectPacketId,
+      },
+      target_ref: {
+        packet_id: input.assertedTargetPacketId,
+      },
+      scope_ref: {
+        packet_id: input.scopePacketId,
+      },
+    },
+    claim_kind:
+      input.claimKind === 'assembly_association' ||
+      input.claimKind === 'home_locality' ||
+      input.claimKind === 'role_association'
+        ? input.claimKind
+        : null,
+    status: input.status ?? 'active',
+    note: input.note ?? null,
   });
 }

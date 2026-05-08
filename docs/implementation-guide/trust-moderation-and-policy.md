@@ -63,3 +63,10 @@ Current implementation note:
 
 - the new `Policy.relation_requirements` seam exists so rules like OWA home-locality support can be expressed generically instead of being hardcoded as route-only logic
 - this chapter should be read before changing `Claim`, `Attestation`, `Relation`, or `Policy` semantics because it owns the intended separation between assertion, evidence, graph structure, and policy requirements
+
+Current home-locality policy note:
+
+- OWA-sensitive home-locality legitimacy now resolves from the forward `Cause(subtype: initiative)` anchor plus linked policy packets
+- a canonical `Relation(subtype: home_locality)` can exist structurally without counting as the effective mounted home locality if its governing `Policy.relation_requirements` are unsatisfied
+- the expected support model in this phase is a supporting `Claim(subtype: relation_assertion)`, not a required attestation
+- legacy claim-only home-locality reads remain compatibility projections, not the forward legitimacy model

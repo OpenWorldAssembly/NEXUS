@@ -36,3 +36,51 @@ test('actor write-policy preparation is wired to current policy before future po
   assert.ok(currentSecurityModeDecisionIndex < nextWritePolicyIndex);
   assert.ok(bootstrapDecisionIndex < nextWritePolicyIndex);
 });
+
+test('legacy home-locality mutation intent delegates into the canonical relation-first prepare path', () => {
+  const source = readFileSync(
+    join(process.cwd(), 'runtime', 'nexus', 'server', 'mutation-service.ts'),
+    'utf8'
+  );
+  const aliasMethodIndex = source.indexOf(
+    'private async prepareHomeLocalityClaimCompatibilityAlias'
+  );
+  const canonicalMethodIndex = source.indexOf(
+    'private async prepareHomeLocalityRelation'
+  );
+  const canonicalPrepareCallIndex = source.indexOf(
+    'await this.prepareHomeLocalityRelation({',
+    aliasMethodIndex
+  );
+  const canonicalKindIndex = source.indexOf(
+    "kind: 'home_locality.relation.set'",
+    canonicalPrepareCallIndex
+  );
+
+  assert.notEqual(canonicalMethodIndex, -1);
+  assert.notEqual(aliasMethodIndex, -1);
+  assert.notEqual(canonicalPrepareCallIndex, -1);
+  assert.notEqual(canonicalKindIndex, -1);
+  assert.ok(canonicalMethodIndex < aliasMethodIndex);
+  assert.ok(aliasMethodIndex < canonicalPrepareCallIndex);
+  assert.ok(canonicalPrepareCallIndex < canonicalKindIndex);
+});
+
+test('home-locality finalization still accepts both canonical and compatibility tickets through one result path', () => {
+  const source = readFileSync(
+    join(process.cwd(), 'runtime', 'nexus', 'server', 'mutation-service.ts'),
+    'utf8'
+  );
+  const finalizeSwitchIndex = source.indexOf("case 'home_locality.relation.set':");
+  const compatibilityCaseIndex = source.indexOf("case 'home_locality.claim.set':");
+  const finalizeCallIndex = source.indexOf(
+    'await this.finalizeHomeLocalityRelation({',
+    finalizeSwitchIndex
+  );
+
+  assert.notEqual(finalizeSwitchIndex, -1);
+  assert.notEqual(compatibilityCaseIndex, -1);
+  assert.notEqual(finalizeCallIndex, -1);
+  assert.ok(finalizeSwitchIndex < compatibilityCaseIndex);
+  assert.ok(compatibilityCaseIndex < finalizeCallIndex);
+});

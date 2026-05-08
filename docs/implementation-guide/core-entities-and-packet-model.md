@@ -64,6 +64,13 @@ Current forward direction:
 
 remain readable and are projected into the widened claim shape through compatibility.
 
+Current home-locality direction:
+
+- canonical writes now use `home_locality.relation.set`
+- that write produces `Relation(subtype: home_locality)` plus a supporting `Claim(subtype: relation_assertion)`
+- legacy `home_locality.claim.set` remains compatibility-only and should be treated as an alias onto the canonical relation-first prepare path
+- revise and withdraw semantics remain packet-native: status changes are represented by newly signed packet material rather than in-place mutation
+
 ### Attestation
 
 The evidence, certification, support, dispute, and packet-signal family.
@@ -122,3 +129,10 @@ The graph should continue to express relationships through typed refs and edges 
 - implements or enacts
 - reports_on
 - fork_of or derived_from
+
+Current scope-graph direction:
+
+- canonical mounted ancestry prefers `Relation(subtype: default_ancestry_parent)`
+- canonical home-locality legitimacy prefers `Relation(subtype: home_locality)` evaluated through `Policy.relation_requirements`
+- `Relation(subtype: defined_by_location)` is the live read seam for linked `Location` packets
+- legacy `parent_scope` ancestry and legacy `Claim(home_locality)` reads now belong in explicit compatibility projections rather than inline main-path shell logic

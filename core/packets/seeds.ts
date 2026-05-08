@@ -11,6 +11,7 @@ import type {
 
 import {
   createAssemblyPacket,
+  createCausePacket,
   createClaimPacket,
   createDiscussionForumPacket,
   createDiscussionPostPacket,
@@ -22,6 +23,7 @@ import {
   createPersonPacket,
   createPolicyPacket,
   createProposalPacket,
+  createRelationPacket,
   createRolePacket,
   createVotePacket,
 } from '@core/packets/builders';
@@ -36,6 +38,8 @@ export const PERSONAL_TREE_PACKET_IDS = {
   moreno_valley: 'nexus:element/moreno-valley',
   sunnymead_ranch: 'nexus:element/sunnymead-ranch',
   aaron: 'nexus:element/aaron',
+  owa_cause: 'nexus:cause/owa',
+  owa_home_locality_policy: 'nexus:policy/owa-home-locality',
   visitor_lobby_policy: 'nexus:policy/visitor-lobby-baseline',
   trust_baseline_policy: 'nexus:policy/global-trust-baseline',
   facilitator_role: 'nexus:role/facilitator',
@@ -53,6 +57,10 @@ export const PERSONAL_TREE_REFS = {
   moreno_valley: createPacketRef(PERSONAL_TREE_PACKET_IDS.moreno_valley),
   sunnymead_ranch: createPacketRef(PERSONAL_TREE_PACKET_IDS.sunnymead_ranch),
   aaron: createPacketRef(PERSONAL_TREE_PACKET_IDS.aaron),
+  owa_cause: createPacketRef(PERSONAL_TREE_PACKET_IDS.owa_cause),
+  owa_home_locality_policy: createPacketRef(
+    PERSONAL_TREE_PACKET_IDS.owa_home_locality_policy
+  ),
   visitor_lobby_policy: createPacketRef(
     PERSONAL_TREE_PACKET_IDS.visitor_lobby_policy
   ),
@@ -634,6 +642,102 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     tags: ['person', 'resident'],
   });
 
+  const owaHomeLocalityPolicyPacket = createPolicyPacket({
+    packet_id: PERSONAL_TREE_PACKET_IDS.owa_home_locality_policy,
+    created_at: SEED_CREATED_AT,
+    authority_scope_ref: PERSONAL_TREE_REFS.global_commons,
+    applicable_scope_refs: globalApplicableScopeRefs,
+    title: 'OWA Home Locality Relation Policy',
+    summary:
+      'Requires a supporting relation assertion claim for home-locality relations that count for mounted ancestry.',
+    policy_kind: 'charter',
+    body_markdown: [
+      '# OWA Home Locality Relation Policy',
+      '',
+      '- Home-locality relations are structural graph facts.',
+      '- A supporting relation assertion claim is required for the relation to count as the effective mounted home locality.',
+    ].join('\n'),
+    status: 'active',
+    relation_requirements: {
+      rules: [
+        {
+          relation_subtype: 'home_locality',
+          required_claim_subtypes: ['relation_assertion'],
+          required_attestation_subtypes: [],
+          claim_target_mode: 'relation_packet',
+          subject_match_mode: 'relation_subject',
+        },
+      ],
+    },
+  });
+
+  const owaCausePacket = createCausePacket({
+    packet_id: PERSONAL_TREE_PACKET_IDS.owa_cause,
+    created_at: SEED_CREATED_AT,
+    authority_scope_ref: PERSONAL_TREE_REFS.global_commons,
+    applicable_scope_refs: globalApplicableScopeRefs,
+    title: 'OWA',
+    summary:
+      'The default OWA initiative anchor for current policy and future lineage-aware Nexus consumer behavior.',
+    subtype: 'initiative',
+    status: 'active',
+    purpose_markdown:
+      'Provides the default initiative anchor for OWA policy and schema-aware scope behavior.',
+    policy_refs: [PERSONAL_TREE_REFS.owa_home_locality_policy],
+  });
+
+  const unitedStatesAncestryRelation = createRelationPacket({
+    packet_id: 'nexus:relation/default-ancestry-parent/united-states',
+    created_at: SEED_CREATED_AT,
+    authority_scope_ref: PERSONAL_TREE_REFS.united_states,
+    applicable_scope_refs: unitedStatesApplicableScopeRefs,
+    created_by: PERSONAL_TREE_REFS.global_commons,
+    subtype: 'default_ancestry_parent',
+    subject_ref: PERSONAL_TREE_REFS.united_states,
+    target_ref: PERSONAL_TREE_REFS.global_commons,
+    scope_ref: PERSONAL_TREE_REFS.united_states,
+    status: 'active',
+  });
+
+  const californiaAncestryRelation = createRelationPacket({
+    packet_id: 'nexus:relation/default-ancestry-parent/california',
+    created_at: SEED_CREATED_AT,
+    authority_scope_ref: PERSONAL_TREE_REFS.california,
+    applicable_scope_refs: californiaApplicableScopeRefs,
+    created_by: PERSONAL_TREE_REFS.global_commons,
+    subtype: 'default_ancestry_parent',
+    subject_ref: PERSONAL_TREE_REFS.california,
+    target_ref: PERSONAL_TREE_REFS.united_states,
+    scope_ref: PERSONAL_TREE_REFS.california,
+    status: 'active',
+  });
+
+  const morenoValleyAncestryRelation = createRelationPacket({
+    packet_id: 'nexus:relation/default-ancestry-parent/moreno-valley',
+    created_at: SEED_CREATED_AT,
+    authority_scope_ref: PERSONAL_TREE_REFS.moreno_valley,
+    applicable_scope_refs: morenoValleyApplicableScopeRefs,
+    created_by: PERSONAL_TREE_REFS.global_commons,
+    subtype: 'default_ancestry_parent',
+    subject_ref: PERSONAL_TREE_REFS.moreno_valley,
+    target_ref: PERSONAL_TREE_REFS.california,
+    scope_ref: PERSONAL_TREE_REFS.moreno_valley,
+    status: 'active',
+  });
+
+  const sunnymeadRanchAncestryRelation = createRelationPacket({
+    packet_id: 'nexus:relation/default-ancestry-parent/sunnymead-ranch',
+    created_at: SEED_CREATED_AT,
+    authority_scope_ref: PERSONAL_TREE_REFS.sunnymead_ranch,
+    applicable_scope_refs: sunnymeadApplicableScopeRefs,
+    created_by: PERSONAL_TREE_REFS.global_commons,
+    subtype: 'default_ancestry_parent',
+    subject_ref: PERSONAL_TREE_REFS.sunnymead_ranch,
+    target_ref: PERSONAL_TREE_REFS.moreno_valley,
+    scope_ref: PERSONAL_TREE_REFS.sunnymead_ranch,
+    status: 'active',
+  });
+
   const visitorLobbyPolicyPacket = createPolicyPacket({
     packet_id: PERSONAL_TREE_PACKET_IDS.visitor_lobby_policy,
     created_at: SEED_CREATED_AT,
@@ -768,8 +872,14 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     morenoValleyPacket,
     sunnymeadRanchPacket,
     aaronPacket,
+    owaHomeLocalityPolicyPacket,
+    owaCausePacket,
     visitorLobbyPolicyPacket,
     trustBaselinePolicyPacket,
+    unitedStatesAncestryRelation,
+    californiaAncestryRelation,
+    morenoValleyAncestryRelation,
+    sunnymeadRanchAncestryRelation,
     facilitatorRolePacket,
     coordinatorRolePacket,
     councilorRolePacket,

@@ -39,7 +39,6 @@ import type {
   NexusVotesPayload,
 } from '@runtime/nexus/nexus-api-types';
 import type {
-  NexusScopeMountReason,
   NexusScopeSummary,
 } from '@runtime/nexus/nexus-shell';
 import { getNexusPacketServices } from '@runtime/nexus/server/nexus-packet-services';
@@ -55,13 +54,11 @@ import {
   listClaimPackets,
   type ClaimPacket,
 } from '@runtime/nexus/server/claim-utils';
-
-const DISCUSSION_FORUM_DISPLAY_ORDER = [
-  'visitor-lobby',
-  'general',
-  'proposals',
-  'reports',
-] as const;
+import {
+  buildNexusScopeGraphProjection,
+  buildPersonalScopeSummary as buildScopeGraphPersonalScopeSummary,
+  buildScopeSummaryFromGraph,
+} from '@runtime/nexus/server/scope-graph';
 
 type ScopeNode = {
   routeId: string;
@@ -79,63 +76,12 @@ type ScopeResolution = {
   lens: NexusScopeLens;
 };
 
-type HomeLocalityContext = {
-  claimPacket: ClaimPacket;
-  scopeRouteId: string;
-  scopePacketId: string;
-  ancestorRouteIds: string[];
-};
-
-type MountedScopeContext = {
-  defaultScopeId: string;
-  personalParentScopeId: string | null;
-  mountedScopeIds: Set<string>;
-  mountReasonsByScopeId: Map<string, NexusScopeMountReason[]>;
-  homeScopeId: string | null;
-};
-
-/**
- * Inputs: a canonical element packet id.
- * Output: a URL-safe scope id used by nexus API routes and shell state.
- */
-function toRouteScopeId(packetId: string): string {
-  if (packetId.startsWith('nexus:element/')) {
-    return packetId.slice('nexus:element/'.length);
-  }
-
-  return packetId.replace(/[^a-zA-Z0-9_-]+/g, '-');
-}
-
 /**
  * Inputs: a URL-safe scope id.
  * Output: canonical element packet id fallback for unknown route ids.
  */
 function toPacketScopeId(scopeId: string): string {
   return `nexus:element/${scopeId}`;
-}
-
-/**
- * Inputs: optional scope subtype from an assembly element packet.
- * Output: the UI scope level used by shell navigation.
- */
-function toScopeLevel(scopeSubtype: string | null): NexusScopeSummary['level'] {
-  if (scopeSubtype === 'global') {
-    return 'global';
-  }
-
-  if (scopeSubtype === 'nation') {
-    return 'nation';
-  }
-
-  if (scopeSubtype === 'state' || scopeSubtype === 'region') {
-    return 'region';
-  }
-
-  if (scopeSubtype === 'city') {
-    return 'city';
-  }
-
-  return 'district';
 }
 
 function isHomeLocalityLevel(
@@ -147,81 +93,6 @@ function isHomeLocalityLevel(
     level === 'city' ||
     level === 'district'
   );
-}
-
-function addMountReason(
-  mountReasonsByScopeId: Map<string, NexusScopeMountReason[]>,
-  scopeId: string,
-  mountReason: NexusScopeMountReason
-): void {
-  const currentReasons = mountReasonsByScopeId.get(scopeId) ?? [];
-
-  if (!currentReasons.includes(mountReason)) {
-    mountReasonsByScopeId.set(scopeId, [...currentReasons, mountReason]);
-  }
-}
-
-function buildPersonalScopeSummary(input: {
-  actorPacket: PacketEnvelopeByType['Element'];
-  parentScopeId?: string | null;
-}): NexusScopeSummary {
-  return {
-    id: 'you',
-    packetId: input.actorPacket.header.packet_id,
-    name: 'You',
-    shortLabel: 'You',
-    level: 'personal',
-    description:
-      'Packet-backed personal scope lens anchored to the current actor element.',
-    localityLabel: input.actorPacket.body.locality_label ?? input.actorPacket.body.name,
-    badge:
-      input.actorPacket.body.identity?.claim_status === 'claimed'
-        ? 'Claimed actor'
-        : 'Guest actor',
-    relationshipLabel: 'Current actor scope',
-    parentId: input.parentScopeId ?? undefined,
-    childIds: [],
-    followedScopeIds: [],
-    isMounted: true,
-    isDiscoverable: false,
-    mountReasons: ['personal_default'],
-    publicLobbyLabel: 'Personal trust lens',
-    stats: {
-      members: 1,
-      activeVotes: 0,
-      hotDiscussions: 0,
-      missions: 0,
-      guestLobbyOpen: false,
-    },
-  };
-}
-
-/**
- * Inputs: scope name and subtype.
- * Output: compact short label used in sidebar rows and badges.
- */
-function toScopeShortLabel(name: string, subtype: string | null): string {
-  const subtypeLeaf = getElementSubtypeLeaf(subtype);
-
-  if (subtypeLeaf === 'global') {
-    return 'Global';
-  }
-
-  if (name === 'United States') {
-    return 'U.S.';
-  }
-
-  if (name === 'California') {
-    return 'CA';
-  }
-
-  const words = name.split(' ').filter((word) => word.length > 0);
-
-  if (words.length === 1) {
-    return words[0];
-  }
-
-  return words[0];
 }
 
 /**
@@ -393,26 +264,32 @@ async function resolveScopeResolution(input: {
   requestedScopeId: string;
   actorPacketId?: string | null;
 }): Promise<ScopeResolution> {
-  const scopeNodes = await listScopeNodes();
-  const scopeMap = new Map(
-    scopeNodes.map((scopeNode) => [scopeNode.routeId, scopeNode])
-  );
   const services = await getNexusPacketServices();
-  const claimPackets = await listClaimPackets(services.packetStore);
-  const mountedScopeContext = buildMountedScopeContext({
-    scopeNodes,
-    claimPackets,
+  const scopeGraph = await buildNexusScopeGraphProjection({
+    packetStore: services.packetStore,
     actorPacketId: input.actorPacketId ?? null,
     followedScopeIds: [],
   });
+  const scopeNodes = scopeGraph.nodes.map((scopeNode) => ({
+    routeId: scopeNode.routeId,
+    packetId: scopeNode.packetId,
+    name: scopeNode.name,
+    subtype: getElementSubtypeLeaf(scopeNode.scopeSubtype),
+    summary: scopeNode.summary,
+    localityLabel: scopeNode.localityLabel,
+    parentRouteId: scopeNode.parentRouteId,
+  })) satisfies ScopeNode[];
+  const scopeMap = new Map(
+    scopeNodes.map((scopeNode) => [scopeNode.routeId, scopeNode])
+  );
 
   if (input.requestedScopeId === 'you') {
     const actorPacket = await getActorElementPacket(input.actorPacketId ?? null);
 
     if (actorPacket) {
-      const summary = buildPersonalScopeSummary({
+      const summary = buildScopeGraphPersonalScopeSummary({
         actorPacket,
-        parentScopeId: mountedScopeContext.personalParentScopeId,
+        parentScopeId: scopeGraph.personalParentScopeId,
       });
 
       return {
@@ -424,39 +301,39 @@ async function resolveScopeResolution(input: {
   }
 
   const scopeLens = buildScopeLens(input.requestedScopeId, scopeMap);
-  const scopeSummaries = scopeNodes.map((scopeNode) => ({
-    id: scopeNode.routeId,
-    packetId: scopeNode.packetId,
-    name: scopeNode.name,
-    shortLabel: toScopeShortLabel(scopeNode.name, scopeNode.subtype),
-    level: toScopeLevel(scopeNode.subtype),
-    description:
-      scopeNode.summary ??
-      `Packet-backed assembly scope for ${scopeNode.name}.`,
-    localityLabel:
-      scopeNode.localityLabel ?? `${scopeNode.name} assembly locality`,
-    badge: scopeNode.subtype === 'global' ? 'Guest default' : 'Assembly scope',
-    relationshipLabel:
-      scopeNode.parentRouteId === null
-        ? 'Root assembly scope'
-        : `Child of ${scopeMap.get(scopeNode.parentRouteId)?.name ?? 'parent scope'}`,
-    parentId: scopeNode.parentRouteId ?? undefined,
-    childIds: scopeNodes
-      .filter((candidateNode) => candidateNode.parentRouteId === scopeNode.routeId)
-      .map((childNode) => childNode.routeId),
-    followedScopeIds: [],
-    isMounted: mountedScopeContext.mountedScopeIds.has(scopeNode.routeId),
-    isDiscoverable: true,
-    mountReasons: mountedScopeContext.mountReasonsByScopeId.get(scopeNode.routeId) ?? [],
-    publicLobbyLabel: `${scopeNode.name} visitor lobby`,
-    stats: {
-      members: 0,
-      activeVotes: 0,
-      hotDiscussions: 0,
-      missions: 0,
-      guestLobbyOpen: false,
-    },
-  })) satisfies NexusScopeSummary[];
+  const scopeSummaries = scopeGraph.nodes.map((scopeNode) =>
+    buildScopeSummaryFromGraph({
+      node: scopeNode,
+      childIds: scopeGraph.nodes
+        .filter((candidateNode) => candidateNode.parentRouteId === scopeNode.routeId)
+        .map((childNode) => childNode.routeId),
+      followedScopeIds: [],
+      isMounted: scopeGraph.mountedScopeIds.has(scopeNode.routeId),
+      isKnown: scopeGraph.knownScopeIds.has(scopeNode.routeId),
+      isDiscoverable: scopeGraph.discoverableScopeIds.has(scopeNode.routeId),
+      isFollowed: scopeGraph.followedScopeIds.has(scopeNode.routeId),
+      isAssociated: scopeGraph.associatedScopeIds.has(scopeNode.routeId),
+      isHomeAncestor:
+        scopeGraph.effectiveHomeLocality?.ancestorRouteIds.includes(scopeNode.routeId) ??
+        false,
+      associationKind: scopeGraph.associatedScopeIds.has(scopeNode.routeId)
+        ? 'assembly_association_claim_compatibility'
+        : null,
+      mountReasons: scopeGraph.mountReasonsByScopeId.get(scopeNode.routeId) ?? [],
+      justificationPacketIds:
+        scopeGraph.justificationPacketIdsByScopeId.get(scopeNode.routeId) ?? [],
+      stats: {
+        members: 0,
+        activeVotes: 0,
+        hotDiscussions: 0,
+        missions: 0,
+        guestLobbyOpen: false,
+      },
+      parentName: scopeGraph.nodes.find(
+        (candidateNode) => candidateNode.routeId === scopeNode.parentRouteId
+      )?.name ?? null,
+    })
+  ) satisfies NexusScopeSummary[];
 
   const summary = getScopeByIdOrDefault(scopeSummaries, input.requestedScopeId);
 
@@ -505,15 +382,6 @@ async function getTrustPolicyForScope(
       .find((policy): policy is NexusTrustPolicySnapshot => policy !== null) ??
     DEFAULT_TRUST_POLICY_SNAPSHOT
   );
-}
-
-function getAssemblyPacketIdForScope(
-  scopeSummary: NexusScopeSummary,
-  actorPacket: PacketEnvelopeByType['Element'] | null
-): string | null {
-  return scopeSummary.level === 'personal'
-    ? actorPacket?.header.authority_scope_ref?.packet_id ?? null
-    : scopeSummary.packetId;
 }
 
 function getClaimAuthorityScopeId(input: {
@@ -575,275 +443,6 @@ function getScopeFromLens(
 
 /**
  * Inputs: none.
- * Output: assembly scope nodes projected from preferred `Element` packet revisions.
- */
-async function listScopeNodes(): Promise<ScopeNode[]> {
-  const services = await getNexusPacketServices();
-  const elementPackets =
-    await services.packetStore.listPreferredPacketsByFamily('Element');
-
-  return elementPackets
-    .filter((packet) => packet.body.kind === 'assembly')
-    .map((packet) => ({
-      routeId: toRouteScopeId(packet.header.packet_id),
-      packetId: packet.header.packet_id,
-      name: packet.body.name,
-      subtype: getElementSubtypeLeaf(packet.body.subtype ?? null),
-      summary: packet.body.summary ?? null,
-      localityLabel: packet.body.locality_label ?? null,
-      parentRouteId: (() => {
-        const parentPacketId =
-          packet.header.edges.find((edge) => edge.edge_type === 'parent_scope')
-            ?.target.packet_id ?? null;
-
-        return parentPacketId ? toRouteScopeId(parentPacketId) : null;
-      })(),
-    }));
-}
-
-function getAncestorRouteIds(
-  scopeMap: Map<string, ScopeNode>,
-  scopeRouteId: string
-): string[] {
-  const ancestorRouteIds: string[] = [];
-  let currentParentRouteId = scopeMap.get(scopeRouteId)?.parentRouteId ?? null;
-
-  while (currentParentRouteId) {
-    ancestorRouteIds.unshift(currentParentRouteId);
-    currentParentRouteId = scopeMap.get(currentParentRouteId)?.parentRouteId ?? null;
-  }
-
-  return ancestorRouteIds;
-}
-
-function getActiveHomeLocalityContext(input: {
-  claimPackets: ClaimPacket[];
-  actorPacketId?: string | null;
-  scopeMap: Map<string, ScopeNode>;
-}): HomeLocalityContext | null {
-  if (!input.actorPacketId) {
-    return null;
-  }
-
-  const activeHomeClaims = filterClaimPackets({
-    claims: input.claimPackets,
-    claimKind: 'home_locality',
-    subjectPacketId: input.actorPacketId,
-    activeOnly: true,
-  });
-  const rankedHomeClaims = activeHomeClaims
-    .map((claimPacket) => {
-      const scopeRouteId = Array.from(input.scopeMap.values()).find(
-        (scopeNode) =>
-          scopeNode.packetId === claimPacket.body.target_ref.packet_id &&
-          isHomeLocalityLevel(toScopeLevel(scopeNode.subtype))
-      )?.routeId;
-
-      if (!scopeRouteId) {
-        return null;
-      }
-
-      const ancestorRouteIds = getAncestorRouteIds(input.scopeMap, scopeRouteId);
-
-      return {
-        claimPacket,
-        scopeRouteId,
-        scopePacketId: claimPacket.body.target_ref.packet_id,
-        ancestorRouteIds,
-        depth: ancestorRouteIds.length,
-      };
-    })
-    .filter(
-      (
-        value
-      ): value is HomeLocalityContext & {
-        depth: number;
-      } => value !== null
-    )
-    .sort((leftClaim, rightClaim) => rightClaim.depth - leftClaim.depth);
-
-  if (rankedHomeClaims.length === 0) {
-    return null;
-  }
-
-  const { depth: _depth, ...homeContext } = rankedHomeClaims[0];
-
-  return homeContext;
-}
-
-function buildMountedScopeContext(input: {
-  scopeNodes: ScopeNode[];
-  claimPackets: ClaimPacket[];
-  actorPacketId?: string | null;
-  followedScopeIds: string[];
-}): MountedScopeContext {
-  const scopeMap = new Map(
-    input.scopeNodes.map((scopeNode) => [scopeNode.routeId, scopeNode])
-  );
-  const globalScopeId =
-    input.scopeNodes.find((scopeNode) => scopeNode.subtype === 'global')?.routeId ??
-    input.scopeNodes[0]?.routeId ??
-    '';
-  const homeLocalityContext = getActiveHomeLocalityContext({
-    claimPackets: input.claimPackets,
-    actorPacketId: input.actorPacketId ?? null,
-    scopeMap,
-  });
-  const mountedScopeIds = new Set<string>();
-  const mountReasonsByScopeId = new Map<string, NexusScopeMountReason[]>();
-
-  if (globalScopeId) {
-    mountedScopeIds.add(globalScopeId);
-    addMountReason(mountReasonsByScopeId, globalScopeId, 'global_default');
-  }
-
-  if (homeLocalityContext) {
-    mountedScopeIds.add(homeLocalityContext.scopeRouteId);
-    addMountReason(
-      mountReasonsByScopeId,
-      homeLocalityContext.scopeRouteId,
-      'home_locality'
-    );
-
-    homeLocalityContext.ancestorRouteIds.forEach((ancestorRouteId) => {
-      mountedScopeIds.add(ancestorRouteId);
-      addMountReason(mountReasonsByScopeId, ancestorRouteId, 'home_ancestor');
-    });
-  }
-
-  input.followedScopeIds.forEach((followedScopeId) => {
-    if (!scopeMap.has(followedScopeId)) {
-      return;
-    }
-
-    mountedScopeIds.add(followedScopeId);
-    addMountReason(mountReasonsByScopeId, followedScopeId, 'followed');
-  });
-
-  return {
-    defaultScopeId: homeLocalityContext?.scopeRouteId ?? globalScopeId,
-    personalParentScopeId: homeLocalityContext?.scopeRouteId ?? globalScopeId,
-    mountedScopeIds,
-    mountReasonsByScopeId,
-    homeScopeId: homeLocalityContext?.scopeRouteId ?? null,
-  };
-}
-
-/**
- * Inputs: one scope lens.
- * Output: scope packet ids visible in that lens.
- */
-function getLensScopeIds(scopeLens: NexusScopeLens): Set<string> {
-  return new Set(
-    [
-      scopeLens.authority_scope_ref?.packet_id ?? null,
-      ...scopeLens.applicable_scope_refs.map((scopeRef) => scopeRef.packet_id),
-    ].filter((scopeId): scopeId is string => typeof scopeId === 'string')
-  );
-}
-
-/**
- * Inputs: one packet envelope plus a scope lens.
- * Output: whether the packet is visible through that scope lens.
- */
-function matchesPacketScopeLens(
-  packet: PacketEnvelopeByType['DiscussionThread'],
-  scopeLens: NexusScopeLens
-): boolean {
-  const lensScopeIds = getLensScopeIds(scopeLens);
-
-  if (lensScopeIds.size === 0) {
-    return true;
-  }
-
-  if (
-    packet.header.authority_scope_ref &&
-    lensScopeIds.has(packet.header.authority_scope_ref.packet_id)
-  ) {
-    return true;
-  }
-
-  return packet.header.applicable_scope_refs.some((scopeRef) =>
-    lensScopeIds.has(scopeRef.packet_id)
-  );
-}
-
-/**
- * Inputs: one discussion thread packet and scope lens.
- * Output: ranking score where lower values are preferred for forum tabs.
- */
-function getThreadScopeRank(
-  threadPacket: PacketEnvelopeByType['DiscussionThread'],
-  scopeLens: NexusScopeLens
-): number {
-  const authorityScopeId = scopeLens.authority_scope_ref?.packet_id;
-
-  if (
-    authorityScopeId &&
-    threadPacket.header.authority_scope_ref?.packet_id === authorityScopeId
-  ) {
-    return 0;
-  }
-
-  return 1;
-}
-
-/**
- * Inputs: discussion thread kind.
- * Output: stable forum id used by discussions tab routes.
- */
-function toDiscussionForumId(threadKind: string): string {
-  const normalizedThreadKind = threadKind.trim().toLowerCase();
-
-  if (normalizedThreadKind === 'visitor_lobby') {
-    return 'visitor-lobby';
-  }
-
-  return normalizedThreadKind.replace(/[^a-z0-9]+/g, '-');
-}
-
-/**
- * Inputs: discussion forum id.
- * Output: sort rank for stable tab ordering.
- */
-function getDiscussionForumOrder(forumId: string): number {
-  const orderIndex = DISCUSSION_FORUM_DISPLAY_ORDER.indexOf(
-    forumId as (typeof DISCUSSION_FORUM_DISPLAY_ORDER)[number]
-  );
-
-  return orderIndex >= 0 ? orderIndex : DISCUSSION_FORUM_DISPLAY_ORDER.length;
-}
-
-/**
- * Inputs: forum id, active scope display name, and source thread title.
- * Output: a scope-aware forum title for tab rendering, while preserving unknown kinds.
- */
-function getDiscussionForumDisplayTitle(
-  forumId: string,
-  scopeName: string,
-  sourceThreadTitle: string
-): string {
-  if (forumId === 'visitor-lobby') {
-    return `${scopeName} visitor lobby`;
-  }
-
-  if (forumId === 'general') {
-    return `${scopeName} general`;
-  }
-
-  if (forumId === 'proposals') {
-    return `${scopeName} proposals`;
-  }
-
-  if (forumId === 'reports') {
-    return `${scopeName} reports and AARs`;
-  }
-
-  return sourceThreadTitle;
-}
-
-/**
- * Inputs: none.
  * Output: builds the shell payload from assembly element packets and query-derived counts.
  */
 export async function getNexusShellPayload(
@@ -851,22 +450,27 @@ export async function getNexusShellPayload(
   request?: Request | null
 ): Promise<NexusShellPayload> {
   const services = await getNexusPacketServices();
-  const scopeNodes = await listScopeNodes();
-  const scopeMap = new Map(
-    scopeNodes.map((scopeNode) => [scopeNode.routeId, scopeNode])
-  );
-  const claimPackets = await listClaimPackets(services.packetStore);
-  const followedScopeIds = readFollowedScopeIds(request ?? null, actorPacketId ?? null)
-    .filter((scopeId) => scopeMap.has(scopeId));
-  const mountedScopeContext = buildMountedScopeContext({
-    scopeNodes,
-    claimPackets,
+  const followedScopeIds = readFollowedScopeIds(request ?? null, actorPacketId ?? null);
+  const scopeGraph = await buildNexusScopeGraphProjection({
+    packetStore: services.packetStore,
     actorPacketId: actorPacketId ?? null,
     followedScopeIds,
   });
+  const scopeNodes = scopeGraph.nodes.map((scopeNode) => ({
+    routeId: scopeNode.routeId,
+    packetId: scopeNode.packetId,
+    name: scopeNode.name,
+    subtype: getElementSubtypeLeaf(scopeNode.scopeSubtype),
+    summary: scopeNode.summary,
+    localityLabel: scopeNode.localityLabel,
+    parentRouteId: scopeNode.parentRouteId,
+  })) satisfies ScopeNode[];
+  const scopeMap = new Map(
+    scopeNodes.map((scopeNode) => [scopeNode.routeId, scopeNode])
+  );
   const scopeSummaries: NexusScopeSummary[] = [];
 
-  for (const scopeNode of scopeNodes) {
+  for (const scopeNode of scopeGraph.nodes) {
     const scopeLens = buildScopeLens(scopeNode.routeId, scopeMap);
     const [voteCards, discussionCards, missionCards] = await Promise.all([
       services.nexusQueryService.listVotes(scopeLens),
@@ -893,30 +497,25 @@ export async function getNexusShellPayload(
         discussionCard.title.toLowerCase().includes('visitor lobby')
     );
 
-    scopeSummaries.push({
-      id: scopeNode.routeId,
-      packetId: scopeNode.packetId,
-      name: scopeNode.name,
-      shortLabel: toScopeShortLabel(scopeNode.name, scopeNode.subtype),
-      level: toScopeLevel(scopeNode.subtype),
-      description:
-        scopeNode.summary ??
-        `Packet-backed assembly scope for ${scopeNode.name}.`,
-      localityLabel:
-        scopeNode.localityLabel ?? `${scopeNode.name} assembly locality`,
-      badge: scopeNode.subtype === 'global' ? 'Guest default' : 'Assembly scope',
-      relationshipLabel:
-        scopeNode.parentRouteId === null
-          ? 'Root assembly scope'
-          : `Child of ${scopeMap.get(scopeNode.parentRouteId)?.name ?? 'parent scope'}`,
-      parentId: scopeNode.parentRouteId ?? undefined,
+    scopeSummaries.push(buildScopeSummaryFromGraph({
+      node: scopeNode,
       childIds,
-      followedScopeIds,
-      isMounted: mountedScopeContext.mountedScopeIds.has(scopeNode.routeId),
-      isDiscoverable: true,
+      followedScopeIds: Array.from(scopeGraph.followedScopeIds),
+      isMounted: scopeGraph.mountedScopeIds.has(scopeNode.routeId),
+      isKnown: scopeGraph.knownScopeIds.has(scopeNode.routeId),
+      isDiscoverable: scopeGraph.discoverableScopeIds.has(scopeNode.routeId),
+      isFollowed: scopeGraph.followedScopeIds.has(scopeNode.routeId),
+      isAssociated: scopeGraph.associatedScopeIds.has(scopeNode.routeId),
+      isHomeAncestor:
+        scopeGraph.effectiveHomeLocality?.ancestorRouteIds.includes(scopeNode.routeId) ??
+        false,
+      associationKind: scopeGraph.associatedScopeIds.has(scopeNode.routeId)
+        ? 'assembly_association_claim_compatibility'
+        : null,
       mountReasons:
-        mountedScopeContext.mountReasonsByScopeId.get(scopeNode.routeId) ?? [],
-      publicLobbyLabel: `${scopeNode.name} visitor lobby`,
+        scopeGraph.mountReasonsByScopeId.get(scopeNode.routeId) ?? [],
+      justificationPacketIds:
+        scopeGraph.justificationPacketIdsByScopeId.get(scopeNode.routeId) ?? [],
       stats: {
         members: membersInScope.length,
         activeVotes: voteCards.filter((voteCard) => isOpenVoteStatus(voteCard.status))
@@ -925,7 +524,10 @@ export async function getNexusShellPayload(
         missions: missionCards.length,
         guestLobbyOpen: hasVisitorLobbyForum,
       },
-    });
+      parentName: scopeGraph.nodes.find(
+        (candidateNode) => candidateNode.routeId === scopeNode.parentRouteId
+      )?.name ?? null,
+    }));
   }
 
   scopeSummaries.sort((leftScope, rightScope) =>
@@ -933,10 +535,10 @@ export async function getNexusShellPayload(
   );
 
   const defaultScopeId =
-    mountedScopeContext.defaultScopeId || scopeSummaries[0]?.id || '';
+    scopeGraph.defaultScopeId || scopeSummaries[0]?.id || '';
   const defaultScope = getScopeByIdOrDefault(scopeSummaries, defaultScopeId);
   const personalParentScopeId =
-    mountedScopeContext.personalParentScopeId ?? defaultScope.id;
+    scopeGraph.personalParentScopeId ?? defaultScope.id;
   const defaultExpandedScopeIds = scopeSummaries
     .filter(
       (scopeSummary) => scopeSummary.isMounted && scopeSummary.childIds.length > 0
@@ -947,9 +549,13 @@ export async function getNexusShellPayload(
     scope_summaries: scopeSummaries,
     default_scope_id: defaultScope.id,
     default_expanded_scope_ids: defaultExpandedScopeIds,
-    followed_scope_ids: followedScopeIds,
+    geographic_mounted_scope_ids: scopeGraph.geographicMountedScopeIds,
+    associated_scope_ids: Array.from(scopeGraph.associatedScopeIds),
+    followed_scope_ids: Array.from(scopeGraph.followedScopeIds),
+    known_scope_ids: Array.from(scopeGraph.knownScopeIds),
+    known_unmounted_scope_ids: scopeGraph.knownUnmountedScopeIds,
     personal_parent_scope_id: personalParentScopeId,
-    home_scope_id: mountedScopeContext.homeScopeId,
+    home_scope_id: scopeGraph.homeScopeId,
     guest_profile: NEXUS_GUEST_PROFILE,
     guest_capabilities: NEXUS_GUEST_CAPABILITIES,
     guest_checklist: NEXUS_GUEST_CHECKLIST,
@@ -1314,6 +920,11 @@ export async function getNexusTrustPayload(input: {
   const services = await getNexusPacketServices();
   const actorPacket = await getActorElementPacket(input.actorPacketId ?? null);
   const shellPayload = await getNexusShellPayload(input.actorPacketId ?? null);
+  const scopeGraph = await buildNexusScopeGraphProjection({
+    packetStore: services.packetStore,
+    actorPacketId: input.actorPacketId ?? null,
+    followedScopeIds: shellPayload.followed_scope_ids,
+  });
   const scopeResolution = await resolveScopeResolution({
     requestedScopeId: input.scopeId,
     actorPacketId: input.actorPacketId,
@@ -1327,19 +938,10 @@ export async function getNexusTrustPayload(input: {
     shellPayload,
   });
   const claimPackets = await listClaimPackets(services.packetStore);
-  const scopeNodes = await listScopeNodes();
-  const scopeMap = new Map(
-    scopeNodes.map((scopeNode) => [scopeNode.routeId, scopeNode])
-  );
-  const homeLocalityContext = getActiveHomeLocalityContext({
-    claimPackets,
-    actorPacketId: actorPacket?.header.packet_id ?? null,
-    scopeMap,
-  });
-  const homeLocalityRouteIds = homeLocalityContext
+  const homeLocalityRouteIds = scopeGraph.effectiveHomeLocality
     ? [
-        ...homeLocalityContext.ancestorRouteIds,
-        homeLocalityContext.scopeRouteId,
+        ...scopeGraph.effectiveHomeLocality.ancestorRouteIds,
+        scopeGraph.effectiveHomeLocality.scopeRouteId,
       ]
     : [];
   const homeLocalityScopeNames = homeLocalityRouteIds
@@ -1457,14 +1059,22 @@ export async function getNexusTrustPayload(input: {
     can_vote: meetsTrustGate(trustStage, trustPolicy.voting_gate),
     can_review: meetsTrustGate(trustStage, trustPolicy.review_gate),
     home_locality: {
-      claim_packet_id: homeLocalityContext?.claimPacket.header.packet_id ?? null,
-      scope_packet_id: homeLocalityContext?.scopePacketId ?? null,
-      scope_id: homeLocalityContext?.scopeRouteId ?? null,
+      relation_packet_id: scopeGraph.effectiveHomeLocality?.relationPacketId ?? null,
+      claim_packet_id:
+        scopeGraph.effectiveHomeLocality?.compatibilityClaimPacketId ??
+        scopeGraph.effectiveHomeLocality?.supportingClaimPacketIds[0] ??
+        null,
+      compatibility_source: scopeGraph.effectiveHomeLocality?.source ?? null,
+      policy_evaluation_state:
+        scopeGraph.effectiveHomeLocality?.policyEvaluationState ?? null,
+      scope_packet_id: scopeGraph.effectiveHomeLocality?.scopePacketId ?? null,
+      scope_id: scopeGraph.effectiveHomeLocality?.scopeRouteId ?? null,
       scope_name:
         shellPayload.scope_summaries.find(
-          (scopeSummary) => scopeSummary.id === homeLocalityContext?.scopeRouteId
+          (scopeSummary) => scopeSummary.id === scopeGraph.effectiveHomeLocality?.scopeRouteId
         )?.name ?? null,
-      is_active_scope: homeLocalityContext?.scopeRouteId === scopeResolution.summary.id,
+      is_active_scope:
+        scopeGraph.effectiveHomeLocality?.scopeRouteId === scopeResolution.summary.id,
       is_active_scope_in_chain: homeLocalityRouteIds.includes(scopeResolution.summary.id),
       can_set_active_scope: isHomeLocalityLevel(scopeResolution.summary.level),
       derived_scope_ids: homeLocalityRouteIds,
