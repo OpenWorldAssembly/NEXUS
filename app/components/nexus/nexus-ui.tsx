@@ -574,10 +574,107 @@ export function NexusSectionHeader({ title }: NexusSectionHeaderProps) {
   const headingTextClass = themeMode === 'dark' ? 'text-nexus-text' : 'text-slate-900';
   const mutedTextClass = themeMode === 'dark' ? 'text-nexus-muted' : 'text-slate-600';
   const titleSizeClass = uiDensity === 'large' ? 'text-3xl lg:text-4xl' : 'text-2xl lg:text-3xl';
+  const mobileTitleSizeClass = uiDensity === 'large' ? 'text-2xl' : 'text-xl';
+  const actorBadgeSurfaceClass =
+    themeMode === 'dark'
+      ? 'border-nexus-line/70 bg-white/5'
+      : 'border-slate-300 bg-slate-100';
+  const projectLink = (
+    <Pressable
+      accessibilityRole="link"
+      className={joinClasses(
+        chrome.secondaryActionSurfaceClass,
+        'relative overflow-hidden rounded-nexus border px-3 py-2',
+      )}
+      onPress={() => router.push('/')}
+    >
+      <Text className="text-xs font-bold uppercase tracking-[2.5px] text-nexus-sky">
+        Open World Assembly
+      </Text>
+      <NexusBevelEdges subtle />
+    </Pressable>
+  );
+  const actorBadge = (
+    <View
+      className={joinClasses(
+        chrome.badgeFrameClass,
+        actorBadgeSurfaceClass,
+        'max-w-[48%]',
+      )}
+    >
+      <Text
+        className={joinClasses(
+          'text-xs font-semibold uppercase tracking-[2px]',
+          mutedTextClass,
+        )}
+        numberOfLines={1}
+      >
+        {currentActorLabel}
+      </Text>
+    </View>
+  );
+  const explorerButton = (
+    <Pressable
+      accessibilityRole="button"
+      className={chrome.mobileMenuButtonClass}
+      onPress={() => openExplorer()}
+    >
+      <Text className={joinClasses('text-sm font-semibold', headingTextClass)}>
+        Packet Explorer
+      </Text>
+      <NexusBevelEdges subtle />
+    </Pressable>
+  );
+  const menuButton = (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ expanded: isSidebarOpen }}
+      className={chrome.mobileMenuButtonClass}
+      onPress={toggleShellMenu}
+    >
+      <Text className={joinClasses('text-sm font-semibold', headingTextClass)}>
+        ☰ Menu
+      </Text>
+      <NexusBevelEdges subtle />
+    </Pressable>
+  );
+
+  if (!isDesktop) {
+    return (
+      <View className="gap-3">
+        <View className="flex-row items-center justify-between gap-2">
+          <View className="min-w-0 flex-1 flex-row items-center">
+            {projectLink}
+          </View>
+
+          <View className="shrink-0 flex-row items-center justify-end gap-2">
+            {explorerButton}
+            {menuButton}
+          </View>
+        </View>
+
+        <View className="flex-row items-center justify-between gap-3">
+          <Text
+            className={joinClasses(
+              mobileTitleSizeClass,
+              'min-w-0 flex-1 font-bold',
+              headingTextClass,
+            )}
+            numberOfLines={1}
+          >
+            {title}
+          </Text>
+
+          {actorBadge}
+        </View>
+      </View>
+    );
+  }
+
   const isProfileRailVisible =
-    isDesktop && isSidebarOpen && !isPrimaryRailCollapsed;
+    isSidebarOpen && !isPrimaryRailCollapsed;
   const isContextRailVisible =
-    isDesktop && isSidebarOpen && !isSecondaryRailCollapsed;
+    isSidebarOpen && !isSecondaryRailCollapsed;
   const activeSectionTitle = getNexusSectionMenuTitle(activeSection, activeScope);
   const scopedFunctionTitle = `${activeScope.name} ${activeSectionTitle}`.trim();
   const isScopedFunctionTitle =
@@ -589,76 +686,22 @@ export function NexusSectionHeader({ title }: NexusSectionHeaderProps) {
   return (
     <View className="gap-3 lg:flex-row lg:items-center lg:justify-between">
       <View className="min-w-0 flex-1 flex-row flex-wrap items-center gap-3">
-        {shouldShowProjectLink ? (
-            <Pressable
-              accessibilityRole="link"
-              className={joinClasses(
-                chrome.secondaryActionSurfaceClass,
-                'relative overflow-hidden rounded-nexus border px-3 py-2',
-              )}
-              onPress={() => router.push('/')}
-            >
-              <Text className="text-xs font-bold uppercase tracking-[2.5px] text-nexus-sky">
-                Open World Assembly
-              </Text>
-              <NexusBevelEdges subtle />
-            </Pressable>
-          ) : null}
+        {shouldShowProjectLink ? projectLink : null}
 
-          {shouldShowTitle ? (
-            <Text
-              className={joinClasses(titleSizeClass, 'min-w-0 flex-1 font-bold', headingTextClass)}
-              numberOfLines={1}
-            >
-              {title}
-            </Text>
+        {shouldShowTitle ? (
+          <Text
+            className={joinClasses(titleSizeClass, 'min-w-0 flex-1 font-bold', headingTextClass)}
+            numberOfLines={1}
+          >
+            {title}
+          </Text>
         ) : null}
       </View>
 
       <View className="flex-row flex-wrap items-center justify-end gap-2">
-        {shouldShowActorLabel ? (
-          <View
-            className={joinClasses(
-              chrome.badgeFrameClass,
-              themeMode === 'dark'
-                ? 'border-nexus-line/70 bg-white/5'
-                : 'border-slate-300 bg-slate-100',
-            )}
-          >
-            <Text
-              className={joinClasses(
-                'text-xs font-semibold uppercase tracking-[2px]',
-                mutedTextClass,
-              )}
-              numberOfLines={1}
-            >
-              {currentActorLabel}
-            </Text>
-          </View>
-        ) : null}
-
-        <Pressable
-          accessibilityRole="button"
-          className={chrome.mobileMenuButtonClass}
-          onPress={() => openExplorer()}
-        >
-          <Text className={joinClasses('text-sm font-semibold', headingTextClass)}>
-            Packet Explorer
-          </Text>
-          <NexusBevelEdges subtle />
-        </Pressable>
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityState={{ expanded: isSidebarOpen }}
-          className={chrome.mobileMenuButtonClass}
-          onPress={toggleShellMenu}
-        >
-          <Text className={joinClasses('text-sm font-semibold', headingTextClass)}>
-            ☰ Menu
-          </Text>
-          <NexusBevelEdges subtle />
-        </Pressable>
+        {shouldShowActorLabel ? actorBadge : null}
+        {explorerButton}
+        {menuButton}
       </View>
     </View>
   );
