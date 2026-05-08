@@ -82,6 +82,7 @@ type NexusScopeSectionVisibilityState = Record<NexusSidebarScopeSectionId, boole
 type NexusScopeMenuRowProps = {
   depth: number;
   isActive: boolean;
+  isMenuOpen?: boolean;
   menuButton?: ReactNode;
   scopeMeta: string;
   scopeName: string;
@@ -620,6 +621,7 @@ function NexusPrimaryNavItem({
 function NexusScopeMenuRow({
   depth,
   isActive,
+  isMenuOpen = false,
   menuButton,
   scopeMeta,
   scopeName,
@@ -630,7 +632,14 @@ function NexusScopeMenuRow({
   const chrome = getNexusChromeClasses(themeMode, uiDensity);
 
   return (
-    <View className="flex-row items-start gap-2 overflow-visible" style={{ marginLeft: depth * 12 }}>
+    <View
+      className="relative flex-row items-start gap-2 overflow-visible"
+      style={{
+        marginLeft: depth * 12,
+        zIndex: isMenuOpen ? 80 : 1,
+        elevation: isMenuOpen ? 80 : 1,
+      }}
+    >
       <Pressable
         accessibilityRole="button"
         className={joinClasses(
@@ -775,6 +784,7 @@ function NexusScopeSectionHeader({
 }
 
 function NexusScopeActionMenu({
+  align = 'top',
   isOpen,
   onAssociatePress,
   onFollowPress,
@@ -785,6 +795,7 @@ function NexusScopeActionMenu({
   themeMode,
   uiDensity,
 }: {
+  align?: 'top' | 'bottom';
   isOpen: boolean;
   onAssociatePress: () => void;
   onFollowPress: () => void;
@@ -816,12 +827,14 @@ function NexusScopeActionMenu({
       {isOpen ? (
         <View
           className={joinClasses(
-            'absolute right-full top-0 z-50 mr-2 min-w-[180px] gap-1 rounded-2xl border p-2 shadow-lg',
-            themeMode === 'dark'
-              ? 'border-nexus-line bg-nexus-panel'
-              : 'border-slate-300 bg-white'
+            'absolute right-full z-50 mr-2 min-w-[180px] gap-1 overflow-hidden rounded-2xl border p-2 shadow-lg',
+            align === 'bottom' ? 'bottom-0' : 'top-0',
+            chrome.inlineSelectMenuClass
           )}
-          style={{ elevation: 50 }}
+          style={{
+            elevation: 50,
+            backgroundColor: themeMode === 'dark' ? '#102133' : '#ffffff',
+          }}
         >
           {[
             { key: 'open', label: 'Open', onPress: onOpenPress, visible: true },
@@ -874,6 +887,7 @@ function NexusScopeActionMenu({
 
 function NexusScopeListRow({
   activeScopeId,
+  isMenuOpen = false,
   menuButton,
   onPress,
   scope,
@@ -881,6 +895,7 @@ function NexusScopeListRow({
   uiDensity,
 }: {
   activeScopeId: string;
+  isMenuOpen?: boolean;
   menuButton: ReactNode;
   onPress: () => void;
   scope: NexusScopeSummary;
@@ -892,8 +907,12 @@ function NexusScopeListRow({
   return (
     <View
       className={joinClasses(
-        'flex-row items-start gap-2 overflow-visible',
+        'relative flex-row items-start gap-2 overflow-visible',
       )}
+      style={{
+        zIndex: isMenuOpen ? 80 : 1,
+        elevation: isMenuOpen ? 80 : 1,
+      }}
     >
       <Pressable
         accessibilityRole="button"
@@ -949,14 +968,23 @@ function NexusGroupedScopeRows({
   uiDensity: NexusUiDensity;
 }) {
   const [visibleGroupCounts, setVisibleGroupCounts] = useState<Record<string, number>>({});
+  const totalVisibleScopeCount = groups.reduce(
+    (count, group) => count + group.scopes.length,
+    0
+  );
+  const useScrollContainer = totalVisibleScopeCount > SIDEBAR_SCOPE_LIST_LIMIT;
+  const Wrapper = useScrollContainer ? ScrollView : View;
+  const wrapperProps = useScrollContainer
+    ? {
+        className: 'max-h-[280px]',
+        nestedScrollEnabled: true,
+        showsVerticalScrollIndicator: false,
+        style: { maxHeight: SIDEBAR_SECTION_MAX_HEIGHT },
+      }
+    : {};
 
   return (
-    <ScrollView
-      className="max-h-[280px]"
-      nestedScrollEnabled
-      showsVerticalScrollIndicator={false}
-      style={{ maxHeight: SIDEBAR_SECTION_MAX_HEIGHT }}
-    >
+    <Wrapper {...wrapperProps}>
       <View className="gap-3">
         {groups.map((group) => {
           const groupKey = `${scopeSectionId}:${group.id}`;
@@ -982,8 +1010,16 @@ function NexusGroupedScopeRows({
                   <NexusScopeListRow
                     key={scope.id}
                     activeScopeId={activeScopeId}
+                    isMenuOpen={openMenuScopeId === scope.id}
                     menuButton={
                       <NexusScopeActionMenu
+                        align={
+                          groups.length > 1 || visibleScopes.length > 1
+                            ? visibleScopes.indexOf(scope) >= visibleScopes.length - 2
+                              ? 'bottom'
+                              : 'top'
+                            : 'bottom'
+                        }
                         isOpen={openMenuScopeId === scope.id}
                         onAssociatePress={() => {
                           setOpenMenuScopeId(null);
@@ -1013,7 +1049,6 @@ function NexusGroupedScopeRows({
                     }
                     onPress={() => onScopePress(scope.id)}
                     scope={scope}
-                    sectionId={scopeSectionId}
                     themeMode={themeMode}
                     uiDensity={uiDensity}
                   />
@@ -1044,7 +1079,7 @@ function NexusGroupedScopeRows({
           );
         })}
       </View>
-    </ScrollView>
+    </Wrapper>
   );
 }
 
@@ -1151,9 +1186,15 @@ function NexusScopeMenuContent({
                   key={scope.id}
                   depth={node?.depth ?? index}
                   isActive={scope.id === activeScopeId}
-                  isLineage
+                  isMenuOpen={openMenuScopeId === scope.id}
                   menuButton={
                     <NexusScopeActionMenu
+                      align={
+                        (homeSection?.scopes.length ?? 0) > 1 &&
+                        index >= (homeSection?.scopes.length ?? 1) - 2
+                          ? 'bottom'
+                          : 'top'
+                      }
                       isOpen={openMenuScopeId === scope.id}
                       onAssociatePress={() => {
                         setOpenMenuScopeId(null);
