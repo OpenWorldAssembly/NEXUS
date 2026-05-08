@@ -153,3 +153,12 @@ export function projectLegacyAssemblyAssociationScopeCompatibility(input: {
 
   return associatedScopeIds;
 }
+
+export function projectLegacyFollowedScopeCompatibility(input: {
+  scopeMap: Map<string, ScopeNodeLike>;
+  followedScopeIds: string[];
+}): string[] {
+  return [...new Set(input.followedScopeIds)].filter((scopeId) =>
+    input.scopeMap.has(scopeId)
+  );
+}

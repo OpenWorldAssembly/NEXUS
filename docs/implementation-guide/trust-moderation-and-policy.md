@@ -63,6 +63,8 @@ Current implementation note:
 
 - the new `Policy.relation_requirements` seam exists so rules like OWA home-locality support can be expressed generically instead of being hardcoded as route-only logic
 - this chapter should be read before changing `Claim`, `Attestation`, `Relation`, or `Policy` semantics because it owns the intended separation between assertion, evidence, graph structure, and policy requirements
+- packet-native follow does not currently require a supporting claim in this phase
+- packet-native assembly association does currently keep a supporting self-issued `Claim(subtype: relation_assertion)` alongside the structural relation
 
 Current home-locality policy note:
 

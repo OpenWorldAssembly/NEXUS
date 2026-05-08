@@ -94,3 +94,10 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - Legacy `home_locality.claim.set`, legacy `Claim(home_locality)`, and legacy `parent_scope` ancestry remain readable only through named compatibility adapters and projections rather than through mixed main-path shell logic.
 - Mounted scope projection now prefers packet-native structural relations such as `default_ancestry_parent` and `defined_by_location`, while also exposing richer packet-backed shell metadata for later UI graph and dashboard work.
 - OWA home-locality legitimacy now evaluates through `Policy.relation_requirements` sourced from the forward `Cause(subtype: initiative)` anchor path instead of route-local hardcoding.
+
+## 2026-05 Scope graph hardening and packet-native scope writers
+
+- Scope ancestry resolution now explicitly surfaces structural graph state, including `compatibility_parent`, `conflicting_parents`, `cyclic_ancestry`, and `missing_parent`, instead of silently treating all non-canonical cases as equivalent.
+- Follow is now canonical and actor-only: new writes use `follows.relation.set` / `follows.relation.clear`, while shell cookie follows remain a compatibility read bridge only.
+- Assembly association is now relation-first in the mutation corridor: canonical writes use `assembly_association.relation.set` / `assembly_association.relation.clear`, keep the supporting self-claim layer, and mount associated scopes as related mounted scopes rather than leaving them as badge-only side state.
+- `locality.path.create` now emits locality `Element` packets, canonical `default_ancestry_parent` relations, provisional `Location(subtype: region)` packets, and `defined_by_location` relations in one signed packet batch, while `parent_scope` remains a named compatibility mirror only.

@@ -447,7 +447,7 @@ export default function NexusLocalityCreatePage() {
         try {
           await runFortressMutation({
             intent: {
-              kind: 'home_locality.claim.set',
+              kind: 'home_locality.relation.set',
               home_scope_packet_id: locality.scope_id,
             },
           });
@@ -530,6 +530,8 @@ export default function NexusLocalityCreatePage() {
       try {
         const finalizedMutation = await runFortressMutation<{
           created_packets: unknown[];
+          created_relation_packet_ids: string[];
+          created_location_packet_ids: string[];
           final_result: NexusLocationSearchResult;
           duplicate_warnings: NexusLocalityDuplicateWarningPayload[];
         }>({
@@ -544,7 +546,7 @@ export default function NexusLocalityCreatePage() {
         setDuplicateWarnings(payload.duplicate_warnings);
         setStatusMessage(
           payload.created_packets.length > 0
-            ? `Created ${payload.created_packets.length} locality Element(s).`
+            ? `Created ${payload.created_packets.length} locality packet(s).`
             : 'Existing locality path reused.'
         );
 

@@ -110,6 +110,7 @@ type NexusScopeMenuContentProps = {
   uiDensity: NexusUiDensity;
   onScopePress: (scopeId: string) => void;
   onScopeFollowPress: (scopeId: string, isFollowed: boolean) => void;
+  onScopeAssociatePress: (scopeId: string, isAssociated: boolean) => void;
 };
 
 type NexusPreferenceSwitchProps<TOption extends string> = {
@@ -759,6 +760,7 @@ function NexusScopeMenuContent({
   uiDensity,
   onScopePress,
   onScopeFollowPress,
+  onScopeAssociatePress,
 }: NexusScopeMenuContentProps) {
   const [isExploreOpen, setIsExploreOpen] = useState(false);
   const branchScopeIds = new Set(scopeMenuNodes.map((node) => node.scopeId));
@@ -935,6 +937,28 @@ function NexusScopeMenuContent({
                   >
                     {getNexusScopeLevelLabel(scope.level)}
                   </Text>
+                  {scope.isAssociated ||
+                  scope.isHomeAncestor ||
+                  scope.associationKind?.includes('compatibility') ||
+                  scope.structuralState !== 'canonical' ? (
+                    <View className="mt-2 flex-row flex-wrap gap-2">
+                      {scope.isAssociated ? (
+                        <NexusBadge label="Associated" tone="default" />
+                      ) : null}
+                      {scope.isHomeAncestor ? (
+                        <NexusBadge label="Home" tone="default" />
+                      ) : null}
+                      {scope.associationKind?.includes('compatibility') ? (
+                        <NexusBadge label="Compatibility" tone="default" />
+                      ) : null}
+                      {scope.structuralState !== 'canonical' ? (
+                        <NexusBadge
+                          label={scope.structuralState.replace(/_/g, ' ')}
+                          tone="default"
+                        />
+                      ) : null}
+                    </View>
+                  ) : null}
                   <View className="mt-3 flex-row flex-wrap gap-2">
                     <Pressable
                       accessibilityRole="button"
@@ -975,6 +999,29 @@ function NexusScopeMenuContent({
                         )}
                       >
                         Follow
+                      </Text>
+                      <NexusThemedBevelEdges themeMode={themeMode} subtle />
+                    </Pressable>
+                    <Pressable
+                      accessibilityRole="button"
+                      className={joinClasses(
+                        scope.isAssociated
+                          ? chrome.compactButtonActiveClass
+                          : chrome.compactButtonClass,
+                      )}
+                      onPress={() => onScopeAssociatePress(scope.id, !scope.isAssociated)}
+                    >
+                      <Text
+                        className={joinClasses(
+                          uiDensity === 'large'
+                            ? 'text-sm font-semibold'
+                            : 'text-xs font-semibold',
+                          themeMode === 'dark'
+                            ? 'text-nexus-text'
+                            : 'text-slate-900',
+                        )}
+                      >
+                        {scope.isAssociated ? 'Unassociate' : 'Associate'}
                       </Text>
                       <NexusThemedBevelEdges themeMode={themeMode} subtle />
                     </Pressable>
@@ -1028,6 +1075,7 @@ export default function NexusSidebar({
     setActiveScopeId,
     setActiveSection,
     setScopeFollowed,
+    setScopeAssociated,
     setNavigationMode,
     setThemeMode,
     setUiDensity,
@@ -1046,7 +1094,7 @@ export default function NexusSidebar({
     setRememberClaimedSessions,
     setSecurityMode,
   } = useIdentityShell();
-  const { authGateModal, openNexusAuthGate, openNexusAuthGateForError } =
+  const { authGateModal, guardNexusWrite, openNexusAuthGate, openNexusAuthGateForError } =
     useNexusAuthGate({
       returnTo: pathname || '/nexus',
       returnScopeId: activeScopeId,
@@ -1570,7 +1618,38 @@ export default function NexusSidebar({
                     scopeSummaries={scopeSummaries}
                     onScopePress={handleScopePress}
                     onScopeFollowPress={(scopeId, isFollowed) => {
-                      void setScopeFollowed(scopeId, isFollowed).catch(() => undefined);
+                      void guardNexusWrite(
+                        {
+                          requiresClaimedIdentity: true,
+                          writeRisk: 'standard',
+                        },
+                        async () => {
+                          try {
+                            await setScopeFollowed(scopeId, isFollowed);
+                          } catch (error) {
+                            if (!openNexusAuthGateForError(error)) {
+                              throw error;
+                            }
+                          }
+                        },
+                      ).catch(() => undefined);
+                    }}
+                    onScopeAssociatePress={(scopeId, isAssociated) => {
+                      void guardNexusWrite(
+                        {
+                          requiresClaimedIdentity: true,
+                          writeRisk: 'standard',
+                        },
+                        async () => {
+                          try {
+                            await setScopeAssociated(scopeId, isAssociated);
+                          } catch (error) {
+                            if (!openNexusAuthGateForError(error)) {
+                              throw error;
+                            }
+                          }
+                        },
+                      ).catch(() => undefined);
                     }}
                     themeMode={themeMode}
                     uiDensity={uiDensity}
@@ -1654,7 +1733,38 @@ export default function NexusSidebar({
                     scopeSummaries={scopeSummaries}
                     onScopePress={handleScopePress}
                     onScopeFollowPress={(scopeId, isFollowed) => {
-                      void setScopeFollowed(scopeId, isFollowed).catch(() => undefined);
+                      void guardNexusWrite(
+                        {
+                          requiresClaimedIdentity: true,
+                          writeRisk: 'standard',
+                        },
+                        async () => {
+                          try {
+                            await setScopeFollowed(scopeId, isFollowed);
+                          } catch (error) {
+                            if (!openNexusAuthGateForError(error)) {
+                              throw error;
+                            }
+                          }
+                        },
+                      ).catch(() => undefined);
+                    }}
+                    onScopeAssociatePress={(scopeId, isAssociated) => {
+                      void guardNexusWrite(
+                        {
+                          requiresClaimedIdentity: true,
+                          writeRisk: 'standard',
+                        },
+                        async () => {
+                          try {
+                            await setScopeAssociated(scopeId, isAssociated);
+                          } catch (error) {
+                            if (!openNexusAuthGateForError(error)) {
+                              throw error;
+                            }
+                          }
+                        },
+                      ).catch(() => undefined);
                     }}
                     themeMode={themeMode}
                     uiDensity={uiDensity}

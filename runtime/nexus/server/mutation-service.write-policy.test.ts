@@ -66,6 +66,39 @@ test('legacy home-locality mutation intent delegates into the canonical relation
   assert.ok(canonicalPrepareCallIndex < canonicalKindIndex);
 });
 
+test('legacy assembly-association mutation intent delegates into the canonical relation-first prepare path', () => {
+  const source = readFileSync(
+    join(process.cwd(), 'runtime', 'nexus', 'server', 'mutation-service.ts'),
+    'utf8'
+  );
+  const aliasMethodIndex = source.indexOf(
+    'private async prepareAssemblyAssociationClaimCompatibilityAlias'
+  );
+  const canonicalMethodIndex = source.indexOf(
+    'private async prepareAssemblyAssociationRelation'
+  );
+  const canonicalPrepareCallIndex = source.indexOf(
+    'await this.prepareAssemblyAssociationRelation({',
+    aliasMethodIndex
+  );
+  const canonicalSetKindIndex = source.indexOf(
+    "kind: 'assembly_association.relation.set'",
+    canonicalPrepareCallIndex
+  );
+  const canonicalClearKindIndex = source.indexOf(
+    "kind: 'assembly_association.relation.clear'",
+    canonicalPrepareCallIndex
+  );
+
+  assert.notEqual(canonicalMethodIndex, -1);
+  assert.notEqual(aliasMethodIndex, -1);
+  assert.notEqual(canonicalPrepareCallIndex, -1);
+  assert.notEqual(canonicalSetKindIndex, -1);
+  assert.notEqual(canonicalClearKindIndex, -1);
+  assert.ok(canonicalMethodIndex < aliasMethodIndex);
+  assert.ok(aliasMethodIndex < canonicalPrepareCallIndex);
+});
+
 test('home-locality finalization still accepts both canonical and compatibility tickets through one result path', () => {
   const source = readFileSync(
     join(process.cwd(), 'runtime', 'nexus', 'server', 'mutation-service.ts'),

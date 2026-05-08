@@ -25,24 +25,6 @@ export function fetchNexusShellPayload(input?: {
   );
 }
 
-export function setNexusScopeFollowPreference(input: {
-  actorPacketId?: string | null;
-  scopeId: string;
-  isFollowed: boolean;
-}): Promise<{ followed_scope_ids: string[] }> {
-  return fetchJsonOrThrow<{ followed_scope_ids: string[] }>('/api/nexus/shell/follows', {
-    method: 'PUT',
-    headers: {
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      actor_packet_id: input.actorPacketId ?? null,
-      scope_id: input.scopeId,
-      is_followed: input.isFollowed,
-    }),
-  });
-}
-
 export function fetchNexusDashboardPayload(
   scopeId: string,
   actorPacketId?: string | null

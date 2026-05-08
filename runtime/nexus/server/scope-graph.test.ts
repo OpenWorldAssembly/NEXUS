@@ -207,10 +207,19 @@ test('scope graph prefers canonical ancestry relations and projects packet-nativ
       ],
       createdByPacketId: actor.header.packet_id,
     });
-    const associatedClaim = createAssociationClaimPacket({
-      claimKind: 'assembly_association',
+    const associatedRelation = createScopedRelationPacket({
+      subtype: 'assembly_association',
       subjectPacketId: actor.header.packet_id,
       targetPacketId: associatedScope.header.packet_id,
+      scopePacketId: associatedScope.header.packet_id,
+      applicableScopeRefs: [{ packet_id: associatedScope.header.packet_id }],
+      createdByPacketId: actor.header.packet_id,
+    });
+    const associatedClaim = createRelationAssertionClaimPacket({
+      claimKind: 'assembly_association',
+      subjectPacketId: actor.header.packet_id,
+      relationPacketId: associatedRelation.header.packet_id,
+      assertedTargetPacketId: associatedScope.header.packet_id,
       scopePacketId: associatedScope.header.packet_id,
       applicableScopeRefs: [{ packet_id: associatedScope.header.packet_id }],
       createdByPacketId: actor.header.packet_id,
@@ -232,6 +241,7 @@ test('scope graph prefers canonical ancestry relations and projects packet-nativ
       sunnymeadParent,
       homeRelation,
       supportingClaim,
+      associatedRelation,
       associatedClaim,
     ]) {
       await writePreferredPacket(harness.packetStore, packet);
@@ -249,13 +259,100 @@ test('scope graph prefers canonical ancestry relations and projects packet-nativ
     assert.equal(graph.effectiveHomeLocality?.source, 'canonical_relation');
     assert.equal(graph.followedScopeIds.has('remote-farm'), true);
     assert.equal(graph.associatedScopeIds.has('canyon-lake'), true);
+    assert.equal(graph.mountedScopeIds.has('canyon-lake'), true);
     assert.equal(graph.mountedScopeIds.has('global-commons'), true);
     assert.equal(graph.mountedScopeIds.has('california'), true);
     assert.equal(graph.mountedScopeIds.has('moreno-valley'), true);
     assert.equal(graph.mountedScopeIds.has('sunnymead-ranch'), true);
+    assert.equal(
+      graph.associationKindByRouteId.get('canyon-lake'),
+      'canonical_relation_assertion'
+    );
+    assert.deepEqual(
+      graph.mountReasonsByScopeId.get('canyon-lake'),
+      ['associated']
+    );
     assert.deepEqual(
       graph.justificationPacketIdsByScopeId.get('sunnymead-ranch'),
       [homeRelation.header.packet_id, supportingClaim.header.packet_id]
+    );
+    assert.deepEqual(
+      graph.justificationPacketIdsByScopeId.get('canyon-lake'),
+      [associatedRelation.header.packet_id, associatedClaim.header.packet_id]
+    );
+  } finally {
+    harness.cleanup();
+  }
+});
+
+test('scope graph keeps canonical association projection when the supporting claim also matches compatibility filters', async () => {
+  const harness = createScopeGraphHarness();
+
+  try {
+    const global = createAssemblyPacket({
+      packet_id: 'nexus:element/global-commons',
+      created_at: '2026-05-08T02:00:00.000Z',
+      name: 'Global Commons',
+      subtype: 'global',
+      locality_label: 'Global',
+    });
+    const scope = createAssemblyPacket({
+      packet_id: 'nexus:element/canyon-lake',
+      created_at: '2026-05-08T02:01:00.000Z',
+      name: 'Canyon Lake',
+      subtype: 'city',
+      locality_label: 'Canyon Lake',
+    });
+    const actor = createPersonPacket({
+      packet_id: 'nexus:element/aaron',
+      created_at: '2026-05-08T02:02:00.000Z',
+      authority_scope_ref: { packet_id: global.header.packet_id },
+      applicable_scope_refs: [{ packet_id: global.header.packet_id }],
+      name: 'Aaron',
+      subtype: 'resident',
+      locality_label: 'Aaron',
+    });
+    const canonicalRelation = createScopedRelationPacket({
+      subtype: 'assembly_association',
+      subjectPacketId: actor.header.packet_id,
+      targetPacketId: scope.header.packet_id,
+      scopePacketId: scope.header.packet_id,
+      applicableScopeRefs: [{ packet_id: scope.header.packet_id }],
+      createdByPacketId: actor.header.packet_id,
+    });
+    const canonicalClaim = createRelationAssertionClaimPacket({
+      claimKind: 'assembly_association',
+      subjectPacketId: actor.header.packet_id,
+      relationPacketId: canonicalRelation.header.packet_id,
+      assertedTargetPacketId: scope.header.packet_id,
+      scopePacketId: scope.header.packet_id,
+      applicableScopeRefs: [{ packet_id: scope.header.packet_id }],
+      createdByPacketId: actor.header.packet_id,
+    });
+    for (const packet of [
+      global,
+      scope,
+      actor,
+      canonicalRelation,
+      canonicalClaim,
+    ]) {
+      await writePreferredPacket(harness.packetStore, packet);
+    }
+
+    const graph = await buildNexusScopeGraphProjection({
+      packetStore: harness.packetStore,
+      actorPacketId: actor.header.packet_id,
+      followedScopeIds: [],
+    });
+
+    assert.equal(graph.associatedScopeIds.has('canyon-lake'), true);
+    assert.equal(
+      graph.associationKindByRouteId.get('canyon-lake'),
+      'canonical_relation_assertion'
+    );
+    assert.deepEqual(
+      graph.justificationPacketIdsByScopeId.get('canyon-lake'),
+      [canonicalRelation.header.packet_id, canonicalClaim.header.packet_id]
     );
   } finally {
     harness.cleanup();

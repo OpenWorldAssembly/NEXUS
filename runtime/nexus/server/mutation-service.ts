@@ -76,6 +76,8 @@ import {
   filterRelationPackets,
   listRelationPackets,
 } from '@runtime/nexus/server/relation-utils';
+import { getLegacyParentScopePacketIdCompatibility } from '@runtime/nexus/server/scope-graph-compatibility';
+import { resolveScopeParentResolutions } from '@runtime/nexus/server/scope-parent-resolution';
 import {
   planDefaultDiscussionSurfaces,
 } from '@runtime/nexus/server/default-discussion-surfaces';
@@ -273,6 +275,10 @@ function assertNeverMutationKind(kind: never): never {
   throw new Error(`Unsupported mutation kind: ${kind}`);
 }
 
+function isClaimedActorPacket(actorPacket: PacketEnvelopeByType['Element']): boolean {
+  return actorPacket.body.identity?.claim_status === 'claimed';
+}
+
 function isHomeLocalityMutationKind(
   kind: MutationIntent['kind']
 ): kind is 'home_locality.relation.set' | 'home_locality.claim.set' {
@@ -302,19 +308,27 @@ export class NexusMutationService {
   }
 
   private async listAssemblyScopeNodes(): Promise<AssemblyScopeNode[]> {
-    const elementPackets =
-      (await this.packetStore.listPreferredPacketsByFamily(
-        'Element'
-      )) as PacketEnvelopeByType['Element'][];
+    const [elementPackets, relationPackets] = await Promise.all([
+      this.packetStore.listPreferredPacketsByFamily('Element'),
+      listRelationPackets(this.packetStore),
+    ]);
+    const typedElementPackets = elementPackets as PacketEnvelopeByType['Element'][];
+    const scopePackets = typedElementPackets.filter((packet) => packet.body.kind === 'assembly');
+    const parentResolutionsByPacketId = resolveScopeParentResolutions({
+      scopePackets,
+      relationPackets,
+      getCompatibilityParentPacketId: getLegacyParentScopePacketIdCompatibility,
+    });
 
-    return elementPackets
+    return typedElementPackets
       .filter((packet) => packet.body.kind === 'assembly')
       .map((packet) => ({
         packet,
         packetId: packet.header.packet_id,
         routeId: toRouteScopeId(packet.header.packet_id),
         name: packet.body.name,
-        parentPacketId: getParentPacketId(packet),
+        parentPacketId:
+          parentResolutionsByPacketId.get(packet.header.packet_id)?.parentPacketId ?? null,
       }));
   }
 
@@ -939,10 +953,27 @@ export class NexusMutationService {
     }
 
     if (input.intent.claim_association !== false) {
-      const claimPacket = createAssociationClaimPacket({
-        claimKind: 'assembly_association',
+      const relationPacketId = createRelationPacketId({
+        subtype: 'assembly_association',
         subjectPacketId: input.actorPacket.header.packet_id,
         targetPacketId: assemblyPacket.header.packet_id,
+        scopePacketId: assemblyPacket.header.packet_id,
+      });
+      const relationPacket = createScopedRelationPacket({
+        subtype: 'assembly_association',
+        subjectPacketId: input.actorPacket.header.packet_id,
+        targetPacketId: assemblyPacket.header.packet_id,
+        scopePacketId: assemblyPacket.header.packet_id,
+        applicableScopeRefs,
+        createdByPacketId: input.actorPacket.header.packet_id,
+        status: 'active',
+        packetId: relationPacketId,
+      });
+      const claimPacket = createRelationAssertionClaimPacket({
+        claimKind: 'assembly_association',
+        subjectPacketId: input.actorPacket.header.packet_id,
+        relationPacketId,
+        assertedTargetPacketId: assemblyPacket.header.packet_id,
         scopePacketId: assemblyPacket.header.packet_id,
         applicableScopeRefs,
         createdByPacketId: input.actorPacket.header.packet_id,
@@ -955,8 +986,8 @@ export class NexusMutationService {
           scopePacketId: assemblyPacket.header.packet_id,
         }),
       });
-      packets.push(claimPacket);
-      actionIds.push('assembly_association.claim.set');
+      packets.push(relationPacket, claimPacket);
+      actionIds.push('assembly_association.relation.set');
     }
 
     const mergedPolicyDecision = await this.resolveScopePolicyDecision({
@@ -983,13 +1014,25 @@ export class NexusMutationService {
     };
   }
 
-  private async prepareAssemblyAssociationClaim(input: {
-    intent: Extract<MutationIntent, { kind: 'assembly_association.claim.set' }>;
+  private async prepareAssemblyAssociationRelation(input: {
+    intent:
+      | Extract<MutationIntent, { kind: 'assembly_association.relation.set' }>
+      | Extract<MutationIntent, { kind: 'assembly_association.relation.clear' }>;
     actorPacket: PacketEnvelopeByType['Element'];
   }): Promise<PreparedMutation> {
     const assemblyPacket = await this.requirePacket({
       packetId: input.intent.assembly_packet_id,
       family: 'Element',
+    });
+    const applicableScopeRefs =
+      assemblyPacket.header.applicable_scope_refs.length > 0
+        ? assemblyPacket.header.applicable_scope_refs
+        : [{ packet_id: assemblyPacket.header.packet_id }];
+    const relationPacketId = createRelationPacketId({
+      subtype: 'assembly_association',
+      subjectPacketId: input.actorPacket.header.packet_id,
+      targetPacketId: assemblyPacket.header.packet_id,
+      scopePacketId: assemblyPacket.header.packet_id,
     });
     const claimPacketId = createClaimPacketId({
       claimKind: 'assembly_association',
@@ -997,45 +1040,142 @@ export class NexusMutationService {
       targetPacketId: assemblyPacket.header.packet_id,
       scopePacketId: assemblyPacket.header.packet_id,
     });
-    const existingPreferredRevision = await this.packetStore.fetchPreferredRevision({
-      packet_id: claimPacketId,
-    });
-    const claimPacket = createAssociationClaimPacket({
-      claimKind: 'assembly_association',
-      subjectPacketId: input.actorPacket.header.packet_id,
-      targetPacketId: assemblyPacket.header.packet_id,
-      scopePacketId: assemblyPacket.header.packet_id,
-      applicableScopeRefs:
-        assemblyPacket.header.applicable_scope_refs.length > 0
-          ? assemblyPacket.header.applicable_scope_refs
-          : [{ packet_id: assemblyPacket.header.packet_id }],
-      createdByPacketId: input.actorPacket.header.packet_id,
-      note: input.intent.value === 1 ? input.intent.note ?? null : null,
-      status: input.intent.value === 1 ? 'active' : 'withdrawn',
-      packetId: claimPacketId,
-      parentRevisionRefs: existingPreferredRevision ? [existingPreferredRevision] : [],
-    });
+    const [
+      existingPreferredRelationRevision,
+      existingPreferredClaimRevision,
+      existingPreferredRelationPacket,
+      existingPreferredClaimPacket,
+    ] = await Promise.all([
+      this.packetStore.fetchPreferredRevision({
+        packet_id: relationPacketId,
+      }),
+      this.packetStore.fetchPreferredRevision({
+        packet_id: claimPacketId,
+      }),
+      this.packetStore.fetchByPacket({
+        packet_id: relationPacketId,
+      }),
+      this.packetStore.fetchByPacket({
+        packet_id: claimPacketId,
+      }),
+    ]);
+    const existingRelationPacket =
+      existingPreferredRelationPacket?.header.family === 'Relation'
+        ? (existingPreferredRelationPacket as PacketEnvelopeByType['Relation'])
+        : null;
+    const existingClaimPacket =
+      existingPreferredClaimPacket?.header.family === 'Claim'
+        ? (existingPreferredClaimPacket as PacketEnvelopeByType['Claim'])
+        : null;
+    const isSetIntent = input.intent.kind === 'assembly_association.relation.set';
+    const packets: PacketEnvelope[] = [];
+
+    if (isSetIntent || existingRelationPacket) {
+      packets.push(
+        createScopedRelationPacket({
+          subtype: 'assembly_association',
+          subjectPacketId: input.actorPacket.header.packet_id,
+          targetPacketId: assemblyPacket.header.packet_id,
+          scopePacketId: assemblyPacket.header.packet_id,
+          applicableScopeRefs,
+          createdByPacketId: input.actorPacket.header.packet_id,
+          note:
+            input.intent.kind === 'assembly_association.relation.set'
+              ? input.intent.note ?? null
+              : existingRelationPacket?.body.note ?? null,
+          status: isSetIntent ? 'active' : 'withdrawn',
+          packetId: relationPacketId,
+          parentRevisionRefs: existingPreferredRelationRevision
+            ? [existingPreferredRelationRevision]
+            : [],
+          supportingRefs: existingRelationPacket?.body.supporting_refs ?? [],
+          policyRef: existingRelationPacket?.body.policy_ref ?? null,
+          termsRef: existingRelationPacket?.body.terms_ref ?? null,
+        })
+      );
+    }
+
+    if (isSetIntent || existingClaimPacket) {
+      packets.push(
+        createRelationAssertionClaimPacket({
+          claimKind: 'assembly_association',
+          subjectPacketId: input.actorPacket.header.packet_id,
+          relationPacketId,
+          assertedTargetPacketId: assemblyPacket.header.packet_id,
+          scopePacketId: assemblyPacket.header.packet_id,
+          applicableScopeRefs,
+          createdByPacketId: input.actorPacket.header.packet_id,
+          note:
+            input.intent.kind === 'assembly_association.relation.set'
+              ? input.intent.note ?? null
+              : existingClaimPacket?.body.claim_markdown ??
+                existingClaimPacket?.body.note ??
+                null,
+          status: isSetIntent ? 'active' : 'withdrawn',
+          packetId: claimPacketId,
+          parentRevisionRefs: existingPreferredClaimRevision
+            ? [existingPreferredClaimRevision]
+            : [],
+        })
+      );
+    }
+
     const mergedPolicyDecision = await this.resolveScopePolicyDecision({
       governingScopePacket: assemblyPacket,
       actorPacket: input.actorPacket,
       actionIds: [
-        input.intent.value === 1
-          ? 'assembly_association.claim.set'
-          : 'assembly_association.claim.withdraw',
+        isSetIntent
+          ? 'assembly_association.relation.set'
+          : 'assembly_association.relation.clear',
       ],
     });
-    const digests = await getPacketUnsignedDigestCandidates(claimPacket);
+    const preparedPackets = await Promise.all(
+      packets.map(async (packet) => {
+        const digests = await getPacketUnsignedDigestCandidates(packet);
+
+        return {
+          packet,
+          unsigned_digest: digests[0]?.digest ?? '',
+        };
+      })
+    );
 
     return {
       kind: input.intent.kind,
       ...mergedPolicyDecision,
       governing_scope_packet_id: assemblyPacket.header.packet_id,
-      prepared_packets: [
-        {
-          packet: claimPacket,
-          unsigned_digest: digests[0]?.digest ?? '',
-        },
-      ],
+      prepared_packets: preparedPackets,
+    };
+  }
+
+  private async prepareAssemblyAssociationClaimCompatibilityAlias(input: {
+    intent: Extract<MutationIntent, { kind: 'assembly_association.claim.set' }>;
+    actorPacket: PacketEnvelopeByType['Element'];
+  }): Promise<PreparedMutation> {
+    const preparedMutation = await this.prepareAssemblyAssociationRelation({
+      intent:
+        input.intent.value === 1
+          ? {
+              kind: 'assembly_association.relation.set',
+              assembly_packet_id: input.intent.assembly_packet_id,
+              scope_id: input.intent.scope_id,
+              note: input.intent.note ?? null,
+              created_at: input.intent.created_at,
+              mutation_nonce: input.intent.mutation_nonce,
+            }
+          : {
+              kind: 'assembly_association.relation.clear',
+              assembly_packet_id: input.intent.assembly_packet_id,
+              scope_id: input.intent.scope_id,
+              created_at: input.intent.created_at,
+              mutation_nonce: input.intent.mutation_nonce,
+            },
+      actorPacket: input.actorPacket,
+    });
+
+    return {
+      ...preparedMutation,
+      kind: input.intent.kind,
     };
   }
 
@@ -1195,9 +1335,13 @@ export class NexusMutationService {
       if (!targetScopePacketId) {
         governingScopePacket = null;
       } else {
-      const packet = await this.packetStore.fetchByPacket({ packet_id: targetScopePacketId });
-      governingScopePacket =
-        packet?.header.family === 'Element' ? (packet as PacketEnvelopeByType['Element']) : null;
+        const packet = await this.packetStore.fetchByPacket({
+          packet_id: targetScopePacketId,
+        });
+        governingScopePacket =
+          packet?.header.family === 'Element'
+            ? (packet as PacketEnvelopeByType['Element'])
+            : null;
       }
     }
 
@@ -1248,6 +1392,94 @@ export class NexusMutationService {
     return {
       ...preparedMutation,
       kind: input.intent.kind,
+    };
+  }
+
+  private async prepareFollowRelation(input: {
+    intent:
+      | Extract<MutationIntent, { kind: 'follows.relation.set' }>
+      | Extract<MutationIntent, { kind: 'follows.relation.clear' }>;
+    actorPacket: PacketEnvelopeByType['Element'];
+  }): Promise<PreparedMutation> {
+    if (!isClaimedActorPacket(input.actorPacket)) {
+      throw new Error('Follow relations require a claimed identity.');
+    }
+
+    const targetScopePacket = await this.requirePacket({
+      packetId: input.intent.target_scope_packet_id,
+      family: 'Element',
+    });
+    const applicableScopeRefs =
+      targetScopePacket.header.applicable_scope_refs.length > 0
+        ? targetScopePacket.header.applicable_scope_refs
+        : [{ packet_id: targetScopePacket.header.packet_id }];
+    const relationPacketId = createRelationPacketId({
+      subtype: 'follows',
+      subjectPacketId: input.actorPacket.header.packet_id,
+      targetPacketId: targetScopePacket.header.packet_id,
+      scopePacketId: targetScopePacket.header.packet_id,
+    });
+    const [existingPreferredRelationRevision, existingPreferredRelationPacket] =
+      await Promise.all([
+        this.packetStore.fetchPreferredRevision({
+          packet_id: relationPacketId,
+        }),
+        this.packetStore.fetchByPacket({
+          packet_id: relationPacketId,
+        }),
+      ]);
+    const existingRelationPacket =
+      existingPreferredRelationPacket?.header.family === 'Relation'
+        ? (existingPreferredRelationPacket as PacketEnvelopeByType['Relation'])
+        : null;
+    const isSetIntent = input.intent.kind === 'follows.relation.set';
+    const packets: PacketEnvelope[] = [];
+
+    if (isSetIntent || existingRelationPacket) {
+      packets.push(
+        createScopedRelationPacket({
+          subtype: 'follows',
+          subjectPacketId: input.actorPacket.header.packet_id,
+          targetPacketId: targetScopePacket.header.packet_id,
+          scopePacketId: targetScopePacket.header.packet_id,
+          applicableScopeRefs,
+          createdByPacketId: input.actorPacket.header.packet_id,
+          note: existingRelationPacket?.body.note ?? null,
+          status: isSetIntent ? 'active' : 'withdrawn',
+          packetId: relationPacketId,
+          parentRevisionRefs: existingPreferredRelationRevision
+            ? [existingPreferredRelationRevision]
+            : [],
+          supportingRefs: existingRelationPacket?.body.supporting_refs ?? [],
+          policyRef: existingRelationPacket?.body.policy_ref ?? null,
+          termsRef: existingRelationPacket?.body.terms_ref ?? null,
+        })
+      );
+    }
+
+    const mergedPolicyDecision = await this.resolveScopePolicyDecision({
+      governingScopePacket: targetScopePacket,
+      actorPacket: input.actorPacket,
+      actionIds: [
+        isSetIntent ? 'follows.relation.set' : 'follows.relation.clear',
+      ],
+    });
+    const preparedPackets = await Promise.all(
+      packets.map(async (packet) => {
+        const digests = await getPacketUnsignedDigestCandidates(packet);
+
+        return {
+          packet,
+          unsigned_digest: digests[0]?.digest ?? '',
+        };
+      })
+    );
+
+    return {
+      kind: input.intent.kind,
+      ...mergedPolicyDecision,
+      governing_scope_packet_id: targetScopePacket.header.packet_id,
+      prepared_packets: preparedPackets,
     };
   }
 
@@ -1503,10 +1735,16 @@ export class NexusMutationService {
       createAnyway: input.intent.create_anyway,
     });
     const createdPackets = plannedResult.created_packets;
+    const firstCreatedScopePacket = createdPackets.find(
+      (packet): packet is PacketEnvelopeByType['Element'] =>
+        packet.header.family === 'Element'
+    );
     const governingScopePacket =
-      createdPackets.length > 0
+      firstCreatedScopePacket
         ? await this.requirePacket({
-            packetId: getParentPacketId(createdPackets[0]) ?? createdPackets[0].header.packet_id,
+            packetId:
+              getParentPacketId(firstCreatedScopePacket) ??
+              firstCreatedScopePacket.header.packet_id,
             family: 'Element',
           })
         : null;
@@ -1637,10 +1875,16 @@ export class NexusMutationService {
                   actorPacket: input.actorPacket,
                 })
               : input.intent.kind === 'assembly_association.claim.set'
-                ? await this.prepareAssemblyAssociationClaim({
+                ? await this.prepareAssemblyAssociationClaimCompatibilityAlias({
                     intent: input.intent,
                     actorPacket: input.actorPacket,
                   })
+                : input.intent.kind === 'assembly_association.relation.set' ||
+                    input.intent.kind === 'assembly_association.relation.clear'
+                  ? await this.prepareAssemblyAssociationRelation({
+                      intent: input.intent,
+                      actorPacket: input.actorPacket,
+                    })
                 : input.intent.kind === 'home_locality.relation.set'
                   ? await this.prepareHomeLocalityRelation({
                       intent: input.intent,
@@ -1648,9 +1892,15 @@ export class NexusMutationService {
                     })
                   : input.intent.kind === 'home_locality.claim.set'
                     ? await this.prepareHomeLocalityClaimCompatibilityAlias({
-                      intent: input.intent,
-                      actorPacket: input.actorPacket,
-                    })
+                        intent: input.intent,
+                        actorPacket: input.actorPacket,
+                      })
+                    : input.intent.kind === 'follows.relation.set' ||
+                        input.intent.kind === 'follows.relation.clear'
+                      ? await this.prepareFollowRelation({
+                          intent: input.intent,
+                          actorPacket: input.actorPacket,
+                        })
                     : input.intent.kind === 'role_association.claim.set'
                       ? await this.prepareRoleAssociationClaim({
                           intent: input.intent,
@@ -1951,26 +2201,109 @@ export class NexusMutationService {
     };
   }
 
-  private async finalizeAssociationClaimUpdate(input: {
+  private async finalizeAssociationRelationUpdate(input: {
     actorContext: ActorContext;
-    signedPackets: [PacketEnvelope];
+    signedPackets: PacketEnvelope[];
+    storedTicket: ReturnType<MutationTicketStore['consume']>;
   }) {
     await this.persistSignedPacketsForActor({
       actorPacket: input.actorContext.actorPacket,
       signedPackets: input.signedPackets,
     });
     await this.attestationService.syncDerivedState();
-    const [claimPacket] = input.signedPackets;
-    const claimStatus =
-      claimPacket.header.family === 'Claim'
-        ? (claimPacket as PacketEnvelopeByType['Claim']).body.status
-        : null;
+    const activeRelationPacket = [...input.signedPackets].reverse().find(
+      (packet): packet is PacketEnvelopeByType['Relation'] =>
+        packet.header.family === 'Relation' &&
+        (packet as PacketEnvelopeByType['Relation']).body.status === 'active'
+    );
+    const activeClaimPacket = [...input.signedPackets].reverse().find(
+      (packet): packet is PacketEnvelopeByType['Claim'] =>
+        packet.header.family === 'Claim' &&
+        (packet as PacketEnvelopeByType['Claim']).body.status === 'active'
+    );
+    const wasClearIntent =
+      input.storedTicket.intent.kind === 'assembly_association.relation.clear' ||
+      (input.storedTicket.intent.kind === 'assembly_association.claim.set' &&
+        input.storedTicket.intent.value !== 1);
 
     return {
       persist_effects: toPersistEffects(input.signedPackets),
       result: {
-        claim_packet_id: claimPacket.header.packet_id,
-        claim_status: claimStatus,
+        relation_packet_id: activeRelationPacket?.header.packet_id ?? null,
+        relation_status:
+          activeRelationPacket?.body.status ?? (wasClearIntent ? 'withdrawn' : null),
+        claim_packet_id: activeClaimPacket?.header.packet_id ?? null,
+        claim_status:
+          activeClaimPacket?.body.status ?? (wasClearIntent ? 'withdrawn' : null),
+        assembly_packet_id:
+          input.storedTicket.intent.kind === 'assembly_association.relation.set' ||
+          input.storedTicket.intent.kind === 'assembly_association.relation.clear' ||
+          input.storedTicket.intent.kind === 'assembly_association.claim.set'
+            ? input.storedTicket.intent.assembly_packet_id
+            : null,
+      },
+    };
+  }
+
+  private async finalizeFollowRelationUpdate(input: {
+    actorContext: ActorContext;
+    signedPackets: PacketEnvelope[];
+    storedTicket: ReturnType<MutationTicketStore['consume']>;
+  }) {
+    await this.persistSignedPacketsForActor({
+      actorPacket: input.actorContext.actorPacket,
+      signedPackets: input.signedPackets,
+    });
+    const activeRelationPacket = [...input.signedPackets].reverse().find(
+      (packet): packet is PacketEnvelopeByType['Relation'] =>
+        packet.header.family === 'Relation' &&
+        (packet as PacketEnvelopeByType['Relation']).body.status === 'active'
+    );
+
+    return {
+      persist_effects: toPersistEffects(input.signedPackets),
+      result: {
+        relation_packet_id: activeRelationPacket?.header.packet_id ?? null,
+        relation_status:
+          activeRelationPacket?.body.status ??
+          (input.storedTicket.intent.kind === 'follows.relation.clear'
+            ? 'withdrawn'
+            : null),
+        target_scope_packet_id:
+          activeRelationPacket?.body.target_ref.packet_id ??
+          (input.storedTicket.intent.kind === 'follows.relation.set' ||
+          input.storedTicket.intent.kind === 'follows.relation.clear'
+            ? input.storedTicket.intent.target_scope_packet_id
+            : null),
+      },
+    };
+  }
+
+  private async finalizeClaimUpdate(input: {
+    actorContext: ActorContext;
+    signedPackets: PacketEnvelope[];
+    storedTicket: ReturnType<MutationTicketStore['consume']>;
+  }) {
+    await this.persistSignedPacketsForActor({
+      actorPacket: input.actorContext.actorPacket,
+      signedPackets: input.signedPackets,
+    });
+    await this.attestationService.syncDerivedState();
+    const claimPacket = [...input.signedPackets].reverse().find(
+      (packet): packet is PacketEnvelopeByType['Claim'] =>
+        packet.header.family === 'Claim'
+    );
+
+    return {
+      persist_effects: toPersistEffects(input.signedPackets),
+      result: {
+        claim_packet_id: claimPacket?.header.packet_id ?? null,
+        claim_status:
+          claimPacket?.body.status ??
+          (input.storedTicket.intent.kind === 'role_association.claim.set' &&
+          !input.storedTicket.intent.claimed
+            ? 'withdrawn'
+            : null),
       },
     };
   }
@@ -2094,7 +2427,9 @@ export class NexusMutationService {
 
     const preparedResult = input.storedTicket.prepared_result as
       | {
-          created_packets: PacketEnvelopeByType['Element'][];
+          created_packets: PacketEnvelope[];
+          created_relation_packet_ids: string[];
+          created_location_packet_ids: string[];
           final_result: unknown;
           duplicate_warnings: unknown[];
         }
@@ -2104,6 +2439,10 @@ export class NexusMutationService {
       persist_effects: toPersistEffects(input.signedPackets),
       result: {
         created_packets: input.signedPackets,
+        created_relation_packet_ids:
+          preparedResult?.created_relation_packet_ids ?? [],
+        created_location_packet_ids:
+          preparedResult?.created_location_packet_ids ?? [],
         final_result: preparedResult?.final_result ?? null,
         duplicate_warnings: preparedResult?.duplicate_warnings ?? [],
       },
@@ -2181,7 +2520,9 @@ export class NexusMutationService {
       | Awaited<ReturnType<typeof this.finalizeDiscussionReply>>
       | Awaited<ReturnType<typeof this.finalizePacketSignal>>
       | Awaited<ReturnType<typeof this.finalizeAssemblyElementCreate>>
-      | Awaited<ReturnType<typeof this.finalizeAssociationClaimUpdate>>
+      | Awaited<ReturnType<typeof this.finalizeAssociationRelationUpdate>>
+      | Awaited<ReturnType<typeof this.finalizeFollowRelationUpdate>>
+      | Awaited<ReturnType<typeof this.finalizeClaimUpdate>>
       | Awaited<ReturnType<typeof this.finalizeHomeLocalityRelation>>
       | Awaited<ReturnType<typeof this.finalizeRoleAssociationAttestation>>
       | Awaited<ReturnType<typeof this.finalizeLocalityPathCreate>>
@@ -2217,11 +2558,28 @@ export class NexusMutationService {
           signedPackets: input.request.signed_packets,
         });
         break;
+      case 'assembly_association.relation.set':
+      case 'assembly_association.relation.clear':
       case 'assembly_association.claim.set':
-      case 'role_association.claim.set':
-        finalized = await this.finalizeAssociationClaimUpdate({
+        finalized = await this.finalizeAssociationRelationUpdate({
           actorContext: input.actorContext,
-          signedPackets: input.request.signed_packets as [PacketEnvelope],
+          signedPackets: input.request.signed_packets,
+          storedTicket,
+        });
+        break;
+      case 'follows.relation.set':
+      case 'follows.relation.clear':
+        finalized = await this.finalizeFollowRelationUpdate({
+          actorContext: input.actorContext,
+          signedPackets: input.request.signed_packets,
+          storedTicket,
+        });
+        break;
+      case 'role_association.claim.set':
+        finalized = await this.finalizeClaimUpdate({
+          actorContext: input.actorContext,
+          signedPackets: input.request.signed_packets,
+          storedTicket,
         });
         break;
       case 'home_locality.relation.set':

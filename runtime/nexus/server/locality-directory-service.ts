@@ -7,10 +7,18 @@ import { createHash } from 'node:crypto';
 
 import {
   createAssemblyPacket,
+  createLocationPacket,
   createPacketEdge,
   createPacketRef,
 } from '@core/packets/builders';
-import { getElementSubtypeLeaf, type LocalityLevel, type PacketEnvelopeByType, type PacketRef } from '@core/schema/packet-schema';
+import { createScopedRelationPacket } from '@core/packets/relations';
+import {
+  getElementSubtypeLeaf,
+  type LocalityLevel,
+  type PacketEnvelope,
+  type PacketEnvelopeByType,
+  type PacketRef,
+} from '@core/schema/packet-schema';
 import type { NexusLocationSearchResult } from '@runtime/nexus/location-search';
 import {
   createLocalityCanonicalNameKey,
@@ -18,7 +26,10 @@ import {
   normalizeLocalitySearchText,
   toLocalitySearchLevel,
 } from '@runtime/nexus/location-search-normalization';
-import { getNexusPacketServices } from '@runtime/nexus/server/nexus-packet-services';
+import { listRelationPackets } from '@runtime/nexus/server/relation-utils';
+import { getLegacyParentScopePacketIdCompatibility } from '@runtime/nexus/server/scope-graph-compatibility';
+import { resolveScopeParentResolutions } from '@runtime/nexus/server/scope-parent-resolution';
+import type { NodeSQLiteQueryServices } from '@runtime/storage/node-sqlite-query-services';
 
 export type LocalityCreatePathEntry = {
   level: LocalityLevel;
@@ -57,6 +68,14 @@ type LocalityNode = {
   parent_packet_id: string | null;
 };
 
+export type LocalityPathPlanResult = {
+  created_packets: PacketEnvelope[];
+  created_relation_packet_ids: string[];
+  created_location_packet_ids: string[];
+  final_result: NexusLocationSearchResult;
+  duplicate_warnings: LocalityDuplicateWarning[];
+};
+
 const LOCALITY_LEVEL_ORDER: LocalityLevel[] = [
   'nation',
   'region',
@@ -64,15 +83,40 @@ const LOCALITY_LEVEL_ORDER: LocalityLevel[] = [
   'district',
 ];
 
-function getParentPacketId(packet: PacketEnvelopeByType['Element']): string | null {
-  return (
-    packet.header.edges.find((edge) => edge.edge_type === 'parent_scope')?.target
-      .packet_id ?? null
+function createParentScopeCompatibilityEdge(parentPacketId: string) {
+  return createPacketEdge('parent_scope', {
+    packet_id: parentPacketId,
+  });
+}
+
+function createLocationPacketId(input: {
+  scopePacketId: string;
+  subtype: string;
+}): string {
+  return `nexus:location/${input.subtype}/${encodeURIComponent(input.scopePacketId)}`;
+}
+
+function resolveParentByPacketId(input: {
+  elementPackets: PacketEnvelopeByType['Element'][];
+  relationPackets: Awaited<ReturnType<typeof listRelationPackets>>;
+}): Map<string, string | null> {
+  const parentResolutions = resolveScopeParentResolutions({
+    scopePackets: input.elementPackets,
+    relationPackets: input.relationPackets,
+    getCompatibilityParentPacketId: getLegacyParentScopePacketIdCompatibility,
+  });
+
+  return new Map(
+    input.elementPackets.map((packet) => [
+      packet.header.packet_id,
+      parentResolutions.get(packet.header.packet_id)?.parentPacketId ?? null,
+    ])
   );
 }
 
 function toLocalityNode(
-  packet: PacketEnvelopeByType['Element']
+  packet: PacketEnvelopeByType['Element'],
+  parentByPacketId: Map<string, string | null>
 ): LocalityNode | null {
   if (packet.body.kind !== 'assembly') {
     return null;
@@ -94,7 +138,7 @@ function toLocalityNode(
       createLocalityCanonicalNameKey(packet.body.locality_label ?? packet.body.name),
     alias_keys: packet.body.locality?.alias_keys ?? [],
     display_aliases: packet.body.locality?.display_aliases ?? [],
-    parent_packet_id: getParentPacketId(packet),
+    parent_packet_id: parentByPacketId.get(packet.header.packet_id) ?? null,
   };
 }
 
@@ -256,36 +300,48 @@ function validatePathOrder(path: LocalityCreatePathEntry[]) {
   });
 }
 
-export async function planCanonicalLocalityPath(input: {
+type LocalityPlannerInput = {
   actorPacketId: string;
   path: LocalityCreatePathEntry[];
   createAnyway?: boolean;
-}): Promise<{
-  created_packets: PacketEnvelopeByType['Element'][];
-  final_result: NexusLocationSearchResult;
-  duplicate_warnings: LocalityDuplicateWarning[];
-}> {
+};
+
+async function getPlannerPacketStore(): Promise<NodeSQLiteQueryServices['packetStore']> {
+  const { getNexusPacketServices } = await import('@runtime/nexus/server/nexus-packet-services');
+  const services = await getNexusPacketServices();
+
+  return services.packetStore;
+}
+
+export async function planCanonicalLocalityPathWithPacketStore(input: LocalityPlannerInput & {
+  packetStore: NodeSQLiteQueryServices['packetStore'];
+}): Promise<LocalityPathPlanResult> {
   validatePathOrder(input.path);
 
-  const services = await getNexusPacketServices();
-  const elementPackets = (await services.packetStore.listPreferredPacketsByFamily(
-    'Element'
-  )) as PacketEnvelopeByType['Element'][];
+  const [elementPackets, relationPackets] = await Promise.all([
+    input.packetStore.listPreferredPacketsByFamily('Element') as Promise<
+      PacketEnvelopeByType['Element'][]
+    >,
+    listRelationPackets(input.packetStore),
+  ]);
   const globalAssemblyPacket = getGlobalAssemblyPacket(elementPackets);
 
   if (!globalAssemblyPacket) {
     throw new Error('Global assembly root is required before creating localities.');
   }
 
+  const parentByPacketId = resolveParentByPacketId({
+    elementPackets,
+    relationPackets,
+  });
   const localityNodes = elementPackets
-    .map(toLocalityNode)
+    .map((packet) => toLocalityNode(packet, parentByPacketId))
     .filter((node): node is LocalityNode => node !== null);
   const nodeMap = new Map(localityNodes.map((node) => [node.packet_id, node]));
   const packetMap = new Map(elementPackets.map((packet) => [packet.header.packet_id, packet]));
-  const parentByPacketId = new Map<string, string | null>(
-    elementPackets.map((packet) => [packet.header.packet_id, getParentPacketId(packet)])
-  );
-  const createdPackets: PacketEnvelopeByType['Element'][] = [];
+  const createdPackets: PacketEnvelope[] = [];
+  const createdRelationPacketIds: string[] = [];
+  const createdLocationPacketIds: string[] = [];
   const duplicateWarnings: LocalityDuplicateWarning[] = [];
   let parentPacketId: string = globalAssemblyPacket.header.packet_id;
   let finalNode: LocalityNode | null = null;
@@ -293,7 +349,9 @@ export async function planCanonicalLocalityPath(input: {
   for (const entry of input.path) {
     if (entry.existing_scope_id) {
       const existingPacket = packetMap.get(entry.existing_scope_id);
-      const existingNode = existingPacket ? toLocalityNode(existingPacket) : null;
+      const existingNode = existingPacket
+        ? toLocalityNode(existingPacket, parentByPacketId)
+        : null;
 
       if (!existingPacket || !existingNode) {
         throw new Error(`Unknown existing locality scope: ${entry.existing_scope_id}`);
@@ -380,7 +438,7 @@ export async function planCanonicalLocalityPath(input: {
         parentPacketId,
         parentByPacketId,
       }),
-      edges: [createPacketEdge('parent_scope', parentPacketId)],
+      edges: [createParentScopeCompatibilityEdge(parentPacketId)],
       created_by: createPacketRef(input.actorPacketId),
       submitted_by: createPacketRef(input.actorPacketId),
       name: entry.name.trim(),
@@ -401,12 +459,69 @@ export async function planCanonicalLocalityPath(input: {
       tags: ['assembly', 'locality', entry.level],
       metadata_tags: ['assembly', 'locality', entry.level],
     });
+    const parentRelationPacket = createScopedRelationPacket({
+      subtype: 'default_ancestry_parent',
+      subjectPacketId: packetId,
+      targetPacketId: parentPacketId,
+      scopePacketId: packetId,
+      applicableScopeRefs: packet.header.applicable_scope_refs,
+      createdByPacketId: input.actorPacketId,
+      status: 'active',
+    });
+    const locationPacketId = createLocationPacketId({
+      scopePacketId: packetId,
+      subtype: 'region',
+    });
+    const locationPacket = createLocationPacket({
+      packet_id: locationPacketId,
+      created_at: packet.header.created_at,
+      adapter: 'nexus-locality-directory',
+      authority_scope_ref: createPacketRef(packetId),
+      applicable_scope_refs: packet.header.applicable_scope_refs,
+      created_by: createPacketRef(input.actorPacketId),
+      submitted_by: createPacketRef(input.actorPacketId),
+      subtype: 'region',
+      title: entry.name.trim(),
+      summary: `Portable region definition for ${entry.name.trim()}.`,
+      status: 'provisional',
+      location_label: entry.name.trim(),
+      spatial_payload: {
+        canonical_name_key: canonicalNameKey,
+        locality_level: entry.level,
+        display_name: entry.name.trim(),
+        alias_keys: Array.from(
+          new Set([
+            canonicalNameKey,
+            ...(entry.alias_keys ?? []).map(createLocalityCanonicalNameKey),
+          ])
+        ).filter(Boolean),
+      },
+    });
+    const locationRelationPacket = createScopedRelationPacket({
+      subtype: 'defined_by_location',
+      subjectPacketId: packetId,
+      targetPacketId: locationPacketId,
+      scopePacketId: packetId,
+      applicableScopeRefs: packet.header.applicable_scope_refs,
+      createdByPacketId: input.actorPacketId,
+      status: 'active',
+    });
 
-    createdPackets.push(packet);
+    createdPackets.push(
+      packet,
+      parentRelationPacket,
+      locationPacket,
+      locationRelationPacket
+    );
+    createdRelationPacketIds.push(
+      parentRelationPacket.header.packet_id,
+      locationRelationPacket.header.packet_id
+    );
+    createdLocationPacketIds.push(locationPacketId);
     packetMap.set(packet.header.packet_id, packet);
     parentByPacketId.set(packet.header.packet_id, parentPacketId);
 
-    const createdNode = toLocalityNode(packet);
+    const createdNode = toLocalityNode(packet, parentByPacketId);
 
     if (!createdNode) {
       throw new Error('Created locality packet could not be projected.');
@@ -424,6 +539,8 @@ export async function planCanonicalLocalityPath(input: {
 
   return {
     created_packets: createdPackets,
+    created_relation_packet_ids: createdRelationPacketIds,
+    created_location_packet_ids: createdLocationPacketIds,
     final_result: buildLocationResult({
       node: finalNode,
       nodeMap,
@@ -432,21 +549,29 @@ export async function planCanonicalLocalityPath(input: {
   };
 }
 
-export async function createCanonicalLocalityPath(input: {
-  actorPacketId: string;
-  path: LocalityCreatePathEntry[];
-  createAnyway?: boolean;
-}): Promise<{
-  created_packets: PacketEnvelopeByType['Element'][];
-  final_result: NexusLocationSearchResult;
-  duplicate_warnings: LocalityDuplicateWarning[];
-}> {
-  const services = await getNexusPacketServices();
-  const plannedResult = await planCanonicalLocalityPath(input);
+export async function planCanonicalLocalityPath(
+  input: LocalityPlannerInput
+): Promise<LocalityPathPlanResult> {
+  const packetStore = await getPlannerPacketStore();
+
+  return planCanonicalLocalityPathWithPacketStore({
+    ...input,
+    packetStore,
+  });
+}
+
+export async function createCanonicalLocalityPath(
+  input: LocalityPlannerInput
+): Promise<LocalityPathPlanResult> {
+  const packetStore = await getPlannerPacketStore();
+  const plannedResult = await planCanonicalLocalityPathWithPacketStore({
+    ...input,
+    packetStore,
+  });
 
   for (const packet of plannedResult.created_packets) {
-    await services.packetStore.writeRevision(packet);
-    await services.packetStore.publishRevision({
+    await packetStore.writeRevision(packet);
+    await packetStore.publishRevision({
       packet_id: packet.header.packet_id,
       revision_id: packet.header.revision_id,
     });

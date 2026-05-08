@@ -42,7 +42,6 @@ import {
 } from '@runtime/nexus/nexus-content';
 import {
   fetchNexusShellPayload,
-  setNexusScopeFollowPreference,
 } from '@runtime/nexus/nexus-query-api';
 import {
   buildNexusBranchNodes,
@@ -81,6 +80,7 @@ type NexusShellContextValue = NexusShellState & {
   toggleScopeExpansion: (scopeId: string) => void;
   setActiveSection: (section: NexusSection) => void;
   setScopeFollowed: (scopeId: string, isFollowed: boolean) => Promise<void>;
+  setScopeAssociated: (scopeId: string, isAssociated: boolean) => Promise<void>;
   refreshShellData: () => Promise<void>;
   togglePreferencesDrawer: () => void;
   dismissEarlyAccessGate: () => void;
@@ -232,6 +232,7 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
     currentActorPacketId,
     currentLabel,
     currentMode,
+    runFortressMutation,
   } = useIdentityShell();
   const [scopeSummaries, setScopeSummaries] = useState<NexusScopeSummary[]>([
     FALLBACK_SCOPE_SUMMARY,
@@ -270,7 +271,7 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
     expandedScopeIds,
   );
   const discoverableScopes = scopeSummaries.filter(
-    (scope) => scope.isDiscoverable && !scope.isMounted
+    (scope) => scope.isDiscoverable && (!scope.isMounted || scope.isAssociated)
   );
   const followedScopes = scopeSummaries.filter((scope) =>
     followedScopeIds.includes(scope.id),
@@ -414,10 +415,48 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
   };
 
   const setScopeFollowed = async (scopeId: string, isFollowed: boolean) => {
-    await setNexusScopeFollowPreference({
-      actorPacketId: currentActorPacketId,
-      scopeId,
-      isFollowed,
+    const targetScope = scopeSummaries.find((scope) => scope.id === scopeId) ?? null;
+
+    if (!targetScope) {
+      throw new Error('Unknown scope follow target.');
+    }
+
+    await runFortressMutation({
+      intent: isFollowed
+        ? {
+            kind: 'follows.relation.set',
+            scope_id: scopeId,
+            target_scope_packet_id: targetScope.packetId,
+          }
+        : {
+            kind: 'follows.relation.clear',
+            scope_id: scopeId,
+            target_scope_packet_id: targetScope.packetId,
+          },
+    });
+    await refreshShellData();
+  };
+
+  const setScopeAssociated = async (scopeId: string, isAssociated: boolean) => {
+    const targetScope = scopeSummaries.find((scope) => scope.id === scopeId) ?? null;
+
+    if (!targetScope) {
+      throw new Error('Unknown scope association target.');
+    }
+
+    await runFortressMutation({
+      intent: isAssociated
+        ? {
+            kind: 'assembly_association.relation.set',
+            scope_id: scopeId,
+            assembly_packet_id: targetScope.packetId,
+          }
+        : {
+            kind: 'assembly_association.relation.clear',
+            scope_id: scopeId,
+            assembly_packet_id: targetScope.packetId,
+          },
+      writeRisk: 'standard',
     });
     await refreshShellData();
   };
@@ -633,6 +672,7 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
         toggleScopeExpansion,
         setActiveSection,
         setScopeFollowed,
+        setScopeAssociated,
         refreshShellData,
         togglePreferencesDrawer,
         dismissEarlyAccessGate,

@@ -63,6 +63,23 @@ export type AssemblyAssociationClaimMutationIntent = {
   mutation_nonce?: string | null;
 };
 
+export type AssemblyAssociationRelationSetMutationIntent = {
+  kind: 'assembly_association.relation.set';
+  assembly_packet_id: string;
+  scope_id: string;
+  note?: string | null;
+  created_at?: string | null;
+  mutation_nonce?: string | null;
+};
+
+export type AssemblyAssociationRelationClearMutationIntent = {
+  kind: 'assembly_association.relation.clear';
+  assembly_packet_id: string;
+  scope_id: string;
+  created_at?: string | null;
+  mutation_nonce?: string | null;
+};
+
 export type HomeLocalityRelationMutationIntent = {
   kind: 'home_locality.relation.set';
   home_scope_packet_id: string | null;
@@ -73,6 +90,22 @@ export type HomeLocalityRelationMutationIntent = {
 export type HomeLocalityClaimCompatibilityMutationIntent = {
   kind: 'home_locality.claim.set';
   home_scope_packet_id: string | null;
+  created_at?: string | null;
+  mutation_nonce?: string | null;
+};
+
+export type FollowRelationSetMutationIntent = {
+  kind: 'follows.relation.set';
+  scope_id: string;
+  target_scope_packet_id: string;
+  created_at?: string | null;
+  mutation_nonce?: string | null;
+};
+
+export type FollowRelationClearMutationIntent = {
+  kind: 'follows.relation.clear';
+  scope_id: string;
+  target_scope_packet_id: string;
   created_at?: string | null;
   mutation_nonce?: string | null;
 };
@@ -132,8 +165,12 @@ export type MutationIntent =
   | PacketSignalMutationIntent
   | AssemblyElementCreateMutationIntent
   | AssemblyAssociationClaimMutationIntent
+  | AssemblyAssociationRelationSetMutationIntent
+  | AssemblyAssociationRelationClearMutationIntent
   | HomeLocalityRelationMutationIntent
   | HomeLocalityClaimCompatibilityMutationIntent
+  | FollowRelationSetMutationIntent
+  | FollowRelationClearMutationIntent
   | RoleAssociationClaimMutationIntent
   | RoleAssociationAttestationMutationIntent
   | LocalityPathCreateMutationIntent

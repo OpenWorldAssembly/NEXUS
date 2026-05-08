@@ -191,6 +191,15 @@ test('geographic tree excludes followed-only scopes but keeps followed home scop
   );
 });
 
+test('associated mount reasons stay mounted without joining the geographic tree trunk', () => {
+  assert.equal(
+    isNexusGeographicTreeScope({
+      mountReasons: ['associated'],
+    }),
+    false
+  );
+});
+
 test('scope selection routes wrapper-level account and identity pages back to trust', () => {
   assert.equal(getNexusScopeSelectionHref('/nexus/account'), '/nexus/trust');
   assert.equal(

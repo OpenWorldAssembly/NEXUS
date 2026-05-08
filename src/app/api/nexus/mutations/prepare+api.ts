@@ -87,8 +87,53 @@ const MutationIntentSchema = z.discriminatedUnion('kind', [
     .strict(),
   z
     .object({
+      kind: z.literal('assembly_association.relation.set'),
+      assembly_packet_id: z.string().min(1),
+      scope_id: z.string().min(1),
+      note: z.string().min(1).optional().nullable().default(null),
+      created_at: z.string().optional().nullable().default(null),
+      mutation_nonce: z.string().optional().nullable().default(null),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('assembly_association.relation.clear'),
+      assembly_packet_id: z.string().min(1),
+      scope_id: z.string().min(1),
+      created_at: z.string().optional().nullable().default(null),
+      mutation_nonce: z.string().optional().nullable().default(null),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('home_locality.relation.set'),
+      home_scope_packet_id: z.string().min(1).optional().nullable().default(null),
+      created_at: z.string().optional().nullable().default(null),
+      mutation_nonce: z.string().optional().nullable().default(null),
+    })
+    .strict(),
+  z
+    .object({
       kind: z.literal('home_locality.claim.set'),
       home_scope_packet_id: z.string().min(1).optional().nullable().default(null),
+      created_at: z.string().optional().nullable().default(null),
+      mutation_nonce: z.string().optional().nullable().default(null),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('follows.relation.set'),
+      scope_id: z.string().min(1),
+      target_scope_packet_id: z.string().min(1),
+      created_at: z.string().optional().nullable().default(null),
+      mutation_nonce: z.string().optional().nullable().default(null),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('follows.relation.clear'),
+      scope_id: z.string().min(1),
+      target_scope_packet_id: z.string().min(1),
       created_at: z.string().optional().nullable().default(null),
       mutation_nonce: z.string().optional().nullable().default(null),
     })

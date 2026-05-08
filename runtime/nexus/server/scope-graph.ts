@@ -13,7 +13,9 @@ import type {
 } from '@runtime/nexus/nexus-shell';
 import { collectPoliciesForCauseAnchor, evaluateRelationPolicyRequirements } from '@runtime/nexus/server/relation-policy';
 import {
+  filterClaimPackets,
   listClaimPackets,
+  listRelationSupportingClaims,
   type ClaimPacket,
 } from '@runtime/nexus/server/claim-utils';
 import {
@@ -24,8 +26,13 @@ import {
 import {
   getLegacyParentScopePacketIdCompatibility,
   projectLegacyAssemblyAssociationScopeCompatibility,
+  projectLegacyFollowedScopeCompatibility,
   projectLegacyHomeLocalityCompatibility,
 } from '@runtime/nexus/server/scope-graph-compatibility';
+import {
+  resolveScopeParentResolutions,
+  type ScopeStructuralState,
+} from '@runtime/nexus/server/scope-parent-resolution';
 import type { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store';
 
 export type ScopeGraphNode = {
@@ -39,6 +46,7 @@ export type ScopeGraphNode = {
   summary: string | null;
   localityLabel: string | null;
   parentRouteId: string | null;
+  structuralState: ScopeStructuralState;
   structuralRelationPacketIds: string[];
   locationPacketIds: string[];
 };
@@ -64,8 +72,10 @@ export type ScopeGraphProjection = {
   homeScopeId: string | null;
   effectiveHomeLocality: EffectiveHomeLocalityProjection | null;
   followedScopeIds: Set<string>;
+  followKindByRouteId: Map<string, string>;
   associatedScopeIds: Set<string>;
-  associatedScopeClaimIdsByRouteId: Map<string, string[]>;
+  associationKindByRouteId: Map<string, string>;
+  associatedScopeJustificationPacketIdsByRouteId: Map<string, string[]>;
   knownScopeIds: Set<string>;
   discoverableScopeIds: Set<string>;
   geographicMountedScopeIds: string[];
@@ -171,10 +181,12 @@ function getAncestorRouteIds(
   scopeRouteId: string
 ): string[] {
   const ancestorRouteIds: string[] = [];
+  const visitedRouteIds = new Set<string>([scopeRouteId]);
   let currentParentRouteId = scopeMap.get(scopeRouteId)?.parentRouteId ?? null;
 
-  while (currentParentRouteId) {
+  while (currentParentRouteId && !visitedRouteIds.has(currentParentRouteId)) {
     ancestorRouteIds.unshift(currentParentRouteId);
+    visitedRouteIds.add(currentParentRouteId);
     currentParentRouteId = scopeMap.get(currentParentRouteId)?.parentRouteId ?? null;
   }
 
@@ -241,40 +253,34 @@ async function getOwaRelationPolicyPackets(
   });
 }
 
-function buildCanonicalParentPacketIdMap(input: {
+function resolveCanonicalScopedRelationPacketIds(input: {
   relations: RelationPacket[];
+  relationSubtype: string;
   scopePacketIds: Set<string>;
-  structuralRelationPacketIdsByPacketId: Map<string, string[]>;
-}): Map<string, string> {
-  const parentPacketIdByScopePacketId = new Map<string, string>();
-  const parentRelations = filterRelationPackets({
+  subjectPacketId?: string | null;
+}): Map<string, string[]> {
+  const relationPacketIdsByScopePacketId = new Map<string, string[]>();
+  const scopedRelations = filterRelationPackets({
     relations: input.relations,
-    relationSubtype: 'default_ancestry_parent',
+    relationSubtype: input.relationSubtype,
+    subjectPacketId: input.subjectPacketId ?? null,
     activeOnly: true,
   });
 
-  for (const relationPacket of parentRelations) {
-    const childPacketId = relationPacket.body.subject_ref.packet_id;
-    const parentPacketId = relationPacket.body.target_ref.packet_id;
+  for (const relationPacket of scopedRelations) {
+    const scopePacketId = relationPacket.body.target_ref.packet_id;
 
-    if (
-      !input.scopePacketIds.has(childPacketId) ||
-      !input.scopePacketIds.has(parentPacketId)
-    ) {
+    if (!input.scopePacketIds.has(scopePacketId)) {
       continue;
     }
 
-    if (!parentPacketIdByScopePacketId.has(childPacketId)) {
-      parentPacketIdByScopePacketId.set(childPacketId, parentPacketId);
-    }
-
-    input.structuralRelationPacketIdsByPacketId.set(childPacketId, [
-      ...(input.structuralRelationPacketIdsByPacketId.get(childPacketId) ?? []),
+    relationPacketIdsByScopePacketId.set(scopePacketId, [
+      ...(relationPacketIdsByScopePacketId.get(scopePacketId) ?? []),
       relationPacket.header.packet_id,
     ]);
   }
 
-  return parentPacketIdByScopePacketId;
+  return relationPacketIdsByScopePacketId;
 }
 
 function buildLocationPacketIdsByScopePacketId(input: {
@@ -419,11 +425,10 @@ export async function buildNexusScopeGraphProjection(input: {
   const scopePacketIds = new Set(
     scopeElementPackets.map((packet) => packet.header.packet_id)
   );
-  const structuralRelationPacketIdsByPacketId = new Map<string, string[]>();
-  const canonicalParentPacketIdByScopePacketId = buildCanonicalParentPacketIdMap({
-    relations: relationPackets,
-    scopePacketIds,
-    structuralRelationPacketIdsByPacketId,
+  const parentResolutionsByPacketId = resolveScopeParentResolutions({
+    scopePackets: scopeElementPackets,
+    relationPackets,
+    getCompatibilityParentPacketId: getLegacyParentScopePacketIdCompatibility,
   });
   const {
     locationPacketIdsByScopePacketId,
@@ -435,10 +440,8 @@ export async function buildNexusScopeGraphProjection(input: {
   const parentRouteIdByPacketId = new Map<string, string | null>();
 
   for (const packet of scopeElementPackets) {
-    const canonicalParentPacketId =
-      canonicalParentPacketIdByScopePacketId.get(packet.header.packet_id) ?? null;
-    const compatibilityParentPacketId = getLegacyParentScopePacketIdCompatibility(packet);
-    const resolvedParentPacketId = canonicalParentPacketId ?? compatibilityParentPacketId;
+    const resolvedParentPacketId =
+      parentResolutionsByPacketId.get(packet.header.packet_id)?.parentPacketId ?? null;
     parentRouteIdByPacketId.set(
       packet.header.packet_id,
       resolvedParentPacketId ? toRouteScopeId(resolvedParentPacketId) : null
@@ -462,8 +465,14 @@ export async function buildNexusScopeGraphProjection(input: {
       summary: packet.body.summary ?? null,
       localityLabel: packet.body.locality_label ?? null,
       parentRouteId: parentRouteIdByPacketId.get(packet.header.packet_id) ?? null,
+      structuralState:
+        parentResolutionsByPacketId.get(packet.header.packet_id)?.structuralState ??
+        'canonical',
       structuralRelationPacketIds: [
-        ...(structuralRelationPacketIdsByPacketId.get(packet.header.packet_id) ?? []),
+        ...(
+          parentResolutionsByPacketId.get(packet.header.packet_id)
+            ?.structuralRelationPacketIds ?? []
+        ),
         ...(locationRelationPacketIdsByScopePacketId.get(packet.header.packet_id) ?? []),
       ],
       locationPacketIds: locationPacketIdsByScopePacketId.get(packet.header.packet_id) ?? [],
@@ -522,9 +531,23 @@ export async function buildNexusScopeGraphProjection(input: {
   const locationPacketIdsByScopeId = new Map<string, string[]>(
     nodes.map((scopeNode) => [scopeNode.routeId, [...scopeNode.locationPacketIds]])
   );
-  const followedScopeIds = new Set(
-    input.followedScopeIds.filter((scopeId) => scopeMap.has(scopeId))
+  const canonicalFollowRelationPacketIdsByScopePacketId = resolveCanonicalScopedRelationPacketIds(
+    {
+      relations: relationPackets,
+      relationSubtype: 'follows',
+      scopePacketIds,
+      subjectPacketId: input.actorPacketId ?? null,
+    }
   );
+  const canonicalAssociationRelationPacketIdsByScopePacketId =
+    resolveCanonicalScopedRelationPacketIds({
+      relations: relationPackets,
+      relationSubtype: 'assembly_association',
+      scopePacketIds,
+      subjectPacketId: input.actorPacketId ?? null,
+    });
+  const followedScopeIds = new Set<string>();
+  const followKindByRouteId = new Map<string, string>();
   const globalScopeId =
     nodes.find((scopeNode) => getElementSubtypeLeaf(scopeNode.scopeSubtype) === 'global')
       ?.routeId ??
@@ -560,9 +583,75 @@ export async function buildNexusScopeGraphProjection(input: {
     }
   }
 
+  for (const [scopePacketId, relationPacketIds] of canonicalFollowRelationPacketIdsByScopePacketId) {
+    const routeId = toRouteScopeId(scopePacketId);
+
+    if (!scopeMap.has(routeId)) {
+      continue;
+    }
+
+    followedScopeIds.add(routeId);
+    followKindByRouteId.set(routeId, 'canonical_relation');
+    appendPacketIds(justificationPacketIdsByScopeId, routeId, relationPacketIds);
+  }
+
+  const compatibilityFollowedScopeIds = projectLegacyFollowedScopeCompatibility({
+    scopeMap,
+    followedScopeIds: input.followedScopeIds,
+  });
+
+  for (const routeId of compatibilityFollowedScopeIds) {
+    if (followedScopeIds.has(routeId)) {
+      continue;
+    }
+
+    followedScopeIds.add(routeId);
+    followKindByRouteId.set(routeId, 'shell_preference_compatibility');
+  }
+
   for (const followedScopeId of followedScopeIds) {
     mountedScopeIds.add(followedScopeId);
     addMountReason(mountReasonsByScopeId, followedScopeId, 'followed');
+  }
+
+  const associatedScopeIds = new Set<string>();
+  const associationKindByRouteId = new Map<string, string>();
+  const associatedScopeJustificationPacketIdsByRouteId = new Map<string, string[]>();
+
+  for (const [
+    scopePacketId,
+    relationPacketIds,
+  ] of canonicalAssociationRelationPacketIdsByScopePacketId.entries()) {
+    const routeId = toRouteScopeId(scopePacketId);
+
+    if (!scopeMap.has(routeId)) {
+      continue;
+    }
+
+    const supportingClaimPacketIds = [
+      ...new Set(
+        relationPacketIds.flatMap((relationPacketId) =>
+          filterClaimPackets({
+            claims: listRelationSupportingClaims({
+              claims: claimPackets,
+              relationPacketId,
+              claimSubtype: 'relation_assertion',
+              activeOnly: true,
+            }),
+            claimKind: 'assembly_association',
+            activeOnly: true,
+          }).map((claimPacket) => claimPacket.header.packet_id)
+        )
+      ),
+    ];
+    const justificationPacketIds = [...relationPacketIds, ...supportingClaimPacketIds];
+
+    associatedScopeIds.add(routeId);
+    mountedScopeIds.add(routeId);
+    addMountReason(mountReasonsByScopeId, routeId, 'associated');
+    associationKindByRouteId.set(routeId, 'canonical_relation_assertion');
+    associatedScopeJustificationPacketIdsByRouteId.set(routeId, justificationPacketIds);
+    appendPacketIds(justificationPacketIdsByScopeId, routeId, justificationPacketIds);
   }
 
   const associatedScopeClaimIdsByPacketId = projectLegacyAssemblyAssociationScopeCompatibility({
@@ -570,18 +659,19 @@ export async function buildNexusScopeGraphProjection(input: {
     actorPacketId: input.actorPacketId ?? null,
     scopePacketIds,
   });
-  const associatedScopeIds = new Set<string>();
-  const associatedScopeClaimIdsByRouteId = new Map<string, string[]>();
 
   for (const [scopePacketId, claimPacketIds] of associatedScopeClaimIdsByPacketId.entries()) {
     const routeId = toRouteScopeId(scopePacketId);
 
-    if (!scopeMap.has(routeId)) {
+    if (!scopeMap.has(routeId) || associatedScopeIds.has(routeId)) {
       continue;
     }
 
     associatedScopeIds.add(routeId);
-    associatedScopeClaimIdsByRouteId.set(routeId, claimPacketIds);
+    mountedScopeIds.add(routeId);
+    addMountReason(mountReasonsByScopeId, routeId, 'associated');
+    associationKindByRouteId.set(routeId, 'assembly_association_claim_compatibility');
+    associatedScopeJustificationPacketIdsByRouteId.set(routeId, claimPacketIds);
     appendPacketIds(justificationPacketIdsByScopeId, routeId, claimPacketIds);
   }
 
@@ -611,8 +701,10 @@ export async function buildNexusScopeGraphProjection(input: {
     homeScopeId: effectiveHomeLocality?.scopeRouteId ?? null,
     effectiveHomeLocality,
     followedScopeIds,
+    followKindByRouteId,
     associatedScopeIds,
-    associatedScopeClaimIdsByRouteId,
+    associationKindByRouteId,
+    associatedScopeJustificationPacketIdsByRouteId,
     knownScopeIds,
     discoverableScopeIds,
     geographicMountedScopeIds,
@@ -652,6 +744,7 @@ export function buildPersonalScopeSummary(input: {
     isFollowed: false,
     isAssociated: false,
     isHomeAncestor: false,
+    structuralState: 'canonical',
     associationKind: null,
     mountReasons: ['personal_default'],
     justificationPacketIds: [],
@@ -713,6 +806,7 @@ export function buildScopeSummaryFromGraph(input: {
     isFollowed: input.isFollowed,
     isAssociated: input.isAssociated,
     isHomeAncestor: input.isHomeAncestor,
+    structuralState: input.node.structuralState,
     associationKind: input.associationKind ?? null,
     mountReasons: input.mountReasons,
     justificationPacketIds: input.justificationPacketIds,

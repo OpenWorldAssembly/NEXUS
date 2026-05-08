@@ -78,10 +78,10 @@ export interface NexusPasskeyRegistrationOptionsPayload {
       name: string;
       displayName: string;
     };
-    pubKeyCredParams: Array<{
+    pubKeyCredParams: {
       type: 'public-key';
       alg: number;
-    }>;
+    }[];
     timeout: number;
     attestation: 'none';
     authenticatorSelection: {
@@ -182,7 +182,9 @@ export interface NexusLocalityDuplicateWarningPayload {
 }
 
 export interface NexusCreateLocalityPayload {
-  created_packets: PacketEnvelopeByType['Element'][];
+  created_packets: PacketEnvelopeByType[keyof PacketEnvelopeByType][];
+  created_relation_packet_ids: string[];
+  created_location_packet_ids: string[];
   final_result: NexusLocationSearchResult;
   duplicate_warnings: NexusLocalityDuplicateWarningPayload[];
 }

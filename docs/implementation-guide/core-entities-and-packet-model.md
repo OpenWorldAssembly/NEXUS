@@ -134,5 +134,8 @@ Current scope-graph direction:
 
 - canonical mounted ancestry prefers `Relation(subtype: default_ancestry_parent)`
 - canonical home-locality legitimacy prefers `Relation(subtype: home_locality)` evaluated through `Policy.relation_requirements`
+- canonical follows now use `Relation(subtype: follows)` and are actor-only; legacy shell follow preferences are compatibility-only read input
+- canonical assembly association now uses `Relation(subtype: assembly_association)` plus a supporting `Claim(subtype: relation_assertion)`, and associated scopes now count as mounted related scopes in shell projection
 - `Relation(subtype: defined_by_location)` is the live read seam for linked `Location` packets
-- legacy `parent_scope` ancestry and legacy `Claim(home_locality)` reads now belong in explicit compatibility projections rather than inline main-path shell logic
+- `locality.path.create` now emits locality `Element` packets, `default_ancestry_parent` relations, provisional `Location(subtype: region)` packets, and `defined_by_location` relations together
+- legacy `parent_scope` ancestry, shell follow preferences, and legacy `Claim(home_locality)` reads now belong in explicit compatibility projections or compatibility mirrors rather than inline main-path logic

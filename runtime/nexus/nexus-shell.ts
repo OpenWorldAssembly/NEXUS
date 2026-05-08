@@ -33,7 +33,15 @@ export type NexusScopeMountReason =
   | 'personal_default'
   | 'home_locality'
   | 'home_ancestor'
+  | 'associated'
   | 'followed';
+
+export type NexusScopeStructuralState =
+  | 'canonical'
+  | 'compatibility_parent'
+  | 'conflicting_parents'
+  | 'cyclic_ancestry'
+  | 'missing_parent';
 
 export type NexusScopeSummary = {
   id: string;
@@ -56,6 +64,7 @@ export type NexusScopeSummary = {
   isFollowed: boolean;
   isAssociated: boolean;
   isHomeAncestor: boolean;
+  structuralState: NexusScopeStructuralState;
   associationKind: string | null;
   mountReasons: NexusScopeMountReason[];
   justificationPacketIds: string[];

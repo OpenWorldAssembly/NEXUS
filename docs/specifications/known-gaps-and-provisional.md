@@ -5,7 +5,6 @@
 - identity/auth and discussions remain the two strongest end-to-end verticals
 - dashboard, votes, trust, roles, and Library are packet-backed, but are still comparatively provisional
 - role creation and editing remain deferred
-- packet-native follows remain deferred
 - broader moderation, trust weighting, and governance execution remain deferred
 
 ## Location and relationship caveats
@@ -13,14 +12,14 @@
 - `home_locality` is now the packet-backed source of mounted geographic ancestry, with canonical writes producing both a relation and supporting claim
 - `identity.location_disclosure` remains optional profile metadata rather than mounted-scope truth
 - `assembly_association` remains distinct from `home_locality`
-- followed scopes remain shell-preference backed in the current pass even though scope projection now exposes them more explicitly
-- `Location` is currently a read seam in scope projection, not yet a full creation and provider-resolution workflow
+- followed scopes are now packet-native on the write path, but legacy shell-preference follows remain readable through an explicit compatibility bridge during transition
+- `Location` is now part of locality creation through provisional `region` packets, but provider-backed normalization, richer payload conventions, and external refs remain later work
 - generic abstract assembly creation and richer locality governance are still later work
 
 ## Explorer caveats
 
 - Packet Explorer is read-only
-- follow semantics, fork or adapt execution, diff, and compare are not live yet
+- fork or adapt execution, diff, and compare are not live yet
 - official versus unofficial initiative filtering is not active product behavior
 - initiative-version subscription behavior is not active product behavior
 

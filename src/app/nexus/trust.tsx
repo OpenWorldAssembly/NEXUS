@@ -131,14 +131,18 @@ export default function NexusTrustPage() {
       try {
         await runFortressMutation({
           intent: {
-            kind: 'assembly_association.claim.set',
+            kind:
+              value === 1
+                ? 'assembly_association.relation.set'
+                : 'assembly_association.relation.clear',
             assembly_packet_id: activeScope.packetId,
             scope_id: activeScope.id,
-            note:
-              value === 1 && associationNote.trim().length > 0
-                ? associationNote
-                : null,
-            value,
+            ...(value === 1
+              ? {
+                  note:
+                    associationNote.trim().length > 0 ? associationNote : null,
+                }
+              : {}),
           },
         });
         const nextTrustPayload = await fetchNexusTrustPayload({
@@ -180,7 +184,7 @@ export default function NexusTrustPage() {
       try {
         await runFortressMutation({
           intent: {
-            kind: 'home_locality.claim.set',
+            kind: 'home_locality.relation.set',
             home_scope_packet_id: homeScopePacketId,
           },
         });
@@ -219,26 +223,40 @@ export default function NexusTrustPage() {
   };
 
   const handleFollowPreference = async (isFollowed: boolean) => {
-    setIsUpdatingFollow(true);
+    const applyFollowPreference = async () => {
+      setIsUpdatingFollow(true);
 
-    try {
-      await setScopeFollowed(activeScope.id, isFollowed);
-      setStatusMessage(
-        isFollowed
-          ? `${activeScope.name} added to followed scopes.`
-          : `${activeScope.name} removed from followed scopes.`
-      );
-      setErrorMessage(null);
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : 'Unable to update the follow preference.'
-      );
-      setStatusMessage(null);
-    } finally {
-      setIsUpdatingFollow(false);
-    }
+      try {
+        await setScopeFollowed(activeScope.id, isFollowed);
+        setStatusMessage(
+          isFollowed
+            ? `${activeScope.name} added to followed scopes.`
+            : `${activeScope.name} removed from followed scopes.`
+        );
+        setErrorMessage(null);
+      } catch (error) {
+        if (openNexusAuthGateForError(error, applyFollowPreference)) {
+          return;
+        }
+
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : 'Unable to update the follow relation.'
+        );
+        setStatusMessage(null);
+      } finally {
+        setIsUpdatingFollow(false);
+      }
+    };
+
+    await guardNexusWrite(
+      {
+        requiresClaimedIdentity: true,
+        writeRisk: 'standard',
+      },
+      applyFollowPreference
+    );
   };
 
   return (

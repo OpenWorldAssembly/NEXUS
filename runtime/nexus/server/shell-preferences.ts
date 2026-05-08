@@ -1,6 +1,6 @@
 /**
  * File: shell-preferences.ts
- * Description: Reads and writes lightweight Nexus shell preferences such as followed scopes.
+ * Description: Hosts explicit compatibility bridges for legacy shell follow preferences.
  */
 
 const SHELL_FOLLOWS_COOKIE = 'owa_nexus_scope_follows';
@@ -92,14 +92,14 @@ function getBucketScopeIds(
   return normalizeScopeIds(state.guest_scope_ids);
 }
 
-export function readFollowedScopeIds(
+export function readFollowedScopeIdsCompatibility(
   request: Request | null | undefined,
   actorPacketId?: string | null
 ): string[] {
   return getBucketScopeIds(readPreferenceState(request), actorPacketId);
 }
 
-export function writeFollowedScopePreference(input: {
+export function writeFollowedScopePreferenceCompatibility(input: {
   request: Request;
   actorPacketId?: string | null;
   scopeId: string;
@@ -131,3 +131,6 @@ export function writeFollowedScopePreference(input: {
     }),
   };
 }
+
+export const readFollowedScopeIds = readFollowedScopeIdsCompatibility;
+export const writeFollowedScopePreference = writeFollowedScopePreferenceCompatibility;

@@ -42,7 +42,7 @@ import type {
   NexusScopeSummary,
 } from '@runtime/nexus/nexus-shell';
 import { getNexusPacketServices } from '@runtime/nexus/server/nexus-packet-services';
-import { readFollowedScopeIds } from '@runtime/nexus/server/shell-preferences';
+import { readFollowedScopeIdsCompatibility } from '@runtime/nexus/server/shell-preferences';
 import {
   DEFAULT_TRUST_POLICY_SNAPSHOT,
   deriveTrustStage,
@@ -316,9 +316,8 @@ async function resolveScopeResolution(input: {
       isHomeAncestor:
         scopeGraph.effectiveHomeLocality?.ancestorRouteIds.includes(scopeNode.routeId) ??
         false,
-      associationKind: scopeGraph.associatedScopeIds.has(scopeNode.routeId)
-        ? 'assembly_association_claim_compatibility'
-        : null,
+      associationKind:
+        scopeGraph.associationKindByRouteId.get(scopeNode.routeId) ?? null,
       mountReasons: scopeGraph.mountReasonsByScopeId.get(scopeNode.routeId) ?? [],
       justificationPacketIds:
         scopeGraph.justificationPacketIdsByScopeId.get(scopeNode.routeId) ?? [],
@@ -450,7 +449,10 @@ export async function getNexusShellPayload(
   request?: Request | null
 ): Promise<NexusShellPayload> {
   const services = await getNexusPacketServices();
-  const followedScopeIds = readFollowedScopeIds(request ?? null, actorPacketId ?? null);
+  const followedScopeIds = readFollowedScopeIdsCompatibility(
+    request ?? null,
+    actorPacketId ?? null
+  );
   const scopeGraph = await buildNexusScopeGraphProjection({
     packetStore: services.packetStore,
     actorPacketId: actorPacketId ?? null,
@@ -509,9 +511,8 @@ export async function getNexusShellPayload(
       isHomeAncestor:
         scopeGraph.effectiveHomeLocality?.ancestorRouteIds.includes(scopeNode.routeId) ??
         false,
-      associationKind: scopeGraph.associatedScopeIds.has(scopeNode.routeId)
-        ? 'assembly_association_claim_compatibility'
-        : null,
+      associationKind:
+        scopeGraph.associationKindByRouteId.get(scopeNode.routeId) ?? null,
       mountReasons:
         scopeGraph.mountReasonsByScopeId.get(scopeNode.routeId) ?? [],
       justificationPacketIds:

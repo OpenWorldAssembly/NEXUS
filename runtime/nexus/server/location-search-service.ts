@@ -15,6 +15,9 @@ import {
   type LocalitySearchLevel,
 } from '@runtime/nexus/location-search-normalization';
 import { getNexusPacketServices } from '@runtime/nexus/server/nexus-packet-services';
+import { listRelationPackets } from '@runtime/nexus/server/relation-utils';
+import { getLegacyParentScopePacketIdCompatibility } from '@runtime/nexus/server/scope-graph-compatibility';
+import { resolveScopeParentResolutions } from '@runtime/nexus/server/scope-parent-resolution';
 
 type NexusLocationLookupProvider = {
   searchLocations: (
@@ -142,7 +145,17 @@ function getLocationSearchMatch(input: {
 
 async function listGraphLocationNodes(): Promise<ScopeSearchNode[]> {
   const services = await getNexusPacketServices();
-  const elementPackets = await services.packetStore.listPreferredPacketsByFamily('Element');
+  const [elementPackets, relationPackets] = await Promise.all([
+    services.packetStore.listPreferredPacketsByFamily('Element') as Promise<
+      PacketEnvelopeByType['Element'][]
+    >,
+    listRelationPackets(services.packetStore),
+  ]);
+  const parentResolutions = resolveScopeParentResolutions({
+    scopePackets: elementPackets,
+    relationPackets,
+    getCompatibilityParentPacketId: getLegacyParentScopePacketIdCompatibility,
+  });
 
   return elementPackets
     .filter(
@@ -172,8 +185,7 @@ async function listGraphLocationNodes(): Promise<ScopeSearchNode[]> {
         description:
           packet.body.summary ?? `${packet.body.name} assembly locality`,
         parent_packet_id:
-          packet.header.edges.find((edge) => edge.edge_type === 'parent_scope')?.target
-            .packet_id ?? null,
+          parentResolutions.get(packet.header.packet_id)?.parentPacketId ?? null,
       } satisfies ScopeSearchNode;
     })
     .filter((value): value is ScopeSearchNode => value !== null);
