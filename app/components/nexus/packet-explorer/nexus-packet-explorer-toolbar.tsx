@@ -2,10 +2,10 @@ import { Text, View } from 'react-native';
 
 import {
   NexusActionButton,
-  NexusAttachedTabRail,
   NexusInlineSelect,
   useNexusAppearance,
 } from '@app/components/nexus/nexus-ui';
+import { NexusTabRail, type NexusTabNode } from '@app/components/nexus/nexus-tabs';
 import type {
   PacketExplorerHomeSubtab,
   PacketExplorerTab,
@@ -13,6 +13,12 @@ import type {
 } from '@runtime/nexus/packet-explorer-session';
 
 import { getViewModeLabel } from './nexus-packet-explorer-utils';
+
+const PACKET_EXPLORER_HOME_TAB_NODES: NexusTabNode[] = [
+  { id: 'search', label: 'Search' },
+  { id: 'import', label: 'Import' },
+  { id: 'export', label: 'Export' },
+];
 
 type NexusPacketExplorerToolbarProps = {
   activeTab: PacketExplorerTab;
@@ -50,15 +56,14 @@ export function NexusPacketExplorerToolbar({
 
   if (activeTab.kind === 'home') {
     return (
-      <NexusAttachedTabRail
-        tabs={[
-          { id: 'search', title: 'Search' },
-          { id: 'import', title: 'Import' },
-          { id: 'export', title: 'Export' },
-        ]}
+      <NexusTabRail
         activeId={activeHomeSubtab}
-        compact
+        depth={1}
+        maxRows={2}
+        nodes={PACKET_EXPLORER_HOME_TAB_NODES}
         onSelect={(tabId) => onSelectHomeSubtab?.(tabId as PacketExplorerHomeSubtab)}
+        truncate="middle"
+        wrapMode="wrap"
       />
     );
   }

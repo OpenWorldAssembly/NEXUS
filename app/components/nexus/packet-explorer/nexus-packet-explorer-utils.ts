@@ -1,3 +1,4 @@
+import { middleTruncateText } from '@app/components/nexus/nexus-tab-primitives';
 import type { NexusActionIntentDescriptor, NexusActionState } from '@core/contracts';
 import type {
   NexusPacketExplorerLinkGroup,
@@ -38,18 +39,6 @@ export function formatJson(value: unknown): string {
   } catch {
     return 'Unable to serialize this view as JSON.';
   }
-}
-
-function middleTruncateText(value: string, maxLength: number): string {
-  if (value.length <= maxLength) {
-    return value;
-  }
-
-  const visibleCharacterCount = Math.max(1, maxLength - 3);
-  const leadingCount = Math.ceil(visibleCharacterCount / 2);
-  const trailingCount = Math.floor(visibleCharacterCount / 2);
-
-  return `${value.slice(0, leadingCount)}...${value.slice(value.length - trailingCount)}`;
 }
 
 export function getExplorerTabLabel(tab: PacketExplorerTab): string {

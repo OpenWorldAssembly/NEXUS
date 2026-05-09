@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Platform, ScrollView, Text, View } from 'react-native';
 
 import {
   NexusActionButton,
@@ -8,6 +8,11 @@ import {
   useNexusAppearance,
   useNexusChrome,
 } from '@app/components/nexus/nexus-ui';
+import {
+  NexusTabCloseButton,
+  NexusTabFrame,
+  NexusTabLabel,
+} from '@app/components/nexus/nexus-tab-primitives';
 import type { PacketExplorerTab } from '@runtime/nexus/packet-explorer-session';
 
 import { getExplorerTabLabel } from './nexus-packet-explorer-utils';
@@ -18,8 +23,6 @@ type NexusPacketExplorerTabDeckProps = {
   notice: string | null;
   headingTextClass: string;
   mutedTextClass: string;
-  inactiveTabClass: string;
-  attachedActiveTabClass: string;
   isConfirmingCloseTabs: boolean;
   onFocusTab: (tabId: string) => void;
   onCloseTab: (tabId: string) => void;
@@ -32,9 +35,6 @@ export function NexusPacketExplorerTabDeck({
   activeTabId,
   notice,
   headingTextClass,
-  mutedTextClass,
-  inactiveTabClass,
-  attachedActiveTabClass,
   isConfirmingCloseTabs,
   onFocusTab,
   onCloseTab,
@@ -115,15 +115,12 @@ export function NexusPacketExplorerTabDeck({
                     }
                   : undefined
               }
-              className={`min-w-[150px] max-w-[240px] flex-row items-start justify-between gap-3 border px-4 py-3 ${
-                isActive
-                  ? `-mb-px rounded-t-[20px] ${attachedActiveTabClass}`
-                  : `rounded-t-[20px] ${inactiveTabClass}`
-              }`}
             >
-              <Pressable
-                accessibilityRole="button"
-                className="min-w-0 flex-1"
+              <NexusTabFrame
+                active={isActive}
+                depth={0}
+                maxWidth={240}
+                minWidth={150}
                 onHoverIn={
                   canShowHoverTooltip &&
                   tab.kind === 'packet' &&
@@ -165,37 +162,46 @@ export function NexusPacketExplorerTabDeck({
                     : undefined
                 }
                 onPress={() => onFocusTab(tab.id)}
+                trailing={
+                  <NexusTabCloseButton
+                    accessibilityLabel={`Close ${getExplorerTabLabel(tab)} tab`}
+                    onPress={() => onCloseTab(tab.id)}
+                  />
+                }
               >
-                <Text
-                  className={`text-sm font-semibold ${headingTextClass}`}
+                <NexusTabLabel
+                  active={isActive}
+                  depth={0}
+                  label={getExplorerTabLabel(tab)}
                   numberOfLines={2}
-                >
-                  {getExplorerTabLabel(tab)}
-                </Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => onCloseTab(tab.id)}
-              >
-                <Text className={`text-xs font-semibold ${mutedTextClass}`}>x</Text>
-              </Pressable>
+                  truncate="none"
+                />
+              </NexusTabFrame>
             </View>
           );
         })}
 
         {packetTabCount > 1 ? (
-          <Pressable
-            accessibilityRole="button"
-            className={`min-w-[150px] max-w-[240px] flex-row items-start justify-between gap-3 rounded-t-[20px] border px-4 py-3 ${inactiveTabClass}`}
+          <NexusTabFrame
+            active={false}
+            depth={0}
+            maxWidth={240}
+            minWidth={150}
             onPress={onToggleCloseTabsConfirmation}
+            trailing={
+              <NexusTabCloseButton
+                accessibilityLabel="Close all packet tabs"
+                onPress={onToggleCloseTabsConfirmation}
+              />
+            }
           >
-            <View className="min-w-0 flex-1">
-              <Text className={`text-sm font-semibold ${headingTextClass}`}>
-                Close tabs
-              </Text>
-            </View>
-            <Text className={`text-xs font-semibold ${mutedTextClass}`}>x</Text>
-          </Pressable>
+            <NexusTabLabel
+              active={false}
+              depth={0}
+              label="Close tabs"
+              truncate="none"
+            />
+          </NexusTabFrame>
         ) : null}
       </ScrollView>
 

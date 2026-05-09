@@ -23,6 +23,11 @@ import type { NexusFeatureStatusId } from '@app/components/nexus/nexus-feature-s
 import { useNexusFeatureStatus } from '@app/components/nexus/nexus-feature-status-context';
 import { useNexusShellChrome } from '@app/components/nexus/nexus-shell-chrome-context';
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
+import {
+  NexusTabDetail,
+  NexusTabFrame,
+  NexusTabLabel,
+} from '@app/components/nexus/nexus-tab-primitives';
 import type { NexusCardTone } from '@runtime/nexus/nexus-content';
 import {
   getNexusSectionMenuTitle,
@@ -1086,12 +1091,6 @@ export function NexusAttachedTabRail({
   onSelect,
   compact = false,
 }: NexusAttachedTabRailProps) {
-  const { themeMode, uiDensity } = useNexusShell();
-  const appearance = useNexusAppearance();
-  const chrome = getNexusChromeClasses(themeMode, uiDensity);
-  const inactiveTabClass = chrome.attachedTabClass;
-  const activeTabClass = chrome.attachedTabActiveClass;
-
   return (
     <ScrollView
       horizontal
@@ -1103,20 +1102,26 @@ export function NexusAttachedTabRail({
           const isActive = tab.id === activeId;
 
           return (
-            <Pressable
+            <NexusTabFrame
               key={tab.id}
-              accessibilityRole="button"
-              className={`relative min-w-[140px] overflow-hidden border px-4 ${
-                compact ? 'rounded-t-nexus py-2.5' : 'rounded-t-nexus py-3'
-              } ${isActive ? `${activeTabClass} -mb-px` : inactiveTabClass}`}
+              active={isActive}
+              compact={compact}
+              depth={compact ? 1 : 0}
+              maxWidth={compact ? 220 : 260}
+              minWidth={140}
               onPress={() => onSelect(tab.id)}
             >
-              <Text className={appearance.itemTitleClass}>{tab.title}</Text>
-              {tab.detail ? (
-                <Text className={appearance.itemMetaClass}>{tab.detail}</Text>
-              ) : null}
-              <NexusThemedBevelEdges themeMode={themeMode} subtle />
-            </Pressable>
+              <View className="min-w-0 gap-1">
+                <NexusTabLabel
+                  active={isActive}
+                  depth={compact ? 1 : 0}
+                  label={tab.title}
+                />
+                {tab.detail ? (
+                  <NexusTabDetail active={isActive}>{tab.detail}</NexusTabDetail>
+                ) : null}
+              </View>
+            </NexusTabFrame>
           );
         })}
       </View>

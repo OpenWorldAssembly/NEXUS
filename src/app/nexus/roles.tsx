@@ -5,7 +5,7 @@
 
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ScrollView, Text, TextInput, View } from 'react-native';
 
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
 import { useNexusAuthGate } from '@app/components/nexus/nexus-auth-gate';
@@ -17,72 +17,14 @@ import {
   NexusSectionHeader,
   useNexusAppearance,
 } from '@app/components/nexus/nexus-ui';
+import { NexusTabRail, type NexusTabNode } from '@app/components/nexus/nexus-tabs';
 import type { NexusRolesPayload } from '@runtime/nexus/nexus-api-types';
 import {
   fetchNexusRolesPayload,
 } from '@runtime/nexus/nexus-query-api';
 
-type RoleTabRailProps = {
-  tabs: {
-    id: string;
-    title: string;
-    detail: string;
-  }[];
-  activeId: string | null;
-  onSelect: (tabId: string) => void;
-};
-
-function formatTrustStage(stage: string): string {
-  return stage.replace(/_/g, ' ');
-}
-
-function formatEvidenceActor(
-  actorLabel: string | null,
-  actorPacketId: string | null
-): string {
-  if (actorLabel) {
-    return actorLabel;
-  }
-
-  if (actorPacketId) {
-    return actorPacketId.replace('nexus:element/', '');
-  }
-
-  return 'Unknown actor';
-}
-
-function RoleTabRail({ tabs, activeId, onSelect }: RoleTabRailProps) {
-  const appearance = useNexusAppearance();
-
-  return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      className="flex-grow-0"
-    >
-      <View className="flex-row items-end gap-2">
-        {tabs.map((tab) => {
-          const isActive = tab.id === activeId;
-
-          return (
-            <Pressable
-              key={tab.id}
-              accessibilityRole="button"
-              className={`min-w-[150px] rounded-t-[20px] border px-4 py-3 ${
-                isActive
-                  ? '-mb-px border-nexus-line/70 border-b-nexus-panel bg-nexus-panel'
-                  : 'border-nexus-line/70 bg-white/5'
-              }`}
-              onPress={() => onSelect(tab.id)}
-            >
-              <Text className={appearance.itemTitleClass}>{tab.title}</Text>
-              <Text className={appearance.itemMetaClass}>{tab.detail}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
-    </ScrollView>
-  );
+function formatRoleClaimantBadge(claimantCount: number): string {
+  return `${claimantCount} ${claimantCount === 1 ? 'claimant' : 'claimants'}`;
 }
 
 export default function NexusRolesPage() {
@@ -380,10 +322,19 @@ export default function NexusRolesPage() {
 
         {roleTabs.length > 0 ? (
           <View className="gap-0">
-            <RoleTabRail
-              tabs={roleTabs}
+            <NexusTabRail
               activeId={activeRoleCard?.role_packet_id ?? null}
+              maxRows={3}
+              nodes={roleTabs.map(
+                (tab): NexusTabNode => ({
+                  id: tab.id,
+                  label: tab.title,
+                  badge: tab.detail,
+                })
+              )}
               onSelect={setActiveRolePacketId}
+              truncate="middle"
+              wrapMode="wrap"
             />
             {[activeRoleCard]
               .filter(

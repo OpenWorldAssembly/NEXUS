@@ -1,27 +1,25 @@
-import {
-  NexusAttachedTabRail,
-} from '@app/components/nexus/nexus-ui';
+import { NexusTabRail } from '@app/components/nexus/nexus-tabs';
 import type { PacketExplorerPrimaryTab } from '@runtime/nexus/packet-explorer-session';
 
 const PRIMARY_TAB_OPTIONS: {
   id: PacketExplorerPrimaryTab;
-  title: string;
+  label: string;
 }[] = [
   {
     id: 'data',
-    title: 'Data',
+    label: 'Data',
   },
   {
     id: 'lineage',
-    title: 'Lineage',
+    label: 'Lineage',
   },
   {
     id: 'links',
-    title: 'Links',
+    label: 'Links',
   },
   {
     id: 'actions',
-    title: 'Actions',
+    label: 'Actions',
   },
 ];
 
@@ -35,11 +33,14 @@ export function NexusPacketExplorerPrimaryRail({
   onSelect,
 }: NexusPacketExplorerPrimaryRailProps) {
   return (
-    <NexusAttachedTabRail
-      compact
-      tabs={PRIMARY_TAB_OPTIONS}
+    <NexusTabRail
       activeId={activeId}
+      depth={1}
+      maxRows={2}
+      nodes={PRIMARY_TAB_OPTIONS}
       onSelect={(primaryTabId) => onSelect(primaryTabId as PacketExplorerPrimaryTab)}
+      truncate="middle"
+      wrapMode="wrap"
     />
   );
 }

@@ -110,14 +110,6 @@ export default function NexusPacketExplorer() {
       : 'border-slate-300 bg-white';
   const dividerClass =
     themeMode === 'dark' ? 'border-nexus-line' : 'border-slate-300';
-  const inactiveTabClass =
-    themeMode === 'dark'
-      ? 'border-nexus-line/70 bg-white/5'
-      : 'border-slate-300 bg-slate-100';
-  const attachedActiveTabClass =
-    themeMode === 'dark'
-      ? 'border-nexus-line/70 border-b-nexus-panel bg-nexus-panel'
-      : 'border-slate-300 border-b-white bg-white';
   const mutedTextClass =
     themeMode === 'dark' ? 'text-nexus-muted' : 'text-slate-600';
   const headingTextClass =
@@ -565,8 +557,6 @@ export default function NexusPacketExplorer() {
                     notice={packetExplorerSession.notice}
                     headingTextClass={headingTextClass}
                     mutedTextClass={mutedTextClass}
-                    inactiveTabClass={inactiveTabClass}
-                    attachedActiveTabClass={attachedActiveTabClass}
                     isConfirmingCloseTabs={isConfirmingCloseTabs}
                     onFocusTab={focusExplorerTab}
                     onCloseTab={closeExplorerTab}

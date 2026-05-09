@@ -21,6 +21,7 @@ import {
   NexusCard,
   useNexusAppearance,
 } from '@app/components/nexus/nexus-ui';
+import { NexusTabRail, type NexusTabNode } from '@app/components/nexus/nexus-tabs';
 import type { NexusIdentitySearchResultPayload } from '@runtime/nexus/nexus-api-types';
 import { fetchNexusIdentitySearchPayload } from '@runtime/nexus/nexus-query-api';
 import {
@@ -30,44 +31,11 @@ import {
 
 type SignInMode = 'local' | 'passkey' | 'import';
 
-function IdentityModeTabRail({
-  activeId,
-  onSelect,
-}: {
-  activeId: SignInMode;
-  onSelect: (nextValue: SignInMode) => void;
-}) {
-  const appearance = useNexusAppearance();
-
-  return (
-    <View className="gap-0">
-      <View className="flex-row items-end gap-2">
-        {[
-          { id: 'local', label: 'Saved / Find identity', detail: 'Normal sign-in' },
-          { id: 'passkey', label: 'Passkey', detail: 'Device presence proof' },
-          { id: 'import', label: 'Import bundle', detail: 'Recovery / restore' },
-        ].map((tab) => {
-          const isActive = tab.id === activeId;
-
-          return (
-            <Pressable
-              key={tab.id}
-              className={`min-w-[170px] rounded-t-[20px] border px-4 py-3 ${
-                isActive
-                  ? 'border-nexus-line/70 border-b-nexus-panel bg-nexus-panel -mb-px'
-                  : 'border-nexus-line/70 bg-white/5'
-              }`}
-              onPress={() => onSelect(tab.id as SignInMode)}
-            >
-              <Text className={appearance.itemTitleClass}>{tab.label}</Text>
-              <Text className={appearance.itemMetaClass}>{tab.detail}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
-    </View>
-  );
-}
+const IDENTITY_MODE_TAB_NODES: NexusTabNode[] = [
+  { id: 'local', label: 'Saved / Find identity', shortLabel: 'Saved / Find' },
+  { id: 'passkey', label: 'Passkey' },
+  { id: 'import', label: 'Import bundle', shortLabel: 'Import' },
+];
 
 function getStorageModeCopy(
   storageMode: 'none' | 'session_only' | 'saved_on_device' | null
@@ -392,9 +360,13 @@ export default function NexusIdentitySignInPage() {
       </NexusCard>
 
       <View className="gap-0">
-        <IdentityModeTabRail
+        <NexusTabRail
           activeId={activeMode}
-          onSelect={setActiveMode}
+          maxRows={2}
+          nodes={IDENTITY_MODE_TAB_NODES}
+          onSelect={(nextValue) => setActiveMode(nextValue as SignInMode)}
+          truncate="middle"
+          wrapMode="wrap"
         />
 
         <NexusCard className="gap-4 rounded-t-none border-t-0">
