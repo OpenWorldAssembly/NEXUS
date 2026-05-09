@@ -21,6 +21,7 @@ import {
 
 import type { NexusFeatureStatusId } from '@app/components/nexus/nexus-feature-status-registry';
 import { useNexusFeatureStatus } from '@app/components/nexus/nexus-feature-status-context';
+export { NexusCardMenuButton } from '@app/components/nexus/action-card/nexus-card-menu-button';
 import { useNexusShellChrome } from '@app/components/nexus/nexus-shell-chrome-context';
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import {
@@ -47,12 +48,6 @@ type NexusCardProps = PropsWithChildren<{
   selected?: boolean;
   tone?: NexusCardTone | 'default';
 }>;
-
-type NexusCardMenuButtonProps = {
-  accessibilityLabel?: string;
-  className?: string;
-  onPress: () => void;
-};
 
 type NexusSectionHeaderProps = {
   eyebrow?: string;
@@ -632,42 +627,6 @@ export function NexusCard({
       ) : null}
       <NexusThemedBevelEdges themeMode={themeMode} />
     </View>
-  );
-}
-
-/**
- * Inputs: a press callback and optional accessibility label.
- * Output: a subtle integrated kebab action button for Nexus cards.
- */
-export function NexusCardMenuButton({
-  accessibilityLabel = 'Open card actions',
-  className,
-  onPress,
-}: NexusCardMenuButtonProps) {
-  const { themeMode, uiDensity } = useNexusShell();
-  const iconColor = themeMode === 'dark' ? '#9bb2c5' : '#64748b';
-
-  return (
-    <Pressable
-      accessibilityLabel={accessibilityLabel}
-      accessibilityRole="button"
-      className={joinClasses(
-        'items-center justify-center rounded-nexus',
-        uiDensity === 'large' ? 'h-8 w-8' : 'h-7 w-7',
-        themeMode === 'dark' ? 'bg-white/0 active:bg-white/10' : 'bg-white/0 active:bg-slate-200',
-        className,
-      )}
-      onPress={(event) => {
-        event.stopPropagation();
-        onPress();
-      }}
-    >
-      <MaterialIcons
-        color={iconColor}
-        name="more-vert"
-        size={uiDensity === 'large' ? 22 : 20}
-      />
-    </Pressable>
   );
 }
 

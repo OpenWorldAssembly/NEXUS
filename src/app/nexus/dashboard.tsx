@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
+import { NexusActionCard, type NexusCardBadge } from '@app/components/nexus/action-card';
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import {
   NexusActionButton,
@@ -17,6 +18,47 @@ import {
 import type { NexusDashboardPayload } from '@runtime/nexus/nexus-api-types';
 import { fetchNexusDashboardPayload } from '@runtime/nexus/nexus-query-api';
 
+function getStatusBadgeTone(status: string | null | undefined): NexusCardBadge['tone'] {
+  const normalizedStatus = status?.toLowerCase() ?? '';
+
+  if (normalizedStatus.includes('withdrawn') || normalizedStatus.includes('closed')) {
+    return 'muted';
+  }
+
+  if (normalizedStatus.includes('open') || normalizedStatus.includes('active')) {
+    return 'accent';
+  }
+
+  if (normalizedStatus.includes('blocked') || normalizedStatus.includes('failed')) {
+    return 'danger';
+  }
+
+  if (normalizedStatus.includes('warn') || normalizedStatus.includes('review')) {
+    return 'warning';
+  }
+
+  return 'default';
+}
+
+function getStatusBadgeIcon(status: string | null | undefined): NexusCardBadge['icon'] {
+  const normalizedStatus = status?.toLowerCase() ?? '';
+
+  if (normalizedStatus.includes('withdrawn') || normalizedStatus.includes('closed')) {
+    return 'history';
+  }
+
+  if (normalizedStatus.includes('open') || normalizedStatus.includes('active')) {
+    return 'visibility';
+  }
+
+  if (normalizedStatus.includes('blocked') || normalizedStatus.includes('failed')) {
+    return 'warning';
+  }
+
+  return 'packet';
+}
+
+
 /**
  * Inputs: none.
  * Output: the main nexus dashboard surface for the currently selected scope.
@@ -26,7 +68,12 @@ export default function NexusDashboardPage() {
     locality_created?: string | string[];
     locality_name?: string | string[];
   }>();
-  const { activeScope, currentActorPacketId, setActiveSection } = useNexusShell();
+  const {
+    activeScope,
+    currentActorPacketId,
+    openPacketInExplorer,
+    setActiveSection,
+  } = useNexusShell();
   const appearance = useNexusAppearance();
   const [dashboardPayload, setDashboardPayload] =
     useState<NexusDashboardPayload | null>(null);
@@ -138,7 +185,7 @@ export default function NexusDashboardPage() {
         </View>
 
         <View className="gap-4 xl:flex-row">
-          <View className="flex-1 gap-4">
+          <View className="w-full gap-4 xl:flex-1">
             <NexusCard className="gap-4">
               <View className="gap-2">
                 <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
@@ -171,48 +218,107 @@ export default function NexusDashboardPage() {
                 Aggregate queues
               </Text>
               <View className="gap-3">
-                {visibleQueues.map((queue) => (
-                  <NexusCard
-                    key={queue.id}
-                    className={`gap-2 p-4 ${appearance.cardInsetClass}`}
-                    tone={queue.tone}
-                  >
-                    <View className="flex-row items-start justify-between gap-4">
-                      <View className="flex-1 gap-1">
+                {visibleQueues.map((queue) => {
+                  const openQueueInExplorer = () =>
+                    openPacketInExplorer({
+                      packetId: queue.id,
+                      titleSnapshot: queue.title,
+                      seedSummary: {
+                        family: null,
+                        label: queue.stat,
+                        summary: queue.detail,
+                      },
+                    });
+
+                  return (
+                    <NexusActionCard
+                      key={queue.id}
+                      accessibilityLabel={`Open ${queue.title} in Explorer`}
+                      actions={[
+                        {
+                          id: 'open-explorer',
+                          label: 'Open in Explorer',
+                          onSelect: openQueueInExplorer,
+                        },
+                      ]}
+                      badges={[
+                        {
+                          id: 'queue-status',
+                          icon: getStatusBadgeIcon(queue.stat),
+                          label: queue.stat,
+                          tone: getStatusBadgeTone(queue.stat),
+                        },
+                      ]}
+                      className={`gap-2 p-4 ${appearance.cardInsetClass}`}
+                      onPress={openQueueInExplorer}
+                    >
+                      <View className="gap-1">
                         <Text className={appearance.itemTitleClass}>{queue.title}</Text>
                         <Text className={appearance.itemBodyClass}>{queue.detail}</Text>
                       </View>
-                      <NexusBadge label={queue.stat} tone={queue.tone} />
-                    </View>
-                  </NexusCard>
-                ))}
+                    </NexusActionCard>
+                  );
+                })}
               </View>
             </NexusCard>
           </View>
 
-          <View className="flex-1 gap-4">
+          <View className="w-full gap-4 xl:flex-1">
             <NexusCard className="gap-4">
               <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
                 Packet review
               </Text>
               <View className="gap-3">
-                {recommendedPackets.slice(0, 4).map((packet) => (
-                  <NexusCard
-                    key={packet.packet.packet_id}
-                    className={`gap-2 p-4 ${appearance.cardInsetClass}`}
-                  >
-                    <View className="flex-row items-center justify-between gap-3">
-                      <Text className={appearance.itemTitleClass}>{packet.title}</Text>
-                      <NexusBadge label={packet.family} tone="default" />
-                    </View>
-                    <Text className={appearance.itemBodyClass}>
-                      {packet.summary ?? 'No packet summary available.'}
-                    </Text>
-                    <Text className={appearance.itemMetaClass}>
-                      {packet.status ?? packet.label}
-                    </Text>
-                  </NexusCard>
-                ))}
+                {recommendedPackets.slice(0, 4).map((packet) => {
+                  const openRecommendedPacket = () =>
+                    openPacketInExplorer({
+                      packetId: packet.packet.packet_id,
+                      preferredRevisionId: packet.revision.revision_id,
+                      titleSnapshot: packet.title,
+                      seedSummary: {
+                        family: packet.family,
+                        label: packet.label,
+                        summary: packet.summary,
+                      },
+                    });
+
+                  return (
+                    <NexusActionCard
+                      key={packet.packet.packet_id}
+                      accessibilityLabel={`Open ${packet.title} in Explorer`}
+                      actions={[
+                        {
+                          id: 'open-explorer',
+                          label: 'Open in Explorer',
+                          onSelect: openRecommendedPacket,
+                        },
+                      ]}
+                      badges={[
+                        {
+                          id: 'packet-family',
+                          icon: 'packet',
+                          label: packet.family,
+                          tone: 'muted',
+                        },
+                        {
+                          id: 'packet-status',
+                          icon: getStatusBadgeIcon(packet.status ?? packet.label),
+                          label: packet.status ?? packet.label,
+                          tone: getStatusBadgeTone(packet.status ?? packet.label),
+                        },
+                      ]}
+                      className={`gap-2 p-4 ${appearance.cardInsetClass}`}
+                      onPress={openRecommendedPacket}
+                    >
+                      <View className="gap-2">
+                        <Text className={appearance.itemTitleClass}>{packet.title}</Text>
+                        <Text className={appearance.itemBodyClass}>
+                          {packet.summary ?? 'No packet summary available.'}
+                        </Text>
+                      </View>
+                    </NexusActionCard>
+                  );
+                })}
               </View>
             </NexusCard>
           </View>

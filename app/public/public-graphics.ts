@@ -5,6 +5,11 @@
 
 export type PublicBackgroundMotif =
   | 'none'
+  | 'civicLattice'
+  | 'signalClarifier'
+  | 'distributedChamber'
+  | 'choiceCircuit'
+  | 'emergentNetwork'
   | 'assembly'
   | 'social'
   | 'global'
@@ -133,115 +138,194 @@ function buildPublicBackgroundMotifSvg(
   motifOpacity: number,
 ) {
   const opacity = clampOpacity(motifOpacity);
+  const faintOpacity = clampOpacity(opacity * 0.72);
+  const nodeOpacity = clampOpacity(opacity + 0.045);
+  const pulseOpacity = clampOpacity(opacity + 0.025);
 
   if (motif === 'none') {
     return '';
   }
 
-  if (motif === 'assembly') {
+  if (motif === 'civicLattice' || motif === 'assembly') {
     return `
-      <g opacity="${opacity}" fill="none" stroke="${palette.accentSoft}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="1160" cy="430" r="250" />
-        <path d="M910 430 C 980 320, 1060 270, 1160 270 C 1260 270, 1340 320, 1410 430" />
-        <path d="M910 430 C 980 540, 1060 590, 1160 590 C 1260 590, 1340 540, 1410 430" />
-        <path d="M1160 180 C 1110 285, 1090 355, 1090 430 C 1090 505, 1110 575, 1160 680" />
-        <path d="M1160 180 C 1210 285, 1230 355, 1230 430 C 1230 505, 1210 575, 1160 680" />
+      <g opacity="${faintOpacity}" fill="none" stroke="${palette.ridge}" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M835 682 C 980 590, 1140 550, 1322 570 C 1405 580, 1488 606, 1562 646" />
+        <path d="M892 246 C 1028 194, 1210 190, 1374 240 C 1444 262, 1508 294, 1570 338" />
+        <path d="M890 326 C 1050 292, 1254 296, 1470 368" />
+        <path d="M848 590 C 1030 512, 1240 500, 1526 554" />
+        <path d="M1164 184 C 1098 330, 1088 514, 1152 716" />
+        <path d="M1164 184 C 1268 342, 1292 520, 1224 734" />
       </g>
-      <g opacity="${opacity + 0.035}" fill="${palette.accent}" stroke="${palette.accentSoft}" stroke-width="1.4">
-        <circle cx="990" cy="315" r="8" />
-        <circle cx="1090" cy="260" r="6" />
-        <circle cx="1218" cy="262" r="7" />
-        <circle cx="1326" cy="330" r="6" />
-        <circle cx="1386" cy="450" r="8" />
-        <circle cx="1288" cy="566" r="6" />
-        <circle cx="1158" cy="600" r="7" />
-        <circle cx="1026" cy="548" r="6" />
-        <circle cx="936" cy="438" r="7" />
-      </g>
-    `;
-  }
-
-  if (motif === 'social') {
-    return `
       <g opacity="${opacity}" fill="none" stroke="${palette.accentSoft}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="930" y="210" width="230" height="72" rx="18" />
-        <rect x="1010" y="328" width="300" height="82" rx="20" />
-        <rect x="900" y="466" width="250" height="76" rx="18" />
-        <path d="M1160 246 C 1228 270, 1276 304, 1310 356" />
-        <path d="M1150 504 C 1224 496, 1302 456, 1360 400" />
-        <path d="M1242 408 C 1276 470, 1334 530, 1418 584" />
+        <circle cx="1196" cy="456" r="274" />
+        <circle cx="1196" cy="456" r="188" />
+        <circle cx="1196" cy="456" r="92" />
+        <path d="M922 456 C 1008 348, 1100 306, 1196 306 C 1294 306, 1386 348, 1470 456" />
+        <path d="M922 456 C 1008 564, 1100 606, 1196 606 C 1294 606, 1386 564, 1470 456" />
+        <path d="M1008 302 C 1078 408, 1082 512, 1018 614" />
+        <path d="M1388 302 C 1318 408, 1314 512, 1378 614" />
       </g>
-      <g opacity="${opacity + 0.025}" fill="${palette.accent}" stroke="${palette.accentSoft}" stroke-width="1.2">
-        <circle cx="1328" cy="366" r="7" />
-        <circle cx="1382" cy="404" r="5" />
-        <circle cx="1422" cy="584" r="7" />
-        <circle cx="1470" cy="634" r="4" />
-        <circle cx="1236" cy="500" r="5" />
+      <g opacity="${pulseOpacity}" fill="none" stroke="${palette.accent}" stroke-width="1.45" stroke-linecap="round">
+        <path d="M896 476 C 996 408, 1096 392, 1196 456 C 1302 524, 1408 506, 1508 436" />
+        <path d="M964 646 C 1088 566, 1212 562, 1352 646" />
       </g>
-    `;
-  }
-
-  if (motif === 'global') {
-    return `
-      <g opacity="${opacity}" fill="none" stroke="${palette.accentSoft}" stroke-width="1.7" stroke-linecap="round">
-        <path d="M900 250 C 1060 190, 1270 190, 1460 250" />
-        <path d="M840 410 C 1030 350, 1280 350, 1520 410" />
-        <path d="M880 590 C 1070 650, 1280 650, 1480 590" />
-        <path d="M1160 150 C 1070 310, 1070 520, 1160 730" />
-        <path d="M1160 150 C 1250 310, 1250 520, 1160 730" />
-        <path d="M800 490 C 1010 420, 1240 430, 1540 520" />
-      </g>
-      <g opacity="${opacity + 0.03}" fill="${palette.accent}" stroke="${palette.accentSoft}" stroke-width="1.2">
-        <circle cx="970" cy="390" r="6" />
-        <circle cx="1088" cy="330" r="5" />
-        <circle cx="1210" cy="382" r="7" />
-        <circle cx="1342" cy="452" r="5" />
-        <circle cx="1278" cy="560" r="6" />
-        <circle cx="1120" cy="610" r="5" />
+      <g opacity="${nodeOpacity}" fill="${palette.accent}" stroke="${palette.accentSoft}" stroke-width="1.15">
+        <circle cx="936" cy="454" r="7" />
+        <circle cx="1008" cy="302" r="5" />
+        <circle cx="1092" cy="388" r="5" />
+        <circle cx="1196" cy="306" r="7" />
+        <circle cx="1298" cy="388" r="5" />
+        <circle cx="1388" cy="302" r="5" />
+        <circle cx="1460" cy="456" r="8" />
+        <circle cx="1378" cy="614" r="5" />
+        <circle cx="1196" cy="606" r="7" />
+        <circle cx="1018" cy="614" r="5" />
+        <circle cx="1196" cy="456" r="5" />
       </g>
     `;
   }
 
-  if (motif === 'choice') {
+  if (motif === 'signalClarifier' || motif === 'social') {
     return `
+      <g opacity="${faintOpacity}" fill="none" stroke="${palette.ridge}" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M880 258 L922 244 L956 268 L996 238 L1038 272" />
+        <path d="M904 624 L940 602 L980 630 L1026 592 L1072 620" />
+        <path d="M884 392 L936 410 L982 384 L1028 418 L1082 398" />
+        <path d="M922 512 L986 488 L1032 536 L1098 502" />
+      </g>
+      <g opacity="${opacity}" fill="none" stroke="${palette.accentSoft}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="870" y="198" width="196" height="62" rx="15" />
+        <rect x="920" y="314" width="258" height="70" rx="18" />
+        <rect x="860" y="456" width="220" height="66" rx="16" />
+        <rect x="958" y="610" width="188" height="58" rx="15" />
+        <path d="M1072 230 C 1160 244, 1234 286, 1298 356" />
+        <path d="M1178 350 C 1236 368, 1290 398, 1342 446" />
+        <path d="M1080 490 C 1170 492, 1266 468, 1362 416" />
+        <path d="M1146 640 C 1238 610, 1328 546, 1436 438" />
+      </g>
+      <g opacity="${pulseOpacity}" fill="none" stroke="${palette.accent}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M1158 510 C 1238 506, 1320 468, 1418 380" />
+        <path d="M1248 314 C 1320 354, 1384 392, 1464 410" />
+        <path d="M1304 592 C 1364 540, 1420 492, 1498 460" />
+      </g>
+      <g opacity="${nodeOpacity}" fill="${palette.accent}" stroke="${palette.accentSoft}" stroke-width="1.1">
+        <circle cx="1160" cy="510" r="5" />
+        <circle cx="1248" cy="314" r="5" />
+        <circle cx="1304" cy="592" r="5" />
+        <circle cx="1342" cy="446" r="6" />
+        <circle cx="1418" cy="380" r="8" />
+        <circle cx="1464" cy="410" r="5" />
+        <circle cx="1498" cy="460" r="7" />
+      </g>
+    `;
+  }
+
+  if (motif === 'distributedChamber' || motif === 'global') {
+    return `
+      <g opacity="${faintOpacity}" fill="none" stroke="${palette.ridge}" stroke-width="1.4" stroke-linecap="round">
+        <ellipse cx="1190" cy="552" rx="386" ry="122" />
+        <ellipse cx="1190" cy="552" rx="282" ry="84" />
+        <ellipse cx="1190" cy="552" rx="174" ry="48" />
+        <path d="M804 552 C 930 434, 1048 370, 1190 370 C 1332 370, 1452 434, 1576 552" />
+        <path d="M884 628 C 1010 708, 1370 710, 1500 628" />
+      </g>
+      <g opacity="${opacity}" fill="none" stroke="${palette.accentSoft}" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="1190" cy="430" r="86" />
+        <path d="M1012 552 C 1050 480, 1114 430, 1190 430 C 1266 430, 1330 480, 1368 552" />
+        <path d="M930 552 C 1000 398, 1110 314, 1190 314 C 1270 314, 1380 398, 1450 552" />
+        <path d="M1190 314 L1190 640" />
+        <path d="M962 474 C 1082 518, 1284 520, 1420 474" />
+        <path d="M914 590 C 1062 634, 1314 636, 1468 590" />
+      </g>
+      <g opacity="${pulseOpacity}" fill="none" stroke="${palette.accent}" stroke-width="1.5" stroke-linecap="round">
+        <path d="M930 552 C 994 524, 1048 498, 1110 466" />
+        <path d="M1270 464 C 1338 500, 1396 528, 1450 552" />
+        <path d="M1048 634 C 1140 594, 1242 594, 1336 634" />
+      </g>
+      <g opacity="${nodeOpacity}" fill="${palette.accent}" stroke="${palette.accentSoft}" stroke-width="1.15">
+        <circle cx="930" cy="552" r="6" />
+        <circle cx="1012" cy="552" r="5" />
+        <circle cx="1048" cy="634" r="5" />
+        <circle cx="1110" cy="466" r="5" />
+        <circle cx="1190" cy="430" r="8" />
+        <circle cx="1270" cy="464" r="5" />
+        <circle cx="1336" cy="634" r="5" />
+        <circle cx="1368" cy="552" r="5" />
+        <circle cx="1450" cy="552" r="6" />
+      </g>
+    `;
+  }
+
+  if (motif === 'choiceCircuit' || motif === 'choice') {
+    return `
+      <g opacity="${faintOpacity}" fill="none" stroke="${palette.ridge}" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="1278" y="236" width="172" height="96" rx="16" />
+        <rect x="1334" y="640" width="150" height="84" rx="14" />
+        <path d="M1320 254 L1396 314" />
+        <path d="M1320 314 L1396 254" />
+        <path d="M1362 658 L1454 706" />
+      </g>
       <g opacity="${opacity}" fill="none" stroke="${palette.accentSoft}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M890 510 C 1010 510, 1060 470, 1134 410 C 1220 340, 1300 294, 1450 280" />
-        <path d="M890 510 C 1010 510, 1070 548, 1142 610 C 1232 688, 1322 726, 1480 730" />
-        <path d="M1128 412 C 1180 430, 1224 454, 1260 486" />
-        <path d="M1140 608 C 1200 584, 1266 576, 1338 592" />
-        <path d="M1260 486 C 1310 532, 1360 552, 1448 556" />
+        <path d="M862 504 C 984 504, 1056 468, 1136 406 C 1220 340, 1306 294, 1452 284" />
+        <path d="M862 504 C 982 504, 1056 546, 1138 610 C 1234 686, 1340 722, 1510 724" />
+        <path d="M1136 406 C 1190 424, 1242 456, 1288 500" />
+        <path d="M1138 610 C 1204 584, 1272 578, 1342 596" />
+        <path d="M1288 500 C 1342 540, 1404 554, 1492 552" />
       </g>
-      <g opacity="${opacity + 0.025}" fill="${palette.accent}" stroke="${palette.accentSoft}" stroke-width="1.2">
-        <circle cx="890" cy="510" r="8" />
-        <circle cx="1134" cy="410" r="6" />
-        <circle cx="1142" cy="610" r="6" />
-        <circle cx="1260" cy="486" r="5" />
-        <circle cx="1450" cy="280" r="7" />
-        <circle cx="1480" cy="730" r="7" />
+      <g opacity="${pulseOpacity}" fill="none" stroke="${palette.accent}" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M1010 504 C 1110 492, 1228 434, 1384 332" />
+        <path d="M1010 504 C 1108 536, 1226 584, 1410 592" />
+        <path d="M1160 398 L1160 326 L1216 326" />
+        <path d="M1174 618 L1174 692 L1234 692" />
+      </g>
+      <g opacity="${nodeOpacity}" fill="${palette.accent}" stroke="${palette.accentSoft}" stroke-width="1.15">
+        <circle cx="862" cy="504" r="8" />
+        <circle cx="1010" cy="504" r="5" />
+        <circle cx="1136" cy="406" r="6" />
+        <circle cx="1138" cy="610" r="6" />
+        <circle cx="1288" cy="500" r="5" />
+        <circle cx="1384" cy="332" r="6" />
+        <circle cx="1452" cy="284" r="8" />
+        <circle cx="1410" cy="592" r="5" />
+        <circle cx="1510" cy="724" r="8" />
       </g>
     `;
   }
 
   return `
-    <g opacity="${opacity}" fill="none" stroke="${palette.accentSoft}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="1110" cy="500" r="80" />
-      <circle cx="1110" cy="500" r="150" />
-      <circle cx="1110" cy="500" r="230" />
-      <path d="M1110 500 C 1200 450, 1280 390, 1360 300" />
-      <path d="M1110 500 C 1214 540, 1318 586, 1450 660" />
-      <path d="M1110 500 C 1002 450, 930 380, 850 280" />
-      <path d="M1110 500 C 1016 570, 930 630, 820 690" />
+    <g opacity="${faintOpacity}" fill="none" stroke="${palette.ridge}" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M820 736 C 990 672, 1162 650, 1350 678 C 1444 692, 1514 716, 1574 746" />
+      <path d="M916 704 C 1022 624, 1122 564, 1216 500" />
+      <path d="M1066 704 C 1170 606, 1268 522, 1386 408" />
+      <path d="M1240 704 C 1300 610, 1370 548, 1480 486" />
     </g>
-    <g opacity="${opacity + 0.03}" fill="${palette.accent}" stroke="${palette.accentSoft}" stroke-width="1.2">
-      <circle cx="1110" cy="500" r="8" />
-      <circle cx="1218" cy="440" r="5" />
-      <circle cx="1360" cy="300" r="7" />
-      <circle cx="1308" cy="584" r="5" />
-      <circle cx="1450" cy="660" r="7" />
-      <circle cx="964" cy="414" r="5" />
-      <circle cx="850" cy="280" r="7" />
-      <circle cx="930" cy="630" r="5" />
-      <circle cx="820" cy="690" r="7" />
+    <g opacity="${opacity}" fill="none" stroke="${palette.accentSoft}" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="1138" cy="500" r="82" />
+      <circle cx="1138" cy="500" r="154" />
+      <circle cx="1138" cy="500" r="236" />
+      <path d="M1138 500 C 1226 454, 1300 394, 1388 302" />
+      <path d="M1138 500 C 1242 546, 1356 596, 1492 664" />
+      <path d="M1138 500 C 1030 458, 950 392, 862 292" />
+      <path d="M1138 500 C 1038 574, 942 640, 820 704" />
+      <path d="M942 640 C 1090 610, 1236 616, 1356 596" />
+    </g>
+    <g opacity="${pulseOpacity}" fill="none" stroke="${palette.accent}" stroke-width="1.5" stroke-linecap="round">
+      <path d="M820 704 C 956 658, 1046 580, 1138 500 C 1230 420, 1318 358, 1388 302" />
+      <path d="M942 640 C 1054 590, 1230 592, 1492 664" />
+    </g>
+    <g opacity="${nodeOpacity}" fill="${palette.accent}" stroke="${palette.accentSoft}" stroke-width="1.15">
+      <circle cx="1138" cy="500" r="8" />
+      <circle cx="1226" cy="454" r="5" />
+      <circle cx="1388" cy="302" r="8" />
+      <circle cx="1300" cy="596" r="5" />
+      <circle cx="1492" cy="664" r="8" />
+      <circle cx="986" cy="416" r="5" />
+      <circle cx="862" cy="292" r="8" />
+      <circle cx="942" cy="640" r="5" />
+      <circle cx="820" cy="704" r="8" />
+      <circle cx="916" cy="704" r="4" />
+      <circle cx="1066" cy="704" r="4" />
+      <circle cx="1240" cy="704" r="4" />
     </g>
   `;
 }

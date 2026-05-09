@@ -34,7 +34,8 @@ const sections: HomeRailSection[] = [
     ],
     backgroundImageUri: buildPublicBackgroundImageUri({
       variant: 'card',
-      motif: 'assembly',
+      motif: 'civicLattice',
+      motifOpacity: 0.095,
       motifSide: 'right',
       palette: {
         base: '#09131f',
@@ -64,7 +65,8 @@ const sections: HomeRailSection[] = [
     ],
     backgroundImageUri: buildPublicBackgroundImageUri({
       variant: 'card',
-      motif: 'social',
+      motif: 'signalClarifier',
+      motifOpacity: 0.09,
       motifSide: 'left',
       palette: {
         base: '#0a1422',
@@ -90,7 +92,8 @@ const sections: HomeRailSection[] = [
     ],
     backgroundImageUri: buildPublicBackgroundImageUri({
       variant: 'card',
-      motif: 'global',
+      motif: 'distributedChamber',
+      motifOpacity: 0.09,
       motifSide: 'right',
       palette: {
         base: '#0a1524',
@@ -116,7 +119,8 @@ const sections: HomeRailSection[] = [
     ],
     backgroundImageUri: buildPublicBackgroundImageUri({
       variant: 'card',
-      motif: 'choice',
+      motif: 'choiceCircuit',
+      motifOpacity: 0.09,
       motifSide: 'left',
       palette: {
         base: '#08111d',
@@ -142,7 +146,8 @@ const sections: HomeRailSection[] = [
     ],
     backgroundImageUri: buildPublicBackgroundImageUri({
       variant: 'card',
-      motif: 'agency',
+      motif: 'emergentNetwork',
+      motifOpacity: 0.09,
       motifSide: 'right',
       palette: {
         base: '#09131f',
