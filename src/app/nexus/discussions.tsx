@@ -14,6 +14,7 @@ import type {
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
+import { NexusTabStack, type NexusTabNode } from '@app/components/nexus/nexus-tabs';
 import { useNexusAuthGate } from '@app/components/nexus/nexus-auth-gate';
 import {
   NexusActionButton,
@@ -60,33 +61,12 @@ type InlineReplyComposerProps = {
   onSubmit: () => void;
 };
 
-type ConnectedTabRailProps = {
-  tabs: {
-    id: string;
-    title: string;
-    detail: string;
-  }[];
-  activeId: string | null;
-  compact?: boolean;
-  onSelect: (tabId: string) => void;
-};
-
 type DiscussionVotePillProps = {
   score: number;
   viewerValue: -1 | 0 | 1;
   canVote: boolean;
   disabled: boolean;
   onVote: (event: GestureResponderEvent, value: -1 | 1) => void;
-};
-
-type SegmentedControlProps = {
-  options: {
-    id: string;
-    label: string;
-  }[];
-  activeId: string;
-  onSelect: (optionId: string) => void;
-  disabled?: boolean;
 };
 
 type ReplyBranchState = {
@@ -407,53 +387,6 @@ function InlineReplyComposer({
   );
 }
 
-function ConnectedTabRail({
-  tabs,
-  activeId,
-  compact = false,
-  onSelect,
-}: ConnectedTabRailProps) {
-  const { themeMode } = useNexusShell();
-  const appearance = useNexusAppearance();
-  const inactiveTabClass =
-    themeMode === 'dark'
-      ? 'border-nexus-line/70 bg-white/5'
-      : 'border-slate-300 bg-slate-100';
-  const activeTabClass =
-    themeMode === 'dark'
-      ? 'border-nexus-line/70 border-b-nexus-panel bg-nexus-panel'
-      : 'border-slate-300 border-b-white bg-white';
-
-  return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      className="flex-grow-0"
-    >
-      <View className="flex-row items-end gap-2">
-        {tabs.map((tab) => {
-          const isActive = tab.id === activeId;
-
-          return (
-            <Pressable
-              key={tab.id}
-              className={`min-w-[150px] border px-4 ${
-                compact
-                  ? 'rounded-t-[18px] py-2.5'
-                  : 'rounded-t-[20px] py-3'
-              } ${isActive ? `${activeTabClass} -mb-px` : inactiveTabClass}`}
-              onPress={() => onSelect(tab.id)}
-            >
-              <Text className={appearance.itemTitleClass}>{tab.title}</Text>
-              <Text className={appearance.itemMetaClass}>{tab.detail}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
-    </ScrollView>
-  );
-}
-
 function DiscussionVotePill({
   score,
   viewerValue,
@@ -522,63 +455,6 @@ function ReplyCountPill({ replyLabel }: { replyLabel: string }) {
   return (
     <View className={`rounded-full border px-4 py-2.5 ${containerClass}`}>
       <Text className={`text-sm font-semibold ${textClass}`}>{replyLabel}</Text>
-    </View>
-  );
-}
-
-function SegmentedControl({
-  options,
-  activeId,
-  onSelect,
-  disabled = false,
-}: SegmentedControlProps) {
-  const { containerClass, dividerClass, buttonClass } = useVotePillClasses();
-  const { themeMode } = useNexusShell();
-  const activeSegmentClass =
-    themeMode === 'dark'
-      ? 'bg-nexus-sky/12 text-nexus-sky'
-      : 'bg-sky-100 text-sky-700';
-
-  return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-grow-0">
-      <View className={`flex-row items-center overflow-hidden rounded-full border ${containerClass}`}>
-        {options.map((option, index) => {
-          const isActive = option.id === activeId;
-
-          return (
-            <Pressable
-              key={option.id}
-              accessibilityRole="button"
-              className={`${index > 0 ? `border-l ${dividerClass}` : ''} px-4 py-2.5 ${
-                isActive ? activeSegmentClass : ''
-              }`}
-              disabled={disabled}
-              onPress={() => onSelect(option.id)}
-            >
-              <Text
-                className={`text-sm font-semibold ${
-                  isActive ? '' : buttonClass
-                }`}
-              >
-                {option.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-    </ScrollView>
-  );
-}
-
-function ReplyTree({
-  replies,
-  ...props
-}: ReplyTreeProps) {
-  return (
-    <View className="gap-3">
-      {replies.map((reply) => (
-        <ReplyNode key={reply.packet.packet_id} reply={reply} {...props} />
-      ))}
     </View>
   );
 }
@@ -888,36 +764,93 @@ export default function NexusDiscussionsPage() {
   const isFeedWorkspace = requestedWorkspaceView === 'feed';
   const isThreadWorkspace = requestedWorkspaceView === 'thread';
   const isPostWorkspace = requestedWorkspaceView === 'post';
-  const forumTabs = (feedPayload?.forums ?? []).map((forum) => ({
+  const discussionTabTree = (feedPayload?.forums ?? []).map<NexusTabNode>((forum) => ({
     id: forum.id,
-    title: forum.title,
-    detail: forum.public_posting ? 'Signed guest posting' : 'Membership posting',
+    label: forum.title,
+    kind: 'view',
+    defaultChildId: 'feed',
+    children: [
+      {
+        id: 'feed',
+        label: 'Feed',
+        kind: 'view',
+        defaultChildId: selectedFeedSort,
+        children: FEED_SORT_OPTIONS.map((sortOption) => ({
+          id: sortOption,
+          label: sortOption.replace(/_/g, ' '),
+          kind: 'sort',
+        })),
+      },
+      {
+        id: 'thread',
+        label: 'Thread',
+        kind: 'view',
+        defaultChildId: selectedReplySort,
+        children: REPLY_SORT_OPTIONS.map((sortOption) => ({
+          id: sortOption,
+          label: sortOption.replace(/_/g, ' '),
+          kind: 'sort',
+        })),
+      },
+      {
+        id: 'post',
+        label: 'Post',
+        kind: 'compose',
+      },
+    ],
   }));
-  const workspaceTabs = [
-    {
-      id: 'feed',
-      title: 'Feed',
-      detail: `${feedPosts.length} loaded threads`,
+  const discussionTabPath = [
+    activeForumId,
+    requestedWorkspaceView,
+    requestedWorkspaceView === 'thread'
+      ? selectedReplySort
+      : requestedWorkspaceView === 'feed'
+        ? selectedFeedSort
+        : null,
+  ].filter((pathSegment): pathSegment is string => Boolean(pathSegment));
+  const handleDiscussionTabPathChange = useCallback(
+    (nextPath: string[]) => {
+      const [nextForumId, requestedViewId, requestedSubtabId] = nextPath;
+      const nextView = (DISCUSSION_WORKSPACE_VIEWS as readonly string[]).includes(
+        requestedViewId ?? ''
+      )
+        ? (requestedViewId as DiscussionWorkspaceView)
+        : 'feed';
+      const nextFeedSort =
+        nextView === 'feed' &&
+        (FEED_SORT_OPTIONS as readonly string[]).includes(requestedSubtabId ?? '')
+          ? (requestedSubtabId as FeedSort)
+          : selectedFeedSort;
+      const nextReplySort =
+        nextView === 'thread' &&
+        (REPLY_SORT_OPTIONS as readonly string[]).includes(requestedSubtabId ?? '')
+          ? (requestedSubtabId as ReplySort)
+          : selectedReplySort;
+
+      router.replace(
+        getDiscussionHref({
+          forumId: nextForumId ?? activeForumId,
+          sort: nextFeedSort,
+          view: nextView,
+          postId: nextView === 'thread' ? requestedPostId : null,
+          replySort: nextView === 'thread' ? nextReplySort : null,
+          showHidden: requestedShowHidden,
+        })
+      );
     },
-    {
-      id: 'thread',
-      title: 'Thread',
-      detail: requestedPostId ? 'selected thread' : 'auto top thread',
-    },
-    {
-      id: 'post',
-      title: 'Post',
-      detail: 'start a top-level thread',
-    },
-  ] satisfies ConnectedTabRailProps['tabs'];
+    [
+      activeForumId,
+      requestedPostId,
+      requestedShowHidden,
+      router,
+      selectedFeedSort,
+      selectedReplySort,
+    ]
+  );
   const forumShellClass =
     themeMode === 'dark'
       ? 'border-nexus-line/70 bg-nexus-panel'
       : 'border-slate-300 bg-white';
-  const workspacePanelClass =
-    themeMode === 'dark'
-      ? 'border-nexus-line/70 bg-nexus-canvas/70'
-      : 'border-slate-300 bg-slate-50';
   const feedListClass =
     themeMode === 'dark'
       ? 'rounded-[24px] border border-nexus-line/50 bg-transparent lg:max-h-[980px]'
@@ -1817,93 +1750,19 @@ export default function NexusDiscussionsPage() {
             </NexusCard>
           ) : null}
 
-          {forumTabs.length > 0 ? (
+          {discussionTabTree.length > 0 ? (
             <View className="gap-0">
-              <ConnectedTabRail
-                tabs={forumTabs}
-                activeId={activeForumId}
-                onSelect={(forumId) => {
-                  router.replace(
-                    getDiscussionHref({
-                      forumId,
-                      sort: selectedFeedSort,
-                      view: 'feed',
-                      showHidden: requestedShowHidden,
-                    })
-                  );
-                }}
+              <NexusTabStack
+                tree={discussionTabTree}
+                valuePath={discussionTabPath}
+                onChangePath={handleDiscussionTabPathChange}
               />
 
               <NexusCard
-                className={`gap-5 rounded-t-none border-t-0 ${forumShellClass}`}
+                className={`gap-3 rounded-t-none border-t-0 ${forumShellClass}`}
               >
-                <View className="flex-row flex-wrap items-start justify-between gap-3">
-                  <Text className={appearance.surfaceTitleClass}>
-                    {selectedForum?.title ?? 'Discussion forum'}
-                  </Text>
-
-                  <View className="flex-row flex-wrap gap-2">
-                    {selectedForum?.public_posting ? (
-                      <NexusBadge label="Guest posting open" tone="mint" />
-                    ) : (
-                      <NexusBadge label="Membership required" tone="default" />
-                    )}
-                  </View>
-                </View>
-
-                <View className="gap-0">
-                  <ConnectedTabRail
-                    tabs={workspaceTabs}
-                    activeId={requestedWorkspaceView}
-                    compact
-                    onSelect={(workspaceId) => {
-                      const nextView = workspaceId as DiscussionWorkspaceView;
-                      router.replace(
-                        getDiscussionHref({
-                          forumId: activeForumId,
-                          sort: selectedFeedSort,
-                          view: nextView,
-                          postId:
-                            nextView === 'thread' ? requestedPostId : null,
-                          replySort:
-                            nextView === 'thread' ? selectedReplySort : null,
-                          showHidden: requestedShowHidden,
-                        })
-                      );
-                    }}
-                  />
-
-                  <View
-                    className={`-mt-px gap-4 rounded-[24px] rounded-tl-none border p-4 ${workspacePanelClass}`}
-                  >
                     {isFeedWorkspace ? (
                       <View className="gap-4">
-                        <View className="flex-row flex-wrap items-center justify-between gap-3">
-                          <SegmentedControl
-                            options={FEED_SORT_OPTIONS.map((sortOption) => ({
-                              id: sortOption,
-                              label: sortOption.replace(/_/g, ' '),
-                            }))}
-                            activeId={selectedFeedSort}
-                            onSelect={(sortOption) => {
-                              router.replace(
-                                getDiscussionHref({
-                                  forumId: activeForumId,
-                                  sort: sortOption,
-                                  view: 'feed',
-                                  showHidden: requestedShowHidden,
-                                })
-                              );
-                            }}
-                          />
-                          <View className="flex-row flex-wrap items-center gap-3">
-                            <NexusActionButton
-                              label="New post"
-                              onPress={handleOpenPostWorkspace}
-                            />
-                          </View>
-                        </View>
-
                         <ScrollView
                           nestedScrollEnabled
                           showsVerticalScrollIndicator={false}
@@ -2012,58 +1871,34 @@ export default function NexusDiscussionsPage() {
 
                     {isThreadWorkspace ? (
                       <View className="gap-4">
-                        <View className="flex-row flex-wrap items-center justify-between gap-3">
-                          <SegmentedControl
-                            options={REPLY_SORT_OPTIONS.map((sortOption) => ({
-                              id: sortOption,
-                              label: sortOption,
-                            }))}
-                            activeId={selectedReplySort}
-                            onSelect={(sortOption) => {
+                        <View className="flex-row flex-wrap items-center gap-2">
+                          <NexusActionButton
+                            label="Back to feed"
+                            onPress={() => {
                               router.replace(
                                 getDiscussionHref({
                                   forumId: activeForumId,
                                   sort: selectedFeedSort,
-                                  view: 'thread',
-                                  postId: requestedPostId,
-                                  replySort: sortOption,
+                                  view: 'feed',
                                   showHidden: requestedShowHidden,
                                 })
                               );
                             }}
-                            disabled={!requestedPostId}
                           />
-                          <View className="flex-row flex-wrap items-center gap-3">
-                            <View className="flex-row flex-wrap items-center gap-2">
-                              <NexusActionButton
-                                label="Back to feed"
-                                onPress={() => {
-                                  router.replace(
-                                    getDiscussionHref({
-                                      forumId: activeForumId,
-                                      sort: selectedFeedSort,
-                                      view: 'feed',
-                                      showHidden: requestedShowHidden,
-                                    })
-                                  );
-                                }}
-                              />
-                              <NexusActionButton
-                                label="New reply"
-                                onPress={() => {
-                                  if (!threadPayload) {
-                                    return;
-                                  }
+                          <NexusActionButton
+                            label="New reply"
+                            onPress={() => {
+                              if (!threadPayload) {
+                                return;
+                              }
 
-                                  handleStartReply(
-                                    threadPayload.root_post.packet.packet_id,
-                                    threadPayload.root_post.packet.packet_id
-                                  );
-                                }}
-                                disabled={!threadPayload}
-                              />
-                            </View>
-                          </View>
+                              handleStartReply(
+                                threadPayload.root_post.packet.packet_id,
+                                threadPayload.root_post.packet.packet_id
+                              );
+                            }}
+                            disabled={!threadPayload}
+                          />
                         </View>
 
                         {!requestedPostId && isLoadingFeed ? (
@@ -2427,8 +2262,6 @@ export default function NexusDiscussionsPage() {
                         </NexusCard>
                       </View>
                     ) : null}
-                  </View>
-                </View>
               </NexusCard>
             </View>
           ) : isLoadingFeed ? (
