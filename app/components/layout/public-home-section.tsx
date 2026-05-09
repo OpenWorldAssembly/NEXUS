@@ -162,9 +162,10 @@ export default function PublicHomeSection({
   return (
     <View style={styles.chapter}>
       <PublicCardFrame
+        backgroundImageOpacity={0.58}
         backgroundImageUri={section.backgroundImageUri}
         backgroundPreset="none"
-        className={isActive ? 'shadow-public' : ''}
+        className={`${isActive ? 'shadow-public' : ''} bg-public-surface/80`}
         contentClassName={contentClassName}
         enableDecorativeAccents={false}
         focusLineRatio={PUBLIC_SECTION_FOCUS_LINE_RATIO}
