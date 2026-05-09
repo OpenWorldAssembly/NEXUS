@@ -19,6 +19,7 @@ import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
 import { useNexusAuthGate } from '@app/components/nexus/nexus-auth-gate';
 import {
   NexusCard,
+  NexusCardMenuButton,
   NexusChevronIcon,
   NexusSegmentedPill,
   NexusThemedBevelEdges,
@@ -58,7 +59,7 @@ type NexusPrimaryNavItemProps = {
 };
 
 type NexusRailToggleProps = {
-  direction: '<' | '>';
+  direction: 'left' | 'right';
   themeMode: NexusThemeMode;
   uiDensity: NexusUiDensity;
   onPress: () => void;
@@ -339,16 +340,7 @@ function NexusRailToggle({
       )}
       onPress={onPress}
     >
-      <Text
-        className={joinClasses(
-          uiDensity === 'large'
-            ? 'text-base font-semibold'
-            : 'text-sm font-semibold',
-          themeMode === 'dark' ? 'text-nexus-text' : 'text-slate-900',
-        )}
-      >
-        {direction}
-      </Text>
+      <NexusChevronIcon direction={direction} variant="rail" />
     </Pressable>
   );
 }
@@ -629,25 +621,22 @@ function NexusScopeMenuRow({
   uiDensity,
   onPress,
 }: NexusScopeMenuRowProps) {
-  const chrome = getNexusChromeClasses(themeMode, uiDensity);
-
   return (
     <View
-      className="relative flex-row items-start gap-2 overflow-visible"
+      className="relative overflow-visible"
       style={{
         marginLeft: depth * 12,
         zIndex: isMenuOpen ? 80 : 1,
         elevation: isMenuOpen ? 80 : 1,
       }}
     >
-      <Pressable
-        accessibilityRole="button"
-        className={joinClasses(
-          'min-w-0 flex-1',
-          isActive ? chrome.scopeRowActiveClass : chrome.scopeRowClass,
-          uiDensity === 'large' ? 'px-4 py-3.5' : 'px-3 py-3',
-        )}
+      <NexusCard
+        accessibilityLabel={`Open ${scopeName}`}
+        action={menuButton}
+        className="min-w-0 overflow-visible"
+        compact
         onPress={onPress}
+        selected={isActive}
       >
         <View className="min-w-0">
           <Text
@@ -673,26 +662,7 @@ function NexusScopeMenuRow({
             {scopeMeta}
           </Text>
         </View>
-        <NexusThemedBevelEdges themeMode={themeMode} subtle />
-      </Pressable>
-
-      {menuButton ? <View className="w-9 items-end overflow-visible pt-1">{menuButton}</View> : null}
-    </View>
-  );
-}
-
-function NexusScopeMenuDots({
-  themeMode,
-}: {
-  themeMode: NexusThemeMode;
-}) {
-  const dotClass = themeMode === 'dark' ? 'bg-nexus-muted' : 'bg-slate-500';
-
-  return (
-    <View className="items-center gap-1">
-      <View className={joinClasses('h-1 w-1 rounded-full', dotClass)} />
-      <View className={joinClasses('h-1 w-1 rounded-full', dotClass)} />
-      <View className={joinClasses('h-1 w-1 rounded-full', dotClass)} />
+      </NexusCard>
     </View>
   );
 }
@@ -810,25 +780,17 @@ function NexusScopeActionMenu({
   const canMutateScope = scope.level !== 'personal';
 
   return (
-    <View className="relative z-50">
-      <Pressable
-        accessibilityRole="button"
+    <View className="relative z-50 overflow-visible">
+      <NexusCardMenuButton
         accessibilityLabel={`More actions for ${scope.name}`}
-        className={joinClasses(
-          chrome.compactButtonClass,
-          uiDensity === 'large' ? 'px-2 py-2' : 'px-1.5 py-1.5'
-        )}
         onPress={onToggle}
-      >
-        <NexusScopeMenuDots themeMode={themeMode} />
-        <NexusThemedBevelEdges themeMode={themeMode} subtle />
-      </Pressable>
+      />
 
       {isOpen ? (
         <View
           className={joinClasses(
-            'absolute right-full z-50 mr-2 min-w-[180px] gap-1 overflow-hidden rounded-2xl border p-2 shadow-lg',
-            align === 'bottom' ? 'bottom-0' : 'top-0',
+            'absolute right-0 z-50 min-w-[180px] gap-1 overflow-hidden rounded-2xl border p-2 shadow-lg',
+            align === 'bottom' ? 'bottom-full mb-2' : 'top-full mt-2',
             chrome.inlineSelectMenuClass
           )}
           style={{
@@ -902,31 +864,28 @@ function NexusScopeListRow({
   themeMode: NexusThemeMode;
   uiDensity: NexusUiDensity;
 }) {
-  const chrome = getNexusChromeClasses(themeMode, uiDensity);
-
   return (
     <View
-      className={joinClasses(
-        'relative flex-row items-start gap-2 overflow-visible',
-      )}
+      className="relative overflow-visible"
       style={{
         zIndex: isMenuOpen ? 80 : 1,
         elevation: isMenuOpen ? 80 : 1,
       }}
     >
-      <Pressable
-        accessibilityRole="button"
-        className={joinClasses(
-          'min-w-0 flex-1',
-          activeScopeId === scope.id ? chrome.scopeRowActiveClass : chrome.scopeRowClass,
-          uiDensity === 'large' ? 'px-4 py-3.5' : 'px-3 py-3'
-        )}
+      <NexusCard
+        accessibilityLabel={`Open ${scope.name}`}
+        action={menuButton}
+        className="min-w-0 overflow-visible"
+        compact
         onPress={onPress}
+        selected={activeScopeId === scope.id}
       >
         <View className="min-w-0">
           <Text
             className={joinClasses(
-              uiDensity === 'large' ? 'text-base font-semibold leading-6' : 'text-sm font-semibold leading-5',
+              uiDensity === 'large'
+                ? 'text-base font-semibold leading-6'
+                : 'text-sm font-semibold leading-5',
               themeMode === 'dark' ? 'text-nexus-text' : 'text-slate-900'
             )}
             numberOfLines={3}
@@ -934,10 +893,7 @@ function NexusScopeListRow({
             {scope.name}
           </Text>
         </View>
-        <NexusThemedBevelEdges themeMode={themeMode} subtle />
-      </Pressable>
-
-      <View className="w-9 items-end overflow-visible pt-1">{menuButton}</View>
+      </NexusCard>
     </View>
   );
 }
@@ -1879,7 +1835,7 @@ export default function NexusSidebar({
           </ScrollView>
 
           <NexusRailToggle
-            direction="<"
+            direction="left"
             onPress={togglePrimaryRailCollapsed}
             themeMode={themeMode}
             uiDensity={uiDensity}
@@ -1895,7 +1851,7 @@ export default function NexusSidebar({
           style={{ width: NEXUS_COLLAPSED_RAIL_WIDTH }}
         >
           <NexusRailToggle
-            direction=">"
+            direction="right"
             onPress={togglePrimaryRailCollapsed}
             themeMode={themeMode}
             uiDensity={uiDensity}
@@ -1983,7 +1939,7 @@ export default function NexusSidebar({
           </ScrollView>
 
           <NexusRailToggle
-            direction="<"
+            direction="left"
             onPress={toggleSecondaryRailCollapsed}
             themeMode={themeMode}
             uiDensity={uiDensity}
@@ -2001,7 +1957,7 @@ export default function NexusSidebar({
           style={{ width: NEXUS_COLLAPSED_RAIL_WIDTH }}
         >
           <NexusRailToggle
-            direction=">"
+            direction="right"
             onPress={toggleSecondaryRailCollapsed}
             themeMode={themeMode}
             uiDensity={uiDensity}

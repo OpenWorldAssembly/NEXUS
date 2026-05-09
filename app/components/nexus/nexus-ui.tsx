@@ -8,6 +8,7 @@ import {
   type PropsWithChildren,
   type ReactNode,
 } from 'react';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import {
   Modal,
@@ -30,9 +31,23 @@ import {
 } from '@runtime/nexus/nexus-shell';
 
 type NexusCardProps = PropsWithChildren<{
+  accessibilityLabel?: string;
+  action?: ReactNode;
+  actionClassName?: string;
   className?: string;
+  compact?: boolean;
+  contentClassName?: string;
+  disabled?: boolean;
+  onPress?: () => void;
+  selected?: boolean;
   tone?: NexusCardTone | 'default';
 }>;
+
+type NexusCardMenuButtonProps = {
+  accessibilityLabel?: string;
+  className?: string;
+  onPress: () => void;
+};
 
 type NexusSectionHeaderProps = {
   eyebrow?: string;
@@ -48,8 +63,12 @@ type NexusBadgeProps = {
   textClassName?: string;
 };
 
+type NexusChevronIconDirection = 'up' | 'down' | 'left' | 'right';
+
 type NexusChevronIconProps = {
-  isOpen: boolean;
+  isOpen?: boolean;
+  direction?: NexusChevronIconDirection;
+  variant?: 'disclosure' | 'rail';
   className?: string;
 };
 
@@ -527,25 +546,123 @@ export function useNexusAppearance(): NexusAppearance {
  * Output: a styled nexus card container.
  */
 export function NexusCard({
+  accessibilityLabel,
+  action,
+  actionClassName,
   children,
   className,
+  compact = false,
+  contentClassName,
+  disabled = false,
+  onPress,
+  selected = false,
   tone = 'default',
 }: NexusCardProps) {
   const { themeMode, uiDensity } = useNexusShell();
   const chrome = getNexusChromeClasses(themeMode, uiDensity);
+  const selectedToneClass =
+    themeMode === 'dark'
+      ? 'border-nexus-sky bg-nexus-sky/10'
+      : 'border-sky-400 bg-sky-50';
+  const paddingClass = compact
+    ? uiDensity === 'large'
+      ? 'px-4 py-3.5'
+      : 'px-3 py-3'
+    : getNexusCardPaddingClass(uiDensity);
+  const frameClassName = joinClasses(
+    chrome.cardFrameClass,
+    paddingClass,
+    selected ? selectedToneClass : getNexusToneClasses(themeMode, tone),
+    disabled ? 'opacity-60' : undefined,
+    className,
+  );
+  const content =
+    action || contentClassName ? (
+      <View
+        className={joinClasses(action ? 'pr-8' : undefined, contentClassName)}
+      >
+        {children}
+      </View>
+    ) : (
+      children
+    );
+
+  if (onPress) {
+    return (
+      <Pressable
+        accessibilityLabel={accessibilityLabel}
+        accessibilityRole="button"
+        className={frameClassName}
+        disabled={disabled}
+        onPress={onPress}
+      >
+        {content}
+        {action ? (
+          <View
+            className={joinClasses(
+              'absolute right-1.5 top-1.5 z-30 overflow-visible',
+              actionClassName,
+            )}
+          >
+            {action}
+          </View>
+        ) : null}
+        <NexusThemedBevelEdges themeMode={themeMode} />
+      </Pressable>
+    );
+  }
 
   return (
-    <View
-      className={joinClasses(
-        chrome.cardFrameClass,
-        getNexusCardPaddingClass(uiDensity),
-        getNexusToneClasses(themeMode, tone),
-        className,
-      )}
-    >
-      {children}
+    <View className={frameClassName}>
+      {content}
+      {action ? (
+        <View
+          className={joinClasses(
+            'absolute right-1.5 top-1.5 z-30 overflow-visible',
+            actionClassName,
+          )}
+        >
+          {action}
+        </View>
+      ) : null}
       <NexusThemedBevelEdges themeMode={themeMode} />
     </View>
+  );
+}
+
+/**
+ * Inputs: a press callback and optional accessibility label.
+ * Output: a subtle integrated kebab action button for Nexus cards.
+ */
+export function NexusCardMenuButton({
+  accessibilityLabel = 'Open card actions',
+  className,
+  onPress,
+}: NexusCardMenuButtonProps) {
+  const { themeMode, uiDensity } = useNexusShell();
+  const iconColor = themeMode === 'dark' ? '#9bb2c5' : '#64748b';
+
+  return (
+    <Pressable
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole="button"
+      className={joinClasses(
+        'items-center justify-center rounded-nexus',
+        uiDensity === 'large' ? 'h-8 w-8' : 'h-7 w-7',
+        themeMode === 'dark' ? 'bg-white/0 active:bg-white/10' : 'bg-white/0 active:bg-slate-200',
+        className,
+      )}
+      onPress={(event) => {
+        event.stopPropagation();
+        onPress();
+      }}
+    >
+      <MaterialIcons
+        color={iconColor}
+        name="more-vert"
+        size={uiDensity === 'large' ? 22 : 20}
+      />
+    </Pressable>
   );
 }
 
@@ -741,43 +858,52 @@ export function NexusBadge({
   );
 }
 
+const NEXUS_CHEVRON_ICON_NAMES: Record<
+  NexusChevronIconDirection,
+  keyof typeof MaterialIcons.glyphMap
+> = {
+  down: 'keyboard-arrow-down',
+  left: 'keyboard-arrow-left',
+  right: 'keyboard-arrow-right',
+  up: 'keyboard-arrow-up',
+};
+
 /**
- * Inputs: whether the chevron is open plus optional wrapper classes.
- * Output: a small vertical chevron icon that matches the Nexus drawer language.
+ * Inputs: a direction or legacy open state plus optional variant and wrapper classes.
+ * Output: a theme-aware vector chevron for Nexus disclosure controls and rail handles.
  */
 export function NexusChevronIcon({
   isOpen,
+  direction,
+  variant = 'disclosure',
   className,
 }: NexusChevronIconProps) {
   const { themeMode, uiDensity } = useNexusShell();
-  const lineClass =
-    themeMode === 'dark' ? 'bg-nexus-text' : 'bg-slate-900';
-  const sizeClass = uiDensity === 'large' ? 'w-2.5' : 'w-2';
+  const resolvedDirection = direction ?? (isOpen ? 'up' : 'down');
+  const iconColor = themeMode === 'dark' ? '#ecf4fb' : '#0f172a';
+  const railIconColor = themeMode === 'dark' ? '#6dd3ff' : '#0284c7';
+  const iconSize =
+    variant === 'rail'
+      ? uiDensity === 'large'
+        ? 30
+        : 28
+      : uiDensity === 'large'
+        ? 23
+        : 21;
 
   return (
     <View
       className={joinClasses(
-        'h-4 w-4 items-center justify-center',
-        isOpen ? 'rotate-180' : '',
+        'items-center justify-center',
+        variant === 'rail' ? 'h-7 w-7' : 'h-4 w-4',
         className,
       )}
     >
-      <View className="flex-row items-center justify-center gap-[1px]">
-        <View
-          className={joinClasses(
-            sizeClass,
-            'h-[2px] rotate-45 rounded-full',
-            lineClass,
-          )}
-        />
-        <View
-          className={joinClasses(
-            sizeClass,
-            'h-[2px] -rotate-45 rounded-full',
-            lineClass,
-          )}
-        />
-      </View>
+      <MaterialIcons
+        color={variant === 'rail' ? railIconColor : iconColor}
+        name={NEXUS_CHEVRON_ICON_NAMES[resolvedDirection]}
+        size={iconSize}
+      />
     </View>
   );
 }
