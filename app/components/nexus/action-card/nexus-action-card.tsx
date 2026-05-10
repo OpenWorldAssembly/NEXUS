@@ -65,7 +65,7 @@ export function NexusActionCard({
       accessibilityLabel={accessibilityLabel}
       action={
         hasTopRightCluster ? (
-          <View className="relative flex-row items-center gap-1 overflow-visible">
+          <View className="relative min-w-[5.25rem] flex-row items-center justify-end gap-1 overflow-visible">
             <NexusCardBadgeStrip badges={visibleBadges} />
             {visibleActions.length > 0 ? (
               <View className="relative overflow-visible">
@@ -99,7 +99,7 @@ export function NexusActionCard({
       actionClassName="right-2 top-2"
       className={joinClasses('overflow-visible', isMenuOpen ? 'z-50' : undefined, className)}
       compact={compact}
-      contentClassName={joinClasses(hasTopRightCluster ? 'pr-16' : undefined, contentClassName)}
+      contentClassName={joinClasses(hasTopRightCluster ? 'pr-24' : undefined, contentClassName)}
       disabled={disabled}
       onPress={onPress}
       selected={selected}

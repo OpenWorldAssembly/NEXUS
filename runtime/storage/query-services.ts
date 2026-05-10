@@ -76,6 +76,7 @@ function toNexusCardProjection(
     title: row.title,
     summary: row.summary,
     status: row.status,
+    created_at: row.created_at,
   };
 }
 

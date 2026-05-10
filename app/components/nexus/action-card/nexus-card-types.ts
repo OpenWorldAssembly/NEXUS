@@ -27,7 +27,9 @@ export type NexusCardBadgeIcon =
   | 'history'
   | 'signature'
   | 'packet'
-  | 'visibility';
+  | 'visibility'
+  | 'archive'
+  | 'verified';
 
 export type NexusActionMenuItem = {
   id: string;

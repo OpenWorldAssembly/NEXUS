@@ -1,63 +1,165 @@
 /**
  * File: dashboard.tsx
- * Description: Renders the guest dashboard with scope-aware civic queues, highlights, and recommendations.
+ * Description: Renders the guest dashboard with scope totals and function preview sections.
  */
 import { useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
-import { NexusActionCard, type NexusCardBadge } from '@app/components/nexus/action-card';
+import { type NexusCardBadge } from '@app/components/nexus/action-card';
+import { NexusActionList, NexusActionListItem } from '@app/components/nexus/action-list';
+import {
+  NexusDashboardPreviewSection,
+  NexusDashboardStatCard,
+} from '@app/components/nexus/dashboard';
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import {
-  NexusActionButton,
   NexusBadge,
   NexusCard,
   useNexusAppearance,
   NexusSectionHeader,
 } from '@app/components/nexus/nexus-ui';
+import type { NexusPacketCardProjection } from '@core/contracts';
 import type { NexusDashboardPayload } from '@runtime/nexus/nexus-api-types';
 import { fetchNexusDashboardPayload } from '@runtime/nexus/nexus-query-api';
 
-function getStatusBadgeTone(status: string | null | undefined): NexusCardBadge['tone'] {
-  const normalizedStatus = status?.toLowerCase() ?? '';
+type NexusDashboardLifecycleState = 'active' | 'archived' | 'withdrawn';
+type NexusDashboardTrustState = 'trusted' | 'unverified' | 'flagged';
 
-  if (normalizedStatus.includes('withdrawn') || normalizedStatus.includes('closed')) {
-    return 'muted';
-  }
-
-  if (normalizedStatus.includes('open') || normalizedStatus.includes('active')) {
-    return 'accent';
-  }
-
-  if (normalizedStatus.includes('blocked') || normalizedStatus.includes('failed')) {
-    return 'danger';
-  }
-
-  if (normalizedStatus.includes('warn') || normalizedStatus.includes('review')) {
-    return 'warning';
-  }
-
-  return 'default';
+function normalizeDashboardSignal(value: string | null | undefined): string {
+  return value?.toLowerCase().trim() ?? '';
 }
 
-function getStatusBadgeIcon(status: string | null | undefined): NexusCardBadge['icon'] {
-  const normalizedStatus = status?.toLowerCase() ?? '';
+function getLifecycleState(status: string | null | undefined): NexusDashboardLifecycleState {
+  const normalizedStatus = normalizeDashboardSignal(status);
 
-  if (normalizedStatus.includes('withdrawn') || normalizedStatus.includes('closed')) {
-    return 'history';
+  if (
+    normalizedStatus.includes('withdrawn') ||
+    normalizedStatus.includes('revoked') ||
+    normalizedStatus.includes('retracted')
+  ) {
+    return 'withdrawn';
   }
 
-  if (normalizedStatus.includes('open') || normalizedStatus.includes('active')) {
-    return 'visibility';
+  if (
+    normalizedStatus.includes('archived') ||
+    normalizedStatus.includes('closed') ||
+    normalizedStatus.includes('superseded') ||
+    normalizedStatus.includes('inactive')
+  ) {
+    return 'archived';
   }
 
-  if (normalizedStatus.includes('blocked') || normalizedStatus.includes('failed')) {
-    return 'warning';
-  }
-
-  return 'packet';
+  return 'active';
 }
 
+function getLifecycleBadge(status: string | null | undefined): NexusCardBadge {
+  const lifecycleState = getLifecycleState(status);
+
+  if (lifecycleState === 'withdrawn') {
+    return {
+      id: 'lifecycle-withdrawn',
+      icon: 'history',
+      label: 'Withdrawn',
+      tone: 'muted',
+    };
+  }
+
+  if (lifecycleState === 'archived') {
+    return {
+      id: 'lifecycle-archived',
+      icon: 'archive',
+      label: 'Archived',
+      tone: 'muted',
+    };
+  }
+
+  return {
+    id: 'lifecycle-active',
+    icon: 'visibility',
+    label: 'Active',
+    tone: 'accent',
+  };
+}
+
+function getTrustState(status: string | null | undefined): NexusDashboardTrustState {
+  const normalizedStatus = normalizeDashboardSignal(status);
+
+  if (
+    normalizedStatus.includes('flagged') ||
+    normalizedStatus.includes('disputed') ||
+    normalizedStatus.includes('blocked') ||
+    normalizedStatus.includes('failed')
+  ) {
+    return 'flagged';
+  }
+
+  if (
+    normalizedStatus.includes('trusted') ||
+    normalizedStatus.includes('verified') ||
+    normalizedStatus.includes('approved')
+  ) {
+    return 'trusted';
+  }
+
+  return 'unverified';
+}
+
+function getTrustBadge(status: string | null | undefined): NexusCardBadge {
+  const trustState = getTrustState(status);
+
+  if (trustState === 'flagged') {
+    return {
+      id: 'trust-flagged',
+      icon: 'flag',
+      label: 'Flagged',
+      tone: 'warning',
+    };
+  }
+
+  if (trustState === 'trusted') {
+    return {
+      id: 'trust-trusted',
+      icon: 'verified',
+      label: 'Trusted',
+      tone: 'accent',
+    };
+  }
+
+  return {
+    id: 'trust-unverified',
+    icon: 'signature',
+    label: 'Unverified',
+    tone: 'muted',
+  };
+}
+
+function getDashboardBadges(status: string | null | undefined): NexusCardBadge[] {
+  return [getLifecycleBadge(status), getTrustBadge(status)];
+}
+
+function formatDashboardTimestamp(value: string | null | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(date);
+}
+
+function getPreviewMeta(count: number, label: string): string {
+  return `${count} ${label}${count === 1 ? '' : 's'}`;
+}
 
 /**
  * Inputs: none.
@@ -124,7 +226,11 @@ export default function NexusDashboardPage() {
 
   const visibleMetrics = dashboardPayload?.metrics ?? [];
   const visibleQueues = dashboardPayload?.queue ?? [];
-  const recommendedPackets = dashboardPayload?.recommended_packets ?? [];
+  const discussionPreviewPackets = dashboardPayload?.discussion_preview_packets ?? [];
+  const rolePreviewPackets = dashboardPayload?.role_preview_packets ?? [];
+  const trustReviewPackets =
+    dashboardPayload?.trust_review_packets ?? dashboardPayload?.recommended_packets ?? [];
+  const votePreviewPackets = dashboardPayload?.vote_preview_packets ?? [];
   const localityCreated =
     Array.isArray(params.locality_created)
       ? params.locality_created[0] === '1'
@@ -134,19 +240,105 @@ export default function NexusDashboardPage() {
       ? params.locality_name[0]
       : params.locality_name) ?? activeScope.name;
 
+  const openPacketCardInExplorer = (packet: NexusPacketCardProjection) => {
+    openPacketInExplorer({
+      packetId: packet.packet.packet_id,
+      preferredRevisionId: packet.revision.revision_id,
+      titleSnapshot: packet.title,
+      seedSummary: {
+        family: packet.family,
+        label: packet.label,
+        summary: packet.summary,
+      },
+    });
+  };
+
+  const getPacketBadges = (packet: NexusPacketCardProjection): NexusCardBadge[] =>
+    getDashboardBadges(packet.status ?? packet.label);
+
+  const renderPacketPreviewRow = (packet: NexusPacketCardProjection, index: number, packets: NexusPacketCardProjection[]) => {
+    const packetTimestamp = formatDashboardTimestamp(packet.created_at);
+    const openPacket = () => openPacketCardInExplorer(packet);
+
+    return (
+      <NexusActionListItem
+        key={packet.packet.packet_id}
+        accessibilityLabel={`Open ${packet.title} in Explorer`}
+        actions={[
+          {
+            id: 'open-explorer',
+            label: 'Open in Explorer',
+            onSelect: openPacket,
+          },
+        ]}
+        actionMenuAlign={index >= 2 ? 'bottom' : 'top'}
+        badges={getPacketBadges(packet)}
+        detail={packet.summary ?? 'No packet summary available.'}
+        isLast={index === packets.length - 1}
+        meta={packetTimestamp}
+        onPress={openPacket}
+        title={packet.title}
+      />
+    );
+  };
+
+  const renderPacketPreviewList = (packets: NexusPacketCardProjection[], emptyLabel: string) => {
+    if (packets.length === 0) {
+      return <Text className={appearance.itemBodyClass}>{emptyLabel}</Text>;
+    }
+
+    return <NexusActionList>{packets.map(renderPacketPreviewRow)}</NexusActionList>;
+  };
+
+  const renderQueuePreviewList = () => {
+    if (visibleQueues.length === 0) {
+      return <Text className={appearance.itemBodyClass}>No recent activity.</Text>;
+    }
+
+    return (
+      <NexusActionList>
+        {visibleQueues.map((queue, index) => {
+          const queueTimestamp = formatDashboardTimestamp(queue.created_at);
+          const openQueueInExplorer = () =>
+            openPacketInExplorer({
+              packetId: queue.id,
+              titleSnapshot: queue.title,
+              seedSummary: {
+                family: null,
+                label: queue.stat,
+                summary: queue.detail,
+              },
+            });
+
+          return (
+            <NexusActionListItem
+              key={queue.id}
+              accessibilityLabel={`Open ${queue.title} in Explorer`}
+              actions={[
+                {
+                  id: 'open-explorer',
+                  label: 'Open in Explorer',
+                  onSelect: openQueueInExplorer,
+                },
+              ]}
+              actionMenuAlign={index >= 2 ? 'bottom' : 'top'}
+              badges={getDashboardBadges(queue.stat)}
+              detail={queue.detail}
+              isLast={index === visibleQueues.length - 1}
+              meta={queueTimestamp}
+              onPress={openQueueInExplorer}
+              title={queue.title}
+            />
+          );
+        })}
+      </NexusActionList>
+    );
+  };
+
   return (
     <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
       <View className={appearance.pageContainerClass}>
-        <NexusSectionHeader
-          eyebrow="Dashboard"
-          title={`${activeScope.name} Dashboard`}
-          trailing={
-            <View className="flex-row flex-wrap gap-3">
-              <NexusBadge label={`${visibleMetrics.length} metrics`} tone="sky" />
-              <NexusBadge label={`${visibleQueues.length} queues`} tone="mint" />
-            </View>
-          }
-        />
+        <NexusSectionHeader title={`${activeScope.name} Dashboard`} />
 
         {isLoadingDashboard ? (
           <NexusCard>
@@ -170,158 +362,75 @@ export default function NexusDashboardPage() {
           </NexusCard>
         ) : null}
 
+        <NexusCard className="gap-4">
+          <View className="flex-row flex-wrap items-start justify-between gap-4">
+            <View className="gap-2">
+              <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
+                Scope summary
+              </Text>
+              <Text className={appearance.surfaceTitleClass}>{activeScope.name}</Text>
+            </View>
+
+            <View className="flex-row flex-wrap justify-end gap-2">
+              <NexusBadge label={`${activeScope.level} scope`} />
+              <NexusBadge label={activeScope.relationshipLabel} />
+              <NexusBadge label={`${activeScope.childIds.length} child scopes`} />
+              <NexusBadge label={`${activeScope.followedScopeIds.length} followed`} />
+            </View>
+          </View>
+
+          <View className="flex-row flex-wrap gap-2.5">
+            {visibleMetrics.map((metric) => (
+              <NexusDashboardStatCard
+                key={metric.id}
+                label={metric.title}
+                tone={metric.tone}
+                value={metric.value}
+              />
+            ))}
+          </View>
+        </NexusCard>
+
         <View className="flex-row flex-wrap gap-4">
-          {visibleMetrics.map((metric) => (
-            <NexusCard
-              key={metric.id}
-              className="min-w-[220px] flex-1"
-              tone={metric.tone}
-            >
-              <Text className={appearance.metricLabelClass}>{metric.title}</Text>
-              <Text className={appearance.metricValueClass}>{metric.value}</Text>
-              <Text className={appearance.itemBodyClass}>{metric.detail}</Text>
-            </NexusCard>
-          ))}
-        </View>
+          <NexusDashboardPreviewSection
+            meta={getPreviewMeta(visibleQueues.length, 'item')}
+            onOpen={() => setActiveSection('library')}
+            title="Recent activity"
+          >
+            {renderQueuePreviewList()}
+          </NexusDashboardPreviewSection>
 
-        <View className="gap-4 xl:flex-row">
-          <View className="w-full gap-4 xl:flex-1">
-            <NexusCard className="gap-4">
-              <View className="gap-2">
-                <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
-                  Scope summary
-                </Text>
-                <Text className={appearance.surfaceTitleClass}>{activeScope.name}</Text>
-              </View>
+          <NexusDashboardPreviewSection
+            meta={getPreviewMeta(trustReviewPackets.length, 'item')}
+            onOpen={() => setActiveSection('trust')}
+            title="Trust & Review"
+          >
+            {renderPacketPreviewList(trustReviewPackets, 'No trust review items.')}
+          </NexusDashboardPreviewSection>
 
-              <View className="flex-row flex-wrap gap-3">
-                <NexusBadge label={`${activeScope.stats.members} members`} />
-                <NexusBadge label={`${activeScope.stats.activeVotes} active votes`} />
-                <NexusBadge label={`${activeScope.stats.hotDiscussions} hot discussions`} />
-                <NexusBadge label={`${activeScope.stats.missions} mission signals`} />
-              </View>
+          <NexusDashboardPreviewSection
+            meta={getPreviewMeta(discussionPreviewPackets.length, 'packet')}
+            onOpen={() => setActiveSection('discussions')}
+            title="Discussions"
+          >
+            {renderPacketPreviewList(discussionPreviewPackets, 'No discussion packets.')}
+          </NexusDashboardPreviewSection>
 
-              <View className="flex-row flex-wrap gap-3">
-                <NexusActionButton
-                  label="Open discussions"
-                  onPress={() => setActiveSection('discussions')}
-                />
-                <NexusActionButton
-                  label="Open vote floor"
-                  onPress={() => setActiveSection('votes')}
-                />
-              </View>
-            </NexusCard>
+          <NexusDashboardPreviewSection
+            meta={getPreviewMeta(votePreviewPackets.length, 'packet')}
+            onOpen={() => setActiveSection('votes')}
+            title="Votes & Decisions"
+          >
+            {renderPacketPreviewList(votePreviewPackets, 'No vote packets.')}
+          </NexusDashboardPreviewSection>
 
-            <NexusCard className="gap-4">
-              <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
-                Aggregate queues
-              </Text>
-              <View className="gap-3">
-                {visibleQueues.map((queue) => {
-                  const openQueueInExplorer = () =>
-                    openPacketInExplorer({
-                      packetId: queue.id,
-                      titleSnapshot: queue.title,
-                      seedSummary: {
-                        family: null,
-                        label: queue.stat,
-                        summary: queue.detail,
-                      },
-                    });
-
-                  return (
-                    <NexusActionCard
-                      key={queue.id}
-                      accessibilityLabel={`Open ${queue.title} in Explorer`}
-                      actions={[
-                        {
-                          id: 'open-explorer',
-                          label: 'Open in Explorer',
-                          onSelect: openQueueInExplorer,
-                        },
-                      ]}
-                      badges={[
-                        {
-                          id: 'queue-status',
-                          icon: getStatusBadgeIcon(queue.stat),
-                          label: queue.stat,
-                          tone: getStatusBadgeTone(queue.stat),
-                        },
-                      ]}
-                      className={`gap-2 p-4 ${appearance.cardInsetClass}`}
-                      onPress={openQueueInExplorer}
-                    >
-                      <View className="gap-1">
-                        <Text className={appearance.itemTitleClass}>{queue.title}</Text>
-                        <Text className={appearance.itemBodyClass}>{queue.detail}</Text>
-                      </View>
-                    </NexusActionCard>
-                  );
-                })}
-              </View>
-            </NexusCard>
-          </View>
-
-          <View className="w-full gap-4 xl:flex-1">
-            <NexusCard className="gap-4">
-              <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
-                Packet review
-              </Text>
-              <View className="gap-3">
-                {recommendedPackets.slice(0, 4).map((packet) => {
-                  const openRecommendedPacket = () =>
-                    openPacketInExplorer({
-                      packetId: packet.packet.packet_id,
-                      preferredRevisionId: packet.revision.revision_id,
-                      titleSnapshot: packet.title,
-                      seedSummary: {
-                        family: packet.family,
-                        label: packet.label,
-                        summary: packet.summary,
-                      },
-                    });
-
-                  return (
-                    <NexusActionCard
-                      key={packet.packet.packet_id}
-                      accessibilityLabel={`Open ${packet.title} in Explorer`}
-                      actions={[
-                        {
-                          id: 'open-explorer',
-                          label: 'Open in Explorer',
-                          onSelect: openRecommendedPacket,
-                        },
-                      ]}
-                      badges={[
-                        {
-                          id: 'packet-family',
-                          icon: 'packet',
-                          label: packet.family,
-                          tone: 'muted',
-                        },
-                        {
-                          id: 'packet-status',
-                          icon: getStatusBadgeIcon(packet.status ?? packet.label),
-                          label: packet.status ?? packet.label,
-                          tone: getStatusBadgeTone(packet.status ?? packet.label),
-                        },
-                      ]}
-                      className={`gap-2 p-4 ${appearance.cardInsetClass}`}
-                      onPress={openRecommendedPacket}
-                    >
-                      <View className="gap-2">
-                        <Text className={appearance.itemTitleClass}>{packet.title}</Text>
-                        <Text className={appearance.itemBodyClass}>
-                          {packet.summary ?? 'No packet summary available.'}
-                        </Text>
-                      </View>
-                    </NexusActionCard>
-                  );
-                })}
-              </View>
-            </NexusCard>
-          </View>
+          <NexusDashboardPreviewSection
+            meta={getPreviewMeta(rolePreviewPackets.length, 'packet')}
+            onOpen={() => setActiveSection('roles')}
+            title="Roles & Claims"
+          >
+            {renderPacketPreviewList(rolePreviewPackets, 'No role packets.')}
+          </NexusDashboardPreviewSection>
         </View>
       </View>
     </ScrollView>

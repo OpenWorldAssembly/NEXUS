@@ -176,6 +176,7 @@ export interface NexusPacketCardProjection {
   title: string;
   summary: string | null;
   status: string | null;
+  created_at: string;
 }
 
 export interface NexusLibraryQueryOptions {

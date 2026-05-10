@@ -54,6 +54,7 @@ import {
   listClaimPackets,
   type ClaimPacket,
 } from '@runtime/nexus/server/claim-utils';
+import { listRelationPackets } from '@runtime/nexus/server/relation-utils';
 import {
   buildNexusScopeGraphProjection,
   buildPersonalScopeSummary as buildScopeGraphPersonalScopeSummary,
@@ -74,6 +75,7 @@ type ScopeResolution = {
   resolvedScopeId: string;
   summary: NexusScopeSummary;
   lens: NexusScopeLens;
+  scopeSummaries: NexusScopeSummary[];
 };
 
 /**
@@ -130,6 +132,116 @@ function toStatusCategory(status: string | null): 'petitioning' | 'under_review'
  */
 function isOpenVoteStatus(status: string | null): boolean {
   return toStatusCategory(status) !== 'completed';
+}
+
+
+/**
+ * Inputs: dashboard card projection text.
+ * Output: whether the packet appears to describe an association relationship.
+ */
+function isAssociationCardText(card: { title: string; label: string; summary: string | null }): boolean {
+  const searchableText = [card.title, card.label, card.summary ?? '']
+    .join(' ')
+    .toLowerCase();
+
+  return searchableText.includes('association') || searchableText.includes('associate');
+}
+
+function getScopeTreePacketIds(
+  scopeSummary: NexusScopeSummary,
+  scopeSummaries: NexusScopeSummary[]
+): Set<string> {
+  const scopeIds = new Set<string>([scopeSummary.id]);
+  let previousSize = 0;
+
+  while (scopeIds.size !== previousSize) {
+    previousSize = scopeIds.size;
+
+    for (const candidateSummary of scopeSummaries) {
+      if (candidateSummary.parentId && scopeIds.has(candidateSummary.parentId)) {
+        scopeIds.add(candidateSummary.id);
+      }
+    }
+  }
+
+  return new Set(
+    scopeSummaries
+      .filter((candidateSummary) => scopeIds.has(candidateSummary.id))
+      .map((candidateSummary) => candidateSummary.packetId)
+  );
+}
+
+function getClaimRelationSubjectPacketId(claimPacket: ClaimPacket): string | null {
+  return (
+    claimPacket.body.relation_assertion?.subject_ref.packet_id ??
+    claimPacket.body.subject_ref?.packet_id ??
+    null
+  );
+}
+
+function getClaimRelationTargetPacketId(claimPacket: ClaimPacket): string | null {
+  return (
+    claimPacket.body.relation_assertion?.target_ref.packet_id ??
+    claimPacket.body.target_ref.packet_id
+  );
+}
+
+async function countResidentsInScopeTree(input: {
+  packetStore: Awaited<ReturnType<typeof getNexusPacketServices>>['packetStore'];
+  scopeResolution: ScopeResolution;
+}): Promise<number> {
+  const scopeTreePacketIds = getScopeTreePacketIds(
+    input.scopeResolution.summary,
+    input.scopeResolution.scopeSummaries
+  );
+  const [elementPackets, relationPackets, claimPackets] = await Promise.all([
+    input.packetStore.listPreferredPacketsByFamily('Element'),
+    listRelationPackets(input.packetStore),
+    listClaimPackets(input.packetStore),
+  ]);
+  const personPacketIds = new Set(
+    (elementPackets as PacketEnvelopeByType['Element'][])
+      .filter((elementPacket) => elementPacket.body.kind === 'person')
+      .map((elementPacket) => elementPacket.header.packet_id)
+  );
+  const residentPacketIds = new Set<string>();
+
+  for (const relationPacket of relationPackets) {
+    if (
+      relationPacket.body.subtype === 'home_locality' &&
+      relationPacket.body.status === 'active' &&
+      scopeTreePacketIds.has(relationPacket.body.target_ref.packet_id) &&
+      personPacketIds.has(relationPacket.body.subject_ref.packet_id)
+    ) {
+      residentPacketIds.add(relationPacket.body.subject_ref.packet_id);
+    }
+  }
+
+  for (const claimPacket of claimPackets) {
+    if (claimPacket.body.status !== 'active') {
+      continue;
+    }
+
+    if (
+      claimPacket.body.claim_kind !== 'home_locality' &&
+      claimPacket.body.relation_assertion?.subtype !== 'home_locality'
+    ) {
+      continue;
+    }
+
+    const subjectPacketId = getClaimRelationSubjectPacketId(claimPacket);
+    const targetPacketId = getClaimRelationTargetPacketId(claimPacket);
+
+    if (
+      subjectPacketId &&
+      personPacketIds.has(subjectPacketId) &&
+      scopeTreePacketIds.has(targetPacketId)
+    ) {
+      residentPacketIds.add(subjectPacketId);
+    }
+  }
+
+  return residentPacketIds.size;
 }
 
 /**
@@ -296,6 +408,7 @@ async function resolveScopeResolution(input: {
         resolvedScopeId: 'you',
         summary,
         lens: buildPersonalScopeLens(actorPacket),
+        scopeSummaries: [],
       };
     }
   }
@@ -340,6 +453,7 @@ async function resolveScopeResolution(input: {
     resolvedScopeId: summary.id,
     summary,
     lens: scopeLens,
+    scopeSummaries,
   };
 }
 
@@ -578,62 +692,146 @@ export async function getNexusDashboardPayload(
     actorPacketId,
   });
   const scopeLens = scopeResolution.lens;
-  const [queueCards, voteCards, discussionCards, libraryCards] = await Promise.all([
-    services.nexusQueryService.getDashboardQueue(scopeLens),
-    services.nexusQueryService.listVotes(scopeLens),
-    services.nexusQueryService.listDiscussions(scopeLens),
-    services.nexusQueryService.listLibraryPackets(scopeLens),
+  const [localLibraryCards, residentCount] = await Promise.all([
+    services.nexusQueryService.listLibraryPackets(scopeLens, undefined, {
+      scope_mode: 'local',
+    }),
+    countResidentsInScopeTree({
+      packetStore: services.packetStore,
+      scopeResolution,
+    }),
   ]);
-  const visitorLobbyForumCount = discussionCards.filter(
-    (discussionCard) =>
-      discussionCard.family === 'DiscussionForum' &&
-      discussionCard.title.toLowerCase().includes('visitor lobby')
+  const voteCards = localLibraryCards.filter(
+    (libraryCard) =>
+      libraryCard.family === 'Proposal' ||
+      libraryCard.family === 'Vote' ||
+      libraryCard.family === 'Decision'
+  );
+  const discussionCards = localLibraryCards.filter(
+    (libraryCard) =>
+      libraryCard.family === 'Discussion' ||
+      libraryCard.family === 'DiscussionForum' ||
+      libraryCard.family === 'DiscussionThread' ||
+      libraryCard.family === 'DiscussionPost' ||
+      libraryCard.family === 'DiscussionReply'
+  );
+  const canonicalThreadCount = discussionCards.filter(
+    (discussionCard) => discussionCard.family === 'DiscussionThread'
   ).length;
-
+  const legacyTopLevelPostCount =
+    canonicalThreadCount === 0
+      ? discussionCards.filter(
+          (discussionCard) => discussionCard.family === 'DiscussionPost'
+        ).length
+      : 0;
+  const threadCount = canonicalThreadCount + legacyTopLevelPostCount;
+  const replyCount = discussionCards.filter(
+    (discussionCard) => discussionCard.family === 'DiscussionReply'
+  ).length;
+  const proposalCount = voteCards.filter(
+    (voteCard) => voteCard.family === 'Proposal'
+  ).length;
+  const decisionCount = voteCards.filter(
+    (voteCard) => voteCard.family === 'Decision'
+  ).length;
+  const petitionCount = voteCards.filter(
+    (voteCard) => toStatusCategory(voteCard.status ?? voteCard.label) === 'petitioning'
+  ).length;
+  const associationCount = localLibraryCards.filter(
+    (libraryCard) =>
+      (libraryCard.family === 'Claim' || libraryCard.family === 'Relation') &&
+      isAssociationCardText(libraryCard)
+  ).length;
+  const trustReviewFamilies = new Set<PacketFamily>([
+    'Claim',
+    'Relation',
+    'Attestation',
+    'Policy',
+  ]);
+  const rolePreviewFamilies = new Set<PacketFamily>(['Role', 'Claim', 'Attestation']);
+  const trustReviewCards = localLibraryCards.filter((libraryCard) =>
+    trustReviewFamilies.has(libraryCard.family)
+  );
+  const rolePreviewCards = localLibraryCards.filter((libraryCard) =>
+    rolePreviewFamilies.has(libraryCard.family)
+  );
   return {
     lens: scopeLens,
     metrics: [
       {
-        id: 'packet-count',
-        title: 'Packets in scope',
-        value: libraryCards.length.toString(),
-        detail: 'Canonical packet revisions available in this scope lens.',
+        id: 'packets',
+        title: 'Packets',
+        value: localLibraryCards.length.toString(),
+        detail: 'Current-scope packet revisions.',
         tone: 'sky',
       },
       {
-        id: 'open-votes',
-        title: 'Open vote lanes',
-        value: voteCards.filter((voteCard) => isOpenVoteStatus(voteCard.status)).length.toString(),
-        detail: 'Proposal, vote, and decision packets still in active flow.',
-        tone: 'rose',
-      },
-      {
-        id: 'discussion-lanes',
-        title: 'Discussion surfaces',
-        value: discussionCards.length.toString(),
-        detail: 'Discussion thread and post packets visible in this scope.',
+        id: 'residents',
+        title: 'Residents',
+        value: residentCount.toString(),
+        detail: 'Home-locality residents in this scope tree.',
         tone: 'mint',
       },
       {
-        id: 'visitor-lobbies',
-        title: 'Visitor lobby forums',
-        value: visitorLobbyForumCount.toString(),
-        detail: 'Public visitor-lobby discussion forums currently discoverable.',
+        id: 'associates',
+        title: 'Associates',
+        value: associationCount.toString(),
+        detail: 'Current-scope association claims and relations.',
         tone: 'gold',
       },
+      {
+        id: 'threads',
+        title: 'Threads',
+        value: threadCount.toString(),
+        detail: 'Current-scope discussion thread packets.',
+        tone: 'sky',
+      },
+      {
+        id: 'replies',
+        title: 'Replies',
+        value: replyCount.toString(),
+        detail: 'Current-scope discussion reply packets.',
+        tone: 'mint',
+      },
+      {
+        id: 'petitions',
+        title: 'Petitions',
+        value: petitionCount.toString(),
+        detail: 'Petition-stage packets.',
+        tone: 'gold',
+      },
+      {
+        id: 'proposals',
+        title: 'Proposals',
+        value: proposalCount.toString(),
+        detail: 'Proposal packets.',
+        tone: 'rose',
+      },
+      {
+        id: 'decisions',
+        title: 'Decisions',
+        value: decisionCount.toString(),
+        detail: 'Decision packets.',
+        tone: 'sky',
+      },
     ],
-    queue: queueCards.slice(0, 6).map((queueCard, index) => ({
+    queue: localLibraryCards.slice(0, 6).map((queueCard, index) => ({
       id: queueCard.packet.packet_id,
       title: queueCard.title,
       detail: queueCard.summary ?? 'No summary available yet.',
       stat: queueCard.status ?? queueCard.label,
+      created_at: queueCard.created_at,
       tone: (['sky', 'mint', 'gold', 'rose'][index % 4] ?? 'sky') as
         | 'sky'
         | 'mint'
         | 'gold'
         | 'rose',
     })),
-    recommended_packets: libraryCards.slice(0, 4),
+    discussion_preview_packets: discussionCards.slice(0, 4),
+    role_preview_packets: rolePreviewCards.slice(0, 4),
+    trust_review_packets: trustReviewCards.slice(0, 4),
+    vote_preview_packets: voteCards.slice(0, 4),
+    recommended_packets: trustReviewCards.slice(0, 4),
   };
 }
 

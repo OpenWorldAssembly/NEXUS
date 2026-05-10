@@ -2,9 +2,17 @@
  * File: nexus-card-badge-strip.tsx
  * Description: Renders compact icon badges for Nexus cards without consuming body space.
  */
-import { useMemo, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentRef,
+  type ReactNode,
+} from 'react';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Platform, Pressable, Text, View } from 'react-native';
+import { Dimensions, Modal, Platform, Pressable, Text, View } from 'react-native';
 
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import type { NexusCardBadge, NexusCardBadgeIcon, NexusCardBadgeTone } from './nexus-card-types';
@@ -13,10 +21,22 @@ function joinClasses(...classes: (string | undefined)[]): string {
   return classes.filter(Boolean).join(' ');
 }
 
-const BADGE_DISMISS_LAYER_STYLE =
-  Platform.OS === 'web'
-    ? ({ position: 'fixed', top: 0, right: 0, bottom: 0, left: 0, zIndex: 40 } as never)
-    : undefined;
+const BADGE_MODAL_PANEL_STYLE = { elevation: 90 } as never;
+const BADGE_TOOLTIP_MARGIN = 12;
+const BADGE_TOOLTIP_MAX_WIDTH = 220;
+const BADGE_TOOLTIP_OFFSET = 8;
+
+type BadgeAnchor = {
+  height: number;
+  width: number;
+  x: number;
+  y: number;
+};
+
+type BadgeTooltipState =
+  | { mode: 'idle' }
+  | { anchor: BadgeAnchor | null; badgeId: string; mode: 'hover' }
+  | { anchor: BadgeAnchor | null; badgeId: string; mode: 'pinned' };
 
 const ICON_BY_BADGE: Record<NexusCardBadgeIcon, keyof typeof MaterialIcons.glyphMap> = {
   check: 'check-circle',
@@ -28,6 +48,8 @@ const ICON_BY_BADGE: Record<NexusCardBadgeIcon, keyof typeof MaterialIcons.glyph
   signature: 'gesture',
   packet: 'inventory',
   visibility: 'visibility',
+  archive: 'archive',
+  verified: 'verified',
 };
 
 function getBadgeToneClasses(
@@ -57,6 +79,37 @@ function getBadgeToneClasses(
   return darkToneClasses[tone];
 }
 
+function getTooltipPanelStyle(anchor: BadgeAnchor | null) {
+  const windowWidth = Dimensions.get('window').width;
+  const panelLeft = anchor
+    ? Math.min(
+        Math.max(BADGE_TOOLTIP_MARGIN, anchor.x + anchor.width / 2 - BADGE_TOOLTIP_MAX_WIDTH / 2),
+        Math.max(BADGE_TOOLTIP_MARGIN, windowWidth - BADGE_TOOLTIP_MAX_WIDTH - BADGE_TOOLTIP_MARGIN),
+      )
+    : BADGE_TOOLTIP_MARGIN;
+  const panelTop = anchor ? anchor.y + anchor.height + BADGE_TOOLTIP_OFFSET : BADGE_TOOLTIP_MARGIN;
+
+  return {
+    ...BADGE_MODAL_PANEL_STYLE,
+    left: panelLeft,
+    maxWidth: BADGE_TOOLTIP_MAX_WIDTH,
+    position: 'absolute',
+    top: panelTop,
+  } as never;
+}
+
+function supportsFineHover(): boolean {
+  if (Platform.OS !== 'web') {
+    return false;
+  }
+
+  const webWindow = (globalThis as typeof globalThis & {
+    matchMedia?: (query: string) => { matches: boolean };
+  }).matchMedia;
+
+  return webWindow?.('(hover: hover) and (pointer: fine)').matches ?? false;
+}
+
 function NexusCardBadgeIconView({ badge }: { badge: NexusCardBadge }) {
   const { themeMode, uiDensity } = useNexusShell();
   const tone = getBadgeToneClasses(badge.tone ?? 'default', themeMode);
@@ -75,6 +128,73 @@ function NexusCardBadgeIconView({ badge }: { badge: NexusCardBadge }) {
   );
 }
 
+type NexusCardBadgeButtonProps = {
+  accessibilityLabel: string;
+  active: boolean;
+  children: ReactNode;
+  id: string;
+  onHoverIn: (id: string, anchor: BadgeAnchor | null) => void;
+  onHoverOut: (id: string) => void;
+  onPressBadge: (id: string, anchor: BadgeAnchor | null) => void;
+  tone: NexusCardBadgeTone;
+};
+
+function NexusCardBadgeButton({
+  accessibilityLabel,
+  active,
+  children,
+  id,
+  onHoverIn,
+  onHoverOut,
+  onPressBadge,
+  tone,
+}: NexusCardBadgeButtonProps) {
+  const { themeMode, uiDensity } = useNexusShell();
+  const buttonRef = useRef<ComponentRef<typeof Pressable>>(null);
+  const toneClasses = getBadgeToneClasses(tone, themeMode);
+  const frameClassName = joinClasses(
+    'items-center justify-center rounded-nexus border',
+    uiDensity === 'large' ? 'h-7 w-7' : 'h-6 w-6',
+    toneClasses.frame,
+  );
+
+  const measureBadge = useCallback(
+    (callback: (anchor: BadgeAnchor | null) => void) => {
+      const node = buttonRef.current;
+      if (!node?.measureInWindow) {
+        callback(null);
+        return;
+      }
+
+      node.measureInWindow((x, y, width, height) => {
+        callback({ height, width, x, y });
+      });
+    },
+    [],
+  );
+
+  return (
+    <Pressable
+      ref={buttonRef}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole="button"
+      className={joinClasses(frameClassName, active ? 'opacity-100' : undefined)}
+      onHoverIn={() => {
+        measureBadge((anchor) => onHoverIn(id, anchor));
+      }}
+      onHoverOut={() => {
+        onHoverOut(id);
+      }}
+      onPress={(event) => {
+        event.stopPropagation();
+        measureBadge((anchor) => onPressBadge(id, anchor));
+      }}
+    >
+      {children}
+    </Pressable>
+  );
+}
+
 export type NexusCardBadgeStripProps = {
   badges?: NexusCardBadge[];
   className?: string;
@@ -83,7 +203,7 @@ export type NexusCardBadgeStripProps = {
 
 /**
  * Inputs: compact badge descriptors.
- * Output: an icon-only card badge strip with hover and tap detail popovers.
+ * Output: an icon-only card badge strip with a mutually exclusive hover/pinned tooltip mode.
  */
 export function NexusCardBadgeStrip({
   badges = [],
@@ -91,13 +211,22 @@ export function NexusCardBadgeStrip({
   maxVisible = 3,
 }: NexusCardBadgeStripProps) {
   const { themeMode, uiDensity } = useNexusShell();
-  const [activeBadgeId, setActiveBadgeId] = useState<string | null>(null);
+  const [canHover, setCanHover] = useState(false);
+  const [tooltipState, setTooltipState] = useState<BadgeTooltipState>({ mode: 'idle' });
+  const stripRef = useRef<ComponentRef<typeof View>>(null);
   const visibleBadges = badges.filter((badge) => !badge.hidden);
+
+  useEffect(() => {
+    setCanHover(supportsFineHover());
+  }, []);
 
   const shownBadges = visibleBadges.slice(0, maxVisible);
   const hiddenBadges = visibleBadges.slice(maxVisible);
   const hiddenCount = hiddenBadges.length;
   const overflowTone = getBadgeToneClasses('muted', themeMode);
+  const activeBadgeId = tooltipState.mode === 'idle' ? null : tooltipState.badgeId;
+  const activeAnchor = tooltipState.mode === 'idle' ? null : tooltipState.anchor;
+
   const activeBadge = useMemo(() => {
     if (activeBadgeId === '__overflow__') {
       return hiddenCount > 0
@@ -112,64 +241,212 @@ export function NexusCardBadgeStrip({
     return visibleBadges.find((badge) => badge.id === activeBadgeId) ?? null;
   }, [activeBadgeId, hiddenCount, visibleBadges]);
 
+  const closeTooltip = useCallback(() => {
+    setTooltipState({ mode: 'idle' });
+  }, []);
+
+  const handleHoverIn = useCallback(
+    (badgeId: string, anchor: BadgeAnchor | null) => {
+      if (!canHover) {
+        return;
+      }
+
+      setTooltipState((current) => {
+        if (current.mode === 'pinned') {
+          return current;
+        }
+
+        return { anchor, badgeId, mode: 'hover' };
+      });
+    },
+    [canHover],
+  );
+
+  const handleHoverOut = useCallback(
+    (badgeId: string) => {
+      if (!canHover) {
+        return;
+      }
+
+      setTooltipState((current) => {
+        if (current.mode !== 'hover' || current.badgeId !== badgeId) {
+          return current;
+        }
+
+        return { mode: 'idle' };
+      });
+    },
+    [canHover],
+  );
+
+  const handlePressBadge = useCallback(
+    (badgeId: string, anchor: BadgeAnchor | null) => {
+      const currentState = tooltipState;
+
+      if (currentState.mode === 'hover') {
+        return;
+      }
+
+      if (currentState.mode === 'pinned' && currentState.badgeId === badgeId) {
+        closeTooltip();
+        return;
+      }
+
+      setTooltipState({ anchor, badgeId, mode: 'pinned' });
+      visibleBadges.find((badge) => badge.id === badgeId)?.onPress?.();
+    },
+    [closeTooltip, tooltipState, visibleBadges],
+  );
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || tooltipState.mode !== 'hover') {
+      return undefined;
+    }
+
+    const webWindow = (globalThis as typeof globalThis & {
+      window?: {
+        addEventListener?: (type: string, listener: (event: unknown) => void, options?: unknown) => void;
+        removeEventListener?: (type: string, listener: (event: unknown) => void, options?: unknown) => void;
+      };
+    }).window;
+
+    const closeHover = () => {
+      setTooltipState((current) => (current.mode === 'hover' ? { mode: 'idle' } : current));
+    };
+
+    webWindow?.addEventListener?.('scroll', closeHover, true);
+    webWindow?.addEventListener?.('blur', closeHover);
+
+    return () => {
+      webWindow?.removeEventListener?.('scroll', closeHover, true);
+      webWindow?.removeEventListener?.('blur', closeHover);
+    };
+  }, [tooltipState.mode]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || tooltipState.mode !== 'pinned') {
+      return undefined;
+    }
+
+    const webDocument = (globalThis as typeof globalThis & {
+      document?: {
+        addEventListener?: (type: string, listener: (event: unknown) => void, options?: unknown) => void;
+        removeEventListener?: (type: string, listener: (event: unknown) => void, options?: unknown) => void;
+      };
+    }).document;
+
+    const closePinnedFromOutside = (event: unknown) => {
+      const rootNode = stripRef.current as unknown as { contains?: (target: unknown) => boolean } | null;
+      const target = (event as { target?: unknown })?.target;
+
+      if (target && rootNode?.contains?.(target)) {
+        return;
+      }
+
+      closeTooltip();
+    };
+
+    webDocument?.addEventListener?.('pointerdown', closePinnedFromOutside, true);
+
+    return () => {
+      webDocument?.removeEventListener?.('pointerdown', closePinnedFromOutside, true);
+    };
+  }, [closeTooltip, tooltipState.mode]);
+
   if (visibleBadges.length === 0) {
     return null;
   }
 
-  const popoverClassName = joinClasses(
-    'absolute right-0 top-full z-50 mt-2 min-w-[120px] max-w-[220px] rounded-xl border px-3 py-2 shadow-lg',
+  const modalPanelClassName = joinClasses(
+    'min-w-[120px] max-w-[220px] rounded-xl border px-3 py-2 shadow-lg',
     themeMode === 'dark'
       ? 'border-nexus-line bg-nexus-panel'
       : 'border-slate-300 bg-white',
   );
 
-  return (
-    <View className={joinClasses('relative flex-row items-center gap-1 overflow-visible', className)}>
-      {shownBadges.map((badge) => {
-        const tone = getBadgeToneClasses(badge.tone ?? 'default', themeMode);
-        const frameClassName = joinClasses(
-          'items-center justify-center rounded-nexus border',
-          uiDensity === 'large' ? 'h-7 w-7' : 'h-6 w-6',
-          tone.frame,
-        );
-        const isActive = activeBadgeId === badge.id;
+  const tooltipTextClassName = activeBadge
+    ? joinClasses(
+        uiDensity === 'large' ? 'text-sm' : 'text-xs',
+        'font-semibold',
+        getBadgeToneClasses(activeBadge.tone ?? 'default', themeMode).text,
+      )
+    : undefined;
 
-        return (
-          <Pressable
-            key={badge.id}
-            accessibilityLabel={badge.accessibilityLabel ?? badge.label}
-            accessibilityRole="button"
-            className={joinClasses(frameClassName, isActive ? 'opacity-100' : undefined)}
-            onHoverIn={() => setActiveBadgeId(badge.id)}
-            onHoverOut={() => setActiveBadgeId((current) => (current === badge.id ? null : current))}
-            onPress={(event) => {
-              event.stopPropagation();
-              setActiveBadgeId((current) => (current === badge.id ? null : badge.id));
-              badge.onPress?.();
-            }}
-          >
-            <NexusCardBadgeIconView badge={badge} />
-          </Pressable>
-        );
-      })}
+  const hoverPanel = tooltipState.mode === 'hover' && activeBadge ? (
+    <View
+      className={joinClasses(
+        modalPanelClassName,
+        'absolute right-0 top-8 z-50',
+      )}
+      pointerEvents="none"
+      style={BADGE_MODAL_PANEL_STYLE}
+    >
+      <Text className={tooltipTextClassName}>{activeBadge.label}</Text>
+    </View>
+  ) : null;
+
+  const pinnedPanel = tooltipState.mode === 'pinned' && activeBadge ? (
+    <Pressable
+      accessibilityLabel={activeBadge.label}
+      accessibilityRole="button"
+      className={modalPanelClassName}
+      onPress={(event) => {
+        event.stopPropagation();
+        closeTooltip();
+      }}
+      pointerEvents="auto"
+      style={getTooltipPanelStyle(activeAnchor)}
+    >
+      <Text className={tooltipTextClassName}>{activeBadge.label}</Text>
+    </Pressable>
+  ) : null;
+
+  const webPinnedModalContent = (
+    <View className="flex-1" pointerEvents="box-none">
+      {pinnedPanel}
+    </View>
+  );
+
+  const nativePinnedModalContent = (
+    <Pressable
+      accessibilityLabel="Close badge details"
+      accessibilityRole="button"
+      className="flex-1"
+      onPress={(event) => {
+        event.stopPropagation();
+        closeTooltip();
+      }}
+    >
+      {pinnedPanel}
+    </Pressable>
+  );
+
+  return (
+    <View ref={stripRef} className={joinClasses('relative flex-row items-center gap-1 overflow-visible', className)}>
+      {shownBadges.map((badge) => (
+        <NexusCardBadgeButton
+          key={badge.id}
+          accessibilityLabel={badge.accessibilityLabel ?? badge.label}
+          active={activeBadgeId === badge.id}
+          id={badge.id}
+          onHoverIn={handleHoverIn}
+          onHoverOut={handleHoverOut}
+          onPressBadge={handlePressBadge}
+          tone={badge.tone ?? 'default'}
+        >
+          <NexusCardBadgeIconView badge={badge} />
+        </NexusCardBadgeButton>
+      ))}
 
       {hiddenCount > 0 ? (
-        <Pressable
+        <NexusCardBadgeButton
           accessibilityLabel={`${hiddenCount} more badges`}
-          accessibilityRole="button"
-          className={joinClasses(
-            'items-center justify-center rounded-nexus border px-1.5',
-            uiDensity === 'large' ? 'h-7 min-w-[1.75rem]' : 'h-6 min-w-[1.5rem]',
-            overflowTone.frame,
-          )}
-          onHoverIn={() => setActiveBadgeId('__overflow__')}
-          onHoverOut={() =>
-            setActiveBadgeId((current) => (current === '__overflow__' ? null : current))
-          }
-          onPress={(event) => {
-            event.stopPropagation();
-            setActiveBadgeId((current) => (current === '__overflow__' ? null : '__overflow__'));
-          }}
+          active={activeBadgeId === '__overflow__'}
+          id="__overflow__"
+          onHoverIn={handleHoverIn}
+          onHoverOut={handleHoverOut}
+          onPressBadge={handlePressBadge}
+          tone="muted"
         >
           <Text
             className={joinClasses(
@@ -180,35 +457,19 @@ export function NexusCardBadgeStrip({
           >
             +{hiddenCount}
           </Text>
-        </Pressable>
+        </NexusCardBadgeButton>
       ) : null}
 
-      {activeBadge ? (
-        <Pressable
-          accessibilityLabel="Close badge details"
-          accessibilityRole="button"
-          className={Platform.OS === 'web' ? 'fixed inset-0 z-40' : 'absolute inset-0 z-40'}
-          onPress={(event) => {
-            event.stopPropagation();
-            setActiveBadgeId(null);
-          }}
-          style={BADGE_DISMISS_LAYER_STYLE}
-        />
-      ) : null}
+      {hoverPanel}
 
-      {activeBadge ? (
-        <View className={popoverClassName} style={{ elevation: 70 }}>
-          <Text
-            className={joinClasses(
-              uiDensity === 'large' ? 'text-sm' : 'text-xs',
-              'font-semibold',
-              getBadgeToneClasses(activeBadge.tone ?? 'default', themeMode).text,
-            )}
-          >
-            {activeBadge.label}
-          </Text>
-        </View>
-      ) : null}
+      <Modal
+        animationType="fade"
+        onRequestClose={closeTooltip}
+        transparent
+        visible={tooltipState.mode === 'pinned' && activeBadge !== null}
+      >
+        {Platform.OS === 'web' ? webPinnedModalContent : nativePinnedModalContent}
+      </Modal>
     </View>
   );
 }
