@@ -8,10 +8,12 @@ import { useLocalSearchParams } from 'expo-router';
 
 import { type NexusCardBadge } from '@app/components/nexus/action-card';
 import { NexusActionList, NexusActionListItem } from '@app/components/nexus/action-list';
+import { NexusPreviewPanel, NexusStatCard } from '@app/components/nexus/preview';
+import { getDashboardBadges } from '@app/components/nexus/dashboard/nexus-dashboard-badges';
 import {
-  NexusDashboardPreviewSection,
-  NexusDashboardStatCard,
-} from '@app/components/nexus/dashboard';
+  formatDashboardTimestamp,
+  getDashboardPreviewMeta,
+} from '@app/components/nexus/dashboard/nexus-dashboard-format';
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import {
   NexusBadge,
@@ -22,144 +24,6 @@ import {
 import type { NexusPacketCardProjection } from '@core/contracts';
 import type { NexusDashboardPayload } from '@runtime/nexus/nexus-api-types';
 import { fetchNexusDashboardPayload } from '@runtime/nexus/nexus-query-api';
-
-type NexusDashboardLifecycleState = 'active' | 'archived' | 'withdrawn';
-type NexusDashboardTrustState = 'trusted' | 'unverified' | 'flagged';
-
-function normalizeDashboardSignal(value: string | null | undefined): string {
-  return value?.toLowerCase().trim() ?? '';
-}
-
-function getLifecycleState(status: string | null | undefined): NexusDashboardLifecycleState {
-  const normalizedStatus = normalizeDashboardSignal(status);
-
-  if (
-    normalizedStatus.includes('withdrawn') ||
-    normalizedStatus.includes('revoked') ||
-    normalizedStatus.includes('retracted')
-  ) {
-    return 'withdrawn';
-  }
-
-  if (
-    normalizedStatus.includes('archived') ||
-    normalizedStatus.includes('closed') ||
-    normalizedStatus.includes('superseded') ||
-    normalizedStatus.includes('inactive')
-  ) {
-    return 'archived';
-  }
-
-  return 'active';
-}
-
-function getLifecycleBadge(status: string | null | undefined): NexusCardBadge {
-  const lifecycleState = getLifecycleState(status);
-
-  if (lifecycleState === 'withdrawn') {
-    return {
-      id: 'lifecycle-withdrawn',
-      icon: 'history',
-      label: 'Withdrawn',
-      tone: 'muted',
-    };
-  }
-
-  if (lifecycleState === 'archived') {
-    return {
-      id: 'lifecycle-archived',
-      icon: 'archive',
-      label: 'Archived',
-      tone: 'muted',
-    };
-  }
-
-  return {
-    id: 'lifecycle-active',
-    icon: 'visibility',
-    label: 'Active',
-    tone: 'accent',
-  };
-}
-
-function getTrustState(status: string | null | undefined): NexusDashboardTrustState {
-  const normalizedStatus = normalizeDashboardSignal(status);
-
-  if (
-    normalizedStatus.includes('flagged') ||
-    normalizedStatus.includes('disputed') ||
-    normalizedStatus.includes('blocked') ||
-    normalizedStatus.includes('failed')
-  ) {
-    return 'flagged';
-  }
-
-  if (
-    normalizedStatus.includes('trusted') ||
-    normalizedStatus.includes('verified') ||
-    normalizedStatus.includes('approved')
-  ) {
-    return 'trusted';
-  }
-
-  return 'unverified';
-}
-
-function getTrustBadge(status: string | null | undefined): NexusCardBadge {
-  const trustState = getTrustState(status);
-
-  if (trustState === 'flagged') {
-    return {
-      id: 'trust-flagged',
-      icon: 'flag',
-      label: 'Flagged',
-      tone: 'warning',
-    };
-  }
-
-  if (trustState === 'trusted') {
-    return {
-      id: 'trust-trusted',
-      icon: 'verified',
-      label: 'Trusted',
-      tone: 'accent',
-    };
-  }
-
-  return {
-    id: 'trust-unverified',
-    icon: 'signature',
-    label: 'Unverified',
-    tone: 'muted',
-  };
-}
-
-function getDashboardBadges(status: string | null | undefined): NexusCardBadge[] {
-  return [getLifecycleBadge(status), getTrustBadge(status)];
-}
-
-function formatDashboardTimestamp(value: string | null | undefined): string | null {
-  if (!value) {
-    return null;
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
-
-  return new Intl.DateTimeFormat(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(date);
-}
-
-function getPreviewMeta(count: number, label: string): string {
-  return `${count} ${label}${count === 1 ? '' : 's'}`;
-}
 
 /**
  * Inputs: none.
@@ -381,7 +245,7 @@ export default function NexusDashboardPage() {
 
           <View className="flex-row flex-wrap gap-2.5">
             {visibleMetrics.map((metric) => (
-              <NexusDashboardStatCard
+              <NexusStatCard
                 key={metric.id}
                 label={metric.title}
                 tone={metric.tone}
@@ -392,45 +256,45 @@ export default function NexusDashboardPage() {
         </NexusCard>
 
         <View className="flex-row flex-wrap gap-4">
-          <NexusDashboardPreviewSection
-            meta={getPreviewMeta(visibleQueues.length, 'item')}
+          <NexusPreviewPanel
+            meta={getDashboardPreviewMeta(visibleQueues.length, 'item')}
             onOpen={() => setActiveSection('library')}
             title="Recent activity"
           >
             {renderQueuePreviewList()}
-          </NexusDashboardPreviewSection>
+          </NexusPreviewPanel>
 
-          <NexusDashboardPreviewSection
-            meta={getPreviewMeta(trustReviewPackets.length, 'item')}
+          <NexusPreviewPanel
+            meta={getDashboardPreviewMeta(trustReviewPackets.length, 'item')}
             onOpen={() => setActiveSection('trust')}
             title="Trust & Review"
           >
             {renderPacketPreviewList(trustReviewPackets, 'No trust review items.')}
-          </NexusDashboardPreviewSection>
+          </NexusPreviewPanel>
 
-          <NexusDashboardPreviewSection
-            meta={getPreviewMeta(discussionPreviewPackets.length, 'packet')}
+          <NexusPreviewPanel
+            meta={getDashboardPreviewMeta(discussionPreviewPackets.length, 'packet')}
             onOpen={() => setActiveSection('discussions')}
             title="Discussions"
           >
             {renderPacketPreviewList(discussionPreviewPackets, 'No discussion packets.')}
-          </NexusDashboardPreviewSection>
+          </NexusPreviewPanel>
 
-          <NexusDashboardPreviewSection
-            meta={getPreviewMeta(votePreviewPackets.length, 'packet')}
+          <NexusPreviewPanel
+            meta={getDashboardPreviewMeta(votePreviewPackets.length, 'packet')}
             onOpen={() => setActiveSection('votes')}
             title="Votes & Decisions"
           >
             {renderPacketPreviewList(votePreviewPackets, 'No vote packets.')}
-          </NexusDashboardPreviewSection>
+          </NexusPreviewPanel>
 
-          <NexusDashboardPreviewSection
-            meta={getPreviewMeta(rolePreviewPackets.length, 'packet')}
+          <NexusPreviewPanel
+            meta={getDashboardPreviewMeta(rolePreviewPackets.length, 'packet')}
             onOpen={() => setActiveSection('roles')}
             title="Roles & Claims"
           >
             {renderPacketPreviewList(rolePreviewPackets, 'No role packets.')}
-          </NexusDashboardPreviewSection>
+          </NexusPreviewPanel>
         </View>
       </View>
     </ScrollView>

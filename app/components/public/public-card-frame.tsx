@@ -38,6 +38,7 @@ export type PublicCardFrameProps = {
   variant?: PublicCardFrameVariant;
   className?: string;
   contentClassName?: string;
+  baseClassName?: string;
   layoutClassName?: string;
   layoutStyle?: StyleProp<ViewStyle>;
   style?: StyleProp<ViewStyle> | Animated.WithAnimatedValue<StyleProp<ViewStyle>>;
@@ -120,6 +121,7 @@ export default function PublicCardFrame({
   variant = 'default',
   className,
   contentClassName,
+  baseClassName,
   layoutClassName,
   layoutStyle,
   style,
@@ -226,6 +228,7 @@ export default function PublicCardFrame({
       backgroundImagePosition={backgroundImagePosition}
       backgroundImageResizeMode={backgroundImageResizeMode}
       backgroundImageUri={resolvedBackgroundImageUri}
+      baseClassName={baseClassName}
       className={mergeClassNames(getVariantClassName(variant), className)}
       contentClassName={mergeClassNames(
         PUBLIC_SURFACE_CLASSES.cardFrame.contentBaseClassName,
