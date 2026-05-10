@@ -5,6 +5,7 @@
 import { Link } from 'expo-router';
 import { Animated, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
+import { getPositionFocusProgress } from '@app/components/public/animation/public-position-motion';
 import PublicCardFrame from '@app/components/public/public-card-frame';
 import PublicPageActions from '@app/components/public/public-page-actions';
 import PublicSectionImagePanel from '@app/components/public/public-section-image-panel';
@@ -12,7 +13,6 @@ import {
   PUBLIC_SURFACE_CLASSES,
   PUBLIC_SURFACE_STYLE_VALUES,
 } from '@app/components/public/public-surface';
-import { getPositionFocusProgress } from '@app/components/public/animation/public-position-motion';
 import { PUBLIC_SECTION_FOCUS_LINE_RATIO } from '@app/components/public/sections/public-section.constants';
 import type { SectionLayout } from '@app/components/public/sections/public-section.types';
 import type { HomeRailSection } from '@app/public/home-content';
@@ -53,6 +53,7 @@ export default function PublicHomeSection({
   const hasSubPointList = subPointItems.length > 1;
   const { width: windowWidth } = useWindowDimensions();
   const isDesktop = windowWidth >= 768;
+  const hasRichSectionImage = section.visualMode === 'image' && Boolean(section.sideImageSource);
 
   const actionAlignmentClassName = isRightAligned ? 'items-end' : 'items-start';
   const actionWrapperClassName =
@@ -155,13 +156,17 @@ export default function PublicHomeSection({
       })
     : undefined;
   const sectionBackground =
-    section.visualMode === 'image' && section.sideImageSource ? (
+    hasRichSectionImage && section.sideImageSource ? (
       <PublicSectionImagePanel
         align={section.align}
         focusProgress={imageFocusProgress}
         source={section.sideImageSource}
       />
     ) : undefined;
+  const frameBaseClassName = hasRichSectionImage ? 'overflow-hidden rounded-[28px]' : undefined;
+  const frameClassName = hasRichSectionImage
+    ? undefined
+    : `${isActive ? 'shadow-public' : ''} bg-public-surface/80`;
 
   const actionNode = isHero && section.actions?.length ? (
     <View className={actionAlignmentClassName}>
@@ -181,16 +186,17 @@ export default function PublicHomeSection({
     <View style={styles.chapter}>
       <PublicCardFrame
         background={sectionBackground}
-        backgroundImageOpacity={section.visualMode === 'image' ? 0.28 : 0.58}
-        backgroundImageUri={section.backgroundImageUri}
+        backgroundImageOpacity={hasRichSectionImage ? 0 : 0.58}
+        backgroundImageUri={hasRichSectionImage ? undefined : section.backgroundImageUri}
         backgroundPreset="none"
-        className={`${isActive ? 'shadow-public' : ''} bg-public-surface/80`}
+        baseClassName={frameBaseClassName}
+        className={frameClassName}
         contentClassName={contentClassName}
         enableDecorativeAccents={false}
         focusLineRatio={PUBLIC_SECTION_FOCUS_LINE_RATIO}
         layoutOffsetY={sectionLayout?.y}
         scrollY={scrollY}
-        style={styles.shell}
+        style={hasRichSectionImage ? styles.imageOnlyShell : styles.shell}
         variant="default"
         viewportHeight={viewportHeight}
       >
@@ -239,6 +245,11 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingHorizontal: 4,
     marginBottom: 14,
+  },
+  imageOnlyShell: {
+    width: '100%',
+    borderRadius: 30,
+    overflow: 'hidden',
   },
   shell: {
     shadowColor: PUBLIC_SURFACE_STYLE_VALUES.sectionShadowColor,
