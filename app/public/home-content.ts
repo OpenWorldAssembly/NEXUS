@@ -2,7 +2,10 @@
  * File: home-content.ts
  * Description: Stores the homepage rail sections, including the leading hero section.
  */
+import type { ImageSource } from 'expo-image';
+
 import type { PublicPageAction } from '@app/public/content-types';
+import { homeSectionOpenAssemblyImageSource } from './home-section-assets';
 import { buildPublicBackgroundImageUri } from './public-graphics';
 
 export type HomeRailSection = {
@@ -12,6 +15,9 @@ export type HomeRailSection = {
   subPoints?: string[];
   backgroundImageUri: string;
   align: 'left' | 'right';
+  sideImageSource?: ImageSource;
+  sideImageAlt?: string;
+  visualMode?: 'motif' | 'image';
   action?: PublicPageAction;
   actions?: PublicPageAction[];
   mainPointScale?: 'standard' | 'compact';
@@ -46,6 +52,9 @@ const sections: HomeRailSection[] = [
       },
     }),
     align: 'left',
+    sideImageSource: homeSectionOpenAssemblyImageSource,
+    sideImageAlt: 'A luminous open assembly forming in a public civic space.',
+    visualMode: 'image',
     actions: [
       { href: '/about', label: 'About OWA', variant: 'secondary' },
       { href: '/nexus/dashboard', label: 'Enter Nexus', variant: 'primary' },

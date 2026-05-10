@@ -3,4 +3,4 @@
  * Description: Exposes rich public-site background assets while keeping generated SVG motifs as card fallbacks.
  */
 
-export const homeNetworkBackgroundImageSource = require('../../assets/images/background_image_01.png');
+export const homeNetworkBackgroundImageSource = require('../../assets/public/backgrounds/owa-global-network-bg.png');

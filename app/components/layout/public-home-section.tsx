@@ -7,10 +7,12 @@ import { Animated, Pressable, StyleSheet, Text, View, useWindowDimensions } from
 
 import PublicCardFrame from '@app/components/public/public-card-frame';
 import PublicPageActions from '@app/components/public/public-page-actions';
+import PublicSectionImagePanel from '@app/components/public/public-section-image-panel';
 import {
   PUBLIC_SURFACE_CLASSES,
   PUBLIC_SURFACE_STYLE_VALUES,
 } from '@app/components/public/public-surface';
+import { getPositionFocusProgress } from '@app/components/public/animation/public-position-motion';
 import { PUBLIC_SECTION_FOCUS_LINE_RATIO } from '@app/components/public/sections/public-section.constants';
 import type { SectionLayout } from '@app/components/public/sections/public-section.types';
 import type { HomeRailSection } from '@app/public/home-content';
@@ -120,9 +122,9 @@ export default function PublicHomeSection({
         : isDesktop
           ? 320
           : 220,
-    textShadowColor: 'rgba(2, 7, 14, 0.5)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 10,
+    textShadowColor: 'rgba(0, 5, 12, 0.92)',
+    textShadowOffset: { width: 0, height: 3 },
+    textShadowRadius: 16,
   };
 
   const subTextStyle = {
@@ -134,9 +136,9 @@ export default function PublicHomeSection({
     opacity: 0.84,
     position: 'relative' as const,
     zIndex: 2,
-    textShadowColor: 'rgba(2, 7, 14, 0.45)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 6,
+    textShadowColor: 'rgba(0, 5, 12, 0.88)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 10,
   };
 
   const textStackClassName = isRightAligned ? 'w-full items-end md:pr-4' : 'w-full items-start md:pl-1';
@@ -144,6 +146,22 @@ export default function PublicHomeSection({
   const subPointListClassName = isRightAligned ? 'items-end' : 'items-start';
   const subPointGap = hasSubPointList ? (isDesktop ? 16 : 11) : 0;
   const contentClassName = 'min-h-[350px] justify-center px-6 py-10 md:min-h-[460px] md:px-10 md:py-12';
+  const imageFocusProgress = sectionLayout
+    ? getPositionFocusProgress({
+        focusLineRatio: PUBLIC_SECTION_FOCUS_LINE_RATIO,
+        layout: sectionLayout,
+        scrollY,
+        viewportHeight,
+      })
+    : undefined;
+  const sectionBackground =
+    section.visualMode === 'image' && section.sideImageSource ? (
+      <PublicSectionImagePanel
+        align={section.align}
+        focusProgress={imageFocusProgress}
+        source={section.sideImageSource}
+      />
+    ) : undefined;
 
   const actionNode = isHero && section.actions?.length ? (
     <View className={actionAlignmentClassName}>
@@ -162,7 +180,8 @@ export default function PublicHomeSection({
   return (
     <View style={styles.chapter}>
       <PublicCardFrame
-        backgroundImageOpacity={0.58}
+        background={sectionBackground}
+        backgroundImageOpacity={section.visualMode === 'image' ? 0.28 : 0.58}
         backgroundImageUri={section.backgroundImageUri}
         backgroundPreset="none"
         className={`${isActive ? 'shadow-public' : ''} bg-public-surface/80`}
