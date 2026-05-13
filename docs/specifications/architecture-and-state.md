@@ -33,6 +33,7 @@ Current packet behavior in code includes:
 Forward ontology currently active in code includes:
 
 - `Cause`, `Action`, `Relation`, and `Location` as first-class packet families
+- `Report` as a first-class packet family for verification and import reporting
 - `Element.subtype` as the forward classifier, with `kind` preserved as compatibility metadata
 - widened `Claim` packets for packet-targeted assertion content plus optional `relation_assertion`
 - widened `Attestation` packets with canonical `type/subtype` semantics and legacy `attestation_kind` compatibility
@@ -47,7 +48,13 @@ Current scope consumer direction in code includes:
 - followed, associated, known, discoverable, and home-ancestor semantics are now carried as additive packet-backed scope-summary metadata
 - locality creation now emits provisional `Location(subtype: region)` packets plus `Relation(subtype: defined_by_location)` so linked location packets are part of the live writer path as well as the read seam
 - the active shell sidebar now consumes that metadata through four packet-native groupings: home, associated, followed, and discoverable
+- the current home trunk renders broadest-to-smallest, while associated scopes remain mounted related scopes outside the geographic ancestry chain
 - shell UI actions for follow and association now route through the canonical mutation corridor and refresh scope projection after success instead of relying on local-only toggles
+- dashboard payloads are now scope-backed runtime projections rather than static shell filler
+- shared packet-card projection and action-menu behavior now spans dashboard previews and related Nexus surfaces
+- focused packet state is currently a surface-local UI layer over packet-backed preview lists rather than a separate routed or core packet concept
+- the first verification chapter now treats report packets as the signed source of truth for local packet verification and import reporting, with a runtime-owned verification cache layered on top for fast UI reads
+- the local runtime now owns a normal signed validator identity and uses it to sign `verification_report` and `import_report` packets without routing those writes through user-authored fortress mutations
 
 ## Public docs build system
 

@@ -15,6 +15,7 @@ import type {
   PacketBuilderBaseInput,
   PolicyPacketInput,
   ProposalPacketInput,
+  ReportPacketInput,
   RelationPacketInput,
   RolePacketInput,
   VotePacketInput,
@@ -29,6 +30,7 @@ import { elementBuildDefinition } from '@core/packets/families/element';
 import { locationBuildDefinition } from '@core/packets/families/location';
 import { policyBuildDefinition } from '@core/packets/families/policy';
 import { proposalBuildDefinition } from '@core/packets/families/proposal';
+import { reportBuildDefinition } from '@core/packets/families/report';
 import { relationBuildDefinition } from '@core/packets/families/relation';
 import { roleBuildDefinition } from '@core/packets/families/role';
 import { voteBuildDefinition } from '@core/packets/families/vote';
@@ -141,6 +143,7 @@ export const GENERIC_PACKET_BUILD_FAMILIES = [
   'Role',
   'Claim',
   'Relation',
+  'Report',
   'Proposal',
   'Vote',
   'Attestation',
@@ -279,6 +282,9 @@ export function buildPacket(
   request: PacketBuildRequest<'Relation', RelationPacketInput>
 ): PacketEnvelopeByType['Relation'];
 export function buildPacket(
+  request: PacketBuildRequest<'Report', ReportPacketInput>
+): PacketEnvelopeByType['Report'];
+export function buildPacket(
   request: PacketBuildRequest<'Proposal', ProposalPacketInput>
 ): PacketEnvelopeByType['Proposal'];
 export function buildPacket(
@@ -330,6 +336,11 @@ export function buildPacket(
       return buildPacketWithDefinition(
         request as PacketBuildRequest<'Relation', RelationPacketInput>,
         relationBuildDefinition
+      );
+    case 'Report':
+      return buildPacketWithDefinition(
+        request as PacketBuildRequest<'Report', ReportPacketInput>,
+        reportBuildDefinition
       );
     case 'Proposal':
       return buildPacketWithDefinition(

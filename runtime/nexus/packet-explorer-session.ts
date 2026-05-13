@@ -14,6 +14,7 @@ export const PACKET_EXPLORER_VIEW_MODES = [
 
 export const PACKET_EXPLORER_PRIMARY_TABS = [
   'data',
+  'verification',
   'lineage',
   'links',
   'actions',
@@ -26,6 +27,7 @@ export const PACKET_EXPLORER_LIVE_VIEW_MODES = [
   'raw',
   'adapted',
   'read_model',
+  'verification',
   'lineage',
   'links',
   'actions',
@@ -286,6 +288,8 @@ export function createPacketExplorerPacketTab(input: {
   preferredRevisionId?: string | null;
   titleSnapshot?: string | null;
   seedSummary?: PacketExplorerSeedSummary | null;
+  activePrimaryTab?: PacketExplorerPrimaryTab;
+  selectedDataViewMode?: PacketExplorerViewMode;
 }): PacketExplorerTab {
   return {
     id: createExplorerTabId('packet'),
@@ -296,8 +300,8 @@ export function createPacketExplorerPacketTab(input: {
       getPacketTitleFallbackFromPacketId(input.packetId),
     packet_id: input.packetId,
     preferred_revision_id: input.preferredRevisionId ?? null,
-    active_primary_tab: 'data',
-    selected_data_view_mode: 'summary',
+    active_primary_tab: input.activePrimaryTab ?? 'data',
+    selected_data_view_mode: input.selectedDataViewMode ?? 'summary',
     selected_read_mode: 'raw',
     selected_target_schema_version: null,
     active_home_subtab: 'search',
@@ -351,6 +355,8 @@ export function openPacketExplorerPacket(
     preferredRevisionId?: string | null;
     titleSnapshot?: string | null;
     seedSummary?: PacketExplorerSeedSummary | null;
+    activePrimaryTab?: PacketExplorerPrimaryTab;
+    selectedDataViewMode?: PacketExplorerViewMode;
   }
 ): PacketExplorerSession {
   const existingTab =
@@ -375,6 +381,9 @@ export function openPacketExplorerPacket(
               preferred_revision_id:
                 input.preferredRevisionId ?? tab.preferred_revision_id,
               seed_summary: input.seedSummary ?? tab.seed_summary,
+              active_primary_tab: input.activePrimaryTab ?? tab.active_primary_tab,
+              selected_data_view_mode:
+                input.selectedDataViewMode ?? tab.selected_data_view_mode,
             }
           : tab
       ),

@@ -51,6 +51,7 @@ export interface NexusDashboardPayload {
   lens: NexusScopeLens;
   metrics: NexusDashboardMetric[];
   queue: NexusDashboardQueueItem[];
+  recent_activity_packets?: NexusPacketCardProjection[];
   discussion_preview_packets?: NexusPacketCardProjection[];
   role_preview_packets?: NexusPacketCardProjection[];
   trust_review_packets: NexusPacketCardProjection[];

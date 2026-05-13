@@ -102,3 +102,50 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - Assembly association is now relation-first in the mutation corridor: canonical writes use `assembly_association.relation.set` / `assembly_association.relation.clear`, keep the supporting self-claim layer, and mount associated scopes as related mounted scopes rather than leaving them as badge-only side state.
 - The first packet-native shell UI pass keeps the current rail layout but now groups scope context into Home, Associated, Followed, and Discoverable sections, roots the home trunk at `You`, and routes follow/associate sidebar actions through the canonical mutation corridor with a refetched shell projection afterward.
 - `locality.path.create` now emits locality `Element` packets, canonical `default_ancestry_parent` relations, provisional `Location(subtype: region)` packets, and `defined_by_location` relations in one signed packet batch, while `parent_scope` remains a named compatibility mirror only.
+
+## 2026-05 shared packet-card actions and focus
+
+- Dashboard preview lists and focused packet panels now share reusable packet action menus instead of route-local action clusters.
+- Dashboard preview surfaces can focus one packet at a time locally, letting the focused presentation reuse the same packet action vocabulary without inventing a separate packet-detail route.
+- Compact tooltip-capable icon badges are now part of the shared Nexus packet-card language instead of being dashboard-only decoration.
+
+## 2026-05 sidebar follow-up polish
+
+- The Home scope trunk now renders broadest-to-smallest, with `You` at the personal end rather than as the visual root.
+- Sidebar rows no longer depend on inline badge clutter or left-side tree graphics for their primary meaning.
+- Compact side overflow menus are now the active scope-row action pattern, with section placement carrying most of the relationship signal.
+
+## 2026-05 Explorer truth clarification
+
+- Packet Explorer Search, Import, and Export are live and should be treated as current product truth.
+- Explorer remains read-only for packet mutation.
+- Verification is now live for local packet validation, import reporting, and Explorer verification surfaces, while richer peer trust, provenance weighting, and broader report semantics remain later seams.
+
+## 2026-05 verification chapter 1
+
+- `Report` is now a real packet family in code, with `verification_report` and `import_report` as the first live subtypes.
+- The local runtime now bootstraps a normal signed validator identity and uses it to sign packet verification and import reports instead of introducing a privileged core-signature bypass.
+- Packet Explorer now has a dedicated `Verification` rail, while dashboard and shared packet action menus can `Validate`, `Revalidate`, and `View verification`.
+- Import now supports `Validate first`, `Validate after`, and `Don't validate`, with validation reports and packet-level verification summaries recorded through runtime services and cached locally for truthful UI projection.
+
+## 2026-05 verification hardening and bundle direction lock-in
+
+- Packet-signature verification now accepts a narrow explicit set of identity-bearing signer packets, including `Element(kind: person)` and `Element(kind: service)`, so the local validator stays a real service identity instead of a fake person-only compatibility hack.
+- Verification summaries are now revision-anchored: local cache rows record the exact target revision and digest they verified, and current verified state only applies while that preferred revision still matches.
+- Unknown signer status is now intentionally truthful: a packet can remain signed while still being `unverifiable` on the local node when the signer packet is unavailable, instead of being mislabeled as cryptographically valid.
+- Explorer Import now exposes recent `import_report` history and richer artifact metadata through the existing report packet family rather than introducing an interim import-history packet family.
+- The future bundle direction is now locked in at the roadmap level: `Bundle` will become a first-class packet family later, rebundling will create a new bundle packet rather than revising someone else’s bundle, bundle history should behave as a lineage graph, and legacy bundle JSON remains a runtime transport artifact rather than a core packet-compatibility family.
+
+## 2026-05 verification tidy polish
+
+- Explorer verification now surfaces freshness explicitly: the current preferred revision, the revision targeted by the latest local report, and whether that report is current, stale, or absent.
+- Import History now speaks honestly about its current model: it shows the latest local import report per artifact identity rather than pretending to be a full append-only event ledger.
+- The next major implementation chapter remains locality UX and geo standardization; a dedicated validation workflow screen and first-class `Bundle` packets stay intentionally deferred for later work.
+
+## 2026-05 locality UX pass 1
+
+- `/nexus/locality/create` now has a true non-mutating `Review path` seam instead of pretending the write corridor itself is the review step.
+- Top-level locality search now activates the existing `create_candidate` handoff so missing places can seed the broad-to-narrow builder directly, including from the Enter key path.
+- Duplicate warnings in locality review are now actionable through `Use existing`, `Edit name`, and `Create anyway` rather than appearing only as passive blocker text.
+- `Use as home locality` is now an explicit shared toggle for both selecting existing localities and creating new ones.
+- The home-branch inclusion checklist is now visible during review as a UI-only preview affordance, while authoritative storage and projection of selected included scopes remains deferred to a later locality pass.

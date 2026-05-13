@@ -249,6 +249,31 @@ async function collectScopeStackPacketIds(input: {
   return orderedScopeIds;
 }
 
+async function collectSignerIdentityPacketIds(input: {
+  services: PacketExportServices;
+  packetIds: string[];
+}): Promise<string[]> {
+  const signerPacketIds = new Set<string>();
+
+  for (const packetId of input.packetIds) {
+    const packet = await resolvePacketWithPreferredHeader({
+      services: input.services,
+      packetId,
+    });
+    const embeddedSignatures = packet.header.integrity.embedded_signatures;
+
+    for (const signature of embeddedSignatures) {
+      const signerPacketId = signature.signer_packet_ref.packet_id;
+
+      if (typeof signerPacketId === 'string' && signerPacketId.length > 0) {
+        signerPacketIds.add(signerPacketId);
+      }
+    }
+  }
+
+  return Array.from(signerPacketIds);
+}
+
 async function resolveBundlePacketIds(input: {
   services: PacketExportServices;
   rootPacketId: string;
@@ -289,6 +314,31 @@ async function resolveBundlePacketIds(input: {
       packetId: input.rootPacketId,
     })) {
       packetIds.add(packetId);
+    }
+  }
+
+  const queue = Array.from(packetIds);
+
+  while (queue.length > 0) {
+    const signerPacketIds = await collectSignerIdentityPacketIds({
+      services: input.services,
+      packetIds: queue.splice(0),
+    });
+
+    let addedAny = false;
+
+    for (const signerPacketId of signerPacketIds) {
+      if (packetIds.has(signerPacketId)) {
+        continue;
+      }
+
+      packetIds.add(signerPacketId);
+      queue.push(signerPacketId);
+      addedAny = true;
+    }
+
+    if (!addedAny && queue.length === 0) {
+      break;
     }
   }
 

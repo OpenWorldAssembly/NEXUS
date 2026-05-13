@@ -95,6 +95,38 @@ CREATE INDEX IF NOT EXISTS idx_packet_search_authority_scope
   ON packet_search_index(authority_scope_packet_id)
   WHERE authority_scope_packet_id IS NOT NULL;
 
+CREATE TABLE IF NOT EXISTS runtime_validator_identity (
+  node_key TEXT PRIMARY KEY,
+  validator_packet_id TEXT NOT NULL,
+  kid TEXT NOT NULL,
+  public_jwk_json TEXT NOT NULL,
+  private_jwk_json TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS packet_verification_index (
+  packet_id TEXT PRIMARY KEY,
+  target_revision_id TEXT,
+  target_digest TEXT,
+  latest_report_packet_id TEXT,
+  latest_report_revision_id TEXT,
+  latest_report_source TEXT NOT NULL,
+  status TEXT NOT NULL,
+  structural_valid INTEGER NOT NULL,
+  compatibility_status TEXT NOT NULL,
+  signature_status TEXT NOT NULL,
+  signer_status TEXT NOT NULL,
+  provenance_status TEXT NOT NULL,
+  local_trust_status TEXT NOT NULL,
+  warnings_count INTEGER NOT NULL,
+  validated_at TEXT,
+  validator_packet_id TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_packet_verification_status
+  ON packet_verification_index(status, validated_at DESC);
+
 CREATE TABLE IF NOT EXISTS attestation_index (
   attestation_packet_id TEXT PRIMARY KEY,
   target_packet_id TEXT NOT NULL,

@@ -3,7 +3,8 @@
 ## Current known gaps
 
 - identity/auth and discussions remain the two strongest end-to-end verticals
-- dashboard, votes, trust, roles, and Library are packet-backed, but are still comparatively provisional
+- votes, trust, roles, and Library are packet-backed, but are still comparatively provisional
+- dashboard is live and packet-backed, but deeper verification, trust, and governance meaning on its preview surfaces remains provisional
 - role creation and editing remain deferred
 - broader moderation, trust weighting, and governance execution remain deferred
 
@@ -14,12 +15,20 @@
 - `assembly_association` remains distinct from `home_locality`
 - followed scopes are now packet-native on the write path, but legacy shell-preference follows remain readable through an explicit compatibility bridge during transition
 - `Location` is now part of locality creation through provisional `region` packets, but provider-backed normalization, richer payload conventions, and external refs remain later work
+- locality creation now has a real non-mutating review seam, but the home-branch inclusion checklist shown during review is still preview-only and does not yet alter stored `home_locality` relation semantics
 - generic abstract assembly creation and richer locality governance are still later work
 
 ## Explorer caveats
 
-- Packet Explorer is read-only
+- Packet Explorer is read-only for packet mutation
+- Packet Explorer Search, Import, and Export are live
+- Packet Explorer verification is now live for local validation, imported report reading, and truthful layered status display
+- Packet Explorer verification is now revision-aware and stale-aware for the currently preferred revision, but richer revalidation workflows remain deferred
+- Packet Explorer Import now keeps recent import-report history visible inside the Import workspace, but that history currently reflects the latest local report per imported artifact identity rather than a full event-by-event ledger; richer filtering, artifact lineage browsing, and bundle-native history are still later work
 - fork or adapt execution, diff, and compare are not live yet
+- validation now distinguishes `validate first`, `validate after`, and `don't validate`, but local trust still remains node-local rather than peer-weighted
+- packet verification reports and import reports now exist, but richer provenance surfacing, peer-trust weighting, and broader report semantics remain next seams
+- a dedicated validation workflow screen is intentionally deferred
 - official versus unofficial initiative filtering is not active product behavior
 - initiative-version subscription behavior is not active product behavior
 

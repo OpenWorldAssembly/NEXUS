@@ -5,6 +5,8 @@
 
 import type {
   NexusPacketExplorerImportCommitPayload,
+  NexusPacketExplorerImportHistoryPayload,
+  NexusPacketExplorerImportHistoryRequest,
   NexusPacketExplorerImportPreviewPayload,
   NexusPacketExplorerImportRequest,
   NexusPacketExplorerExportPreviewPayload,
@@ -69,6 +71,16 @@ export function commitNexusPacketExplorerImport(
 ): Promise<NexusPacketExplorerImportCommitPayload> {
   return fetchMutationJsonOrThrow<NexusPacketExplorerImportCommitPayload>({
     path: '/api/nexus/packets/explorer?action=import_commit',
+    method: 'POST',
+    body: requestBody,
+  });
+}
+
+export function fetchNexusPacketExplorerImportHistory(
+  requestBody: NexusPacketExplorerImportHistoryRequest = {}
+): Promise<NexusPacketExplorerImportHistoryPayload> {
+  return fetchMutationJsonOrThrow<NexusPacketExplorerImportHistoryPayload>({
+    path: '/api/nexus/packets/explorer?action=import_history',
     method: 'POST',
     body: requestBody,
   });

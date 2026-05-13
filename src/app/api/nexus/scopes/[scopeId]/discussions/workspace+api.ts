@@ -50,11 +50,24 @@ export const GET: RequestHandler = async (request, params) => {
     const requestedForumId = requestUrl.searchParams.get('forum');
     const requestedSort = requestUrl.searchParams.get('sort');
     const requestedView = requestUrl.searchParams.get('view');
-    const requestedPostPacketId = requestUrl.searchParams.get('post_packet_id');
+    const requestedPostPacketId =
+      requestUrl.searchParams.get('post_packet_id') ??
+      requestUrl.searchParams.get('post');
+    const requestedTargetPacketId =
+      requestUrl.searchParams.get('target_packet_id') ??
+      requestUrl.searchParams.get('packet_id');
+    const requestedFocusPacketId = requestUrl.searchParams.get('focus_packet_id');
+    const requestedHighlightPacketId = requestUrl.searchParams.get(
+      'highlight_packet_id'
+    );
     const requestedReplyTargetPacketId = requestUrl.searchParams.get(
       'reply_target_packet_id'
+    ) ?? requestUrl.searchParams.get(
+      'replyTo'
     );
-    const requestedReplySort = requestUrl.searchParams.get('reply_sort');
+    const requestedReplySort =
+      requestUrl.searchParams.get('reply_sort') ??
+      requestUrl.searchParams.get('replySort');
     const requestedShowHidden = requestUrl.searchParams.get('show_hidden');
     const viewerActorPacketId = requestUrl.searchParams.get('viewer_actor_packet_id');
     const feedLimit = parsePositiveInteger(requestUrl.searchParams.get('feed_limit'));
@@ -80,6 +93,9 @@ export const GET: RequestHandler = async (request, params) => {
           ? requestedView
           : 'feed',
       postPacketId: requestedPostPacketId,
+      targetPacketId: requestedTargetPacketId,
+      focusPacketId: requestedFocusPacketId,
+      highlightPacketId: requestedHighlightPacketId,
       replyTargetPacketId: requestedReplyTargetPacketId,
       replySort:
         requestedReplySort &&

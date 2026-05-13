@@ -2,6 +2,7 @@
  * File: nexus-dashboard-badges.ts
  * Description: Builds temporary dashboard lifecycle/trust badges from dashboard packet projections.
  */
+import type { NexusPacketVerificationSummary } from '@core/contracts';
 import type { NexusCardBadge } from '@app/components/nexus/action-card';
 
 export type NexusDashboardLifecycleState = 'active' | 'archived' | 'withdrawn';
@@ -119,10 +120,74 @@ function getDashboardTrustBadge(status: string | null | undefined): NexusCardBad
   };
 }
 
+function getVerificationBadge(
+  verification: NexusPacketVerificationSummary | null | undefined
+): NexusCardBadge | null {
+  if (!verification) {
+    return null;
+  }
+
+  if (
+    verification.status === 'signature_invalid' ||
+    verification.status === 'canonicalization_mismatch'
+  ) {
+    return {
+      id: 'verification-invalid',
+      icon: 'warning',
+      label: 'Validation failed',
+      description: `Signature status: ${verification.signature_status}. Local trust: ${verification.local_trust_status}.`,
+      tone: 'danger',
+    };
+  }
+
+  if (verification.status === 'trusted_signer') {
+    return {
+      id: 'verification-trusted',
+      icon: 'verified',
+      label: 'Validated locally',
+      description: `Validated at ${verification.validated_at ?? 'unknown time'} by ${verification.validator_packet_id ?? 'local validator'}.`,
+      tone: 'accent',
+    };
+  }
+
+  if (
+    verification.status === 'unsigned' ||
+    verification.status === 'unknown_signer' ||
+    verification.status === 'external_report_only'
+  ) {
+    const label =
+      verification.status === 'unknown_signer'
+        ? 'Signer unavailable locally'
+        : verification.status.replace(/_/g, ' ');
+
+    return {
+      id: 'verification-untrusted',
+      icon: verification.status === 'external_report_only' ? 'history' : 'signature',
+      label,
+      description: `Signature: ${verification.signature_status}. Signer: ${verification.signer_status}.`,
+      tone: 'warning',
+    };
+  }
+
+  return {
+    id: 'verification-known',
+    icon: 'signature',
+    label: verification.status.replace(/_/g, ' '),
+    description: `Signature: ${verification.signature_status}. Signer: ${verification.signer_status}.`,
+    tone: 'muted',
+  };
+}
+
 /**
  * Inputs: temporary dashboard status text from packet projections.
  * Output: the two dashboard badge slots: lifecycle and trust.
  */
-export function getDashboardBadges(status: string | null | undefined): NexusCardBadge[] {
-  return [getDashboardLifecycleBadge(status), getDashboardTrustBadge(status)];
+export function getDashboardBadges(input: {
+  status: string | null | undefined;
+  verification?: NexusPacketVerificationSummary | null;
+}): NexusCardBadge[] {
+  return [
+    getDashboardLifecycleBadge(input.status),
+    getVerificationBadge(input.verification) ?? getDashboardTrustBadge(input.status),
+  ];
 }

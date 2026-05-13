@@ -31,6 +31,7 @@ export async function getNexusPacketServices(): Promise<NexusPacketServices> {
 
       await ensureNexusPacketBootstrap(queryServices);
       await services.authService.ensureStorage();
+      await services.verificationService.ensureLocalValidatorIdentity();
       const preferredHeadAudit =
         await queryServices.packetStore.auditPreferredHeadConsistency();
 

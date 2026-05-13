@@ -7,6 +7,8 @@ import { NexusAuthService } from '@runtime/nexus/server/auth-service';
 import { SQLiteAttestationService } from '@runtime/nexus/server/attestation-service';
 import { SQLiteDiscussionService } from '@runtime/nexus/server/discussion-service';
 import { NexusMutationService } from '@runtime/nexus/server/mutation-service';
+import { NexusPacketActionService } from '@runtime/nexus/server/packet-action-service';
+import { NexusPacketVerificationService } from '@runtime/nexus/server/verification-service';
 import type { NodeSQLiteQueryServices } from '@runtime/storage/node-sqlite-query-services';
 
 export interface NexusPacketServices extends NodeSQLiteQueryServices {
@@ -15,4 +17,6 @@ export interface NexusPacketServices extends NodeSQLiteQueryServices {
   discussionService: SQLiteDiscussionService;
   packetVoteService: SQLiteAttestationService;
   mutationService: NexusMutationService;
+  verificationService: NexusPacketVerificationService;
+  packetActionService: NexusPacketActionService;
 }

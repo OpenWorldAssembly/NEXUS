@@ -13,7 +13,9 @@ import {
 } from '@runtime/nexus/server/nexus-packet-export';
 import {
   getNexusPacketExplorerImportCommit,
+  getNexusPacketExplorerImportHistory,
   getNexusPacketExplorerImportPreview,
+  parseNexusPacketExplorerImportHistoryRequest,
   parseNexusPacketExplorerImportRequest,
 } from '@runtime/nexus/server/nexus-packet-import';
 import {
@@ -128,6 +130,16 @@ export const POST: RequestHandler = async (request) => {
       return createJsonResponse(commitPayload);
     }
 
+    if (action === 'import_history') {
+      const importHistoryRequestBody =
+        parseNexusPacketExplorerImportHistoryRequest(requestBody);
+      const historyPayload = await getNexusPacketExplorerImportHistory(
+        importHistoryRequestBody
+      );
+
+      return createJsonResponse(historyPayload);
+    }
+
     if (action === 'search') {
       const searchRequestBody = parseNexusPacketExplorerSearchRequest(
         requestBody
@@ -153,6 +165,8 @@ export const POST: RequestHandler = async (request) => {
             ? 'Unable to commit the Packet Explorer import.'
             : action === 'import_preview'
               ? 'Unable to preview the Packet Explorer import.'
+              : action === 'import_history'
+                ? 'Unable to load Packet Explorer import history.'
               : action === 'search'
                 ? 'Unable to search Packet Explorer packets.'
                 : 'Unable to preview the Packet Explorer export.';

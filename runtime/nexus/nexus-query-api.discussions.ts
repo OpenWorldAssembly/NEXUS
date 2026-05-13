@@ -58,6 +58,7 @@ export function fetchNexusDiscussionsPayload(input: {
 export function fetchNexusDiscussionThreadPayload(input: {
   scopeId: string;
   postPacketId: string;
+  focusPacketId?: string | null;
   replySort?: string | null;
   showHidden?: boolean;
   viewerActorPacketId?: string | null;
@@ -68,6 +69,10 @@ export function fetchNexusDiscussionThreadPayload(input: {
 
   if (input.replySort) {
     searchParams.set('reply_sort', input.replySort);
+  }
+
+  if (input.focusPacketId) {
+    searchParams.set('focus_packet_id', input.focusPacketId);
   }
 
   if (input.showHidden) {
@@ -143,6 +148,9 @@ export function fetchNexusDiscussionWorkspacePayload(input: {
   sort?: string | null;
   view?: string | null;
   postId?: string | null;
+  targetPacketId?: string | null;
+  focusPacketId?: string | null;
+  highlightPacketId?: string | null;
   replyTargetId?: string | null;
   replySort?: string | null;
   showHidden?: boolean;
@@ -166,6 +174,18 @@ export function fetchNexusDiscussionWorkspacePayload(input: {
 
   if (input.postId) {
     searchParams.set('post_packet_id', input.postId);
+  }
+
+  if (input.targetPacketId) {
+    searchParams.set('target_packet_id', input.targetPacketId);
+  }
+
+  if (input.focusPacketId) {
+    searchParams.set('focus_packet_id', input.focusPacketId);
+  }
+
+  if (input.highlightPacketId) {
+    searchParams.set('highlight_packet_id', input.highlightPacketId);
   }
 
   if (input.replyTargetId) {

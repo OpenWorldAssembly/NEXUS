@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Modal, Platform, Pressable, Text, TextInput, View } from 'react-native';
 
+import type { NexusPacketValidationMode } from '@core/contracts';
 import {
   NexusActionButton,
   NexusBadge,
@@ -10,11 +11,14 @@ import {
 } from '@app/components/nexus/nexus-ui';
 import type {
   NexusPacketExplorerImportCommitPayload,
+  NexusPacketExplorerImportHistoryEntry,
+  NexusPacketExplorerImportHistoryPayload,
   NexusPacketExplorerImportPreviewPayload,
   NexusPacketExplorerImportRequest,
 } from '@runtime/nexus/nexus-api-types';
 import {
   commitNexusPacketExplorerImport,
+  fetchNexusPacketExplorerImportHistory,
   previewNexusPacketExplorerImport,
 } from '@runtime/nexus/nexus-query-api';
 
@@ -29,6 +33,7 @@ type NexusPacketExplorerImportPanelProps = {
       summary: string | null;
       label: string | null;
     } | null;
+    activePrimaryTab?: 'data' | 'lineage' | 'verification' | 'links' | 'actions';
   }) => void;
 };
 
@@ -50,12 +55,26 @@ type ImportOutcomeModalState = {
   tone: 'mint' | 'gold' | 'rose';
 } | null;
 
+type ImportHistoryState = {
+  entries: NexusPacketExplorerImportHistoryEntry[];
+  error: string | null;
+  isLoading: boolean;
+};
+
 function createIdleWorkflowState(): ImportWorkflowState {
   return {
     result: null,
     error: null,
     isAnalyzing: false,
     isCommitting: false,
+  };
+}
+
+function createInitialImportHistoryState(): ImportHistoryState {
+  return {
+    entries: [],
+    error: null,
+    isLoading: true,
   };
 }
 
@@ -129,10 +148,12 @@ function pickJsonFileFromBrowser(): Promise<{
 function buildImportRequest(input: {
   sourceText: string;
   fileName: string | null;
+  validationMode: NexusPacketValidationMode;
 }): NexusPacketExplorerImportRequest {
   return {
     source_text: input.sourceText,
     file_name: input.fileName,
+    validation_mode: input.validationMode,
   };
 }
 
@@ -243,6 +264,10 @@ function ImportResultCard(input: {
           label={input.result.status.replace(/_/g, ' ')}
           tone={getStatusTone(input.result.status)}
         />
+        <NexusBadge
+          label={input.result.validation_mode.replace(/_/g, ' ')}
+          tone="sky"
+        />
         {input.result.artifact_type ? (
           <NexusBadge
             label={input.result.artifact_type.replace(/_/g, ' ')}
@@ -280,6 +305,37 @@ function ImportResultCard(input: {
         <NexusBadge
           label={`${input.result.family_conflict_count} family conflicts`}
           tone={input.result.family_conflict_count > 0 ? 'rose' : 'default'}
+        />
+        <NexusBadge
+          label={`${input.result.validation_blocked_count} validation blocked`}
+          tone={input.result.validation_blocked_count > 0 ? 'rose' : 'default'}
+        />
+      </View>
+
+      <View className="flex-row flex-wrap gap-2">
+        <NexusBadge
+          label={`${input.result.validation_counts.signature_valid} signature valid`}
+          tone="mint"
+        />
+        <NexusBadge
+          label={`${input.result.validation_counts.unknown_signer} signer unavailable locally`}
+          tone="gold"
+        />
+        <NexusBadge
+          label={`${input.result.validation_counts.unsigned} unsigned`}
+          tone="gold"
+        />
+        <NexusBadge
+          label={`${input.result.validation_counts.signature_invalid} invalid sig`}
+          tone={input.result.validation_counts.signature_invalid > 0 ? 'rose' : 'default'}
+        />
+        <NexusBadge
+          label={`${input.result.validation_counts.canonicalization_mismatch} canonical mismatch`}
+          tone={
+            input.result.validation_counts.canonicalization_mismatch > 0
+              ? 'rose'
+              : 'default'
+          }
         />
       </View>
 
@@ -356,27 +412,56 @@ function ImportResultCard(input: {
       ) : null}
 
       {'committed' in input.result ? (
-        <View className="flex-row flex-wrap gap-2">
-          <NexusBadge
-            label={
-              input.result.committed
-                ? `${input.result.imported_revision_count} imported`
-                : 'Commit blocked'
-            }
-            tone={input.result.committed ? 'mint' : 'rose'}
-          />
-          <NexusBadge
-            label={`${input.result.skipped_duplicate_count} skipped duplicates`}
-            tone="gold"
-          />
-          <NexusBadge
-            label={`${input.result.restored_preferred_packet_count} preferred restored`}
-            tone="sky"
-          />
-          <NexusBadge
-            label={`${input.result.diverged_packet_count} diverged`}
-            tone={input.result.diverged_packet_count > 0 ? 'gold' : 'default'}
-          />
+        <View className="gap-3">
+          <View className="flex-row flex-wrap gap-2">
+            <NexusBadge
+              label={
+                input.result.committed
+                  ? `${input.result.imported_revision_count} imported`
+                  : 'Commit blocked'
+              }
+              tone={input.result.committed ? 'mint' : 'rose'}
+            />
+            <NexusBadge
+              label={`${input.result.skipped_duplicate_count} skipped duplicates`}
+              tone="gold"
+            />
+            <NexusBadge
+              label={`${input.result.restored_preferred_packet_count} preferred restored`}
+              tone="sky"
+            />
+            <NexusBadge
+              label={`${input.result.diverged_packet_count} diverged`}
+              tone={input.result.diverged_packet_count > 0 ? 'gold' : 'default'}
+            />
+            {input.result.import_report_packet_id ? (
+              <NexusBadge label="Import report created" tone="sky" />
+            ) : null}
+          </View>
+
+          {input.result.import_report_packet_id ? (
+            <View className="flex-row flex-wrap gap-3">
+              <NexusActionButton
+                label="Open import report"
+                onPress={() =>
+                  input.onOpenPacketInExplorer({
+                    packetId: input.result.import_report_packet_id!,
+                  })
+                }
+              />
+              {input.result.created_verification_report_packet_ids[0] ? (
+                <NexusActionButton
+                  label="Open validation report"
+                  variant="ghost"
+                  onPress={() =>
+                    input.onOpenPacketInExplorer({
+                      packetId: input.result.created_verification_report_packet_ids[0]!,
+                    })
+                  }
+                />
+              ) : null}
+            </View>
+          ) : null}
         </View>
       ) : null}
 
@@ -395,22 +480,129 @@ function ImportResultCard(input: {
   );
 }
 
+function ImportHistoryCard(input: {
+  entry: NexusPacketExplorerImportHistoryEntry;
+  onOpenPacketInExplorer: NexusPacketExplorerImportPanelProps['onOpenPacketInExplorer'];
+}) {
+  const appearance = useNexusAppearance();
+
+  return (
+    <NexusCard className="gap-3">
+      <View className="flex-row flex-wrap gap-2">
+        <NexusBadge label={input.entry.source === 'local' ? 'local report' : 'external report'} tone="sky" />
+        {input.entry.validation_mode ? (
+          <NexusBadge label={input.entry.validation_mode.replace(/_/g, ' ')} tone="gold" />
+        ) : null}
+        {input.entry.artifact_type ? (
+          <NexusBadge label={input.entry.artifact_type.replace(/_/g, ' ')} />
+        ) : null}
+      </View>
+      <Text className={appearance.surfaceTitleClass}>{input.entry.title}</Text>
+      <Text className={appearance.itemMetaClass}>{input.entry.created_at}</Text>
+      {input.entry.summary ? (
+        <Text className={appearance.itemBodyClass}>{input.entry.summary}</Text>
+      ) : null}
+      <View className="flex-row flex-wrap gap-2">
+        <NexusBadge label={`${input.entry.imported_count} imported`} tone="mint" />
+        <NexusBadge label={`${input.entry.skipped_count} skipped`} tone="gold" />
+        <NexusBadge
+          label={`${input.entry.blocked_count} blocked`}
+          tone={input.entry.blocked_count > 0 ? 'rose' : 'default'}
+        />
+        <NexusBadge label={`${input.entry.affected_packet_ids.length} packets`} />
+      </View>
+      {input.entry.source_file_name || input.entry.source_digest ? (
+        <View className="gap-1">
+          {input.entry.source_file_name ? (
+            <Text className={appearance.itemBodyClass}>
+              Source file: {input.entry.source_file_name}
+            </Text>
+          ) : null}
+          {input.entry.source_digest ? (
+            <Text className={appearance.itemMetaClass}>
+              Digest: {input.entry.source_digest}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
+      <View className="flex-row flex-wrap gap-3">
+        <NexusActionButton
+          label="Open report"
+          onPress={() =>
+            input.onOpenPacketInExplorer({
+              packetId: input.entry.report_packet_id,
+            })
+          }
+        />
+        {input.entry.affected_packet_ids[0] ? (
+          <NexusActionButton
+            label="Open first packet"
+            variant="ghost"
+            onPress={() =>
+              input.onOpenPacketInExplorer({
+                packetId: input.entry.affected_packet_ids[0]!,
+              })
+            }
+          />
+        ) : null}
+      </View>
+    </NexusCard>
+  );
+}
+
 export function NexusPacketExplorerImportPanel({
   shortcutIntent = null,
   onOpenPacketInExplorer,
 }: NexusPacketExplorerImportPanelProps) {
   const appearance = useNexusAppearance();
   const [sourceMode, setSourceMode] = useState<ImportSourceMode>('paste');
+  const [validationMode, setValidationMode] =
+    useState<NexusPacketValidationMode>('validate_before_commit');
   const [sourceText, setSourceText] = useState('');
   const [sourceFileName, setSourceFileName] = useState<string | null>(null);
   const [workflow, setWorkflow] = useState<ImportWorkflowState>(
     createIdleWorkflowState
   );
+  const [importHistory, setImportHistory] = useState<ImportHistoryState>(
+    createInitialImportHistoryState
+  );
   const [outcomeModal, setOutcomeModal] = useState<ImportOutcomeModalState>(null);
+
+  const loadImportHistory = async () => {
+    setImportHistory((currentState) => ({
+      ...currentState,
+      error: null,
+      isLoading: true,
+    }));
+
+    try {
+      const payload: NexusPacketExplorerImportHistoryPayload =
+        await fetchNexusPacketExplorerImportHistory({ limit: 8 });
+
+      setImportHistory({
+        entries: payload.entries,
+        error: null,
+        isLoading: false,
+      });
+    } catch (error) {
+      setImportHistory({
+        entries: [],
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unable to load import history.',
+        isLoading: false,
+      });
+    }
+  };
+
+  useEffect(() => {
+    void loadImportHistory();
+  }, []);
 
   useEffect(() => {
     setWorkflow(createIdleWorkflowState());
-  }, [sourceText, sourceFileName, sourceMode]);
+  }, [sourceText, sourceFileName, sourceMode, validationMode]);
 
   const shortcutHint = useMemo(
     () => getShortcutHint(shortcutIntent),
@@ -444,6 +636,7 @@ export function NexusPacketExplorerImportPanel({
     const requestBody = buildImportRequest({
       sourceText,
       fileName: sourceFileName,
+      validationMode,
     });
 
     setWorkflow((currentState) => ({
@@ -489,6 +682,7 @@ export function NexusPacketExplorerImportPanel({
     const requestBody = buildImportRequest({
       sourceText,
       fileName: sourceFileName,
+      validationMode,
     });
 
     setWorkflow((currentState) => ({
@@ -506,6 +700,7 @@ export function NexusPacketExplorerImportPanel({
         isAnalyzing: false,
         isCommitting: false,
       });
+      void loadImportHistory();
       setOutcomeModal(
         result.committed
           ? result.imported_revision_count > 0
@@ -584,6 +779,21 @@ export function NexusPacketExplorerImportPanel({
             ]}
             activeId={sourceMode}
             onSelect={(optionId) => setSourceMode(optionId as ImportSourceMode)}
+          />
+        </View>
+
+        <View className="gap-3">
+          <Text className={appearance.itemMetaClass}>Validation mode</Text>
+          <NexusSegmentedPill
+            options={[
+              { id: 'validate_before_commit', label: 'VALIDATE FIRST' },
+              { id: 'validate_after_commit', label: 'VALIDATE AFTER' },
+              { id: 'dont_validate', label: `DON'T VALIDATE` },
+            ]}
+            activeId={validationMode}
+            onSelect={(optionId) =>
+              setValidationMode(optionId as NexusPacketValidationMode)
+            }
           />
         </View>
 
@@ -670,6 +880,51 @@ export function NexusPacketExplorerImportPanel({
           onOpenPacketInExplorer={onOpenPacketInExplorer}
         />
       ) : null}
+
+      <NexusCard className="gap-4">
+        <View className="flex-row flex-wrap items-center justify-between gap-3">
+          <View className="gap-1">
+            <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
+              Import History
+            </Text>
+            <Text className={appearance.surfaceTitleClass}>Recent import reports</Text>
+            <Text className={appearance.itemMetaClass}>
+              Recent entries reflect the latest local report for each imported
+              artifact identity, not a full event-by-event ledger.
+            </Text>
+          </View>
+          <NexusActionButton
+            label={importHistory.isLoading ? 'Refreshing...' : 'Refresh'}
+            variant="ghost"
+            onPress={() => void loadImportHistory()}
+            disabled={importHistory.isLoading}
+          />
+        </View>
+
+        {importHistory.error ? (
+          <NexusCard tone="rose">
+            <Text className={appearance.itemBodyClass}>{importHistory.error}</Text>
+          </NexusCard>
+        ) : null}
+
+        {importHistory.isLoading && importHistory.entries.length === 0 ? (
+          <Text className={appearance.itemBodyClass}>Loading import history...</Text>
+        ) : importHistory.entries.length === 0 ? (
+          <Text className={appearance.itemBodyClass}>
+            No import reports yet.
+          </Text>
+        ) : (
+          <View className="gap-3">
+            {importHistory.entries.map((entry) => (
+              <ImportHistoryCard
+                key={entry.report_revision_id}
+                entry={entry}
+                onOpenPacketInExplorer={onOpenPacketInExplorer}
+              />
+            ))}
+          </View>
+        )}
+      </NexusCard>
 
       <Modal
         animationType="fade"

@@ -12,12 +12,21 @@ import {
   createDiscussionPostPacket,
   createDiscussionSpacePacket,
   createDiscussionThreadPacket,
+  createElementPacket,
 } from '@core/packets/builders';
 import { createPersonIdentityPacket } from '@core/packets/identity';
 import type { PacketEnvelope } from '@core/schema/packet-schema';
+import {
+  createIdentityKeyBinding,
+  exportIdentityKeyPairToJwk,
+  generateP256KeyPair,
+  signPacketWithIdentity,
+} from '@runtime/nexus/identity-crypto';
+import { NexusPacketActionService } from '@runtime/nexus/server/packet-action-service';
 import { SQLiteAttestationService } from '@runtime/nexus/server/attestation-service';
 import { buildNexusPacketExplorerPayload } from '@runtime/nexus/server/nexus-packet-explorer-data';
 import { SQLiteDiscussionService } from '@runtime/nexus/server/discussion-service';
+import { NexusPacketVerificationService } from '@runtime/nexus/server/verification-service';
 import { createNodeSQLiteQueryServicesAsync } from '@runtime/storage/node-sqlite-query-services';
 import { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store';
 
@@ -58,10 +67,17 @@ async function createExplorerHarness() {
     packetStore,
     attestationService
   );
+  const verificationService = new NexusPacketVerificationService(packetStore);
+  const packetActionService = new NexusPacketActionService(
+    queryServices.browserQueryService,
+    verificationService
+  );
   const services = {
     packetStore,
     browserQueryService: queryServices.browserQueryService,
     discussionService,
+    packetActionService,
+    verificationService,
   };
 
   return {
@@ -71,6 +87,38 @@ async function createExplorerHarness() {
       packetStore.close();
       rmSync(directory, { recursive: true, force: true });
     },
+  };
+}
+
+async function createSignedIdentityPacket(input: {
+  packetId: string;
+  alias: string;
+  createdAt: string;
+}) {
+  const keyPair = await generateP256KeyPair();
+  const jwkPair = await exportIdentityKeyPairToJwk(keyPair);
+  const keyBinding = await createIdentityKeyBinding({
+    publicJwk: jwkPair.publicJwk,
+    addedAt: input.createdAt,
+  });
+  const identityPacket = createPersonIdentityPacket({
+    alias: input.alias,
+    claimStatus: 'claimed',
+    packetId: input.packetId,
+    createdAt: input.createdAt,
+    publicKeyBinding: keyBinding,
+  });
+
+  return {
+    keyPair,
+    keyBinding,
+    packet: await signPacketWithIdentity({
+      packet: identityPacket,
+      signerPacketId: input.packetId,
+      kid: keyBinding.kid,
+      privateKey: keyPair.privateKey,
+      signedAt: input.createdAt,
+    }),
   };
 }
 
@@ -149,6 +197,79 @@ test('explorer payload returns raw, adapted, read-model, and link data for packe
       payload.adaptation_summary.stages.includes('read_model_projection'),
       true
     );
+  } finally {
+    harness.cleanup();
+  }
+});
+
+test('explorer verification payload marks stale local validation when preferred revision advances', async () => {
+  const harness = await createExplorerHarness();
+
+  try {
+    const createdAt = '2026-05-12T00:00:00.000Z';
+    const signer = await createSignedIdentityPacket({
+      packetId: 'nexus:element/explorer-freshness-signer',
+      alias: 'Explorer Freshness Signer',
+      createdAt,
+    });
+    const unsignedRevisionOne = createElementPacket({
+      packet_id: 'nexus:element/explorer-freshness-target',
+      revision_id: 'nexus:element/explorer-freshness-target@r1',
+      created_at: createdAt,
+      kind: 'organization',
+      name: 'Explorer Freshness Target',
+    });
+    const signedRevisionOne = await signPacketWithIdentity({
+      packet: unsignedRevisionOne,
+      signerPacketId: signer.packet.header.packet_id,
+      kid: signer.keyBinding.kid,
+      privateKey: signer.keyPair.privateKey,
+      signedAt: createdAt,
+    });
+
+    await writePreferredPacket(harness.packetStore, signer.packet);
+    await writePreferredPacket(harness.packetStore, signedRevisionOne);
+    await harness.services.verificationService.validatePacket(
+      signedRevisionOne.header.packet_id
+    );
+
+    const unsignedRevisionTwo = createElementPacket({
+      packet_id: signedRevisionOne.header.packet_id,
+      revision_id: 'nexus:element/explorer-freshness-target@r2',
+      created_at: '2026-05-12T00:05:00.000Z',
+      parent_revision_refs: [
+        {
+          packet_id: signedRevisionOne.header.packet_id,
+          revision_id: signedRevisionOne.header.revision_id,
+        },
+      ],
+      kind: 'organization',
+      name: 'Explorer Freshness Target Revised',
+    });
+    const signedRevisionTwo = await signPacketWithIdentity({
+      packet: unsignedRevisionTwo,
+      signerPacketId: signer.packet.header.packet_id,
+      kid: signer.keyBinding.kid,
+      privateKey: signer.keyPair.privateKey,
+      signedAt: '2026-05-12T00:05:00.000Z',
+    });
+
+    await writePreferredPacket(harness.packetStore, signedRevisionTwo);
+
+    const payload = await buildNexusPacketExplorerPayload({
+      services: harness.services,
+      packetId: signedRevisionOne.header.packet_id,
+      viewerActorPacketId: signer.packet.header.packet_id,
+      inspectionLens: 'summary',
+    });
+
+    assert.equal(payload.preferred_revision.revision_id, signedRevisionTwo.header.revision_id);
+    assert.equal(
+      payload.verification_report_target_revision_id,
+      signedRevisionOne.header.revision_id
+    );
+    assert.equal(payload.is_current_for_preferred_revision, false);
+    assert.equal(payload.verification_freshness, 'stale');
   } finally {
     harness.cleanup();
   }

@@ -46,6 +46,7 @@ export const GET: RequestHandler = async (request, params) => {
   try {
     const requestUrl = new URL(request.url);
     const postPacketId = requestUrl.searchParams.get('post_packet_id');
+    const focusPacketId = requestUrl.searchParams.get('focus_packet_id');
     const requestedReplySort = requestUrl.searchParams.get('reply_sort');
     const requestedShowHidden = requestUrl.searchParams.get('show_hidden');
     const viewerActorPacketId = requestUrl.searchParams.get('viewer_actor_packet_id');
@@ -65,6 +66,7 @@ export const GET: RequestHandler = async (request, params) => {
     const threadPayload = await getNexusDiscussionThreadPayload({
       scopeId,
       postPacketId,
+      focusPacketId,
       replySort:
         requestedReplySort &&
         (DISCUSSION_REPLY_SORTS as readonly string[]).includes(requestedReplySort)

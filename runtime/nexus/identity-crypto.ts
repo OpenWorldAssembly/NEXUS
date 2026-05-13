@@ -147,12 +147,24 @@ function stripRawPacketSignatures<TPacket extends RawPacketEnvelopeInput>(
   };
 }
 
-function isPersonElementPacketForVerification(
+const VERIFIED_SIGNER_ELEMENT_KINDS = new Set(['person', 'service']);
+
+function isIdentityElementPacketForVerification(
   packet: PacketEnvelope
 ): packet is PacketEnvelopeByType['Element'] {
   const body = packet.body as Record<string, unknown>;
+  const identity =
+    body.identity && typeof body.identity === 'object' && !Array.isArray(body.identity)
+      ? (body.identity as Record<string, unknown>)
+      : null;
+  const publicKeyBindings = identity?.public_key_bindings;
 
-  return packet.header.family === 'Element' && body.kind === 'person';
+  return (
+    packet.header.family === 'Element' &&
+    typeof body.kind === 'string' &&
+    VERIFIED_SIGNER_ELEMENT_KINDS.has(body.kind) &&
+    Array.isArray(publicKeyBindings)
+  );
 }
 
 function readRawEmbeddedSignature(
@@ -401,7 +413,7 @@ export async function verifyPacketSignatureDetailed(input: {
   try {
     const parsedSignerPacket = parsePacketEnvelope(input.signerPacket);
 
-    if (!isPersonElementPacketForVerification(parsedSignerPacket)) {
+    if (!isIdentityElementPacketForVerification(parsedSignerPacket)) {
       return {
         isValid: false,
         failureKind: 'key_binding_missing',

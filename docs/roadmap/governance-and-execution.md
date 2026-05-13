@@ -6,9 +6,11 @@ Governance should follow trust, policy, and inspectability rather than racing ah
 
 Working direction:
 
+- governance should follow verification truthfulness, trust and policy seams, locality and scope stabilization, and inspectable process rather than leapfrogging those foundations
 - decisions begin as legitimacy records and civic signals
 - proposals should declare what happens if they pass as explicitly and programmatically as possible
 - some proposal shapes may later become effect-bearing through policy
+- future resolutions and decisions should read as process-backed outcome artifacts rather than as magical authority events
 
 ## Governance backlog
 

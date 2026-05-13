@@ -8,6 +8,7 @@ import type {
   BrowserQueryService,
   NexusLibraryQueryOptions,
   NexusPacketCardProjection,
+  NexusPacketVerificationSummary,
   NexusQueryService,
   NexusScopeLens,
   PacketStore,
@@ -28,6 +29,7 @@ import type { PacketSearchIndexRecord } from '@runtime/storage/sqlite-records';
 
 interface PacketSearchReader {
   listSearchRows(): Promise<PacketSearchIndexRecord[]>;
+  listPacketVerificationSummaries?: () => Promise<NexusPacketVerificationSummary[]>;
 }
 
 const MECHANICAL_HEADER_FIELDS = new Set([
@@ -56,12 +58,27 @@ function toBrowserProjection(
   };
 }
 
+
+function getFreshVerificationSummaryForRow(
+  row: PacketSearchIndexRecord,
+  verificationByPacketId: Map<string, NexusPacketVerificationSummary>
+): NexusPacketVerificationSummary | null {
+  const verification = verificationByPacketId.get(row.packet_id) ?? null;
+
+  if (!verification || verification.target_revision_id !== row.revision_id) {
+    return null;
+  }
+
+  return verification;
+}
+
 /**
  * Inputs: one search-index row.
  * Output: normalized nexus card projection.
  */
 function toNexusCardProjection(
-  row: PacketSearchIndexRecord
+  row: PacketSearchIndexRecord,
+  verification: NexusPacketVerificationSummary | null
 ): NexusPacketCardProjection {
   return {
     packet: {
@@ -77,6 +94,7 @@ function toNexusCardProjection(
     summary: row.summary,
     status: row.status,
     created_at: row.created_at,
+    verification,
   };
 }
 
@@ -276,30 +294,59 @@ export class PacketStoreNexusQueryService implements NexusQueryService {
     this.searchReader = searchReader;
   }
 
+  private async getVerificationSummaryByPacketId(): Promise<
+    Map<string, NexusPacketVerificationSummary>
+  > {
+    const listPacketVerificationSummaries =
+      this.searchReader.listPacketVerificationSummaries;
+
+    if (!listPacketVerificationSummaries) {
+      return new Map();
+    }
+
+    const summaries = await listPacketVerificationSummaries.call(this.searchReader);
+
+    return new Map(
+      summaries.map((summary) => [summary.packet_id, summary] as const)
+    );
+  }
+
   private async listCardsByFamilies(
     lens: NexusScopeLens,
     families: PacketFamily[]
   ): Promise<NexusPacketCardProjection[]> {
     const familySet = new Set(families);
     const rows = await this.searchReader.listSearchRows();
+    const verificationByPacketId = await this.getVerificationSummaryByPacketId();
 
     return rows
       .filter((row) => familySet.has(row.family as PacketFamily))
       .filter((row) => matchesScopeLens(row, lens))
       .sort((left, right) => right.created_at.localeCompare(left.created_at))
-      .map(toNexusCardProjection);
+      .map((row) =>
+        toNexusCardProjection(
+          row,
+          getFreshVerificationSummaryForRow(row, verificationByPacketId)
+        )
+      );
   }
 
   async getDashboardQueue(
     lens: NexusScopeLens
   ): Promise<NexusPacketCardProjection[]> {
     const rows = await this.searchReader.listSearchRows();
+    const verificationByPacketId = await this.getVerificationSummaryByPacketId();
 
     return rows
       .filter((row) => matchesScopeLens(row, lens))
       .sort((left, right) => right.created_at.localeCompare(left.created_at))
       .slice(0, 12)
-      .map(toNexusCardProjection);
+      .map((row) =>
+        toNexusCardProjection(
+          row,
+          getFreshVerificationSummaryForRow(row, verificationByPacketId)
+        )
+      );
   }
 
   async listVotes(lens: NexusScopeLens): Promise<NexusPacketCardProjection[]> {
@@ -325,6 +372,7 @@ export class PacketStoreNexusQueryService implements NexusQueryService {
   ): Promise<NexusPacketCardProjection[]> {
     const rows = await this.searchReader.listSearchRows();
     const scopeMode = options?.scope_mode ?? 'lens';
+    const verificationByPacketId = await this.getVerificationSummaryByPacketId();
 
     return rows
       .filter((row) => (family ? row.family === family : true))
@@ -334,6 +382,11 @@ export class PacketStoreNexusQueryService implements NexusQueryService {
           : matchesScopeLens(row, lens)
       )
       .sort((left, right) => right.created_at.localeCompare(left.created_at))
-      .map(toNexusCardProjection);
+      .map((row) =>
+        toNexusCardProjection(
+          row,
+          getFreshVerificationSummaryForRow(row, verificationByPacketId)
+        )
+      );
   }
 }

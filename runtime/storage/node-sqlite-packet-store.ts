@@ -8,6 +8,7 @@ import { dirname } from 'node:path';
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 
 import type {
+  NexusPacketVerificationSummary,
   PacketEdgeQuery,
   PacketHeadStatus,
   PacketReadValue,
@@ -66,6 +67,35 @@ interface StoredPacketJsonOverrides {
   body_json: string;
   preferred_revision_json: string;
 }
+
+interface RuntimeValidatorIdentityRow {
+  node_key: string;
+  validator_packet_id: string;
+  kid: string;
+  public_jwk_json: string;
+  private_jwk_json: string;
+  created_at: string;
+  updated_at: string;
+}
+
+type PacketVerificationIndexRow = {
+  packet_id: string;
+  target_revision_id: string | null;
+  target_digest: string | null;
+  latest_report_packet_id: string | null;
+  latest_report_revision_id: string | null;
+  latest_report_source: 'local' | 'external';
+  status: NexusPacketVerificationSummary['status'];
+  structural_valid: number;
+  compatibility_status: NexusPacketVerificationSummary['compatibility_status'];
+  signature_status: NexusPacketVerificationSummary['signature_status'];
+  signer_status: NexusPacketVerificationSummary['signer_status'];
+  provenance_status: NexusPacketVerificationSummary['provenance_status'];
+  local_trust_status: NexusPacketVerificationSummary['local_trust_status'];
+  warnings_count: number;
+  validated_at: string | null;
+  validator_packet_id: string | null;
+};
 
 export interface PreferredHeadConsistencyIssue {
   packet_id: string;
@@ -129,6 +159,29 @@ function hasSameMembers(left: Set<string>, right: Set<string>): boolean {
   }
 
   return true;
+}
+
+function toVerificationSummary(
+  row: PacketVerificationIndexRow
+): NexusPacketVerificationSummary {
+  return {
+    packet_id: row.packet_id,
+    target_revision_id: row.target_revision_id,
+    target_digest: row.target_digest,
+    latest_report_packet_id: row.latest_report_packet_id,
+    latest_report_revision_id: row.latest_report_revision_id,
+    latest_report_source: row.latest_report_source,
+    status: row.status,
+    structural_valid: row.structural_valid === 1,
+    compatibility_status: row.compatibility_status,
+    signature_status: row.signature_status,
+    signer_status: row.signer_status,
+    provenance_status: row.provenance_status,
+    local_trust_status: row.local_trust_status,
+    warnings_count: row.warnings_count,
+    validated_at: row.validated_at,
+    validator_packet_id: row.validator_packet_id,
+  };
 }
 
 /**
@@ -230,6 +283,26 @@ export class NodeSQLitePacketStore implements PacketStore {
     mkdirSync(dirname(databasePath), { recursive: true });
     this.database = new DatabaseSync(databasePath);
     this.database.exec(PACKET_STORE_SCHEMA_SQL);
+    this.ensureVerificationIndexColumns();
+  }
+
+  private ensureVerificationIndexColumns(): void {
+    const rows = this.database
+      .prepare(`PRAGMA table_info(packet_verification_index)`)
+      .all() as { name: string }[];
+    const columnNames = new Set(rows.map((row) => row.name));
+
+    if (!columnNames.has('target_revision_id')) {
+      this.database.exec(
+        'ALTER TABLE packet_verification_index ADD COLUMN target_revision_id TEXT'
+      );
+    }
+
+    if (!columnNames.has('target_digest')) {
+      this.database.exec(
+        'ALTER TABLE packet_verification_index ADD COLUMN target_digest TEXT'
+      );
+    }
   }
 
   /**
@@ -1338,6 +1411,207 @@ export class NodeSQLitePacketStore implements PacketStore {
       .map((row) => row.preferred_revision_json)
       .filter((value): value is string => typeof value === 'string')
       .map((value) => this.readStoredPacketJson(value, 'adapted') as PacketEnvelope);
+  }
+
+  async getPacketVerificationSummary(
+    packet: PacketRef
+  ): Promise<NexusPacketVerificationSummary | null> {
+    const row = this.database
+      .prepare(
+        `
+          SELECT
+            packet_id,
+            target_revision_id,
+            target_digest,
+            latest_report_packet_id,
+            latest_report_revision_id,
+            latest_report_source,
+            status,
+            structural_valid,
+            compatibility_status,
+            signature_status,
+            signer_status,
+            provenance_status,
+            local_trust_status,
+            warnings_count,
+            validated_at,
+            validator_packet_id
+          FROM packet_verification_index
+          WHERE packet_id = ?
+        `
+      )
+      .get(packet.packet_id) as PacketVerificationIndexRow | undefined;
+
+    return row ? toVerificationSummary(row) : null;
+  }
+
+  async listPacketVerificationSummaries(): Promise<NexusPacketVerificationSummary[]> {
+    const rows = this.database
+      .prepare(
+        `
+          SELECT
+            packet_id,
+            target_revision_id,
+            target_digest,
+            latest_report_packet_id,
+            latest_report_revision_id,
+            latest_report_source,
+            status,
+            structural_valid,
+            compatibility_status,
+            signature_status,
+            signer_status,
+            provenance_status,
+            local_trust_status,
+            warnings_count,
+            validated_at,
+            validator_packet_id
+          FROM packet_verification_index
+        `
+      )
+      .all() as PacketVerificationIndexRow[];
+
+    return rows.map(toVerificationSummary);
+  }
+
+  async writePacketVerificationSummary(
+    summary: NexusPacketVerificationSummary
+  ): Promise<void> {
+    this.database
+      .prepare(
+        `
+          INSERT INTO packet_verification_index (
+            packet_id,
+            target_revision_id,
+            target_digest,
+            latest_report_packet_id,
+            latest_report_revision_id,
+            latest_report_source,
+            status,
+            structural_valid,
+            compatibility_status,
+            signature_status,
+            signer_status,
+            provenance_status,
+            local_trust_status,
+            warnings_count,
+            validated_at,
+            validator_packet_id
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(packet_id) DO UPDATE SET
+            target_revision_id = excluded.target_revision_id,
+            target_digest = excluded.target_digest,
+            latest_report_packet_id = excluded.latest_report_packet_id,
+            latest_report_revision_id = excluded.latest_report_revision_id,
+            latest_report_source = excluded.latest_report_source,
+            status = excluded.status,
+            structural_valid = excluded.structural_valid,
+            compatibility_status = excluded.compatibility_status,
+            signature_status = excluded.signature_status,
+            signer_status = excluded.signer_status,
+            provenance_status = excluded.provenance_status,
+            local_trust_status = excluded.local_trust_status,
+            warnings_count = excluded.warnings_count,
+            validated_at = excluded.validated_at,
+            validator_packet_id = excluded.validator_packet_id
+        `
+      )
+      .run(
+        summary.packet_id,
+        summary.target_revision_id,
+        summary.target_digest,
+        summary.latest_report_packet_id,
+        summary.latest_report_revision_id,
+        summary.latest_report_source,
+        summary.status,
+        summary.structural_valid ? 1 : 0,
+        summary.compatibility_status,
+        summary.signature_status,
+        summary.signer_status,
+        summary.provenance_status,
+        summary.local_trust_status,
+        summary.warnings_count,
+        summary.validated_at,
+        summary.validator_packet_id
+      );
+  }
+
+  async readRuntimeValidatorIdentity(): Promise<{
+    validator_packet_id: string;
+    kid: string;
+    public_jwk: JsonWebKey;
+    private_jwk: JsonWebKey;
+    created_at: string;
+    updated_at: string;
+  } | null> {
+    const row = this.database
+      .prepare(
+        `
+          SELECT
+            node_key,
+            validator_packet_id,
+            kid,
+            public_jwk_json,
+            private_jwk_json,
+            created_at,
+            updated_at
+          FROM runtime_validator_identity
+          WHERE node_key = 'local'
+        `
+      )
+      .get() as RuntimeValidatorIdentityRow | undefined;
+
+    if (!row) {
+      return null;
+    }
+
+    return {
+      validator_packet_id: row.validator_packet_id,
+      kid: row.kid,
+      public_jwk: parseJson<JsonWebKey>(row.public_jwk_json, {}),
+      private_jwk: parseJson<JsonWebKey>(row.private_jwk_json, {}),
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+    };
+  }
+
+  async writeRuntimeValidatorIdentity(input: {
+    validator_packet_id: string;
+    kid: string;
+    public_jwk: JsonWebKey;
+    private_jwk: JsonWebKey;
+    created_at: string;
+    updated_at: string;
+  }): Promise<void> {
+    this.database
+      .prepare(
+        `
+          INSERT INTO runtime_validator_identity (
+            node_key,
+            validator_packet_id,
+            kid,
+            public_jwk_json,
+            private_jwk_json,
+            created_at,
+            updated_at
+          ) VALUES ('local', ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(node_key) DO UPDATE SET
+            validator_packet_id = excluded.validator_packet_id,
+            kid = excluded.kid,
+            public_jwk_json = excluded.public_jwk_json,
+            private_jwk_json = excluded.private_jwk_json,
+            created_at = excluded.created_at,
+            updated_at = excluded.updated_at
+        `
+      )
+      .run(
+        input.validator_packet_id,
+        input.kid,
+        JSON.stringify(input.public_jwk),
+        JSON.stringify(input.private_jwk),
+        input.created_at,
+        input.updated_at
+      );
   }
 
   /**

@@ -72,3 +72,34 @@ Current home-locality policy note:
 - a canonical `Relation(subtype: home_locality)` can exist structurally without counting as the effective mounted home locality if its governing `Policy.relation_requirements` are unsatisfied
 - the expected support model in this phase is a supporting `Claim(subtype: relation_assertion)`, not a required attestation
 - legacy claim-only home-locality reads remain compatibility projections, not the forward legitimacy model
+
+## Longer-term civic review framing
+
+Direction:
+
+- `Claim` should be understood as an unresolved assertion or request that invites evaluation, scrutiny, or action
+- `Attestation` should be understood as a signed stance toward a target, such as support, dispute, certification, rejection, or abstention
+- a `Vote` should remain a governed attestation inside a recognized process with eligibility and policy rules
+- `Report` should be the long-term home for findings, outcomes, and context around a target
+- a resolution or decision artifact should eventually read as a process-backed closure report rather than as unexplained authority
+
+This framing is architectural direction, not a statement that all of those packet families or workflow surfaces already exist as live runtime behavior.
+
+## Verification truthfulness direction
+
+Future verification UI and policy language should distinguish at least:
+
+- structurally valid
+- cryptographically verified
+- provenance known
+- locally trusted
+- substantively true
+
+Current product language does not yet fully expose those distinctions. The next verification/reporting work should avoid collapsing them all into one vague `verified` concept.
+
+Current verification chapter truth:
+
+- the runtime now signs `verification_report` and `import_report` packets with a normal local validator identity
+- those report packets are the signed record of what the node concluded
+- a local runtime-owned verification index/cache exists so dashboard cards, Explorer search rows, export lookup rows, action menus, and Explorer verification views can project truthful current status quickly
+- imported external verification reports are readable evidence, but local trusted status still comes only from the latest local validator report in this phase

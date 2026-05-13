@@ -20,6 +20,7 @@ export type ForwardPacketType =
   | 'role'
   | 'claim'
   | 'relation'
+  | 'report'
   | 'signal'
   | 'proposal'
   | 'vote'
@@ -65,6 +66,8 @@ function toForwardType(family: PacketFamily): ForwardPacketType {
       return 'claim';
     case 'Relation':
       return 'relation';
+    case 'Report':
+      return 'report';
     case 'Signal':
       return 'signal';
     case 'Proposal':
@@ -112,6 +115,7 @@ function toForwardSubtype(packet: PacketEnvelope): string | null {
     case 'Cause':
     case 'Action':
     case 'Relation':
+    case 'Report':
       return packet.body.subtype;
     case 'Claim':
       return packet.body.subtype ?? packet.body.claim_kind ?? null;

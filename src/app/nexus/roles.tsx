@@ -10,6 +10,7 @@ import { ScrollView, Text, TextInput, View } from 'react-native';
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
 import { useNexusAuthGate } from '@app/components/nexus/nexus-auth-gate';
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
+import { useNexusPreviewTargetParams } from '@app/components/nexus/preview';
 import {
   NexusActionButton,
   NexusBadge,
@@ -27,11 +28,20 @@ function formatRoleClaimantBadge(claimantCount: number): string {
   return `${claimantCount} ${claimantCount === 1 ? 'claimant' : 'claimants'}`;
 }
 
+function formatTrustStage(stage: NexusRolesPayload['role_cards'][number]['claimants'][number]['trust_stage']): string {
+  return stage.replace(/_/g, ' ');
+}
+
 export default function NexusRolesPage() {
   const router = useRouter();
   const appearance = useNexusAppearance();
   const { activeScope, currentActorPacketId, currentActorLabel } = useNexusShell();
   const { runFortressMutation } = useIdentityShell();
+  const previewTargetParams = useNexusPreviewTargetParams();
+  const focusedPacketId =
+    previewTargetParams.focusPacketId ?? previewTargetParams.packetId;
+  const highlightedPacketId =
+    previewTargetParams.highlightPacketId ?? focusedPacketId;
   const [rolesPayload, setRolesPayload] = useState<NexusRolesPayload | null>(null);
   const [isLoadingRoles, setIsLoadingRoles] = useState(true);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -100,6 +110,47 @@ export default function NexusRolesPage() {
         : roleCards[0].role_packet_id
     );
   }, [rolesPayload?.role_cards]);
+
+
+  useEffect(() => {
+    if (!focusedPacketId || !rolesPayload?.role_cards.length) {
+      return;
+    }
+
+    const targetedRoleCard = rolesPayload.role_cards.find((roleCard) => {
+      if (roleCard.role_packet_id === focusedPacketId) {
+        return true;
+      }
+
+      return roleCard.claimants.some(
+        (claimant) =>
+          claimant.claim_packet_id === focusedPacketId ||
+          claimant.support_edges.some((edge) => edge.packet.packet_id === focusedPacketId) ||
+          claimant.dispute_edges.some((edge) => edge.packet.packet_id === focusedPacketId)
+      );
+    });
+
+    if (!targetedRoleCard) {
+      return;
+    }
+
+    setActiveRolePacketId(targetedRoleCard.role_packet_id);
+
+    const targetedClaimant = targetedRoleCard.claimants.find(
+      (claimant) =>
+        claimant.claim_packet_id === focusedPacketId ||
+        claimant.support_edges.some((edge) => edge.packet.packet_id === focusedPacketId) ||
+        claimant.dispute_edges.some((edge) => edge.packet.packet_id === focusedPacketId)
+    );
+
+    if (targetedClaimant) {
+      setExpandedEvidenceKeys((currentKeys) =>
+        currentKeys.includes(targetedClaimant.claim_packet_id)
+          ? currentKeys
+          : [...currentKeys, targetedClaimant.claim_packet_id]
+      );
+    }
+  }, [focusedPacketId, rolesPayload?.role_cards]);
 
   const refreshRolesPayload = async () => {
     setIsLoadingRoles(true);
@@ -344,13 +395,20 @@ export default function NexusRolesPage() {
               .map((roleCard) => (
             <NexusCard
               key={roleCard.role_packet_id}
-              className="gap-4 rounded-t-none border-t-0"
+              className={`gap-4 rounded-t-none border-t-0 ${
+                roleCard.role_packet_id === highlightedPacketId
+                  ? 'border-nexus-sky/70 bg-nexus-sky/10'
+                  : ''
+              }`}
             >
               <View className="gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <View className="min-w-0 flex-1 gap-3">
                   <View className="flex-row flex-wrap items-center gap-2">
                     <Text className={appearance.surfaceTitleClass}>{roleCard.title}</Text>
                     <NexusBadge label={roleCard.role_kind} tone="default" />
+                    {roleCard.role_packet_id === highlightedPacketId ? (
+                      <NexusBadge label="Focused" tone="sky" />
+                    ) : null}
                     {roleCard.is_claimed_by_current_actor ? (
                       <NexusBadge label="You claimed this" tone="mint" />
                     ) : null}
@@ -394,10 +452,17 @@ export default function NexusRolesPage() {
                     const evidenceIsExpanded =
                       expandedEvidenceKeys.includes(evidenceKey);
 
+                    const claimantIsHighlighted =
+                      claimant.claim_packet_id === highlightedPacketId ||
+                      claimant.support_edges.some((edge) => edge.packet.packet_id === highlightedPacketId) ||
+                      claimant.dispute_edges.some((edge) => edge.packet.packet_id === highlightedPacketId);
+
                     return (
                       <NexusCard
                         key={evidenceKey}
-                        className={`gap-3 p-4 ${appearance.cardInsetClass}`}
+                        className={`gap-3 p-4 ${appearance.cardInsetClass} ${
+                          claimantIsHighlighted ? 'border-nexus-sky/70 bg-nexus-sky/10' : ''
+                        }`}
                       >
                         <View className="gap-2 lg:flex-row lg:items-start lg:justify-between">
                           <View className="min-w-0 flex-1 gap-2">
@@ -416,6 +481,9 @@ export default function NexusRolesPage() {
                                 }
                               />
                               <NexusBadge label={claimant.actor_kind} tone="default" />
+                              {claimantIsHighlighted ? (
+                                <NexusBadge label="Focused" tone="sky" />
+                              ) : null}
                               {claimant.is_current_actor ? (
                                 <NexusBadge label="You" tone="sky" />
                               ) : null}
@@ -554,7 +622,11 @@ export default function NexusRolesPage() {
                                   {claimant.support_edges.map((edge) => (
                                     <NexusCard
                                       key={edge.packet.packet_id}
-                                      className={`gap-2 p-4 ${appearance.cardInsetClass}`}
+                                      className={`gap-2 p-4 ${appearance.cardInsetClass} ${
+                                        edge.packet.packet_id === highlightedPacketId
+                                          ? 'border-nexus-sky/70 bg-nexus-sky/10'
+                                          : ''
+                                      }`}
                                     >
                                       <Text className={appearance.itemTitleClass}>
                                         {formatEvidenceActor(
@@ -587,7 +659,11 @@ export default function NexusRolesPage() {
                                   {claimant.dispute_edges.map((edge) => (
                                     <NexusCard
                                       key={edge.packet.packet_id}
-                                      className={`gap-2 p-4 ${appearance.cardInsetClass}`}
+                                      className={`gap-2 p-4 ${appearance.cardInsetClass} ${
+                                        edge.packet.packet_id === highlightedPacketId
+                                          ? 'border-nexus-sky/70 bg-nexus-sky/10'
+                                          : ''
+                                      }`}
                                     >
                                       <Text className={appearance.itemTitleClass}>
                                         {formatEvidenceActor(

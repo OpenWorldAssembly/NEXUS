@@ -46,6 +46,7 @@ export type LocalityDuplicateWarning = {
   existing_scope_id: string;
   existing_name: string;
   message: string;
+  existing_result: NexusLocationSearchResult;
 };
 
 export class LocalityDuplicateWarningError extends Error {
@@ -74,6 +75,31 @@ export type LocalityPathPlanResult = {
   created_location_packet_ids: string[];
   final_result: NexusLocationSearchResult;
   duplicate_warnings: LocalityDuplicateWarning[];
+  resolved_path: LocalityResolvedPathEntry[];
+};
+
+export type LocalityResolvedPathEntry = {
+  level: LocalityLevel;
+  name: string;
+  disposition: 'reuse_existing' | 'create_new';
+  existing_result: NexusLocationSearchResult | null;
+  planned_scope_packet_id: string | null;
+};
+
+export type LocalityPathPreviewResult = {
+  review_entries: LocalityResolvedPathEntry[];
+  final_result: NexusLocationSearchResult;
+  duplicate_warnings: LocalityDuplicateWarning[];
+  planned_scope_packet_ids: string[];
+  planned_relation_packet_ids: string[];
+  planned_location_packet_ids: string[];
+  suggested_home_scope_entries: {
+    scope_id: string;
+    name: string;
+    level: LocalityLevel;
+    path_label: string;
+    checked_by_default: true;
+  }[];
 };
 
 const LOCALITY_LEVEL_ORDER: LocalityLevel[] = [
@@ -225,6 +251,7 @@ function findAliasCollision(input: {
 
 function findFuzzyWarnings(input: {
   localityNodes: LocalityNode[];
+  nodeMap: Map<string, LocalityNode>;
   level: LocalityLevel;
   parentPacketId: string;
   name: string;
@@ -243,6 +270,10 @@ function findFuzzyWarnings(input: {
       existing_scope_id: node.packet_id,
       existing_name: node.name,
       message: `${node.name} already looks similar under the same parent path.`,
+      existing_result: buildLocationResult({
+        node,
+        nodeMap: input.nodeMap,
+      }),
     }));
 }
 
@@ -284,6 +315,43 @@ function buildLocationResult(input: {
   };
 }
 
+function buildSuggestedHomeScopeEntries(
+  resolvedPath: LocalityResolvedPathEntry[]
+): LocalityPathPreviewResult['suggested_home_scope_entries'] {
+  const pathNames: string[] = [];
+
+  return resolvedPath.map((entry) => {
+    pathNames.push(entry.name);
+
+    return {
+      scope_id:
+        entry.existing_result?.scope_id ?? entry.planned_scope_packet_id ?? entry.name,
+      name: entry.name,
+      level: entry.level,
+      path_label: pathNames.join(' / '),
+      checked_by_default: true as const,
+    };
+  });
+}
+
+export function buildLocalityPathPreviewResult(
+  plannedResult: LocalityPathPlanResult
+): LocalityPathPreviewResult {
+  return {
+    review_entries: plannedResult.resolved_path,
+    final_result: plannedResult.final_result,
+    duplicate_warnings: plannedResult.duplicate_warnings,
+    planned_scope_packet_ids: plannedResult.resolved_path
+      .map((entry) => entry.planned_scope_packet_id)
+      .filter((value): value is string => Boolean(value)),
+    planned_relation_packet_ids: plannedResult.created_relation_packet_ids,
+    planned_location_packet_ids: plannedResult.created_location_packet_ids,
+    suggested_home_scope_entries: buildSuggestedHomeScopeEntries(
+      plannedResult.resolved_path
+    ),
+  };
+}
+
 function validatePathOrder(path: LocalityCreatePathEntry[]) {
   if (path.length === 0) {
     throw new Error('Provide at least one locality path entry.');
@@ -301,10 +369,13 @@ function validatePathOrder(path: LocalityCreatePathEntry[]) {
 }
 
 type LocalityPlannerInput = {
-  actorPacketId: string;
+  actorPacketId?: string | null;
   path: LocalityCreatePathEntry[];
   createAnyway?: boolean;
+  allowDuplicateWarnings?: boolean;
 };
+
+const LOCALITY_PREVIEW_ACTOR_PACKET_ID = 'nexus:element/locality-preview-actor';
 
 async function getPlannerPacketStore(): Promise<NodeSQLiteQueryServices['packetStore']> {
   const { getNexusPacketServices } = await import('@runtime/nexus/server/nexus-packet-services');
@@ -343,8 +414,10 @@ export async function planCanonicalLocalityPathWithPacketStore(input: LocalityPl
   const createdRelationPacketIds: string[] = [];
   const createdLocationPacketIds: string[] = [];
   const duplicateWarnings: LocalityDuplicateWarning[] = [];
+  const resolvedPath: LocalityResolvedPathEntry[] = [];
   let parentPacketId: string = globalAssemblyPacket.header.packet_id;
   let finalNode: LocalityNode | null = null;
+  const actorPacketId = input.actorPacketId ?? LOCALITY_PREVIEW_ACTOR_PACKET_ID;
 
   for (const entry of input.path) {
     if (entry.existing_scope_id) {
@@ -367,6 +440,16 @@ export async function planCanonicalLocalityPathWithPacketStore(input: LocalityPl
 
       parentPacketId = existingNode.packet_id;
       finalNode = existingNode;
+      resolvedPath.push({
+        level: entry.level,
+        name: existingNode.name,
+        disposition: 'reuse_existing',
+        existing_result: buildLocationResult({
+          node: existingNode,
+          nodeMap,
+        }),
+        planned_scope_packet_id: null,
+      });
       continue;
     }
 
@@ -386,6 +469,16 @@ export async function planCanonicalLocalityPathWithPacketStore(input: LocalityPl
     if (exactNode) {
       parentPacketId = exactNode.packet_id;
       finalNode = exactNode;
+      resolvedPath.push({
+        level: entry.level,
+        name: exactNode.name,
+        disposition: 'reuse_existing',
+        existing_result: buildLocationResult({
+          node: exactNode,
+          nodeMap,
+        }),
+        planned_scope_packet_id: null,
+      });
       continue;
     }
 
@@ -404,20 +497,39 @@ export async function planCanonicalLocalityPathWithPacketStore(input: LocalityPl
         existing_scope_id: aliasNode.packet_id,
         existing_name: aliasNode.name,
         message: `${entry.name} matches an existing alias for ${aliasNode.name}; using the existing locality.`,
+        existing_result: buildLocationResult({
+          node: aliasNode,
+          nodeMap,
+        }),
       });
       parentPacketId = aliasNode.packet_id;
       finalNode = aliasNode;
+      resolvedPath.push({
+        level: entry.level,
+        name: aliasNode.name,
+        disposition: 'reuse_existing',
+        existing_result: buildLocationResult({
+          node: aliasNode,
+          nodeMap,
+        }),
+        planned_scope_packet_id: null,
+      });
       continue;
     }
 
     const fuzzyWarnings = findFuzzyWarnings({
       localityNodes,
+      nodeMap,
       level: entry.level,
       parentPacketId,
       name: entry.name,
     });
 
-    if (fuzzyWarnings.length > 0 && !input.createAnyway) {
+    if (
+      fuzzyWarnings.length > 0 &&
+      !input.createAnyway &&
+      !input.allowDuplicateWarnings
+    ) {
       throw new LocalityDuplicateWarningError(fuzzyWarnings);
     }
 
@@ -439,8 +551,8 @@ export async function planCanonicalLocalityPathWithPacketStore(input: LocalityPl
         parentByPacketId,
       }),
       edges: [createParentScopeCompatibilityEdge(parentPacketId)],
-      created_by: createPacketRef(input.actorPacketId),
-      submitted_by: createPacketRef(input.actorPacketId),
+      created_by: createPacketRef(actorPacketId),
+      submitted_by: createPacketRef(actorPacketId),
       name: entry.name.trim(),
       subtype: getLocalitySubtype(entry.level),
       summary: `A ${entry.level} locality assembly for ${entry.name.trim()}.`,
@@ -465,7 +577,7 @@ export async function planCanonicalLocalityPathWithPacketStore(input: LocalityPl
       targetPacketId: parentPacketId,
       scopePacketId: packetId,
       applicableScopeRefs: packet.header.applicable_scope_refs,
-      createdByPacketId: input.actorPacketId,
+      createdByPacketId: actorPacketId,
       status: 'active',
     });
     const locationPacketId = createLocationPacketId({
@@ -478,8 +590,8 @@ export async function planCanonicalLocalityPathWithPacketStore(input: LocalityPl
       adapter: 'nexus-locality-directory',
       authority_scope_ref: createPacketRef(packetId),
       applicable_scope_refs: packet.header.applicable_scope_refs,
-      created_by: createPacketRef(input.actorPacketId),
-      submitted_by: createPacketRef(input.actorPacketId),
+      created_by: createPacketRef(actorPacketId),
+      submitted_by: createPacketRef(actorPacketId),
       subtype: 'region',
       title: entry.name.trim(),
       summary: `Portable region definition for ${entry.name.trim()}.`,
@@ -503,7 +615,7 @@ export async function planCanonicalLocalityPathWithPacketStore(input: LocalityPl
       targetPacketId: locationPacketId,
       scopePacketId: packetId,
       applicableScopeRefs: packet.header.applicable_scope_refs,
-      createdByPacketId: input.actorPacketId,
+      createdByPacketId: actorPacketId,
       status: 'active',
     });
 
@@ -531,6 +643,13 @@ export async function planCanonicalLocalityPathWithPacketStore(input: LocalityPl
     nodeMap.set(createdNode.packet_id, createdNode);
     parentPacketId = createdNode.packet_id;
     finalNode = createdNode;
+    resolvedPath.push({
+      level: entry.level,
+      name: createdNode.name,
+      disposition: 'create_new',
+      existing_result: null,
+      planned_scope_packet_id: createdNode.packet_id,
+    });
   }
 
   if (!finalNode) {
@@ -546,6 +665,7 @@ export async function planCanonicalLocalityPathWithPacketStore(input: LocalityPl
       nodeMap,
     }),
     duplicate_warnings: duplicateWarnings,
+    resolved_path: resolvedPath,
   };
 }
 
@@ -558,6 +678,17 @@ export async function planCanonicalLocalityPath(
     ...input,
     packetStore,
   });
+}
+
+export async function previewCanonicalLocalityPath(
+  input: LocalityPlannerInput
+): Promise<LocalityPathPreviewResult> {
+  const plannedResult = await planCanonicalLocalityPath({
+    ...input,
+    allowDuplicateWarnings: true,
+  });
+
+  return buildLocalityPathPreviewResult(plannedResult);
 }
 
 export async function createCanonicalLocalityPath(

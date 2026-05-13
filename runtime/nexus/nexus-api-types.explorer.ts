@@ -6,6 +6,8 @@
 import type {
   NexusActionIntentDescriptor,
   NexusActionMap,
+  NexusPacketValidationMode,
+  NexusPacketVerificationSummary,
   PacketHeadStatus,
 } from '@core/contracts';
 import type {
@@ -71,6 +73,20 @@ export interface NexusPacketExplorerExportRequest {
 export interface NexusPacketExplorerImportRequest {
   source_text: string;
   file_name?: string | null;
+  validation_mode?: NexusPacketValidationMode | null;
+}
+
+export interface NexusPacketExplorerImportHistoryRequest {
+  limit?: number | null;
+}
+
+export interface NexusPacketExplorerValidationCounts {
+  trusted_signer: number;
+  signature_valid: number;
+  unknown_signer: number;
+  unsigned: number;
+  signature_invalid: number;
+  canonicalization_mismatch: number;
 }
 
 export interface NexusPacketExplorerSearchRequest {
@@ -122,6 +138,10 @@ export interface NexusPacketExplorerImportPreviewPayload {
   warnings: string[];
   open_packet_id: string | null;
   source_file_name: string | null;
+  validation_mode: NexusPacketValidationMode;
+  validation_counts: NexusPacketExplorerValidationCounts;
+  validation_blocked_count: number;
+  validation_report_packet_ids: string[];
 }
 
 export interface NexusPacketExplorerImportCommitPayload
@@ -131,6 +151,45 @@ export interface NexusPacketExplorerImportCommitPayload
   skipped_duplicate_count: number;
   restored_preferred_packet_count: number;
   diverged_packet_count: number;
+  import_report_packet_id: string | null;
+  created_verification_report_packet_ids: string[];
+}
+
+export interface NexusPacketExplorerImportHistoryEntry {
+  report_packet_id: string;
+  report_revision_id: string;
+  source: 'local' | 'external';
+  status: string;
+  title: string;
+  summary: string | null;
+  created_at: string;
+  validator_packet_id: string | null;
+  source_file_name: string | null;
+  source_digest: string | null;
+  artifact_type: string | null;
+  bundle_version: string | number | null;
+  export_mode: string | null;
+  validation_mode: string | null;
+  imported_count: number;
+  skipped_count: number;
+  blocked_count: number;
+  affected_packet_ids: string[];
+}
+
+export interface NexusPacketExplorerImportHistoryPayload {
+  entries: NexusPacketExplorerImportHistoryEntry[];
+}
+
+export interface NexusPacketExplorerVerificationReportSummary {
+  report_packet_id: string;
+  report_revision_id: string;
+  source: 'local' | 'external';
+  subtype: 'verification_report' | 'import_report';
+  status: string;
+  title: string;
+  summary: string | null;
+  created_at: string;
+  validator_packet_id: string | null;
 }
 
 export interface NexusPacketExplorerSearchResultRow {
@@ -149,6 +208,7 @@ export interface NexusPacketExplorerSearchResultRow {
   score: number;
   matched_revision_id: string | null;
   created_at: string;
+  verification: NexusPacketVerificationSummary | null;
 }
 
 export interface NexusPacketExplorerSearchGroup {
@@ -256,4 +316,12 @@ export interface NexusPacketExplorerPayload {
   outgoing_link_groups: NexusPacketExplorerLinkGroup[];
   actions: NexusActionMap;
   action_descriptors: NexusActionIntentDescriptor[];
+  verification_basis: NexusPacketExplorerSectionBasis;
+  verification_summary: NexusPacketVerificationSummary | null;
+  verification_report_target_revision_id: string | null;
+  verification_freshness: 'current' | 'stale' | 'not_validated';
+  is_current_for_preferred_revision: boolean;
+  local_validator_packet_id: string | null;
+  local_verification_reports: NexusPacketExplorerVerificationReportSummary[];
+  external_verification_reports: NexusPacketExplorerVerificationReportSummary[];
 }

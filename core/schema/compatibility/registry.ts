@@ -929,6 +929,7 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
     },
   },
   Relation: createDefaultCompatibilityEntry('Relation'),
+  Report: createDefaultCompatibilityEntry('Report'),
   Signal: createDefaultCompatibilityEntry('Signal'),
   Proposal: createDefaultCompatibilityEntry('Proposal'),
   Vote: createDefaultCompatibilityEntry('Vote'),

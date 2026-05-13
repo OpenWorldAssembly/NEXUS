@@ -8,6 +8,8 @@ export * from '@runtime/nexus/nexus-api-types.auth';
 export * from '@runtime/nexus/nexus-api-types.discussions';
 export * from '@runtime/nexus/nexus-api-types.explorer';
 export * from '@runtime/nexus/nexus-api-types.mutations';
+export * from '@runtime/nexus/nexus-api-types.packet-actions';
+export * from '@runtime/nexus/nexus-api-types.verification';
 export * from '@runtime/nexus/nexus-api-types.roles';
 export * from '@runtime/nexus/nexus-api-types.shell';
 export * from '@runtime/nexus/nexus-api-types.trust';

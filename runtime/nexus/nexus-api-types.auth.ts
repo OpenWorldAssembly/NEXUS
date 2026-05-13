@@ -172,6 +172,20 @@ export interface NexusLocationSearchPayload {
   create_candidate: NexusLocationCreateCandidate | null;
 }
 
+export interface NexusLocalityPathEntryPayload {
+  level: 'nation' | 'region' | 'city' | 'district';
+  name: string;
+  existing_scope_id?: string | null;
+  alias_keys?: string[];
+  display_aliases?: string[];
+}
+
+export interface NexusLocalityPathPreviewRequest {
+  actor_packet_id?: string | null;
+  path: NexusLocalityPathEntryPayload[];
+  create_anyway?: boolean;
+}
+
 export interface NexusLocalityDuplicateWarningPayload {
   level: 'nation' | 'region' | 'city' | 'district';
   name: string;
@@ -179,6 +193,33 @@ export interface NexusLocalityDuplicateWarningPayload {
   existing_scope_id: string;
   existing_name: string;
   message: string;
+  existing_result: NexusLocationSearchResult;
+}
+
+export interface NexusLocalityReviewEntryPayload {
+  level: 'nation' | 'region' | 'city' | 'district';
+  name: string;
+  disposition: 'reuse_existing' | 'create_new';
+  existing_result: NexusLocationSearchResult | null;
+  planned_scope_packet_id: string | null;
+}
+
+export interface NexusSuggestedHomeScopeEntryPayload {
+  scope_id: string;
+  name: string;
+  level: 'nation' | 'region' | 'city' | 'district';
+  path_label: string;
+  checked_by_default: true;
+}
+
+export interface NexusLocalityPathPreviewPayload {
+  review_entries: NexusLocalityReviewEntryPayload[];
+  final_result: NexusLocationSearchResult;
+  duplicate_warnings: NexusLocalityDuplicateWarningPayload[];
+  planned_scope_packet_ids: string[];
+  planned_relation_packet_ids: string[];
+  planned_location_packet_ids: string[];
+  suggested_home_scope_entries: NexusSuggestedHomeScopeEntryPayload[];
 }
 
 export interface NexusCreateLocalityPayload {

@@ -7,6 +7,7 @@ import type {
   DiscussionWorkspaceModel,
   AttestationEdgeProjection,
   DiscussionFeedProjection,
+  DiscussionFocusModel,
   DiscussionForumProjection,
   DiscussionPostProjection,
   DiscussionReplyChildrenProjection,
@@ -19,6 +20,7 @@ import type { AttestationValue } from '@core/schema/packet-schema';
 export type NexusDiscussionForum = DiscussionForumProjection;
 export type NexusDiscussionPost = DiscussionPostProjection;
 export type NexusDiscussionReply = DiscussionReplyProjection;
+export type NexusDiscussionFocus = DiscussionFocusModel;
 
 export interface NexusDiscussionsPayload extends DiscussionFeedProjection {}
 

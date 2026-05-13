@@ -36,6 +36,7 @@ export type NexusActionMenuProps = {
   actions?: NexusActionMenuItem[];
   align?: 'top' | 'bottom';
   className?: string;
+  isFloating?: boolean;
   isOpen: boolean;
   onClose: () => void;
 };
@@ -48,6 +49,7 @@ export function NexusActionMenu({
   actions = [],
   align = 'top',
   className,
+  isFloating = false,
   isOpen,
   onClose,
 }: NexusActionMenuProps) {
@@ -62,8 +64,9 @@ export function NexusActionMenu({
   return (
     <View
       className={joinClasses(
-        'absolute right-0 z-50 min-w-[190px] gap-1 overflow-hidden rounded-2xl border p-2 shadow-lg',
-        align === 'bottom' ? 'bottom-full mb-2' : 'top-full mt-2',
+        'min-w-[190px] gap-1 overflow-hidden rounded-2xl border p-2 shadow-lg',
+        isFloating ? undefined : 'absolute right-0 z-50',
+        isFloating ? undefined : align === 'bottom' ? 'bottom-full mb-2' : 'top-full mt-2',
         chrome.inlineSelectMenuClass,
         className,
       )}

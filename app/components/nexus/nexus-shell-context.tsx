@@ -111,6 +111,8 @@ type NexusShellContextValue = NexusShellState & {
       summary: string | null;
       label: string | null;
     } | null;
+    activePrimaryTab?: PacketExplorerPrimaryTab;
+    selectedDataViewMode?: PacketExplorerViewMode;
   }) => void;
   focusExplorerTab: (tabId: string) => void;
   closeExplorer: () => void;
@@ -571,6 +573,8 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
       summary: string | null;
       label: string | null;
     } | null;
+    activePrimaryTab?: PacketExplorerPrimaryTab;
+    selectedDataViewMode?: PacketExplorerViewMode;
   }) => {
     setPacketExplorerSession((currentSession) =>
       openPacketExplorerPacket(currentSession, input)

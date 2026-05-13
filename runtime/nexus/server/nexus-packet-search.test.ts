@@ -42,6 +42,24 @@ test('exact packet-id search returns the packet in the direct group', async () =
 
   try {
     await queryServices.packetStore.writeRevision(packet);
+    await queryServices.packetStore.writePacketVerificationSummary({
+      packet_id: packet.header.packet_id,
+      target_revision_id: packet.header.revision_id,
+      target_digest: packet.header.integrity.digest,
+      latest_report_packet_id: 'nexus:report/verification-search-root',
+      latest_report_revision_id: 'nexus:report/verification-search-root@r1',
+      latest_report_source: 'local',
+      status: 'trusted_signer',
+      structural_valid: true,
+      compatibility_status: 'native',
+      signature_status: 'valid',
+      signer_status: 'trusted',
+      provenance_status: 'local',
+      local_trust_status: 'trusted',
+      warnings_count: 0,
+      validated_at: '2026-05-12T00:00:00.000Z',
+      validator_packet_id: 'nexus:element/local-validator',
+    });
 
     const payload = await buildNexusPacketExplorerSearchPayload({
       services,
@@ -57,6 +75,7 @@ test('exact packet-id search returns the packet in the direct group', async () =
     assert.equal(directGroup?.count, 1);
     assert.equal(directGroup?.results[0]?.packet_id, packet.header.packet_id);
     assert.equal(directGroup?.results[0]?.match_type, 'packet_id_exact');
+    assert.equal(directGroup?.results[0]?.verification?.status, 'trusted_signer');
   } finally {
     queryServices.packetStore.close();
     rmSync(directory, { recursive: true, force: true });

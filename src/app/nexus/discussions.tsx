@@ -14,6 +14,7 @@ import type {
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
+import { useNexusPreviewTargetParams } from '@app/components/nexus/preview';
 import { NexusTabStack, type NexusTabNode } from '@app/components/nexus/nexus-tabs';
 import { useNexusAuthGate } from '@app/components/nexus/nexus-auth-gate';
 import {
@@ -145,6 +146,53 @@ function normalizeWorkspaceView(
   }
 
   return hasSelectedThread ? 'thread' : 'feed';
+}
+
+function isDiscussionPostRouteTarget(input: {
+  packetId: string | null;
+  packetFamily: string | null;
+}): boolean {
+  if (!input.packetId) {
+    return false;
+  }
+
+  if (input.packetFamily) {
+    return (
+      input.packetFamily === 'DiscussionPost' ||
+      input.packetFamily === 'DiscussionReply'
+    );
+  }
+
+  return (
+    input.packetId.includes('/post/') ||
+    input.packetId.includes('/reply/')
+  );
+}
+
+function resolvePreviewDiscussionPostTargetId(input: {
+  packetId: string | null;
+  focusPacketId: string | null;
+  packetFamily: string | null;
+}): string | null {
+  if (
+    isDiscussionPostRouteTarget({
+      packetId: input.focusPacketId,
+      packetFamily: input.packetFamily,
+    })
+  ) {
+    return input.focusPacketId;
+  }
+
+  if (
+    isDiscussionPostRouteTarget({
+      packetId: input.packetId,
+      packetFamily: input.packetFamily,
+    })
+  ) {
+    return input.packetId;
+  }
+
+  return null;
 }
 
 function getDiscussionHref(input: {
@@ -591,7 +639,7 @@ function ReplyNode({
                   onVote(reply, value);
                 }}
               />
-              {isHighlighted ? <NexusBadge label="just posted" tone="mint" /> : null}
+              {isHighlighted ? <NexusBadge label="focused" tone="mint" /> : null}
               {isReplyTarget ? <NexusBadge label="reply target" tone="sky" /> : null}
               <NexusActionButton
                 label={isReplyTarget ? 'Reply target' : 'Reply here'}
@@ -663,6 +711,22 @@ function ReplyNode({
   );
 }
 
+function ReplyTree(props: ReplyTreeProps) {
+  const { replies, ...replyNodeProps } = props;
+
+  return (
+    <View className="gap-3">
+      {replies.map((reply) => (
+        <ReplyNode
+          key={reply.packet.packet_id}
+          reply={reply}
+          {...replyNodeProps}
+        />
+      ))}
+    </View>
+  );
+}
+
 export default function NexusDiscussionsPage() {
   const router = useRouter();
   const localParams = useLocalSearchParams<{
@@ -672,6 +736,9 @@ export default function NexusDiscussionsPage() {
     post?: string | string[];
     replyTo?: string | string[];
     replySort?: string | string[];
+    target_packet_id?: string | string[];
+    focus_packet_id?: string | string[];
+    highlight_packet_id?: string | string[];
     showHidden?: string | string[];
   }>();
   const { activeScope, themeMode } = useNexusShell();
@@ -686,16 +753,38 @@ export default function NexusDiscussionsPage() {
       ? currentActorPacketId
       : activeScope.id;
   const appearance = useNexusAppearance();
+  const previewTargetParams = useNexusPreviewTargetParams();
   const requestedForumId = normalizeQueryValue(localParams.forum);
-  const requestedPostId = normalizeQueryValue(localParams.post);
+  const previewDiscussionPostTargetId = resolvePreviewDiscussionPostTargetId({
+    packetId: previewTargetParams.packetId,
+    focusPacketId: previewTargetParams.focusPacketId,
+    packetFamily: previewTargetParams.packetFamily,
+  });
+  const requestedNavigationTargetPacketId =
+    normalizeQueryValue(localParams.target_packet_id) ?? previewTargetParams.packetId;
+  const requestedNavigationFocusPacketId =
+    normalizeQueryValue(localParams.focus_packet_id) ?? previewTargetParams.focusPacketId;
+  const requestedNavigationHighlightPacketId =
+    normalizeQueryValue(localParams.highlight_packet_id) ?? previewTargetParams.highlightPacketId;
+  const requestedPostId =
+    normalizeQueryValue(localParams.post) ?? previewDiscussionPostTargetId;
   const requestedWorkspaceView = normalizeWorkspaceView(
     localParams.view,
-    Boolean(requestedPostId)
+    Boolean(requestedPostId || requestedNavigationTargetPacketId)
   );
   const requestedReplyTargetId = normalizeQueryValue(localParams.replyTo);
   const requestedSort = normalizeQueryValue(localParams.sort);
   const requestedReplySort = normalizeQueryValue(localParams.replySort);
   const requestedShowHidden = normalizeBooleanQueryValue(localParams.showHidden);
+  const requestedPreviewHighlightId =
+    requestedNavigationHighlightPacketId ??
+    requestedNavigationFocusPacketId ??
+    requestedNavigationTargetPacketId;
+  const hasDiscussionFocusRoute = Boolean(
+    requestedNavigationTargetPacketId ||
+      requestedNavigationFocusPacketId ||
+      requestedNavigationHighlightPacketId
+  );
 
   const [feedPayload, setFeedPayload] = useState<NexusDiscussionsPayload | null>(null);
   const [threadPayload, setThreadPayload] =
@@ -735,6 +824,12 @@ export default function NexusDiscussionsPage() {
     useState(false);
   const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null);
   const [pendingVotePacketId, setPendingVotePacketId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (requestedPreviewHighlightId) {
+      setHighlightedPostId(requestedPreviewHighlightId);
+    }
+  }, [requestedPreviewHighlightId]);
 
   const selectedForum =
     feedPayload?.forums.find((forum) => forum.id === feedPayload.selected_forum_id) ??
@@ -869,12 +964,13 @@ export default function NexusDiscussionsPage() {
     themeMode === 'dark'
       ? 'text-2xl font-semibold text-nexus-text'
       : 'text-2xl font-semibold text-slate-900';
+  const resolvedThreadPostId = threadPayload?.root_post.packet.packet_id ?? requestedPostId;
   const currentDiscussionReturnHref = String(
     getDiscussionHref({
       forumId: activeForumId,
       sort: selectedFeedSort,
       view: requestedWorkspaceView,
-      postId: requestedPostId,
+      postId: resolvedThreadPostId,
       replyTargetId: requestedReplyTargetId,
       replySort: selectedReplySort,
       showHidden: requestedShowHidden,
@@ -978,7 +1074,7 @@ export default function NexusDiscussionsPage() {
    */
   const loadWorkspace = useCallback(async () => {
     setIsLoadingFeed(true);
-    setIsLoadingThread(Boolean(requestedPostId));
+    setIsLoadingThread(Boolean(requestedPostId || requestedNavigationTargetPacketId));
     setFeedError(null);
     setThreadError(null);
 
@@ -989,6 +1085,9 @@ export default function NexusDiscussionsPage() {
         sort: requestedSort ?? 'new',
         view: requestedWorkspaceView,
         postId: requestedPostId,
+        targetPacketId: requestedNavigationTargetPacketId,
+        focusPacketId: requestedNavigationFocusPacketId,
+        highlightPacketId: requestedNavigationHighlightPacketId,
         replyTargetId: requestedReplyTargetId,
         replySort: requestedReplySort ?? 'new',
         showHidden: requestedShowHidden,
@@ -1031,6 +1130,9 @@ export default function NexusDiscussionsPage() {
     activeScope.id,
     currentActorPacketId,
     requestedForumId,
+    requestedNavigationFocusPacketId,
+    requestedNavigationHighlightPacketId,
+    requestedNavigationTargetPacketId,
     requestedPostId,
     requestedReplySort,
     requestedReplyTargetId,
@@ -1246,6 +1348,34 @@ export default function NexusDiscussionsPage() {
       selectedReplySort,
     ]
   );
+
+  /**
+   * Inputs: current discussion route state.
+   * Output: clears preview-driven focus/highlight without leaving the current thread/feed.
+   */
+  const clearDiscussionFocus = useCallback(() => {
+    setHighlightedPostId(null);
+    router.replace(
+      getDiscussionHref({
+        forumId: activeForumId,
+        sort: selectedFeedSort,
+        view: requestedWorkspaceView,
+        postId: resolvedThreadPostId,
+        replyTargetId: requestedReplyTargetId,
+        replySort: selectedReplySort,
+        showHidden: requestedShowHidden,
+      })
+    );
+  }, [
+    activeForumId,
+    requestedReplyTargetId,
+    resolvedThreadPostId,
+    requestedShowHidden,
+    requestedWorkspaceView,
+    router,
+    selectedFeedSort,
+    selectedReplySort,
+  ]);
 
   /**
    * Inputs: one vote target plus a vote value.
@@ -1797,8 +1927,10 @@ export default function NexusDiscussionsPage() {
                                 <NexusCard
                                   className={`gap-3 ${
                                     requestedPostId === post.packet.packet_id
-                                      ? 'border-nexus-sky/70'
-                                      : ''
+                                      ? 'border-nexus-sky/70 bg-nexus-sky/10'
+                                      : post.packet.packet_id === highlightedPostId
+                                        ? 'border-nexus-sky/70 bg-nexus-sky/10'
+                                        : ''
                                   }`}
                                 >
                                   <View className="gap-1">
@@ -1885,6 +2017,13 @@ export default function NexusDiscussionsPage() {
                               );
                             }}
                           />
+                          {highlightedPostId || hasDiscussionFocusRoute ? (
+                            <NexusActionButton
+                              label="Dismiss focus"
+                              onPress={clearDiscussionFocus}
+                              variant="secondary"
+                            />
+                          ) : null}
                           <NexusActionButton
                             label="New reply"
                             onPress={() => {
@@ -1968,7 +2107,14 @@ export default function NexusDiscussionsPage() {
                             scrollEventThrottle={16}
                           >
                             <View className="gap-4 p-3">
-                              <NexusCard className="gap-4 border-nexus-sky/70 bg-nexus-strong">
+                              <NexusCard
+                                className={`gap-4 border-nexus-sky/70 ${
+                                  highlightedPostId ===
+                                  threadPayload.root_post.packet.packet_id
+                                    ? 'bg-nexus-sky/10'
+                                    : 'bg-nexus-strong'
+                                }`}
+                              >
                                 <View className="gap-2">
                                   <View className="flex-row flex-wrap items-center gap-2">
                                     <NexusBadge
@@ -1987,7 +2133,7 @@ export default function NexusDiscussionsPage() {
                                     {highlightedPostId ===
                                     threadPayload.root_post.packet.packet_id ? (
                                       <NexusBadge
-                                        label="just posted"
+                                        label="focused"
                                         tone="mint"
                                       />
                                     ) : null}

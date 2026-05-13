@@ -5,6 +5,7 @@
 
 import type {
   AssemblyAssociationClaimProjection,
+  NexusPacketCardProjection,
   NexusScopeLens,
 } from '@core/contracts';
 import {
@@ -12,6 +13,7 @@ import {
   getElementSubtypeLeaf,
   type DiscussionReplySort,
   type DiscussionSort,
+  type PacketEnvelope,
   type PacketEnvelopeByType,
   type PacketFamily,
   type PacketRef,
@@ -145,6 +147,61 @@ function isAssociationCardText(card: { title: string; label: string; summary: st
     .toLowerCase();
 
   return searchableText.includes('association') || searchableText.includes('associate');
+}
+
+type DashboardDiscussionCardKind =
+  | 'space'
+  | 'forum'
+  | 'thread'
+  | 'root_post'
+  | 'reply'
+  | 'other';
+
+function classifyDashboardDiscussionCard(input: {
+  card: NexusPacketCardProjection;
+  packet: PacketEnvelope | null;
+}): DashboardDiscussionCardKind {
+  if (input.card.family === 'DiscussionSpace') {
+    return 'space';
+  }
+
+  if (input.card.family === 'DiscussionForum') {
+    return 'forum';
+  }
+
+  if (input.card.family === 'DiscussionThread') {
+    return 'thread';
+  }
+
+  if (input.card.family === 'DiscussionPost') {
+    return 'root_post';
+  }
+
+  if (input.card.family === 'DiscussionReply') {
+    return 'reply';
+  }
+
+  if (input.packet?.header.family === 'Discussion') {
+    const body = (input.packet as PacketEnvelopeByType['Discussion']).body;
+
+    if (body.kind === 'space') {
+      return 'space';
+    }
+
+    if (body.kind === 'forum') {
+      return 'forum';
+    }
+
+    if (body.kind === 'topic') {
+      return 'thread';
+    }
+
+    if (body.kind === 'message') {
+      return body.root_message_ref ? 'reply' : 'root_post';
+    }
+  }
+
+  return 'other';
 }
 
 function getScopeTreePacketIds(
@@ -715,19 +772,37 @@ export async function getNexusDashboardPayload(
       libraryCard.family === 'DiscussionPost' ||
       libraryCard.family === 'DiscussionReply'
   );
-  const canonicalThreadCount = discussionCards.filter(
-    (discussionCard) => discussionCard.family === 'DiscussionThread'
+  const discussionPackets = await Promise.all(
+    discussionCards.map((discussionCard) =>
+      services.packetStore.fetchByPacket(discussionCard.packet)
+    )
+  );
+  const discussionCardKinds = new Map(
+    discussionCards.map((discussionCard, index) => [
+      discussionCard.packet.packet_id,
+      classifyDashboardDiscussionCard({
+        card: discussionCard,
+        packet: discussionPackets[index] ?? null,
+      }),
+    ])
+  );
+  const rootPostCount = discussionCards.filter(
+    (discussionCard) =>
+      discussionCardKinds.get(discussionCard.packet.packet_id) === 'root_post'
   ).length;
-  const legacyTopLevelPostCount =
-    canonicalThreadCount === 0
-      ? discussionCards.filter(
-          (discussionCard) => discussionCard.family === 'DiscussionPost'
-        ).length
-      : 0;
-  const threadCount = canonicalThreadCount + legacyTopLevelPostCount;
+  const topicThreadCount = discussionCards.filter(
+    (discussionCard) =>
+      discussionCardKinds.get(discussionCard.packet.packet_id) === 'thread'
+  ).length;
+  const threadCount = rootPostCount > 0 ? rootPostCount : topicThreadCount;
   const replyCount = discussionCards.filter(
-    (discussionCard) => discussionCard.family === 'DiscussionReply'
+    (discussionCard) =>
+      discussionCardKinds.get(discussionCard.packet.packet_id) === 'reply'
   ).length;
+  const discussionPreviewCards = discussionCards.filter(
+    (discussionCard) =>
+      discussionCardKinds.get(discussionCard.packet.packet_id) === 'root_post'
+  );
   const proposalCount = voteCards.filter(
     (voteCard) => voteCard.family === 'Proposal'
   ).length;
@@ -815,6 +890,7 @@ export async function getNexusDashboardPayload(
         tone: 'sky',
       },
     ],
+    recent_activity_packets: localLibraryCards.slice(0, 6),
     queue: localLibraryCards.slice(0, 6).map((queueCard, index) => ({
       id: queueCard.packet.packet_id,
       title: queueCard.title,
@@ -827,7 +903,7 @@ export async function getNexusDashboardPayload(
         | 'gold'
         | 'rose',
     })),
-    discussion_preview_packets: discussionCards.slice(0, 4),
+    discussion_preview_packets: discussionPreviewCards.slice(0, 4),
     role_preview_packets: rolePreviewCards.slice(0, 4),
     trust_review_packets: trustReviewCards.slice(0, 4),
     vote_preview_packets: voteCards.slice(0, 4),
@@ -868,6 +944,7 @@ export async function getNexusDiscussionsPayload(input: {
 export async function getNexusDiscussionThreadPayload(input: {
   scopeId: string;
   postPacketId: string;
+  focusPacketId?: string | null;
   replySort?: DiscussionReplySort | null;
   showHidden?: boolean;
   viewerActorKey?: string | null;
@@ -879,6 +956,7 @@ export async function getNexusDiscussionThreadPayload(input: {
   return services.discussionService.getThreadDetail({
     scope_id: input.scopeId,
     post_packet_id: input.postPacketId,
+    focus_packet_id: input.focusPacketId ?? null,
     reply_sort: input.replySort ?? null,
     show_hidden: input.showHidden ?? false,
     viewer_actor_key: input.viewerActorKey ?? null,
@@ -925,6 +1003,9 @@ export async function getNexusDiscussionWorkspacePayload(input: {
   sort?: DiscussionSort | null;
   view?: 'feed' | 'thread' | 'post';
   postPacketId?: string | null;
+  targetPacketId?: string | null;
+  focusPacketId?: string | null;
+  highlightPacketId?: string | null;
   replyTargetPacketId?: string | null;
   replySort?: DiscussionReplySort | null;
   showHidden?: boolean;
@@ -933,19 +1014,39 @@ export async function getNexusDiscussionWorkspacePayload(input: {
   replyLimit?: number | null;
 }): Promise<NexusDiscussionWorkspacePayload> {
   const services = await getNexusPacketServices();
+  const navigationTargetPacketId = input.targetPacketId ?? input.postPacketId ?? null;
+  const navigationTarget = navigationTargetPacketId
+    ? await services.discussionService.resolveNavigationTarget({
+        scope_id: input.scopeId,
+        packet_id: navigationTargetPacketId,
+      })
+    : null;
+  const resolvedForumId = navigationTarget?.forum_id ?? input.forumId ?? null;
+  const resolvedPostPacketId =
+    navigationTarget?.root_post_packet_id ?? input.postPacketId ?? null;
+  const resolvedFocusPacketId =
+    input.highlightPacketId ??
+    input.focusPacketId ??
+    navigationTarget?.highlight_packet_id ??
+    navigationTarget?.focus_packet_id ??
+    input.postPacketId ??
+    null;
+  const resolvedView =
+    input.view ?? (resolvedPostPacketId ? 'thread' : 'feed');
   const feed = await services.discussionService.getForumFeed({
     scope_id: input.scopeId,
-    forum_id: input.forumId ?? null,
+    forum_id: resolvedForumId,
     sort: input.sort ?? null,
     show_hidden: input.showHidden ?? false,
     viewer_actor_key: input.viewerActorKey ?? null,
     limit: input.feedLimit ?? null,
   });
   const thread =
-    input.postPacketId
+    resolvedPostPacketId
       ? await services.discussionService.getThreadDetail({
           scope_id: input.scopeId,
-          post_packet_id: input.postPacketId,
+          post_packet_id: resolvedPostPacketId,
+          focus_packet_id: resolvedFocusPacketId,
           reply_sort: input.replySort ?? null,
           show_hidden: input.showHidden ?? false,
           viewer_actor_key: input.viewerActorKey ?? null,
@@ -954,10 +1055,13 @@ export async function getNexusDiscussionWorkspacePayload(input: {
       : null;
   const workspace = await services.discussionService.getWorkspace({
     scope_id: input.scopeId,
-    forum_id: input.forumId ?? null,
+    forum_id: resolvedForumId,
     sort: input.sort ?? null,
-    view: input.view ?? 'feed',
-    post_packet_id: input.postPacketId ?? null,
+    view: resolvedView,
+    post_packet_id: resolvedPostPacketId,
+    focus_packet_id: resolvedFocusPacketId,
+    highlight_packet_id:
+      input.highlightPacketId ?? navigationTarget?.highlight_packet_id ?? null,
     reply_target_packet_id: input.replyTargetPacketId ?? null,
     reply_sort: input.replySort ?? null,
     show_hidden: input.showHidden ?? false,

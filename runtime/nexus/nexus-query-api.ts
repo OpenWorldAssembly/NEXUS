@@ -11,3 +11,5 @@ export * from '@runtime/nexus/nexus-query-api.roles';
 export * from '@runtime/nexus/nexus-query-api.shell';
 export * from '@runtime/nexus/nexus-query-api.trust';
 export * from '@runtime/nexus/nexus-query-api.workspaces';
+export * from '@runtime/nexus/nexus-query-api.packet-actions';
+export * from '@runtime/nexus/nexus-query-api.verification';

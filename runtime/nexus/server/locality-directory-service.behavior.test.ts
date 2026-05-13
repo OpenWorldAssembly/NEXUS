@@ -12,6 +12,7 @@ import {
 import { createScopedRelationPacket } from '@core/packets/relations';
 import type { PacketEnvelope, PacketEnvelopeByType } from '@core/schema/packet-schema';
 import {
+  buildLocalityPathPreviewResult,
   LocalityDuplicateWarningError,
   planCanonicalLocalityPathWithPacketStore,
 } from '@runtime/nexus/server/locality-directory-service';
@@ -223,6 +224,7 @@ test('planCanonicalLocalityPath reuses existing path segments and alias collisio
       assert.equal(planned.created_relation_packet_ids.length, 4);
       assert.equal(planned.duplicate_warnings.length, 1);
       assert.equal(planned.duplicate_warnings[0]?.existing_scope_id, region.header.packet_id);
+      assert.equal(planned.duplicate_warnings[0]?.existing_result.scope_id, region.header.packet_id);
     },
   });
 });
@@ -333,9 +335,66 @@ test('planCanonicalLocalityPath surfaces fuzzy duplicate warnings and still cont
 
       assert.equal(planned.duplicate_warnings.length > 0, true);
       assert.equal(planned.duplicate_warnings[0]?.existing_scope_id, city.header.packet_id);
+      assert.equal(planned.duplicate_warnings[0]?.existing_result.scope_id, city.header.packet_id);
       assert.equal(elementPackets.length, 2);
       assert.equal(planned.created_location_packet_ids.length, 2);
       assert.equal(planned.created_relation_packet_ids.length, 4);
+    },
+  });
+});
+
+test('locality preview stays non-mutating and returns review entries plus suggested home scopes', async () => {
+  const globalAssembly = createAssemblyPacket({
+    packet_id: 'nexus:element/global-commons',
+    created_at: '2026-05-12T00:00:00.000Z',
+    authority_scope_ref: { packet_id: 'nexus:element/global-commons' },
+    applicable_scope_refs: [{ packet_id: 'nexus:element/global-commons' }],
+    name: 'Global Commons',
+    subtype: 'global',
+    locality_label: 'Global',
+    tags: ['assembly', 'global'],
+    metadata_tags: ['assembly', 'global'],
+  });
+
+  await withTemporaryNexusPacketServices({
+    seedPackets: [globalAssembly],
+    run: async ({ packetStore }) => {
+      const planned = await planCanonicalLocalityPathWithPacketStore({
+        packetStore,
+        path: [
+          { level: 'nation', name: 'United States' },
+          { level: 'region', name: 'California' },
+          { level: 'city', name: 'Moreno Valley' },
+        ],
+        allowDuplicateWarnings: true,
+      });
+      const preview = buildLocalityPathPreviewResult(planned);
+      const storedElements =
+        (await packetStore.listPreferredPacketsByFamily('Element')) as PacketEnvelopeByType['Element'][];
+
+      assert.equal(storedElements.length, 1);
+      assert.equal(preview.review_entries.length, 3);
+      assert.deepEqual(
+        preview.review_entries.map((entry) => entry.disposition),
+        ['create_new', 'create_new', 'create_new']
+      );
+      assert.deepEqual(
+        preview.suggested_home_scope_entries.map((entry) => entry.name),
+        ['United States', 'California', 'Moreno Valley']
+      );
+      assert.deepEqual(
+        preview.suggested_home_scope_entries.map((entry) => entry.path_label),
+        [
+          'United States',
+          'United States / California',
+          'United States / California / Moreno Valley',
+        ]
+      );
+      assert.equal(
+        preview.suggested_home_scope_entries.every((entry) => entry.checked_by_default),
+        true
+      );
+      assert.equal(preview.final_result.name, 'Moreno Valley');
     },
   });
 });

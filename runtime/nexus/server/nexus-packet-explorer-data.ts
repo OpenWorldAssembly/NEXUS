@@ -19,6 +19,7 @@ import type {
   NexusPacketExplorerLinkGroup,
   NexusPacketExplorerLinkRow,
   NexusPacketExplorerPayload,
+  NexusPacketExplorerVerificationReportSummary,
   NexusPacketExplorerScopeSummary,
   NexusPacketExplorerSummary,
 } from '@runtime/nexus/nexus-api-types';
@@ -26,7 +27,11 @@ import type { NexusPacketServices } from '@runtime/nexus/server/nexus-packet-ser
 
 type PacketExplorerDataServices = Pick<
   NexusPacketServices,
-  'packetStore' | 'browserQueryService' | 'discussionService'
+  | 'packetStore'
+  | 'browserQueryService'
+  | 'discussionService'
+  | 'packetActionService'
+  | 'verificationService'
 >;
 
 const EXPLORER_DEBUG_ENABLED = process.env.NODE_ENV !== 'production';
@@ -204,6 +209,10 @@ function getActionsBasis(): NexusPacketExplorerPayload['actions_basis'] {
   return 'runtime_operational';
 }
 
+function getVerificationBasis(): NexusPacketExplorerPayload['verification_basis'] {
+  return 'runtime_operational';
+}
+
 async function resolveExplorerLinks(input: {
   services: PacketExplorerDataServices;
   packetId: string;
@@ -322,10 +331,19 @@ async function resolveExplorerActions(input: {
   actions: NexusActionMap;
   actionDescriptors: NexusActionIntentDescriptor[];
 }> {
+  const baseActionProjection = await input.services.packetActionService.projectPacketActions({
+    currentSurface: 'explorer',
+    target: {
+      packet_id: input.packetId,
+      family: input.adaptedPacket.header.family,
+      preferred_surface: undefined,
+    },
+  });
+
   if (!DISCUSSION_FAMILIES.has(input.adaptedPacket.header.family)) {
     return {
-      actions: {},
-      actionDescriptors: [],
+      actions: baseActionProjection.actions,
+      actionDescriptors: [...baseActionProjection.action_descriptors],
     };
   }
 
@@ -338,8 +356,14 @@ async function resolveExplorerActions(input: {
     });
 
   return {
-    actions: actionInspection.actions,
-    actionDescriptors: [...actionInspection.action_descriptors],
+    actions: {
+      ...baseActionProjection.actions,
+      ...actionInspection.actions,
+    },
+    actionDescriptors: [
+      ...baseActionProjection.action_descriptors,
+      ...actionInspection.action_descriptors,
+    ],
   };
 }
 
@@ -471,6 +495,12 @@ export async function buildNexusPacketExplorerPayload(input: {
         viewerActorPacketId: input.viewerActorPacketId ?? null,
       }),
   });
+  const verificationOverview = await runExplorerStage({
+    packetId,
+    stage: 'verification inspection',
+    run: async () =>
+      services.verificationService.getVerificationOverview(packetId),
+  });
   const packetSummary: NexusPacketExplorerSummary = {
     packet: {
       packet_id: adaptedPacket.header.packet_id,
@@ -492,6 +522,23 @@ export async function buildNexusPacketExplorerPayload(input: {
   const inspectionLens = input.inspectionLens ?? 'summary';
   const incomingLinkGroups = groupExplorerLinks(incomingLinks);
   const outgoingLinkGroups = groupExplorerLinks(outgoingLinks);
+  const latestLocalReportData =
+    verificationOverview.localReports[0]?.report_data ?? null;
+  const verificationReportTargetRevisionId =
+    verificationOverview.verificationSummary?.latest_report_source === 'local'
+      ? verificationOverview.verificationSummary.target_revision_id
+      : typeof latestLocalReportData?.target_revision_id === 'string'
+        ? latestLocalReportData.target_revision_id
+        : null;
+  const isCurrentForPreferredRevision =
+    verificationReportTargetRevisionId !== null &&
+    verificationReportTargetRevisionId === preferredRevision.revision_id;
+  const verificationFreshness =
+    verificationOverview.localReports.length === 0
+      ? ('not_validated' as const)
+      : isCurrentForPreferredRevision
+        ? ('current' as const)
+        : ('stale' as const);
 
   return {
     inspection_lens: inspectionLens,
@@ -515,6 +562,16 @@ export async function buildNexusPacketExplorerPayload(input: {
     outgoing_link_groups: outgoingLinkGroups,
     actions: actionInspection.actions,
     action_descriptors: actionInspection.actionDescriptors,
+    verification_basis: getVerificationBasis(),
+    verification_summary: verificationOverview.verificationSummary,
+    verification_report_target_revision_id: verificationReportTargetRevisionId,
+    verification_freshness: verificationFreshness,
+    is_current_for_preferred_revision: isCurrentForPreferredRevision,
+    local_validator_packet_id: verificationOverview.localValidatorPacketId,
+    local_verification_reports:
+      verificationOverview.localReports as NexusPacketExplorerVerificationReportSummary[],
+    external_verification_reports:
+      verificationOverview.externalReports as NexusPacketExplorerVerificationReportSummary[],
   };
 }
 

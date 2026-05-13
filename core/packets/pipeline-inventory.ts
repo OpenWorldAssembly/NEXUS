@@ -155,6 +155,24 @@ export const PACKET_PIPELINE_INVENTORY: Record<
     read_model_status: 'declared',
     next_migration_step: 'Route new relation-aware read models through Relation while keeping Claim interoperable during migration.',
   }),
+  Report: createEntry('Report', {
+    canonical_structure: 'Report(type, subtype)',
+    builder_path:
+      'core/packets/packet-build-pipeline.ts + core/packets/families/report.ts',
+    compatibility_stance: 'current_only',
+    read_projection_path:
+      'runtime verification/import reporting projections + Explorer verification surfaces',
+    ui_consumers: ['Explorer', 'Dashboard', 'Packet action menus'],
+    write_paths: ['Runtime verification service', 'Runtime import reporting'],
+    known_manual_assumptions: [
+      'Report is the forward verification/import reporting family while MissionReport remains a legacy mission-specific family.',
+    ],
+    builder_pipeline_status: 'production',
+    same_family_adapter_status: 'tested',
+    family_evolution_status: 'none',
+    read_model_status: 'declared',
+    next_migration_step: 'Use Report for verification and import reporting before broader decision/resolution reporting semantics land.',
+  }),
   Signal: createReservedEntry('Signal', 'Family reserved but not actively surfaced.'),
   Proposal: createEntry('Proposal', {
     canonical_structure: 'Proposal',

@@ -26,6 +26,8 @@ import type {
   AttestationService,
   AttestationSummary,
   DiscussionForumProjection,
+  DiscussionFocusModel,
+  DiscussionNavigationTarget,
   DiscussionPostProjection,
   DiscussionQueryService,
   DiscussionReplyProjection,
@@ -1114,6 +1116,7 @@ export class SQLiteDiscussionService
   async getThreadDetail(input: {
     scope_id: string;
     post_packet_id: string;
+    focus_packet_id?: string | null;
     reply_sort: DiscussionReplySort | null;
     show_hidden: boolean;
     viewer_actor_key: string | null;
@@ -1220,6 +1223,13 @@ export class SQLiteDiscussionService
       cursor: input.cursor ?? null,
       limit: input.limit ?? null,
     });
+    const focusedReplies = this.mergeFocusedReplyPath({
+      root_replies: rootReplyPage.replies,
+      root_post_packet_id: rootPostPacket.header.packet_id,
+      target_post_packet_id: input.focus_packet_id ?? input.post_packet_id,
+      viewer_actor_key: actorIdentity.actor_key,
+      viewer,
+    });
 
     return {
       lens: scopeLens,
@@ -1232,7 +1242,7 @@ export class SQLiteDiscussionService
       show_hidden: input.show_hidden,
       viewer,
       root_post: rootPostProjection,
-      replies: rootReplyPage.replies,
+      replies: focusedReplies,
       next_cursor: rootReplyPage.next_cursor,
       has_more: rootReplyPage.has_more,
     };
@@ -1299,11 +1309,174 @@ export class SQLiteDiscussionService
     });
   }
 
+  async resolveNavigationTarget(input: {
+    scope_id: string;
+    packet_id: string;
+  }): Promise<DiscussionNavigationTarget> {
+    await this.syncDerivedState();
+
+    if (!this.state) {
+      throw new Error('Discussion state is unavailable.');
+    }
+
+    const unknownTarget = (): DiscussionNavigationTarget => ({
+      requested_packet_id: input.packet_id,
+      target_kind: 'unknown',
+      forum_id: null,
+      root_post_packet_id: null,
+      focus_packet_id: null,
+      highlight_packet_id: null,
+      focus_path_packet_ids: [],
+    });
+    const resolveForumId = (
+      forumPacket: PacketEnvelopeByType['DiscussionForum'] | null
+    ): string | null => (forumPacket ? toDiscussionForumId(forumPacket.body.forum_kind) : null);
+    const entryPacket = resolveOperationalDiscussionPacket({
+      packetMap: this.state.entryMap,
+      operationalMap: this.state.entryOperationalMap,
+      packetId: input.packet_id,
+    });
+
+    if (entryPacket) {
+      const rootPostPacketId = resolveOperationalRootPostId({
+        entryMap: this.state.entryMap,
+        entryOperationalMap: this.state.entryOperationalMap,
+        packetId: entryPacket.header.packet_id,
+      });
+      const rootPostPacket = this.state.rootPostOperationalMap.get(
+        toDiscussionOperationalPacketId(rootPostPacketId)
+      );
+      const threadPacket = rootPostPacket
+        ? resolveOperationalDiscussionPacket({
+            packetMap: this.state.threadMap,
+            operationalMap: this.state.threadOperationalMap,
+            packetId: rootPostPacket.body.thread_ref.packet_id,
+          })
+        : null;
+      const forumPacket = threadPacket
+        ? resolveOperationalDiscussionPacket({
+            packetMap: this.state.forumMap,
+            operationalMap: this.state.forumOperationalMap,
+            packetId: threadPacket.body.forum_ref.packet_id,
+          })
+        : null;
+      const replyPath =
+        entryPacket.header.family === 'DiscussionReply' && rootPostPacket
+          ? this.getFocusedReplyPathPackets({
+              root_post_packet_id: rootPostPacket.header.packet_id,
+              target_post_packet_id: entryPacket.header.packet_id,
+            })
+          : [];
+      const focusPathPacketIds = rootPostPacket
+        ? [
+            rootPostPacket.header.packet_id,
+            ...replyPath.map((replyPacket) => replyPacket.header.packet_id),
+          ]
+        : [entryPacket.header.packet_id];
+      const focusPacketId =
+        focusPathPacketIds[focusPathPacketIds.length - 1] ??
+        entryPacket.header.packet_id;
+
+      return {
+        requested_packet_id: input.packet_id,
+        target_kind:
+          entryPacket.header.family === 'DiscussionReply' ? 'reply' : 'root_post',
+        forum_id: resolveForumId(forumPacket),
+        root_post_packet_id: rootPostPacket?.header.packet_id ?? rootPostPacketId,
+        focus_packet_id: focusPacketId,
+        highlight_packet_id: focusPacketId,
+        focus_path_packet_ids: focusPathPacketIds,
+      };
+    }
+
+    const threadPacket = resolveOperationalDiscussionPacket({
+      packetMap: this.state.threadMap,
+      operationalMap: this.state.threadOperationalMap,
+      packetId: input.packet_id,
+    });
+
+    if (threadPacket) {
+      const rootPostPacket = Array.from(
+        this.state.rootPostOperationalMap.values()
+      ).find((candidateRootPost) =>
+        isSameDiscussionTarget(
+          candidateRootPost.body.thread_ref.packet_id,
+          threadPacket.header.packet_id
+        )
+      );
+      const forumPacket = resolveOperationalDiscussionPacket({
+        packetMap: this.state.forumMap,
+        operationalMap: this.state.forumOperationalMap,
+        packetId: threadPacket.body.forum_ref.packet_id,
+      });
+      const rootPostPacketId = rootPostPacket?.header.packet_id ?? null;
+
+      return {
+        requested_packet_id: input.packet_id,
+        target_kind: 'topic',
+        forum_id: resolveForumId(forumPacket),
+        root_post_packet_id: rootPostPacketId,
+        focus_packet_id: rootPostPacketId,
+        highlight_packet_id: rootPostPacketId,
+        focus_path_packet_ids: rootPostPacketId ? [rootPostPacketId] : [],
+      };
+    }
+
+    const forumPacket = resolveOperationalDiscussionPacket({
+      packetMap: this.state.forumMap,
+      operationalMap: this.state.forumOperationalMap,
+      packetId: input.packet_id,
+    });
+
+    if (forumPacket) {
+      return {
+        requested_packet_id: input.packet_id,
+        target_kind: 'forum',
+        forum_id: resolveForumId(forumPacket),
+        root_post_packet_id: null,
+        focus_packet_id: null,
+        highlight_packet_id: null,
+        focus_path_packet_ids: [],
+      };
+    }
+
+    const discussionSpacePacket = resolveOperationalDiscussionPacket({
+      packetMap: this.state.discussionSpaceMap,
+      operationalMap: this.state.discussionSpaceOperationalMap,
+      packetId: input.packet_id,
+    });
+
+    if (discussionSpacePacket) {
+      const firstForumPacket = Array.from(
+        this.state.forumOperationalMap.values()
+      ).find((candidateForum) =>
+        isSameDiscussionTarget(
+          candidateForum.body.discussion_space_ref.packet_id,
+          discussionSpacePacket.header.packet_id
+        )
+      );
+
+      return {
+        requested_packet_id: input.packet_id,
+        target_kind: 'space',
+        forum_id: resolveForumId(firstForumPacket ?? null),
+        root_post_packet_id: null,
+        focus_packet_id: null,
+        highlight_packet_id: null,
+        focus_path_packet_ids: [],
+      };
+    }
+
+    return unknownTarget();
+  }
+
   async getWorkspace(input: {
     scope_id: string;
     forum_id: string | null;
     view: 'feed' | 'thread' | 'post';
     post_packet_id: string | null;
+    focus_packet_id?: string | null;
+    highlight_packet_id?: string | null;
     reply_target_packet_id: string | null;
     sort: DiscussionSort | null;
     reply_sort: DiscussionReplySort | null;
@@ -1327,6 +1500,7 @@ export class SQLiteDiscussionService
         ? await this.getThreadDetail({
             scope_id: input.scope_id,
             post_packet_id: input.post_packet_id,
+            focus_packet_id: input.focus_packet_id ?? null,
             reply_sort: input.reply_sort,
             show_hidden: input.show_hidden,
             viewer_actor_key: input.viewer_actor_key,
@@ -1355,6 +1529,18 @@ export class SQLiteDiscussionService
       replies: thread?.replies ?? [],
       replyTargetPacketId,
     });
+    const focus =
+      thread && threadRoot
+        ? this.buildDiscussionFocusModel({
+            root_post_packet_id: threadRoot.packet.packet_id,
+            focus_packet_id:
+              input.highlight_packet_id ??
+              input.focus_packet_id ??
+              input.post_packet_id,
+            viewer_actor_key: input.viewer_actor_key,
+            viewer,
+          })
+        : null;
     const workspaceActions = this.createDiscussionWorkspaceActions({
       viewer,
       selectedForum,
@@ -1373,6 +1559,7 @@ export class SQLiteDiscussionService
       feed_items: feedItems,
       thread_root: threadRoot,
       thread_items: threadItems,
+      focus,
       workspace_actions: workspaceActions,
       action_descriptors: DISCUSSION_ACTION_DESCRIPTORS,
       composer: {
@@ -2099,6 +2286,201 @@ export class SQLiteDiscussionService
     return {
       ...projection,
       actions: this.createDiscussionPostActions(projection, viewer),
+    };
+  }
+
+  private getFocusedReplyPathPackets(input: {
+    root_post_packet_id: string;
+    target_post_packet_id: string;
+  }): PacketEnvelopeByType['DiscussionReply'][] {
+    if (!this.state) {
+      return [];
+    }
+
+    const targetEntry = resolveOperationalDiscussionPacket({
+      packetMap: this.state.entryMap,
+      operationalMap: this.state.entryOperationalMap,
+      packetId: input.target_post_packet_id,
+    });
+
+    if (!targetEntry || targetEntry.header.family !== 'DiscussionReply') {
+      return [];
+    }
+
+    const path: PacketEnvelopeByType['DiscussionReply'][] = [];
+    const visitedPacketIds = new Set<string>();
+    let currentEntry: DiscussionEntryPacket | null = targetEntry;
+
+    while (currentEntry?.header.family === 'DiscussionReply') {
+      const replyPacket = currentEntry as PacketEnvelopeByType['DiscussionReply'];
+      const replyPacketId = replyPacket.header.packet_id;
+
+      if (visitedPacketIds.has(replyPacketId)) {
+        return [];
+      }
+
+      visitedPacketIds.add(replyPacketId);
+      path.unshift(replyPacket);
+
+      const parentPacketId = replyPacket.body.reply_to_ref.packet_id;
+
+      if (isSameDiscussionTarget(parentPacketId, input.root_post_packet_id)) {
+        return path;
+      }
+
+      currentEntry = resolveOperationalDiscussionPacket({
+        packetMap: this.state.entryMap,
+        operationalMap: this.state.entryOperationalMap,
+        packetId: parentPacketId,
+      });
+    }
+
+    return [];
+  }
+
+  private mergeFocusedReplyPath(input: {
+    root_replies: DiscussionReplyProjection[];
+    root_post_packet_id: string;
+    target_post_packet_id: string;
+    viewer_actor_key: string | null;
+    viewer: DiscussionViewerContext | null;
+  }): DiscussionReplyProjection[] {
+    const pathPackets = this.getFocusedReplyPathPackets({
+      root_post_packet_id: input.root_post_packet_id,
+      target_post_packet_id: input.target_post_packet_id,
+    });
+
+    if (pathPackets.length === 0) {
+      return input.root_replies;
+    }
+
+    let focusedBranch: DiscussionReplyProjection | null = null;
+
+    for (let index = pathPackets.length - 1; index >= 0; index -= 1) {
+      const replyPacket = pathPackets[index];
+      const baseProjection = this.toDiscussionReplyProjection(
+        replyPacket,
+        input.viewer_actor_key,
+        input.viewer
+      );
+      const isTarget = index === pathPackets.length - 1;
+      const nestedReplies = focusedBranch ? [focusedBranch] : [];
+
+      focusedBranch = {
+        ...baseProjection,
+        replies: nestedReplies,
+        child_page: {
+          ...baseProjection.child_page,
+          has_more:
+            baseProjection.child_page.has_more && nestedReplies.length === 0,
+        },
+        state: {
+          ...baseProjection.state,
+          is_reply_target: isTarget,
+          has_loaded_children:
+            baseProjection.state.has_loaded_children || nestedReplies.length > 0,
+        },
+        is_collapsed_by_default: false,
+      };
+    }
+
+    if (!focusedBranch) {
+      return input.root_replies;
+    }
+
+    const targetBranch = focusedBranch;
+    const mergedReplies = input.root_replies.map((reply) =>
+      isSameDiscussionTarget(reply.packet.packet_id, targetBranch.packet.packet_id)
+        ? targetBranch
+        : reply
+    );
+    const alreadyLoaded = input.root_replies.some((reply) =>
+      isSameDiscussionTarget(reply.packet.packet_id, targetBranch.packet.packet_id)
+    );
+
+    return alreadyLoaded ? mergedReplies : [targetBranch, ...mergedReplies];
+  }
+
+  private buildDiscussionFocusModel(input: {
+    root_post_packet_id: string;
+    focus_packet_id: string | null;
+    viewer_actor_key: string | null;
+    viewer: DiscussionViewerContext | null;
+  }): DiscussionFocusModel | null {
+    if (!this.state || !input.focus_packet_id) {
+      return null;
+    }
+
+    const rootPostPacket = resolveOperationalDiscussionPacket({
+      packetMap: this.state.rootPostMap,
+      operationalMap: this.state.rootPostOperationalMap,
+      packetId: input.root_post_packet_id,
+    });
+
+    if (!rootPostPacket) {
+      return null;
+    }
+
+    const targetEntry = resolveOperationalDiscussionPacket({
+      packetMap: this.state.entryMap,
+      operationalMap: this.state.entryOperationalMap,
+      packetId: input.focus_packet_id,
+    });
+
+    if (!targetEntry) {
+      return null;
+    }
+
+    const targetRootPostId = resolveOperationalRootPostId({
+      entryMap: this.state.entryMap,
+      entryOperationalMap: this.state.entryOperationalMap,
+      packetId: targetEntry.header.packet_id,
+    });
+
+    if (!isSameDiscussionTarget(targetRootPostId, rootPostPacket.header.packet_id)) {
+      return null;
+    }
+
+    const replyPath =
+      targetEntry.header.family === 'DiscussionReply'
+        ? this.getFocusedReplyPathPackets({
+            root_post_packet_id: rootPostPacket.header.packet_id,
+            target_post_packet_id: targetEntry.header.packet_id,
+          })
+        : [];
+    const focusChainItems: DiscussionPostProjection[] = [
+      this.toDiscussionPostProjection(
+        rootPostPacket,
+        input.viewer_actor_key,
+        input.viewer
+      ),
+      ...replyPath.map((replyPacket) =>
+        this.toDiscussionReplyProjection(
+          replyPacket,
+          input.viewer_actor_key,
+          input.viewer
+        )
+      ),
+    ];
+
+    if (focusChainItems.length === 0) {
+      return null;
+    }
+
+    const focusPathPacketIds = focusChainItems.map(
+      (focusItem) => focusItem.packet.packet_id
+    );
+    const focusPacketId =
+      focusPathPacketIds[focusPathPacketIds.length - 1] ??
+      targetEntry.header.packet_id;
+
+    return {
+      root_post_packet_id: rootPostPacket.header.packet_id,
+      focus_packet_id: focusPacketId,
+      highlight_packet_id: focusPacketId,
+      ancestor_packet_ids: focusPathPacketIds.slice(0, -1),
+      focus_path_packet_ids: focusPathPacketIds,
+      focus_chain_items: focusChainItems,
     };
   }
 

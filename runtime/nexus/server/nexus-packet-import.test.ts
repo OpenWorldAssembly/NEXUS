@@ -8,13 +8,22 @@ import {
   createElementPacket,
   createRolePacket,
 } from '@core/packets/builders';
+import { createPersonIdentityPacket } from '@core/packets/identity';
 import {
   buildNexusPacketExplorerExportPreview,
 } from '@runtime/nexus/server/nexus-packet-export';
 import {
+  createIdentityKeyBinding,
+  exportIdentityKeyPairToJwk,
+  generateP256KeyPair,
+  signPacketWithIdentity,
+} from '@runtime/nexus/identity-crypto';
+import {
   buildNexusPacketExplorerImportCommit,
+  buildNexusPacketExplorerImportHistory,
   buildNexusPacketExplorerImportPreview,
 } from '@runtime/nexus/server/nexus-packet-import';
+import { NexusPacketVerificationService } from '@runtime/nexus/server/verification-service';
 import { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store';
 import { createNodeSQLiteQueryServicesAsync } from '@runtime/storage/node-sqlite-query-services';
 
@@ -27,7 +36,44 @@ async function createImportTestServices(directory: string, fileName: string) {
 
   return {
     queryServices,
-    services: queryServices,
+    services: {
+      ...queryServices,
+      verificationService: new NexusPacketVerificationService(
+        queryServices.packetStore
+      ),
+    },
+  };
+}
+
+async function createSignedIdentityPacket(input: {
+  packetId: string;
+  alias: string;
+  createdAt: string;
+}) {
+  const keyPair = await generateP256KeyPair();
+  const jwkPair = await exportIdentityKeyPairToJwk(keyPair);
+  const keyBinding = await createIdentityKeyBinding({
+    publicJwk: jwkPair.publicJwk,
+    addedAt: input.createdAt,
+  });
+  const identityPacket = createPersonIdentityPacket({
+    alias: input.alias,
+    claimStatus: 'claimed',
+    packetId: input.packetId,
+    createdAt: input.createdAt,
+    publicKeyBinding: keyBinding,
+  });
+
+  return {
+    keyPair,
+    packet: await signPacketWithIdentity({
+      packet: identityPacket,
+      signerPacketId: input.packetId,
+      kid: keyBinding.kid,
+      privateKey: keyPair.privateKey,
+      signedAt: input.createdAt,
+    }),
+    keyBinding,
   };
 }
 
@@ -52,7 +98,7 @@ test('raw packet imports analyze and commit successfully', async () => {
       },
     });
 
-    assert.equal(preview.status, 'ready');
+    assert.equal(preview.status, 'partial_risk');
     assert.equal(preview.artifact_type, 'raw_packet');
     assert.equal(preview.new_revision_count, 1);
     assert.equal(preview.open_packet_id, packet.header.packet_id);
@@ -66,12 +112,247 @@ test('raw packet imports analyze and commit successfully', async () => {
 
     assert.equal(commit.committed, true);
     assert.equal(commit.imported_revision_count, 1);
+    assert.equal(commit.created_verification_report_packet_ids.length, 1);
+    assert.notEqual(commit.import_report_packet_id, null);
 
     const preferredRevision = await queryServices.packetStore.fetchPreferredRevision({
       packet_id: packet.header.packet_id,
     });
+    const verificationSummary =
+      await queryServices.packetStore.getPacketVerificationSummary({
+        packet_id: packet.header.packet_id,
+      });
+    const importReport = await queryServices.packetStore.fetchByPacket({
+      packet_id: commit.import_report_packet_id!,
+    });
 
     assert.equal(preferredRevision?.revision_id, packet.header.revision_id);
+    assert.equal(verificationSummary?.status, 'unsigned');
+    assert.equal(verificationSummary?.signature_status, 'missing');
+    assert.equal(importReport?.header.family, 'Report');
+    assert.equal(
+      (importReport?.body as { report_data?: { artifact_type?: string } }).report_data
+        ?.artifact_type,
+      'raw_packet'
+    );
+  } finally {
+    queryServices.packetStore.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('import history lists recent import reports with artifact metadata', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'owa-explorer-import-history-'));
+  const { queryServices, services } = await createImportTestServices(
+    directory,
+    'import-history.db'
+  );
+  const packet = createElementPacket({
+    packet_id: 'nexus:element/import-history-target',
+    revision_id: 'nexus:element/import-history-target@r1',
+    kind: 'organization',
+    name: 'Import History Target',
+  });
+
+  try {
+    const commit = await buildNexusPacketExplorerImportCommit({
+      services,
+      requestBody: {
+        source_text: JSON.stringify(packet),
+        file_name: 'history-target.json',
+      },
+    });
+
+    assert.equal(commit.committed, true);
+    assert.notEqual(commit.import_report_packet_id, null);
+
+    const history = await buildNexusPacketExplorerImportHistory({
+      services,
+      requestBody: {
+        limit: 5,
+      },
+    });
+
+    assert.equal(history.entries.length, 1);
+    assert.equal(history.entries[0]?.report_packet_id, commit.import_report_packet_id);
+    assert.equal(history.entries[0]?.source_file_name, 'history-target.json');
+    assert.equal(history.entries[0]?.artifact_type, 'raw_packet');
+    assert.equal(history.entries[0]?.validation_mode, 'validate_before_commit');
+    assert.equal(history.entries[0]?.affected_packet_ids[0], packet.header.packet_id);
+  } finally {
+    queryServices.packetStore.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('dont_validate mode commits structurally safe imports without packet verification reports', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'owa-explorer-import-'));
+  const { queryServices, services } = await createImportTestServices(
+    directory,
+    'dont-validate.db'
+  );
+  const packet = createElementPacket({
+    packet_id: 'nexus:element/dont-validate-target',
+    revision_id: 'nexus:element/dont-validate-target@r1',
+    kind: 'organization',
+    name: 'Dont Validate Target',
+  });
+
+  try {
+    const preview = await buildNexusPacketExplorerImportPreview({
+      services,
+      requestBody: {
+        source_text: JSON.stringify(packet),
+        validation_mode: 'dont_validate',
+      },
+    });
+
+    assert.equal(preview.validation_mode, 'dont_validate');
+    assert.deepEqual(preview.validation_counts, {
+      trusted_signer: 0,
+      signature_valid: 0,
+      unknown_signer: 0,
+      unsigned: 0,
+      signature_invalid: 0,
+      canonicalization_mismatch: 0,
+    });
+
+    const commit = await buildNexusPacketExplorerImportCommit({
+      services,
+      requestBody: {
+        source_text: JSON.stringify(packet),
+        validation_mode: 'dont_validate',
+      },
+    });
+
+    assert.equal(commit.committed, true);
+    assert.equal(commit.created_verification_report_packet_ids.length, 0);
+    assert.notEqual(commit.import_report_packet_id, null);
+
+    const verificationSummary =
+      await queryServices.packetStore.getPacketVerificationSummary({
+        packet_id: packet.header.packet_id,
+      });
+
+    assert.equal(verificationSummary, null);
+  } finally {
+    queryServices.packetStore.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('validate_after_commit imports first and then writes verification reports', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'owa-explorer-import-'));
+  const { queryServices, services } = await createImportTestServices(
+    directory,
+    'validate-after.db'
+  );
+  const packet = createElementPacket({
+    packet_id: 'nexus:element/validate-after-target',
+    revision_id: 'nexus:element/validate-after-target@r1',
+    kind: 'organization',
+    name: 'Validate After Target',
+  });
+
+  try {
+    const preview = await buildNexusPacketExplorerImportPreview({
+      services,
+      requestBody: {
+        source_text: JSON.stringify(packet),
+        validation_mode: 'validate_after_commit',
+      },
+    });
+
+    assert.equal(preview.validation_mode, 'validate_after_commit');
+    assert.equal(preview.validation_blocked_count, 0);
+
+    const commit = await buildNexusPacketExplorerImportCommit({
+      services,
+      requestBody: {
+        source_text: JSON.stringify(packet),
+        validation_mode: 'validate_after_commit',
+      },
+    });
+
+    assert.equal(commit.committed, true);
+    assert.equal(commit.created_verification_report_packet_ids.length, 1);
+    assert.notEqual(commit.import_report_packet_id, null);
+
+    const verificationSummary =
+      await queryServices.packetStore.getPacketVerificationSummary({
+        packet_id: packet.header.packet_id,
+      });
+
+    assert.equal(verificationSummary?.status, 'unsigned');
+  } finally {
+    queryServices.packetStore.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('validate_before_commit blocks packets with canonicalization mismatches', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'owa-explorer-import-'));
+  const { queryServices, services } = await createImportTestServices(
+    directory,
+    'validate-before-blocked.db'
+  );
+  const createdAt = '2026-05-12T00:00:00.000Z';
+
+  try {
+    const signer = await createSignedIdentityPacket({
+      packetId: 'nexus:element/import-validation-signer',
+      alias: 'Import Validation Signer',
+      createdAt,
+    });
+    const unsignedPacket = createElementPacket({
+      packet_id: 'nexus:element/import-validation-target',
+      revision_id: 'nexus:element/import-validation-target@r1',
+      created_at: createdAt,
+      kind: 'organization',
+      name: 'Import Validation Target',
+    });
+    const signedPacket = await signPacketWithIdentity({
+      packet: unsignedPacket,
+      signerPacketId: signer.packet.header.packet_id,
+      kid: signer.keyBinding.kid,
+      privateKey: signer.keyPair.privateKey,
+      signedAt: createdAt,
+    });
+    const tamperedPacket = {
+      ...signedPacket,
+      body: {
+        ...signedPacket.body,
+        name: 'Tampered Import Validation Target',
+      },
+    };
+    const sourceText = JSON.stringify({
+      bundle_version: 1,
+      packets: [signer.packet, tamperedPacket],
+    });
+
+    const preview = await buildNexusPacketExplorerImportPreview({
+      services,
+      requestBody: {
+        source_text: sourceText,
+        validation_mode: 'validate_before_commit',
+      },
+    });
+
+    assert.equal(preview.status, 'blocked');
+    assert.equal(preview.validation_counts.canonicalization_mismatch, 1);
+    assert.equal(preview.validation_blocked_count, 1);
+
+    const commit = await buildNexusPacketExplorerImportCommit({
+      services,
+      requestBody: {
+        source_text: sourceText,
+        validation_mode: 'validate_before_commit',
+      },
+    });
+
+    assert.equal(commit.committed, false);
+    assert.equal(commit.import_report_packet_id, null);
+    assert.equal(commit.created_verification_report_packet_ids.length, 0);
   } finally {
     queryServices.packetStore.close();
     rmSync(directory, { recursive: true, force: true });
@@ -122,7 +403,7 @@ test('exported bundle imports analyze and commit successfully', async () => {
       },
     });
 
-    assert.equal(preview.status, 'ready');
+    assert.equal(preview.status, 'partial_risk');
     assert.equal(preview.artifact_type, 'bundle');
     assert.equal(preview.new_revision_count, 2);
 

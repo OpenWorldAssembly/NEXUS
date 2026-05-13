@@ -5,10 +5,14 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Pressable, View, useWindowDimensions } from 'react-native';
+import { Modal, Pressable, Text, View, useWindowDimensions } from 'react-native';
 
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
-import { NexusChevronIcon } from '@app/components/nexus/nexus-ui';
+import {
+  NexusActionButton,
+  NexusCard,
+  NexusChevronIcon,
+} from '@app/components/nexus/nexus-ui';
 import { NexusPacketExplorerContent } from '@app/components/nexus/packet-explorer/nexus-packet-explorer-content';
 import { NexusPacketExplorerPrimaryRail } from '@app/components/nexus/packet-explorer/nexus-packet-explorer-primary-rail';
 import type { NexusPacketExplorerSearchCategory } from '@app/components/nexus/packet-explorer/nexus-packet-explorer-search-panel';
@@ -19,7 +23,10 @@ import type {
   ExplorerPacketLoadState,
   ExplorerPacketStateMap,
 } from '@app/components/nexus/packet-explorer/nexus-packet-explorer-types';
-import type { NexusPacketExplorerSearchPayload } from '@runtime/nexus/nexus-api-types';
+import type {
+  NexusPacketExplorerSearchPayload,
+  NexusPacketVerificationActionPayload,
+} from '@runtime/nexus/nexus-api-types';
 import {
   EXPLORER_DESKTOP_BREAKPOINT,
 } from '@app/components/nexus/packet-explorer/nexus-packet-explorer-resize-math';
@@ -30,6 +37,7 @@ import {
 } from '@app/components/nexus/packet-explorer/nexus-packet-explorer-utils';
 import {
   fetchNexusPacketExplorerPayload,
+  runNexusPacketVerification,
   searchNexusPacketExplorerPackets,
 } from '@runtime/nexus/nexus-query-api';
 import {
@@ -99,6 +107,9 @@ export default function NexusPacketExplorer() {
   const [isConfirmingCloseTabs, setIsConfirmingCloseTabs] = useState(false);
   const [isPacketShellBandCollapsed, setIsPacketShellBandCollapsed] = useState(false);
   const [isInspectorBandCollapsed, setIsInspectorBandCollapsed] = useState(false);
+  const [validationNotice, setValidationNotice] =
+    useState<NexusPacketVerificationActionPayload | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const activeTab = getActiveExplorerTab();
   const activePacketId = activeTab?.kind === 'packet' ? activeTab.packet_id : null;
   const isDesktop = width >= EXPLORER_DESKTOP_BREAKPOINT;
@@ -319,6 +330,26 @@ export default function NexusPacketExplorer() {
     }));
   };
 
+  const handleRunVerificationForActivePacket = async (packetId: string) => {
+    try {
+      const payload = await runNexusPacketVerification({
+        packet_id: packetId,
+      });
+
+      setValidationError(null);
+      setValidationNotice(payload);
+      setRetryNonceByPacketId((currentState) => ({
+        ...currentState,
+        [packetId]: (currentState[packetId] ?? 0) + 1,
+      }));
+    } catch (error) {
+      setValidationNotice(null);
+      setValidationError(
+        error instanceof Error ? error.message : 'Unable to validate packet.'
+      );
+    }
+  };
+
   const handleOpenPacketInLibrary = (packetId: string, family?: string | null) => {
     router.push({
       pathname: '/nexus/library',
@@ -503,6 +534,7 @@ export default function NexusPacketExplorer() {
   };
 
   return (
+    <>
     <View className="absolute inset-0 z-30 flex-row justify-end">
       {isDraggingResizeHandle ? (
         <View
@@ -674,10 +706,66 @@ export default function NexusPacketExplorer() {
               onRoutePacketToExport={handleRoutePacketToExport}
               onClearExportTarget={handleClearExportTarget}
               onViewInLibrary={handleOpenPacketInLibrary}
+              onRunVerificationForActivePacket={handleRunVerificationForActivePacket}
             />
           </View>
         </View>
       </View>
     </View>
+    <Modal
+      animationType="fade"
+      onRequestClose={() => {
+        setValidationNotice(null);
+        setValidationError(null);
+      }}
+      transparent
+      visible={validationNotice !== null || validationError !== null}
+    >
+      <View className="flex-1">
+        <Pressable
+          accessibilityRole="button"
+          className="absolute inset-0 bg-black/55"
+          onPress={() => {
+            setValidationNotice(null);
+            setValidationError(null);
+          }}
+        />
+        <View className="flex-1 items-center justify-center px-4">
+          <NexusCard className="w-full max-w-[520px] gap-4">
+            <Text className={headingTextClass}>
+              {validationNotice?.title ?? 'Validation failed'}
+            </Text>
+            <Text className={mutedTextClass}>
+              {validationNotice?.summary ?? validationError ?? ''}
+            </Text>
+            {validationNotice ? (
+              <Text className={mutedTextClass}>
+                Validated at: {validationNotice.validated_at}
+              </Text>
+            ) : null}
+            {validationNotice?.warnings.length ? (
+              <View className="gap-1">
+                {validationNotice.warnings.map((warning) => (
+                  <Text key={warning} className={mutedTextClass}>
+                    {warning}
+                  </Text>
+                ))}
+              </View>
+            ) : null}
+            <View className="flex-row justify-end">
+              <NexusActionButton
+                label="Dismiss"
+                variant="ghost"
+                onPress={() => {
+                  setValidationNotice(null);
+                  setValidationError(null);
+                }}
+              />
+            </View>
+          </NexusCard>
+        </View>
+      </View>
+    </Modal>
+    </>
   );
 }

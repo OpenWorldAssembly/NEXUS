@@ -100,6 +100,27 @@ Current direction:
 
 A governance artifact family that exists in infrastructure and read surfaces, but whose real workflow semantics are still developing.
 
+## Converging civic grammar
+
+The long-term Nexus direction is converging on a smaller reusable civic grammar:
+
+- `Element`
+- `Relation`
+- `Claim`
+- `Attestation`
+- `Report`
+- `Action`
+- `Policy`
+
+Current code already implements most of that grammar directly. `Report` has now landed as a real packet family, but its live use is still intentionally narrow.
+
+Current code now ships the first concrete `Report` family use:
+
+- `Report(subtype: verification_report)`
+- `Report(subtype: import_report)`
+
+This first live usage should still be understood narrowly. The family now exists as real packet infrastructure, but broader audit, incident, decision, or resolution report semantics remain later architectural work rather than implicit current product truth.
+
 ## Schema evolution discipline
 
 Before changing packet schemas, read this chapter first.

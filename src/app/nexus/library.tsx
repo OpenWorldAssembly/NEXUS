@@ -7,6 +7,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScrollView, Text, View } from 'react-native';
 
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
+import { useNexusPreviewTargetParams } from '@app/components/nexus/preview';
 import {
   NexusActionButton,
   NexusBadge,
@@ -26,22 +27,24 @@ type PacketFilter = 'all' | PacketFamily;
  * Output: the packet library view for the current scope lens.
  */
 export default function NexusLibraryPage() {
-  const { activeScope, currentActorPacketId, openPacketInExplorer, packetExplorerSession } =
+  const { activeScope, currentActorPacketId, openPacketInExplorer } =
     useNexusShell();
   const appearance = useNexusAppearance();
   const router = useRouter();
   const scrollViewRef = useRef<ScrollView | null>(null);
   const localParams = useLocalSearchParams<{
     family?: string | string[];
-    packet_id?: string | string[];
   }>();
+  const previewTargetParams = useNexusPreviewTargetParams();
   const requestedFamilyFilter =
     typeof localParams.family === 'string' &&
     PACKET_FAMILIES.includes(localParams.family as PacketFamily)
       ? (localParams.family as PacketFamily)
       : null;
   const highlightedPacketId =
-    typeof localParams.packet_id === 'string' ? localParams.packet_id : null;
+    previewTargetParams.highlightPacketId ??
+    previewTargetParams.focusPacketId ??
+    previewTargetParams.packetId;
   const [packetFilter, setPacketFilter] = useState<PacketFilter>('all');
   const [libraryPayload, setLibraryPayload] = useState<NexusLibraryPayload | null>(
     null,
@@ -119,6 +122,9 @@ export default function NexusLibraryPage() {
     packetFilter === 'all'
       ? allPackets
       : allPackets.filter((packet) => packet.family === packetFilter);
+  const highlightedPacketIsVisible =
+    highlightedPacketId !== null &&
+    visiblePackets.some((packet) => packet.packet.packet_id === highlightedPacketId);
 
   useEffect(() => {
     if (
@@ -129,25 +135,6 @@ export default function NexusLibraryPage() {
       setPacketFilter('all');
     }
   }, [availablePacketFilters, isLoadingLibrary, packetFilter]);
-
-  const highlightedPacketHasExplorerTab =
-    highlightedPacketId !== null &&
-    packetExplorerSession.tabs.some(
-      (tab) => tab.kind === 'packet' && tab.packet_id === highlightedPacketId
-    );
-  const highlightedPacketIsVisible =
-    highlightedPacketId !== null &&
-    visiblePackets.some((packet) => packet.packet.packet_id === highlightedPacketId);
-
-  useEffect(() => {
-    if (!highlightedPacketId || highlightedPacketHasExplorerTab) {
-      return;
-    }
-
-    router.setParams({
-      packet_id: undefined,
-    });
-  }, [highlightedPacketHasExplorerTab, highlightedPacketId, router]);
 
   useEffect(() => {
     if (
@@ -276,7 +263,7 @@ export default function NexusLibraryPage() {
                       </Text>
                       <NexusBadge label={packet.family} tone="sky" />
                       {packet.packet.packet_id === highlightedPacketId ? (
-                        <NexusBadge label="Selected in Explorer" tone="gold" />
+                        <NexusBadge label="Focused packet" tone="gold" />
                       ) : null}
                     </View>
                     <Text className={appearance.sectionBodyClass}>

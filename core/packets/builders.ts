@@ -176,6 +176,18 @@ export interface RelationPacketInput extends PacketBuilderBaseInput {
   effective_until?: string | null;
 }
 
+export interface ReportPacketInput extends PacketBuilderBaseInput {
+  subtype: 'verification_report' | 'import_report';
+  status?: 'active' | 'superseded';
+  target_ref?: PacketRef | null;
+  scope_ref?: PacketRef | null;
+  summary_markdown?: string | null;
+  report_markdown: string;
+  supporting_refs?: PacketRef[];
+  supersedes_ref?: PacketRef | null;
+  report_data?: Record<string, unknown>;
+}
+
 export interface DiscussionThreadPacketInput extends PacketBuilderBaseInput {
   title: string;
   summary?: string | null;
@@ -490,6 +502,24 @@ export function createRelationPacket(
     header: {
       ...input,
       metadata_summary: input.metadata_summary ?? input.note ?? null,
+    },
+  });
+}
+
+/**
+ * Inputs: common packet header fields plus one verification/import report body.
+ * Output: a validated report packet with target/supporting graph edges mirrored from refs.
+ */
+export function createReportPacket(
+  input: ReportPacketInput
+): PacketEnvelopeByType['Report'] {
+  return buildPacket({
+    family: 'Report',
+    body: input,
+    header: {
+      ...input,
+      metadata_summary:
+        input.metadata_summary ?? input.summary_markdown ?? input.report_markdown,
     },
   });
 }

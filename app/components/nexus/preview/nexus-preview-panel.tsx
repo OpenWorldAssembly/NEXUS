@@ -3,7 +3,7 @@
  * Description: Renders a fixed-height Nexus preview panel for compact function or packet previews.
  */
 import type { ReactNode } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { NexusCard, useNexusAppearance } from '@app/components/nexus/nexus-ui';
 
@@ -36,10 +36,8 @@ export function NexusPreviewPanel({
 
   return (
     <NexusCard
-      accessibilityLabel={`Open ${title}`}
       className={joinClasses('h-[335px] min-w-[280px] flex-1 basis-[280px] gap-3', className)}
       contentClassName="h-full gap-3"
-      onPress={onOpen}
     >
       <View className="flex-row flex-wrap items-start justify-between gap-3">
         <View className="gap-1">
@@ -48,9 +46,19 @@ export function NexusPreviewPanel({
           </Text>
           {meta ? <Text className={appearance.itemMetaClass}>{meta}</Text> : null}
         </View>
-        <Text className="text-xs font-bold uppercase tracking-[2px] text-nexus-sky">
-          Open
-        </Text>
+        <Pressable
+          accessibilityLabel={`Open ${title}`}
+          accessibilityRole="button"
+          className="rounded-nexus px-1.5 py-1 active:bg-white/10"
+          onPress={(event) => {
+            event.stopPropagation();
+            onOpen();
+          }}
+        >
+          <Text className="text-xs font-bold uppercase tracking-[2px] text-nexus-sky">
+            Open
+          </Text>
+        </Pressable>
       </View>
 
       <ScrollView

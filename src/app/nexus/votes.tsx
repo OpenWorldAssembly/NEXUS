@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
+import { useNexusPreviewTargetParams } from '@app/components/nexus/preview';
 import {
   NexusActionButton,
   NexusBadge,
@@ -26,6 +27,11 @@ import { fetchNexusVotesPayload } from '@runtime/nexus/nexus-query-api';
 export default function NexusVotesPage() {
   const { activeScope, currentActorPacketId } = useNexusShell();
   const appearance = useNexusAppearance();
+  const previewTargetParams = useNexusPreviewTargetParams();
+  const highlightedPacketId =
+    previewTargetParams.highlightPacketId ??
+    previewTargetParams.focusPacketId ??
+    previewTargetParams.packetId;
   const [votesPayload, setVotesPayload] = useState<NexusVotesPayload | null>(null);
   const [isLoadingVotes, setIsLoadingVotes] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -123,7 +129,14 @@ export default function NexusVotesPage() {
             ) : null}
 
             {voteCards.map((voteCard) => (
-              <NexusCard key={voteCard.packet.packet_id} className="gap-4">
+              <NexusCard
+                key={voteCard.packet.packet_id}
+                className={`gap-4 ${
+                  voteCard.packet.packet_id === highlightedPacketId
+                    ? 'border-nexus-sky/70 bg-nexus-sky/10'
+                    : ''
+                }`}
+              >
                 <View className="gap-2">
                   <View className="flex-row flex-wrap items-center gap-2">
                     <Text className={appearance.surfaceTitleClass}>{voteCard.title}</Text>
@@ -131,6 +144,9 @@ export default function NexusVotesPage() {
                       label={voteCard.status ?? voteCard.family}
                       tone="gold"
                     />
+                    {voteCard.packet.packet_id === highlightedPacketId ? (
+                      <NexusBadge label="Focused" tone="sky" />
+                    ) : null}
                   </View>
                   <Text className={appearance.sectionBodyClass}>
                     {voteCard.summary ?? 'No packet summary available.'}

@@ -10,6 +10,12 @@ import {
 } from '@core/packets/builders';
 import type { PacketRef } from '@core/schema/packet-schema';
 import {
+  createIdentityKeyBinding,
+  exportIdentityKeyPairToJwk,
+  generateP256KeyPair,
+  signPacketWithIdentity,
+} from '@runtime/nexus/identity-crypto';
+import {
   buildNexusPacketExplorerExportPreview,
 } from '@runtime/nexus/server/nexus-packet-export';
 import { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store';
@@ -108,6 +114,44 @@ async function createExportTestServices(directory: string) {
   };
 }
 
+async function createServiceSignerPacket(input: {
+  packetId: string;
+  createdAt: string;
+}) {
+  const keyPair = await generateP256KeyPair();
+  const jwkPair = await exportIdentityKeyPairToJwk(keyPair);
+  const keyBinding = await createIdentityKeyBinding({
+    publicJwk: jwkPair.publicJwk,
+    addedAt: input.createdAt,
+  });
+  const packet = createElementPacket({
+    packet_id: input.packetId,
+    revision_id: `${input.packetId}@r1`,
+    created_at: input.createdAt,
+    kind: 'service',
+    name: 'Export Signer',
+    subtype: 'local_validator',
+    identity: {
+      alias: 'Export Signer',
+      claim_status: 'claimed',
+      location_disclosure: null,
+      public_key_bindings: [keyBinding],
+    },
+  });
+
+  return {
+    keyPair,
+    keyBinding,
+    packet: await signPacketWithIdentity({
+      packet,
+      signerPacketId: input.packetId,
+      kid: keyBinding.kid,
+      privateKey: keyPair.privateKey,
+      signedAt: input.createdAt,
+    }),
+  };
+}
+
 test('raw packet export previews the current preferred revision envelope', async () => {
   const directory = mkdtempSync(join(tmpdir(), 'owa-explorer-export-'));
   const { queryServices, services, fixture } = await createExportTestServices(
@@ -203,6 +247,61 @@ test('full store export includes every known packet and revision', async () => {
     assert.equal(preview.packet_count, 6);
     assert.equal(preview.revision_count, 7);
     assert.deepEqual(preview.root_packet_refs, []);
+  } finally {
+    queryServices.packetStore.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('bundle export closure includes signer identity packets for signed packets', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'owa-explorer-export-'));
+  const queryServices = await createNodeSQLiteQueryServicesAsync({
+    packetStore: new NodeSQLitePacketStore({
+      databasePath: join(directory, 'owa-export-signer.db'),
+    }),
+  });
+  const services = queryServices;
+  const createdAt = '2026-05-12T00:00:00.000Z';
+
+  try {
+    const signer = await createServiceSignerPacket({
+      packetId: 'nexus:element/export-validator',
+      createdAt,
+    });
+    const signedPacket = await signPacketWithIdentity({
+      packet: createElementPacket({
+        packet_id: 'nexus:element/export-signed-target',
+        revision_id: 'nexus:element/export-signed-target@r1',
+        created_at: createdAt,
+        kind: 'organization',
+        name: 'Export Signed Target',
+      }),
+      signerPacketId: signer.packet.header.packet_id,
+      kid: signer.keyBinding.kid,
+      privateKey: signer.keyPair.privateKey,
+      signedAt: createdAt,
+    });
+
+    await queryServices.packetStore.writeRevision(signer.packet);
+    await queryServices.packetStore.writeRevision(signedPacket);
+
+    const preview = await buildNexusPacketExplorerExportPreview({
+      services,
+      requestBody: {
+        artifact_mode: 'bundle',
+        bundle_mode: 'packet_history',
+        root_packet_id: signedPacket.header.packet_id,
+      },
+    });
+    const parsedBundle = JSON.parse(preview.preview_json ?? 'null') as {
+      packets: { header: { packet_id: string } }[];
+    };
+    const packetIds = new Set(
+      parsedBundle.packets.map((packet) => packet.header.packet_id)
+    );
+
+    assert.equal(packetIds.has(signedPacket.header.packet_id), true);
+    assert.equal(packetIds.has(signer.packet.header.packet_id), true);
   } finally {
     queryServices.packetStore.close();
     rmSync(directory, { recursive: true, force: true });

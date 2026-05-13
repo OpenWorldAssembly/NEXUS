@@ -48,6 +48,45 @@ export interface BundleImportResult {
   edge_count: number;
 }
 
+export type NexusPacketValidationMode =
+  | 'dont_validate'
+  | 'validate_before_commit'
+  | 'validate_after_commit';
+
+export type NexusPacketVerificationStatus =
+  | 'not_validated'
+  | 'unsigned'
+  | 'signature_valid'
+  | 'signature_invalid'
+  | 'canonicalization_mismatch'
+  | 'unknown_signer'
+  | 'trusted_signer'
+  | 'external_report_only';
+
+export interface NexusPacketVerificationSummary {
+  packet_id: string;
+  target_revision_id: string | null;
+  target_digest: string | null;
+  latest_report_packet_id: string | null;
+  latest_report_revision_id: string | null;
+  latest_report_source: 'local' | 'external';
+  status: NexusPacketVerificationStatus;
+  structural_valid: boolean;
+  compatibility_status: 'native' | 'adapted' | 'lossy' | 'blocked';
+  signature_status:
+    | 'missing'
+    | 'valid'
+    | 'unverifiable'
+    | 'invalid'
+    | 'canonicalization_mismatch';
+  signer_status: 'missing' | 'unknown' | 'known' | 'trusted';
+  provenance_status: 'local' | 'imported' | 'unknown';
+  local_trust_status: 'trusted' | 'untrusted' | 'unknown';
+  warnings_count: number;
+  validated_at: string | null;
+  validator_packet_id: string | null;
+}
+
 export interface PacketHeadStatus {
   preferred_revision: PacketRevisionRef | null;
   head_revisions: PacketRevisionRef[];
@@ -98,6 +137,17 @@ export interface PacketStore {
   ): Promise<PacketRevisionRef>;
   importBundle(bundle: Uint8Array | ArrayBuffer | string): Promise<BundleImportResult>;
   exportBundle(packet_refs: PacketRef[]): Promise<BundleExportResult>;
+  listPreferredPacketsByFamily<TFamily extends PacketFamily>(
+    family: TFamily
+  ): Promise<PacketEnvelopeByType[TFamily][]>;
+  listPreferredPackets(): Promise<PacketEnvelope[]>;
+  getPacketVerificationSummary(
+    packet: PacketRef
+  ): Promise<NexusPacketVerificationSummary | null>;
+  listPacketVerificationSummaries(): Promise<NexusPacketVerificationSummary[]>;
+  writePacketVerificationSummary(
+    summary: NexusPacketVerificationSummary
+  ): Promise<void>;
 }
 
 export interface BrowserPacketProjection {
@@ -126,6 +176,16 @@ export interface NexusScopeLens {
 }
 
 export type NexusActionId =
+  | 'packet.focus'
+  | 'packet.open_surface'
+  | 'packet.open_explorer'
+  | 'packet.validate'
+  | 'packet.revalidate'
+  | 'packet.view_verification'
+  | 'packet.view_library'
+  | 'packet.view_raw'
+  | 'packet.export'
+  | 'packet.copy_id'
   | 'discussion.open_thread'
   | 'discussion.reply'
   | 'discussion.vote_up'
@@ -156,11 +216,20 @@ export interface NexusActionState {
   auth_gate_reason?: string | null;
   target_packet_id?: string | null;
   target_revision_id?: string | null;
+  target_family?: PacketFamily | null;
+  target_surface?: string | null;
+  target_intent?: string | null;
+  target_view?: string | null;
+  target_primary_tab?: string | null;
+  target_home_subtab?: string | null;
+  target_report_packet_id?: string | null;
 }
 
 export interface NexusActionIntentDescriptor {
   id: NexusActionId;
   execution_kind: NexusActionExecutionKind;
+  label?: string;
+  description?: string;
   mutation_kind?: MutationIntent['kind'];
   requires_selection?: boolean;
   target_kind?: string | null;
@@ -177,6 +246,7 @@ export interface NexusPacketCardProjection {
   summary: string | null;
   status: string | null;
   created_at: string;
+  verification: NexusPacketVerificationSummary | null;
 }
 
 export interface NexusLibraryQueryOptions {
@@ -310,6 +380,33 @@ export interface DiscussionWorkspaceComposer {
   reply_target_packet_id: string | null;
 }
 
+export type DiscussionNavigationTargetKind =
+  | 'space'
+  | 'forum'
+  | 'topic'
+  | 'root_post'
+  | 'reply'
+  | 'unknown';
+
+export interface DiscussionNavigationTarget {
+  requested_packet_id: string;
+  target_kind: DiscussionNavigationTargetKind;
+  forum_id: string | null;
+  root_post_packet_id: string | null;
+  focus_packet_id: string | null;
+  highlight_packet_id: string | null;
+  focus_path_packet_ids: string[];
+}
+
+export interface DiscussionFocusModel {
+  root_post_packet_id: string;
+  focus_packet_id: string;
+  highlight_packet_id: string;
+  ancestor_packet_ids: string[];
+  focus_path_packet_ids: string[];
+  focus_chain_items: DiscussionPostProjection[];
+}
+
 export interface DiscussionWorkspaceModel {
   lens: NexusScopeLens;
   active_view: DiscussionWorkspaceView;
@@ -321,6 +418,7 @@ export interface DiscussionWorkspaceModel {
   feed_items: DiscussionPostProjection[];
   thread_root: DiscussionPostProjection | null;
   thread_items: DiscussionReplyProjection[];
+  focus: DiscussionFocusModel | null;
   workspace_actions: NexusActionMap;
   action_descriptors: NexusActionIntentDescriptor[];
   composer: DiscussionWorkspaceComposer;
@@ -370,6 +468,7 @@ export interface DiscussionQueryService {
   getThreadDetail(input: {
     scope_id: string;
     post_packet_id: string;
+    focus_packet_id?: string | null;
     reply_sort: DiscussionReplySort | null;
     show_hidden: boolean;
     viewer_actor_key: string | null;
@@ -391,6 +490,8 @@ export interface DiscussionQueryService {
     forum_id: string | null;
     view: DiscussionWorkspaceView;
     post_packet_id: string | null;
+    focus_packet_id?: string | null;
+    highlight_packet_id?: string | null;
     reply_target_packet_id: string | null;
     sort: DiscussionSort | null;
     reply_sort: DiscussionReplySort | null;
@@ -399,6 +500,10 @@ export interface DiscussionQueryService {
     feed_limit?: number | null;
     reply_limit?: number | null;
   }): Promise<DiscussionWorkspaceModel>;
+  resolveNavigationTarget(input: {
+    scope_id: string;
+    packet_id: string;
+  }): Promise<DiscussionNavigationTarget>;
 }
 
 export interface AttestationService {

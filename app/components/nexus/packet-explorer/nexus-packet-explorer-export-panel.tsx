@@ -59,6 +59,39 @@ const BUNDLE_SCOPE_OPTIONS: {
   },
 ];
 
+function getVerificationLookupBadge(
+  verification: NexusPacketExplorerSearchResultRow['verification']
+): { label: string; tone?: 'default' | 'sky' | 'gold' | 'rose' | 'mint' } | null {
+  if (!verification) {
+    return null;
+  }
+
+  if (
+    verification.status === 'signature_invalid' ||
+    verification.status === 'canonicalization_mismatch'
+  ) {
+    return { label: 'Validation failed', tone: 'rose' };
+  }
+
+  if (verification.status === 'trusted_signer') {
+    return { label: 'Validated locally', tone: 'mint' };
+  }
+
+  if (verification.status === 'unsigned') {
+    return { label: 'Unsigned', tone: 'gold' };
+  }
+
+  if (verification.status === 'unknown_signer') {
+    return { label: 'Signer unavailable locally', tone: 'gold' };
+  }
+
+  if (verification.status === 'external_report_only') {
+    return { label: 'External report only', tone: 'gold' };
+  }
+
+  return { label: verification.status.replace(/_/g, ' ') };
+}
+
 function createIdleWorkflowState(): ExportWorkflowState {
   return {
     preview: null,
@@ -643,25 +676,41 @@ export function NexusPacketExplorerExportPanel({
               {lookupResults.length > 0 ? (
                 <NexusCard className="gap-2">
                   {lookupResults.map((result, resultIndex) => (
-                    <Pressable
-                      key={`${result.packet_id}:${result.match_type}:${result.matched_revision_id ?? result.revision_id ?? 'none'}`}
-                      className={`rounded-[3px] border px-3 py-3 ${
-                        resultIndex === activeLookupIndex
-                          ? appearance.cardInsetClass
-                          : 'border-transparent'
-                      }`}
-                      onPress={() => handleSelectLookupResult(result)}
-                    >
-                      <Text className={appearance.itemTitleClass}>
-                        {result.title}
-                      </Text>
-                      <Text className={appearance.itemMetaClass}>
-                        {result.match_reason}
-                      </Text>
-                      <Text className={appearance.itemBodyClass}>
-                        {result.packet_id}
-                      </Text>
-                    </Pressable>
+                    (() => {
+                      const verificationBadge = getVerificationLookupBadge(
+                        result.verification
+                      );
+
+                      return (
+                        <Pressable
+                          key={`${result.packet_id}:${result.match_type}:${result.matched_revision_id ?? result.revision_id ?? 'none'}`}
+                          className={`rounded-[3px] border px-3 py-3 ${
+                            resultIndex === activeLookupIndex
+                              ? appearance.cardInsetClass
+                              : 'border-transparent'
+                          }`}
+                          onPress={() => handleSelectLookupResult(result)}
+                        >
+                          <View className="flex-row flex-wrap items-center gap-2">
+                            <Text className={appearance.itemTitleClass}>
+                              {result.title}
+                            </Text>
+                            {verificationBadge ? (
+                              <NexusBadge
+                                label={verificationBadge.label}
+                                tone={verificationBadge.tone}
+                              />
+                            ) : null}
+                          </View>
+                          <Text className={appearance.itemMetaClass}>
+                            {result.match_reason}
+                          </Text>
+                          <Text className={appearance.itemBodyClass}>
+                            {result.packet_id}
+                          </Text>
+                        </Pressable>
+                      );
+                    })()
                   ))}
                 </NexusCard>
               ) : null}

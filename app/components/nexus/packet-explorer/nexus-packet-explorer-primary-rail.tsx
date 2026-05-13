@@ -10,6 +10,10 @@ const PRIMARY_TAB_OPTIONS: {
     label: 'Data',
   },
   {
+    id: 'verification',
+    label: 'Validation',
+  },
+  {
     id: 'lineage',
     label: 'Lineage',
   },

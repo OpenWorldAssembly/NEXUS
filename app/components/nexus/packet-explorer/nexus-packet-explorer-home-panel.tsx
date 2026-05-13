@@ -16,8 +16,9 @@ type PacketExplorerRoutePacketInput = {
   seedSummary?: {
     family: string | null;
     summary: string | null;
-    label: string | null;
-  } | null;
+      label: string | null;
+    } | null;
+  activePrimaryTab?: 'data' | 'lineage' | 'verification' | 'links' | 'actions';
 };
 
 type NexusPacketExplorerHomePanelProps = {

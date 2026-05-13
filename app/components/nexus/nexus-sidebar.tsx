@@ -95,6 +95,7 @@ type NexusScopeMenuRowProps = {
 type NexusFunctionMenuContentProps = {
   activeScope: NexusScopeSummary;
   activeSection: NexusSection;
+  showActiveSelection: boolean;
   showScopedLabel: boolean;
   themeMode: NexusThemeMode;
   uiDensity: NexusUiDensity;
@@ -674,6 +675,7 @@ function NexusScopeMenuRow({
 function NexusFunctionMenuContent({
   activeScope,
   activeSection,
+  showActiveSelection,
   showScopedLabel,
   themeMode,
   uiDensity,
@@ -694,7 +696,7 @@ function NexusFunctionMenuContent({
           <NexusPrimaryNavItem
             key={section}
             detail={getNexusSectionMenuDetail(section, activeScope)}
-            isActive={activeSection === section}
+            isActive={showActiveSelection && activeSection === section}
             onPress={() => onSectionPress(section)}
             title={getNexusSectionMenuTitle(section, activeScope)}
             themeMode={themeMode}
@@ -1309,6 +1311,10 @@ export default function NexusSidebar({
         : 'save';
 
   const isFunctionMode = navigationMode === 'function';
+  const isGraphSurface = NEXUS_SECTION_ORDER.some(
+    (section) => pathname === `/nexus/${section}` || pathname.startsWith(`/nexus/${section}/`)
+  );
+  const visualActiveScopeId = isGraphSurface ? activeScopeId : '';
   const isLargeUi = uiDensity === 'large';
   const railWidth = getNexusRailWidth(uiDensity);
   const primaryTitle = isFunctionMode ? 'Function menu' : 'Scope menu';
@@ -1802,13 +1808,14 @@ export default function NexusSidebar({
                     activeScope={activeScope}
                     activeSection={activeSection}
                     onSectionPress={handleSectionPress}
+                    showActiveSelection={isGraphSurface}
                     showScopedLabel={false}
                     themeMode={themeMode}
                     uiDensity={uiDensity}
                   />
                 ) : (
                   <NexusScopeMenuContent
-                    activeScopeId={activeScopeId}
+                    activeScopeId={visualActiveScopeId}
                     associatedScopes={associatedScopes}
                     discoverableScopes={discoverableScopes}
                     followedScopes={followedScopes}
@@ -1903,7 +1910,7 @@ export default function NexusSidebar({
               <View className="gap-3">
                 {isFunctionMode ? (
                   <NexusScopeMenuContent
-                    activeScopeId={activeScopeId}
+                    activeScopeId={visualActiveScopeId}
                     associatedScopes={associatedScopes}
                     discoverableScopes={discoverableScopes}
                     followedScopes={followedScopes}
@@ -1929,6 +1936,7 @@ export default function NexusSidebar({
                     activeScope={activeScope}
                     activeSection={activeSection}
                     onSectionPress={handleSectionPress}
+                    showActiveSelection={isGraphSurface}
                     showScopedLabel={true}
                     themeMode={themeMode}
                     uiDensity={uiDensity}

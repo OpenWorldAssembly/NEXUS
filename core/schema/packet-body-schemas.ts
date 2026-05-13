@@ -542,6 +542,21 @@ export const MissionReportBodySchema = z
   })
   .strict();
 
+export const ReportBodySchema = z
+  .object({
+    type: z.literal('report').default('report'),
+    subtype: z.enum(['verification_report', 'import_report']),
+    status: z.enum(['active', 'superseded']).default('active'),
+    target_ref: PacketRefSchema.nullable().default(null),
+    scope_ref: PacketRefSchema.nullable().default(null),
+    summary_markdown: z.string().min(1).nullable().default(null),
+    report_markdown: z.string().min(1),
+    supporting_refs: z.array(PacketRefSchema).default([]),
+    supersedes_ref: PacketRefSchema.nullable().default(null),
+    report_data: z.record(z.string(), z.unknown()).default({}),
+  })
+  .strict();
+
 export const ModuleBodySchema = z
   .object({
     title: z.string().min(1),
@@ -774,6 +789,7 @@ export const PACKET_BODY_SCHEMAS = {
   Role: RoleBodySchema,
   Claim: ClaimBodySchema,
   Relation: RelationBodySchema,
+  Report: ReportBodySchema,
   Signal: SignalBodySchema,
   Proposal: ProposalBodySchema,
   Vote: VoteBodySchema,

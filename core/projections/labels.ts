@@ -18,6 +18,7 @@ const FAMILY_LABELS: Record<PacketEnvelope['header']['family'], string> = {
   Role: 'role packet',
   Claim: 'claim packet',
   Relation: 'relation packet',
+  Report: 'report packet',
   Signal: 'signal packet',
   Proposal: 'proposal packet',
   Vote: 'vote packet',
@@ -122,6 +123,10 @@ export function getPacketDisplayLabel(packet: PacketEnvelope): string {
       const body = packet.body as PacketBodyByType['Relation'];
       return `${titleCase(body.subtype)} relation`;
     }
+    case 'Report': {
+      const body = packet.body as PacketBodyByType['Report'];
+      return `${titleCase(body.subtype)} report`;
+    }
     case 'Policy': {
       const body = packet.body as PacketBodyByType['Policy'];
       if (body.policy_kind === 'charter') {
@@ -196,6 +201,10 @@ export function getPacketTitle(packet: PacketEnvelope): string {
       const body = packet.body as PacketBodyByType['Relation'];
       return `${titleCase(body.subtype)} relation`;
     }
+    case 'Report': {
+      const body = packet.body as PacketBodyByType['Report'];
+      return `${titleCase(body.subtype)} report`;
+    }
     case 'Role': {
       const body = packet.body as PacketBodyByType['Role'];
       return body.title;
@@ -255,6 +264,10 @@ export function getPacketSummary(packet: PacketEnvelope): string | null {
       const body = packet.body as PacketBodyByType['MissionReport'];
       return body.notes;
     }
+    case 'Report': {
+      const body = packet.body as PacketBodyByType['Report'];
+      return body.summary_markdown ?? body.report_markdown ?? null;
+    }
     case 'Policy': {
       const body = packet.body as PacketBodyByType['Policy'];
       return body.summary ?? null;
@@ -296,6 +309,10 @@ export function getPacketStatus(packet: PacketEnvelope): string | null {
     }
     case 'Relation': {
       const body = packet.body as PacketBodyByType['Relation'];
+      return body.status;
+    }
+    case 'Report': {
+      const body = packet.body as PacketBodyByType['Report'];
       return body.status;
     }
     case 'Decision': {

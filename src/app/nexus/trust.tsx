@@ -11,6 +11,7 @@ import { ScrollView, Text, TextInput, View } from 'react-native';
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
 import { useNexusAuthGate } from '@app/components/nexus/nexus-auth-gate';
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
+import { useNexusPreviewTargetParams } from '@app/components/nexus/preview';
 import {
   NexusActionButton,
   NexusBadge,
@@ -42,6 +43,11 @@ export default function NexusTrustPage() {
   } = useNexusShell();
   const { currentMode, isAuthenticated, runFortressMutation } =
     useIdentityShell();
+  const previewTargetParams = useNexusPreviewTargetParams();
+  const highlightedPacketId =
+    previewTargetParams.highlightPacketId ??
+    previewTargetParams.focusPacketId ??
+    previewTargetParams.packetId;
   const { authGateModal, guardNexusWrite, openNexusAuthGateForError } =
     useNexusAuthGate({
       returnTo: '/nexus/trust',
@@ -544,7 +550,11 @@ export default function NexusTrustPage() {
                   {assemblyClaims.map((claim) => (
                     <NexusCard
                       key={claim.claim_packet_id}
-                      className={`gap-3 p-4 ${appearance.cardInsetClass}`}
+                      className={`gap-3 p-4 ${appearance.cardInsetClass} ${
+                        claim.claim_packet_id === highlightedPacketId
+                          ? 'border-nexus-sky/70 bg-nexus-sky/10'
+                          : ''
+                      }`}
                     >
                       <View className="flex-row flex-wrap items-center gap-2">
                         <Text className={appearance.itemTitleClass}>
@@ -554,6 +564,9 @@ export default function NexusTrustPage() {
                           label={claim.status === 'active' ? 'Active claim' : 'Withdrawn'}
                           tone={claim.status === 'active' ? 'mint' : 'default'}
                         />
+                        {claim.claim_packet_id === highlightedPacketId ? (
+                          <NexusBadge label="Focused" tone="sky" />
+                        ) : null}
                       </View>
                       <Text className={appearance.itemBodyClass}>
                         {claim.note ?? 'No note added to this claim yet.'}
@@ -591,7 +604,11 @@ export default function NexusTrustPage() {
                 {roleCards.map((roleCard) => (
                   <NexusCard
                     key={roleCard.role_packet_id}
-                    className={`gap-3 p-4 ${appearance.cardInsetClass}`}
+                    className={`gap-3 p-4 ${appearance.cardInsetClass} ${
+                      roleCard.role_packet_id === highlightedPacketId
+                        ? 'border-nexus-sky/70 bg-nexus-sky/10'
+                        : ''
+                    }`}
                   >
                     <View className="flex-row flex-wrap items-center gap-2">
                       <Text className={appearance.itemTitleClass}>{roleCard.title}</Text>
@@ -599,6 +616,9 @@ export default function NexusTrustPage() {
                         label={roleCard.stage.replace(/_/g, ' ')}
                         tone={roleCard.stage === 'role_eligible' ? 'mint' : 'gold'}
                       />
+                      {roleCard.role_packet_id === highlightedPacketId ? (
+                        <NexusBadge label="Focused" tone="sky" />
+                      ) : null}
                     </View>
                     <Text className={appearance.itemBodyClass}>
                       {roleCard.summary ?? 'No summary available yet.'}

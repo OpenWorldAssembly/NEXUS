@@ -3,20 +3,29 @@
  * Description: Analyzes and commits Packet Explorer import requests over the shared packet store.
  */
 
+import { sha256Base64Url } from '@core/crypto/canonical-json';
 import {
   inspectPacketEnvelope,
   type PacketEnvelope,
   type PacketRef,
 } from '@core/schema/packet-schema';
 import type {
+  NexusPacketValidationMode,
+} from '@core/contracts';
+import type {
   NexusPacketExplorerImportArtifactType,
   NexusPacketExplorerImportCommitPayload,
+  NexusPacketExplorerImportHistoryPayload,
+  NexusPacketExplorerImportHistoryRequest,
   NexusPacketExplorerImportPreviewPayload,
   NexusPacketExplorerImportRequest,
 } from '@runtime/nexus/nexus-api-types';
 import type { NexusPacketServices } from '@runtime/nexus/server/nexus-packet-services.types';
 
-type PacketImportServices = Pick<NexusPacketServices, 'packetStore'>;
+type PacketImportServices = Pick<
+  NexusPacketServices,
+  'packetStore' | 'verificationService'
+>;
 
 type NormalizedImportEntry = {
   rawPacket: unknown;
@@ -38,7 +47,35 @@ type AnalyzedImport = {
   normalizedBundleText: string | null;
   affectedPacketIds: string[];
   packetIdsWithNewRevisions: string[];
+  validationMode: NexusPacketValidationMode;
 };
+
+type ValidationCounts = NexusPacketExplorerImportPreviewPayload['validation_counts'];
+
+function createEmptyValidationCounts(): ValidationCounts {
+  return {
+    trusted_signer: 0,
+    signature_valid: 0,
+    unknown_signer: 0,
+    unsigned: 0,
+    signature_invalid: 0,
+    canonicalization_mismatch: 0,
+  };
+}
+
+function normalizeValidationMode(
+  value: NexusPacketExplorerImportRequest['validation_mode']
+): NexusPacketValidationMode {
+  if (
+    value === 'dont_validate' ||
+    value === 'validate_after_commit' ||
+    value === 'validate_before_commit'
+  ) {
+    return value;
+  }
+
+  return 'validate_before_commit';
+}
 
 type PreferredSnapshot = {
   preferredRevisionId: string | null;
@@ -105,6 +142,7 @@ function buildBlockedPreviewPayload(input: {
   sourceFileName: string | null;
   status: NexusPacketExplorerImportPreviewPayload['status'];
   blockingErrors: string[];
+  validationMode: NexusPacketValidationMode;
 }): NexusPacketExplorerImportPreviewPayload {
   return {
     artifact_type: null,
@@ -129,6 +167,10 @@ function buildBlockedPreviewPayload(input: {
     warnings: [],
     open_packet_id: null,
     source_file_name: input.sourceFileName,
+    validation_mode: input.validationMode,
+    validation_counts: createEmptyValidationCounts(),
+    validation_blocked_count: 0,
+    validation_report_packet_ids: [],
   };
 }
 
@@ -253,11 +295,136 @@ function normalizeImportSource(
   };
 }
 
+async function assessImportVerification(input: {
+  services: PacketImportServices;
+  entries: NormalizedImportEntry[];
+  existingRevisionPresence: Map<string, boolean>;
+}): Promise<{
+  validationCounts: ValidationCounts;
+  validationBlockedCount: number;
+  validationWarnings: string[];
+}> {
+  const verificationCounts = createEmptyValidationCounts();
+  const validationWarnings: string[] = [];
+  const signerPacketIds = new Set<string>();
+  const importedSignerPacketsById = new Map<string, PacketEnvelope>();
+
+  for (const entry of input.entries) {
+    importedSignerPacketsById.set(
+      entry.adaptedPacket.header.packet_id,
+      entry.adaptedPacket
+    );
+    const signerPacketId =
+      entry.adaptedPacket.header.integrity.embedded_signatures[0]?.signer_packet_ref
+        .packet_id ?? null;
+
+    if (signerPacketId) {
+      signerPacketIds.add(signerPacketId);
+    }
+  }
+
+  const signerPacketsById = new Map<string, PacketEnvelope | null>();
+
+  await Promise.all(
+    Array.from(signerPacketIds).map(async (packetId) => {
+      if (importedSignerPacketsById.has(packetId)) {
+        signerPacketsById.set(packetId, importedSignerPacketsById.get(packetId)!);
+        return;
+      }
+
+      const signerPacket = await input.services.packetStore.fetchByPacket({
+        packet_id: packetId,
+      });
+      signerPacketsById.set(packetId, signerPacket);
+    })
+  );
+
+  let validationBlockedCount = 0;
+
+  for (const entry of input.entries) {
+    const revisionKey = getRevisionKey(
+      entry.adaptedPacket.header.packet_id,
+      entry.adaptedPacket.header.revision_id
+    );
+
+    if (input.existingRevisionPresence.get(revisionKey) === true) {
+      continue;
+    }
+
+    const signerPacketId =
+      entry.adaptedPacket.header.integrity.embedded_signatures[0]?.signer_packet_ref
+        .packet_id ?? null;
+    const assessment = await input.services.verificationService.assessPacket({
+      rawPacket: entry.rawPacket,
+      packet: entry.adaptedPacket,
+      signerPacket: signerPacketId
+        ? signerPacketsById.get(signerPacketId) ?? null
+        : null,
+      compatibilityStatus: 'native',
+      provenanceStatus: 'imported',
+    });
+
+    switch (assessment.status) {
+      case 'trusted_signer':
+        verificationCounts.trusted_signer += 1;
+        break;
+      case 'signature_valid':
+        verificationCounts.signature_valid += 1;
+        break;
+      case 'unknown_signer':
+        verificationCounts.unknown_signer += 1;
+        break;
+      case 'unsigned':
+        verificationCounts.unsigned += 1;
+        break;
+      case 'signature_invalid':
+        verificationCounts.signature_invalid += 1;
+        break;
+      case 'canonicalization_mismatch':
+        verificationCounts.canonicalization_mismatch += 1;
+        break;
+      default:
+        break;
+    }
+
+    if (
+      assessment.status === 'signature_invalid' ||
+      assessment.status === 'canonicalization_mismatch'
+    ) {
+      validationBlockedCount += 1;
+      validationWarnings.push(
+        `Packet ${entry.adaptedPacket.header.packet_id} failed signature validation (${assessment.status.replace(/_/g, ' ')}).`
+      );
+      continue;
+    }
+
+    if (
+      assessment.status === 'unsigned' ||
+      assessment.status === 'unknown_signer'
+    ) {
+      validationWarnings.push(
+        `Packet ${entry.adaptedPacket.header.packet_id} will import as untrusted (${assessment.status.replace(/_/g, ' ')}).`
+      );
+      continue;
+    }
+
+  }
+
+  return {
+    validationCounts: verificationCounts,
+    validationBlockedCount,
+    validationWarnings,
+  };
+}
+
 async function analyzeImportRequest(input: {
   services: PacketImportServices;
   requestBody: NexusPacketExplorerImportRequest;
 }): Promise<AnalyzedImport> {
   const sourceFileName = trimOptionalString(input.requestBody.file_name ?? null);
+  const validationMode = normalizeValidationMode(
+    input.requestBody.validation_mode ?? null
+  );
 
   let normalizedSource: NormalizedImportSource;
 
@@ -274,10 +441,12 @@ async function analyzeImportRequest(input: {
         sourceFileName,
         status: 'invalid_json',
         blockingErrors: [message],
+        validationMode,
       }),
       normalizedBundleText: null,
       affectedPacketIds: [],
       packetIdsWithNewRevisions: [],
+      validationMode,
     };
   }
 
@@ -464,16 +633,36 @@ async function analyzeImportRequest(input: {
         : affectedPacketIds.length === 1
           ? affectedPacketIds[0] ?? null
           : null;
+  const orderedValidEntries = orderImportEntries({
+    entries: validEntries,
+    existingRevisionPresence,
+  });
+  let validationCounts = createEmptyValidationCounts();
+  let validationBlockedCount = 0;
+
+  if (validationMode === 'validate_before_commit') {
+    const verificationAssessment = await assessImportVerification({
+      services: input.services,
+      entries: orderedValidEntries,
+      existingRevisionPresence,
+    });
+
+    validationCounts = verificationAssessment.validationCounts;
+    validationBlockedCount = verificationAssessment.validationBlockedCount;
+    warnings.push(...verificationAssessment.validationWarnings);
+
+    if (validationBlockedCount > 0) {
+      blockingErrors.push(
+        `${validationBlockedCount} packet${validationBlockedCount === 1 ? '' : 's'} failed validation and must be fixed or imported with validate-after-commit or don’t-validate mode.`
+      );
+    }
+  }
   const status = getImportStatus({
     hasInvalidJson: false,
     blockingErrors,
     newRevisionCount,
     duplicateRevisionCount,
     warnings,
-  });
-  const orderedValidEntries = orderImportEntries({
-    entries: validEntries,
-    existingRevisionPresence,
   });
 
   return {
@@ -500,6 +689,10 @@ async function analyzeImportRequest(input: {
       warnings,
       open_packet_id: openPacketId,
       source_file_name: sourceFileName,
+      validation_mode: validationMode,
+      validation_counts: validationCounts,
+      validation_blocked_count: validationBlockedCount,
+      validation_report_packet_ids: [],
     },
     normalizedBundleText:
       orderedValidEntries.length > 0
@@ -510,6 +703,7 @@ async function analyzeImportRequest(input: {
         : null,
     affectedPacketIds,
     packetIdsWithNewRevisions: Array.from(packetIdsWithNewRevisions),
+    validationMode,
   };
 }
 
@@ -618,6 +812,27 @@ export function parseNexusPacketExplorerImportRequest(
     source_text: candidate.source_text,
     file_name:
       typeof candidate.file_name === 'string' ? candidate.file_name : null,
+    validation_mode: normalizeValidationMode(
+      (candidate.validation_mode as NexusPacketValidationMode | null | undefined) ??
+        null
+    ),
+  };
+}
+
+export function parseNexusPacketExplorerImportHistoryRequest(
+  input: unknown
+): NexusPacketExplorerImportHistoryRequest {
+  if (!input || typeof input !== 'object') {
+    return {};
+  }
+
+  const candidate = input as Record<string, unknown>;
+
+  return {
+    limit:
+      typeof candidate.limit === 'number' && Number.isFinite(candidate.limit)
+        ? candidate.limit
+        : null,
   };
 }
 
@@ -647,6 +862,8 @@ export async function buildNexusPacketExplorerImportCommit(input: {
       skipped_duplicate_count: analyzedImport.payload.duplicate_revision_count,
       restored_preferred_packet_count: 0,
       diverged_packet_count: 0,
+      import_report_packet_id: null,
+      created_verification_report_packet_ids: [],
     };
   }
 
@@ -662,6 +879,39 @@ export async function buildNexusPacketExplorerImportCommit(input: {
     packetIdsWithNewRevisions: analyzedImport.packetIdsWithNewRevisions,
     snapshots: preferredSnapshots,
   });
+  const validationMode = analyzedImport.validationMode;
+  const shouldCreateVerificationReports =
+    validationMode === 'validate_before_commit' ||
+    validationMode === 'validate_after_commit';
+  const createdVerificationReports = shouldCreateVerificationReports
+    ? await Promise.all(
+        analyzedImport.affectedPacketIds.map((packetId) =>
+          input.services.verificationService.validatePacket(packetId)
+        )
+      )
+    : [];
+  const sourceDigest = await sha256Base64Url(
+    analyzedImport.normalizedBundleText ?? input.requestBody.source_text
+  );
+  const importReport = await input.services.verificationService.writeImportReport({
+    sourceDigest,
+    sourceFileName: analyzedImport.payload.source_file_name,
+    artifactType: analyzedImport.payload.artifact_type,
+    bundleVersion: analyzedImport.payload.bundle_version,
+    exportMode: analyzedImport.payload.export_mode,
+    rootPacketRefs: analyzedImport.payload.root_packet_refs,
+    validationMode,
+    importedRevisionCount: importResult.revision_count,
+    skippedDuplicateCount: analyzedImport.payload.duplicate_revision_count,
+    blockedCount: analyzedImport.payload.validation_blocked_count,
+    affectedPacketIds: analyzedImport.affectedPacketIds,
+    verificationReportPacketIds: createdVerificationReports.map(
+      (report) => report.report_packet_id
+    ),
+    warnings: analyzedImport.payload.warnings,
+    errors: analyzedImport.payload.blocking_errors,
+    initiatedByActorPacketId: null,
+  });
 
   return {
     ...analyzedImport.payload,
@@ -671,6 +921,42 @@ export async function buildNexusPacketExplorerImportCommit(input: {
     restored_preferred_packet_count:
       preferredRepair.restoredPreferredPacketCount,
     diverged_packet_count: preferredRepair.divergedPacketCount,
+    import_report_packet_id: importReport.header.packet_id,
+    created_verification_report_packet_ids: createdVerificationReports.map(
+      (report) => report.report_packet_id
+    ),
+  };
+}
+
+export async function buildNexusPacketExplorerImportHistory(input: {
+  services: PacketImportServices;
+  requestBody: NexusPacketExplorerImportHistoryRequest;
+}): Promise<NexusPacketExplorerImportHistoryPayload> {
+  const entries = await input.services.verificationService.listRecentImportReports({
+    limit: input.requestBody.limit ?? 8,
+  });
+
+  return {
+    entries: entries.map((entry) => ({
+      report_packet_id: entry.report_packet_id,
+      report_revision_id: entry.report_revision_id,
+      source: entry.source,
+      status: entry.status,
+      title: entry.title,
+      summary: entry.summary,
+      created_at: entry.created_at,
+      validator_packet_id: entry.validator_packet_id,
+      source_file_name: entry.source_file_name,
+      source_digest: entry.source_digest,
+      artifact_type: entry.artifact_type,
+      bundle_version: entry.bundle_version,
+      export_mode: entry.export_mode,
+      validation_mode: entry.validation_mode,
+      imported_count: entry.imported_count,
+      skipped_count: entry.skipped_count,
+      blocked_count: entry.blocked_count,
+      affected_packet_ids: entry.affected_packet_ids,
+    })),
   };
 }
 
@@ -697,6 +983,20 @@ export async function getNexusPacketExplorerImportCommit(
   const services = await getNexusPacketServices();
 
   return buildNexusPacketExplorerImportCommit({
+    services,
+    requestBody,
+  });
+}
+
+export async function getNexusPacketExplorerImportHistory(
+  requestBody: NexusPacketExplorerImportHistoryRequest
+): Promise<NexusPacketExplorerImportHistoryPayload> {
+  const { getNexusPacketServices } = await import(
+    '@runtime/nexus/server/nexus-packet-services'
+  );
+  const services = await getNexusPacketServices();
+
+  return buildNexusPacketExplorerImportHistory({
     services,
     requestBody,
   });

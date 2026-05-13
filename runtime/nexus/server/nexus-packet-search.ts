@@ -4,6 +4,7 @@
  */
 
 import type {
+  NexusPacketVerificationSummary,
   NexusPacketExplorerSearchActiveGroup,
   NexusPacketExplorerSearchGroup,
   NexusPacketExplorerSearchGroupKey,
@@ -92,6 +93,20 @@ function sanitizePageSize(value: number | null | undefined): number {
   return Math.max(1, Math.min(MAX_GROUP_RESULT_LIMIT, Math.floor(value)));
 }
 
+
+function getFreshVerificationSummaryForSearchRow(
+  row: PacketSearchIndexRecord,
+  verificationByPacketId: Map<string, NexusPacketVerificationSummary>
+): NexusPacketVerificationSummary | null {
+  const verification = verificationByPacketId.get(row.packet_id) ?? null;
+
+  if (!verification || verification.target_revision_id !== row.revision_id) {
+    return null;
+  }
+
+  return verification;
+}
+
 function createSearchRow(input: {
   row: PacketSearchIndexRecord;
   matchGroup: NexusPacketExplorerSearchGroupKey;
@@ -99,6 +114,7 @@ function createSearchRow(input: {
   matchReason: string;
   score: number;
   matchedRevisionId?: string | null;
+  verification?: NexusPacketVerificationSummary | null;
 }): RankedSearchCandidate {
   return {
     packet_id: input.row.packet_id,
@@ -116,6 +132,7 @@ function createSearchRow(input: {
     score: input.score,
     matched_revision_id: input.matchedRevisionId ?? null,
     created_at: input.row.created_at,
+    verification: input.verification ?? null,
   };
 }
 
@@ -379,7 +396,13 @@ export async function buildNexusPacketExplorerSearchPayload(input: {
   const page = sanitizePageNumber(input.requestBody.page ?? null);
   const pageSize = sanitizePageSize(input.requestBody.page_size ?? null);
   const normalizedQuery = normalizeText(query);
-  const searchRows = await input.services.packetStore.listSearchRows();
+  const [searchRows, verificationSummaries] = await Promise.all([
+    input.services.packetStore.listSearchRows(),
+    input.services.packetStore.listPacketVerificationSummaries(),
+  ]);
+  const verificationByPacketId = new Map(
+    verificationSummaries.map((summary) => [summary.packet_id, summary] as const)
+  );
   const rowsByPacketId = new Map(
     searchRows.map((row) => [row.packet_id, row] as const)
   );
@@ -394,6 +417,8 @@ export async function buildNexusPacketExplorerSearchPayload(input: {
     if (!nextCandidate) {
       continue;
     }
+
+    nextCandidate.verification = getFreshVerificationSummaryForSearchRow(row, verificationByPacketId);
 
     candidatesByPacketId.set(
       row.packet_id,
@@ -420,6 +445,7 @@ export async function buildNexusPacketExplorerSearchPayload(input: {
         matchReason: 'Matched revision ID',
         score: 975,
         matchedRevisionId: resolvedRevisionRef.revision_id,
+        verification: getFreshVerificationSummaryForSearchRow(searchRow, verificationByPacketId),
       });
 
       candidatesByPacketId.set(

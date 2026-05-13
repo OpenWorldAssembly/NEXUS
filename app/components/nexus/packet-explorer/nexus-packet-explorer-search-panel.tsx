@@ -14,6 +14,56 @@ import type {
   NexusPacketExplorerSearchResultRow,
 } from '@runtime/nexus/nexus-api-types';
 
+function getVerificationBadgeProps(
+  verification: NexusPacketExplorerSearchResultRow['verification']
+): { label: string; tone?: 'default' | 'sky' | 'gold' | 'rose' | 'mint' } | null {
+  if (!verification) {
+    return null;
+  }
+
+  if (
+    verification.status === 'signature_invalid' ||
+    verification.status === 'canonicalization_mismatch'
+  ) {
+    return {
+      label: 'Validation failed',
+      tone: 'rose',
+    };
+  }
+
+  if (verification.status === 'trusted_signer') {
+    return {
+      label: 'Validated locally',
+      tone: 'mint',
+    };
+  }
+
+  if (verification.status === 'unsigned') {
+    return {
+      label: 'Unsigned',
+      tone: 'gold',
+    };
+  }
+
+  if (verification.status === 'unknown_signer') {
+    return {
+      label: 'Signer unavailable locally',
+      tone: 'gold',
+    };
+  }
+
+  if (verification.status === 'external_report_only') {
+    return {
+      label: 'External report only',
+      tone: 'gold',
+    };
+  }
+
+  return {
+    label: verification.status.replace(/_/g, ' '),
+  };
+}
+
 export type NexusPacketExplorerSearchCategory =
   | 'all'
   | NexusPacketExplorerSearchGroupKey;
@@ -68,6 +118,7 @@ function SearchResultCard(input: {
   onRoutePacketToExport: NexusPacketExplorerSearchPanelProps['onRoutePacketToExport'];
 }) {
   const appearance = useNexusAppearance();
+  const verificationBadge = getVerificationBadgeProps(input.result.verification);
 
   return (
     <NexusCard className="gap-3">
@@ -75,6 +126,12 @@ function SearchResultCard(input: {
         <Text className={appearance.itemTitleClass}>{input.result.title}</Text>
         <NexusBadge label={input.result.family} tone="sky" />
         <NexusBadge label={input.result.match_reason} tone="gold" />
+        {verificationBadge ? (
+          <NexusBadge
+            label={verificationBadge.label}
+            tone={verificationBadge.tone}
+          />
+        ) : null}
         {input.result.status ? (
           <NexusBadge label={input.result.status} />
         ) : null}

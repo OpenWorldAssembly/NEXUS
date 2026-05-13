@@ -1,6 +1,10 @@
 import type { ReactNode } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
+import type {
+  NexusPacketVerificationStatus,
+  NexusPacketVerificationSummary,
+} from '@core/contracts';
 import {
   NexusActionButton,
   NexusBadge,
@@ -37,6 +41,7 @@ type PacketExplorerRoutePacketInput = {
     summary: string | null;
     label: string | null;
   } | null;
+  activePrimaryTab?: 'data' | 'lineage' | 'verification' | 'links' | 'actions';
 };
 
 type NexusPacketExplorerContentProps = {
@@ -64,7 +69,125 @@ type NexusPacketExplorerContentProps = {
   onRoutePacketToExport: (input: PacketExplorerRoutePacketInput) => void;
   onClearExportTarget: () => void;
   onViewInLibrary: (packetId: string, family?: string | null) => void;
+  onRunVerificationForActivePacket: (packetId: string) => Promise<void>;
 };
+
+function formatVerificationStatusLabel(
+  status: NexusPacketVerificationStatus | null
+): string {
+  switch (status) {
+    case 'trusted_signer':
+      return 'Locally validated';
+    case 'unknown_signer':
+      return 'Signer unavailable locally';
+    case 'signature_invalid':
+      return 'Invalid signature';
+    case 'canonicalization_mismatch':
+      return 'Canonicalization mismatch';
+    case 'external_report_only':
+      return 'External report only';
+    case 'unsigned':
+      return 'Unsigned';
+    case 'signature_valid':
+      return 'Signature valid';
+    default:
+      return 'Not validated';
+  }
+}
+
+function formatVerificationFreshnessLabel(
+  freshness: NexusPacketExplorerPayload['verification_freshness']
+): string {
+  switch (freshness) {
+    case 'current':
+      return 'Current';
+    case 'stale':
+      return 'Stale';
+    default:
+      return 'No local validation yet';
+  }
+}
+
+function formatVerificationDetailLabel(
+  kind:
+    | 'signature'
+    | 'signer'
+    | 'trust'
+    | 'provenance'
+    | 'compatibility'
+    | 'structural',
+  value:
+    | NexusPacketVerificationSummary['signature_status']
+    | NexusPacketVerificationSummary['signer_status']
+    | NexusPacketVerificationSummary['local_trust_status']
+    | NexusPacketVerificationSummary['provenance_status']
+    | NexusPacketVerificationSummary['compatibility_status']
+    | boolean
+    | null
+    | undefined
+): string {
+  if (kind === 'structural') {
+    return value === true ? 'Valid' : 'Unknown';
+  }
+
+  switch (kind) {
+    case 'signature':
+      switch (value) {
+        case 'valid':
+          return 'Valid';
+        case 'unverifiable':
+          return 'Unverifiable on this node';
+        case 'invalid':
+          return 'Invalid';
+        case 'canonicalization_mismatch':
+          return 'Canonicalization mismatch';
+        default:
+          return 'Missing';
+      }
+    case 'signer':
+      switch (value) {
+        case 'known':
+          return 'Known locally';
+        case 'unknown':
+          return 'Signer unavailable locally';
+        default:
+          return 'Unknown';
+      }
+    case 'trust':
+      switch (value) {
+        case 'trusted':
+          return 'Trusted locally';
+        case 'untrusted':
+          return 'Untrusted locally';
+        default:
+          return 'Unknown';
+      }
+    case 'provenance':
+      switch (value) {
+        case 'known':
+          return 'Known';
+        case 'unknown':
+          return 'Unknown';
+        default:
+          return 'Unknown';
+      }
+    case 'compatibility':
+      switch (value) {
+        case 'native':
+          return 'Native';
+        case 'adapted':
+          return 'Adapted';
+        case 'lossy':
+          return 'Lossy adaptation';
+        case 'blocked':
+          return 'Blocked';
+        default:
+          return 'Unknown';
+      }
+    default:
+      return 'Unknown';
+  }
+}
 
 function NexusPacketExplorerSeededSummary({
   activeTab,
@@ -272,6 +395,193 @@ function NexusPacketExplorerActionsPanel({
   );
 }
 
+function NexusPacketExplorerValidationPanel({
+  payload,
+  onRunValidation,
+}: {
+  payload: NexusPacketExplorerPayload;
+  onRunValidation: (packetId: string) => Promise<void>;
+}) {
+  const appearance = useNexusAppearance();
+  const summary = payload.verification_summary;
+  const validationStatusTone =
+    summary?.status === 'trusted_signer'
+      ? 'mint'
+      : summary?.status === 'signature_invalid' ||
+          summary?.status === 'canonicalization_mismatch'
+        ? 'rose'
+        : summary?.status === 'unsigned' ||
+            summary?.status === 'unknown_signer' ||
+            summary?.status === 'external_report_only'
+          ? 'gold'
+          : 'default';
+
+  return (
+    <View className="gap-4">
+      <NexusCard className="gap-3">
+        <View className="flex-row flex-wrap items-center gap-2">
+          <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
+            Validation
+          </Text>
+          <NexusBadge
+            label={formatVerificationStatusLabel(summary?.status ?? null)}
+            tone={validationStatusTone}
+          />
+          <NexusBadge
+            label={formatVerificationFreshnessLabel(payload.verification_freshness)}
+            tone={
+              payload.verification_freshness === 'current'
+                ? 'mint'
+                : payload.verification_freshness === 'stale'
+                  ? 'gold'
+                  : 'default'
+            }
+          />
+          <NexusActionButton
+            label={
+              payload.verification_freshness === 'current'
+                ? 'Revalidate'
+                : 'Validate'
+            }
+            onPress={() => void onRunValidation(payload.packet_summary.packet.packet_id)}
+          />
+        </View>
+        <Text className={appearance.itemBodyClass}>
+          Local validator: {payload.local_validator_packet_id ?? 'Unavailable'}
+        </Text>
+        <Text className={appearance.itemBodyClass}>
+          Basis: {payload.verification_basis.replace(/_/g, ' ')}
+        </Text>
+        <Text className={appearance.itemBodyClass}>
+          Validation target revision:{' '}
+          {payload.verification_report_target_revision_id ?? 'No local validation yet'}
+        </Text>
+        <Text className={appearance.itemBodyClass}>
+          Current preferred revision: {payload.preferred_revision.revision_id}
+        </Text>
+        <Text className={appearance.itemBodyClass}>
+          Freshness: {formatVerificationFreshnessLabel(payload.verification_freshness)}
+        </Text>
+        <Text className={appearance.itemBodyClass}>
+          Signature:{' '}
+          {formatVerificationDetailLabel(
+            'signature',
+            summary?.signature_status ?? null
+          )}
+        </Text>
+        <Text className={appearance.itemBodyClass}>
+          Signer:{' '}
+          {formatVerificationDetailLabel('signer', summary?.signer_status ?? null)}
+        </Text>
+        <Text className={appearance.itemBodyClass}>
+          Local trust:{' '}
+          {formatVerificationDetailLabel(
+            'trust',
+            summary?.local_trust_status ?? null
+          )}
+        </Text>
+        <Text className={appearance.itemMetaClass}>
+          Validated at: {summary?.validated_at ?? 'Not validated locally'}
+        </Text>
+      </NexusCard>
+
+      <NexusCard className="gap-3">
+        <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
+          Breakdown
+        </Text>
+        <Text className={appearance.itemBodyClass}>
+          Structural validity:{' '}
+          {formatVerificationDetailLabel(
+            'structural',
+            summary?.structural_valid ?? null
+          )}
+        </Text>
+        <Text className={appearance.itemBodyClass}>
+          Compatibility:{' '}
+          {formatVerificationDetailLabel(
+            'compatibility',
+            summary?.compatibility_status ?? null
+          )}
+        </Text>
+        <Text className={appearance.itemBodyClass}>
+          Signature result:{' '}
+          {formatVerificationDetailLabel(
+            'signature',
+            summary?.signature_status ?? null
+          )}
+        </Text>
+        <Text className={appearance.itemBodyClass}>
+          Signer result:{' '}
+          {formatVerificationDetailLabel('signer', summary?.signer_status ?? null)}
+        </Text>
+        <Text className={appearance.itemBodyClass}>
+          Provenance:{' '}
+          {formatVerificationDetailLabel(
+            'provenance',
+            summary?.provenance_status ?? null
+          )}
+        </Text>
+        <Text className={appearance.itemBodyClass}>
+          Local trust result:{' '}
+          {formatVerificationDetailLabel(
+            'trust',
+            summary?.local_trust_status ?? null
+          )}
+        </Text>
+        <Text className={appearance.itemMetaClass}>
+          Warning count: {summary?.warnings_count ?? 0}
+        </Text>
+      </NexusCard>
+
+      <NexusCard className="gap-3">
+        <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
+          Local Validation Reports
+        </Text>
+        {payload.local_verification_reports.length === 0 ? (
+          <Text className={appearance.itemBodyClass}>
+            No local validation reports yet.
+          </Text>
+        ) : (
+          payload.local_verification_reports.map((report) => (
+            <View key={report.report_revision_id} className="gap-1">
+              <Text className={appearance.itemBodyClass}>{report.title}</Text>
+              <Text className={appearance.itemMetaClass}>
+                {report.report_packet_id} • {report.created_at}
+              </Text>
+              {report.summary ? (
+                <Text className={appearance.itemBodyClass}>{report.summary}</Text>
+              ) : null}
+            </View>
+          ))
+        )}
+      </NexusCard>
+
+      <NexusCard className="gap-3">
+        <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
+          External Validation Reports
+        </Text>
+        {payload.external_verification_reports.length === 0 ? (
+          <Text className={appearance.itemBodyClass}>
+            No imported external validation reports are attached here.
+          </Text>
+        ) : (
+          payload.external_verification_reports.map((report) => (
+            <View key={report.report_revision_id} className="gap-1">
+              <Text className={appearance.itemBodyClass}>{report.title}</Text>
+              <Text className={appearance.itemMetaClass}>
+                {report.report_packet_id} • {report.created_at}
+              </Text>
+              {report.summary ? (
+                <Text className={appearance.itemBodyClass}>{report.summary}</Text>
+              ) : null}
+            </View>
+          ))
+        )}
+      </NexusCard>
+    </View>
+  );
+}
+
 function renderPayloadPanel(input: {
   payload: NexusPacketExplorerPayload;
   activePrimaryTab: PacketExplorerPrimaryTab;
@@ -281,6 +591,7 @@ function renderPayloadPanel(input: {
   onOpenPacketInNewTab: NexusPacketExplorerContentProps['onOpenPacketInNewTab'];
   onOpenPacketInCurrentTab: NexusPacketExplorerContentProps['onOpenPacketInCurrentTab'];
   onViewInLibrary: NexusPacketExplorerContentProps['onViewInLibrary'];
+  onRunVerificationForActivePacket: NexusPacketExplorerContentProps['onRunVerificationForActivePacket'];
 }) {
   if (input.activePrimaryTab === 'data') {
     return (
@@ -295,6 +606,15 @@ function renderPayloadPanel(input: {
 
   if (input.activePrimaryTab === 'lineage') {
     return <NexusPacketExplorerLineagePanel payload={input.payload} />;
+  }
+
+  if (input.activePrimaryTab === 'verification') {
+    return (
+      <NexusPacketExplorerValidationPanel
+        payload={input.payload}
+        onRunValidation={input.onRunVerificationForActivePacket}
+      />
+    );
   }
 
   if (input.activePrimaryTab === 'links') {
@@ -333,6 +653,7 @@ export function NexusPacketExplorerContent({
   onRoutePacketToExport,
   onClearExportTarget,
   onViewInLibrary,
+  onRunVerificationForActivePacket,
 }: NexusPacketExplorerContentProps) {
   const appearance = useNexusAppearance();
 
@@ -412,6 +733,7 @@ export function NexusPacketExplorerContent({
     onOpenPacketInNewTab,
     onOpenPacketInCurrentTab,
     onViewInLibrary,
+    onRunVerificationForActivePacket,
   });
 
   if (activePacketState.status === 'error') {
