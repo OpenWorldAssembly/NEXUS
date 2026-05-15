@@ -19,10 +19,20 @@ import {
   type PacketEnvelopeByType,
   type PacketRef,
 } from '@core/schema/packet-schema';
-import type { NexusLocationSearchResult } from '@runtime/nexus/location-search';
+import {
+  createFallbackLocalityScopeDescriptor,
+  isLegacyLocalityLevel,
+  readLocalityManualStatus,
+  readLocalityScopeDescriptor,
+  type LocalityManualStatus,
+  type LocalityScopeDescriptor,
+  type NexusLocationSearchResult,
+} from '@runtime/nexus/location-search';
 import {
   createLocalityCanonicalNameKey,
   getLocalityFuzzySimilarity,
+  isUsefulLegacyAsciiAliasKey,
+  normalizeLegacyAsciiLocalitySearchText,
   normalizeLocalitySearchText,
   toLocalitySearchLevel,
 } from '@runtime/nexus/location-search-normalization';
@@ -37,6 +47,7 @@ export type LocalityCreatePathEntry = {
   existing_scope_id?: string | null;
   alias_keys?: string[];
   display_aliases?: string[];
+  scope_descriptor?: LocalityScopeDescriptor | null;
 };
 
 export type LocalityDuplicateWarning = {
@@ -67,6 +78,8 @@ type LocalityNode = {
   alias_keys: string[];
   display_aliases: string[];
   parent_packet_id: string | null;
+  scope_descriptor: LocalityScopeDescriptor | null;
+  manual_status: LocalityManualStatus | null;
 };
 
 export type LocalityPathPlanResult = {
@@ -84,6 +97,7 @@ export type LocalityResolvedPathEntry = {
   disposition: 'reuse_existing' | 'create_new';
   existing_result: NexusLocationSearchResult | null;
   planned_scope_packet_id: string | null;
+  scope_descriptor: LocalityScopeDescriptor | null;
 };
 
 export type LocalityPathPreviewResult = {
@@ -102,18 +116,31 @@ export type LocalityPathPreviewResult = {
   }[];
 };
 
-const LOCALITY_LEVEL_ORDER: LocalityLevel[] = [
-  'nation',
-  'region',
-  'city',
-  'district',
-];
+export type LocalityGraphPlanResult = {
+  created_packets: PacketEnvelope[];
+  created_relation_packet_ids: string[];
+  created_location_packet_ids: string[];
+  path_results: LocalityPathPlanResult[];
+  final_result: NexusLocationSearchResult | null;
+};
 
 function createParentScopeCompatibilityEdge(parentPacketId: string) {
   return createPacketEdge('parent_scope', {
     packet_id: parentPacketId,
   });
 }
+
+type ScopeLocationMetadata = {
+  scope_descriptor: LocalityScopeDescriptor | null;
+  manual_status: LocalityManualStatus | null;
+};
+
+const LOCALITY_LEVEL_RANK: Record<LocalityLevel, number> = {
+  nation: 0,
+  region: 1,
+  city: 2,
+  district: 3,
+};
 
 function createLocationPacketId(input: {
   scopePacketId: string;
@@ -142,7 +169,8 @@ function resolveParentByPacketId(input: {
 
 function toLocalityNode(
   packet: PacketEnvelopeByType['Element'],
-  parentByPacketId: Map<string, string | null>
+  parentByPacketId: Map<string, string | null>,
+  scopeLocationMetadataByScopePacketId: Map<string, ScopeLocationMetadata>
 ): LocalityNode | null {
   if (packet.body.kind !== 'assembly') {
     return null;
@@ -154,17 +182,40 @@ function toLocalityNode(
     return null;
   }
 
+  const displayName = packet.body.locality_label ?? packet.body.name;
+  const canonicalNameKey = createLocalityCanonicalNameKey(displayName);
+  const storedCanonicalNameKey = packet.body.locality?.canonical_name_key ?? null;
+  const aliasKeys = new Set<string>(
+    (packet.body.locality?.alias_keys ?? []).map(createLocalityCanonicalNameKey)
+  );
+  const legacyAsciiAliasKey = normalizeLegacyAsciiLocalitySearchText(displayName);
+  const scopeLocationMetadata =
+    scopeLocationMetadataByScopePacketId.get(packet.header.packet_id) ?? null;
+
+  if (storedCanonicalNameKey && storedCanonicalNameKey !== canonicalNameKey) {
+    aliasKeys.add(storedCanonicalNameKey);
+  }
+
+  if (
+    legacyAsciiAliasKey &&
+    legacyAsciiAliasKey !== canonicalNameKey &&
+    isUsefulLegacyAsciiAliasKey(legacyAsciiAliasKey)
+  ) {
+    aliasKeys.add(legacyAsciiAliasKey);
+  }
+
   return {
     packet,
     packet_id: packet.header.packet_id,
     name: packet.body.name,
     level,
-    canonical_name_key:
-      packet.body.locality?.canonical_name_key ??
-      createLocalityCanonicalNameKey(packet.body.locality_label ?? packet.body.name),
-    alias_keys: packet.body.locality?.alias_keys ?? [],
+    canonical_name_key: canonicalNameKey,
+    alias_keys: Array.from(aliasKeys).filter(Boolean),
     display_aliases: packet.body.locality?.display_aliases ?? [],
     parent_packet_id: parentByPacketId.get(packet.header.packet_id) ?? null,
+    scope_descriptor:
+      scopeLocationMetadata?.scope_descriptor ?? createFallbackLocalityScopeDescriptor(level),
+    manual_status: scopeLocationMetadata?.manual_status ?? null,
   };
 }
 
@@ -197,6 +248,92 @@ function createLocalityPacketId(input: {
 
 function getLocalitySubtype(level: LocalityLevel): string {
   return level;
+}
+
+function resolvePathEntryScopeDescriptor(
+  entry: LocalityCreatePathEntry
+): LocalityScopeDescriptor {
+  const fallbackDescriptor = createFallbackLocalityScopeDescriptor(entry.level);
+
+  if (!entry.scope_descriptor) {
+    return fallbackDescriptor;
+  }
+
+  return {
+    hierarchy_system: entry.scope_descriptor.hierarchy_system,
+    local_type_label: entry.scope_descriptor.local_type_label,
+    local_type_key: entry.scope_descriptor.local_type_key,
+    legacy_level: entry.level,
+  };
+}
+
+function createLocalityAliasKeys(input: {
+  canonicalNameKey: string;
+  legacyAsciiAliasKey: string;
+  aliasKeys: string[];
+}): string[] {
+  const keys = new Set<string>([input.canonicalNameKey]);
+
+  for (const aliasKey of input.aliasKeys.map(createLocalityCanonicalNameKey)) {
+    if (aliasKey) {
+      keys.add(aliasKey);
+    }
+  }
+
+  if (
+    input.legacyAsciiAliasKey &&
+    input.legacyAsciiAliasKey !== input.canonicalNameKey &&
+    isUsefulLegacyAsciiAliasKey(input.legacyAsciiAliasKey)
+  ) {
+    keys.add(input.legacyAsciiAliasKey);
+  }
+
+  return Array.from(keys).filter(Boolean);
+}
+
+function buildScopeLocationMetadataByScopePacketId(input: {
+  locationPackets: PacketEnvelopeByType['Location'][];
+  relationPackets: Awaited<ReturnType<typeof listRelationPackets>>;
+}): Map<string, ScopeLocationMetadata> {
+  const locationPacketById = new Map(
+    input.locationPackets.map((packet) => [packet.header.packet_id, packet])
+  );
+  const metadataByScopePacketId = new Map<string, ScopeLocationMetadata>();
+
+  for (const relationPacket of input.relationPackets) {
+    if (
+      relationPacket.body.subtype !== 'defined_by_location' ||
+      relationPacket.body.status !== 'active'
+    ) {
+      continue;
+    }
+
+    const locationPacket = locationPacketById.get(
+      relationPacket.body.target_ref.packet_id
+    );
+
+    if (!locationPacket) {
+      continue;
+    }
+
+    const spatialPayload = locationPacket.body.spatial_payload;
+    const payloadLegacyLevel = isLegacyLocalityLevel(spatialPayload.locality_level)
+      ? spatialPayload.locality_level
+      : null;
+
+    metadataByScopePacketId.set(relationPacket.body.subject_ref.packet_id, {
+      scope_descriptor: readLocalityScopeDescriptor(
+        spatialPayload.scope_descriptor,
+        payloadLegacyLevel
+      ),
+      manual_status: readLocalityManualStatus({
+        spatialPayload,
+        status: locationPacket.body.status,
+      }),
+    });
+  }
+
+  return metadataByScopePacketId;
 }
 
 function buildApplicableScopeRefs(input: {
@@ -303,6 +440,14 @@ function buildLocationResult(input: {
     parent_path_label:
       parentPath.length > 0 ? parentPath.map((pathNode) => pathNode.name).join(' / ') : null,
     canonical_name_key: input.node.canonical_name_key,
+    alias_keys: input.node.alias_keys,
+    display_aliases: input.node.display_aliases,
+    path_entries: path.map((pathNode) => ({
+      scope_id: pathNode.packet_id,
+      name: pathNode.name,
+      level: pathNode.level,
+      scope_type_label: pathNode.scope_descriptor?.local_type_label ?? null,
+    })),
     match_type: 'exact',
     description:
       input.node.packet.body.summary ?? `${input.node.name} assembly locality`,
@@ -312,6 +457,12 @@ function buildLocationResult(input: {
       label: pathNode.level.toUpperCase(),
       description: pathNode.name,
     })),
+    scope_descriptor: input.node.scope_descriptor,
+    scope_type_label: input.node.scope_descriptor?.local_type_label ?? null,
+    scope_type_key: input.node.scope_descriptor?.local_type_key ?? null,
+    scope_hierarchy_system: input.node.scope_descriptor?.hierarchy_system ?? null,
+    legacy_level: input.node.scope_descriptor?.legacy_level ?? input.node.level,
+    manual_status: input.node.manual_status,
   };
 }
 
@@ -357,15 +508,24 @@ function validatePathOrder(path: LocalityCreatePathEntry[]) {
     throw new Error('Provide at least one locality path entry.');
   }
 
-  path.forEach((entry, index) => {
-    if (entry.level !== LOCALITY_LEVEL_ORDER[index]) {
-      throw new Error('Locality creation expects a contiguous broad-to-narrow path starting at nation.');
-    }
-
+  path.forEach((entry) => {
     if (!entry.name.trim() && !entry.existing_scope_id) {
       throw new Error('Every locality path entry needs a name or existing scope id.');
     }
   });
+
+  for (let index = 1; index < path.length; index += 1) {
+    const previousEntry = path[index - 1];
+    const currentEntry = path[index];
+
+    if (
+      LOCALITY_LEVEL_RANK[currentEntry.level] < LOCALITY_LEVEL_RANK[previousEntry.level]
+    ) {
+      throw new Error(
+        'Locality path entries must stay broad-to-narrow across legacy compatibility buckets.'
+      );
+    }
+  }
 }
 
 type LocalityPlannerInput = {
@@ -373,6 +533,12 @@ type LocalityPlannerInput = {
   path: LocalityCreatePathEntry[];
   createAnyway?: boolean;
   allowDuplicateWarnings?: boolean;
+};
+
+type LocalityGraphPlannerInput = {
+  actorPacketId?: string | null;
+  paths: LocalityCreatePathEntry[][];
+  createAnyway?: boolean;
 };
 
 const LOCALITY_PREVIEW_ACTOR_PACKET_ID = 'nexus:element/locality-preview-actor';
@@ -384,16 +550,48 @@ async function getPlannerPacketStore(): Promise<NodeSQLiteQueryServices['packetS
   return services.packetStore;
 }
 
+function createPacketStoreOverlay(input: {
+  packetStore: NodeSQLiteQueryServices['packetStore'];
+  stagedPackets: PacketEnvelope[];
+}): NodeSQLiteQueryServices['packetStore'] {
+  const stagedPacketsByFamily = new Map<string, PacketEnvelope[]>();
+
+  for (const packet of input.stagedPackets) {
+    stagedPacketsByFamily.set(packet.header.family, [
+      ...(stagedPacketsByFamily.get(packet.header.family) ?? []),
+      packet,
+    ]);
+  }
+
+  return {
+    ...input.packetStore,
+    async listPreferredPacketsByFamily(family) {
+      const basePackets = await input.packetStore.listPreferredPacketsByFamily(family);
+      const stagedPackets = stagedPacketsByFamily.get(family) ?? [];
+      const packetById = new Map<string, PacketEnvelope>();
+
+      [...(basePackets as PacketEnvelope[]), ...stagedPackets].forEach((packet) => {
+        packetById.set(packet.header.packet_id, packet);
+      });
+
+      return Array.from(packetById.values()) as PacketEnvelopeByType[keyof PacketEnvelopeByType][];
+    },
+  } as NodeSQLiteQueryServices['packetStore'];
+}
+
 export async function planCanonicalLocalityPathWithPacketStore(input: LocalityPlannerInput & {
   packetStore: NodeSQLiteQueryServices['packetStore'];
 }): Promise<LocalityPathPlanResult> {
   validatePathOrder(input.path);
 
-  const [elementPackets, relationPackets] = await Promise.all([
+  const [elementPackets, relationPackets, locationPackets] = await Promise.all([
     input.packetStore.listPreferredPacketsByFamily('Element') as Promise<
       PacketEnvelopeByType['Element'][]
     >,
     listRelationPackets(input.packetStore),
+    input.packetStore.listPreferredPacketsByFamily('Location') as Promise<
+      PacketEnvelopeByType['Location'][]
+    >,
   ]);
   const globalAssemblyPacket = getGlobalAssemblyPacket(elementPackets);
 
@@ -405,8 +603,14 @@ export async function planCanonicalLocalityPathWithPacketStore(input: LocalityPl
     elementPackets,
     relationPackets,
   });
+  const scopeLocationMetadataByScopePacketId = buildScopeLocationMetadataByScopePacketId({
+    locationPackets,
+    relationPackets,
+  });
   const localityNodes = elementPackets
-    .map((packet) => toLocalityNode(packet, parentByPacketId))
+    .map((packet) =>
+      toLocalityNode(packet, parentByPacketId, scopeLocationMetadataByScopePacketId)
+    )
     .filter((node): node is LocalityNode => node !== null);
   const nodeMap = new Map(localityNodes.map((node) => [node.packet_id, node]));
   const packetMap = new Map(elementPackets.map((packet) => [packet.header.packet_id, packet]));
@@ -423,7 +627,11 @@ export async function planCanonicalLocalityPathWithPacketStore(input: LocalityPl
     if (entry.existing_scope_id) {
       const existingPacket = packetMap.get(entry.existing_scope_id);
       const existingNode = existingPacket
-        ? toLocalityNode(existingPacket, parentByPacketId)
+        ? toLocalityNode(
+            existingPacket,
+            parentByPacketId,
+            scopeLocationMetadataByScopePacketId
+          )
         : null;
 
       if (!existingPacket || !existingNode) {
@@ -434,7 +642,10 @@ export async function planCanonicalLocalityPathWithPacketStore(input: LocalityPl
         throw new Error(`${existingNode.name} is not a ${entry.level} locality.`);
       }
 
-      if (existingNode.parent_packet_id !== parentPacketId) {
+      if (
+        existingNode.parent_packet_id !== null &&
+        existingNode.parent_packet_id !== parentPacketId
+      ) {
         throw new Error(`${existingNode.name} is not nested under the confirmed parent path.`);
       }
 
@@ -449,11 +660,14 @@ export async function planCanonicalLocalityPathWithPacketStore(input: LocalityPl
           nodeMap,
         }),
         planned_scope_packet_id: null,
+        scope_descriptor: existingNode.scope_descriptor,
       });
       continue;
     }
 
     const canonicalNameKey = createLocalityCanonicalNameKey(entry.name);
+    const legacyAsciiAliasKey = normalizeLegacyAsciiLocalitySearchText(entry.name);
+    const scopeDescriptor = resolvePathEntryScopeDescriptor(entry);
 
     if (canonicalNameKey.length < 2) {
       throw new Error('Locality names need at least two searchable characters.');
@@ -478,6 +692,7 @@ export async function planCanonicalLocalityPathWithPacketStore(input: LocalityPl
           nodeMap,
         }),
         planned_scope_packet_id: null,
+        scope_descriptor: exactNode.scope_descriptor,
       });
       continue;
     }
@@ -513,6 +728,7 @@ export async function planCanonicalLocalityPathWithPacketStore(input: LocalityPl
           nodeMap,
         }),
         planned_scope_packet_id: null,
+        scope_descriptor: aliasNode.scope_descriptor,
       });
       continue;
     }
@@ -556,20 +772,26 @@ export async function planCanonicalLocalityPathWithPacketStore(input: LocalityPl
       name: entry.name.trim(),
       subtype: getLocalitySubtype(entry.level),
       summary: `A ${entry.level} locality assembly for ${entry.name.trim()}.`,
+      scope_kind: 'locality',
+      scope_system: scopeDescriptor.hierarchy_system,
       locality_label: entry.name.trim(),
       locality: {
         level: entry.level,
         canonical_name_key: canonicalNameKey,
-        alias_keys: Array.from(
-          new Set([
-            canonicalNameKey,
-            ...(entry.alias_keys ?? []).map(createLocalityCanonicalNameKey),
-          ])
-        ).filter(Boolean),
+        alias_keys: createLocalityAliasKeys({
+          canonicalNameKey,
+          legacyAsciiAliasKey,
+          aliasKeys: entry.alias_keys ?? [],
+        }),
         display_aliases: entry.display_aliases ?? [],
       },
-      tags: ['assembly', 'locality', entry.level],
-      metadata_tags: ['assembly', 'locality', entry.level],
+      tags: ['assembly', 'locality', entry.level, scopeDescriptor.local_type_key],
+      metadata_tags: [
+        'assembly',
+        'locality',
+        entry.level,
+        scopeDescriptor.local_type_key,
+      ],
     });
     const parentRelationPacket = createScopedRelationPacket({
       subtype: 'default_ancestry_parent',
@@ -601,12 +823,15 @@ export async function planCanonicalLocalityPathWithPacketStore(input: LocalityPl
         canonical_name_key: canonicalNameKey,
         locality_level: entry.level,
         display_name: entry.name.trim(),
-        alias_keys: Array.from(
-          new Set([
-            canonicalNameKey,
-            ...(entry.alias_keys ?? []).map(createLocalityCanonicalNameKey),
-          ])
-        ).filter(Boolean),
+        alias_keys: createLocalityAliasKeys({
+          canonicalNameKey,
+          legacyAsciiAliasKey,
+          aliasKeys: entry.alias_keys ?? [],
+        }),
+        scope_descriptor: scopeDescriptor,
+        source: {
+          kind: 'manual',
+        },
       },
     });
     const locationRelationPacket = createScopedRelationPacket({
@@ -633,7 +858,15 @@ export async function planCanonicalLocalityPathWithPacketStore(input: LocalityPl
     packetMap.set(packet.header.packet_id, packet);
     parentByPacketId.set(packet.header.packet_id, parentPacketId);
 
-    const createdNode = toLocalityNode(packet, parentByPacketId);
+    scopeLocationMetadataByScopePacketId.set(packet.header.packet_id, {
+      scope_descriptor: scopeDescriptor,
+      manual_status: 'manual',
+    });
+    const createdNode = toLocalityNode(
+      packet,
+      parentByPacketId,
+      scopeLocationMetadataByScopePacketId
+    );
 
     if (!createdNode) {
       throw new Error('Created locality packet could not be projected.');
@@ -649,6 +882,7 @@ export async function planCanonicalLocalityPathWithPacketStore(input: LocalityPl
       disposition: 'create_new',
       existing_result: null,
       planned_scope_packet_id: createdNode.packet_id,
+      scope_descriptor: scopeDescriptor,
     });
   }
 
@@ -666,6 +900,40 @@ export async function planCanonicalLocalityPathWithPacketStore(input: LocalityPl
     }),
     duplicate_warnings: duplicateWarnings,
     resolved_path: resolvedPath,
+  };
+}
+
+export async function planCanonicalLocalityGraphWithPacketStore(input: LocalityGraphPlannerInput & {
+  packetStore: NodeSQLiteQueryServices['packetStore'];
+}): Promise<LocalityGraphPlanResult> {
+  const pathResults: LocalityPathPlanResult[] = [];
+  const stagedPackets: PacketEnvelope[] = [];
+
+  for (const path of input.paths) {
+    const pathResult = await planCanonicalLocalityPathWithPacketStore({
+      actorPacketId: input.actorPacketId,
+      path,
+      createAnyway: input.createAnyway,
+      packetStore: createPacketStoreOverlay({
+        packetStore: input.packetStore,
+        stagedPackets,
+      }),
+    });
+
+    pathResults.push(pathResult);
+    stagedPackets.push(...pathResult.created_packets);
+  }
+
+  return {
+    created_packets: stagedPackets,
+    created_relation_packet_ids: pathResults.flatMap(
+      (pathResult) => pathResult.created_relation_packet_ids
+    ),
+    created_location_packet_ids: pathResults.flatMap(
+      (pathResult) => pathResult.created_location_packet_ids
+    ),
+    path_results: pathResults,
+    final_result: pathResults[0]?.final_result ?? null,
   };
 }
 

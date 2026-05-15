@@ -15,6 +15,25 @@ const LocalityPathEntrySchema = z
     existing_scope_id: z.string().min(1).optional().nullable().default(null),
     alias_keys: z.array(z.string().min(1)).optional().default([]),
     display_aliases: z.array(z.string().min(1)).optional().default([]),
+    scope_descriptor: z
+      .object({
+        hierarchy_system: z.enum([
+          'planetary',
+          'administrative',
+          'electoral',
+          'postal',
+          'addressing',
+          'building',
+          'custom',
+        ]),
+        local_type_label: z.string().min(1),
+        local_type_key: z.string().min(1),
+        legacy_level: z.enum(['nation', 'region', 'city', 'district']),
+      })
+      .strict()
+      .optional()
+      .nullable()
+      .default(null),
   })
   .strict();
 

@@ -42,6 +42,7 @@ import {
 } from '@runtime/nexus/nexus-content';
 import {
   fetchNexusShellPayload,
+  updateNexusScopeDisplayPreferences,
 } from '@runtime/nexus/nexus-query-api';
 import {
   buildNexusBranchNodes,
@@ -51,10 +52,12 @@ import {
   getNexusSectionHref,
   isNexusGeographicTreeScope,
   type NexusNavMode,
+  type NexusProjectedScopeSection,
   type NexusScopeBranchNode,
   type NexusScopeSummary,
   type NexusSection,
   type NexusShellState,
+  type NexusSidebarScopeSectionId,
   type NexusThemeMode,
   type NexusUiDensity,
 } from '@runtime/nexus/nexus-shell';
@@ -66,8 +69,14 @@ type NexusShellContextValue = NexusShellState & {
   currentIdentityMode: 'ephemeral_guest' | 'persistent_guest' | 'claimed' | null;
   branchNodes: NexusScopeBranchNode[];
   associatedScopes: NexusScopeSummary[];
+  associatedGraph: NexusProjectedScopeSection;
+  discoverableSection: NexusProjectedScopeSection;
   discoverableScopes: NexusScopeSummary[];
   followedScopes: NexusScopeSummary[];
+  followedGraph: NexusProjectedScopeSection;
+  homeGraph: NexusProjectedScopeSection;
+  mainGraph: NexusProjectedScopeSection;
+  mainVisibleScopePacketIds: string[];
   scopeSummaries: NexusScopeSummary[];
   isPreferencesDrawerOpen: boolean;
   isPrimaryRailCollapsed: boolean;
@@ -82,6 +91,10 @@ type NexusShellContextValue = NexusShellState & {
   setActiveSection: (section: NexusSection) => void;
   setScopeFollowed: (scopeId: string, isFollowed: boolean) => Promise<void>;
   setScopeAssociated: (scopeId: string, isAssociated: boolean) => Promise<void>;
+  setScopeSectionParentChains: (
+    sectionId: Extract<NexusSidebarScopeSectionId, 'associated' | 'followed'>,
+    showParentChains: boolean
+  ) => Promise<void>;
   refreshShellData: () => Promise<void>;
   togglePreferencesDrawer: () => void;
   dismissEarlyAccessGate: () => void;
@@ -181,50 +194,6 @@ const FALLBACK_SCOPE_SUMMARY: NexusScopeSummary = {
   },
 };
 
-function buildPersonalScopeSummary(input: {
-  actorPacketId: string;
-  currentLabel: string;
-  currentMode: 'ephemeral_guest' | 'persistent_guest' | 'claimed' | null;
-  parentScopeId?: string | null;
-}): NexusScopeSummary {
-  return {
-    id: 'you',
-    packetId: input.actorPacketId,
-    name: 'You',
-    shortLabel: 'You',
-    level: 'personal',
-    scopeSubtype: null,
-    scopeSystem: null,
-    description:
-      'Personal scope lens anchored to the current actor packet and used across every Nexus function.',
-    localityLabel: input.currentLabel,
-    badge: input.currentMode === 'claimed' ? 'Claimed actor' : 'Guest actor',
-    relationshipLabel: 'Current actor scope',
-    parentId: input.parentScopeId ?? undefined,
-    childIds: [],
-    followedScopeIds: [],
-    isKnown: true,
-    isMounted: true,
-    isDiscoverable: false,
-    isFollowed: false,
-    isAssociated: false,
-    isHomeAncestor: false,
-    associationKind: null,
-    mountReasons: ['personal_default'],
-    justificationPacketIds: [],
-    structuralRelationPacketIds: [],
-    locationPacketIds: [],
-    publicLobbyLabel: 'Personal trust lens',
-    stats: {
-      members: 1,
-      activeVotes: 0,
-      hotDiscussions: 0,
-      missions: 0,
-      guestLobbyOpen: false,
-    },
-  };
-}
-
 /**
  * Inputs: nexus route children.
  * Output: a provider that keeps the scope navigation and menu preference state in sync.
@@ -236,12 +205,50 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
     currentActorPacketId,
     currentLabel,
     currentMode,
+    createVerifiedRequestBody,
     runFortressMutation,
   } = useIdentityShell();
   const [scopeSummaries, setScopeSummaries] = useState<NexusScopeSummary[]>([
     FALLBACK_SCOPE_SUMMARY,
   ]);
   const [followedScopeIds, setFollowedScopeIds] = useState<string[]>([]);
+  const [mainVisibleScopePacketIds, setMainVisibleScopePacketIds] = useState<string[]>([]);
+  const [homeGraph, setHomeGraph] = useState<NexusProjectedScopeSection>({
+    id: 'home',
+    title: 'Home scopes',
+    count: 0,
+    showParentChains: false,
+    groups: [],
+  });
+  const [associatedGraph, setAssociatedGraph] = useState<NexusProjectedScopeSection>({
+    id: 'associated',
+    title: 'Associated scopes',
+    count: 0,
+    showParentChains: true,
+    groups: [],
+  });
+  const [followedGraph, setFollowedGraph] = useState<NexusProjectedScopeSection>({
+    id: 'followed',
+    title: 'Followed scopes',
+    count: 0,
+    showParentChains: true,
+    groups: [],
+  });
+  const [mainGraph, setMainGraph] = useState<NexusProjectedScopeSection>({
+    id: 'main',
+    title: 'Main scopes',
+    count: 0,
+    showParentChains: true,
+    groups: [],
+  });
+  const [discoverableSection, setDiscoverableSection] =
+    useState<NexusProjectedScopeSection>({
+      id: 'discoverable',
+      title: 'Discoverable scopes',
+      count: 0,
+      showParentChains: false,
+      groups: [],
+    });
   const [guestCapabilities, setGuestCapabilities] = useState(
     NEXUS_GUEST_CAPABILITIES,
   );
@@ -295,37 +302,16 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
       return;
     }
 
-    const baseScopeSummaries = shellPayload.scope_summaries;
-    const nextScopeSummaries =
-      currentActorPacketId !== null
-        ? (() => {
-            const personalParentScopeId =
-              shellPayload.personal_parent_scope_id ?? shellPayload.default_scope_id;
-            const personalScopeSummary = buildPersonalScopeSummary({
-              actorPacketId: currentActorPacketId,
-              currentLabel,
-              currentMode,
-              parentScopeId: personalParentScopeId,
-            });
-
-            return [
-              ...baseScopeSummaries.map((scopeSummary) =>
-                scopeSummary.id === personalParentScopeId
-                  ? {
-                      ...scopeSummary,
-                      childIds: Array.from(
-                        new Set([...scopeSummary.childIds, personalScopeSummary.id])
-                      ),
-                    }
-                  : scopeSummary
-              ),
-              personalScopeSummary,
-            ];
-          })()
-        : baseScopeSummaries;
+    const nextScopeSummaries = shellPayload.scope_summaries;
 
     setScopeSummaries(nextScopeSummaries);
     setFollowedScopeIds(shellPayload.followed_scope_ids);
+    setMainVisibleScopePacketIds(shellPayload.main_visible_scope_packet_ids);
+    setHomeGraph(shellPayload.home_graph);
+    setAssociatedGraph(shellPayload.associated_graph);
+    setFollowedGraph(shellPayload.followed_graph);
+    setMainGraph(shellPayload.main_graph);
+    setDiscoverableSection(shellPayload.discoverable_section);
     setGuestCapabilities(shellPayload.guest_capabilities);
     setActiveScopeIdState((currentScopeId) => {
       const currentScope = nextScopeSummaries.find(
@@ -345,11 +331,10 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
         new Set([
           ...shellPayload.default_expanded_scope_ids,
           ...currentScopeIds,
-          ...(currentActorPacketId ? ['you'] : []),
         ]),
       );
     });
-  }, [currentActorPacketId, currentLabel, currentMode]);
+  }, [currentActorPacketId]);
 
   useEffect(() => {
     let isMounted = true;
@@ -463,6 +448,48 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
           },
       writeRisk: 'standard',
     });
+    await refreshShellData();
+  };
+
+  const setScopeSectionParentChains = async (
+    sectionId: Extract<NexusSidebarScopeSectionId, 'associated' | 'followed'>,
+    showParentChains: boolean
+  ) => {
+    const preferencePayload =
+      sectionId === 'associated'
+        ? { show_associated_parent_chains: showParentChains }
+        : { show_followed_parent_chains: showParentChains };
+    const requestBody =
+      currentMode === 'claimed'
+        ? await createVerifiedRequestBody(
+            '/api/nexus/shell-preferences',
+            'POST',
+            preferencePayload
+          )
+        : preferencePayload;
+    const updated = await updateNexusScopeDisplayPreferences({
+      requestBody,
+    });
+
+    setAssociatedGraph((currentGraph) =>
+      sectionId === 'associated'
+        ? {
+            ...currentGraph,
+            showParentChains:
+              updated.preferences.show_associated_parent_chains,
+          }
+        : currentGraph
+    );
+    setFollowedGraph((currentGraph) =>
+      sectionId === 'followed'
+        ? {
+            ...currentGraph,
+            showParentChains:
+              updated.preferences.show_followed_parent_chains,
+          }
+        : currentGraph
+    );
+    setMainVisibleScopePacketIds(updated.preferences.main_visible_scope_packet_ids);
     await refreshShellData();
   };
 
@@ -674,8 +701,14 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
         currentIdentityMode: currentMode,
         branchNodes,
         associatedScopes,
+        associatedGraph,
+        discoverableSection,
         discoverableScopes,
         followedScopes,
+        followedGraph,
+        homeGraph,
+        mainGraph,
+        mainVisibleScopePacketIds,
         scopeSummaries,
         isPreferencesDrawerOpen,
         isPrimaryRailCollapsed,
@@ -690,6 +723,7 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
         setActiveSection,
         setScopeFollowed,
         setScopeAssociated,
+        setScopeSectionParentChains,
         refreshShellData,
         togglePreferencesDrawer,
         dismissEarlyAccessGate,

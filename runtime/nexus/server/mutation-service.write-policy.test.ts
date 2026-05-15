@@ -3,38 +3,47 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-test('actor write-policy preparation is wired to current policy before future policy', () => {
-  const source = readFileSync(
+test('actor write-policy preparation resolves current policy before building the future policy', () => {
+  const mutationSource = readFileSync(
     join(process.cwd(), 'runtime', 'nexus', 'server', 'mutation-service.ts'),
     'utf8'
   );
-  const prepareActorWritePolicyUpdateIndex = source.indexOf(
+  const policyGateSource = readFileSync(
+    join(process.cwd(), 'runtime', 'nexus', 'server', 'mutation-policy-gate.ts'),
+    'utf8'
+  );
+  const prepareActorWritePolicyUpdateIndex = mutationSource.indexOf(
     'private async prepareActorWritePolicyUpdate'
   );
-  const nextWritePolicyIndex = source.indexOf(
+  const policyGateCallIndex = mutationSource.indexOf(
+    'await this.policyGate.resolveActorWritePolicyUpdate',
+    prepareActorWritePolicyUpdateIndex
+  );
+  const nextWritePolicyIndex = mutationSource.indexOf(
     'const nextWritePolicy = createWritePolicyForSecurityMode'
   );
-  const currentPolicyDecisionIndex = source.indexOf(
+  const currentPolicyDecisionIndex = policyGateSource.indexOf(
     'const currentPolicyDecision = existingWritePolicyPacket'
   );
-  const currentSecurityModeDecisionIndex = source.indexOf(
+  const currentSecurityModeDecisionIndex = policyGateSource.indexOf(
     'securityMode: currentSecurityMode',
     currentPolicyDecisionIndex
   );
-  const bootstrapDecisionIndex = source.indexOf(
+  const bootstrapDecisionIndex = policyGateSource.indexOf(
     'buildBootstrapWritePolicyDecision',
     currentPolicyDecisionIndex
   );
 
   assert.notEqual(prepareActorWritePolicyUpdateIndex, -1);
+  assert.notEqual(policyGateCallIndex, -1);
   assert.notEqual(nextWritePolicyIndex, -1);
   assert.notEqual(currentPolicyDecisionIndex, -1);
   assert.notEqual(currentSecurityModeDecisionIndex, -1);
   assert.notEqual(bootstrapDecisionIndex, -1);
-  assert.ok(currentPolicyDecisionIndex > prepareActorWritePolicyUpdateIndex);
-  assert.ok(currentPolicyDecisionIndex < nextWritePolicyIndex);
-  assert.ok(currentSecurityModeDecisionIndex < nextWritePolicyIndex);
-  assert.ok(bootstrapDecisionIndex < nextWritePolicyIndex);
+  assert.ok(policyGateCallIndex > prepareActorWritePolicyUpdateIndex);
+  assert.ok(policyGateCallIndex < nextWritePolicyIndex);
+  assert.ok(currentSecurityModeDecisionIndex > currentPolicyDecisionIndex);
+  assert.ok(bootstrapDecisionIndex > currentPolicyDecisionIndex);
 });
 
 test('legacy home-locality mutation intent delegates into the canonical relation-first prepare path', () => {

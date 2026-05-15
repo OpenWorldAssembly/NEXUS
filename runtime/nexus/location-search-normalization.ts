@@ -3,6 +3,29 @@
  * Output: a punctuation-insensitive key for canonical locality search.
  */
 export function normalizeLocalitySearchText(value: string): string {
+  const normalizedValue = value
+    .trim()
+    .normalize('NFKD')
+    .toLowerCase()
+    .replace(/['\u2019]/gu, '')
+    .replace(/\p{Mark}+/gu, '')
+    .replace(/[^\p{Letter}\p{Number}]+/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (normalizedValue.length > 0) {
+    return normalizedValue;
+  }
+
+  return value
+    .trim()
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+export function normalizeLegacyAsciiLocalitySearchText(value: string): string {
   return value
     .trim()
     .toLowerCase()
@@ -10,6 +33,17 @@ export function normalizeLocalitySearchText(value: string): string {
     .replace(/[^a-z0-9]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+export function isUsefulLegacyAsciiAliasKey(value: string): boolean {
+  if (value.length < 2) {
+    return false;
+  }
+
+  const tokens = value.split(' ').filter(Boolean);
+  const singleCharacterTokenCount = tokens.filter((token) => token.length === 1).length;
+
+  return singleCharacterTokenCount <= 1;
 }
 
 export type LocalitySearchLevel = 'nation' | 'region' | 'city' | 'district';

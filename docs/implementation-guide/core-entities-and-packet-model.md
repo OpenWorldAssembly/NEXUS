@@ -159,4 +159,7 @@ Current scope-graph direction:
 - canonical assembly association now uses `Relation(subtype: assembly_association)` plus a supporting `Claim(subtype: relation_assertion)`, and associated scopes now count as mounted related scopes in shell projection
 - `Relation(subtype: defined_by_location)` is the live read seam for linked `Location` packets
 - `locality.path.create` now emits locality `Element` packets, `default_ancestry_parent` relations, provisional `Location(subtype: region)` packets, and `defined_by_location` relations together
+- locality rows can now carry dynamic descriptor metadata, which is currently stored in linked `Location.spatial_payload.scope_descriptor` rather than through a packet schema bump
+- legacy locality levels such as `nation | region | city | district` now function as compatibility buckets, while actual ancestry comes from the ordered path graph and not from a hardcoded four-slot ladder
+- locality depth remains projection-only and should not be stored as a universal packet truth
 - legacy `parent_scope` ancestry, shell follow preferences, and legacy `Claim(home_locality)` reads now belong in explicit compatibility projections or compatibility mirrors rather than inline main-path logic

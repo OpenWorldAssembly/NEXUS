@@ -2,10 +2,15 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  createFallbackLocalityScopeDescriptor,
+  readLocalityScopeDescriptor,
+} from '../location-search.ts';
+import {
   createLocalityCanonicalNameKey,
   getLocalityFuzzySimilarity,
   getLocalitySearchMatchScore,
   matchesLocalitySearchScopeFilter,
+  normalizeLegacyAsciiLocalitySearchText,
   normalizeLocalitySearchText,
   toLocalitySearchLevel,
 } from '../location-search-normalization.ts';
@@ -106,4 +111,61 @@ test('locality canonical keys and fuzzy similarity support duplicate warnings', 
   assert.equal(createLocalityCanonicalNameKey('  Sunnymead--Ranch  '), 'sunnymead ranch');
   assert.ok(getLocalityFuzzySimilarity('Sunnymead Rnch', 'Sunnymead Ranch') >= 0.5);
   assert.ok(getLocalityFuzzySimilarity('Belltown', 'Sunnymead Ranch') < 0.5);
+});
+
+test('locality canonical keys preserve Unicode scripts and normalize accents deterministically', () => {
+  assert.equal(createLocalityCanonicalNameKey('S\u00e3o Paulo'), 'sao paulo');
+  assert.equal(createLocalityCanonicalNameKey('M\u00fcnchen'), 'munchen');
+  assert.equal(createLocalityCanonicalNameKey('Qu\u00e9bec'), 'quebec');
+  assert.equal(createLocalityCanonicalNameKey('Krak\u00f3w'), 'krakow');
+  assert.equal(createLocalityCanonicalNameKey('\u5317\u4eac'), '\u5317\u4eac');
+  assert.equal(createLocalityCanonicalNameKey('\u6771\u4eac\u90fd'), '\u6771\u4eac\u90fd');
+});
+
+test('locality matching remains accent-insensitive while preserving legacy ASCII alias compatibility', () => {
+  const saoPauloKey = createLocalityCanonicalNameKey('S\u00e3o Paulo');
+  const legacyAsciiAlias = normalizeLegacyAsciiLocalitySearchText('S\u00e3o Paulo');
+
+  assert.equal(normalizeLocalitySearchText('Sao Paulo'), saoPauloKey);
+  assert.equal(
+    getLocalitySearchMatchScore({
+      query: 'Quebec',
+      searchableValues: ['Qu\u00e9bec'],
+    }),
+    0
+  );
+  assert.notEqual(legacyAsciiAlias, saoPauloKey);
+  assert.ok(legacyAsciiAlias.includes('paulo'));
+});
+
+test('Unicode normalization never collapses non-Latin locality names to empty keys', () => {
+  assert.notEqual(createLocalityCanonicalNameKey('\u5317\u4eac'), '');
+  assert.notEqual(createLocalityCanonicalNameKey('\u6771\u4eac\u90fd'), '');
+});
+
+test('malformed stored descriptors fall back to the level-based descriptor instead of trusting invalid hierarchy systems', () => {
+  assert.deepEqual(
+    readLocalityScopeDescriptor(
+      {
+        hierarchy_system: 'invalid-system',
+        local_type_label: 'Province',
+        local_type_key: 'province',
+        legacy_level: 'region',
+      },
+      'region'
+    ),
+    createFallbackLocalityScopeDescriptor('region')
+  );
+  assert.equal(
+    readLocalityScopeDescriptor(
+      {
+        hierarchy_system: 'administrative',
+        local_type_label: 'Province',
+        local_type_key: 'province',
+        legacy_level: 'region',
+      },
+      'region'
+    )?.hierarchy_system,
+    'administrative'
+  );
 });

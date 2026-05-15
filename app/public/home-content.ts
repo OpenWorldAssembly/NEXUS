@@ -5,7 +5,10 @@
 import type { ImageSource } from 'expo-image';
 
 import type { PublicPageAction } from '@app/public/content-types';
-import { homeSectionOpenAssemblyImageSource } from './home-section-assets';
+import {
+  homeSectionOpenAssemblyImageSource,
+  homeSectionOwaClarityImageSource,
+} from './home-section-assets';
 import { buildPublicBackgroundImageUri } from './public-graphics';
 
 export type HomeRailSection = {
@@ -86,6 +89,10 @@ const sections: HomeRailSection[] = [
       },
     }),
     align: 'right',
+    sideImageSource: homeSectionOwaClarityImageSource,
+    sideImageAlt:
+      'A clarity lens revealing transparent civic information packets through media noise.',
+    visualMode: 'image',
     action: { href: '/about', label: 'About OWA', variant: 'secondary' },
     mainPointScale: 'compact',
     variant: 'standard',

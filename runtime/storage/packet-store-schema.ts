@@ -105,6 +105,14 @@ CREATE TABLE IF NOT EXISTS runtime_validator_identity (
   updated_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS actor_scope_display_preferences (
+  actor_packet_id TEXT PRIMARY KEY,
+  main_visible_scope_packet_ids_json TEXT NOT NULL DEFAULT '[]',
+  show_associated_parent_chains INTEGER NOT NULL DEFAULT 1,
+  show_followed_parent_chains INTEGER NOT NULL DEFAULT 1,
+  updated_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS packet_verification_index (
   packet_id TEXT PRIMARY KEY,
   target_revision_id TEXT,

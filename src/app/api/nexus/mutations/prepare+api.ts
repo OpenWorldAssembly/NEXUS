@@ -176,12 +176,87 @@ const MutationIntentSchema = z.discriminatedUnion('kind', [
                 .default(null),
               alias_keys: z.array(z.string().min(1)).optional().default([]),
               display_aliases: z.array(z.string().min(1)).optional().default([]),
+              scope_descriptor: z
+                .object({
+                  hierarchy_system: z.enum([
+                    'planetary',
+                    'administrative',
+                    'electoral',
+                    'postal',
+                    'addressing',
+                    'building',
+                    'custom',
+                  ]),
+                  local_type_label: z.string().min(1),
+                  local_type_key: z.string().min(1),
+                  legacy_level: z.enum(['nation', 'region', 'city', 'district']),
+                })
+                .strict()
+                .optional()
+                .nullable()
+                .default(null),
             })
             .strict()
         )
         .min(1)
         .max(4),
       create_anyway: z.boolean().optional().default(false),
+      created_at: z.string().optional().nullable().default(null),
+      mutation_nonce: z.string().optional().nullable().default(null),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('locality.graph.apply'),
+      paths: z
+        .array(
+          z
+            .array(
+              z
+                .object({
+                  level: z.enum(['nation', 'region', 'city', 'district']),
+                  name: z.string().trim().max(120).default(''),
+                  existing_scope_id: z
+                    .string()
+                    .min(1)
+                    .optional()
+                    .nullable()
+                    .default(null),
+                  alias_keys: z.array(z.string().min(1)).optional().default([]),
+                  display_aliases: z.array(z.string().min(1)).optional().default([]),
+                  scope_descriptor: z
+                    .object({
+                      hierarchy_system: z.enum([
+                        'planetary',
+                        'administrative',
+                        'electoral',
+                        'postal',
+                        'addressing',
+                        'building',
+                        'custom',
+                      ]),
+                      local_type_label: z.string().min(1),
+                      local_type_key: z.string().min(1),
+                      legacy_level: z.enum(['nation', 'region', 'city', 'district']),
+                    })
+                    .strict()
+                    .optional()
+                    .nullable()
+                    .default(null),
+                })
+                .strict()
+            )
+            .min(1)
+            .max(4)
+        )
+        .min(1),
+      create_anyway: z.boolean().optional().default(false),
+      home_scope_packet_id: z.string().min(1).optional().nullable().default(null),
+      associated_scope_packet_ids: z.array(z.string().min(1)).optional().default([]),
+      followed_scope_packet_ids: z.array(z.string().min(1)).optional().default([]),
+      main_visible_scope_packet_ids: z.array(z.string().min(1)).optional().default([]),
+      show_associated_parent_chains: z.boolean().optional().default(true),
+      show_followed_parent_chains: z.boolean().optional().default(true),
       created_at: z.string().optional().nullable().default(null),
       mutation_nonce: z.string().optional().nullable().default(null),
     })

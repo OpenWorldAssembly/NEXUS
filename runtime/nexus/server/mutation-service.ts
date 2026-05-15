@@ -1,6 +1,6 @@
 /**
  * File: mutation-service.ts
- * Description: Hosts the shared fortress prepare/finalize mutation corridor over adapted packet state and runtime proofs.
+ * Description: Orchestrates the shared fortress prepare/finalize mutation corridor over adapted packet state and runtime proofs.
  *
  * Explicit per-intent planning remains intentionally contained here for now so packet-type-
  * specific mutation law does not leak back into routes, screens, or unrelated runtime services.
@@ -48,17 +48,11 @@ import {
   planPacketTargetMigration,
   resolvePacketTarget,
 } from '@core/packets/packet-target-resolver';
-import {
-  describeWriteProofLevel,
-  doesProofBundleSatisfyRequirement,
-} from '@core/auth/proof-types';
 import type {
   MutationProofBundle,
 } from '@core/auth/proof-types';
-import {
-  resolveWritePolicyForActions,
-  mergeWritePolicyDecisions,
-  type MutationActionId,
+import type {
+  MutationActionId,
 } from '@core/auth/write-policy';
 import type {
   AttestationKind,
@@ -67,13 +61,11 @@ import type {
   PacketEnvelope,
   PacketEnvelopeByType,
 } from '@core/schema/packet-schema';
-import { verifyPacketSignature } from '@runtime/nexus/identity-crypto';
 import {
   filterClaimPackets,
   listClaimPackets,
 } from '@runtime/nexus/server/claim-utils';
 import {
-  filterRelationPackets,
   listRelationPackets,
 } from '@runtime/nexus/server/relation-utils';
 import { getLegacyParentScopePacketIdCompatibility } from '@runtime/nexus/server/scope-graph-compatibility';
@@ -86,15 +78,34 @@ import {
   planCanonicalLocalityPath,
   type LocalityCreatePathEntry,
 } from '@runtime/nexus/server/locality-directory-service';
+import {
+  collectEligibleMainScopePacketIds,
+  planLocalityGraphApplyPackets,
+  type LocalityGraphApplyPreparedResult,
+} from '@runtime/nexus/server/locality-graph-apply-planner';
+import {
+  planAssemblyAssociationRelationPackets,
+  planFollowRelationPackets,
+  planHomeLocalityRelationPackets,
+} from '@runtime/nexus/server/elemental-scope-relation-planner';
 import type { NexusAuthService } from '@runtime/nexus/server/auth-service';
 import { SQLiteAttestationService } from '@runtime/nexus/server/attestation-service';
 import { SQLiteDiscussionService } from '@runtime/nexus/server/discussion-service';
-import { MutationTicketStore } from '@runtime/nexus/server/mutation-ticket-store';
+import { MutationTicketStore, type StoredMutationTicket } from '@runtime/nexus/server/mutation-ticket-store';
+import { MutationTicketService } from '@runtime/nexus/server/mutation-ticket-service';
+import { MutationPolicyGate } from '@runtime/nexus/server/mutation-policy-gate';
+import {
+  SignedPacketFinalizer,
+  toMutationPersistEffects,
+} from '@runtime/nexus/server/signed-packet-finalizer';
+import {
+  reconcileScopeDisplayPreferences,
+  writeClaimedScopeDisplayPreferences,
+} from '@runtime/nexus/server/scope-display-preferences';
 import {
   buildWritePolicyBodyMarkdown,
   createActorWritePolicyPacketId,
   createWritePolicyForSecurityMode,
-  resolveSecurityModePolicyDecision,
 } from '@runtime/nexus/server/write-security-mode';
 import type { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store';
 
@@ -124,58 +135,6 @@ type AssemblyScopeNode = {
   parentPacketId: string | null;
 };
 
-function toPersistEffects(packets: PacketEnvelope[]): MutationPersistEffect[] {
-  return packets.map((packet) => ({
-    packet: {
-      packet_id: packet.header.packet_id,
-      revision_id: packet.header.revision_id,
-    },
-  }));
-}
-
-async function assertSignedPacketsMatchPreparedDigests(input: {
-  preparedMutation: PreparedMutation;
-  signedPackets: PacketEnvelope[];
-}): Promise<void> {
-  if (input.preparedMutation.prepared_packets.length !== input.signedPackets.length) {
-    throw new Error('Signed mutation packet bundle does not match the prepared candidate size.');
-  }
-
-  for (let index = 0; index < input.preparedMutation.prepared_packets.length; index += 1) {
-    const preparedPacket = input.preparedMutation.prepared_packets[index];
-    const signedPacket = input.signedPackets[index];
-
-    if (!signedPacket || signedPacket.header.family !== preparedPacket.packet.header.family) {
-      throw new Error('Signed mutation packet bundle does not match the prepared packet families.');
-    }
-
-    const digestCandidates = await getPacketUnsignedDigestCandidates(signedPacket);
-    const matchesPreparedDigest = digestCandidates.some(
-      (candidate) => candidate.digest === preparedPacket.unsigned_digest
-    );
-
-    if (!matchesPreparedDigest) {
-      throw new Error('Signed mutation packet bundle does not match the prepared packet digest.');
-    }
-  }
-}
-
-async function getPolicyPacketsByRefs(
-  packetStore: NodeSQLitePacketStore,
-  policyRefs: PacketEnvelopeByType['Element']['header']['moderation']['policy_refs']
-): Promise<PacketEnvelopeByType['Policy'][]> {
-  const packets = await Promise.all(
-    policyRefs.map((policyRef) =>
-      packetStore.fetchByPacket({ packet_id: policyRef.packet_id })
-    )
-  );
-
-  return packets.filter(
-    (packet): packet is PacketEnvelopeByType['Policy'] =>
-      packet?.header.family === 'Policy'
-  );
-}
-
 function normalizePreparedMutation(input: {
   kind: MutationIntent['kind'];
   decision: MutationDecision;
@@ -193,16 +152,6 @@ function normalizePreparedMutation(input: {
       unsigned_digest: input.digests[index] ?? '',
     })),
   };
-}
-
-function buildBootstrapWritePolicyDecision(input: {
-  actionIds: MutationActionId[];
-}): ReturnType<typeof resolveSecurityModePolicyDecision> {
-  return resolveSecurityModePolicyDecision({
-    securityMode: 'standard',
-    actionIds: input.actionIds,
-    sourcePolicyPacketIds: [],
-  });
 }
 
 function createSlug(value: string, maxLength = 36): string {
@@ -285,14 +234,24 @@ function isHomeLocalityMutationKind(
   return kind === 'home_locality.relation.set' || kind === 'home_locality.claim.set';
 }
 
+
+
 export class NexusMutationService {
+  private readonly ticketService: MutationTicketService;
+  private readonly signedPacketFinalizer: SignedPacketFinalizer;
+  private readonly policyGate: MutationPolicyGate;
+
   constructor(
     private readonly packetStore: NodeSQLitePacketStore,
     private readonly authService: NexusAuthService,
     private readonly discussionService: SQLiteDiscussionService,
     private readonly attestationService: SQLiteAttestationService,
-    private readonly ticketStore: MutationTicketStore
-  ) {}
+    ticketStore: MutationTicketStore
+  ) {
+    this.ticketService = new MutationTicketService(ticketStore);
+    this.signedPacketFinalizer = new SignedPacketFinalizer(packetStore);
+    this.policyGate = new MutationPolicyGate(packetStore, authService);
+  }
 
   private async requirePacket<TFamily extends PacketEnvelope['header']['family']>(input: {
     packetId: string;
@@ -345,58 +304,6 @@ export class NexusMutationService {
       parentPacketId: parentByPacketId.get(input.scopePacketId) ?? null,
       parentByPacketId,
     });
-  }
-
-  private async resolveScopePolicyDecision(input: {
-    governingScopePacket: PacketEnvelopeByType['Element'] | null;
-    actorPacket: PacketEnvelopeByType['Element'];
-    actionIds: MutationActionId[];
-  }) {
-    const policyPackets = input.governingScopePacket
-      ? await getPolicyPacketsByRefs(
-          this.packetStore,
-          input.governingScopePacket.header.moderation.policy_refs
-        )
-      : [];
-    const currentSecurityMode = await this.authService.resolveEffectiveSecurityMode(
-      input.actorPacket.header.packet_id
-    );
-    const scopePolicyDecision = resolveWritePolicyForActions({
-      governingScopePacket: input.governingScopePacket,
-      policyPackets,
-      actionIds: input.actionIds,
-    });
-    const actorPolicyDecision = resolveSecurityModePolicyDecision({
-      securityMode: currentSecurityMode,
-      actionIds: input.actionIds,
-    });
-
-    return mergeWritePolicyDecisions({
-      actionIds: input.actionIds,
-      decisions: [scopePolicyDecision, actorPolicyDecision],
-    });
-  }
-
-  private async persistSignedPacketsForActor(input: {
-    actorPacket: PacketEnvelopeByType['Element'];
-    signedPackets: PacketEnvelope[];
-  }) {
-    for (const signedPacket of input.signedPackets) {
-      const signatureIsValid = await verifyPacketSignature({
-        packet: signedPacket,
-        signerPacket: input.actorPacket,
-      });
-
-      if (!signatureIsValid) {
-        throw new Error(`Signed ${signedPacket.header.family} packet verification failed.`);
-      }
-
-      await this.packetStore.writeRevision(signedPacket);
-      await this.packetStore.publishRevision({
-        packet_id: signedPacket.header.packet_id,
-        revision_id: signedPacket.header.revision_id,
-      });
-    }
   }
 
   private async planCanonicalDiscussionMirrors(input: {
@@ -469,27 +376,10 @@ export class NexusMutationService {
           family: 'Element',
         })
       : null;
-    const policyPackets = governingScopePacket
-      ? await getPolicyPacketsByRefs(
-          this.packetStore,
-          governingScopePacket.header.moderation.policy_refs
-        )
-      : [];
-    const currentSecurityMode = await this.authService.resolveEffectiveSecurityMode(
-      input.actorPacket.header.packet_id
-    );
-    const scopePolicyDecision = resolveWritePolicyForActions({
+    const mergedPolicyDecision = await this.policyGate.resolveScopePolicyDecision({
       governingScopePacket,
-      policyPackets,
+      actorPacket: input.actorPacket,
       actionIds: ['discussion.thread.create', 'discussion.post.create'],
-    });
-    const actorPolicyDecision = resolveSecurityModePolicyDecision({
-      securityMode: currentSecurityMode,
-      actionIds: ['discussion.thread.create', 'discussion.post.create'],
-    });
-    const mergedPolicyDecision = mergeWritePolicyDecisions({
-      actionIds: ['discussion.thread.create', 'discussion.post.create'],
-      decisions: [scopePolicyDecision, actorPolicyDecision],
     });
     const decision = {
       ...createDiscussionThreadPostCandidate({
@@ -622,27 +512,10 @@ export class NexusMutationService {
           family: 'Element',
         })
       : null;
-    const policyPackets = governingScopePacket
-      ? await getPolicyPacketsByRefs(
-          this.packetStore,
-          governingScopePacket.header.moderation.policy_refs
-        )
-      : [];
-    const currentSecurityMode = await this.authService.resolveEffectiveSecurityMode(
-      input.actorPacket.header.packet_id
-    );
-    const scopePolicyDecision = resolveWritePolicyForActions({
+    const mergedPolicyDecision = await this.policyGate.resolveScopePolicyDecision({
       governingScopePacket,
-      policyPackets,
+      actorPacket: input.actorPacket,
       actionIds: ['discussion.reply.create'],
-    });
-    const actorPolicyDecision = resolveSecurityModePolicyDecision({
-      securityMode: currentSecurityMode,
-      actionIds: ['discussion.reply.create'],
-    });
-    const mergedPolicyDecision = mergeWritePolicyDecisions({
-      actionIds: ['discussion.reply.create'],
-      decisions: [scopePolicyDecision, actorPolicyDecision],
     });
     const decision = {
       ...createDiscussionReplyCandidate({
@@ -745,31 +618,14 @@ export class NexusMutationService {
           family: 'Element',
         })
       : null;
-    const policyPackets = governingScopePacket
-      ? await getPolicyPacketsByRefs(
-          this.packetStore,
-          governingScopePacket.header.moderation.policy_refs
-        )
-      : [];
     const actionId: MutationActionId =
       input.intent.value === 0
         ? 'attestation.packet_signal.clear'
         : 'attestation.packet_signal.set';
-    const currentSecurityMode = await this.authService.resolveEffectiveSecurityMode(
-      input.actorPacket.header.packet_id
-    );
-    const scopePolicyDecision = resolveWritePolicyForActions({
+    const mergedPolicyDecision = await this.policyGate.resolveScopePolicyDecision({
       governingScopePacket,
-      policyPackets,
+      actorPacket: input.actorPacket,
       actionIds: [actionId],
-    });
-    const actorPolicyDecision = resolveSecurityModePolicyDecision({
-      securityMode: currentSecurityMode,
-      actionIds: [actionId],
-    });
-    const mergedPolicyDecision = mergeWritePolicyDecisions({
-      actionIds: [actionId],
-      decisions: [scopePolicyDecision, actorPolicyDecision],
     });
 
     return {
@@ -792,26 +648,13 @@ export class NexusMutationService {
     intent: Extract<MutationIntent, { kind: 'actor.write_policy.update' }>;
     actorPacket: PacketEnvelopeByType['Element'];
   }): Promise<PreparedMutation> {
-    const currentSecurityMode = await this.authService.resolveEffectiveSecurityMode(
-      input.actorPacket.header.packet_id
-    );
-    const existingPolicyPackets = await getPolicyPacketsByRefs(
-      this.packetStore,
-      input.actorPacket.header.moderation.policy_refs
-    );
-    const existingWritePolicyPacket =
-      existingPolicyPackets.find(
-        (policyPacket) => policyPacket.body.policy_kind === 'write_lock'
-      ) ?? null;
-    const currentPolicyDecision = existingWritePolicyPacket
-      ? resolveSecurityModePolicyDecision({
-          securityMode: currentSecurityMode,
-          actionIds: ['actor.write_policy.update'],
-          sourcePolicyPacketIds: [existingWritePolicyPacket.header.packet_id],
-        })
-      : buildBootstrapWritePolicyDecision({
-          actionIds: ['actor.write_policy.update'],
-        });
+    const {
+      currentPolicyDecision,
+      existingPolicyPackets,
+      existingWritePolicyPacket,
+    } = await this.policyGate.resolveActorWritePolicyUpdate({
+      actorPacket: input.actorPacket,
+    });
     const writePolicyPacketId =
       existingWritePolicyPacket?.header.packet_id ??
       createActorWritePolicyPacketId(input.actorPacket.header.packet_id);
@@ -990,7 +833,7 @@ export class NexusMutationService {
       actionIds.push('assembly_association.relation.set');
     }
 
-    const mergedPolicyDecision = await this.resolveScopePolicyDecision({
+    const mergedPolicyDecision = await this.policyGate.resolveScopePolicyDecision({
       governingScopePacket: parentScopePacket,
       actorPacket: input.actorPacket,
       actionIds,
@@ -1024,103 +867,15 @@ export class NexusMutationService {
       packetId: input.intent.assembly_packet_id,
       family: 'Element',
     });
-    const applicableScopeRefs =
-      assemblyPacket.header.applicable_scope_refs.length > 0
-        ? assemblyPacket.header.applicable_scope_refs
-        : [{ packet_id: assemblyPacket.header.packet_id }];
-    const relationPacketId = createRelationPacketId({
-      subtype: 'assembly_association',
-      subjectPacketId: input.actorPacket.header.packet_id,
-      targetPacketId: assemblyPacket.header.packet_id,
-      scopePacketId: assemblyPacket.header.packet_id,
-    });
-    const claimPacketId = createClaimPacketId({
-      claimKind: 'assembly_association',
-      subjectPacketId: input.actorPacket.header.packet_id,
-      targetPacketId: assemblyPacket.header.packet_id,
-      scopePacketId: assemblyPacket.header.packet_id,
-    });
-    const [
-      existingPreferredRelationRevision,
-      existingPreferredClaimRevision,
-      existingPreferredRelationPacket,
-      existingPreferredClaimPacket,
-    ] = await Promise.all([
-      this.packetStore.fetchPreferredRevision({
-        packet_id: relationPacketId,
-      }),
-      this.packetStore.fetchPreferredRevision({
-        packet_id: claimPacketId,
-      }),
-      this.packetStore.fetchByPacket({
-        packet_id: relationPacketId,
-      }),
-      this.packetStore.fetchByPacket({
-        packet_id: claimPacketId,
-      }),
-    ]);
-    const existingRelationPacket =
-      existingPreferredRelationPacket?.header.family === 'Relation'
-        ? (existingPreferredRelationPacket as PacketEnvelopeByType['Relation'])
-        : null;
-    const existingClaimPacket =
-      existingPreferredClaimPacket?.header.family === 'Claim'
-        ? (existingPreferredClaimPacket as PacketEnvelopeByType['Claim'])
-        : null;
     const isSetIntent = input.intent.kind === 'assembly_association.relation.set';
-    const packets: PacketEnvelope[] = [];
-
-    if (isSetIntent || existingRelationPacket) {
-      packets.push(
-        createScopedRelationPacket({
-          subtype: 'assembly_association',
-          subjectPacketId: input.actorPacket.header.packet_id,
-          targetPacketId: assemblyPacket.header.packet_id,
-          scopePacketId: assemblyPacket.header.packet_id,
-          applicableScopeRefs,
-          createdByPacketId: input.actorPacket.header.packet_id,
-          note:
-            input.intent.kind === 'assembly_association.relation.set'
-              ? input.intent.note ?? null
-              : existingRelationPacket?.body.note ?? null,
-          status: isSetIntent ? 'active' : 'withdrawn',
-          packetId: relationPacketId,
-          parentRevisionRefs: existingPreferredRelationRevision
-            ? [existingPreferredRelationRevision]
-            : [],
-          supportingRefs: existingRelationPacket?.body.supporting_refs ?? [],
-          policyRef: existingRelationPacket?.body.policy_ref ?? null,
-          termsRef: existingRelationPacket?.body.terms_ref ?? null,
-        })
-      );
-    }
-
-    if (isSetIntent || existingClaimPacket) {
-      packets.push(
-        createRelationAssertionClaimPacket({
-          claimKind: 'assembly_association',
-          subjectPacketId: input.actorPacket.header.packet_id,
-          relationPacketId,
-          assertedTargetPacketId: assemblyPacket.header.packet_id,
-          scopePacketId: assemblyPacket.header.packet_id,
-          applicableScopeRefs,
-          createdByPacketId: input.actorPacket.header.packet_id,
-          note:
-            input.intent.kind === 'assembly_association.relation.set'
-              ? input.intent.note ?? null
-              : existingClaimPacket?.body.claim_markdown ??
-                existingClaimPacket?.body.note ??
-                null,
-          status: isSetIntent ? 'active' : 'withdrawn',
-          packetId: claimPacketId,
-          parentRevisionRefs: existingPreferredClaimRevision
-            ? [existingPreferredClaimRevision]
-            : [],
-        })
-      );
-    }
-
-    const mergedPolicyDecision = await this.resolveScopePolicyDecision({
+    const relationPlan = await planAssemblyAssociationRelationPackets({
+      packetStore: this.packetStore,
+      actorPacket: input.actorPacket,
+      targetScopePacket: assemblyPacket,
+      mode: isSetIntent ? 'set' : 'clear',
+      note: isSetIntent ? input.intent.note ?? null : null,
+    });
+    const mergedPolicyDecision = await this.policyGate.resolveScopePolicyDecision({
       governingScopePacket: assemblyPacket,
       actorPacket: input.actorPacket,
       actionIds: [
@@ -1130,7 +885,7 @@ export class NexusMutationService {
       ],
     });
     const preparedPackets = await Promise.all(
-      packets.map(async (packet) => {
+      relationPlan.packets.map(async (packet) => {
         const digests = await getPacketUnsignedDigestCandidates(packet);
 
         return {
@@ -1183,180 +938,30 @@ export class NexusMutationService {
     intent: Extract<MutationIntent, { kind: 'home_locality.relation.set' }>;
     actorPacket: PacketEnvelopeByType['Element'];
   }): Promise<PreparedMutation> {
-    const [claimPackets, relationPackets] = await Promise.all([
-      listClaimPackets(this.packetStore),
-      listRelationPackets(this.packetStore),
-    ]);
-    const activeHomeClaims = filterClaimPackets({
-      claims: claimPackets,
-      claimKind: 'home_locality',
-      subjectPacketId: input.actorPacket.header.packet_id,
-      activeOnly: true,
+    const homeScopePacket = input.intent.home_scope_packet_id
+      ? await this.requirePacket({
+          packetId: input.intent.home_scope_packet_id,
+          family: 'Element',
+        })
+      : null;
+    const relationPlan = await planHomeLocalityRelationPackets({
+      packetStore: this.packetStore,
+      actorPacket: input.actorPacket,
+      homeScopePacket,
+      forceSelectedRevision: true,
     });
-    const activeHomeRelations = filterRelationPackets({
-      relations: relationPackets,
-      relationSubtype: 'home_locality',
-      subjectPacketId: input.actorPacket.header.packet_id,
-      activeOnly: true,
-    });
-    const packets: PacketEnvelope[] = [];
-
-    for (const activeHomeRelation of activeHomeRelations) {
-      if (
-        input.intent.home_scope_packet_id &&
-        activeHomeRelation.body.target_ref.packet_id === input.intent.home_scope_packet_id
-      ) {
-        continue;
-      }
-
-      packets.push(
-        createScopedRelationPacket({
-          subtype: 'home_locality',
-          subjectPacketId: input.actorPacket.header.packet_id,
-          targetPacketId: activeHomeRelation.body.target_ref.packet_id,
-          scopePacketId:
-            activeHomeRelation.body.scope_ref?.packet_id ??
-            activeHomeRelation.body.target_ref.packet_id,
-          applicableScopeRefs: activeHomeRelation.header.applicable_scope_refs,
-          createdByPacketId: input.actorPacket.header.packet_id,
-          note: activeHomeRelation.body.note,
-          status: 'withdrawn',
-          packetId: activeHomeRelation.header.packet_id,
-          parentRevisionRefs: [
-            {
-              packet_id: activeHomeRelation.header.packet_id,
-              revision_id: activeHomeRelation.header.revision_id,
-            },
-          ],
-          supportingRefs: activeHomeRelation.body.supporting_refs,
-          policyRef: activeHomeRelation.body.policy_ref,
-          termsRef: activeHomeRelation.body.terms_ref,
-        })
-      );
-    }
-
-    for (const activeHomeClaim of activeHomeClaims) {
-      const activeHomeClaimTargetPacketId =
-        activeHomeClaim.body.relation_assertion?.target_ref.packet_id ??
-        activeHomeClaim.body.target_ref.packet_id;
-      if (
-        input.intent.home_scope_packet_id &&
-        activeHomeClaimTargetPacketId === input.intent.home_scope_packet_id
-      ) {
-        continue;
-      }
-
-      packets.push(
-        createRelationAssertionClaimPacket({
-          claimKind: 'home_locality',
-          subjectPacketId: input.actorPacket.header.packet_id,
-          relationPacketId: activeHomeClaim.body.target_ref.packet_id,
-          assertedTargetPacketId: activeHomeClaimTargetPacketId,
-          scopePacketId: activeHomeClaim.body.scope_ref.packet_id,
-          applicableScopeRefs: activeHomeClaim.header.applicable_scope_refs,
-          createdByPacketId: input.actorPacket.header.packet_id,
-          note: activeHomeClaim.body.claim_markdown ?? activeHomeClaim.body.note ?? null,
-          status: 'withdrawn',
-          packetId: activeHomeClaim.header.packet_id,
-          parentRevisionRefs: [
-            {
-              packet_id: activeHomeClaim.header.packet_id,
-              revision_id: activeHomeClaim.header.revision_id,
-            },
-          ],
-        })
-      );
-    }
-
-    let governingScopePacket: PacketEnvelopeByType['Element'] | null = null;
-
-    if (input.intent.home_scope_packet_id) {
-      governingScopePacket = await this.requirePacket({
-        packetId: input.intent.home_scope_packet_id,
-        family: 'Element',
-      });
-      const applicableScopeRefs =
-        governingScopePacket.header.applicable_scope_refs.length > 0
-          ? governingScopePacket.header.applicable_scope_refs
-          : [{ packet_id: governingScopePacket.header.packet_id }];
-      const homeRelationPacketId = createRelationPacketId({
-        subtype: 'home_locality',
-        subjectPacketId: input.actorPacket.header.packet_id,
-        targetPacketId: governingScopePacket.header.packet_id,
-        scopePacketId: governingScopePacket.header.packet_id,
-      });
-      const existingPreferredRelationRevision = await this.packetStore.fetchPreferredRevision({
-        packet_id: homeRelationPacketId,
-      });
-      packets.push(
-        createScopedRelationPacket({
-          subtype: 'home_locality',
-          subjectPacketId: input.actorPacket.header.packet_id,
-          targetPacketId: governingScopePacket.header.packet_id,
-          scopePacketId: governingScopePacket.header.packet_id,
-          applicableScopeRefs,
-          createdByPacketId: input.actorPacket.header.packet_id,
-          status: 'active',
-          packetId: homeRelationPacketId,
-          parentRevisionRefs: existingPreferredRelationRevision
-            ? [existingPreferredRelationRevision]
-            : [],
-        })
-      );
-      const homeClaimPacketId = createClaimPacketId({
-        claimKind: 'home_locality',
-        subjectPacketId: input.actorPacket.header.packet_id,
-        targetPacketId: governingScopePacket.header.packet_id,
-        scopePacketId: governingScopePacket.header.packet_id,
-      });
-      const existingPreferredRevision = await this.packetStore.fetchPreferredRevision({
-        packet_id: homeClaimPacketId,
-      });
-      packets.push(
-        createRelationAssertionClaimPacket({
-          claimKind: 'home_locality',
-          subjectPacketId: input.actorPacket.header.packet_id,
-          relationPacketId: homeRelationPacketId,
-          assertedTargetPacketId: governingScopePacket.header.packet_id,
-          scopePacketId: governingScopePacket.header.packet_id,
-          applicableScopeRefs,
-          createdByPacketId: input.actorPacket.header.packet_id,
-          status: 'active',
-          packetId: homeClaimPacketId,
-          parentRevisionRefs: existingPreferredRevision ? [existingPreferredRevision] : [],
-        })
-      );
-    } else if (activeHomeRelations[0] || activeHomeClaims[0]) {
-      const targetScopePacketId =
-        activeHomeRelations[0]?.body.target_ref.packet_id ??
-        activeHomeClaims[0]?.body.relation_assertion?.target_ref.packet_id ??
-        activeHomeClaims[0]?.body.target_ref.packet_id ??
-        null;
-      if (!targetScopePacketId) {
-        governingScopePacket = null;
-      } else {
-        const packet = await this.packetStore.fetchByPacket({
-          packet_id: targetScopePacketId,
-        });
-        governingScopePacket =
-          packet?.header.family === 'Element'
-            ? (packet as PacketEnvelopeByType['Element'])
-            : null;
-      }
-    }
-
     const actionIds: MutationActionId[] = [
       input.intent.home_scope_packet_id
         ? 'home_locality.relation.set'
         : 'home_locality.relation.clear',
     ];
-    const mergedPolicyDecision = await this.resolveScopePolicyDecision({
-      governingScopePacket,
+    const mergedPolicyDecision = await this.policyGate.resolveScopePolicyDecision({
+      governingScopePacket: relationPlan.governingScopePacket,
       actorPacket: input.actorPacket,
       actionIds,
     });
     const preparedPackets = await Promise.all(
-      packets.map(async (packet) => {
+      relationPlan.packets.map(async (packet) => {
         const digests = await getPacketUnsignedDigestCandidates(packet);
 
         return {
@@ -1370,7 +975,7 @@ export class NexusMutationService {
       kind: input.intent.kind,
       ...mergedPolicyDecision,
       governing_scope_packet_id:
-        governingScopePacket?.header.packet_id ?? input.actorPacket.header.packet_id,
+        relationPlan.governingScopePacket?.header.packet_id ?? input.actorPacket.header.packet_id,
       prepared_packets: preparedPackets,
     };
   }
@@ -1409,63 +1014,20 @@ export class NexusMutationService {
       packetId: input.intent.target_scope_packet_id,
       family: 'Element',
     });
-    const applicableScopeRefs =
-      targetScopePacket.header.applicable_scope_refs.length > 0
-        ? targetScopePacket.header.applicable_scope_refs
-        : [{ packet_id: targetScopePacket.header.packet_id }];
-    const relationPacketId = createRelationPacketId({
-      subtype: 'follows',
-      subjectPacketId: input.actorPacket.header.packet_id,
-      targetPacketId: targetScopePacket.header.packet_id,
-      scopePacketId: targetScopePacket.header.packet_id,
-    });
-    const [existingPreferredRelationRevision, existingPreferredRelationPacket] =
-      await Promise.all([
-        this.packetStore.fetchPreferredRevision({
-          packet_id: relationPacketId,
-        }),
-        this.packetStore.fetchByPacket({
-          packet_id: relationPacketId,
-        }),
-      ]);
-    const existingRelationPacket =
-      existingPreferredRelationPacket?.header.family === 'Relation'
-        ? (existingPreferredRelationPacket as PacketEnvelopeByType['Relation'])
-        : null;
     const isSetIntent = input.intent.kind === 'follows.relation.set';
-    const packets: PacketEnvelope[] = [];
-
-    if (isSetIntent || existingRelationPacket) {
-      packets.push(
-        createScopedRelationPacket({
-          subtype: 'follows',
-          subjectPacketId: input.actorPacket.header.packet_id,
-          targetPacketId: targetScopePacket.header.packet_id,
-          scopePacketId: targetScopePacket.header.packet_id,
-          applicableScopeRefs,
-          createdByPacketId: input.actorPacket.header.packet_id,
-          note: existingRelationPacket?.body.note ?? null,
-          status: isSetIntent ? 'active' : 'withdrawn',
-          packetId: relationPacketId,
-          parentRevisionRefs: existingPreferredRelationRevision
-            ? [existingPreferredRelationRevision]
-            : [],
-          supportingRefs: existingRelationPacket?.body.supporting_refs ?? [],
-          policyRef: existingRelationPacket?.body.policy_ref ?? null,
-          termsRef: existingRelationPacket?.body.terms_ref ?? null,
-        })
-      );
-    }
-
-    const mergedPolicyDecision = await this.resolveScopePolicyDecision({
+    const relationPlan = await planFollowRelationPackets({
+      packetStore: this.packetStore,
+      actorPacket: input.actorPacket,
+      targetScopePacket,
+      mode: isSetIntent ? 'set' : 'clear',
+    });
+    const mergedPolicyDecision = await this.policyGate.resolveScopePolicyDecision({
       governingScopePacket: targetScopePacket,
       actorPacket: input.actorPacket,
-      actionIds: [
-        isSetIntent ? 'follows.relation.set' : 'follows.relation.clear',
-      ],
+      actionIds: [isSetIntent ? 'follows.relation.set' : 'follows.relation.clear'],
     });
     const preparedPackets = await Promise.all(
-      packets.map(async (packet) => {
+      relationPlan.packets.map(async (packet) => {
         const digests = await getPacketUnsignedDigestCandidates(packet);
 
         return {
@@ -1526,7 +1088,7 @@ export class NexusMutationService {
       packetId: claimPacketId,
       parentRevisionRefs: existingPreferredRevision ? [existingPreferredRevision] : [],
     });
-    const mergedPolicyDecision = await this.resolveScopePolicyDecision({
+    const mergedPolicyDecision = await this.policyGate.resolveScopePolicyDecision({
       governingScopePacket,
       actorPacket: input.actorPacket,
       actionIds: [
@@ -1701,7 +1263,7 @@ export class NexusMutationService {
         : input.intent.mode === 'dispute'
           ? 'role_association.attestation.dispute'
           : 'role_association.attestation.clear';
-    const mergedPolicyDecision = await this.resolveScopePolicyDecision({
+    const mergedPolicyDecision = await this.policyGate.resolveScopePolicyDecision({
       governingScopePacket,
       actorPacket: input.actorPacket,
       actionIds: [actionId],
@@ -1724,6 +1286,7 @@ export class NexusMutationService {
       prepared_packets: preparedPackets,
     };
   }
+
 
   private async prepareLocalityPathCreate(input: {
     intent: Extract<MutationIntent, { kind: 'locality.path.create' }>;
@@ -1748,7 +1311,7 @@ export class NexusMutationService {
             family: 'Element',
           })
         : null;
-    const mergedPolicyDecision = await this.resolveScopePolicyDecision({
+    const mergedPolicyDecision = await this.policyGate.resolveScopePolicyDecision({
       governingScopePacket,
       actorPacket: input.actorPacket,
       actionIds: ['locality.element.create'],
@@ -1770,22 +1333,57 @@ export class NexusMutationService {
         governingScopePacket?.header.packet_id ?? input.actorPacket.header.packet_id,
       prepared_packets: preparedPackets,
     };
-    const storedTicket = this.ticketStore.create({
-      actor_packet_id: input.actorPacket.header.packet_id,
-      prepared_mutation: preparedMutation,
-      intent: input.intent,
-      prepared_result: plannedResult,
-    });
-
     return {
-      ticket: {
-        ticket_id: storedTicket.ticket_id,
-        actor_packet_id: storedTicket.actor_packet_id,
-        kind: storedTicket.intent.kind,
-        expires_at: storedTicket.expires_at,
-      },
-      prepared_mutation: preparedMutation,
+      ...this.ticketService.createPreparedMutationTicket({
+        actorPacketId: input.actorPacket.header.packet_id,
+        preparedMutation,
+        intent: input.intent,
+        preparedResult: plannedResult,
+      }),
       prepared_result: plannedResult,
+    };
+  }
+
+  private async prepareLocalityGraphApply(input: {
+    intent: Extract<MutationIntent, { kind: 'locality.graph.apply' }>;
+    actorPacket: PacketEnvelopeByType['Element'];
+  }): Promise<PreparedMutationResult & { prepared_result: unknown }> {
+    const graphPlan = await planLocalityGraphApplyPackets({
+      packetStore: this.packetStore,
+      actorPacket: input.actorPacket,
+      intent: input.intent,
+    });
+    const mergedPolicyDecision = await this.policyGate.resolveMultiScopePolicyDecision({
+      actorPacket: input.actorPacket,
+      actionIds: graphPlan.actionIds,
+      governingScopes: graphPlan.governingScopes,
+    });
+    const preparedPackets = await Promise.all(
+      graphPlan.createdPackets.map(async (packet) => {
+        const digests = await getPacketUnsignedDigestCandidates(packet);
+
+        return {
+          packet,
+          unsigned_digest: digests[0]?.digest ?? '',
+        };
+      })
+    );
+    const preparedMutation: PreparedMutation = {
+      kind: input.intent.kind,
+      ...mergedPolicyDecision,
+      governing_scope_packet_id:
+        graphPlan.preferredGoverningScopePacket?.header.packet_id ??
+        input.actorPacket.header.packet_id,
+      prepared_packets: preparedPackets,
+    };
+    return {
+      ...this.ticketService.createPreparedMutationTicket({
+        actorPacketId: input.actorPacket.header.packet_id,
+        preparedMutation,
+        intent: input.intent,
+        preparedResult: graphPlan.plannedResult,
+      }),
+      prepared_result: graphPlan.plannedResult,
     };
   }
 
@@ -1810,7 +1408,7 @@ export class NexusMutationService {
         scopeNodes,
       }),
     });
-    const mergedPolicyDecision = await this.resolveScopePolicyDecision({
+    const mergedPolicyDecision = await this.policyGate.resolveScopePolicyDecision({
       governingScopePacket: scopeNode.packet,
       actorPacket: input.actorPacket,
       actionIds: ['discussion.surfaces.ensure'],
@@ -1835,7 +1433,7 @@ export class NexusMutationService {
   }
 
   readTicket(ticketId: string) {
-    return this.ticketStore.read(ticketId);
+    return this.ticketService.read(ticketId);
   }
 
   async prepareMutation(input: {
@@ -1850,6 +1448,15 @@ export class NexusMutationService {
       });
 
       return preparedLocalityMutation;
+    }
+
+    if (input.intent.kind === 'locality.graph.apply') {
+      const preparedLocalityGraphMutation = await this.prepareLocalityGraphApply({
+        intent: input.intent,
+        actorPacket: input.actorPacket,
+      });
+
+      return preparedLocalityGraphMutation;
     }
 
     const preparedMutation =
@@ -1921,25 +1528,15 @@ export class NexusMutationService {
                               actorPacket: input.actorPacket,
                             });
 
-    const storedTicket = this.ticketStore.create({
-      actor_packet_id: input.actorPacket.header.packet_id,
-      prepared_mutation: preparedMutation,
+    return this.ticketService.createPreparedMutationTicket({
+      actorPacketId: input.actorPacket.header.packet_id,
+      preparedMutation,
       intent: input.intent,
     });
-
-    return {
-      ticket: {
-        ticket_id: storedTicket.ticket_id,
-        actor_packet_id: storedTicket.actor_packet_id,
-        kind: storedTicket.intent.kind,
-        expires_at: storedTicket.expires_at,
-      },
-      prepared_mutation: preparedMutation,
-    };
   }
 
   private async finalizeDiscussionThreadPost(input: {
-    storedTicket: ReturnType<MutationTicketStore['consume']>;
+    storedTicket: StoredMutationTicket;
     actorContext: ActorContext;
     signedPackets: PacketEnvelope[];
   }) {
@@ -1973,7 +1570,7 @@ export class NexusMutationService {
     }
 
     if (mirrorPackets.length > 0) {
-      await this.persistSignedPacketsForActor({
+      await this.signedPacketFinalizer.persistSignedPacketsForActor({
         actorPacket: input.actorContext.actorPacket,
         signedPackets: mirrorPackets,
       });
@@ -2022,13 +1619,13 @@ export class NexusMutationService {
     });
 
     return {
-      persist_effects: toPersistEffects([threadPacket, postPacket]),
+      persist_effects: toMutationPersistEffects([threadPacket, postPacket]),
       result,
     };
   }
 
   private async finalizeDiscussionReply(input: {
-    storedTicket: ReturnType<MutationTicketStore['consume']>;
+    storedTicket: StoredMutationTicket;
     actorContext: ActorContext;
     signedPackets: PacketEnvelope[];
   }) {
@@ -2053,7 +1650,7 @@ export class NexusMutationService {
     }
 
     if (mirrorPackets.length > 0) {
-      await this.persistSignedPacketsForActor({
+      await this.signedPacketFinalizer.persistSignedPacketsForActor({
         actorPacket: input.actorContext.actorPacket,
         signedPackets: mirrorPackets,
       });
@@ -2097,7 +1694,7 @@ export class NexusMutationService {
     });
 
     return {
-      persist_effects: toPersistEffects([replyPacket]),
+      persist_effects: toMutationPersistEffects([replyPacket]),
       result,
     };
   }
@@ -2115,7 +1712,7 @@ export class NexusMutationService {
     });
 
     return {
-      persist_effects: toPersistEffects([attestationPacket]),
+      persist_effects: toMutationPersistEffects([attestationPacket]),
       result: {
         target_packet_id: attestationPacket.body.target_ref.packet_id,
         value: (attestationPacket.body.status === 'cleared'
@@ -2130,21 +1727,11 @@ export class NexusMutationService {
     actorContext: ActorContext;
     signedPackets: PacketEnvelope[];
   }) {
-    for (const signedPacket of input.signedPackets) {
-      await verifyPacketSignature({
-        packet: signedPacket,
-        signerPacket: input.actorContext.actorPacket,
-      }).then((signatureIsValid) => {
-        if (!signatureIsValid) {
-          throw new Error('Signed write-policy packet verification failed.');
-        }
-      });
-      await this.packetStore.writeRevision(signedPacket);
-      await this.packetStore.publishRevision({
-        packet_id: signedPacket.header.packet_id,
-        revision_id: signedPacket.header.revision_id,
-      });
-    }
+    await this.signedPacketFinalizer.persistSignedPacketsForActor({
+      actorPacket: input.actorContext.actorPacket,
+      signedPackets: input.signedPackets,
+      signatureFailureMessage: 'Signed write-policy packet verification failed.',
+    });
 
     const latestActorElementPacket = [...input.signedPackets]
       .reverse()
@@ -2168,7 +1755,7 @@ export class NexusMutationService {
     );
 
     return {
-      persist_effects: toPersistEffects(input.signedPackets),
+      persist_effects: toMutationPersistEffects(input.signedPackets),
       result: {
         security_mode: securityMode,
       },
@@ -2179,7 +1766,7 @@ export class NexusMutationService {
     actorContext: ActorContext;
     signedPackets: PacketEnvelope[];
   }) {
-    await this.persistSignedPacketsForActor({
+    await this.signedPacketFinalizer.persistSignedPacketsForActor({
       actorPacket: input.actorContext.actorPacket,
       signedPackets: input.signedPackets,
     });
@@ -2191,7 +1778,7 @@ export class NexusMutationService {
     );
 
     return {
-      persist_effects: toPersistEffects(input.signedPackets),
+      persist_effects: toMutationPersistEffects(input.signedPackets),
       result: {
         assembly_packet: assemblyPacket ?? null,
         claims: await this.attestationService.listAssemblyAssociationClaimsForActor(
@@ -2204,9 +1791,9 @@ export class NexusMutationService {
   private async finalizeAssociationRelationUpdate(input: {
     actorContext: ActorContext;
     signedPackets: PacketEnvelope[];
-    storedTicket: ReturnType<MutationTicketStore['consume']>;
+    storedTicket: StoredMutationTicket;
   }) {
-    await this.persistSignedPacketsForActor({
+    await this.signedPacketFinalizer.persistSignedPacketsForActor({
       actorPacket: input.actorContext.actorPacket,
       signedPackets: input.signedPackets,
     });
@@ -2227,7 +1814,7 @@ export class NexusMutationService {
         input.storedTicket.intent.value !== 1);
 
     return {
-      persist_effects: toPersistEffects(input.signedPackets),
+      persist_effects: toMutationPersistEffects(input.signedPackets),
       result: {
         relation_packet_id: activeRelationPacket?.header.packet_id ?? null,
         relation_status:
@@ -2248,9 +1835,9 @@ export class NexusMutationService {
   private async finalizeFollowRelationUpdate(input: {
     actorContext: ActorContext;
     signedPackets: PacketEnvelope[];
-    storedTicket: ReturnType<MutationTicketStore['consume']>;
+    storedTicket: StoredMutationTicket;
   }) {
-    await this.persistSignedPacketsForActor({
+    await this.signedPacketFinalizer.persistSignedPacketsForActor({
       actorPacket: input.actorContext.actorPacket,
       signedPackets: input.signedPackets,
     });
@@ -2261,7 +1848,7 @@ export class NexusMutationService {
     );
 
     return {
-      persist_effects: toPersistEffects(input.signedPackets),
+      persist_effects: toMutationPersistEffects(input.signedPackets),
       result: {
         relation_packet_id: activeRelationPacket?.header.packet_id ?? null,
         relation_status:
@@ -2282,9 +1869,9 @@ export class NexusMutationService {
   private async finalizeClaimUpdate(input: {
     actorContext: ActorContext;
     signedPackets: PacketEnvelope[];
-    storedTicket: ReturnType<MutationTicketStore['consume']>;
+    storedTicket: StoredMutationTicket;
   }) {
-    await this.persistSignedPacketsForActor({
+    await this.signedPacketFinalizer.persistSignedPacketsForActor({
       actorPacket: input.actorContext.actorPacket,
       signedPackets: input.signedPackets,
     });
@@ -2295,7 +1882,7 @@ export class NexusMutationService {
     );
 
     return {
-      persist_effects: toPersistEffects(input.signedPackets),
+      persist_effects: toMutationPersistEffects(input.signedPackets),
       result: {
         claim_packet_id: claimPacket?.header.packet_id ?? null,
         claim_status:
@@ -2311,9 +1898,9 @@ export class NexusMutationService {
   private async finalizeHomeLocalityRelation(input: {
     actorContext: ActorContext;
     signedPackets: PacketEnvelope[];
-    storedTicket: ReturnType<MutationTicketStore['consume']>;
+    storedTicket: StoredMutationTicket;
   }) {
-    await this.persistSignedPacketsForActor({
+    await this.signedPacketFinalizer.persistSignedPacketsForActor({
       actorPacket: input.actorContext.actorPacket,
       signedPackets: input.signedPackets,
     });
@@ -2332,7 +1919,7 @@ export class NexusMutationService {
       : null;
 
     return {
-      persist_effects: toPersistEffects(input.signedPackets),
+      persist_effects: toMutationPersistEffects(input.signedPackets),
       result: {
         relation_packet_id: activeRelationPacket?.header.packet_id ?? null,
         claim_packet_id: activeClaimPacket?.header.packet_id ?? null,
@@ -2356,9 +1943,9 @@ export class NexusMutationService {
   private async finalizeRoleAssociationAttestation(input: {
     actorContext: ActorContext;
     signedPackets: PacketEnvelope[];
-    storedTicket: ReturnType<MutationTicketStore['consume']>;
+    storedTicket: StoredMutationTicket;
   }) {
-    await this.persistSignedPacketsForActor({
+    await this.signedPacketFinalizer.persistSignedPacketsForActor({
       actorPacket: input.actorContext.actorPacket,
       signedPackets: input.signedPackets,
     });
@@ -2400,7 +1987,7 @@ export class NexusMutationService {
     ).some((edge) => edge.target_ref.packet_id === roleAttestationIntent.claim_packet_id);
 
     return {
-      persist_effects: toPersistEffects(input.signedPackets),
+      persist_effects: toMutationPersistEffects(input.signedPackets),
       result: {
         claim_packet_id: roleAttestationIntent.claim_packet_id,
         mode: roleAttestationIntent.mode,
@@ -2418,9 +2005,9 @@ export class NexusMutationService {
   private async finalizeLocalityPathCreate(input: {
     actorContext: ActorContext;
     signedPackets: PacketEnvelope[];
-    storedTicket: ReturnType<MutationTicketStore['consume']>;
+    storedTicket: StoredMutationTicket;
   }) {
-    await this.persistSignedPacketsForActor({
+    await this.signedPacketFinalizer.persistSignedPacketsForActor({
       actorPacket: input.actorContext.actorPacket,
       signedPackets: input.signedPackets,
     });
@@ -2436,7 +2023,7 @@ export class NexusMutationService {
       | undefined;
 
     return {
-      persist_effects: toPersistEffects(input.signedPackets),
+      persist_effects: toMutationPersistEffects(input.signedPackets),
       result: {
         created_packets: input.signedPackets,
         created_relation_packet_ids:
@@ -2449,12 +2036,124 @@ export class NexusMutationService {
     };
   }
 
+  private async finalizeLocalityGraphApply(input: {
+    actorContext: ActorContext;
+    signedPackets: PacketEnvelope[];
+    storedTicket: StoredMutationTicket;
+  }) {
+    await this.signedPacketFinalizer.persistSignedPacketsForActor({
+      actorPacket: input.actorContext.actorPacket,
+      signedPackets: input.signedPackets,
+    });
+
+    if (input.storedTicket.intent.kind !== 'locality.graph.apply') {
+      throw new Error('Unexpected locality graph mutation ticket.');
+    }
+
+    const preparedResult = input.storedTicket.prepared_result as
+      | LocalityGraphApplyPreparedResult
+      | undefined;
+    let preferencesPhase: {
+      status: 'success' | 'partial' | 'failed' | 'skipped';
+      message: string | null;
+      error_messages: string[];
+    } = {
+      status: 'success',
+      message: 'Temporary main and section display preferences were updated.',
+      error_messages: [],
+    };
+    const eligibleMainScopePacketIds = collectEligibleMainScopePacketIds({
+      intent: input.storedTicket.intent,
+      preparedResult,
+    });
+    let preferences = reconcileScopeDisplayPreferences({
+      preferences: {
+        main_visible_scope_packet_ids:
+          input.storedTicket.intent.main_visible_scope_packet_ids ?? [],
+        show_associated_parent_chains:
+          input.storedTicket.intent.show_associated_parent_chains ?? true,
+        show_followed_parent_chains:
+          input.storedTicket.intent.show_followed_parent_chains ?? true,
+      },
+      eligibleMainScopePacketIds,
+    });
+
+    try {
+      preferences = await writeClaimedScopeDisplayPreferences({
+        packetStore: this.packetStore,
+        actorPacketId: input.actorContext.actorPacket.header.packet_id,
+        preferences,
+        eligibleMainScopePacketIds,
+      });
+    } catch (error) {
+      preferencesPhase = {
+        status: 'failed',
+        message: 'Packet writes succeeded, but temporary scope display preferences were not saved.',
+        error_messages: [
+          error instanceof Error ? error.message : 'Unable to save scope display preferences.',
+        ],
+      };
+    }
+
+    let shellPayload: unknown = null;
+
+    try {
+      const { getNexusShellPayload } = await import('@runtime/nexus/server/nexus-query-data');
+      shellPayload = await getNexusShellPayload(
+        input.actorContext.actorPacket.header.packet_id
+      );
+    } catch {
+      shellPayload = null;
+    }
+
+    const relationPacketCount = input.signedPackets.filter(
+      (packet) => packet.header.family === 'Relation' || packet.header.family === 'Claim'
+    ).length;
+
+    return {
+      persist_effects: toMutationPersistEffects(input.signedPackets),
+      result: {
+        structural_phase: {
+          status: 'success',
+          message: 'Locality graph packet phase completed successfully.',
+          error_messages: [],
+        },
+        relations_phase: {
+          status: relationPacketCount > 0 ? 'success' : 'skipped',
+          message:
+            relationPacketCount > 0
+              ? 'Selected home, association, and follow relation packets were included in the signed packet write.'
+              : 'No additional scope relations were selected.',
+          error_messages: [],
+        },
+        preferences_phase: preferencesPhase,
+        path_results:
+          preparedResult?.path_results?.map((pathResult) => ({
+            ...pathResult,
+            created_packets: input.signedPackets.filter((packet) =>
+              pathResult.created_packets.some(
+                (createdPacket) => createdPacket.header.packet_id === packet.header.packet_id
+              )
+            ),
+          })) ?? [],
+        final_result: preparedResult?.final_result ?? null,
+        home_scope_packet_id: input.storedTicket.intent.home_scope_packet_id ?? null,
+        associated_scope_packet_ids:
+          input.storedTicket.intent.associated_scope_packet_ids ?? [],
+        followed_scope_packet_ids:
+          input.storedTicket.intent.followed_scope_packet_ids ?? [],
+        preferences,
+        shell_payload: shellPayload,
+      },
+    };
+  }
+
   private async finalizeDiscussionSurfacesEnsure(input: {
     actorContext: ActorContext;
     signedPackets: PacketEnvelope[];
-    storedTicket: ReturnType<MutationTicketStore['consume']>;
+    storedTicket: StoredMutationTicket;
   }) {
-    await this.persistSignedPacketsForActor({
+    await this.signedPacketFinalizer.persistSignedPacketsForActor({
       actorPacket: input.actorContext.actorPacket,
       signedPackets: input.signedPackets,
     });
@@ -2473,7 +2172,7 @@ export class NexusMutationService {
     });
 
     return {
-      persist_effects: toPersistEffects(input.signedPackets),
+      persist_effects: toMutationPersistEffects(input.signedPackets),
       result: {
         created_packet_refs: input.signedPackets.map((packet) => ({
           packet_id: packet.header.packet_id,
@@ -2488,31 +2187,16 @@ export class NexusMutationService {
     request: MutationFinalizeRequest;
     actorContext: ActorContext;
   }): Promise<FinalizedMutationResult> {
-    const storedTicket = this.ticketStore.consume(input.request.ticket_id);
-
-    if (storedTicket.actor_packet_id !== input.actorContext.actorPacket.header.packet_id) {
-      throw new Error('Mutation ticket actor does not match the current actor.');
-    }
-
-    await assertSignedPacketsMatchPreparedDigests({
-      preparedMutation: storedTicket.prepared_mutation,
-      signedPackets: input.request.signed_packets,
+    const storedTicket = this.ticketService.consumeForActor({
+      ticketId: input.request.ticket_id,
+      actorPacketId: input.actorContext.actorPacket.header.packet_id,
     });
 
-    if (
-      !doesProofBundleSatisfyRequirement({
-        proofs: input.actorContext.proofBundle,
-        requiredLevel: storedTicket.prepared_mutation.required_proof_level,
-        acceptedMethods:
-          storedTicket.prepared_mutation.accepted_proof_methods,
-      })
-    ) {
-      throw new Error(
-        `This mutation requires ${describeWriteProofLevel(
-          storedTicket.prepared_mutation.required_proof_level
-        )} before it can be finalized.`
-      );
-    }
+    await this.signedPacketFinalizer.validateSignedMutationBundle({
+      storedTicket,
+      signedPackets: input.request.signed_packets,
+      proofBundle: input.actorContext.proofBundle,
+    });
 
     const kind = storedTicket.intent.kind;
     let finalized:
@@ -2526,6 +2210,7 @@ export class NexusMutationService {
       | Awaited<ReturnType<typeof this.finalizeHomeLocalityRelation>>
       | Awaited<ReturnType<typeof this.finalizeRoleAssociationAttestation>>
       | Awaited<ReturnType<typeof this.finalizeLocalityPathCreate>>
+      | Awaited<ReturnType<typeof this.finalizeLocalityGraphApply>>
       | Awaited<ReturnType<typeof this.finalizeDiscussionSurfacesEnsure>>
       | Awaited<ReturnType<typeof this.finalizeActorWritePolicyUpdate>>;
 
@@ -2599,6 +2284,13 @@ export class NexusMutationService {
         break;
       case 'locality.path.create':
         finalized = await this.finalizeLocalityPathCreate({
+          actorContext: input.actorContext,
+          signedPackets: input.request.signed_packets,
+          storedTicket,
+        });
+        break;
+      case 'locality.graph.apply':
+        finalized = await this.finalizeLocalityGraphApply({
           actorContext: input.actorContext,
           signedPackets: input.request.signed_packets,
           storedTicket,

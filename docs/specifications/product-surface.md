@@ -101,20 +101,28 @@ Dashboard is now a real packet-backed preview workspace rather than only a shell
 
 - the route still searches the existing locality directory first
 - when search does not find the intended locality, the existing `create_candidate` seam now seeds the broad-to-narrow builder directly instead of dead-ending
+- top-level search can now still hand off into locality creation when same-name results exist elsewhere, so a result like `Ontario` in one branch does not suppress creating `Ontario` under another chosen parent path
+- the create UI can still be edited target-first, but preview and create now normalize that editing state into a broad-to-narrow planner path before runtime planning
 - the builder now uses a real non-mutating `Review path` step before any write occurs
+- locality rows are now descriptor-first under the hood: each row can carry a hierarchy system, local type label, local type key, and legacy compatibility bucket
+- sparse paths are now valid planner truth, so a path such as `Canada -> Vancouver` no longer needs a required intermediate `region` row just to satisfy the old ladder
 - review distinguishes reused existing levels from newly planned locality levels
 - duplicate warnings are now actionable through `Use existing`, `Edit name`, and `Create anyway`
 - `Use as home locality` is now an explicit toggle shared by both existing-locality selection and newly created locality completion
 - review can also show a pre-checked home-branch inclusion checklist, but that checklist remains preview-only in this pass and does not yet change persisted home-locality semantics
+- created locality packets now record descriptor metadata inside linked `Location.spatial_payload`, while legacy `nation | region | city | district` levels remain compatibility buckets rather than the full future locality model
+- locality confirm now writes through one composite runtime apply seam above `locality.path.create`, so locality graph creation, home-locality selection, association, follow, and temporary main-tree display choices are orchestrated together instead of being chained one mutation at a time in the page
 
 ### Scope sidebar
 
 The Nexus scope sidebar now reflects the packet-native scope graph more directly.
 
-- it groups scope context into `Home scopes`, `Associated scopes`, `Followed scopes`, and `Discoverable scopes`
+- it groups scope context into `Home scopes`, `Associated scopes`, `Followed scopes`, `Main scopes`, and `Discoverable scopes`
 - `Home scopes` render as a projected trunk ordered from the broadest mounted geography down toward the personal `You` scope
 - associated scopes now count as mounted related scopes, but remain outside the geographic home trunk rather than being mixed into its ancestry chain
-- associated, followed, and discoverable scopes are grouped by scope level for quick scale scanning
+- associated, followed, main, and discoverable scopes are now server-projected grouped sections instead of thin client-side reconstructions from id arrays
+- associated and followed sections can now persist lightweight parent-context display independently, using text-only contextual chains rather than full extra scope cards
+- `Main scopes` are currently derived from explicit temporary runtime visibility preferences over eligible home, associated, and followed scopes rather than from a packet-backed relation
 - scope rows stay click-to-open, while secondary actions move into compact side overflow menus
 - section placement now carries most of the relationship meaning, rather than depending on inline badge clutter
 - follow and association actions now use the canonical packet-native mutation corridor and then refresh shell projection from the server result

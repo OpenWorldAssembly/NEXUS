@@ -7,7 +7,10 @@ import type { RequestHandler } from 'expo-router/server';
 import { z } from 'zod';
 
 import { createLocalityCanonicalNameKey } from '@runtime/nexus/location-search-normalization';
-import { searchNexusLocations } from '@runtime/nexus/server/location-search-service';
+import {
+  listNexusLocationChildren,
+  searchNexusLocations,
+} from '@runtime/nexus/server/location-search-service';
 
 const SearchLocationQuerySchema = z.object({
   query: z.string().trim().max(120).default(''),
@@ -17,6 +20,7 @@ const SearchLocationQuerySchema = z.object({
     .nullable()
     .default(null),
   parent_scope_id: z.string().min(1).optional().nullable().default(null),
+  children_of: z.string().min(1).optional().nullable().default(null),
 });
 
 function createJsonResponse(body: unknown, status = 200): Response {
@@ -39,22 +43,30 @@ export const GET: RequestHandler = async (request) => {
       query: requestUrl.searchParams.get('query') ?? '',
       level: requestUrl.searchParams.get('level'),
       parent_scope_id: requestUrl.searchParams.get('parent_scope_id'),
+      children_of: requestUrl.searchParams.get('children_of'),
     });
-    const results = await searchNexusLocations({
-      query: parsedQuery.query,
-      level: parsedQuery.level,
-      parentScopeId: parsedQuery.parent_scope_id,
-    });
+    const results = parsedQuery.children_of
+      ? await listNexusLocationChildren({
+          parentScopeId: parsedQuery.children_of,
+          limit: 80,
+        })
+      : await searchNexusLocations({
+          query: parsedQuery.query,
+          level: parsedQuery.level,
+          parentScopeId: parsedQuery.parent_scope_id,
+        });
     const canonicalQueryKey = createLocalityCanonicalNameKey(parsedQuery.query);
-    const hasExactResult = results.some(
-      (result) => result.canonical_name_key === canonicalQueryKey
+    const hasExactOrAliasResult = results.some(
+      (result) =>
+        result.canonical_name_key === canonicalQueryKey ||
+        (result.alias_keys ?? []).includes(canonicalQueryKey)
     );
 
     return createJsonResponse({
       query: parsedQuery.query,
       results,
       create_candidate:
-        canonicalQueryKey.length >= 2 && !hasExactResult
+        !parsedQuery.children_of && canonicalQueryKey.length >= 2 && !hasExactOrAliasResult
           ? {
               query: parsedQuery.query,
               canonical_name_key: canonicalQueryKey,

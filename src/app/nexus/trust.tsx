@@ -27,7 +27,7 @@ function formatTrustStage(stage: NexusTrustPayload['trust_stage']): string {
 }
 
 function formatHomeChain(scopeNames: string[]): string {
-  return scopeNames.length > 0 ? scopeNames.join(' -> ') : 'Global + You only';
+  return scopeNames.length > 0 ? scopeNames.join(' → ') : 'Global Commons';
 }
 
 export default function NexusTrustPage() {
@@ -338,87 +338,88 @@ export default function NexusTrustPage() {
           </NexusCard>
         </View>
 
-        <NexusCard className="gap-4">
+        <NexusCard className="gap-4 overflow-visible">
           <View className="gap-2">
             <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
               Scope relationship
             </Text>
             <Text className={appearance.itemBodyClass}>
-              Manage how this scope relates to your home branch, sidebar
-              bookmarks, and assembly trust evidence.
+              Manage this scope&apos;s home branch, sidebar bookmark, and assembly trust evidence.
             </Text>
           </View>
 
-          <View className="gap-4 xl:flex-row">
-            <NexusCard className={`min-w-[220px] flex-1 gap-3 p-4 ${appearance.cardInsetClass}`}>
-              <View className="gap-2">
-                <Text className={appearance.itemTitleClass}>Home locality</Text>
-                <Text className={appearance.itemBodyClass}>
-                  Current home: {homeLocalityName ?? 'Not set'}
-                </Text>
-                <Text className={appearance.itemBodyClass}>
-                  Home locality controls the geographic branch used for
-                  community posting. Ancestors are included; descendants are not.
-                </Text>
-                <View className="flex-row flex-wrap gap-2">
-                  <NexusBadge
-                    label={
-                      activeScopeIsInHomeChain
-                        ? 'In home branch'
-                        : 'Outside home branch'
-                    }
-                    tone={activeScopeIsInHomeChain ? 'mint' : 'gold'}
-                  />
-                  {isActiveScopeHomeLocality ? (
-                    <NexusBadge label="Home active" tone="sky" />
-                  ) : null}
-                </View>
-                <Text className={appearance.itemBodyClass}>
-                  Derived branch: {homeChainLabel}
-                </Text>
-              </View>
-              <View className="flex-row flex-wrap gap-3">
-                {canSetActiveScopeAsHome ? (
-                  <NexusActionButton
-                    label={
-                      isActiveScopeHomeLocality
-                        ? 'Home locality active'
-                        : isClaimedIdentity
-                          ? 'Set as home locality'
-                          : 'Sign in to set home'
-                    }
-                    variant={isActiveScopeHomeLocality ? 'secondary' : 'primary'}
-                    disabled={isActiveScopeHomeLocality}
-                    onPress={() =>
-                      void handleHomeLocalityChange(activeScope.packetId)
-                    }
-                  />
-                ) : null}
+          <NexusCard className={`gap-4 overflow-visible p-4 ${appearance.cardInsetClass}`}>
+            <View className="gap-2">
+              <Text className={appearance.itemTitleClass}>Home locality</Text>
+              <Text className={appearance.surfaceTitleClass}>
+                {homeLocalityName ?? 'No home locality set'}
+              </Text>
+              <Text className={appearance.itemBodyClass}>
+                Default geographic branch for community posting.
+              </Text>
+              <Text className={appearance.itemMetaClass}>Branch: {homeChainLabel}</Text>
+              <Text className={appearance.itemMetaClass}>
+                Status:{' '}
+                {isActiveScopeHomeLocality
+                  ? 'Current scope is your home locality.'
+                  : activeScopeIsInHomeChain
+                    ? 'Current scope is in your home branch.'
+                    : 'Current scope is outside your home branch.'}
+              </Text>
+            </View>
+
+            <View className="flex-row flex-wrap gap-2">
+              <NexusBadge
+                label={isActiveScopeHomeLocality ? 'Home active' : 'Home branch'}
+                tone={isActiveScopeHomeLocality ? 'sky' : activeScopeIsInHomeChain ? 'mint' : 'gold'}
+              />
+              {activeScopeIsInHomeChain && !isActiveScopeHomeLocality ? (
+                <NexusBadge label="Current scope included" tone="mint" />
+              ) : null}
+            </View>
+
+            <View className="flex-row flex-wrap gap-3">
+              {canSetActiveScopeAsHome ? (
                 <NexusActionButton
-                  label="Find or create home"
+                  label={
+                    isActiveScopeHomeLocality
+                      ? 'Home locality active'
+                      : isClaimedIdentity
+                        ? 'Set as home locality'
+                        : 'Sign in to set home'
+                  }
+                  variant={isActiveScopeHomeLocality ? 'secondary' : 'primary'}
+                  disabled={isActiveScopeHomeLocality}
                   onPress={() =>
-                    router.push({
-                      pathname: '/nexus/locality/create',
-                      params: {
-                        query: activeScope.name,
-                        return_to: '/nexus/trust',
-                        return_scope_id: activeScope.id,
-                        set_home: '1',
-                      },
-                    } as Href)
+                    void handleHomeLocalityChange(activeScope.packetId)
                   }
                 />
-                {homeLocalityName ? (
-                  <NexusActionButton
-                    label="Clear home locality"
-                    variant="ghost"
-                    onPress={() => void handleHomeLocalityChange(null)}
-                  />
-                ) : null}
-              </View>
-            </NexusCard>
+              ) : null}
+              <NexusActionButton
+                label="Find or create home"
+                onPress={() =>
+                  router.push({
+                    pathname: '/nexus/locality/create',
+                    params: {
+                      return_to: '/nexus/trust',
+                      return_scope_id: activeScope.id,
+                      set_home: '1',
+                    },
+                  } as Href)
+                }
+              />
+              {homeLocalityName ? (
+                <NexusActionButton
+                  label="Clear home locality"
+                  variant="ghost"
+                  onPress={() => void handleHomeLocalityChange(null)}
+                />
+              ) : null}
+            </View>
+          </NexusCard>
 
-            <NexusCard className={`min-w-[220px] flex-1 gap-3 p-4 ${appearance.cardInsetClass}`}>
+          <View className="gap-4 xl:flex-row">
+            <NexusCard className={`min-w-[220px] flex-1 gap-3 overflow-visible p-4 pb-6 ${appearance.cardInsetClass}`}>
               <View className="gap-2">
                 <Text className={appearance.itemTitleClass}>Follow</Text>
                 <Text className={appearance.itemBodyClass}>
@@ -445,7 +446,7 @@ export default function NexusTrustPage() {
               </View>
             </NexusCard>
 
-            <NexusCard className={`min-w-[220px] flex-1 gap-3 p-4 ${appearance.cardInsetClass}`}>
+            <NexusCard className={`min-w-[220px] flex-1 gap-3 overflow-visible p-4 pb-6 ${appearance.cardInsetClass}`}>
               <View className="gap-2">
                 <Text className={appearance.itemTitleClass}>Assembly association</Text>
                 <Text className={appearance.itemBodyClass}>

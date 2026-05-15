@@ -41,10 +41,15 @@ import type {
   NexusVotesPayload,
 } from '@runtime/nexus/nexus-api-types';
 import type {
+  NexusProjectedScopeSection,
   NexusScopeSummary,
 } from '@runtime/nexus/nexus-shell';
+import {
+  buildNexusHomeScopeIds,
+  buildNexusProjectedScopeSection,
+} from '@runtime/nexus/nexus-shell';
 import { getNexusPacketServices } from '@runtime/nexus/server/nexus-packet-services';
-import { readFollowedScopeIdsCompatibility } from '@runtime/nexus/server/shell-preferences';
+import { readScopeDisplayPreferences } from '@runtime/nexus/server/scope-display-preferences';
 import {
   DEFAULT_TRUST_POLICY_SNAPSHOT,
   deriveTrustStage,
@@ -367,6 +372,93 @@ function getScopeByIdOrDefault(
   );
 }
 
+function buildShellGraphSections(input: {
+  scopeSummaries: NexusScopeSummary[];
+  preferences: {
+    main_visible_scope_packet_ids: string[];
+    show_associated_parent_chains: boolean;
+    show_followed_parent_chains: boolean;
+  };
+}): {
+  homeGraph: NexusProjectedScopeSection;
+  associatedGraph: NexusProjectedScopeSection;
+  followedGraph: NexusProjectedScopeSection;
+  mainGraph: NexusProjectedScopeSection;
+  discoverableSection: NexusProjectedScopeSection;
+} {
+  const scopeIdByPacketId = new Map(
+    input.scopeSummaries.map((scopeSummary) => [scopeSummary.packetId, scopeSummary.id])
+  );
+  const homeScopeIds = buildNexusHomeScopeIds(input.scopeSummaries);
+  const associatedScopeIds = input.scopeSummaries
+    .filter((scopeSummary) => scopeSummary.isAssociated && !homeScopeIds.includes(scopeSummary.id))
+    .map((scopeSummary) => scopeSummary.id);
+  const followedScopeIds = input.scopeSummaries
+    .filter(
+      (scopeSummary) =>
+        scopeSummary.isFollowed && !homeScopeIds.includes(scopeSummary.id)
+    )
+    .map((scopeSummary) => scopeSummary.id);
+  const discoverableScopeIds = input.scopeSummaries
+    .filter(
+      (scopeSummary) =>
+        scopeSummary.isDiscoverable &&
+        !homeScopeIds.includes(scopeSummary.id) &&
+        !associatedScopeIds.includes(scopeSummary.id) &&
+        !followedScopeIds.includes(scopeSummary.id)
+    )
+    .map((scopeSummary) => scopeSummary.id);
+  const eligibleMainScopeIds = new Set(
+    [...homeScopeIds, ...associatedScopeIds, ...followedScopeIds]
+  );
+  const mainScopeIds = Array.from(
+    new Set(
+      input.preferences.main_visible_scope_packet_ids
+        .map((packetId) => scopeIdByPacketId.get(packetId) ?? null)
+        .filter((scopeId): scopeId is string => Boolean(scopeId))
+        .filter((scopeId) => eligibleMainScopeIds.has(scopeId))
+    )
+  );
+
+  return {
+    homeGraph: buildNexusProjectedScopeSection({
+      id: 'home',
+      title: 'Home scopes',
+      scopeSummaries: input.scopeSummaries,
+      directScopeIds: homeScopeIds,
+      showParentChains: false,
+    }),
+    associatedGraph: buildNexusProjectedScopeSection({
+      id: 'associated',
+      title: 'Associated scopes',
+      scopeSummaries: input.scopeSummaries,
+      directScopeIds: associatedScopeIds,
+      showParentChains: input.preferences.show_associated_parent_chains,
+    }),
+    followedGraph: buildNexusProjectedScopeSection({
+      id: 'followed',
+      title: 'Followed scopes',
+      scopeSummaries: input.scopeSummaries,
+      directScopeIds: followedScopeIds,
+      showParentChains: input.preferences.show_followed_parent_chains,
+    }),
+    mainGraph: buildNexusProjectedScopeSection({
+      id: 'main',
+      title: 'Main scopes',
+      scopeSummaries: input.scopeSummaries,
+      directScopeIds: mainScopeIds,
+      showParentChains: true,
+    }),
+    discoverableSection: buildNexusProjectedScopeSection({
+      id: 'discoverable',
+      title: 'Discoverable scopes',
+      scopeSummaries: input.scopeSummaries,
+      directScopeIds: discoverableScopeIds,
+      showParentChains: false,
+    }),
+  };
+}
+
 export function getScopeSummaryByIdOrDefault(
   scopeSummaries: NexusScopeSummary[],
   scopeId: string
@@ -620,14 +712,16 @@ export async function getNexusShellPayload(
   request?: Request | null
 ): Promise<NexusShellPayload> {
   const services = await getNexusPacketServices();
-  const followedScopeIds = readFollowedScopeIdsCompatibility(
-    request ?? null,
-    actorPacketId ?? null
-  );
+  const scopeDisplayPreferences = await readScopeDisplayPreferences({
+    packetStore: services.packetStore,
+    request: request ?? null,
+    actorPacketId: actorPacketId ?? null,
+  });
   const scopeGraph = await buildNexusScopeGraphProjection({
     packetStore: services.packetStore,
     actorPacketId: actorPacketId ?? null,
-    followedScopeIds,
+    request: request ?? null,
+    followedScopeIds: [],
   });
   const scopeNodes = scopeGraph.nodes.map((scopeNode) => ({
     routeId: scopeNode.routeId,
@@ -641,7 +735,7 @@ export async function getNexusShellPayload(
   const scopeMap = new Map(
     scopeNodes.map((scopeNode) => [scopeNode.routeId, scopeNode])
   );
-  const scopeSummaries: NexusScopeSummary[] = [];
+  const baseScopeSummaries: NexusScopeSummary[] = [];
 
   for (const scopeNode of scopeGraph.nodes) {
     const scopeLens = buildScopeLens(scopeNode.routeId, scopeMap);
@@ -670,7 +764,7 @@ export async function getNexusShellPayload(
         discussionCard.title.toLowerCase().includes('visitor lobby')
     );
 
-    scopeSummaries.push(buildScopeSummaryFromGraph({
+    baseScopeSummaries.push(buildScopeSummaryFromGraph({
       node: scopeNode,
       childIds,
       followedScopeIds: Array.from(scopeGraph.followedScopeIds),
@@ -702,20 +796,59 @@ export async function getNexusShellPayload(
     }));
   }
 
-  scopeSummaries.sort((leftScope, rightScope) =>
-    leftScope.name.localeCompare(rightScope.name)
-  );
+  const actorPacket = await getActorElementPacket(actorPacketId ?? null);
+  const personalScopeSummary =
+    actorPacket && actorPacketId
+      ? buildScopeGraphPersonalScopeSummary({
+          actorPacket,
+          parentScopeId: scopeGraph.personalParentScopeId,
+        })
+      : null;
+  const scopeSummaries = [...baseScopeSummaries];
 
-  const defaultScopeId =
-    scopeGraph.defaultScopeId || scopeSummaries[0]?.id || '';
+  if (personalScopeSummary) {
+    const personalParentScopeId =
+      personalScopeSummary.parentId ?? scopeGraph.defaultScopeId ?? null;
+
+    if (personalParentScopeId) {
+      for (let index = 0; index < scopeSummaries.length; index += 1) {
+        if (scopeSummaries[index]?.id === personalParentScopeId) {
+          scopeSummaries[index] = {
+            ...scopeSummaries[index],
+            childIds: Array.from(
+              new Set([
+                ...scopeSummaries[index].childIds,
+                personalScopeSummary.id,
+              ])
+            ),
+          };
+        }
+      }
+    }
+
+    scopeSummaries.push(personalScopeSummary);
+  }
+
+  scopeSummaries.sort((leftScope, rightScope) => leftScope.name.localeCompare(rightScope.name));
+
+  const defaultScopeId = scopeGraph.defaultScopeId || scopeSummaries[0]?.id || '';
   const defaultScope = getScopeByIdOrDefault(scopeSummaries, defaultScopeId);
-  const personalParentScopeId =
-    scopeGraph.personalParentScopeId ?? defaultScope.id;
+  const personalParentScopeId = scopeGraph.personalParentScopeId ?? defaultScope.id;
   const defaultExpandedScopeIds = scopeSummaries
     .filter(
       (scopeSummary) => scopeSummary.isMounted && scopeSummary.childIds.length > 0
     )
     .map((scopeSummary) => scopeSummary.id);
+  const {
+    homeGraph,
+    associatedGraph,
+    followedGraph,
+    mainGraph,
+    discoverableSection,
+  } = buildShellGraphSections({
+    scopeSummaries,
+    preferences: scopeDisplayPreferences,
+  });
 
   return {
     scope_summaries: scopeSummaries,
@@ -724,10 +857,17 @@ export async function getNexusShellPayload(
     geographic_mounted_scope_ids: scopeGraph.geographicMountedScopeIds,
     associated_scope_ids: Array.from(scopeGraph.associatedScopeIds),
     followed_scope_ids: Array.from(scopeGraph.followedScopeIds),
+    main_visible_scope_packet_ids:
+      scopeDisplayPreferences.main_visible_scope_packet_ids,
     known_scope_ids: Array.from(scopeGraph.knownScopeIds),
     known_unmounted_scope_ids: scopeGraph.knownUnmountedScopeIds,
     personal_parent_scope_id: personalParentScopeId,
     home_scope_id: scopeGraph.homeScopeId,
+    home_graph: homeGraph,
+    associated_graph: associatedGraph,
+    followed_graph: followedGraph,
+    main_graph: mainGraph,
+    discoverable_section: discoverableSection,
     guest_profile: NEXUS_GUEST_PROFILE,
     guest_capabilities: NEXUS_GUEST_CAPABILITIES,
     guest_checklist: NEXUS_GUEST_CHECKLIST,

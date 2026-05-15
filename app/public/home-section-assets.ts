@@ -4,3 +4,4 @@
  */
 
 export const homeSectionOpenAssemblyImageSource = require('../../assets/public/home/sections/section-01-open-assembly.png');
+export const homeSectionOwaClarityImageSource = require('../../assets/public/home/sections/section-02-owa-clarity.png');

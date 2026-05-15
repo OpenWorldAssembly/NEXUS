@@ -6,11 +6,13 @@ import { tmpdir } from 'node:os';
 
 import {
   createAssemblyPacket,
+  createLocationPacket,
   createPacketEdge,
   createPacketRef,
 } from '@core/packets/builders';
 import { createScopedRelationPacket } from '@core/packets/relations';
 import type { PacketEnvelope, PacketEnvelopeByType } from '@core/schema/packet-schema';
+import { createLocalityCanonicalNameKey } from '@runtime/nexus/location-search-normalization';
 import {
   buildLocalityPathPreviewResult,
   LocalityDuplicateWarningError,
@@ -74,13 +76,69 @@ function createExistingLocalityPacket(input: {
     locality_label: input.name,
     locality: {
       level: input.level,
-      canonical_name_key: input.name.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(),
+      canonical_name_key: createLocalityCanonicalNameKey(input.name),
       alias_keys: input.aliasKeys ?? [],
       display_aliases: [],
     },
     tags: ['assembly', 'locality', input.level],
     metadata_tags: ['assembly', 'locality', input.level],
   });
+}
+
+function createExistingLocalityDefinition(input: {
+  scopePacketId: string;
+  createdAt: string;
+  name: string;
+  level: 'nation' | 'region' | 'city' | 'district';
+  hierarchySystem?: 'administrative' | 'electoral' | 'postal' | 'addressing' | 'building' | 'custom' | 'planetary';
+  localTypeLabel?: string;
+  localTypeKey?: string;
+}): {
+  locationPacket: PacketEnvelopeByType['Location'];
+  locationRelationPacket: PacketEnvelopeByType['Relation'];
+} {
+  const locationPacketId = `nexus:location/region/${encodeURIComponent(input.scopePacketId)}`;
+  const canonicalNameKey = createLocalityCanonicalNameKey(input.name);
+
+  const locationPacket = createLocationPacket({
+    packet_id: locationPacketId,
+    created_at: input.createdAt,
+    authority_scope_ref: createPacketRef(input.scopePacketId),
+    applicable_scope_refs: [createPacketRef(input.scopePacketId)],
+    subtype: 'region',
+    title: input.name,
+    summary: `Portable region definition for ${input.name}.`,
+    status: 'provisional',
+    location_label: input.name,
+    spatial_payload: {
+      display_name: input.name,
+      canonical_name_key: canonicalNameKey,
+      alias_keys: [canonicalNameKey],
+      locality_level: input.level,
+      scope_descriptor: {
+        hierarchy_system: input.hierarchySystem ?? 'administrative',
+        local_type_label: input.localTypeLabel ?? 'City / Town / Village',
+        local_type_key: input.localTypeKey ?? input.level,
+        legacy_level: input.level,
+      },
+      source: {
+        kind: 'manual',
+      },
+    },
+  });
+  const locationRelationPacket = createScopedRelationPacket({
+    subtype: 'defined_by_location',
+    subjectPacketId: input.scopePacketId,
+    targetPacketId: locationPacketId,
+    scopePacketId: input.scopePacketId,
+    applicableScopeRefs: [createPacketRef(input.scopePacketId)],
+    createdByPacketId: 'nexus:element/actor',
+  });
+
+  return {
+    locationPacket,
+    locationRelationPacket,
+  };
 }
 
 test('planCanonicalLocalityPath emits locality, ancestry, location, and location-definition packets together', async () => {
@@ -140,12 +198,18 @@ test('planCanonicalLocalityPath emits locality, ancestry, location, and location
         4
       );
       assert.equal(
-        locationPackets.every((packet) => packet.body.subtype === 'region'),
+        elementPackets.every((packet) =>
+          packet.header.edges.some((edge) => edge.edge_type === 'parent_scope')
+        ),
         true
       );
       assert.equal(
-        elementPackets.every((packet) =>
-          packet.header.edges.some((edge) => edge.edge_type === 'parent_scope')
+        locationPackets.every(
+          (packet) =>
+            packet.body.spatial_payload.display_name === packet.body.location_label &&
+            packet.body.spatial_payload.source?.kind === 'manual' &&
+            packet.body.spatial_payload.scope_descriptor?.legacy_level ===
+              packet.body.spatial_payload.locality_level
         ),
         true
       );
@@ -379,6 +443,10 @@ test('locality preview stays non-mutating and returns review entries plus sugges
         ['create_new', 'create_new', 'create_new']
       );
       assert.deepEqual(
+        preview.review_entries.map((entry) => entry.scope_descriptor?.legacy_level),
+        ['nation', 'region', 'city']
+      );
+      assert.deepEqual(
         preview.suggested_home_scope_entries.map((entry) => entry.name),
         ['United States', 'California', 'Moreno Valley']
       );
@@ -395,6 +463,361 @@ test('locality preview stays non-mutating and returns review entries plus sugges
         true
       );
       assert.equal(preview.final_result.name, 'Moreno Valley');
+    },
+  });
+});
+
+test('planCanonicalLocalityPath supports sparse broad-to-narrow paths without requiring every legacy level', async () => {
+  const globalAssembly = createAssemblyPacket({
+    packet_id: 'nexus:element/global-commons',
+    created_at: '2026-05-13T00:00:00.000Z',
+    authority_scope_ref: { packet_id: 'nexus:element/global-commons' },
+    applicable_scope_refs: [{ packet_id: 'nexus:element/global-commons' }],
+    name: 'Global Commons',
+    subtype: 'global',
+    locality_label: 'Global',
+    tags: ['assembly', 'global'],
+    metadata_tags: ['assembly', 'global'],
+  });
+
+  await withTemporaryNexusPacketServices({
+    seedPackets: [globalAssembly],
+    run: async ({ packetStore }) => {
+      const planned = await planCanonicalLocalityPathWithPacketStore({
+        packetStore,
+        actorPacketId: 'nexus:element/actor',
+        path: [
+          { level: 'nation', name: 'Canada' },
+          { level: 'city', name: 'Vancouver' },
+        ],
+      });
+      const createdElements = planned.created_packets.filter(
+        (packet): packet is PacketEnvelopeByType['Element'] =>
+          packet.header.family === 'Element'
+      );
+      const ancestryRelations = planned.created_packets.filter(
+        (packet): packet is PacketEnvelopeByType['Relation'] =>
+          packet.header.family === 'Relation' &&
+          packet.body.subtype === 'default_ancestry_parent'
+      );
+      const vancouverPacket = createdElements.find(
+        (packet) => packet.body.name === 'Vancouver'
+      );
+      const canadaPacket = createdElements.find((packet) => packet.body.name === 'Canada');
+      const vancouverParentRelation = ancestryRelations.find(
+        (packet) => packet.body.subject_ref.packet_id === vancouverPacket?.header.packet_id
+      );
+
+      assert.equal(createdElements.length, 2);
+      assert.ok(canadaPacket);
+      assert.ok(vancouverPacket);
+      assert.equal(vancouverParentRelation?.body.target_ref.packet_id, canadaPacket.header.packet_id);
+      assert.deepEqual(
+        planned.resolved_path.map((entry) => entry.level),
+        ['nation', 'city']
+      );
+    },
+  });
+});
+
+test('planCanonicalLocalityPath tolerates existing scopes with missing parent relations when the chosen path is otherwise compatible', async () => {
+  const globalAssembly = createAssemblyPacket({
+    packet_id: 'nexus:element/global-commons',
+    created_at: '2026-05-13T01:00:00.000Z',
+    authority_scope_ref: { packet_id: 'nexus:element/global-commons' },
+    applicable_scope_refs: [{ packet_id: 'nexus:element/global-commons' }],
+    name: 'Global Commons',
+    subtype: 'global',
+    locality_label: 'Global',
+    tags: ['assembly', 'global'],
+    metadata_tags: ['assembly', 'global'],
+  });
+  const orphanCity = createAssemblyPacket({
+    packet_id: 'nexus:element/vancouver',
+    created_at: '2026-05-13T01:01:00.000Z',
+    authority_scope_ref: createPacketRef('nexus:element/vancouver'),
+    applicable_scope_refs: [createPacketRef('nexus:element/vancouver')],
+    name: 'Vancouver',
+    subtype: 'city',
+    locality_label: 'Vancouver',
+    locality: {
+      level: 'city',
+      canonical_name_key: createLocalityCanonicalNameKey('Vancouver'),
+      alias_keys: [],
+      display_aliases: [],
+    },
+    tags: ['assembly', 'locality', 'city'],
+    metadata_tags: ['assembly', 'locality', 'city'],
+  });
+
+  await withTemporaryNexusPacketServices({
+    seedPackets: [globalAssembly, orphanCity],
+    run: async ({ packetStore }) => {
+      const planned = await planCanonicalLocalityPathWithPacketStore({
+        packetStore,
+        actorPacketId: 'nexus:element/actor',
+        path: [
+          { level: 'nation', name: 'Canada' },
+          { level: 'city', name: '', existing_scope_id: orphanCity.header.packet_id },
+        ],
+      });
+
+      assert.equal(planned.final_result.name, 'Vancouver');
+      assert.deepEqual(
+        planned.resolved_path.map((entry) => entry.disposition),
+        ['create_new', 'reuse_existing']
+      );
+    },
+  });
+});
+
+test('planCanonicalLocalityPath stores descriptor metadata and Unicode-safe aliases for newly created localities', async () => {
+  const globalAssembly = createAssemblyPacket({
+    packet_id: 'nexus:element/global-commons',
+    created_at: '2026-05-13T02:00:00.000Z',
+    authority_scope_ref: { packet_id: 'nexus:element/global-commons' },
+    applicable_scope_refs: [{ packet_id: 'nexus:element/global-commons' }],
+    name: 'Global Commons',
+    subtype: 'global',
+    locality_label: 'Global',
+    tags: ['assembly', 'global'],
+    metadata_tags: ['assembly', 'global'],
+  });
+
+  await withTemporaryNexusPacketServices({
+    seedPackets: [globalAssembly],
+    run: async ({ packetStore }) => {
+      const planned = await planCanonicalLocalityPathWithPacketStore({
+        packetStore,
+        actorPacketId: 'nexus:element/actor',
+        path: [
+          {
+            level: 'city',
+            name: 'São Paulo',
+            scope_descriptor: {
+              hierarchy_system: 'administrative',
+              local_type_label: 'City / Town / Village',
+              local_type_key: 'city-town',
+              legacy_level: 'city',
+            },
+          },
+        ],
+      });
+      const createdElement = planned.created_packets.find(
+        (packet): packet is PacketEnvelopeByType['Element'] =>
+          packet.header.family === 'Element'
+      );
+      const createdLocation = planned.created_packets.find(
+        (packet): packet is PacketEnvelopeByType['Location'] =>
+          packet.header.family === 'Location'
+      );
+
+      assert.ok(createdElement);
+      assert.ok(createdLocation);
+      assert.equal(createdElement.body.scope_system, 'administrative');
+      assert.equal(
+        createdLocation.body.spatial_payload.canonical_name_key,
+        'sao paulo'
+      );
+      assert.deepEqual(createdLocation.body.spatial_payload.scope_descriptor, {
+        hierarchy_system: 'administrative',
+        local_type_label: 'City / Town / Village',
+        local_type_key: 'city-town',
+        legacy_level: 'city',
+      });
+      assert.equal(createdLocation.body.spatial_payload.source?.kind, 'manual');
+      assert.ok(createdLocation.body.spatial_payload.alias_keys.includes('sao paulo'));
+    },
+  });
+});
+
+test('preview and create surface descriptor-aware reuse metadata from linked Location packets when available', async () => {
+  const globalAssembly = createAssemblyPacket({
+    packet_id: 'nexus:element/global-commons',
+    created_at: '2026-05-13T03:00:00.000Z',
+    authority_scope_ref: { packet_id: 'nexus:element/global-commons' },
+    applicable_scope_refs: [{ packet_id: 'nexus:element/global-commons' }],
+    name: 'Global Commons',
+    subtype: 'global',
+    locality_label: 'Global',
+    tags: ['assembly', 'global'],
+    metadata_tags: ['assembly', 'global'],
+  });
+  const canada = createExistingLocalityPacket({
+    packetId: 'nexus:element/canada',
+    createdAt: '2026-05-13T03:01:00.000Z',
+    name: 'Canada',
+    level: 'nation',
+    parentPacketId: globalAssembly.header.packet_id,
+  });
+  const canadaParent = createScopedRelationPacket({
+    subtype: 'default_ancestry_parent',
+    subjectPacketId: canada.header.packet_id,
+    targetPacketId: globalAssembly.header.packet_id,
+    scopePacketId: canada.header.packet_id,
+    applicableScopeRefs: canada.header.applicable_scope_refs,
+    createdByPacketId: 'nexus:element/actor',
+  });
+  const canadaDefinition = createExistingLocalityDefinition({
+    scopePacketId: canada.header.packet_id,
+    createdAt: '2026-05-13T03:02:00.000Z',
+    name: 'Canada',
+    level: 'nation',
+    localTypeLabel: 'Nation / Country',
+    localTypeKey: 'nation',
+  });
+
+  await withTemporaryNexusPacketServices({
+    seedPackets: [
+      globalAssembly,
+      canada,
+      canadaParent,
+      canadaDefinition.locationPacket,
+      canadaDefinition.locationRelationPacket,
+    ],
+    run: async ({ packetStore }) => {
+      const planned = await planCanonicalLocalityPathWithPacketStore({
+        packetStore,
+        actorPacketId: 'nexus:element/actor',
+        path: [
+          { level: 'nation', name: '', existing_scope_id: canada.header.packet_id },
+          { level: 'city', name: 'Vancouver' },
+        ],
+      });
+      const preview = buildLocalityPathPreviewResult(planned);
+
+      assert.equal(
+        preview.review_entries[0]?.scope_descriptor?.local_type_label,
+        'Nation / Country'
+      );
+      assert.equal(
+        planned.resolved_path[0]?.existing_result?.scope_type_label,
+        'Nation / Country'
+      );
+      assert.equal(
+        planned.resolved_path[0]?.existing_result?.manual_status,
+        'manual'
+      );
+    },
+  });
+});
+
+test('planCanonicalLocalityPath rejects decreasing legacy compatibility bucket order', async () => {
+  const globalAssembly = createAssemblyPacket({
+    packet_id: 'nexus:element/global-commons',
+    created_at: '2026-05-13T04:00:00.000Z',
+    authority_scope_ref: { packet_id: 'nexus:element/global-commons' },
+    applicable_scope_refs: [{ packet_id: 'nexus:element/global-commons' }],
+    name: 'Global Commons',
+    subtype: 'global',
+    locality_label: 'Global',
+    tags: ['assembly', 'global'],
+    metadata_tags: ['assembly', 'global'],
+  });
+
+  await withTemporaryNexusPacketServices({
+    seedPackets: [globalAssembly],
+    run: async ({ packetStore }) => {
+      await assert.rejects(
+        () =>
+          planCanonicalLocalityPathWithPacketStore({
+            packetStore,
+            actorPacketId: 'nexus:element/actor',
+            path: [
+              { level: 'city', name: 'Vancouver' },
+              { level: 'nation', name: 'Canada' },
+            ],
+          }),
+        /broad-to-narrow/
+      );
+    },
+  });
+});
+
+test('planCanonicalLocalityPath does not auto-reuse same-name localities from a different parent branch', async () => {
+  const globalAssembly = createAssemblyPacket({
+    packet_id: 'nexus:element/global-commons',
+    created_at: '2026-05-13T04:30:00.000Z',
+    authority_scope_ref: { packet_id: 'nexus:element/global-commons' },
+    applicable_scope_refs: [{ packet_id: 'nexus:element/global-commons' }],
+    name: 'Global Commons',
+    subtype: 'global',
+    locality_label: 'Global',
+    tags: ['assembly', 'global'],
+    metadata_tags: ['assembly', 'global'],
+  });
+  const unitedStates = createExistingLocalityPacket({
+    packetId: 'nexus:element/united-states',
+    createdAt: '2026-05-13T04:31:00.000Z',
+    name: 'United States',
+    level: 'nation',
+    parentPacketId: globalAssembly.header.packet_id,
+  });
+  const california = createExistingLocalityPacket({
+    packetId: 'nexus:element/california',
+    createdAt: '2026-05-13T04:32:00.000Z',
+    name: 'California',
+    level: 'region',
+    parentPacketId: unitedStates.header.packet_id,
+  });
+  const ontarioCalifornia = createExistingLocalityPacket({
+    packetId: 'nexus:element/ontario-california',
+    createdAt: '2026-05-13T04:33:00.000Z',
+    name: 'Ontario',
+    level: 'city',
+    parentPacketId: california.header.packet_id,
+  });
+  const unitedStatesParent = createScopedRelationPacket({
+    subtype: 'default_ancestry_parent',
+    subjectPacketId: unitedStates.header.packet_id,
+    targetPacketId: globalAssembly.header.packet_id,
+    scopePacketId: unitedStates.header.packet_id,
+    applicableScopeRefs: unitedStates.header.applicable_scope_refs,
+    createdByPacketId: 'nexus:element/actor',
+  });
+  const californiaParent = createScopedRelationPacket({
+    subtype: 'default_ancestry_parent',
+    subjectPacketId: california.header.packet_id,
+    targetPacketId: unitedStates.header.packet_id,
+    scopePacketId: california.header.packet_id,
+    applicableScopeRefs: california.header.applicable_scope_refs,
+    createdByPacketId: 'nexus:element/actor',
+  });
+  const ontarioCaliforniaParent = createScopedRelationPacket({
+    subtype: 'default_ancestry_parent',
+    subjectPacketId: ontarioCalifornia.header.packet_id,
+    targetPacketId: california.header.packet_id,
+    scopePacketId: ontarioCalifornia.header.packet_id,
+    applicableScopeRefs: ontarioCalifornia.header.applicable_scope_refs,
+    createdByPacketId: 'nexus:element/actor',
+  });
+
+  await withTemporaryNexusPacketServices({
+    seedPackets: [
+      globalAssembly,
+      unitedStates,
+      california,
+      ontarioCalifornia,
+      unitedStatesParent,
+      californiaParent,
+      ontarioCaliforniaParent,
+    ],
+    run: async ({ packetStore }) => {
+      const planned = await planCanonicalLocalityPathWithPacketStore({
+        packetStore,
+        actorPacketId: 'nexus:element/actor',
+        path: [
+          { level: 'nation', name: 'Canada' },
+          { level: 'city', name: 'Ontario' },
+        ],
+      });
+
+      assert.equal(planned.final_result.name, 'Ontario');
+      assert.notEqual(planned.final_result.scope_id, ontarioCalifornia.header.packet_id);
+      assert.deepEqual(
+        planned.resolved_path.map((entry) => entry.disposition),
+        ['create_new', 'create_new']
+      );
     },
   });
 });

@@ -9,6 +9,7 @@ import type {
   EncryptedIdentityBundle,
 } from '@runtime/nexus/identity-crypto';
 import type {
+  LocalityScopeDescriptor,
   NexusLocationDisclosureOption,
   NexusLocationCreateCandidate,
   NexusLocationSearchResult,
@@ -178,6 +179,7 @@ export interface NexusLocalityPathEntryPayload {
   existing_scope_id?: string | null;
   alias_keys?: string[];
   display_aliases?: string[];
+  scope_descriptor?: LocalityScopeDescriptor | null;
 }
 
 export interface NexusLocalityPathPreviewRequest {
@@ -202,6 +204,7 @@ export interface NexusLocalityReviewEntryPayload {
   disposition: 'reuse_existing' | 'create_new';
   existing_result: NexusLocationSearchResult | null;
   planned_scope_packet_id: string | null;
+  scope_descriptor?: LocalityScopeDescriptor | null;
 }
 
 export interface NexusSuggestedHomeScopeEntryPayload {
@@ -228,6 +231,50 @@ export interface NexusCreateLocalityPayload {
   created_location_packet_ids: string[];
   final_result: NexusLocationSearchResult;
   duplicate_warnings: NexusLocalityDuplicateWarningPayload[];
+}
+
+export interface NexusLocalityGraphApplyRequest {
+  paths: NexusLocalityPathEntryPayload[][];
+  create_anyway?: boolean;
+  home_scope_packet_id?: string | null;
+  associated_scope_packet_ids?: string[];
+  followed_scope_packet_ids?: string[];
+  main_visible_scope_packet_ids?: string[];
+  show_associated_parent_chains?: boolean;
+  show_followed_parent_chains?: boolean;
+}
+
+export interface NexusLocalityGraphApplyPathResultPayload {
+  created_packets: PacketEnvelopeByType[keyof PacketEnvelopeByType][];
+  created_relation_packet_ids: string[];
+  created_location_packet_ids: string[];
+  final_result: NexusLocationSearchResult;
+  duplicate_warnings: NexusLocalityDuplicateWarningPayload[];
+}
+
+export interface NexusLocalityGraphApplyPhaseOutcome {
+  status: 'success' | 'partial' | 'failed' | 'skipped';
+  message: string | null;
+  error_messages: string[];
+}
+
+export interface NexusScopeDisplayPreferencesPayload {
+  main_visible_scope_packet_ids: string[];
+  show_associated_parent_chains: boolean;
+  show_followed_parent_chains: boolean;
+}
+
+export interface NexusLocalityGraphApplyPayload {
+  structural_phase: NexusLocalityGraphApplyPhaseOutcome;
+  relations_phase: NexusLocalityGraphApplyPhaseOutcome;
+  preferences_phase: NexusLocalityGraphApplyPhaseOutcome;
+  path_results: NexusLocalityGraphApplyPathResultPayload[];
+  final_result: NexusLocationSearchResult | null;
+  home_scope_packet_id: string | null;
+  associated_scope_packet_ids: string[];
+  followed_scope_packet_ids: string[];
+  preferences: NexusScopeDisplayPreferencesPayload;
+  shell_payload: import('@runtime/nexus/nexus-api-types.shell').NexusShellPayload | null;
 }
 
 export interface NexusIdentitySearchResultPayload {

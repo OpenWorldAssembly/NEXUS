@@ -47,7 +47,11 @@ Current scope consumer direction in code includes:
 - assembly association now resolves packet-natively from `Relation(subtype: assembly_association)` first, with legacy claim-only reads reduced to explicit compatibility projection and associated scopes treated as mounted related scopes
 - followed, associated, known, discoverable, and home-ancestor semantics are now carried as additive packet-backed scope-summary metadata
 - locality creation now emits provisional `Location(subtype: region)` packets plus `Relation(subtype: defined_by_location)` so linked location packets are part of the live writer path as well as the read seam
-- the active shell sidebar now consumes that metadata through four packet-native groupings: home, associated, followed, and discoverable
+- the active shell sidebar now consumes server-projected graph sections rather than reconstructing section truth from thin scope-id arrays
+- scope projection now returns `home`, `associated`, `followed`, `main`, and `discoverable` sections, with descriptor-aware grouping and optional lightweight parent-context chains for associated and followed scopes
+- locality confirmation now uses one composite runtime apply seam above `locality.path.create` so structural locality writes, scope relations, and temporary display preferences are coordinated together
+- `main` is currently a runtime-owned temporary visible-scope preference rather than a packet-backed relation or preference family
+- claimed-actor temporary scope-display preferences now persist in runtime storage, while guest preference behavior remains an explicit compatibility/session bridge
 - the current home trunk renders broadest-to-smallest, while associated scopes remain mounted related scopes outside the geographic ancestry chain
 - shell UI actions for follow and association now route through the canonical mutation corridor and refresh scope projection after success instead of relying on local-only toggles
 - dashboard payloads are now scope-backed runtime projections rather than static shell filler
@@ -55,6 +59,7 @@ Current scope consumer direction in code includes:
 - focused packet state is currently a surface-local UI layer over packet-backed preview lists rather than a separate routed or core packet concept
 - the first verification chapter now treats report packets as the signed source of truth for local packet verification and import reporting, with a runtime-owned verification cache layered on top for fast UI reads
 - the local runtime now owns a normal signed validator identity and uses it to sign `verification_report` and `import_report` packets without routing those writes through user-authored fortress mutations
+- OWA-specific initiative-anchor relation-policy lookup now lives in a narrower adapter layer instead of being embedded directly inside the generic scope-graph projection core
 
 ## Public docs build system
 

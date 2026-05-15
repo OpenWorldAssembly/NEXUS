@@ -129,18 +129,47 @@ export type RoleAssociationAttestationMutationIntent = {
   mutation_nonce?: string | null;
 };
 
+export type LocalityScopeDescriptorIntent = {
+  hierarchy_system:
+    | 'planetary'
+    | 'administrative'
+    | 'electoral'
+    | 'postal'
+    | 'addressing'
+    | 'building'
+    | 'custom';
+  local_type_label: string;
+  local_type_key: string;
+  legacy_level: 'nation' | 'region' | 'city' | 'district';
+};
+
 export type LocalityPathEntryIntent = {
   level: 'nation' | 'region' | 'city' | 'district';
   name: string;
   existing_scope_id?: string | null;
   alias_keys?: string[];
   display_aliases?: string[];
+  scope_descriptor?: LocalityScopeDescriptorIntent | null;
 };
 
 export type LocalityPathCreateMutationIntent = {
   kind: 'locality.path.create';
   path: LocalityPathEntryIntent[];
   create_anyway?: boolean;
+  created_at?: string | null;
+  mutation_nonce?: string | null;
+};
+
+export type LocalityGraphApplyMutationIntent = {
+  kind: 'locality.graph.apply';
+  paths: LocalityPathEntryIntent[][];
+  create_anyway?: boolean;
+  home_scope_packet_id?: string | null;
+  associated_scope_packet_ids?: string[];
+  followed_scope_packet_ids?: string[];
+  main_visible_scope_packet_ids?: string[];
+  show_associated_parent_chains?: boolean;
+  show_followed_parent_chains?: boolean;
   created_at?: string | null;
   mutation_nonce?: string | null;
 };
@@ -174,6 +203,7 @@ export type MutationIntent =
   | RoleAssociationClaimMutationIntent
   | RoleAssociationAttestationMutationIntent
   | LocalityPathCreateMutationIntent
+  | LocalityGraphApplyMutationIntent
   | DiscussionSurfacesEnsureMutationIntent
   | ActorWritePolicyMutationIntent;
 

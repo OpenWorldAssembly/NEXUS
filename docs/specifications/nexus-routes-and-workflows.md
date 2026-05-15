@@ -63,11 +63,16 @@
 1. User opens `/nexus/locality/create`.
 2. The route searches the existing locality directory first and still allows selecting an existing locality immediately.
 3. If search does not find the intended place, `create_candidate` can seed the builder directly, including from the top search input when Enter is pressed.
-4. The user confirms a broad-to-narrow path and runs `Review path`, which now previews the canonical planner without writing packets.
-5. Review shows which levels would reuse existing localities, which levels would create new locality packets, and any duplicate warnings that still need a decision.
-6. Duplicate warnings can now route back into the builder through `Use existing`, `Edit name`, or forward into an explicit `Create anyway` path.
-7. If `Use as home locality` is on, selecting an existing locality or creating a new one both apply the canonical `home_locality.relation.set` path after the locality choice is finalized.
-8. The review-only home-branch checklist can be adjusted visually in this pass, but it does not yet change stored home-locality packet semantics.
+4. If same-name locality results exist elsewhere in Nexus, top-level search can still route into the create flow instead of forcing reuse from the wrong branch.
+5. The builder may be edited as one lowest-locality row plus optional parent rows, but the adapter normalizes that state into one broad-to-narrow ordered path before preview or create.
+6. The user runs `Review path`, which now previews the canonical planner without writing packets.
+7. Planner ancestry now follows the ordered path itself rather than the old fixed ladder, so sparse paths like `Canada -> Vancouver` are valid current behavior.
+8. Review shows which levels would reuse existing localities, which levels would create new locality packets, and any duplicate warnings that still need a decision.
+9. Review rows and search results now expose descriptor-aware locality labels when linked `Location` metadata is available, while legacy levels remain compatibility buckets.
+10. Duplicate warnings can now route back into the builder through `Use existing`, `Edit name`, or forward into an explicit `Create anyway` path.
+11. Confirm now routes through one composite `locality.graph.apply` runtime seam, which reruns the structural locality planner, writes locality packets, applies selected home or association or follow relations, stores temporary main-tree display preferences, and then returns refreshed shell graph data.
+12. If `Use as home locality` is on, selecting an existing locality or creating a new one both apply the canonical `home_locality.relation.set` path inside that composite apply flow.
+13. The review-only home-branch checklist can be adjusted visually in this pass, but it does not yet change stored home-locality packet semantics.
 
 ### Packet inspection
 
@@ -109,6 +114,7 @@ The Nexus shell currently provides:
 - a session-scoped early-access welcome gate that blocks shell interaction until dismissed
 - function-first versus scope-first as a shell preference
 - `You` as a first-class personal scope lens
-- grouped Home, Associated, Followed, and Discoverable scope sections with compact row-level overflow menus
+- grouped Home, Associated, Followed, Main, and Discoverable scope sections with compact row-level overflow menus
+- server-projected scope sections, including independent temporary preferences for `Main` visibility and parent-context display in the associated and followed sections
 - independent rail collapse state
 - a profile-area route into account and identity custody surfaces

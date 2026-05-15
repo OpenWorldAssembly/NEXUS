@@ -26,8 +26,11 @@ Working direction:
 - keep packet-native follows and assembly association relations as the base for the later shell graph UI pass
 - treat the current ancestry and provisional `Location(region)` writer path as the new locality substrate rather than as pending exploratory work
 - locality UX pass 1 is now the active baseline: guided search, search-to-create handoff, non-mutating review, actionable duplicate warnings, explicit home-locality toggle, and a preview-only home-branch checklist are all live
-- next, improve locality standardization through Unicode-aware normalization, dynamic descriptors, provider-neutral candidate mapping, aliases, external refs, ancestry mapping, duplicate or equivalence handling, and broader non-US administrative structures
+- locality foundations phase 2A is now the active next layer underneath that UI: descriptor-first locality rows, Unicode-safe normalization, sparse ordered ancestry, and descriptor storage in linked `Location.spatial_payload`
+- the current runtime catch-up layer now sits between locality foundations and the later schema chapter: composite locality graph apply, centralized home or association or follow relation reads, temporary claimed-actor `main` visibility preferences, and server-projected shell sections are now the active bridge
+- locality foundations phase 2B should then make home-tree inclusion and projection fields authoritative without redesigning the shell
+- after that, continue locality standardization through provider-neutral candidate mapping, aliases, external refs, duplicate or equivalence handling, and broader non-US administrative structures
 - preserve the distinction between mounted scopes, followed scopes, and merely known scopes
-- follow the current writer and projection pass with a dedicated shell UI pass and then a dedicated locality-standardization and provider pass rather than collapsing all three into one change set
+- follow the current runtime/projection catch-up pass with the schema chapter that packetizes preferences and broader relation semantics, then continue with the dedicated locality-standardization and provider pass rather than collapsing all three into one change set
 - defer shared assembly custody or keyset work until after semantic foundations are clearer
 - keep first-class `Bundle` packet work explicitly after the current verification and locality-UX chapters rather than letting runtime transport bundles quietly harden into a forever format

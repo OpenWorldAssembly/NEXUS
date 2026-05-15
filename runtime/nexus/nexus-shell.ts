@@ -51,6 +51,10 @@ export type NexusScopeSummary = {
   level: 'personal' | 'global' | 'nation' | 'region' | 'city' | 'district';
   scopeSubtype: string | null;
   scopeSystem: string | null;
+  scopeTypeLabel?: string | null;
+  scopeTypeKey?: string | null;
+  scopeHierarchySystem?: string | null;
+  manualStatus?: 'manual' | 'provisional' | 'provider_backed' | null;
   description: string;
   localityLabel: string;
   badge: string;
@@ -92,6 +96,7 @@ export type NexusSidebarScopeSectionId =
   | 'home'
   | 'associated'
   | 'followed'
+  | 'main'
   | 'discoverable';
 
 export type NexusSidebarScopeLevelGroup = {
@@ -106,6 +111,28 @@ export type NexusSidebarScopeSection = {
   count: number;
   scopes: NexusScopeSummary[];
   groups: NexusSidebarScopeLevelGroup[];
+};
+
+export type NexusProjectedScopeRow = {
+  scopeId: string;
+  projectedDepth: number;
+  parentChainScopeIds: string[];
+  parentChainLabels: string[];
+  parentChainPath: string | null;
+};
+
+export type NexusProjectedScopeGroup = {
+  id: string;
+  title: string;
+  rows: NexusProjectedScopeRow[];
+};
+
+export type NexusProjectedScopeSection = {
+  id: NexusSidebarScopeSectionId;
+  title: string;
+  count: number;
+  showParentChains: boolean;
+  groups: NexusProjectedScopeGroup[];
 };
 
 export type NexusShellState = {
@@ -326,6 +353,20 @@ export function getNexusScopeLevelGroupLabel(
   }
 }
 
+function slugifyProjectedGroupId(value: string): string {
+  return (
+    value
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'scopes'
+  );
+}
+
+function getNexusProjectedGroupLabel(scope: NexusScopeSummary): string {
+  return scope.scopeTypeLabel ?? getNexusScopeLevelGroupLabel(scope.level);
+}
+
 /**
  * Inputs: a nexus UI density.
  * Output: the consistent width used by each open sidebar rail for that density.
@@ -434,10 +475,7 @@ export function buildNexusScopeSidebarSections(input: {
     associatedScopes.map((scope) => scope.id)
   );
   const followedScopes = input.scopeSummaries.filter(
-    (scope) =>
-      scope.isFollowed &&
-      !homeScopeIds.has(scope.id) &&
-      !associatedScopeIds.has(scope.id)
+    (scope) => scope.isFollowed && !homeScopeIds.has(scope.id)
   );
   const followedScopeIds = new Set(followedScopes.map((scope) => scope.id));
   const discoverableScopes = input.scopeSummaries.filter(
@@ -478,6 +516,99 @@ export function buildNexusScopeSidebarSections(input: {
       groups: groupNexusScopesByLevel(discoverableScopes),
     },
   ];
+}
+
+export function buildNexusProjectedScopeSection(input: {
+  id: NexusSidebarScopeSectionId;
+  title: string;
+  scopeSummaries: NexusScopeSummary[];
+  directScopeIds: string[];
+  showParentChains: boolean;
+}): NexusProjectedScopeSection {
+  const scopeMap = new Map(
+    input.scopeSummaries.map((scopeSummary) => [scopeSummary.id, scopeSummary])
+  );
+  const directScopeIdSet = new Set(input.directScopeIds);
+  const rows = Array.from(
+    new Set(
+      input.directScopeIds.filter((scopeId) => scopeMap.has(scopeId))
+    )
+  )
+    .map((scopeId) => {
+      const scope = scopeMap.get(scopeId);
+
+      if (!scope) {
+        return null;
+      }
+
+      const allAncestorScopeIds = getNexusAncestorIds(input.scopeSummaries, scopeId).filter(
+        (ancestorScopeId) => scopeMap.has(ancestorScopeId)
+      );
+      const parentChainScopeIds = allAncestorScopeIds.filter(
+        (ancestorScopeId) => !directScopeIdSet.has(ancestorScopeId)
+      );
+
+      return {
+        scopeId,
+        projectedDepth: allAncestorScopeIds.length,
+        parentChainScopeIds,
+        parentChainLabels: parentChainScopeIds
+          .map((ancestorScopeId) => scopeMap.get(ancestorScopeId)?.shortLabel ?? null)
+          .filter((label): label is string => Boolean(label)),
+        parentChainPath:
+          parentChainScopeIds.length > 0
+            ? parentChainScopeIds
+                .map((ancestorScopeId) => scopeMap.get(ancestorScopeId)?.name ?? null)
+                .filter((label): label is string => Boolean(label))
+                .join(' / ')
+            : null,
+      } satisfies NexusProjectedScopeRow;
+    })
+    .filter((row): row is NexusProjectedScopeRow => row !== null)
+    .sort((leftRow, rightRow) => {
+      const leftScope = scopeMap.get(leftRow.scopeId);
+      const rightScope = scopeMap.get(rightRow.scopeId);
+
+      if (!leftScope || !rightScope) {
+        return leftRow.scopeId.localeCompare(rightRow.scopeId);
+      }
+
+      if (leftRow.projectedDepth !== rightRow.projectedDepth) {
+        return leftRow.projectedDepth - rightRow.projectedDepth;
+      }
+
+      return leftScope.name.localeCompare(rightScope.name);
+    });
+  const groupMap = new Map<string, NexusProjectedScopeGroup>();
+
+  for (const row of rows) {
+    const scope = scopeMap.get(row.scopeId);
+
+    if (!scope) {
+      continue;
+    }
+
+    const groupTitle = getNexusProjectedGroupLabel(scope);
+    const groupId = scope.scopeTypeKey
+      ? `type:${scope.scopeTypeKey}`
+      : `level:${slugifyProjectedGroupId(groupTitle)}`;
+    const currentGroup = groupMap.get(groupId) ?? {
+      id: groupId,
+      title: groupTitle,
+      rows: [],
+    };
+
+    currentGroup.rows.push(row);
+    groupMap.set(groupId, currentGroup);
+  }
+
+  return {
+    id: input.id,
+    title: input.title,
+    count: rows.length,
+    showParentChains: input.showParentChains,
+    groups: Array.from(groupMap.values()),
+  };
 }
 
 /**

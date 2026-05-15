@@ -78,6 +78,14 @@ interface RuntimeValidatorIdentityRow {
   updated_at: string;
 }
 
+interface ActorScopeDisplayPreferencesRow {
+  actor_packet_id: string;
+  main_visible_scope_packet_ids_json: string;
+  show_associated_parent_chains: number;
+  show_followed_parent_chains: number;
+  updated_at: string;
+}
+
 type PacketVerificationIndexRow = {
   packet_id: string;
   target_revision_id: string | null;
@@ -1610,6 +1618,85 @@ export class NodeSQLitePacketStore implements PacketStore {
         JSON.stringify(input.public_jwk),
         JSON.stringify(input.private_jwk),
         input.created_at,
+        input.updated_at
+      );
+  }
+
+  async readActorScopeDisplayPreferences(actorPacketId: string): Promise<{
+    actor_packet_id: string;
+    main_visible_scope_packet_ids: string[];
+    show_associated_parent_chains: boolean;
+    show_followed_parent_chains: boolean;
+    updated_at: string;
+  } | null> {
+    const row = this.database
+      .prepare(
+        `
+          SELECT
+            actor_packet_id,
+            main_visible_scope_packet_ids_json,
+            show_associated_parent_chains,
+            show_followed_parent_chains,
+            updated_at
+          FROM actor_scope_display_preferences
+          WHERE actor_packet_id = ?
+        `
+      )
+      .get(actorPacketId) as ActorScopeDisplayPreferencesRow | undefined;
+
+    if (!row) {
+      return null;
+    }
+
+    return {
+      actor_packet_id: row.actor_packet_id,
+      main_visible_scope_packet_ids: parseJson<string[]>(
+        row.main_visible_scope_packet_ids_json,
+        []
+      ),
+      show_associated_parent_chains: row.show_associated_parent_chains === 1,
+      show_followed_parent_chains: row.show_followed_parent_chains === 1,
+      updated_at: row.updated_at,
+    };
+  }
+
+  async writeActorScopeDisplayPreferences(input: {
+    actor_packet_id: string;
+    main_visible_scope_packet_ids: string[];
+    show_associated_parent_chains: boolean;
+    show_followed_parent_chains: boolean;
+    updated_at: string;
+  }): Promise<void> {
+    const mainVisibleScopePacketIds = Array.from(
+      new Set(
+        input.main_visible_scope_packet_ids
+          .map((packetId) => packetId.trim())
+          .filter((packetId) => packetId.length > 0)
+      )
+    ).sort((leftPacketId, rightPacketId) => leftPacketId.localeCompare(rightPacketId));
+
+    this.database
+      .prepare(
+        `
+          INSERT INTO actor_scope_display_preferences (
+            actor_packet_id,
+            main_visible_scope_packet_ids_json,
+            show_associated_parent_chains,
+            show_followed_parent_chains,
+            updated_at
+          ) VALUES (?, ?, ?, ?, ?)
+          ON CONFLICT(actor_packet_id) DO UPDATE SET
+            main_visible_scope_packet_ids_json = excluded.main_visible_scope_packet_ids_json,
+            show_associated_parent_chains = excluded.show_associated_parent_chains,
+            show_followed_parent_chains = excluded.show_followed_parent_chains,
+            updated_at = excluded.updated_at
+        `
+      )
+      .run(
+        input.actor_packet_id,
+        JSON.stringify(mainVisibleScopePacketIds),
+        input.show_associated_parent_chains ? 1 : 0,
+        input.show_followed_parent_chains ? 1 : 0,
         input.updated_at
       );
   }

@@ -1,6 +1,6 @@
 /**
  * File: create.tsx
- * Description: Guided canonical locality creation flow for Nexus home-locality journeys.
+ * Description: Guided locality selection and creation flow for Nexus home-locality journeys.
  */
 
 import type { Href } from 'expo-router';
@@ -9,6 +9,16 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
+import {
+  LocalityCreateGraphRow,
+  type LocalityCreateGraphRowNode,
+} from '@app/components/nexus/locality/locality-create-graph-row';
+import {
+  LocalityCreatePreviewPanel,
+  getLocalityPreviewAncestorKeys,
+  type LocalityCreatePreviewDuplicateWarning,
+  type LocalityCreatePreviewScopeRow,
+} from '@app/components/nexus/locality/locality-create-preview-panel';
 import { useNexusAuthGate } from '@app/components/nexus/nexus-auth-gate';
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import {
@@ -16,12 +26,19 @@ import {
   NexusBadge,
   NexusCard,
   NexusSectionHeader,
-  NexusSegmentedPill,
   useNexusAppearance,
 } from '@app/components/nexus/nexus-ui';
-import type { NexusLocationCreateCandidate, NexusLocationSearchResult } from '@runtime/nexus/location-search';
+import { NexusTabRail, type NexusTabNode } from '@app/components/nexus/nexus-tabs';
 import type {
-  NexusLocalityDuplicateWarningPayload,
+  LocalityHierarchySystem,
+  LocalityScopeDescriptor,
+  NexusLocationCreateCandidate,
+  NexusLocationSearchResult,
+} from '@runtime/nexus/location-search';
+import { createLocalityCanonicalNameKey } from '@runtime/nexus/location-search-normalization';
+import type {
+  NexusLocalityGraphApplyPayload,
+  NexusLocalityPathEntryPayload,
   NexusLocalityPathPreviewPayload,
   NexusLocalityReviewEntryPayload,
 } from '@runtime/nexus/nexus-api-types';
@@ -32,14 +49,335 @@ import {
 import { NexusApiError } from '@runtime/nexus/nexus-query-api.shared';
 
 type LocalityLevel = 'nation' | 'region' | 'city' | 'district';
+type LocalityWorkflowTab = 'search' | 'create';
+type LocalityCreateMode = 'build' | 'preview';
+
+type LocalityTypePickerContext = {
+  level: LocalityLevel;
+  isTarget: boolean;
+  nodeId?: string;
+} | null;
 
 const LOCALITY_LEVELS: LocalityLevel[] = ['nation', 'region', 'city', 'district'];
+const SEARCH_RESULT_LIMIT = 8;
+
+const LOCALITY_WORKFLOW_TAB_NODES: NexusTabNode[] = [
+  { id: 'search', label: 'Search', shortLabel: 'Search' },
+  { id: 'create', label: 'Create', shortLabel: 'Create' },
+];
+
+type CreateLocalityKindOption = {
+  id: string;
+  label: string;
+  description: string;
+  legacyLevel: LocalityLevel;
+  scaleRank: number | null;
+};
+
+const CREATE_LOCALITY_KIND_OPTIONS: CreateLocalityKindOption[] = [
+  { id: 'nation', label: 'Nation / Country', description: 'A country, nation, or equivalent top-level locality.', legacyLevel: 'nation', scaleRank: 10 },
+  { id: 'state-region', label: 'State / Province / Region', description: 'A state, province, prefecture, autonomous region, or similar area.', legacyLevel: 'region', scaleRank: 20 },
+  { id: 'county-district', label: 'County / District / Regency', description: 'A county, district, regency, borough, parish, or similar middle scope.', legacyLevel: 'region', scaleRank: 30 },
+  { id: 'electoral-district', label: 'Electoral district', description: 'A congressional, legislative, council, or other voting district.', legacyLevel: 'district', scaleRank: 40 },
+  { id: 'city-town', label: 'City / Town / Village', description: 'A city, town, village, municipality, ward, or similar local place.', legacyLevel: 'city', scaleRank: 50 },
+  { id: 'postal-code', label: 'Postal code', description: 'A ZIP code, postal code, or delivery zone.', legacyLevel: 'district', scaleRank: 60 },
+  { id: 'neighborhood', label: 'Neighborhood', description: 'A neighborhood, community area, subdivision, or local district.', legacyLevel: 'district', scaleRank: 70 },
+  { id: 'street-block', label: 'Street / Block', description: 'A street, road, block, corridor, or similar addressing scope.', legacyLevel: 'district', scaleRank: 80 },
+  { id: 'building', label: 'Building', description: 'A building, campus structure, venue, or facility.', legacyLevel: 'district', scaleRank: 90 },
+  { id: 'custom', label: 'Custom locality scope', description: 'A manually defined locality scope that does not fit the common labels.', legacyLevel: 'district', scaleRank: null },
+];
+
+function getDefaultKindIdForLevel(level: LocalityLevel): string {
+  if (level === 'nation') return 'nation';
+  if (level === 'region') return 'state-region';
+  if (level === 'city') return 'city-town';
+  return 'neighborhood';
+}
+
+function getHierarchySystemForKindOption(
+  option: CreateLocalityKindOption
+): LocalityHierarchySystem {
+  if (option.id === 'electoral-district') {
+    return 'electoral';
+  }
+
+  if (option.id === 'postal-code') {
+    return 'postal';
+  }
+
+  if (option.id === 'street-block') {
+    return 'addressing';
+  }
+
+  if (option.id === 'building') {
+    return 'building';
+  }
+
+  if (option.id === 'custom') {
+    return 'custom';
+  }
+
+  return 'administrative';
+}
+
+function createScopeDescriptorForKindOption(
+  option: CreateLocalityKindOption
+): LocalityScopeDescriptor {
+  return {
+    hierarchy_system: getHierarchySystemForKindOption(option),
+    local_type_label: option.label,
+    local_type_key: option.id,
+    legacy_level: option.legacyLevel,
+  };
+}
+
+function getDefaultKindOption(): CreateLocalityKindOption {
+  return (
+    CREATE_LOCALITY_KIND_OPTIONS.find((option) => option.id === 'city-town') ??
+    CREATE_LOCALITY_KIND_OPTIONS[0]
+  );
+}
+
+function getKindOptionById(kindId: string): CreateLocalityKindOption {
+  return (
+    CREATE_LOCALITY_KIND_OPTIONS.find((option) => option.id === kindId) ??
+    getDefaultKindOption()
+  );
+}
+
+function allowsFlexibleHierarchy(kindId: string): boolean {
+  return kindId === 'custom';
+}
+
+function getKindHierarchyIssue(input: {
+  childKindId: string;
+  parentKindId: string;
+}): string | null {
+  if (
+    allowsFlexibleHierarchy(input.childKindId) ||
+    allowsFlexibleHierarchy(input.parentKindId)
+  ) {
+    return null;
+  }
+
+  const childKind = getKindOptionById(input.childKindId);
+  const parentKind = getKindOptionById(input.parentKindId);
+
+  if (childKind.id === 'electoral-district' && parentKind.id === 'city-town') {
+    return null;
+  }
+
+  if (
+    childKind.scaleRank === null ||
+    parentKind.scaleRank === null ||
+    parentKind.scaleRank < childKind.scaleRank
+  ) {
+    return null;
+  }
+
+  return 'Choose a broader parent type or change one of the types.';
+}
+
+function getGraphNodeName(node: LocalityGraphNode): string {
+  return node.selectedResult?.name ?? (node.query.trim() || 'Unnamed connected scope');
+}
+
+function getParentHierarchyIssue(input: {
+  childKindId: string;
+  parentKindId: string | null;
+}): string | null {
+  if (!input.parentKindId) {
+    return null;
+  }
+
+  return getKindHierarchyIssue({
+    childKindId: input.childKindId,
+    parentKindId: input.parentKindId,
+  });
+}
+
+function getKindIdForSearchResult(result: NexusLocationSearchResult): string {
+  if (
+    result.scope_type_key &&
+    CREATE_LOCALITY_KIND_OPTIONS.some((option) => option.id === result.scope_type_key)
+  ) {
+    return result.scope_type_key;
+  }
+
+  return getDefaultKindIdForLevel(result.legacy_level ?? result.level);
+}
+
+function getKindOptionsForLevel(level: LocalityLevel, isTarget: boolean): CreateLocalityKindOption[] {
+  if (isTarget) {
+    return CREATE_LOCALITY_KIND_OPTIONS;
+  }
+
+  return CREATE_LOCALITY_KIND_OPTIONS.filter((option) => option.legacyLevel === level);
+}
+
+function getDefaultKindSelections(): Record<LocalityLevel, string> {
+  return {
+    nation: getDefaultKindIdForLevel('nation'),
+    region: getDefaultKindIdForLevel('region'),
+    city: getDefaultKindIdForLevel('city'),
+    district: getDefaultKindIdForLevel('district'),
+  };
+}
+
+type LocalitySuccessModalState = {
+  title: string;
+  message: string;
+  locality: NexusLocationSearchResult;
+  showDashboardAction: boolean;
+} | null;
+
+type LocalityMessageModalState = {
+  title: string;
+  message: string;
+} | null;
+
+type LocalityRemoveConfirmModalState = {
+  nodeId: string;
+  nodeName: string;
+  childCount: number;
+} | null;
 
 type LocalityLevelEntry = {
   query: string;
   selectedResult: NexusLocationSearchResult | null;
   isNew: boolean;
 };
+
+type LocalityLevelErrorMap = Partial<Record<LocalityLevel, string>>;
+
+
+type LocalityGraphNode = LocalityCreateGraphRowNode;
+
+type LocalityGraphDisplayRow = {
+  node: LocalityGraphNode;
+  depth: number;
+};
+
+type LocalityGraphDisplaySection = {
+  id: 'connected' | 'unconnected';
+  rows: LocalityGraphDisplayRow[];
+};
+
+type LocalityGraphNodeErrorMap = Partial<Record<string, string>>;
+
+type LocalityGraphPreviewResult = {
+  previewId: string;
+  leafNodeId: string;
+  path: NexusLocalityPathEntryPayload[];
+  payload: NexusLocalityPathPreviewPayload;
+};
+
+type LocalityCreateDraftState = {
+  searchQuery?: string;
+  activeWorkflowTab?: LocalityWorkflowTab;
+  graphNodes?: LocalityGraphNode[];
+  targetGraphNodeId?: string;
+  applyAsHomeLocality?: boolean;
+  selectedCreateKindId?: string;
+};
+
+const LOCALITY_CREATE_DRAFT_STORAGE_KEY = 'nexus.locality.create.draft.v1';
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isDraftSearchResult(value: unknown): value is NexusLocationSearchResult {
+  return (
+    isRecord(value) &&
+    typeof value.scope_id === 'string' &&
+    typeof value.name === 'string' &&
+    typeof value.path_label === 'string'
+  );
+}
+
+function sanitizeDraftGraphNode(value: unknown): LocalityGraphNode | null {
+  if (!isRecord(value) || typeof value.id !== 'string' || typeof value.query !== 'string') {
+    return null;
+  }
+
+  const kindId = typeof value.kindId === 'string'
+    ? value.kindId
+    : getDefaultKindIdForLevel('city');
+
+  return {
+    id: value.id,
+    query: value.query,
+    selectedResult: isDraftSearchResult(value.selectedResult) ? value.selectedResult : null,
+    isNew: typeof value.isNew === 'boolean' ? value.isNew : value.query.trim().length >= 2,
+    kindId,
+    parentId: typeof value.parentId === 'string' ? value.parentId : null,
+    parentResult: isDraftSearchResult(value.parentResult) ? value.parentResult : null,
+    hasParentSelection: typeof value.hasParentSelection === 'boolean'
+      ? value.hasParentSelection
+      : typeof value.parentId === 'string',
+  };
+}
+
+function readLocalityCreateDraft(): LocalityCreateDraftState | null {
+  if (typeof window === 'undefined' || !window.sessionStorage) {
+    return null;
+  }
+
+  try {
+    const rawDraft = window.sessionStorage.getItem(LOCALITY_CREATE_DRAFT_STORAGE_KEY);
+
+    if (!rawDraft) {
+      return null;
+    }
+
+    const parsedDraft: unknown = JSON.parse(rawDraft);
+
+    if (!isRecord(parsedDraft)) {
+      return null;
+    }
+
+    const graphNodes = Array.isArray(parsedDraft.graphNodes)
+      ? parsedDraft.graphNodes
+          .map((node) => sanitizeDraftGraphNode(node))
+          .filter((node): node is LocalityGraphNode => node !== null)
+      : undefined;
+
+    return {
+      searchQuery: typeof parsedDraft.searchQuery === 'string' ? parsedDraft.searchQuery : undefined,
+      activeWorkflowTab: parsedDraft.activeWorkflowTab === 'create' ? 'create' : 'search',
+      graphNodes: graphNodes && graphNodes.length > 0 ? graphNodes : undefined,
+      targetGraphNodeId: typeof parsedDraft.targetGraphNodeId === 'string'
+        ? parsedDraft.targetGraphNodeId
+        : undefined,
+      applyAsHomeLocality: typeof parsedDraft.applyAsHomeLocality === 'boolean'
+        ? parsedDraft.applyAsHomeLocality
+        : undefined,
+      selectedCreateKindId: typeof parsedDraft.selectedCreateKindId === 'string'
+        ? parsedDraft.selectedCreateKindId
+        : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalityCreateDraft(draft: LocalityCreateDraftState) {
+  if (typeof window === 'undefined' || !window.sessionStorage) {
+    return;
+  }
+
+  window.sessionStorage.setItem(LOCALITY_CREATE_DRAFT_STORAGE_KEY, JSON.stringify(draft));
+}
+
+function clearLocalityCreateDraft() {
+  if (typeof window === 'undefined' || !window.sessionStorage) {
+    return;
+  }
+
+  window.sessionStorage.removeItem(LOCALITY_CREATE_DRAFT_STORAGE_KEY);
+}
+
 
 function getSingleParam(value: string | string[] | undefined): string | null {
   if (Array.isArray(value)) {
@@ -94,6 +432,504 @@ function createLevelEntries(): Record<LocalityLevel, LocalityLevelEntry> {
   };
 }
 
+
+function createGraphNodeId(): string {
+  return `locality-node-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function createLocalityGraphNode(input: {
+  query?: string;
+  kindId?: string;
+  parentId?: string | null;
+  hasParentSelection?: boolean;
+} = {}): LocalityGraphNode {
+  const query = input.query?.trim() ?? '';
+
+  return {
+    id: createGraphNodeId(),
+    query,
+    selectedResult: null,
+    isNew: query.length >= 2,
+    kindId: input.kindId ?? getDefaultKindIdForLevel('city'),
+    parentId: input.parentId ?? null,
+    parentResult: null,
+    hasParentSelection: input.hasParentSelection ?? input.parentId !== undefined,
+  };
+}
+
+function getGraphNodeKind(node: LocalityGraphNode): CreateLocalityKindOption {
+  return getKindOptionById(node.kindId);
+}
+
+function createExistingLocalityGraphNode(result: NexusLocationSearchResult): LocalityGraphNode {
+  return {
+    id: createGraphNodeId(),
+    query: result.name,
+    selectedResult: result,
+    isNew: false,
+    kindId: getKindIdForSearchResult(result),
+    parentId: null,
+    parentResult: null,
+    hasParentSelection: false,
+  };
+}
+
+function findExistingGraphNodeForResult(
+  nodes: LocalityGraphNode[],
+  result: NexusLocationSearchResult
+): LocalityGraphNode | null {
+  return (
+    nodes.find((node) => node.selectedResult?.scope_id === result.scope_id) ?? null
+  );
+}
+
+function upsertExistingGraphAnchor(input: {
+  nodes: LocalityGraphNode[];
+  result: NexusLocationSearchResult;
+}): { nodes: LocalityGraphNode[]; anchorId: string } {
+  const existingAnchor = findExistingGraphNodeForResult(input.nodes, input.result);
+
+  if (existingAnchor) {
+    return { nodes: input.nodes, anchorId: existingAnchor.id };
+  }
+
+  const anchorNode = createExistingLocalityGraphNode(input.result);
+  return { nodes: input.nodes.concat(anchorNode), anchorId: anchorNode.id };
+}
+
+function getGraphNodeChildren(
+  nodes: LocalityGraphNode[],
+  parentId: string | null
+): LocalityGraphNode[] {
+  return nodes.filter((node) => node.parentId === parentId);
+}
+
+function getGraphDisplayRows(nodes: LocalityGraphNode[]): LocalityGraphDisplayRow[] {
+  const rows: LocalityGraphDisplayRow[] = [];
+  const visited = new Set<string>();
+
+  const visit = (node: LocalityGraphNode, depth: number) => {
+    if (visited.has(node.id)) {
+      return;
+    }
+
+    visited.add(node.id);
+    rows.push({ node, depth });
+
+    getGraphNodeChildren(nodes, node.id).forEach((childNode) => visit(childNode, depth + 1));
+  };
+
+  getGraphNodeChildren(nodes, null).forEach((node) => visit(node, 0));
+
+  nodes.forEach((node) => {
+    if (!visited.has(node.id)) {
+      visit(node, 0);
+    }
+  });
+
+  return rows;
+}
+
+function getGraphTreeRows(input: {
+  nodes: LocalityGraphNode[];
+  rootNode: LocalityGraphNode;
+  visited: Set<string>;
+}): LocalityGraphDisplayRow[] {
+  const rows: LocalityGraphDisplayRow[] = [];
+
+  const visit = (node: LocalityGraphNode, depth: number) => {
+    if (input.visited.has(node.id)) {
+      return;
+    }
+
+    input.visited.add(node.id);
+    rows.push({ node, depth });
+
+    getGraphNodeChildren(input.nodes, node.id).forEach((childNode) =>
+      visit(childNode, depth + 1)
+    );
+  };
+
+  visit(input.rootNode, 0);
+  return rows;
+}
+
+function getGraphDisplaySections(input: {
+  nodes: LocalityGraphNode[];
+  targetNodeId: string;
+}): LocalityGraphDisplaySection[] {
+  const visited = new Set<string>();
+  const targetRootNode = getGraphRootAncestor(input.nodes, input.targetNodeId);
+  const sections: LocalityGraphDisplaySection[] = [];
+
+  if (targetRootNode) {
+    const connectedRows = getGraphTreeRows({
+      nodes: input.nodes,
+      rootNode: targetRootNode,
+      visited,
+    });
+
+    if (connectedRows.length > 0) {
+      sections.push({ id: 'connected', rows: connectedRows });
+    }
+  }
+
+  const unconnectedRows: LocalityGraphDisplayRow[] = [];
+  input.nodes.forEach((node) => {
+    if (visited.has(node.id)) {
+      return;
+    }
+
+    const rootNode = getGraphRootAncestor(input.nodes, node.id) ?? node;
+    unconnectedRows.push(
+      ...getGraphTreeRows({
+        nodes: input.nodes,
+        rootNode,
+        visited,
+      })
+    );
+  });
+
+  if (unconnectedRows.length > 0) {
+    sections.push({ id: 'unconnected', rows: unconnectedRows });
+  }
+
+  return sections;
+}
+
+function getGraphDescendantIds(nodes: LocalityGraphNode[], nodeId: string): Set<string> {
+  const descendantIds = new Set<string>();
+  const visit = (currentNodeId: string) => {
+    nodes
+      .filter((node) => node.parentId === currentNodeId)
+      .forEach((childNode) => {
+        if (descendantIds.has(childNode.id)) {
+          return;
+        }
+
+        descendantIds.add(childNode.id);
+        visit(childNode.id);
+      });
+  };
+
+  visit(nodeId);
+  return descendantIds;
+}
+
+function getGraphRootAncestor(
+  nodes: LocalityGraphNode[],
+  nodeId: string
+): LocalityGraphNode | null {
+  const nodeById = new Map(nodes.map((node) => [node.id, node]));
+  let currentNode = nodeById.get(nodeId) ?? null;
+  const visited = new Set<string>();
+
+  while (currentNode?.parentId) {
+    if (visited.has(currentNode.id)) {
+      return currentNode;
+    }
+
+    visited.add(currentNode.id);
+    currentNode = nodeById.get(currentNode.parentId) ?? currentNode;
+  }
+
+  return currentNode;
+}
+
+function getGraphAncestry(input: {
+  nodes: LocalityGraphNode[];
+  targetNodeId: string;
+}): LocalityGraphNode[] {
+  const nodeById = new Map(input.nodes.map((node) => [node.id, node]));
+  const chain: LocalityGraphNode[] = [];
+  let currentNode = nodeById.get(input.targetNodeId) ?? null;
+  const visited = new Set<string>();
+
+  while (currentNode) {
+    if (visited.has(currentNode.id)) {
+      return [];
+    }
+
+    visited.add(currentNode.id);
+    chain.push(currentNode);
+    currentNode = currentNode.parentId ? nodeById.get(currentNode.parentId) ?? null : null;
+  }
+
+  return chain.reverse();
+}
+
+function getGraphNodeParentKindId(
+  nodes: LocalityGraphNode[],
+  node: LocalityGraphNode
+): string | null {
+  if (node.parentResult) {
+    return getKindIdForSearchResult(node.parentResult);
+  }
+
+  if (!node.parentId) {
+    return null;
+  }
+
+  const parentNode = nodes.find((candidateNode) => candidateNode.id === node.parentId) ?? null;
+  return parentNode?.kindId ?? null;
+}
+
+function getGraphNodeParentHierarchyIssue(
+  nodes: LocalityGraphNode[],
+  node: LocalityGraphNode
+): string | null {
+  return getParentHierarchyIssue({
+    childKindId: node.kindId,
+    parentKindId: getGraphNodeParentKindId(nodes, node),
+  });
+}
+
+function getPathEntriesForExistingLocality(
+  result: NexusLocationSearchResult
+): NexusLocalityPathEntryPayload[] {
+  const pathEntries = result.path_entries?.length
+    ? result.path_entries
+    : [
+        {
+          scope_id: result.scope_id,
+          name: result.name,
+          level: result.legacy_level ?? result.level,
+          scope_type_label: result.scope_type_label ?? null,
+        },
+      ];
+
+  return pathEntries.map((entry) => ({
+    level: entry.level,
+    name: entry.name,
+    existing_scope_id: entry.scope_id,
+    alias_keys: [],
+    display_aliases: [],
+    scope_descriptor: null,
+  }));
+}
+
+function buildGraphPathEntries(input: {
+  nodes: LocalityGraphNode[];
+  targetNodeId: string;
+}): NexusLocalityPathEntryPayload[] {
+  const entries: NexusLocalityPathEntryPayload[] = [];
+  const seenExistingScopeIds = new Set<string>();
+
+  const pushEntry = (entry: NexusLocalityPathEntryPayload) => {
+    if (entry.existing_scope_id) {
+      if (seenExistingScopeIds.has(entry.existing_scope_id)) {
+        return;
+      }
+
+      seenExistingScopeIds.add(entry.existing_scope_id);
+    }
+
+    entries.push(entry);
+  };
+
+  for (const node of getGraphAncestry(input)) {
+    if (node.parentResult) {
+      getPathEntriesForExistingLocality(node.parentResult).forEach(pushEntry);
+    }
+
+    if (node.selectedResult) {
+      getPathEntriesForExistingLocality(node.selectedResult).forEach(pushEntry);
+      continue;
+    }
+
+    const kindOption = getGraphNodeKind(node);
+    const name = node.query.trim();
+
+    if (!name) {
+      continue;
+    }
+
+    pushEntry({
+      level: kindOption.legacyLevel,
+      name,
+      existing_scope_id: null,
+      alias_keys: [],
+      display_aliases: [],
+      scope_descriptor: createScopeDescriptorForKindOption(kindOption),
+    });
+  }
+
+  return entries;
+}
+
+function getGraphPreviewRequests(input: {
+  nodes: LocalityGraphNode[];
+  targetNodeId: string;
+}): { previewId: string; leafNodeId: string; path: NexusLocalityPathEntryPayload[] }[] {
+  const displayRows = getGraphDisplayRows(input.nodes);
+  const leafNodeIds = displayRows
+    .filter(({ node }) => getGraphNodeChildren(input.nodes, node.id).length === 0)
+    .map(({ node }) => node.id);
+  const targetNode = input.nodes.find((node) => node.id === input.targetNodeId) ?? null;
+  const targetNodeId = targetNode?.id ?? leafNodeIds[0] ?? null;
+  const orderedLeafNodeIds = Array.from(
+    new Set([
+      ...(targetNodeId && leafNodeIds.includes(targetNodeId) ? [targetNodeId] : []),
+      ...leafNodeIds,
+    ])
+  );
+  const seenPathKeys = new Set<string>();
+
+  return orderedLeafNodeIds
+    .map((leafNodeId) => {
+      const path = buildGraphPathEntries({
+        nodes: input.nodes,
+        targetNodeId: leafNodeId,
+      });
+      const pathKey = path
+        .map((entry) => entry.existing_scope_id ?? `${entry.level}:${entry.name.toLowerCase()}`)
+        .join('>');
+
+      if (path.length === 0 || seenPathKeys.has(pathKey)) {
+        return null;
+      }
+
+      seenPathKeys.add(pathKey);
+
+      return {
+        previewId: `${leafNodeId}:${pathKey}`,
+        leafNodeId,
+        path,
+      };
+    })
+    .filter(
+      (request): request is {
+        previewId: string;
+        leafNodeId: string;
+        path: NexusLocalityPathEntryPayload[];
+      } => request !== null
+    );
+}
+
+function getPreviewEntryScopeId(entry: NexusLocalityReviewEntryPayload): string {
+  return (
+    entry.existing_result?.scope_id ??
+    entry.planned_scope_packet_id ??
+    `${entry.level}:${createLocalityCanonicalNameKey(entry.name)}`
+  );
+}
+
+function buildPreviewScopeRows(
+  previews: LocalityGraphPreviewResult[]
+): LocalityCreatePreviewScopeRow[] {
+  const rowByKey = new Map<string, LocalityCreatePreviewScopeRow>();
+
+  previews.forEach((preview) => {
+    let parentKey: string | null = null;
+    const pathNames: string[] = [];
+
+    preview.payload.review_entries.forEach((entry) => {
+      const scopeId = getPreviewEntryScopeId(entry);
+      const key = scopeId;
+
+      pathNames.push(entry.name);
+
+      if (!rowByKey.has(key)) {
+        rowByKey.set(key, {
+          key,
+          scopeId,
+          name: entry.name,
+          level: entry.level,
+          typeLabel: getReviewEntryTypeLabel(entry),
+          disposition: entry.disposition,
+          pathLabel: pathNames.join(' / '),
+          parentKey,
+        });
+      }
+
+      parentKey = key;
+    });
+  });
+
+  return Array.from(rowByKey.values());
+}
+
+function buildPreviewDuplicateWarnings(
+  previews: LocalityGraphPreviewResult[]
+): LocalityCreatePreviewDuplicateWarning[] {
+  return previews.flatMap((preview) =>
+    preview.payload.duplicate_warnings.map((warning) => ({
+      ...warning,
+      previewId: preview.previewId,
+      leafNodeId: preview.leafNodeId,
+    }))
+  );
+}
+
+function countUniquePreviewValues(
+  previews: LocalityGraphPreviewResult[],
+  selectValues: (payload: NexusLocalityPathPreviewPayload) => string[]
+): number {
+  return new Set(previews.flatMap((preview) => selectValues(preview.payload))).size;
+}
+
+function createLocalityResultFromPreviewRow(
+  row: LocalityCreatePreviewScopeRow
+): NexusLocationSearchResult {
+  return {
+    scope_id: row.scopeId,
+    name: row.name,
+    short_label: row.name,
+    locality_label: row.name,
+    level: row.level,
+    path_label: row.pathLabel,
+    parent_path_label: null,
+    canonical_name_key: createLocalityCanonicalNameKey(row.name),
+    alias_keys: [],
+    display_aliases: [],
+    path_entries: row.pathLabel.split(' / ').map((name, index, names) => ({
+      scope_id: index === names.length - 1 ? row.scopeId : `${row.scopeId}:ancestor:${index}`,
+      name,
+      level: row.level,
+      scope_type_label: index === names.length - 1 ? row.typeLabel : null,
+    })),
+    match_type: 'exact',
+    description: `${row.name} locality`,
+    disclosure_options: [],
+    scope_descriptor: null,
+    scope_type_label: row.typeLabel,
+    scope_type_key: null,
+    scope_hierarchy_system: null,
+    legacy_level: row.level,
+    manual_status: null,
+  };
+}
+
+function autoAcceptGraphNodes(nodes: LocalityGraphNode[]): LocalityGraphNode[] {
+  return nodes.map((node) => {
+    if (!node.selectedResult && !node.isNew && node.query.trim().length >= 2) {
+      return {
+        ...node,
+        query: node.query.trim(),
+        isNew: true,
+      };
+    }
+
+    return node;
+  });
+}
+
+function findIncompleteGraphNode(input: {
+  nodes: LocalityGraphNode[];
+}): LocalityGraphNode | null {
+  return (
+    input.nodes.find(
+      (node) => !node.selectedResult && !node.isNew && node.query.trim().length < 2
+    ) ??
+    input.nodes.find((node) => !node.selectedResult && !node.hasParentSelection) ??
+    null
+  );
+}
+
+function isGraphReadyForPreview(nodes: LocalityGraphNode[]): boolean {
+  return findIncompleteGraphNode({ nodes }) === null;
+}
+
 function getLevelLabel(level: LocalityLevel): string {
   return level.charAt(0).toUpperCase() + level.slice(1);
 }
@@ -108,18 +944,73 @@ function getPreviousLevel(level: LocalityLevel): LocalityLevel | null {
   return LOCALITY_LEVELS[levelIndex - 1];
 }
 
+function sortLocalityLevels(levels: LocalityLevel[]): LocalityLevel[] {
+  return [...new Set(levels)].sort(
+    (leftLevel, rightLevel) =>
+      LOCALITY_LEVELS.indexOf(leftLevel) - LOCALITY_LEVELS.indexOf(rightLevel)
+  );
+}
+
+function getParentLevelsForFinalLevel(finalLevel: LocalityLevel): LocalityLevel[] {
+  const finalLevelIndex = LOCALITY_LEVELS.indexOf(finalLevel);
+
+  if (finalLevelIndex <= 0) {
+    return [];
+  }
+
+  return LOCALITY_LEVELS.slice(0, finalLevelIndex);
+}
+
+function getNextConnectedParentLevel(input: {
+  finalLevel: LocalityLevel;
+  includedParentLevels: LocalityLevel[];
+}): LocalityLevel | null {
+  const availableParentLevels = getParentLevelsForFinalLevel(input.finalLevel).filter(
+    (level) => !input.includedParentLevels.includes(level)
+  );
+
+  return availableParentLevels[availableParentLevels.length - 1] ?? null;
+}
+
+function getVisibleLevels(input: {
+  finalLevel: LocalityLevel;
+  includedParentLevels: LocalityLevel[];
+}): LocalityLevel[] {
+  return sortLocalityLevels([...input.includedParentLevels, input.finalLevel]);
+}
+
 function clearDownstreamEntries(
   entries: Record<LocalityLevel, LocalityLevelEntry>,
-  level: LocalityLevel
+  level: LocalityLevel,
+  options: { preserveLevel?: LocalityLevel | null } = {}
 ): Record<LocalityLevel, LocalityLevelEntry> {
   const levelIndex = LOCALITY_LEVELS.indexOf(level);
 
   return Object.fromEntries(
-    LOCALITY_LEVELS.map((currentLevel, index) => [
-      currentLevel,
-      index > levelIndex ? createLevelEntry() : entries[currentLevel],
-    ])
+    LOCALITY_LEVELS.map((currentLevel, index) => {
+      const shouldPreserve = options.preserveLevel === currentLevel;
+
+      return [
+        currentLevel,
+        index > levelIndex && !shouldPreserve
+            ? createLevelEntry(entries[currentLevel]?.query ?? '')
+            : entries[currentLevel],
+      ];
+    })
   ) as Record<LocalityLevel, LocalityLevelEntry>;
+}
+
+function getDownstreamPreserveLevel(
+  changedLevel: LocalityLevel,
+  seededTargetLevel: LocalityLevel | null
+): LocalityLevel | null {
+  if (!seededTargetLevel) {
+    return null;
+  }
+
+  return LOCALITY_LEVELS.indexOf(seededTargetLevel) > LOCALITY_LEVELS.indexOf(changedLevel)
+    ? seededTargetLevel
+    : null;
 }
 
 function normalizeCandidateLevel(
@@ -136,50 +1027,186 @@ function getCreateCandidateKey(candidate: NexusLocationCreateCandidate | null): 
   return `${normalizeCandidateLevel(candidate.level)}:${candidate.query.trim().toLowerCase()}`;
 }
 
+function createSearchFallbackCreateCandidate(input: {
+  query: string;
+  results: NexusLocationSearchResult[];
+}): NexusLocationCreateCandidate | null {
+  const trimmedQuery = input.query.trim();
+
+  if (
+    trimmedQuery.length < 2 ||
+    input.results.length === 0 ||
+    !input.results.some((result) => result.level !== 'nation')
+  ) {
+    return null;
+  }
+
+  return {
+    query: trimmedQuery,
+    canonical_name_key: createLocalityCanonicalNameKey(trimmedQuery),
+    label: 'Need a different branch? Create a new locality path.',
+    description:
+      'A same-name locality may already exist elsewhere in Nexus. You can still create this locality under a different parent path.',
+    level: null,
+    parent_scope_id: null,
+  };
+}
+
 function buildVisiblePathEntries(input: {
   entries: Record<LocalityLevel, LocalityLevelEntry>;
   visibleLevels: LocalityLevel[];
-}) {
-  return input.visibleLevels.map((level) => {
+  levelKindSelections: Record<LocalityLevel, string>;
+}): NexusLocalityPathEntryPayload[] {
+  return input.visibleLevels.flatMap((level): NexusLocalityPathEntryPayload[] => {
     const entry = input.entries[level];
+    const isIncluded = entry.selectedResult !== null || entry.isNew;
 
-    return {
-      level,
-      name: entry.selectedResult?.name ?? entry.query.trim(),
-      existing_scope_id: entry.selectedResult?.scope_id ?? null,
-      alias_keys: [],
-      display_aliases: [],
-    };
+    if (!isIncluded) {
+      return [];
+    }
+
+    return [
+      {
+        level,
+        name: entry.selectedResult?.name ?? entry.query.trim(),
+        existing_scope_id: entry.selectedResult?.scope_id ?? null,
+        alias_keys: [],
+        display_aliases: [],
+        scope_descriptor: createScopeDescriptorForKindOption(
+          getKindOptionById(
+            input.levelKindSelections[level] ?? getDefaultKindIdForLevel(level)
+          )
+        ),
+      },
+    ];
   });
+}
+
+function findNearestSelectedParentResult(input: {
+  level: LocalityLevel;
+  entries: Record<LocalityLevel, LocalityLevelEntry>;
+}): NexusLocationSearchResult | null {
+  const levelIndex = LOCALITY_LEVELS.indexOf(input.level);
+
+  for (let index = levelIndex - 1; index >= 0; index -= 1) {
+    const candidateLevel = LOCALITY_LEVELS[index];
+    const candidateEntry = input.entries[candidateLevel];
+
+    if (candidateEntry?.selectedResult) {
+      return candidateEntry.selectedResult;
+    }
+  }
+
+  return null;
+}
+
+function hasPendingNewAncestor(input: {
+  level: LocalityLevel;
+  entries: Record<LocalityLevel, LocalityLevelEntry>;
+}): boolean {
+  const levelIndex = LOCALITY_LEVELS.indexOf(input.level);
+
+  for (let index = levelIndex - 1; index >= 0; index -= 1) {
+    const candidateLevel = LOCALITY_LEVELS[index];
+    const candidateEntry = input.entries[candidateLevel];
+
+    if (candidateEntry?.isNew) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function autoAcceptDraftEntries(input: {
+  entries: Record<LocalityLevel, LocalityLevelEntry>;
+  visibleLevels: LocalityLevel[];
+}): Record<LocalityLevel, LocalityLevelEntry> {
+  return Object.fromEntries(
+    LOCALITY_LEVELS.map((level) => {
+      const entry = input.entries[level];
+
+      if (
+        input.visibleLevels.includes(level) &&
+        !entry.selectedResult &&
+        !entry.isNew &&
+        entry.query.trim().length >= 2
+      ) {
+        return [
+          level,
+          {
+            ...entry,
+            query: entry.query.trim(),
+            isNew: true,
+          },
+        ];
+      }
+
+      return [level, entry];
+    })
+  ) as Record<LocalityLevel, LocalityLevelEntry>;
 }
 
 function findIncompleteLevel(input: {
   entries: Record<LocalityLevel, LocalityLevelEntry>;
   visibleLevels: LocalityLevel[];
 }): LocalityLevel | null {
+  const targetLevel = input.visibleLevels[input.visibleLevels.length - 1] ?? null;
+
   return (
     input.visibleLevels.find((level) => {
       const entry = input.entries[level];
+      const hasTypedValue = entry.query.trim().length > 0;
 
-      return !entry.selectedResult && !entry.isNew;
+      if (targetLevel === level) {
+        return !entry.selectedResult && !entry.isNew;
+      }
+
+      return hasTypedValue && !entry.selectedResult && !entry.isNew;
     }) ?? null
+  );
+}
+
+function getWorkflowErrorMessage(input: unknown, fallback: string): string {
+  const message = input instanceof Error ? input.message : fallback;
+
+  if (message.trim().toLowerCase() === 'not found') {
+    return 'The locality preview service was not found in this running build. Restart or rebuild the app, then try previewing again. If it persists, check that /api/nexus/locality-preview is being served.';
+  }
+
+  return message;
+}
+
+function getSearchResultTypeLabel(result: NexusLocationSearchResult): string {
+  return result.scope_type_label ?? getLevelLabel(result.level);
+}
+
+function getReviewEntryTypeLabel(entry: NexusLocalityReviewEntryPayload): string {
+  return (
+    entry.scope_descriptor?.local_type_label ??
+    entry.existing_result?.scope_type_label ??
+    getLevelLabel(entry.level)
   );
 }
 
 function LocalityLevelSearchRow(input: {
   level: LocalityLevel;
+  roleLabel: string;
+  hierarchyHint: string;
   entry: LocalityLevelEntry;
   isEnabled: boolean;
   parentResult: NexusLocationSearchResult | null;
   parentIsPendingNew: boolean;
+  selectedKind: CreateLocalityKindOption;
+  inputRef?: (node: TextInput | null) => void;
+  onOpenKindPicker: (level: LocalityLevel) => void;
   onQueryChange: (level: LocalityLevel, query: string) => void;
   onSelectResult: (level: LocalityLevel, result: NexusLocationSearchResult) => void;
-  onUseNew: (level: LocalityLevel) => void;
-  onClear: (level: LocalityLevel) => void;
+  onSubmitLevel: (level: LocalityLevel) => void;
+  errorMessage?: string | null;
 }) {
   const appearance = useNexusAppearance();
   const [results, setResults] = useState<NexusLocationSearchResult[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
   const query = input.entry.query.trim();
   const parentScopeId = input.parentResult?.scope_id ?? null;
   const shouldSearch =
@@ -194,13 +1221,11 @@ function LocalityLevelSearchRow(input: {
 
     if (!shouldSearch) {
       setResults([]);
-      setIsSearching(false);
       return () => {
         isMounted = false;
       };
     }
 
-    setIsSearching(true);
     const timeoutHandle = setTimeout(() => {
       void fetchNexusLocationSearchPayload(query, {
         level: input.level,
@@ -211,7 +1236,7 @@ function LocalityLevelSearchRow(input: {
             return;
           }
 
-          setResults(payload.results);
+          setResults(payload.results.slice(0, SEARCH_RESULT_LIMIT));
         })
         .catch(() => {
           if (!isMounted) {
@@ -219,11 +1244,6 @@ function LocalityLevelSearchRow(input: {
           }
 
           setResults([]);
-        })
-        .finally(() => {
-          if (isMounted) {
-            setIsSearching(false);
-          }
         });
     }, 220);
 
@@ -233,30 +1253,40 @@ function LocalityLevelSearchRow(input: {
     };
   }, [input.level, parentScopeId, query, shouldSearch]);
 
-  const pendingParentCopy = input.parentIsPendingNew
-    ? `This ${input.level} will be created under the pending new parent after review.`
-    : null;
-  const useNewLabel = `Use as new ${input.level}`;
-  const canUseNew =
-    input.isEnabled && query.length >= 2 && !input.entry.selectedResult && !input.entry.isNew;
-
   return (
     <View className="gap-2">
-      <View className="flex-row flex-wrap items-center gap-2">
-        <Text className={appearance.itemMetaClass}>{input.level.toUpperCase()}</Text>
-        {input.entry.selectedResult ? (
-          <NexusBadge label="existing" tone="mint" />
-        ) : input.entry.isNew ? (
-          <NexusBadge label="new candidate" tone="gold" />
-        ) : null}
+      <View className="flex-row flex-wrap items-center justify-between gap-3">
+        <View className="min-w-0 flex-1 gap-1">
+          <View className="flex-row flex-wrap items-center gap-2">
+            <Text className={appearance.itemMetaClass}>{input.roleLabel}</Text>
+            {input.entry.selectedResult ? (
+              <NexusBadge label="existing" tone="mint" />
+            ) : input.entry.isNew ? (
+              <NexusBadge label="new candidate" tone="gold" />
+            ) : null}
+          </View>
+          <Text className={appearance.itemBodyClass}>{input.hierarchyHint}</Text>
+        </View>
+        <Pressable
+          className={`rounded-[14px] border px-3 py-2 ${appearance.cardInsetClass}`}
+          onPress={() => input.onOpenKindPicker(input.level)}
+        >
+          <View className="flex-row flex-wrap items-center gap-2">
+            <Text className={appearance.itemMetaClass}>TYPE</Text>
+            <Text className={appearance.itemTitleClass}>{input.selectedKind.label}</Text>
+          </View>
+        </Pressable>
       </View>
       <TextInput
+        ref={input.inputRef}
         value={input.entry.query}
-        editable={input.isEnabled && !input.entry.selectedResult}
+        editable={input.isEnabled}
         onChangeText={(nextQuery) => input.onQueryChange(input.level, nextQuery)}
+        onSubmitEditing={() => input.onSubmitLevel(input.level)}
+        returnKeyType="next"
         placeholder={
           input.isEnabled
-            ? `Search or enter ${input.level}`
+            ? `Search or enter ${input.selectedKind.label.toLowerCase()}`
             : `Choose ${getLevelLabel(getPreviousLevel(input.level) ?? 'nation').toLowerCase()} first`
         }
         placeholderTextColor={appearance.textInputPlaceholderColor}
@@ -265,40 +1295,8 @@ function LocalityLevelSearchRow(input: {
         }`}
       />
 
-      {pendingParentCopy ? (
-        <Text className={appearance.itemMetaClass}>{pendingParentCopy}</Text>
-      ) : null}
-
-      {input.entry.selectedResult ? (
-        <View className={`gap-2 rounded-[18px] border px-4 py-3 ${appearance.cardInsetClass}`}>
-          <Text className={appearance.itemTitleClass}>{input.entry.selectedResult.name}</Text>
-          <Text className={appearance.itemMetaClass}>
-            {input.entry.selectedResult.path_label}
-          </Text>
-          <NexusActionButton
-            label="Change"
-            variant="ghost"
-            onPress={() => input.onClear(input.level)}
-          />
-        </View>
-      ) : null}
-
-      {input.entry.isNew ? (
-        <View className={`gap-2 rounded-[18px] border px-4 py-3 ${appearance.cardInsetClass}`}>
-          <Text className={appearance.itemTitleClass}>{input.entry.query}</Text>
-          <Text className={appearance.itemBodyClass}>
-            This {input.level} will be created only after review.
-          </Text>
-          <NexusActionButton
-            label="Change"
-            variant="ghost"
-            onPress={() => input.onClear(input.level)}
-          />
-        </View>
-      ) : null}
-
-      {isSearching ? (
-        <Text className={appearance.itemMetaClass}>Searching this level...</Text>
+      {input.errorMessage ? (
+        <Text className="text-sm text-nexus-rose">{input.errorMessage}</Text>
       ) : null}
 
       {results.length > 0 ? (
@@ -311,35 +1309,21 @@ function LocalityLevelSearchRow(input: {
             >
               <View className="flex-row flex-wrap items-center gap-2">
                 <Text className={appearance.itemTitleClass}>{result.name}</Text>
+                <NexusBadge label={getSearchResultTypeLabel(result)} tone="sky" />
                 <NexusBadge label={result.match_type.replace(/_/g, ' ')} />
               </View>
-              <Text className={appearance.itemMetaClass}>{result.path_label}</Text>
+              <Text className={appearance.itemMetaClass}>
+                {result.path_label}
+                {result.scope_hierarchy_system
+                  ? ` · ${result.scope_hierarchy_system}`
+                  : ''}
+              </Text>
             </Pressable>
           ))}
         </View>
       ) : null}
-
-      {canUseNew ? (
-        <NexusActionButton
-          label={useNewLabel}
-          variant="ghost"
-          onPress={() => input.onUseNew(input.level)}
-        />
-      ) : null}
     </View>
   );
-}
-
-function ReviewDispositionBadge({
-  entry,
-}: {
-  entry: NexusLocalityReviewEntryPayload;
-}) {
-  if (entry.disposition === 'reuse_existing') {
-    return <NexusBadge label="reuse existing" tone="mint" />;
-  }
-
-  return <NexusBadge label="create new" tone="gold" />;
 }
 
 export default function NexusLocalityCreatePage() {
@@ -358,19 +1342,73 @@ export default function NexusLocalityCreatePage() {
     setActiveScopeId,
   } = useNexusShell();
   const { currentMode, isAuthenticated, runFortressMutation } = useIdentityShell();
-  const returnTo = getSingleParam(params.return_to) ?? '/nexus/trust';
+  const explicitReturnTo = getSingleParam(params.return_to);
+  const returnTo = explicitReturnTo ?? '/nexus/trust';
+  const hasReturnTarget = explicitReturnTo !== null;
   const returnScopeId = getSingleParam(params.return_scope_id);
   const initialQuery = getSingleParam(params.query) ?? '';
   const shouldSetHome = getSingleParam(params.set_home) === '1';
-  const [searchQuery, setSearchQuery] = useState(initialQuery);
+  const initialCreateDraft = useMemo(() => {
+    const savedDraft = initialQuery.trim().length === 0 ? readLocalityCreateDraft() : null;
+    const graphNodes = savedDraft?.graphNodes?.length
+      ? savedDraft.graphNodes
+      : [
+          createLocalityGraphNode({
+            query: initialQuery,
+            kindId: getDefaultKindIdForLevel('city'),
+          }),
+        ];
+    const targetGraphNodeId = savedDraft?.targetGraphNodeId &&
+      graphNodes.some((node) => node.id === savedDraft.targetGraphNodeId)
+      ? savedDraft.targetGraphNodeId
+      : graphNodes[0]?.id ?? '';
+
+    return {
+      savedDraft,
+      graphNodes,
+      targetGraphNodeId,
+    };
+  }, [initialQuery]);
+  const [activeWorkflowTab, setActiveWorkflowTab] = useState<LocalityWorkflowTab>(
+    initialCreateDraft.savedDraft?.activeWorkflowTab ?? 'search'
+  );
+  const [createMode, setCreateMode] = useState<LocalityCreateMode>('build');
+  const [searchQuery, setSearchQuery] = useState(
+    initialQuery || initialCreateDraft.savedDraft?.searchQuery || ''
+  );
   const [results, setResults] = useState<NexusLocationSearchResult[]>([]);
   const [searchCreateCandidate, setSearchCreateCandidate] =
     useState<NexusLocationCreateCandidate | null>(null);
   const [appliedSearchCandidateKey, setAppliedSearchCandidateKey] = useState<string | null>(null);
-  const [notFoundModalCandidate, setNotFoundModalCandidate] =
+  const [createKindCandidate, setCreateKindCandidate] =
     useState<NexusLocationCreateCandidate | null>(null);
+  const [selectedCreateKindId, setSelectedCreateKindId] = useState(
+    initialCreateDraft.savedDraft?.selectedCreateKindId ?? 'city-town'
+  );
+  const [selectedExistingResult, setSelectedExistingResult] =
+    useState<NexusLocationSearchResult | null>(null);
+  const [successModal, setSuccessModal] = useState<LocalitySuccessModalState>(null);
+  const [workflowErrorModal, setWorkflowErrorModal] = useState<LocalityMessageModalState>(null);
+  const [removeConfirmModal, setRemoveConfirmModal] = useState<LocalityRemoveConfirmModalState>(null);
   const [isSearching, setIsSearching] = useState(false);
+  const [searchRefreshNonce, setSearchRefreshNonce] = useState(0);
   const [finalLevel, setFinalLevel] = useState<LocalityLevel>('city');
+  const [includedParentLevels, setIncludedParentLevels] = useState<LocalityLevel[]>([]);
+  const [levelKindSelections, setLevelKindSelections] = useState<Record<LocalityLevel, string>>(
+    () => getDefaultKindSelections()
+  );
+  const [graphNodes, setGraphNodes] = useState<LocalityGraphNode[]>(
+    () => initialCreateDraft.graphNodes
+  );
+  const [targetGraphNodeId, setTargetGraphNodeId] = useState(
+    () => initialCreateDraft.targetGraphNodeId
+  );
+  const [graphNodeErrors, setGraphNodeErrors] = useState<LocalityGraphNodeErrorMap>({});
+  const [parentPickerNodeId, setParentPickerNodeId] = useState<string | null>(null);
+  const [parentSearchQuery, setParentSearchQuery] = useState('');
+  const [parentSearchResults, setParentSearchResults] = useState<NexusLocationSearchResult[]>([]);
+  const [isParentSearching, setIsParentSearching] = useState(false);
+  const [typePickerContext, setTypePickerContext] = useState<LocalityTypePickerContext>(null);
   const [levelEntries, setLevelEntries] = useState<Record<LocalityLevel, LocalityLevelEntry>>(
     () => createLevelEntries()
   );
@@ -378,16 +1416,27 @@ export default function NexusLocalityCreatePage() {
   const [reviewPreview, setReviewPreview] = useState<NexusLocalityPathPreviewPayload | null>(
     null
   );
-  const [homeScopeSelection, setHomeScopeSelection] = useState<Record<string, boolean>>({});
-  const [applyAsHomeLocality, setApplyAsHomeLocality] = useState(shouldSetHome);
+  const [reviewPreviews, setReviewPreviews] = useState<LocalityGraphPreviewResult[]>([]);
+  const [homeLocalityScopeKey, setHomeLocalityScopeKey] = useState<string | null>(null);
+  const [scopeTreeSelection, setScopeTreeSelection] = useState<Record<string, boolean>>({});
+  const [associationSelection, setAssociationSelection] = useState<Record<string, boolean>>({});
+  const [followSelection, setFollowSelection] = useState<Record<string, boolean>>({});
+  const [applyAsHomeLocality, setApplyAsHomeLocality] = useState(
+    initialCreateDraft.savedDraft?.applyAsHomeLocality ?? shouldSetHome
+  );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [levelErrors, setLevelErrors] = useState<LocalityLevelErrorMap>({});
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isReviewing, setIsReviewing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isClaimedIdentity = currentMode === 'claimed' && isAuthenticated;
   const visibleLevels = useMemo(
-    () => LOCALITY_LEVELS.slice(0, LOCALITY_LEVELS.indexOf(finalLevel) + 1),
-    [finalLevel]
+    () => getVisibleLevels({ finalLevel, includedParentLevels }),
+    [finalLevel, includedParentLevels]
+  );
+  const nextConnectedParentLevel = useMemo(
+    () => getNextConnectedParentLevel({ finalLevel, includedParentLevels }),
+    [finalLevel, includedParentLevels]
   );
   const returnToSelf = `/nexus/locality/create?${new URLSearchParams({
     query: searchQuery,
@@ -402,14 +1451,129 @@ export default function NexusLocalityCreatePage() {
     });
   const scrollViewRef = useRef<ScrollView>(null);
   const builderOffsetYRef = useRef(0);
+  const levelInputRefs = useRef<Record<LocalityLevel, TextInput | null>>({
+    nation: null,
+    region: null,
+    city: null,
+    district: null,
+  });
+  const graphInputRefs = useRef<Record<string, TextInput | null>>({});
+  const parentSearchInputRef = useRef<TextInput | null>(null);
 
-  const searchCandidateKey = getCreateCandidateKey(searchCreateCandidate);
+  useEffect(() => {
+    const timeoutHandle = setTimeout(() => {
+      writeLocalityCreateDraft({
+        searchQuery,
+        activeWorkflowTab,
+        graphNodes,
+        targetGraphNodeId,
+        applyAsHomeLocality,
+        selectedCreateKindId,
+      });
+    }, 120);
+
+    return () => clearTimeout(timeoutHandle);
+  }, [
+    activeWorkflowTab,
+    applyAsHomeLocality,
+    graphNodes,
+    searchQuery,
+    selectedCreateKindId,
+    targetGraphNodeId,
+  ]);
+
+  const effectiveSearchCreateCandidate =
+    searchCreateCandidate ??
+    createSearchFallbackCreateCandidate({
+      query: searchQuery,
+      results,
+    });
+  const searchCandidateKey = getCreateCandidateKey(effectiveSearchCreateCandidate);
+  const visibleSearchResults = results.slice(0, SEARCH_RESULT_LIMIT);
+  const hiddenSearchResultCount = Math.max(0, results.length - visibleSearchResults.length);
   const showSearchCreateRow =
-    Boolean(searchCreateCandidate) &&
+    Boolean(effectiveSearchCreateCandidate) &&
     searchQuery.trim().length >= 2 &&
-    results.length === 0 &&
     !isSearching &&
     searchCandidateKey !== appliedSearchCandidateKey;
+  const hasSearchDropdown =
+    visibleSearchResults.length > 0 || showSearchCreateRow || hiddenSearchResultCount > 0;
+  const graphDisplaySections = useMemo(
+    () => getGraphDisplaySections({ nodes: graphNodes, targetNodeId: targetGraphNodeId }),
+    [graphNodes, targetGraphNodeId]
+  );
+  const targetGraphNode = graphNodes.find((node) => node.id === targetGraphNodeId) ?? graphNodes[0] ?? null;
+  const parentPickerNode = parentPickerNodeId
+    ? graphNodes.find((node) => node.id === parentPickerNodeId) ?? null
+    : null;
+  const hasInvalidGraphHierarchy = graphNodes.some((node) =>
+    getGraphNodeParentHierarchyIssue(graphNodes, node) !== null
+  );
+  const canPreviewGraph =
+    Boolean(targetGraphNode) && isGraphReadyForPreview(graphNodes) && !hasInvalidGraphHierarchy;
+
+  useEffect(() => {
+    setParentSearchQuery('');
+    setParentSearchResults([]);
+    setIsParentSearching(false);
+
+    if (parentPickerNodeId) {
+      setTimeout(() => parentSearchInputRef.current?.focus(), 90);
+    }
+  }, [parentPickerNodeId]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const query = parentSearchQuery.trim();
+
+    if (!parentPickerNode || query.length < 2) {
+      setParentSearchResults([]);
+      setIsParentSearching(false);
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    setIsParentSearching(true);
+    const timeoutHandle = setTimeout(() => {
+      void fetchNexusLocationSearchPayload(query)
+        .then((payload) => {
+          if (!isMounted) {
+            return;
+          }
+
+          setParentSearchResults(
+            payload.results
+              .filter((result) => result.scope_id !== parentPickerNode.selectedResult?.scope_id)
+              .filter(
+                (result) =>
+                  getParentHierarchyIssue({
+                    childKindId: parentPickerNode.kindId,
+                    parentKindId: getKindIdForSearchResult(result),
+                  }) === null
+              )
+              .slice(0, SEARCH_RESULT_LIMIT)
+          );
+        })
+        .catch(() => {
+          if (!isMounted) {
+            return;
+          }
+
+          setParentSearchResults([]);
+        })
+        .finally(() => {
+          if (isMounted) {
+            setIsParentSearching(false);
+          }
+        });
+    }, 220);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutHandle);
+    };
+  }, [parentPickerNode, parentSearchQuery]);
 
   const scrollToBuilder = () => {
     setTimeout(() => {
@@ -422,7 +1586,46 @@ export default function NexusLocalityCreatePage() {
 
   const resetReviewState = () => {
     setReviewPreview(null);
-    setHomeScopeSelection({});
+    setReviewPreviews([]);
+    setHomeLocalityScopeKey(null);
+    setScopeTreeSelection({});
+    setAssociationSelection({});
+    setFollowSelection({});
+    setCreateMode('build');
+  };
+
+  const clearLevelErrors = () => {
+    setLevelErrors({});
+    setGraphNodeErrors({});
+  };
+
+  const resetCreateBuilderState = () => {
+    clearLocalityCreateDraft();
+    setCreateMode('build');
+    setFinalLevel('city');
+    setIncludedParentLevels([]);
+    setLevelKindSelections(getDefaultKindSelections());
+    const resetGraphNode = createLocalityGraphNode({ kindId: getDefaultKindIdForLevel('city') });
+    setGraphNodes([resetGraphNode]);
+    setTargetGraphNodeId(resetGraphNode.id);
+    setGraphNodeErrors({});
+    setParentPickerNodeId(null);
+    setRemoveConfirmModal(null);
+    setLevelEntries(createLevelEntries());
+    setSeededTargetLevel(null);
+    setReviewPreview(null);
+    setReviewPreviews([]);
+    setHomeLocalityScopeKey(null);
+    setScopeTreeSelection({});
+    setAssociationSelection({});
+    setFollowSelection({});
+    setTypePickerContext(null);
+    setCreateKindCandidate(null);
+    setSelectedCreateKindId(getDefaultKindIdForLevel('city'));
+    setApplyAsHomeLocality(shouldSetHome);
+    clearLevelErrors();
+    setErrorMessage(null);
+    setStatusMessage(null);
   };
 
   useEffect(() => {
@@ -470,86 +1673,502 @@ export default function NexusLocalityCreatePage() {
       isMounted = false;
       clearTimeout(timeoutHandle);
     };
-  }, [searchQuery]);
+  }, [searchQuery, searchRefreshNonce]);
 
-  useEffect(() => {
-    if (!reviewPreview) {
-      setHomeScopeSelection({});
-      return;
-    }
-
-    setHomeScopeSelection(
-      Object.fromEntries(
-        reviewPreview.suggested_home_scope_entries.map((entry) => [
-          entry.scope_id,
-          entry.checked_by_default,
-        ])
-      )
-    );
-  }, [reviewPreview]);
-
-  const buildPathEntries = (
-    entries: Record<LocalityLevel, LocalityLevelEntry> = levelEntries
-  ) =>
-    buildVisiblePathEntries({
-      entries,
-      visibleLevels,
-    });
-
-  const runLocalityPreview = async (input?: {
-    entries?: Record<LocalityLevel, LocalityLevelEntry>;
-    createAnyway?: boolean;
-  }) => {
-    const entries = input?.entries ?? levelEntries;
-    const createAnyway = input?.createAnyway ?? false;
-    const incompleteLevel = findIncompleteLevel({
-      entries,
-      visibleLevels,
-    });
-
-    if (incompleteLevel) {
-      setErrorMessage(
-        `Select an existing ${incompleteLevel} or mark it as new before review.`
+  const handleTopSearchSubmit = () => {
+    if (showSearchCreateRow && effectiveSearchCreateCandidate && visibleSearchResults.length === 0) {
+      setCreateKindCandidate(effectiveSearchCreateCandidate);
+      setSelectedCreateKindId(
+        getDefaultKindIdForLevel(
+          normalizeCandidateLevel(effectiveSearchCreateCandidate.level)
+        )
       );
       return;
     }
 
-    const path = buildVisiblePathEntries({
-      entries,
-      visibleLevels,
+    if (visibleSearchResults[0]) {
+      setSelectedExistingResult(visibleSearchResults[0]);
+      return;
+    }
+
+    if (!hasSearchDropdown && searchQuery.trim().length >= 2) {
+      setSearchRefreshNonce((currentNonce) => currentNonce + 1);
+    }
+  };
+
+  const previewScopeRows = useMemo(
+    () => buildPreviewScopeRows(reviewPreviews),
+    [reviewPreviews]
+  );
+  const previewDuplicateWarnings = useMemo(
+    () => buildPreviewDuplicateWarnings(reviewPreviews),
+    [reviewPreviews]
+  );
+  const previewLocationDefinitionCount = useMemo(
+    () =>
+      countUniquePreviewValues(
+        reviewPreviews,
+        (payload) => payload.planned_location_packet_ids
+      ),
+    [reviewPreviews]
+  );
+  const previewRelationLinkCount = useMemo(
+    () =>
+      countUniquePreviewValues(
+        reviewPreviews,
+        (payload) => payload.planned_relation_packet_ids
+      ),
+    [reviewPreviews]
+  );
+  const selectedHomePreviewRow = useMemo(
+    () =>
+      homeLocalityScopeKey
+        ? previewScopeRows.find((row) => row.key === homeLocalityScopeKey) ?? null
+        : null,
+    [homeLocalityScopeKey, previewScopeRows]
+  );
+
+  useEffect(() => {
+    if (previewScopeRows.length === 0) {
+      setHomeLocalityScopeKey(null);
+      setScopeTreeSelection({});
+      setAssociationSelection({});
+      setFollowSelection({});
+      return;
+    }
+
+    const primaryFinalScopeId = reviewPreview
+      ? getPreviewEntryScopeId(
+          reviewPreview.review_entries[reviewPreview.review_entries.length - 1]
+        )
+      : null;
+    const defaultHomeKey = applyAsHomeLocality
+      ? primaryFinalScopeId ?? previewScopeRows[previewScopeRows.length - 1]?.key ?? null
+      : null;
+
+    setHomeLocalityScopeKey((currentKey) => {
+      if (!applyAsHomeLocality) {
+        return null;
+      }
+
+      return currentKey && previewScopeRows.some((row) => row.key === currentKey)
+        ? currentKey
+        : defaultHomeKey;
+    });
+    setScopeTreeSelection((currentSelection) =>
+      Object.fromEntries(
+        previewScopeRows
+          .filter((row) => currentSelection[row.key] !== undefined)
+          .map((row) => [row.key, currentSelection[row.key]])
+      )
+    );
+    setAssociationSelection((currentSelection) =>
+      Object.fromEntries(
+        previewScopeRows
+          .filter((row) => currentSelection[row.key])
+          .map((row) => [row.key, true])
+      )
+    );
+    setFollowSelection((currentSelection) =>
+      Object.fromEntries(
+        previewScopeRows
+          .filter((row) => currentSelection[row.key])
+          .map((row) => [row.key, true])
+      )
+    );
+  }, [applyAsHomeLocality, previewScopeRows, reviewPreview]);
+
+  const buildPathEntries = (
+    nodes: LocalityGraphNode[] = graphNodes
+  ) =>
+    buildGraphPathEntries({
+      nodes,
+      targetNodeId: targetGraphNodeId,
     });
 
-    if (path.some((entry) => !entry.existing_scope_id && entry.name.length < 2)) {
-      setErrorMessage('Every new locality level needs at least two searchable characters.');
+  const runLocalityPreview = async (input?: {
+    nodes?: LocalityGraphNode[];
+    createAnyway?: boolean;
+  }) => {
+    const rawNodes = input?.nodes ?? graphNodes;
+    const nodes = autoAcceptGraphNodes(rawNodes);
+    const createAnyway = input?.createAnyway ?? false;
+
+    if (nodes !== rawNodes) {
+      setGraphNodes(nodes);
+    }
+
+    const incompleteNode = findIncompleteGraphNode({ nodes });
+
+    if (incompleteNode) {
+      setGraphNodeErrors({
+        [incompleteNode.id]: incompleteNode.query.trim().length < 2
+          ? 'Enter at least two characters before preview.'
+          : 'Choose a parent, or choose no parent, before preview.',
+      });
+      setErrorMessage(null);
+      return;
+    }
+
+    const invalidHierarchyNode = nodes.find((node) =>
+      getGraphNodeParentHierarchyIssue(nodes, node) !== null
+    );
+
+    if (invalidHierarchyNode) {
+      setGraphNodeErrors({
+        [invalidHierarchyNode.id]:
+          getGraphNodeParentHierarchyIssue(nodes, invalidHierarchyNode) ??
+          'Choose a broader parent type or change one of the types.',
+      });
+      setErrorMessage(null);
+      return;
+    }
+
+    const previewRequests = getGraphPreviewRequests({
+      nodes,
+      targetNodeId: targetGraphNodeId,
+    });
+
+    if (previewRequests.length === 0) {
+      setWorkflowErrorModal({
+        title: 'Unable to preview locality',
+        message: 'Select a locality scope before previewing.',
+      });
+      return;
+    }
+
+    const shortRequest = previewRequests.find((request) =>
+      request.path.some((entry) => !entry.existing_scope_id && entry.name.length < 2)
+    );
+    const shortEntry = shortRequest?.path.find(
+      (entry) => !entry.existing_scope_id && entry.name.length < 2
+    );
+
+    if (shortRequest && shortEntry) {
+      const matchingNode = getGraphAncestry({
+        nodes,
+        targetNodeId: shortRequest.leafNodeId,
+      }).find((node) => getGraphNodeKind(node).legacyLevel === shortEntry.level);
+      setGraphNodeErrors(
+        matchingNode
+          ? { [matchingNode.id]: 'Enter at least two searchable characters for this new locality.' }
+          : {}
+      );
+      setErrorMessage(null);
       return;
     }
 
     setIsReviewing(true);
     setErrorMessage(null);
+    clearLevelErrors();
     setStatusMessage(null);
 
     try {
-      const payload = await previewNexusLocalityPath({
-        actor_packet_id: currentActorPacketId,
-        path,
-        create_anyway: createAnyway,
-      });
+      const previewResults = await Promise.all(
+        previewRequests.map(async (request) => ({
+          previewId: request.previewId,
+          leafNodeId: request.leafNodeId,
+          path: request.path,
+          payload: await previewNexusLocalityPath({
+            actor_packet_id: currentActorPacketId,
+            path: request.path,
+            create_anyway: createAnyway,
+          }),
+        }))
+      );
+      const primaryPreview =
+        previewResults.find((result) => result.leafNodeId === targetGraphNodeId) ??
+        previewResults[0] ??
+        null;
 
-      setReviewPreview(payload);
+      setReviewPreviews(previewResults);
+      setReviewPreview(primaryPreview?.payload ?? null);
+      setActiveWorkflowTab('create');
+      setCreateMode('preview');
     } catch (error) {
       setReviewPreview(null);
-      setErrorMessage(
-        error instanceof Error ? error.message : 'Unable to preview locality path.'
-      );
+      setReviewPreviews([]);
+      setErrorMessage(null);
+      setWorkflowErrorModal({
+        title: 'Unable to preview locality',
+        message: getWorkflowErrorMessage(error, 'Unable to preview locality path.'),
+      });
     } finally {
       setIsReviewing(false);
     }
   };
 
-  const handleLevelQueryChange = (level: LocalityLevel, query: string) => {
+  const handleGraphNodeQueryChange = (nodeId: string, query: string) => {
     setErrorMessage(null);
+    clearLevelErrors();
     setStatusMessage(null);
     resetReviewState();
+    setGraphNodes((currentNodes) =>
+      currentNodes.map((node) =>
+        node.id === nodeId
+          ? {
+              ...node,
+              query,
+              selectedResult: null,
+              isNew: false,
+            }
+          : node
+      )
+    );
+  };
+
+  const handleSubmitGraphNode = (nodeId: string) => {
+    const currentNode = graphNodes.find((node) => node.id === nodeId);
+
+    if (!currentNode) {
+      return;
+    }
+
+    const trimmedQuery = currentNode.query.trim();
+
+    if (trimmedQuery.length < 2) {
+      setGraphNodeErrors({
+        [nodeId]: 'Enter at least two characters before accepting this locality.',
+      });
+      return;
+    }
+
+    const nextNodes = graphNodes.map((node) =>
+      node.id === nodeId
+        ? {
+            ...node,
+            query: trimmedQuery,
+            selectedResult: null,
+            isNew: true,
+          }
+        : node
+    );
+
+    setGraphNodes(nextNodes);
+    clearLevelErrors();
+    resetReviewState();
+
+    const nextBlankNode = getGraphDisplayRows(nextNodes)
+      .map((row) => row.node)
+      .find((node) => !node.selectedResult && !node.isNew && node.query.trim().length < 2);
+
+    if (nextBlankNode) {
+      setTimeout(() => graphInputRefs.current[nextBlankNode.id]?.focus(), 40);
+      return;
+    }
+
+    graphInputRefs.current[nodeId]?.blur();
+  };
+
+  const handleAddConnectedScope = () => {
+    const targetNode = graphNodes.find((node) => node.id === targetGraphNodeId) ?? graphNodes[0];
+
+    if (!targetNode) {
+      return;
+    }
+
+    const nextNode = createLocalityGraphNode({
+      kindId: targetNode.kindId,
+    });
+
+    setGraphNodes((currentNodes) => currentNodes.concat(nextNode));
+    setActiveWorkflowTab('create');
+    setCreateMode('build');
+    resetReviewState();
+    setTimeout(() => graphInputRefs.current[nextNode.id]?.focus(), 60);
+  };
+
+  const performRemoveGraphNode = (nodeId: string) => {
+    if (graphNodes.length <= 1) {
+      return;
+    }
+
+    const removedNode = graphNodes.find((node) => node.id === nodeId);
+
+    if (!removedNode) {
+      return;
+    }
+
+    const nextNodes = graphNodes
+      .filter((node) => node.id !== nodeId)
+      .map((node) =>
+        node.parentId === nodeId
+          ? {
+              ...node,
+              parentId: null,
+              parentResult: null,
+              hasParentSelection: false,
+            }
+          : node
+      );
+
+    setGraphNodes(nextNodes);
+    setTargetGraphNodeId((currentTargetId) =>
+      currentTargetId === nodeId ? nextNodes[0]?.id ?? '' : currentTargetId
+    );
+    setParentPickerNodeId(null);
+    setRemoveConfirmModal(null);
+    clearLevelErrors();
+    resetReviewState();
+  };
+
+  const handleRemoveGraphNode = (nodeId: string) => {
+    if (graphNodes.length <= 1) {
+      return;
+    }
+
+    const removedNode = graphNodes.find((node) => node.id === nodeId);
+
+    if (!removedNode) {
+      return;
+    }
+
+    const childCount = graphNodes.filter((node) => node.parentId === nodeId).length;
+
+    if (childCount > 0) {
+      setRemoveConfirmModal({
+        nodeId,
+        nodeName: getGraphNodeName(removedNode),
+        childCount,
+      });
+      return;
+    }
+
+    performRemoveGraphNode(nodeId);
+  };
+
+  const handleClearExistingGraphNode = (nodeId: string) => {
+    setGraphNodes((currentNodes) =>
+      currentNodes.map((node) =>
+        node.id === nodeId
+          ? {
+              ...node,
+              query: '',
+              selectedResult: null,
+              isNew: false,
+            }
+          : node
+      )
+    );
+    clearLevelErrors();
+    resetReviewState();
+    setTimeout(() => graphInputRefs.current[nodeId]?.focus(), 40);
+  };
+
+  const handleSelectGraphParent = (nodeId: string, parentId: string | null) => {
+    const childNode = graphNodes.find((node) => node.id === nodeId) ?? null;
+    const parentNode = parentId
+      ? graphNodes.find((node) => node.id === parentId) ?? null
+      : null;
+    const hierarchyIssue = childNode && parentNode
+      ? getParentHierarchyIssue({
+          childKindId: childNode.kindId,
+          parentKindId: parentNode.kindId,
+        })
+      : null;
+
+    if (hierarchyIssue) {
+      setGraphNodeErrors({ [nodeId]: hierarchyIssue });
+      return;
+    }
+
+    setGraphNodes((currentNodes) =>
+      currentNodes.map((node) =>
+        node.id === nodeId
+          ? {
+              ...node,
+              parentId,
+              parentResult: null,
+              hasParentSelection: true,
+            }
+          : node
+      )
+    );
+    setParentPickerNodeId(null);
+    clearLevelErrors();
+    resetReviewState();
+  };
+
+  const handleSelectExistingGraphParent = (nodeId: string, result: NexusLocationSearchResult) => {
+    const childNode = graphNodes.find((node) => node.id === nodeId) ?? null;
+    const hierarchyIssue = childNode
+      ? getParentHierarchyIssue({
+          childKindId: childNode.kindId,
+          parentKindId: getKindIdForSearchResult(result),
+        })
+      : null;
+
+    if (hierarchyIssue) {
+      setGraphNodeErrors({ [nodeId]: hierarchyIssue });
+      return;
+    }
+
+    setGraphNodes((currentNodes) => {
+      const { nodes, anchorId } = upsertExistingGraphAnchor({
+        nodes: currentNodes,
+        result,
+      });
+
+      return nodes.map((node) =>
+        node.id === nodeId
+          ? {
+              ...node,
+              parentId: anchorId,
+              parentResult: null,
+              hasParentSelection: true,
+            }
+          : node
+      );
+    });
+    setParentPickerNodeId(null);
+    clearLevelErrors();
+    resetReviewState();
+  };
+
+  const handleSelectGraphNodeResult = (nodeId: string, result: NexusLocationSearchResult) => {
+    setGraphNodes((currentNodes) =>
+      currentNodes.map((node) =>
+        node.id === nodeId
+          ? {
+              ...node,
+              query: result.name,
+              selectedResult: result,
+              isNew: false,
+              kindId: getKindIdForSearchResult(result),
+            }
+          : node
+      )
+    );
+    clearLevelErrors();
+    resetReviewState();
+  };
+
+  const handleSelectExistingChildResult = (nodeId: string, result: NexusLocationSearchResult) => {
+    setGraphNodes((currentNodes) =>
+      currentNodes.map((node) =>
+        node.id === nodeId
+          ? {
+              ...node,
+              query: result.name,
+              selectedResult: result,
+              isNew: false,
+              kindId: getKindIdForSearchResult(result),
+            }
+          : node
+      )
+    );
+    clearLevelErrors();
+    resetReviewState();
+  };
+
+  const handleLevelQueryChange = (level: LocalityLevel, query: string) => {
+    setErrorMessage(null);
+    clearLevelErrors();
+    setStatusMessage(null);
+    resetReviewState();
+    setSeededTargetLevel((currentSeededLevel) =>
+      level === finalLevel ? level : currentSeededLevel === level ? null : currentSeededLevel
+    );
     setLevelEntries((currentEntries) =>
       clearDownstreamEntries(
         {
@@ -560,7 +2179,8 @@ export default function NexusLocalityCreatePage() {
             isNew: false,
           },
         },
-        level
+        level,
+        { preserveLevel: getDownstreamPreserveLevel(level, seededTargetLevel) }
       )
     );
   };
@@ -569,11 +2189,12 @@ export default function NexusLocalityCreatePage() {
     level: LocalityLevel,
     result: NexusLocationSearchResult
   ) => {
-    if (seededTargetLevel === level) {
-      setSeededTargetLevel(null);
-    }
+    setSeededTargetLevel((currentSeededLevel) =>
+      level === finalLevel ? level : currentSeededLevel === level ? null : currentSeededLevel
+    );
 
     setErrorMessage(null);
+    clearLevelErrors();
     setStatusMessage(null);
     resetReviewState();
     setLevelEntries((currentEntries) =>
@@ -586,81 +2207,209 @@ export default function NexusLocalityCreatePage() {
             isNew: false,
           },
         },
-        level
+        level,
+        { preserveLevel: getDownstreamPreserveLevel(level, seededTargetLevel) }
       )
     );
   };
 
-  const handleUseNewLevel = (level: LocalityLevel) => {
-    if (seededTargetLevel === level) {
-      setSeededTargetLevel(null);
-    }
+  const handleSubmitLevel = (level: LocalityLevel) => {
+    const entry = levelEntries[level];
+    const trimmedQuery = entry.query.trim();
 
-    setErrorMessage(null);
-    setStatusMessage(null);
-    resetReviewState();
-    setLevelEntries((currentEntries) =>
-      clearDownstreamEntries(
+    if (!entry.selectedResult && !entry.isNew) {
+      if (trimmedQuery.length < 2) {
+        setLevelErrors({
+          [level]: 'Enter at least two characters before accepting this locality.',
+        });
+        return;
+      }
+
+      const nextEntries = clearDownstreamEntries(
         {
-          ...currentEntries,
+          ...levelEntries,
           [level]: {
-            ...currentEntries[level],
-            query: currentEntries[level].query.trim(),
+            ...entry,
+            query: trimmedQuery,
             selectedResult: null,
             isNew: true,
           },
         },
-        level
-      )
-    );
-  };
+        level,
+        { preserveLevel: getDownstreamPreserveLevel(level, seededTargetLevel) }
+      );
 
-  const handleClearLevel = (level: LocalityLevel) => {
-    if (seededTargetLevel === level) {
-      setSeededTargetLevel(null);
+      setLevelEntries(nextEntries);
+      setSeededTargetLevel((currentSeededLevel) =>
+        level === finalLevel ? level : currentSeededLevel === level ? null : currentSeededLevel
+      );
+      clearLevelErrors();
+      resetReviewState();
+
+      if (level === finalLevel) {
+        void runLocalityPreview({ createAnyway: false });
+        return;
+      }
     }
 
-    setErrorMessage(null);
-    setStatusMessage(null);
-    resetReviewState();
-    setLevelEntries((currentEntries) =>
-      clearDownstreamEntries(
-        {
+    const submitOrder = [finalLevel, ...visibleLevels.slice(0, -1).reverse()];
+    const currentLevelIndex = submitOrder.indexOf(level);
+    const nextLevel = submitOrder[currentLevelIndex + 1] ?? null;
+
+    if (nextLevel) {
+      setTimeout(() => levelInputRefs.current[nextLevel]?.focus(), 40);
+      return;
+    }
+
+    void runLocalityPreview({ createAnyway: false });
+  };
+
+  const handleSelectKindOption = (option: CreateLocalityKindOption) => {
+    if (!typePickerContext) {
+      return;
+    }
+
+    if (typePickerContext.nodeId) {
+      setGraphNodes((currentNodes) =>
+        currentNodes.map((node) =>
+          node.id === typePickerContext.nodeId
+            ? {
+                ...node,
+                kindId: option.id,
+              }
+            : node
+        )
+      );
+      setTypePickerContext(null);
+      resetReviewState();
+      setActiveWorkflowTab('create');
+      return;
+    }
+
+    const destinationLevel = option.legacyLevel;
+
+    setLevelKindSelections((currentSelections) => ({
+      ...currentSelections,
+      [destinationLevel]: option.id,
+    }));
+
+    if (typePickerContext.isTarget) {
+      const previousTargetLevel = finalLevel;
+
+      if (destinationLevel !== previousTargetLevel) {
+        setLevelEntries((currentEntries) => {
+          const previousTargetEntry = currentEntries[previousTargetLevel];
+          const shouldClearPreviousTarget = seededTargetLevel === previousTargetLevel;
+
+          return {
+            ...currentEntries,
+            [destinationLevel]: {
+              ...currentEntries[destinationLevel],
+              query: previousTargetEntry.query,
+              selectedResult: null,
+              isNew: previousTargetEntry.query.trim().length >= 2,
+            },
+            ...(shouldClearPreviousTarget
+              ? {
+                  [previousTargetLevel]: createLevelEntry(),
+                }
+              : {}),
+          };
+        });
+      }
+
+      setIncludedParentLevels((currentLevels) =>
+        sortLocalityLevels(
+          currentLevels.filter(
+            (level) =>
+              level !== destinationLevel &&
+              LOCALITY_LEVELS.indexOf(level) < LOCALITY_LEVELS.indexOf(destinationLevel)
+          )
+        )
+      );
+      setFinalLevel(destinationLevel);
+      setSeededTargetLevel(destinationLevel);
+    } else if (destinationLevel !== typePickerContext.level) {
+      const previousParentLevel = typePickerContext.level;
+
+      setLevelEntries((currentEntries) => {
+        const previousParentEntry = currentEntries[previousParentLevel];
+
+        return {
           ...currentEntries,
-          [level]: createLevelEntry(),
-        },
-        level
-      )
+          [destinationLevel]: {
+            ...currentEntries[destinationLevel],
+            query: previousParentEntry.query,
+            selectedResult: null,
+            isNew: previousParentEntry.query.trim().length >= 2,
+          },
+          [previousParentLevel]: createLevelEntry(),
+        };
+      });
+      setIncludedParentLevels((currentLevels) =>
+        sortLocalityLevels(
+          currentLevels
+            .filter((level) => level !== previousParentLevel && level !== destinationLevel)
+            .concat(destinationLevel)
+        )
+      );
+    }
+
+    setTypePickerContext(null);
+    resetReviewState();
+    setActiveWorkflowTab('create');
+  };
+
+
+  const handleAddConnectedParentScope = () => {
+    if (!nextConnectedParentLevel) {
+      return;
+    }
+
+    setIncludedParentLevels((currentLevels) =>
+      sortLocalityLevels([...currentLevels, nextConnectedParentLevel])
     );
+    setLevelKindSelections((currentSelections) => ({
+      ...currentSelections,
+      [nextConnectedParentLevel]:
+        currentSelections[nextConnectedParentLevel] ??
+        getDefaultKindIdForLevel(nextConnectedParentLevel),
+    }));
+    setActiveWorkflowTab('create');
+    setCreateMode('build');
+    resetReviewState();
+    setTimeout(() => levelInputRefs.current[nextConnectedParentLevel]?.focus(), 60);
+  };
+
+  const handleRemoveConnectedParentScope = (level: LocalityLevel) => {
+    setIncludedParentLevels((currentLevels) =>
+      currentLevels.filter((currentLevel) => currentLevel !== level)
+    );
+    setLevelEntries((currentEntries) => ({
+      ...currentEntries,
+      [level]: createLevelEntry(),
+    }));
+    clearLevelErrors();
+    resetReviewState();
   };
 
   const handleUseSearchCreateCandidate = (
-    candidateOverride?: NexusLocationCreateCandidate | null
+    candidateOverride?: NexusLocationCreateCandidate | null,
+    kindOptionOverride?: CreateLocalityKindOption
   ) => {
-    const candidate = candidateOverride ?? searchCreateCandidate;
+    const candidate = candidateOverride ?? effectiveSearchCreateCandidate;
 
     if (!candidate) {
       return;
     }
 
-    const nextFinalLevel = normalizeCandidateLevel(candidate.level);
-    const previousLevel = getPreviousLevel(nextFinalLevel);
-    const hintedParentResult = candidate.parent_scope_id
-      ? (results.find((result) => result.scope_id === candidate.parent_scope_id) ?? null)
-      : null;
+    const nextKindId = kindOptionOverride?.id ?? selectedCreateKindId;
+    const nextFinalLevel = kindOptionOverride?.legacyLevel ?? normalizeCandidateLevel(candidate.level);
     const nextEntries = createLevelEntries();
-
-    if (
-      previousLevel &&
-      hintedParentResult &&
-      hintedParentResult.level === previousLevel
-    ) {
-      nextEntries[previousLevel] = {
-        query: hintedParentResult.name,
-        selectedResult: hintedParentResult,
-        isNew: false,
-      };
-    }
+    const nextGraphNode = createLocalityGraphNode({
+      query: candidate.query.trim(),
+      kindId: nextKindId,
+    });
 
     nextEntries[nextFinalLevel] = {
       query: candidate.query.trim(),
@@ -672,107 +2421,246 @@ export default function NexusLocalityCreatePage() {
     setStatusMessage(null);
     resetReviewState();
     setAppliedSearchCandidateKey(getCreateCandidateKey(candidate));
-    setNotFoundModalCandidate(null);
+    setCreateKindCandidate(null);
     setApplyAsHomeLocality(true);
     setSeededTargetLevel(nextFinalLevel);
     setFinalLevel(nextFinalLevel);
+    setIncludedParentLevels([]);
+    setLevelKindSelections((currentSelections) => ({
+      ...currentSelections,
+      [nextFinalLevel]: nextKindId,
+    }));
+    setGraphNodes([nextGraphNode]);
+    setTargetGraphNodeId(nextGraphNode.id);
+    setGraphNodeErrors({});
+    setParentPickerNodeId(null);
+    setActiveWorkflowTab('create');
+    setCreateMode('build');
     setLevelEntries(nextEntries);
     scrollToBuilder();
   };
 
-  const handleSelectLocality = async (locality: NexusLocationSearchResult) => {
-    setErrorMessage(null);
-    setStatusMessage(null);
+  const openLocalityDashboard = (locality: NexusLocationSearchResult) => {
+    setActiveScopeId(toRouteScopeId(locality.scope_id));
+    router.replace('/nexus/dashboard' as Href);
+  };
 
-    if (applyAsHomeLocality) {
-      const applyHomeLocalitySelection = async () => {
-        try {
-          await runFortressMutation({
-            intent: {
-              kind: 'home_locality.relation.set',
-              home_scope_packet_id: locality.scope_id,
-            },
-          });
-          await refreshShellData();
-          setActiveScopeId(toRouteScopeId(locality.scope_id));
-          router.replace({
-            pathname: '/nexus/dashboard',
-            params: {
-              locality_created: '1',
-              locality_name: locality.name,
-            },
-          } as Href);
-        } catch (error) {
-          if (openNexusAuthGateForError(error, applyHomeLocalitySelection)) {
-            return;
-          }
-
-          setErrorMessage(
-            error instanceof Error ? error.message : 'Unable to set home locality.'
-          );
-        }
-      };
-
-      await guardNexusWrite(
-        {
-          requiresClaimedIdentity: true,
-          writeRisk: 'standard',
-        },
-        applyHomeLocalitySelection
-      );
-
-      return;
-    }
-
+  const returnWithLocality = (locality: NexusLocationSearchResult) => {
     router.replace(appendReturnParams(returnTo, locality, returnScopeId));
   };
 
-  const handleUseExistingWarning = async (
-    warning: NexusLocalityDuplicateWarningPayload
+  const applyHomeLocalitySelection = async (
+    locality: NexusLocationSearchResult,
+    options: { created?: boolean } = {}
   ) => {
-    const nextEntries = clearDownstreamEntries(
-      {
-        ...levelEntries,
-        [warning.level]: {
-          query: warning.existing_result.name,
-          selectedResult: warning.existing_result,
-          isNew: false,
-        },
+    await runFortressMutation({
+      intent: {
+        kind: 'home_locality.relation.set',
+        home_scope_packet_id: locality.scope_id,
       },
-      warning.level
+    });
+    await refreshShellData();
+    setActiveScopeId(toRouteScopeId(locality.scope_id));
+    setSelectedExistingResult(null);
+    setSuccessModal({
+      title: options.created ? 'Locality created' : 'Home locality updated',
+      message: options.created
+        ? `${locality.name} has been created and set as your home locality.`
+        : `${locality.name} is now your home locality.`,
+      locality,
+      showDashboardAction: true,
+    });
+  };
+
+  const handleSetHomeLocality = async (locality: NexusLocationSearchResult) => {
+    setErrorMessage(null);
+    setStatusMessage(null);
+
+    const guardedApplyHomeLocalitySelection = async () => {
+      try {
+        await applyHomeLocalitySelection(locality);
+      } catch (error) {
+        if (openNexusAuthGateForError(error, guardedApplyHomeLocalitySelection)) {
+          return;
+        }
+
+        setErrorMessage(
+          error instanceof Error ? error.message : 'Unable to set home locality.'
+        );
+      }
+    };
+
+    await guardNexusWrite(
+      {
+        requiresClaimedIdentity: true,
+        writeRisk: 'standard',
+      },
+      guardedApplyHomeLocalitySelection
+    );
+  };
+
+  const handleTogglePreviewHomeScope = (scopeKey: string) => {
+    const nextKey = homeLocalityScopeKey === scopeKey ? null : scopeKey;
+
+    setHomeLocalityScopeKey(nextKey);
+    setApplyAsHomeLocality(Boolean(nextKey));
+
+    if (nextKey) {
+      const homeTreeKeys = getLocalityPreviewAncestorKeys(previewScopeRows, nextKey);
+
+      setScopeTreeSelection((currentSelection) => {
+        const nextSelection = { ...currentSelection };
+
+        homeTreeKeys.forEach((homeTreeKey) => {
+          if (nextSelection[homeTreeKey] === undefined) {
+            nextSelection[homeTreeKey] = true;
+          }
+        });
+
+        return nextSelection;
+      });
+    }
+  };
+
+  const handleToggleScopeTreeSelection = (scopeKey: string) => {
+    const homeTreeKeys = getLocalityPreviewAncestorKeys(previewScopeRows, homeLocalityScopeKey);
+    const isEligibleForMainTree =
+      homeTreeKeys.has(scopeKey) ||
+      Boolean(associationSelection[scopeKey]) ||
+      Boolean(followSelection[scopeKey]);
+
+    if (!isEligibleForMainTree) {
+      return;
+    }
+
+    setScopeTreeSelection((currentSelection) => ({
+      ...currentSelection,
+      [scopeKey]: !(currentSelection[scopeKey] ?? true),
+    }));
+  };
+
+  const handleToggleAssociationSelection = (scopeKey: string) => {
+    const nextValue = !associationSelection[scopeKey];
+
+    setAssociationSelection((currentSelection) => ({
+      ...currentSelection,
+      [scopeKey]: nextValue,
+    }));
+
+    if (nextValue) {
+      setScopeTreeSelection((currentSelection) => ({
+        ...currentSelection,
+        [scopeKey]: currentSelection[scopeKey] ?? true,
+      }));
+    }
+  };
+
+  const handleToggleFollowSelection = (scopeKey: string) => {
+    const nextValue = !followSelection[scopeKey];
+
+    setFollowSelection((currentSelection) => ({
+      ...currentSelection,
+      [scopeKey]: nextValue,
+    }));
+
+    if (nextValue) {
+      setScopeTreeSelection((currentSelection) => ({
+        ...currentSelection,
+        [scopeKey]: currentSelection[scopeKey] ?? true,
+      }));
+    }
+  };
+
+  const handleUseExistingWarning = async (
+    warning: LocalityCreatePreviewDuplicateWarning
+  ) => {
+    const ancestry = getGraphAncestry({
+      nodes: graphNodes,
+      targetNodeId: warning.leafNodeId,
+    });
+    const warningNode = ancestry.find(
+      (node) => getGraphNodeKind(node).legacyLevel === warning.level
+    );
+
+    if (!warningNode) {
+      return;
+    }
+
+    const nextNodes = graphNodes.map((node) =>
+      node.id === warningNode.id
+        ? {
+            ...node,
+            query: warning.existing_result.name,
+            selectedResult: warning.existing_result,
+            isNew: false,
+          }
+        : node
     );
 
     setErrorMessage(null);
     setStatusMessage(null);
     resetReviewState();
-    setLevelEntries(nextEntries);
+    setGraphNodes(nextNodes);
     await runLocalityPreview({
-      entries: nextEntries,
+      nodes: nextNodes,
       createAnyway: false,
     });
   };
 
-  const handleEditWarning = (warning: NexusLocalityDuplicateWarningPayload) => {
+  const handleEditWarning = (warning: LocalityCreatePreviewDuplicateWarning) => {
+    const ancestry = getGraphAncestry({
+      nodes: graphNodes,
+      targetNodeId: warning.leafNodeId,
+    });
+    const warningNode = ancestry.find(
+      (node) => getGraphNodeKind(node).legacyLevel === warning.level
+    );
+
+    if (!warningNode) {
+      return;
+    }
+
     setErrorMessage(null);
     setStatusMessage(null);
     resetReviewState();
-    setLevelEntries((currentEntries) =>
-      clearDownstreamEntries(
-        {
-          ...currentEntries,
-          [warning.level]: {
-            query: currentEntries[warning.level].query,
-            selectedResult: null,
-            isNew: false,
-          },
-        },
-        warning.level
+    setGraphNodes((currentNodes) =>
+      currentNodes.map((node) =>
+        node.id === warningNode.id
+          ? {
+              ...node,
+              selectedResult: null,
+              isNew: false,
+            }
+          : node
       )
     );
   };
 
   const handleCreatePath = async (createAnyway = false) => {
-    const path = buildPathEntries();
+    const fallbackPath = buildPathEntries();
+    const paths = reviewPreviews.length > 0
+      ? reviewPreviews.map((preview) => preview.path)
+      : [fallbackPath];
+    const homeTreeKeys = getLocalityPreviewAncestorKeys(
+      previewScopeRows,
+      homeLocalityScopeKey
+    );
+    const associatedScopePacketIds = previewScopeRows
+      .filter((row) => associationSelection[row.key])
+      .map((row) => row.scopeId);
+    const followedScopePacketIds = previewScopeRows
+      .filter((row) => followSelection[row.key])
+      .map((row) => row.scopeId);
+    const mainVisibleScopePacketIds = previewScopeRows
+      .filter((row) => {
+        const isEligibleForMainTree =
+          homeTreeKeys.has(row.key) ||
+          Boolean(associationSelection[row.key]) ||
+          Boolean(followSelection[row.key]);
+
+        return isEligibleForMainTree && (scopeTreeSelection[row.key] ?? true);
+      })
+      .map((row) => row.scopeId);
 
     const applyCreatePath = async () => {
       setIsSubmitting(true);
@@ -780,28 +2668,65 @@ export default function NexusLocalityCreatePage() {
       setStatusMessage(null);
 
       try {
-        const finalizedMutation = await runFortressMutation<{
-          created_packets: unknown[];
-          created_relation_packet_ids: string[];
-          created_location_packet_ids: string[];
-          final_result: NexusLocationSearchResult;
-          duplicate_warnings: NexusLocalityDuplicateWarningPayload[];
-        }>({
-          intent: {
-            kind: 'locality.path.create',
-            path,
-            create_anyway: createAnyway,
-          },
-        });
-        const payload = finalizedMutation.result;
-
-        setStatusMessage(
-          payload.created_packets.length > 0
-            ? `Created ${payload.created_packets.length} locality packet(s).`
-            : 'Existing locality path reused.'
+        const finalizedMutation =
+          await runFortressMutation<NexusLocalityGraphApplyPayload>({
+            intent: {
+              kind: 'locality.graph.apply',
+              paths,
+              create_anyway: createAnyway,
+              home_scope_packet_id: selectedHomePreviewRow?.scopeId ?? null,
+              associated_scope_packet_ids: associatedScopePacketIds,
+              followed_scope_packet_ids: followedScopePacketIds,
+              main_visible_scope_packet_ids: mainVisibleScopePacketIds,
+              show_associated_parent_chains: true,
+              show_followed_parent_chains: true,
+            },
+          });
+        const primaryPayload = finalizedMutation.result;
+        const primaryResult =
+          primaryPayload.final_result ?? primaryPayload.path_results[0]?.final_result ?? null;
+        const createdNewPackets = primaryPayload.path_results.some(
+          (pathResult) => pathResult.created_packets.length > 0
         );
 
-        await handleSelectLocality(payload.final_result);
+        if (!primaryResult) {
+          throw new Error('No locality path was created.');
+        }
+
+        setStatusMessage(null);
+        await refreshShellData();
+
+        if (selectedHomePreviewRow) {
+          const selectedHomeLocality =
+            createLocalityResultFromPreviewRow(selectedHomePreviewRow);
+          resetCreateBuilderState();
+          setActiveScopeId(toRouteScopeId(selectedHomeLocality.scope_id));
+          setSelectedExistingResult(null);
+          setSuccessModal({
+            title: createdNewPackets ? 'Locality created' : 'Home locality updated',
+            message: createdNewPackets
+              ? `${selectedHomeLocality.name} has been created and set as your home locality.`
+              : `${selectedHomeLocality.name} is now your home locality.`,
+            locality: selectedHomeLocality,
+            showDashboardAction: true,
+          });
+          return;
+        }
+
+        if (hasReturnTarget) {
+          returnWithLocality(primaryResult);
+          return;
+        }
+
+        resetCreateBuilderState();
+        setSuccessModal({
+          title: createdNewPackets ? 'Locality graph created' : 'Locality graph reused',
+          message: createdNewPackets
+            ? `${primaryResult.name} and related localities are ready to use.`
+            : `${primaryResult.name} already exists and is ready to use.`,
+          locality: primaryResult,
+          showDashboardAction: true,
+        });
       } catch (error) {
         if (openNexusAuthGateForError(error, applyCreatePath)) {
           return;
@@ -809,11 +2734,16 @@ export default function NexusLocalityCreatePage() {
 
         if (error instanceof NexusApiError && error.status === 409) {
           await runLocalityPreview({ createAnyway: false });
-          setErrorMessage(error.message);
+          setWorkflowErrorModal({
+            title: 'Possible duplicate found',
+            message: getWorkflowErrorMessage(error, 'The locality graph needs another preview before it can be created.'),
+          });
         } else {
-          setErrorMessage(
-            error instanceof Error ? error.message : 'Unable to create locality.'
-          );
+          setErrorMessage(null);
+          setWorkflowErrorModal({
+            title: 'Unable to create locality',
+            message: getWorkflowErrorMessage(error, 'Unable to create locality graph.'),
+          });
         }
       } finally {
         setIsSubmitting(false);
@@ -829,14 +2759,117 @@ export default function NexusLocalityCreatePage() {
     );
   };
 
+
+  const selectedCreateKind =
+    CREATE_LOCALITY_KIND_OPTIONS.find((option) => option.id === selectedCreateKindId) ??
+    getDefaultKindOption();
+  const typePickerOptions = typePickerContext?.nodeId
+    ? CREATE_LOCALITY_KIND_OPTIONS
+    : typePickerContext
+      ? typePickerContext.isTarget
+        ? getKindOptionsForLevel(typePickerContext.level, true)
+        : CREATE_LOCALITY_KIND_OPTIONS.filter((option) => {
+            const optionLevelIndex = LOCALITY_LEVELS.indexOf(option.legacyLevel);
+            const finalLevelIndex = LOCALITY_LEVELS.indexOf(finalLevel);
+            const isAlreadyUsed =
+              option.legacyLevel !== typePickerContext.level &&
+              includedParentLevels.includes(option.legacyLevel);
+
+            return optionLevelIndex < finalLevelIndex && !isAlreadyUsed;
+          })
+      : [];
+  const selectedTypePickerOption = typePickerContext
+    ? typePickerOptions.find((option) => {
+        if (typePickerContext.nodeId) {
+          return (
+            option.id ===
+            (graphNodes.find((node) => node.id === typePickerContext.nodeId)?.kindId ?? null)
+          );
+        }
+
+        return option.id === levelKindSelections[typePickerContext.level];
+      }) ?? typePickerOptions[0] ?? null
+    : null;
+
+  const confirmCreateKindSelection = () => {
+    if (!createKindCandidate || !selectedCreateKind) {
+      return;
+    }
+
+    handleUseSearchCreateCandidate(
+      {
+        ...createKindCandidate,
+        level: selectedCreateKind.legacyLevel,
+      },
+      selectedCreateKind
+    );
+  };
+
+  useEffect(() => {
+    if (!createKindCandidate && !typePickerContext) {
+      return undefined;
+    }
+
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
+
+    const handleModalKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setCreateKindCandidate(null);
+        setTypePickerContext(null);
+        return;
+      }
+
+      if (event.key !== 'Enter') {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (createKindCandidate) {
+        confirmCreateKindSelection();
+        return;
+      }
+
+      if (selectedTypePickerOption) {
+        handleSelectKindOption(selectedTypePickerOption);
+      }
+    };
+
+    window.addEventListener('keydown', handleModalKeyDown, true);
+
+    if (typeof document !== 'undefined') {
+      document.addEventListener('keydown', handleModalKeyDown, true);
+    }
+
+    return () => {
+      window.removeEventListener('keydown', handleModalKeyDown, true);
+
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('keydown', handleModalKeyDown, true);
+      }
+    };
+  }, [
+    createKindCandidate,
+    selectedCreateKindId,
+    selectedTypePickerOption,
+    typePickerContext,
+  ]);
+
   return (
     <View className="flex-1">
       <ScrollView ref={scrollViewRef} className="flex-1" showsVerticalScrollIndicator={false}>
         <View className={appearance.pageContainerClass}>
           <NexusSectionHeader
             eyebrow="Locality"
-            title="Find or create a locality"
-            description="Search the Nexus locality directory first. If the place is missing, build a confirmed broad-to-narrow path, review it, and then create the canonical locality. No third-party geocoder is used in this phase."
+            title={shouldSetHome ? 'Home Locality' : 'Find or create a locality'}
+            description={
+              shouldSetHome
+                ? 'Choose the locality OWA should use as your home scope for discovery, posting context, and future civic workflows.'
+                : 'Find an existing locality scope or create a manual locality when the place is missing.'
+            }
             trailing={<NexusBadge label={activeScope.name} tone="sky" />}
           />
 
@@ -890,358 +2923,680 @@ export default function NexusLocalityCreatePage() {
             </NexusCard>
           ) : null}
 
-          <NexusCard className="gap-4">
-            <View className="gap-2">
-              <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
-                Search existing localities
-              </Text>
-              <TextInput
-                value={searchQuery}
-                onChangeText={(nextValue) => {
-                  setSearchQuery(nextValue);
-                  setAppliedSearchCandidateKey(null);
-                  setErrorMessage(null);
-                }}
-                onSubmitEditing={() => {
-                  if (results[0]) {
-                    void handleSelectLocality(results[0]);
-                    return;
-                  }
+          <View className="gap-0">
+            <NexusTabRail
+              activeId={activeWorkflowTab}
+              maxRows={2}
+              nodes={LOCALITY_WORKFLOW_TAB_NODES}
+              onSelect={(tabId) => {
+                setActiveWorkflowTab(tabId as LocalityWorkflowTab);
+                if (tabId === 'create' && !reviewPreview) {
+                  setCreateMode('build');
+                }
+              }}
+              truncate="middle"
+              wrapMode="wrap"
+            />
 
-                  if (searchCreateCandidate && showSearchCreateRow) {
-                    setNotFoundModalCandidate(searchCreateCandidate);
-                  }
-                }}
-                placeholder="Search locality or rough path"
-                placeholderTextColor={appearance.textInputPlaceholderColor}
-                className={`rounded-[18px] border px-4 py-3 ${appearance.textInputClass}`}
-              />
-              {isSearching ? (
-                <Text className={appearance.itemMetaClass}>Searching Nexus directory...</Text>
-              ) : null}
-            </View>
-
-            {results.length > 0 || showSearchCreateRow ? (
-              <View className="gap-2">
-                {results.map((result) => (
-                  <Pressable
-                    key={result.scope_id}
-                    className={`rounded-[18px] border px-4 py-3 ${appearance.cardInsetClass}`}
-                    onPress={() => void handleSelectLocality(result)}
-                  >
-                    <View className="flex-row flex-wrap items-center gap-2">
-                      <Text className={appearance.itemTitleClass}>{result.name}</Text>
-                      <NexusBadge label={result.level} tone="sky" />
-                      <NexusBadge label={result.match_type.replace(/_/g, ' ')} />
-                    </View>
-                    <Text className={appearance.itemMetaClass}>{result.path_label}</Text>
-                  </Pressable>
-                ))}
-                {showSearchCreateRow && searchCreateCandidate ? (
-                  <Pressable
-                    className={`rounded-[18px] border px-4 py-3 ${appearance.cardInsetClass}`}
-                    onPress={() => handleUseSearchCreateCandidate(searchCreateCandidate)}
-                  >
-                    <View className="flex-row flex-wrap items-center gap-2">
-                      <Text className={appearance.itemTitleClass}>
-                        No results found. Create “{searchCreateCandidate.query.trim()}”
-                      </Text>
-                      <NexusBadge label={normalizeCandidateLevel(searchCreateCandidate.level)} tone="gold" />
-                    </View>
-                    <Text className={appearance.itemMetaClass}>
-                      Seed the path builder with a new locality Element.
-                    </Text>
-                  </Pressable>
-                ) : null}
-              </View>
-            ) : (
-              <Text className={appearance.itemBodyClass}>
-                Search by locality name, alias, packet id, or known path tokens.
-              </Text>
-            )}
-
-            <View className="gap-2">
-              <Text className={appearance.itemMetaClass}>Selection mode</Text>
-              <NexusSegmentedPill
-                options={[
-                  { id: 'off', label: 'Return only' },
-                  { id: 'on', label: 'Use as home' },
-                ]}
-                activeId={applyAsHomeLocality ? 'on' : 'off'}
-                onSelect={(optionId) => {
-                  setApplyAsHomeLocality(optionId === 'on');
-                }}
-              />
-            </View>
-          </NexusCard>
-
-          <View onLayout={(event) => { builderOffsetYRef.current = event.nativeEvent.layout.y; }}>
-            <NexusCard className="gap-4">
+            {activeWorkflowTab === 'search' ? (
+            <NexusCard className="gap-4 rounded-t-none border-t-0">
               <View className="gap-2">
                 <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
-                  Build locality path
-              </Text>
-              <Text className={appearance.itemBodyClass}>
-                Search each level from broadest to narrowest. Existing localities are
-                reused; new levels are only created after review.
-              </Text>
-            </View>
-
-            <View className="gap-2">
-              <Text className={appearance.itemMetaClass}>Deepest locality level</Text>
-              <NexusSegmentedPill
-                options={LOCALITY_LEVELS.map((level) => ({
-                  id: level,
-                  label: level.toUpperCase(),
-                }))}
-                activeId={finalLevel}
-                onSelect={(level) => {
-                  setFinalLevel(level as LocalityLevel);
-                  setSeededTargetLevel(null);
-                  setErrorMessage(null);
-                  setStatusMessage(null);
-                  resetReviewState();
-                }}
-              />
-            </View>
-
-            <View className="gap-3">
-              {visibleLevels.map((level) => {
-                const previousLevel = getPreviousLevel(level);
-                const parentEntry = previousLevel ? levelEntries[previousLevel] : null;
-                const parentResult = parentEntry?.selectedResult ?? null;
-                const parentIsPendingNew = parentEntry?.isNew ?? false;
-                const isEnabled =
-                  seededTargetLevel === level ||
-                  previousLevel === null ||
-                  Boolean(parentEntry?.selectedResult) ||
-                  Boolean(parentEntry?.isNew);
-
-                return (
-                  <LocalityLevelSearchRow
-                    key={level}
-                    level={level}
-                    entry={levelEntries[level]}
-                    isEnabled={isEnabled}
-                    parentResult={parentResult}
-                    parentIsPendingNew={parentIsPendingNew}
-                    onQueryChange={handleLevelQueryChange}
-                    onSelectResult={handleSelectLevelResult}
-                    onUseNew={handleUseNewLevel}
-                    onClear={handleClearLevel}
-                  />
-                );
-              })}
-            </View>
-
-            <View className="flex-row flex-wrap gap-3">
-              <NexusActionButton
-                label={isReviewing ? 'Reviewing...' : 'Review path'}
-                variant="primary"
-                disabled={isReviewing || isSubmitting}
-                onPress={() => void runLocalityPreview({ createAnyway: false })}
-              />
-              <NexusActionButton
-                label="Go back"
-                onPress={() => {
-                  if (returnScopeId) {
-                    setActiveScopeId(returnScopeId);
-                  }
-
-                  router.replace(returnTo as Href);
-                }}
-              />
-            </View>
-            </NexusCard>
-          </View>
-
-          {reviewPreview ? (
-            <NexusCard className="gap-4">
-              <View className="gap-2">
-                <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
-                  Review path
+                  Search localities
                 </Text>
-                <Text className={appearance.itemBodyClass}>
-                  Preview explains what would happen. Create reruns the canonical
-                  planner and writer, so duplicate checks may still change before
-                  write.
-                </Text>
-              </View>
-
-              <View className="flex-row flex-wrap gap-2">
-                <NexusBadge
-                  label={`${reviewPreview.planned_scope_packet_ids.length} planned locality scope ids`}
-                  tone="gold"
-                />
-                <NexusBadge
-                  label={`${reviewPreview.planned_relation_packet_ids.length} planned relation ids`}
-                  tone="sky"
-                />
-                <NexusBadge
-                  label={`${reviewPreview.planned_location_packet_ids.length} planned location ids`}
-                  tone="sky"
-                />
-              </View>
-
-              <View className="gap-3">
-                {reviewPreview.review_entries.map((entry) => (
-                  <View
-                    key={`${entry.level}-${entry.name}-${entry.planned_scope_packet_id ?? entry.existing_result?.scope_id ?? 'review'}`}
-                    className={`gap-2 rounded-[18px] border px-4 py-3 ${appearance.cardInsetClass}`}
-                  >
-                    <View className="flex-row flex-wrap items-center gap-2">
-                      <Text className={appearance.itemTitleClass}>{entry.name}</Text>
-                      <NexusBadge label={entry.level} tone="sky" />
-                      <ReviewDispositionBadge entry={entry} />
-                    </View>
-                    <Text className={appearance.itemMetaClass}>
-                      {entry.existing_result?.path_label ??
-                        `Will be created in the ${entry.level} branch.`}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-
-              {applyAsHomeLocality ? (
-                <NexusCard className={`gap-3 p-4 ${appearance.cardInsetClass}`}>
-                  <Text className={appearance.itemTitleClass}>Home branch to include</Text>
+                <View className="gap-1">
                   <Text className={appearance.itemBodyClass}>
-                    These scopes are pre-checked by default for review in this pass.
-                    Unchecking them changes only this preview UI for now.
+                    Enter the locality you would like to set as your home.
                   </Text>
-                  <View className="gap-2">
-                    {reviewPreview.suggested_home_scope_entries.map((entry) => (
-                      <Pressable
-                        key={entry.scope_id}
-                        className={`rounded-[18px] border px-4 py-3 ${appearance.cardInsetClass}`}
-                        onPress={() =>
-                          setHomeScopeSelection((currentSelection) => ({
-                            ...currentSelection,
-                            [entry.scope_id]: !currentSelection[entry.scope_id],
-                          }))
-                        }
-                      >
-                        <View className="flex-row flex-wrap items-center gap-2">
-                          <NexusBadge
-                            label={
-                              homeScopeSelection[entry.scope_id] !== false
-                                ? 'included'
-                                : 'excluded'
-                            }
-                            tone={
-                              homeScopeSelection[entry.scope_id] !== false ? 'mint' : 'gold'
-                            }
-                          />
-                          <Text className={appearance.itemTitleClass}>{entry.name}</Text>
-                          <NexusBadge label={entry.level} tone="sky" />
-                        </View>
-                        <Text className={appearance.itemMetaClass}>{entry.path_label}</Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                </NexusCard>
-              ) : null}
-
-              {reviewPreview.duplicate_warnings.length > 0 ? (
-                <NexusCard className={`gap-3 p-4 ${appearance.cardInsetClass}`} tone="gold">
-                  <Text className={appearance.itemTitleClass}>Possible duplicates</Text>
-                  {reviewPreview.duplicate_warnings.map((warning) => (
-                    <View
-                      key={`${warning.level}-${warning.existing_scope_id}`}
-                      className="gap-2"
-                    >
-                      <Text className={appearance.itemBodyClass}>{warning.message}</Text>
-                      <Text className={appearance.itemMetaClass}>
-                        Existing match: {warning.existing_result.path_label}
-                      </Text>
-                      <View className="flex-row flex-wrap gap-2">
-                        <NexusActionButton
-                          label="Use existing"
-                          variant="ghost"
-                          onPress={() => void handleUseExistingWarning(warning)}
-                        />
-                        <NexusActionButton
-                          label="Edit name"
-                          variant="ghost"
-                          onPress={() => handleEditWarning(warning)}
-                        />
-                      </View>
-                    </View>
-                  ))}
-                </NexusCard>
-              ) : null}
-
-              <View className="gap-2">
-                <Text className={appearance.itemMetaClass}>Finalization mode</Text>
-                <NexusSegmentedPill
-                  options={[
-                    { id: 'off', label: 'Create and return' },
-                    { id: 'on', label: 'Create as home' },
-                  ]}
-                  activeId={applyAsHomeLocality ? 'on' : 'off'}
-                  onSelect={(optionId) => {
-                    setApplyAsHomeLocality(optionId === 'on');
-                  }}
-                />
-              </View>
-
-              <View className="flex-row flex-wrap gap-3">
-                <NexusActionButton
-                  label={
-                    isSubmitting
-                      ? 'Creating locality...'
-                      : applyAsHomeLocality
-                        ? 'Create and use as home'
-                        : 'Create locality'
-                  }
-                  variant="primary"
-                  disabled={isSubmitting || reviewPreview.duplicate_warnings.length > 0}
-                  onPress={() => void handleCreatePath(false)}
-                />
-                {reviewPreview.duplicate_warnings.length > 0 ? (
-                  <NexusActionButton
-                    label={isSubmitting ? 'Creating locality...' : 'Create anyway'}
-                    variant="ghost"
-                    disabled={isSubmitting}
-                    onPress={() => void handleCreatePath(true)}
+                  <Text className={appearance.itemBodyClass}>
+                    You may only have one home locality at a time.
+                  </Text>
+                </View>
+                <View className="gap-0">
+                  <TextInput
+                    value={searchQuery}
+                    onChangeText={(nextValue) => {
+                      setSearchQuery(nextValue);
+                      setAppliedSearchCandidateKey(null);
+                      setErrorMessage(null);
+                      clearLevelErrors();
+                    }}
+                    onSubmitEditing={handleTopSearchSubmit}
+                    placeholder="Search city, region, country, or path"
+                    placeholderTextColor={appearance.textInputPlaceholderColor}
+                    className={`${
+                      hasSearchDropdown
+                        ? 'rounded-t-[18px] rounded-b-none border px-4 py-3'
+                        : 'rounded-[18px] border px-4 py-3'
+                    } ${appearance.textInputClass}`}
                   />
+
+                  {hasSearchDropdown ? (
+                    <View className="overflow-hidden rounded-b-[18px] border border-t-0 border-nexus-line/70 bg-white/[0.03]">
+                      {visibleSearchResults.map((result) => (
+                        <Pressable
+                          key={result.scope_id}
+                          className="border-t border-nexus-line/60 px-4 py-3"
+                          onPress={() => setSelectedExistingResult(result)}
+                        >
+                          <View className="flex-row flex-wrap items-center gap-2">
+                            <Text className={appearance.itemTitleClass}>{result.name}</Text>
+                            <NexusBadge label={getSearchResultTypeLabel(result)} tone="sky" />
+                            <NexusBadge label={result.match_type.replace(/_/g, ' ')} />
+                          </View>
+                          <Text className={appearance.itemMetaClass}>
+                            {result.path_label}
+                            {result.scope_hierarchy_system
+                              ? ` · ${result.scope_hierarchy_system}`
+                              : ''}
+                          </Text>
+                        </Pressable>
+                      ))}
+                      {showSearchCreateRow && effectiveSearchCreateCandidate ? (
+                        <Pressable
+                          className="border-t border-nexus-line/60 px-4 py-3"
+                          onPress={() => {
+                            setCreateKindCandidate(effectiveSearchCreateCandidate);
+                            setSelectedCreateKindId(
+                              getDefaultKindIdForLevel(
+                                normalizeCandidateLevel(effectiveSearchCreateCandidate.level)
+                              )
+                            );
+                          }}
+                        >
+                          <View className="flex-row flex-wrap items-center gap-2">
+                            <Text className={appearance.itemTitleClass}>
+                              Create “{effectiveSearchCreateCandidate.query.trim()}” as a new locality scope
+                            </Text>
+                            <NexusBadge label="new locality" tone="gold" />
+                          </View>
+                        </Pressable>
+                      ) : null}
+                      {hiddenSearchResultCount > 0 ? (
+                        <Text className={`border-t border-nexus-line/60 px-4 py-3 ${appearance.itemMetaClass}`}>
+                          Showing first {SEARCH_RESULT_LIMIT} of {results.length}. Refine your search to narrow results.
+                        </Text>
+                      ) : null}
+                    </View>
+                  ) : null}
+                </View>
+
+                {isSearching ? (
+                  <Text className={appearance.itemMetaClass}>Searching Nexus directory...</Text>
                 ) : null}
               </View>
+
             </NexusCard>
           ) : null}
+
+          {activeWorkflowTab === 'create' ? (
+            <View onLayout={(event) => { builderOffsetYRef.current = event.nativeEvent.layout.y; }}>
+              {createMode === 'build' ? (
+                <NexusCard className="gap-4 rounded-t-none border-t-0">
+                  <View className="gap-2">
+                    <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
+                      Create locality
+                    </Text>
+                    <Text className={appearance.itemBodyClass}>
+                      Add locality scopes, then connect parents only when the relationship is useful.
+                    </Text>
+                  </View>
+
+                  <View className="gap-4">
+                    {graphDisplaySections.map((section) => (
+                      <View key={section.id} className="gap-3">
+                        {section.id === 'unconnected' ? (
+                          <View className="gap-1 pt-1">
+                            <Text className={appearance.itemMetaClass}>UNPLACED LOCALITIES</Text>
+                            <Text className={appearance.itemBodyClass}>
+                              Choose a parent when you want to place these in the draft tree.
+                            </Text>
+                          </View>
+                        ) : null}
+                        {section.rows.map(({ node, depth }) => {
+                          const parentNode = node.parentId
+                            ? graphNodes.find((candidateNode) => candidateNode.id === node.parentId) ?? null
+                            : null;
+                          const existingParentResult =
+                            node.parentResult ?? parentNode?.selectedResult ?? null;
+                          const parentLabel = node.parentResult
+                            ? `${node.parentResult.name} (existing)`
+                            : parentNode
+                              ? getGraphNodeName(parentNode)
+                              : node.selectedResult && !node.hasParentSelection
+                                ? 'Existing path'
+                                : node.hasParentSelection
+                                  ? 'Global Commons'
+                                  : 'Choose parent';
+
+                          return (
+                            <LocalityCreateGraphRow
+                              key={node.id}
+                              node={node}
+                              depth={depth}
+                              isTarget={node.id === targetGraphNodeId}
+                              kindLabel={getGraphNodeKind(node).label}
+                              parentLabel={parentLabel}
+                              existingParentResult={existingParentResult}
+                              canRemove={graphNodes.length > 1}
+                              errorMessage={
+                                graphNodeErrors[node.id] ??
+                                getGraphNodeParentHierarchyIssue(graphNodes, node) ??
+                                null
+                              }
+                              inputRef={(inputNode) => {
+                                graphInputRefs.current[node.id] = inputNode;
+                              }}
+                              getResultTypeLabel={getSearchResultTypeLabel}
+                              searchResultLimit={SEARCH_RESULT_LIMIT}
+                              onQueryChange={handleGraphNodeQueryChange}
+                              onSubmitNode={handleSubmitGraphNode}
+                              onSelectResult={handleSelectGraphNodeResult}
+                              onSelectExistingChild={handleSelectExistingChildResult}
+                              onOpenKindPicker={(nodeId) => {
+                                const graphNode = graphNodes.find((candidateNode) => candidateNode.id === nodeId);
+                                if (!graphNode) {
+                                  return;
+                                }
+
+                                setTypePickerContext({
+                                  level: getGraphNodeKind(graphNode).legacyLevel,
+                                  isTarget: graphNode.id === targetGraphNodeId,
+                                  nodeId,
+                                });
+                              }}
+                              onOpenParentPicker={setParentPickerNodeId}
+                              onRemoveNode={handleRemoveGraphNode}
+                              onClearExistingNode={handleClearExistingGraphNode}
+                            />
+                          );
+                        })}
+                      </View>
+                    ))}
+                  </View>
+
+                  <View className="flex-row flex-wrap gap-3">
+                    <NexusActionButton
+                      label="Add locality scope"
+                      onPress={handleAddConnectedScope}
+                    />
+                    <NexusActionButton
+                      label={isReviewing ? 'Previewing...' : 'Next: Preview'}
+                      variant="primary"
+                      disabled={isReviewing || isSubmitting || !canPreviewGraph}
+                      onPress={() => void runLocalityPreview({ createAnyway: false })}
+                    />
+                    <NexusActionButton
+                      label="Back to search"
+                      onPress={() => setActiveWorkflowTab('search')}
+                    />
+                  </View>
+                  {!isGraphReadyForPreview(graphNodes) ? (
+                    <Text className={appearance.itemMetaClass}>
+                      Add a name, type, and parent choice for every scope before preview. Parent may be set to none.
+                    </Text>
+                  ) : hasInvalidGraphHierarchy ? (
+                    <Text className="text-sm text-nexus-rose">
+                      One or more parent choices conflict with the selected locality types.
+                    </Text>
+                  ) : null}
+                </NexusCard>
+              ) : null}
+
+              {createMode === 'preview' && reviewPreview ? (
+                <LocalityCreatePreviewPanel
+                  rows={previewScopeRows}
+                  duplicateWarnings={previewDuplicateWarnings}
+                  locationDefinitionCount={previewLocationDefinitionCount}
+                  relationLinkCount={previewRelationLinkCount}
+                  homeScopeKey={homeLocalityScopeKey}
+                  scopeTreeSelection={scopeTreeSelection}
+                  associationSelection={associationSelection}
+                  followSelection={followSelection}
+                  hasReturnTarget={hasReturnTarget}
+                  isSubmitting={isSubmitting}
+                  onToggleHomeScope={handleTogglePreviewHomeScope}
+                  onToggleScopeTree={handleToggleScopeTreeSelection}
+                  onToggleAssociation={handleToggleAssociationSelection}
+                  onToggleFollow={handleToggleFollowSelection}
+                  onUseExistingWarning={(warning) => void handleUseExistingWarning(warning)}
+                  onEditWarning={handleEditWarning}
+                  onBackToEdit={() => setCreateMode('build')}
+                  onCreate={(createAnyway) => void handleCreatePath(createAnyway)}
+                />
+              ) : null}
+            </View>
+          ) : null}
+          </View>
         </View>
       </ScrollView>
       <Modal
         animationType="fade"
         transparent
-        visible={notFoundModalCandidate !== null}
-        onRequestClose={() => setNotFoundModalCandidate(null)}
+        visible={selectedExistingResult !== null}
+        onRequestClose={() => setSelectedExistingResult(null)}
       >
         <View className="flex-1 items-center justify-center bg-black/50 px-4">
           <Pressable
             className="absolute inset-0"
-            onPress={() => setNotFoundModalCandidate(null)}
+            onPress={() => setSelectedExistingResult(null)}
           />
           <NexusCard className="w-full max-w-xl gap-4">
-            <Text className={appearance.surfaceTitleClass}>No matching locality found</Text>
-            <Text className={appearance.itemBodyClass}>
-              Create a new locality path from “{notFoundModalCandidate?.query.trim() ?? ''}”?
-            </Text>
+            <Text className={appearance.surfaceTitleClass}>Use this locality?</Text>
+            <View className={`gap-2 rounded-[18px] border px-4 py-3 ${appearance.cardInsetClass}`}>
+              <View className="flex-row flex-wrap items-center gap-2">
+                <Text className={appearance.itemTitleClass}>{selectedExistingResult?.name}</Text>
+                {selectedExistingResult ? (
+                  <NexusBadge
+                    label={getSearchResultTypeLabel(selectedExistingResult)}
+                    tone="sky"
+                  />
+                ) : null}
+              </View>
+              <Text className={appearance.itemMetaClass}>
+                {selectedExistingResult?.path_label}
+              </Text>
+            </View>
             <View className="flex-row flex-wrap gap-3">
-              <NexusActionButton
-                label="Create locality"
-                variant="primary"
-                onPress={() => handleUseSearchCreateCandidate(notFoundModalCandidate)}
-              />
+              {selectedExistingResult ? (
+                <NexusActionButton
+                  label="Set as home locality"
+                  variant="primary"
+                  onPress={() => void handleSetHomeLocality(selectedExistingResult)}
+                />
+              ) : null}
+              {selectedExistingResult ? (
+                <NexusActionButton
+                  label="Open scope"
+                  variant="ghost"
+                  onPress={() => openLocalityDashboard(selectedExistingResult)}
+                />
+              ) : null}
+              {selectedExistingResult && hasReturnTarget ? (
+                <NexusActionButton
+                  label="Use this locality and return"
+                  variant="ghost"
+                  onPress={() => returnWithLocality(selectedExistingResult)}
+                />
+              ) : null}
               <NexusActionButton
                 label="Dismiss"
                 variant="ghost"
-                onPress={() => setNotFoundModalCandidate(null)}
+                onPress={() => setSelectedExistingResult(null)}
               />
             </View>
           </NexusCard>
         </View>
       </Modal>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={removeConfirmModal !== null}
+        onRequestClose={() => setRemoveConfirmModal(null)}
+      >
+        <View className="flex-1 items-center justify-center bg-black/50 px-4">
+          <Pressable
+            className="absolute inset-0"
+            onPress={() => setRemoveConfirmModal(null)}
+          />
+          <NexusCard className="w-full max-w-xl gap-4">
+            <View className="gap-2">
+              <Text className={appearance.surfaceTitleClass}>Remove locality from draft?</Text>
+              <Text className={appearance.itemBodyClass}>
+                Are you sure you want to remove {removeConfirmModal?.nodeName ?? 'this locality'}? Doing so will disconnect the connected children.
+              </Text>
+            </View>
+            <View className="flex-row flex-wrap gap-3">
+              <NexusActionButton
+                label="Remove and disconnect"
+                variant="primary"
+                onPress={() => {
+                  if (removeConfirmModal) {
+                    performRemoveGraphNode(removeConfirmModal.nodeId);
+                  }
+                }}
+              />
+              <NexusActionButton
+                label="Cancel"
+                variant="ghost"
+                onPress={() => setRemoveConfirmModal(null)}
+              />
+            </View>
+          </NexusCard>
+        </View>
+      </Modal>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={parentPickerNode !== null}
+        onRequestClose={() => setParentPickerNodeId(null)}
+      >
+        <View className="flex-1 items-center justify-center bg-black/50 px-4">
+          <Pressable
+            className="absolute inset-0"
+            onPress={() => setParentPickerNodeId(null)}
+          />
+          <NexusCard className="max-h-[86%] w-full max-w-2xl gap-4">
+            <View className="gap-2">
+              <Text className={appearance.surfaceTitleClass}>Choose parent scope</Text>
+              <Text className={appearance.itemBodyClass}>
+                Select an on-screen scope, search existing localities, or use Global Commons as the root parent.
+              </Text>
+            </View>
+            {parentPickerNode ? (
+              <ScrollView className="max-h-96" showsVerticalScrollIndicator>
+                <View className="gap-4 pr-1">
+                  <View className="gap-2">
+                    <Text className={appearance.itemMetaClass}>Draft options</Text>
+                    <Pressable
+                      className={`rounded-[18px] border px-4 py-3 ${appearance.cardInsetClass}`}
+                      onPress={() => handleSelectGraphParent(parentPickerNode.id, null)}
+                    >
+                      <View className="gap-1">
+                        <View className="flex-row flex-wrap items-center gap-2">
+                          <Text className={appearance.itemTitleClass}>Global Commons</Text>
+                          <NexusBadge label="root parent" tone="sky" />
+                          {parentPickerNode.hasParentSelection && !parentPickerNode.parentId && !parentPickerNode.parentResult ? (
+                            <NexusBadge label="current" tone="mint" />
+                          ) : null}
+                        </View>
+                        <Text className={appearance.itemMetaClass}>
+                          Use the global root when this locality has no narrower known parent yet.
+                        </Text>
+                      </View>
+                    </Pressable>
+                    {graphNodes
+                      .filter((candidateNode) => candidateNode.id !== parentPickerNode.id)
+                      .map((candidateNode) => {
+                        const isDescendant = getGraphDescendantIds(
+                          graphNodes,
+                          parentPickerNode.id
+                        ).has(candidateNode.id);
+                        const hierarchyIssue = getParentHierarchyIssue({
+                          childKindId: parentPickerNode.kindId,
+                          parentKindId: candidateNode.kindId,
+                        });
+                        const disabledReason = isDescendant || hierarchyIssue
+                          ? 'Beneath selected scope'
+                          : null;
+
+                        return (
+                          <Pressable
+                            key={candidateNode.id}
+                            disabled={Boolean(disabledReason)}
+                            className={`rounded-[18px] border px-4 py-3 ${appearance.cardInsetClass} ${
+                              disabledReason ? 'opacity-50' : ''
+                            }`}
+                            onPress={() => handleSelectGraphParent(parentPickerNode.id, candidateNode.id)}
+                          >
+                            <View className="flex-row flex-wrap items-center gap-2">
+                              <Text className={appearance.itemTitleClass}>{getGraphNodeName(candidateNode)}</Text>
+                              <NexusBadge label={getGraphNodeKind(candidateNode).label} tone="sky" />
+                              {candidateNode.selectedResult ? <NexusBadge label="existing" tone="mint" /> : null}
+                              {parentPickerNode.parentId === candidateNode.id ? (
+                                <NexusBadge label="current" tone="mint" />
+                              ) : null}
+                            </View>
+                            {disabledReason ? (
+                              <Text className="mt-2 text-sm text-nexus-rose">{disabledReason}</Text>
+                            ) : null}
+                          </Pressable>
+                        );
+                      })}
+                  </View>
+
+                  <View className="gap-2">
+                    <Text className={appearance.itemMetaClass}>Search existing localities</Text>
+                    <TextInput
+                      ref={parentSearchInputRef}
+                      autoFocus={parentPickerNode !== null}
+                      value={parentSearchQuery}
+                      onChangeText={setParentSearchQuery}
+                      onSubmitEditing={() => {
+                        const firstResult = parentSearchResults[0] ?? null;
+
+                        if (firstResult && parentPickerNode) {
+                          handleSelectExistingGraphParent(parentPickerNode.id, firstResult);
+                        }
+                      }}
+                      placeholder="Search existing parent scope"
+                      placeholderTextColor={appearance.textInputPlaceholderColor}
+                      className={`${
+                        parentSearchResults.length > 0
+                          ? 'rounded-t-[18px] rounded-b-none border px-4 py-3'
+                          : 'rounded-[18px] border px-4 py-3'
+                      } ${appearance.textInputClass}`}
+                    />
+                    {parentSearchResults.length > 0 ? (
+                      <View className="overflow-hidden rounded-b-[18px] border border-t-0 border-nexus-line/70 bg-white/[0.03]">
+                        {parentSearchResults.map((result) => (
+                          <Pressable
+                            key={result.scope_id}
+                            className="border-t border-nexus-line/60 px-4 py-3"
+                            onPress={() => handleSelectExistingGraphParent(parentPickerNode.id, result)}
+                          >
+                            <View className="flex-row flex-wrap items-center gap-2">
+                              <Text className={appearance.itemTitleClass}>{result.name}</Text>
+                              <NexusBadge label={getSearchResultTypeLabel(result)} tone="sky" />
+                              {parentPickerNode.parentResult?.scope_id === result.scope_id ? (
+                                <NexusBadge label="current" tone="mint" />
+                              ) : null}
+                            </View>
+                            <Text className={appearance.itemMetaClass}>{result.path_label}</Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                    ) : null}
+                    {isParentSearching ? (
+                      <Text className={appearance.itemMetaClass}>Searching existing localities...</Text>
+                    ) : null}
+                  </View>
+                </View>
+              </ScrollView>
+            ) : null}
+            <View className="flex-row flex-wrap gap-3">
+              <NexusActionButton
+                label="Dismiss"
+                variant="ghost"
+                onPress={() => setParentPickerNodeId(null)}
+              />
+            </View>
+          </NexusCard>
+        </View>
+      </Modal>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={typePickerContext !== null}
+        onRequestClose={() => setTypePickerContext(null)}
+      >
+        <View className="flex-1 items-center justify-center bg-black/50 px-4">
+          <Pressable
+            className="absolute inset-0"
+            onPress={() => setTypePickerContext(null)}
+          />
+          <NexusCard className="max-h-[86%] w-full max-w-2xl gap-4">
+            <View className="gap-2">
+              <Text className={appearance.surfaceTitleClass}>Choose locality type</Text>
+              <Text className={appearance.itemBodyClass}>
+                Choose the closest current type for this locality row.
+              </Text>
+            </View>
+            <ScrollView className="max-h-96" showsVerticalScrollIndicator>
+              <View className="gap-2 pr-1">
+                {typePickerOptions.map((option) => {
+                  const activeKindId = typePickerContext?.nodeId
+                    ? graphNodes.find((node) => node.id === typePickerContext.nodeId)?.kindId ?? null
+                    : typePickerContext
+                      ? levelKindSelections[typePickerContext.level]
+                      : null;
+                  const isSelected = option.id === activeKindId;
+
+                  return (
+                    <Pressable
+                      key={option.id}
+                      className={`rounded-[18px] border px-4 py-2 ${
+                        isSelected ? 'border-nexus-sky bg-nexus-sky/10' : appearance.cardInsetClass
+                      }`}
+                      onPress={() => handleSelectKindOption(option)}
+                    >
+                      <View className="flex-row flex-wrap items-center gap-2">
+                        <Text className={appearance.itemTitleClass}>{option.label}</Text>
+                        <NexusBadge label={option.legacyLevel} tone={isSelected ? 'mint' : 'sky'} />
+                      </View>
+                      <Text className={appearance.itemMetaClass}>{option.description}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </ScrollView>
+            <View className="flex-row flex-wrap gap-3">
+              <NexusActionButton
+                label="Dismiss"
+                variant="ghost"
+                onPress={() => setTypePickerContext(null)}
+              />
+            </View>
+          </NexusCard>
+        </View>
+      </Modal>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={createKindCandidate !== null}
+        onRequestClose={() => setCreateKindCandidate(null)}
+      >
+        <View className="flex-1 items-center justify-center bg-black/50 px-4">
+          <Pressable
+            className="absolute inset-0"
+            onPress={() => setCreateKindCandidate(null)}
+          />
+          <NexusCard className="max-h-[86%] w-full max-w-2xl gap-4">
+            <View className="gap-2">
+              <Text className={appearance.surfaceTitleClass}>
+                Create new locality scope for “{createKindCandidate?.query.trim() ?? ''}”
+              </Text>
+              <Text className={appearance.itemBodyClass}>
+                Choose the closest current type to continue.
+              </Text>
+            </View>
+            <ScrollView className="max-h-96" showsVerticalScrollIndicator>
+              <View className="gap-2 pr-1">
+                {CREATE_LOCALITY_KIND_OPTIONS.map((option) => {
+                  const isSelected = option.id === selectedCreateKindId;
+
+                  return (
+                    <Pressable
+                      key={option.id}
+                      className={`rounded-[18px] border px-4 py-2 ${
+                        isSelected ? 'border-nexus-sky bg-nexus-sky/10' : appearance.cardInsetClass
+                      }`}
+                      onPress={() => {
+                        if (!createKindCandidate) {
+                          return;
+                        }
+
+                        setSelectedCreateKindId(option.id);
+                        handleUseSearchCreateCandidate(
+                          {
+                            ...createKindCandidate,
+                            level: option.legacyLevel,
+                          },
+                          option
+                        );
+                      }}
+                    >
+                      <View className="flex-row flex-wrap items-center gap-2">
+                        <Text className={appearance.itemTitleClass}>{option.label}</Text>
+                        <NexusBadge label={option.legacyLevel} tone={isSelected ? 'mint' : 'sky'} />
+                      </View>
+                      <Text className={appearance.itemMetaClass}>{option.description}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </ScrollView>
+            <View className="flex-row flex-wrap gap-3">
+              <NexusActionButton
+                label="Continue"
+                variant="primary"
+                onPress={confirmCreateKindSelection}
+              />
+              <NexusActionButton
+                label="Dismiss"
+                variant="ghost"
+                onPress={() => setCreateKindCandidate(null)}
+              />
+            </View>
+          </NexusCard>
+        </View>
+      </Modal>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={successModal !== null}
+        onRequestClose={() => setSuccessModal(null)}
+      >
+        <View className="flex-1 items-center justify-center bg-black/50 px-4">
+          <Pressable
+            className="absolute inset-0"
+            onPress={() => setSuccessModal(null)}
+          />
+          <NexusCard className="w-full max-w-xl gap-4">
+            <Text className={appearance.surfaceTitleClass}>{successModal?.title}</Text>
+            <Text className={appearance.itemBodyClass}>{successModal?.message}</Text>
+            <View className="flex-row flex-wrap gap-3">
+              {successModal?.showDashboardAction ? (
+                <NexusActionButton
+                  label="Open dashboard"
+                  variant="primary"
+                  onPress={() => {
+                    if (successModal) {
+                      openLocalityDashboard(successModal.locality);
+                    }
+                  }}
+                />
+              ) : null}
+              <NexusActionButton
+                label="Dismiss"
+                variant="ghost"
+                onPress={() => setSuccessModal(null)}
+              />
+            </View>
+          </NexusCard>
+        </View>
+      </Modal>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={workflowErrorModal !== null}
+        onRequestClose={() => setWorkflowErrorModal(null)}
+      >
+        <View className="flex-1 items-center justify-center bg-black/50 px-4">
+          <Pressable
+            className="absolute inset-0"
+            onPress={() => setWorkflowErrorModal(null)}
+          />
+          <NexusCard className="w-full max-w-xl gap-4" tone="rose">
+            <Text className={appearance.surfaceTitleClass}>{workflowErrorModal?.title}</Text>
+            <Text className={appearance.itemBodyClass}>{workflowErrorModal?.message}</Text>
+            <View className="flex-row flex-wrap gap-3">
+              <NexusActionButton
+                label="Dismiss"
+                variant="primary"
+                onPress={() => setWorkflowErrorModal(null)}
+              />
+            </View>
+          </NexusCard>
+        </View>
+      </Modal>
+
       {authGateModal}
     </View>
   );

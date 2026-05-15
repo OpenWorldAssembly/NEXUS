@@ -7,32 +7,36 @@ import {
   getElementSubtypeLeaf,
   type PacketEnvelopeByType,
 } from '@core/schema/packet-schema';
+import {
+  readLocalityManualStatus,
+  readLocalityScopeDescriptor,
+  type LocalityManualStatus,
+  type LocalityScopeDescriptor,
+} from '@runtime/nexus/location-search';
 import type {
   NexusScopeMountReason,
   NexusScopeSummary,
 } from '@runtime/nexus/nexus-shell';
-import { collectPoliciesForCauseAnchor, evaluateRelationPolicyRequirements } from '@runtime/nexus/server/relation-policy';
+import { evaluateRelationPolicyRequirements } from '@runtime/nexus/server/relation-policy';
 import {
-  filterClaimPackets,
-  listClaimPackets,
-  listRelationSupportingClaims,
   type ClaimPacket,
 } from '@runtime/nexus/server/claim-utils';
 import {
   filterRelationPackets,
-  listRelationPackets,
   type RelationPacket,
 } from '@runtime/nexus/server/relation-utils';
+import { resolveElementalScopeRelations } from '@runtime/nexus/server/elemental-scope-relations';
 import {
   getLegacyParentScopePacketIdCompatibility,
-  projectLegacyAssemblyAssociationScopeCompatibility,
-  projectLegacyFollowedScopeCompatibility,
   projectLegacyHomeLocalityCompatibility,
 } from '@runtime/nexus/server/scope-graph-compatibility';
+import { getOwaRelationPolicyPackets } from '@runtime/nexus/server/scope-graph-owa';
 import {
   resolveScopeParentResolutions,
   type ScopeStructuralState,
 } from '@runtime/nexus/server/scope-parent-resolution';
+import { listClaimPackets } from '@runtime/nexus/server/claim-utils';
+import { listRelationPackets } from '@runtime/nexus/server/relation-utils';
 import type { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store';
 
 export type ScopeGraphNode = {
@@ -43,6 +47,10 @@ export type ScopeGraphNode = {
   level: NexusScopeSummary['level'];
   scopeSubtype: string | null;
   scopeSystem: string | null;
+  scopeTypeLabel: string | null;
+  scopeTypeKey: string | null;
+  scopeHierarchySystem: string | null;
+  manualStatus: LocalityManualStatus | null;
   summary: string | null;
   localityLabel: string | null;
   parentRouteId: string | null;
@@ -84,12 +92,6 @@ export type ScopeGraphProjection = {
   structuralRelationPacketIdsByScopeId: Map<string, string[]>;
   locationPacketIdsByScopeId: Map<string, string[]>;
 };
-
-type CauseLikePacket =
-  | PacketEnvelopeByType['Cause']
-  | PacketEnvelopeByType['Initiative']
-  | PacketEnvelopeByType['Program']
-  | PacketEnvelopeByType['Campaign'];
 
 function toRouteScopeId(packetId: string): string {
   if (packetId.startsWith('nexus:element/')) {
@@ -208,81 +210,6 @@ function isScopeElementPacket(
   );
 }
 
-async function resolveOwaCauseAnchor(
-  packetStore: NodeSQLitePacketStore
-): Promise<CauseLikePacket | null> {
-  const directCause = await packetStore.fetchByPacket({ packet_id: 'nexus:cause/owa' });
-
-  if (directCause?.header.family === 'Cause' && directCause.body.subtype === 'initiative') {
-    return directCause as PacketEnvelopeByType['Cause'];
-  }
-
-  for (const family of ['Initiative', 'Program', 'Campaign'] as const) {
-    const packets = await packetStore.listPreferredPacketsByFamily(family);
-    const anchor =
-      packets.find((packet) => packet.header.packet_id.toLowerCase().includes('owa')) ??
-      packets.find((packet) => {
-        const title = 'title' in packet.body ? packet.body.title : null;
-
-        return typeof title === 'string' && title.trim().toLowerCase() === 'owa';
-      });
-
-    if (anchor) {
-      return anchor as CauseLikePacket;
-    }
-  }
-
-  return null;
-}
-
-async function getOwaRelationPolicyPackets(
-  packetStore: NodeSQLitePacketStore
-): Promise<PacketEnvelopeByType['Policy'][]> {
-  const [anchorPacket, policyPackets] = await Promise.all([
-    resolveOwaCauseAnchor(packetStore),
-    packetStore.listPreferredPacketsByFamily('Policy'),
-  ]);
-
-  if (!anchorPacket) {
-    return [];
-  }
-
-  return collectPoliciesForCauseAnchor({
-    anchorPacket,
-    policyPackets: policyPackets as PacketEnvelopeByType['Policy'][],
-  });
-}
-
-function resolveCanonicalScopedRelationPacketIds(input: {
-  relations: RelationPacket[];
-  relationSubtype: string;
-  scopePacketIds: Set<string>;
-  subjectPacketId?: string | null;
-}): Map<string, string[]> {
-  const relationPacketIdsByScopePacketId = new Map<string, string[]>();
-  const scopedRelations = filterRelationPackets({
-    relations: input.relations,
-    relationSubtype: input.relationSubtype,
-    subjectPacketId: input.subjectPacketId ?? null,
-    activeOnly: true,
-  });
-
-  for (const relationPacket of scopedRelations) {
-    const scopePacketId = relationPacket.body.target_ref.packet_id;
-
-    if (!input.scopePacketIds.has(scopePacketId)) {
-      continue;
-    }
-
-    relationPacketIdsByScopePacketId.set(scopePacketId, [
-      ...(relationPacketIdsByScopePacketId.get(scopePacketId) ?? []),
-      relationPacket.header.packet_id,
-    ]);
-  }
-
-  return relationPacketIdsByScopePacketId;
-}
-
 function buildLocationPacketIdsByScopePacketId(input: {
   relations: RelationPacket[];
   scopePacketIds: Set<string>;
@@ -319,6 +246,60 @@ function buildLocationPacketIdsByScopePacketId(input: {
     locationPacketIdsByScopePacketId,
     locationRelationPacketIdsByScopePacketId,
   };
+}
+
+type ScopeLocationMetadata = {
+  scopeDescriptor: LocalityScopeDescriptor | null;
+  manualStatus: LocalityManualStatus | null;
+};
+
+function buildScopeLocationMetadataByScopePacketId(input: {
+  locationPackets: PacketEnvelopeByType['Location'][];
+  relationPackets: RelationPacket[];
+}): Map<string, ScopeLocationMetadata> {
+  const locationPacketById = new Map(
+    input.locationPackets.map((packet) => [packet.header.packet_id, packet])
+  );
+  const metadataByScopePacketId = new Map<string, ScopeLocationMetadata>();
+
+  for (const relationPacket of input.relationPackets) {
+    if (
+      relationPacket.body.subtype !== 'defined_by_location' ||
+      relationPacket.body.status !== 'active'
+    ) {
+      continue;
+    }
+
+    const locationPacket = locationPacketById.get(
+      relationPacket.body.target_ref.packet_id
+    );
+
+    if (!locationPacket) {
+      continue;
+    }
+
+    const spatialPayload = locationPacket.body.spatial_payload;
+    const fallbackLevel =
+      spatialPayload.locality_level === 'nation' ||
+      spatialPayload.locality_level === 'region' ||
+      spatialPayload.locality_level === 'city' ||
+      spatialPayload.locality_level === 'district'
+        ? spatialPayload.locality_level
+        : null;
+
+    metadataByScopePacketId.set(relationPacket.body.subject_ref.packet_id, {
+      scopeDescriptor: readLocalityScopeDescriptor(
+        spatialPayload.scope_descriptor,
+        fallbackLevel
+      ),
+      manualStatus: readLocalityManualStatus({
+        spatialPayload,
+        status: locationPacket.body.status,
+      }),
+    });
+  }
+
+  return metadataByScopePacketId;
 }
 
 async function resolveCanonicalHomeLocality(input: {
@@ -412,12 +393,14 @@ async function resolveCanonicalHomeLocality(input: {
 export async function buildNexusScopeGraphProjection(input: {
   packetStore: NodeSQLitePacketStore;
   actorPacketId?: string | null;
+  request?: Request | null;
   followedScopeIds: string[];
 }): Promise<ScopeGraphProjection> {
-  const [elementPackets, relationPackets, claimPackets] = await Promise.all([
+  const [elementPackets, relationPackets, claimPackets, locationPackets] = await Promise.all([
     input.packetStore.listPreferredPacketsByFamily('Element'),
     listRelationPackets(input.packetStore),
     listClaimPackets(input.packetStore),
+    input.packetStore.listPreferredPacketsByFamily('Location'),
   ]);
   const scopeElementPackets = (elementPackets as PacketEnvelopeByType['Element'][]).filter(
     isScopeElementPacket
@@ -437,6 +420,10 @@ export async function buildNexusScopeGraphProjection(input: {
     relations: relationPackets,
     scopePacketIds,
   });
+  const scopeLocationMetadataByScopePacketId = buildScopeLocationMetadataByScopePacketId({
+    locationPackets: locationPackets as PacketEnvelopeByType['Location'][],
+    relationPackets,
+  });
   const parentRouteIdByPacketId = new Map<string, string | null>();
 
   for (const packet of scopeElementPackets) {
@@ -452,7 +439,9 @@ export async function buildNexusScopeGraphProjection(input: {
     const scopeSubtype = packet.body.subtype ?? null;
     const scopeSystem =
       packet.body.scope_system ??
-      (packet.body.locality ? 'geographic' : null);
+        (packet.body.locality ? 'geographic' : null);
+    const scopeLocationMetadata =
+      scopeLocationMetadataByScopePacketId.get(packet.header.packet_id) ?? null;
 
     return {
       routeId: toRouteScopeId(packet.header.packet_id),
@@ -462,6 +451,16 @@ export async function buildNexusScopeGraphProjection(input: {
       level: toScopeLevel(getElementSubtypeLeaf(scopeSubtype)),
       scopeSubtype,
       scopeSystem,
+      scopeTypeLabel:
+        scopeLocationMetadata?.scopeDescriptor?.local_type_label ??
+        null,
+      scopeTypeKey:
+        scopeLocationMetadata?.scopeDescriptor?.local_type_key ??
+        null,
+      scopeHierarchySystem:
+        scopeLocationMetadata?.scopeDescriptor?.hierarchy_system ??
+        null,
+      manualStatus: scopeLocationMetadata?.manualStatus ?? null,
       summary: packet.body.summary ?? null,
       localityLabel: packet.body.locality_label ?? null,
       parentRouteId: parentRouteIdByPacketId.get(packet.header.packet_id) ?? null,
@@ -531,21 +530,13 @@ export async function buildNexusScopeGraphProjection(input: {
   const locationPacketIdsByScopeId = new Map<string, string[]>(
     nodes.map((scopeNode) => [scopeNode.routeId, [...scopeNode.locationPacketIds]])
   );
-  const canonicalFollowRelationPacketIdsByScopePacketId = resolveCanonicalScopedRelationPacketIds(
-    {
-      relations: relationPackets,
-      relationSubtype: 'follows',
-      scopePacketIds,
-      subjectPacketId: input.actorPacketId ?? null,
-    }
-  );
-  const canonicalAssociationRelationPacketIdsByScopePacketId =
-    resolveCanonicalScopedRelationPacketIds({
-      relations: relationPackets,
-      relationSubtype: 'assembly_association',
-      scopePacketIds,
-      subjectPacketId: input.actorPacketId ?? null,
-    });
+  const elementalScopeRelations = await resolveElementalScopeRelations({
+    packetStore: input.packetStore,
+    actorPacketId: input.actorPacketId ?? null,
+    request: input.request ?? null,
+    scopeRouteIds: new Set(nodes.map((scopeNode) => scopeNode.routeId)),
+    scopePacketIds,
+  });
   const followedScopeIds = new Set<string>();
   const followKindByRouteId = new Map<string, string>();
   const globalScopeId =
@@ -583,7 +574,10 @@ export async function buildNexusScopeGraphProjection(input: {
     }
   }
 
-  for (const [scopePacketId, relationPacketIds] of canonicalFollowRelationPacketIdsByScopePacketId) {
+  for (const [
+    scopePacketId,
+    relationPacketIds,
+  ] of elementalScopeRelations.canonicalFollowRelationPacketIdsByScopePacketId.entries()) {
     const routeId = toRouteScopeId(scopePacketId);
 
     if (!scopeMap.has(routeId)) {
@@ -595,12 +589,16 @@ export async function buildNexusScopeGraphProjection(input: {
     appendPacketIds(justificationPacketIdsByScopeId, routeId, relationPacketIds);
   }
 
-  const compatibilityFollowedScopeIds = projectLegacyFollowedScopeCompatibility({
-    scopeMap,
-    followedScopeIds: input.followedScopeIds,
-  });
+  for (const routeId of input.followedScopeIds) {
+    if (followedScopeIds.has(routeId) || !scopeMap.has(routeId)) {
+      continue;
+    }
 
-  for (const routeId of compatibilityFollowedScopeIds) {
+    followedScopeIds.add(routeId);
+    followKindByRouteId.set(routeId, 'caller_followed_compatibility');
+  }
+
+  for (const routeId of elementalScopeRelations.compatibilityFollowedRouteIds) {
     if (followedScopeIds.has(routeId)) {
       continue;
     }
@@ -621,46 +619,25 @@ export async function buildNexusScopeGraphProjection(input: {
   for (const [
     scopePacketId,
     relationPacketIds,
-  ] of canonicalAssociationRelationPacketIdsByScopePacketId.entries()) {
+  ] of elementalScopeRelations.canonicalAssociationRelationPacketIdsByScopePacketId.entries()) {
     const routeId = toRouteScopeId(scopePacketId);
 
     if (!scopeMap.has(routeId)) {
       continue;
     }
 
-    const supportingClaimPacketIds = [
-      ...new Set(
-        relationPacketIds.flatMap((relationPacketId) =>
-          filterClaimPackets({
-            claims: listRelationSupportingClaims({
-              claims: claimPackets,
-              relationPacketId,
-              claimSubtype: 'relation_assertion',
-              activeOnly: true,
-            }),
-            claimKind: 'assembly_association',
-            activeOnly: true,
-          }).map((claimPacket) => claimPacket.header.packet_id)
-        )
-      ),
-    ];
-    const justificationPacketIds = [...relationPacketIds, ...supportingClaimPacketIds];
-
     associatedScopeIds.add(routeId);
     mountedScopeIds.add(routeId);
     addMountReason(mountReasonsByScopeId, routeId, 'associated');
     associationKindByRouteId.set(routeId, 'canonical_relation_assertion');
-    associatedScopeJustificationPacketIdsByRouteId.set(routeId, justificationPacketIds);
-    appendPacketIds(justificationPacketIdsByScopeId, routeId, justificationPacketIds);
+    associatedScopeJustificationPacketIdsByRouteId.set(routeId, relationPacketIds);
+    appendPacketIds(justificationPacketIdsByScopeId, routeId, relationPacketIds);
   }
 
-  const associatedScopeClaimIdsByPacketId = projectLegacyAssemblyAssociationScopeCompatibility({
-    claimPackets,
-    actorPacketId: input.actorPacketId ?? null,
-    scopePacketIds,
-  });
-
-  for (const [scopePacketId, claimPacketIds] of associatedScopeClaimIdsByPacketId.entries()) {
+  for (const [
+    scopePacketId,
+    claimPacketIds,
+  ] of elementalScopeRelations.compatibilityAssociatedScopeClaimIdsByPacketId.entries()) {
     const routeId = toRouteScopeId(scopePacketId);
 
     if (!scopeMap.has(routeId) || associatedScopeIds.has(routeId)) {
@@ -785,6 +762,10 @@ export function buildScopeSummaryFromGraph(input: {
     level: input.node.level,
     scopeSubtype: input.node.scopeSubtype,
     scopeSystem: input.node.scopeSystem,
+    scopeTypeLabel: input.node.scopeTypeLabel,
+    scopeTypeKey: input.node.scopeTypeKey,
+    scopeHierarchySystem: input.node.scopeHierarchySystem,
+    manualStatus: input.node.manualStatus,
     description:
       input.node.summary ?? `Packet-backed assembly scope for ${input.node.name}.`,
     localityLabel:

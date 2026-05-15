@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   buildNexusHomeScopeIds,
   buildNexusBranchNodes,
+  buildNexusProjectedScopeSection,
   buildNexusScopeSidebarSections,
   getNexusScopeDepthWidth,
   getNexusScopeLevelGroupLabel,
@@ -211,7 +212,7 @@ test('home scope ids are ordered from broadest geography toward the personal roo
   ]);
 });
 
-test('sidebar sections dedupe scopes by home, associated, followed, then discoverable priority', () => {
+test('sidebar sections allow associate and follow overlap while discoverable stays deduped', () => {
   const associatedScope: NexusScopeSummary = {
     ...LOCAL_SCOPE,
     id: 'canyon-lake',
@@ -282,15 +283,82 @@ test('sidebar sections dedupe scopes by home, associated, followed, then discove
   );
   assert.deepEqual(
     followedSection?.scopes.map((scope) => scope.id),
-    ['sunnymead-ranch']
+    ['canyon-lake', 'sunnymead-ranch']
   );
   assert.deepEqual(
     discoverableSection?.scopes.map((scope) => scope.id),
     ['riverside-county']
   );
   assert.equal(associatedSection?.groups[0]?.title, 'City');
-  assert.equal(followedSection?.groups[0]?.title, 'District');
+  assert.deepEqual(
+    followedSection?.groups.map((group) => group.title),
+    ['City', 'District']
+  );
   assert.equal(getNexusScopeLevelGroupLabel('global'), 'Global');
+});
+
+test('projected scope sections group by descriptor label and keep lightweight parent chains', () => {
+  const associatedScope: NexusScopeSummary = {
+    ...LOCAL_SCOPE,
+    id: 'canyon-lake',
+    packetId: 'nexus:element/canyon-lake',
+    name: 'Canyon Lake',
+    shortLabel: 'CL',
+    level: 'city',
+    parentId: 'global-commons',
+    childIds: [],
+    isMounted: true,
+    isDiscoverable: true,
+    isAssociated: true,
+    scopeTypeLabel: 'City / Town / Village',
+    mountReasons: ['associated'],
+  };
+  const projectedSection = buildNexusProjectedScopeSection({
+    id: 'associated',
+    title: 'Associated scopes',
+    scopeSummaries: [GLOBAL_SCOPE, associatedScope],
+    directScopeIds: ['canyon-lake'],
+    showParentChains: true,
+  });
+
+  assert.equal(projectedSection.groups[0]?.title, 'City / Town / Village');
+  assert.equal(projectedSection.groups[0]?.rows[0]?.scopeId, 'canyon-lake');
+  assert.equal(
+    projectedSection.groups[0]?.rows[0]?.parentChainPath,
+    'Global Commons'
+  );
+});
+
+test('projected main sections dedupe overlapping relation ids', () => {
+  const bothRelationScope: NexusScopeSummary = {
+    ...LOCAL_SCOPE,
+    id: 'canyon-lake',
+    packetId: 'nexus:element/canyon-lake',
+    name: 'Canyon Lake',
+    shortLabel: 'CL',
+    level: 'city',
+    parentId: 'global-commons',
+    childIds: [],
+    isMounted: true,
+    isDiscoverable: true,
+    isAssociated: true,
+    isFollowed: true,
+    associationKind: 'canonical_relation_assertion',
+    mountReasons: ['associated', 'followed'],
+  };
+  const projectedSection = buildNexusProjectedScopeSection({
+    id: 'main',
+    title: 'Main scopes',
+    scopeSummaries: [GLOBAL_SCOPE, bothRelationScope],
+    directScopeIds: ['canyon-lake', 'canyon-lake'],
+    showParentChains: true,
+  });
+
+  assert.equal(projectedSection.count, 1);
+  assert.deepEqual(
+    projectedSection.groups.flatMap((group) => group.rows.map((row) => row.scopeId)),
+    ['canyon-lake']
+  );
 });
 
 test('scope selection routes wrapper-level account and identity pages back to trust', () => {

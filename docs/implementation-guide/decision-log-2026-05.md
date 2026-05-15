@@ -149,3 +149,27 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - Duplicate warnings in locality review are now actionable through `Use existing`, `Edit name`, and `Create anyway` rather than appearing only as passive blocker text.
 - `Use as home locality` is now an explicit shared toggle for both selecting existing localities and creating new ones.
 - The home-branch inclusion checklist is now visible during review as a UI-only preview affordance, while authoritative storage and projection of selected included scopes remains deferred to a later locality pass.
+
+## 2026-05 locality foundations phase 2A
+
+- Locality planner semantics are now ordered-path first: the runtime interprets locality preview and create input as a broad-to-narrow path, and sparse paths no longer need to fill every legacy ladder slot.
+- The current locality type picker is now real runtime input instead of decoration: path rows can carry `LocalityScopeDescriptor` data, with safe fallback descriptors derived from current legacy buckets when callers omit them during rollout.
+- New locality writes now persist descriptor metadata inside linked `Location.spatial_payload.scope_descriptor`, while legacy `nation | region | city | district` values remain compatibility buckets rather than the forward locality ontology.
+- Locality search and duplicate projection now preserve Unicode scripts, normalize accents safely for matching, and keep useful legacy ASCII-style aliases where that compatibility bridge is feasible.
+- Home-tree inclusion persistence and projection fields remain intentionally deferred to the next locality foundations pass rather than being bundled into descriptor and ancestry work.
+
+## 2026-05 locality hardening pass 2A.5
+
+- Locality preview and create now reject decreasing legacy compatibility bucket order such as `city -> nation`, while still treating ordered path ancestry rather than the ladder itself as the real graph truth.
+- Descriptor reads now validate `hierarchy_system` against the allowed runtime enum so malformed imported `Location` metadata falls back safely instead of being trusted as-is.
+- Top-level locality search can now still route into creation when same-name results exist in a different branch, preventing one existing `Ontario` from suppressing a new `Ontario` under another parent path.
+- The create page now clears stale carried-over target rows more carefully when the target type changes across legacy buckets, and successful create/reuse completion resets the create builder before the success modal appears.
+- Trust home-locality presentation has been tightened into a smaller onboarding-friendly card without changing the underlying home-locality actions or relation-first write path.
+
+## 2026-05 locality runtime catch-up chapter
+
+- Locality confirmation now routes through one composite `locality.graph.apply` mutation intent above `locality.path.create`, so structural locality writes, selected home-locality changes, scope associations, follows, and temporary scope-display preferences are coordinated together instead of being chained from the client.
+- Partial success is now explicit at that runtime seam: structural locality planning and packet writes remain phase one, while relation and temporary preference writes report their own outcomes without pretending the whole flow is all-or-nothing.
+- Actor-to-scope relationship reads are now centralized through one runtime controller that treats canonical `home_locality`, `assembly_association`, and `follows` relations as the main truth, while preserving guest and compatibility follow behavior as an explicit fallback bridge.
+- `main` is now a runtime-owned temporary visible-scope preference for claimed actors rather than a relation, and associated/followed parent-context display toggles are now persisted alongside it until the upcoming schema chapter packetizes preferences properly.
+- The generic scope-graph projection now returns server-projected `home`, `associated`, `followed`, `main`, and `discoverable` sections for the sidebar, and OWA-specific initiative-anchor relation-policy lookup has been moved out of the generic graph core into a narrower adapter layer.

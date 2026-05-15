@@ -10,6 +10,7 @@ import type {
 } from '@runtime/nexus/nexus-content';
 import type {
   NexusGuestCapability,
+  NexusProjectedScopeSection,
   NexusScopeSummary,
 } from '@runtime/nexus/nexus-shell';
 
@@ -20,10 +21,16 @@ export interface NexusShellPayload {
   geographic_mounted_scope_ids: string[];
   associated_scope_ids: string[];
   followed_scope_ids: string[];
+  main_visible_scope_packet_ids: string[];
   known_scope_ids: string[];
   known_unmounted_scope_ids: string[];
   personal_parent_scope_id: string | null;
   home_scope_id: string | null;
+  home_graph: NexusProjectedScopeSection;
+  associated_graph: NexusProjectedScopeSection;
+  followed_graph: NexusProjectedScopeSection;
+  main_graph: NexusProjectedScopeSection;
+  discoverable_section: NexusProjectedScopeSection;
   guest_profile: NexusGuestProfile;
   guest_capabilities: NexusGuestCapability[];
   guest_checklist: NexusGuestChecklistItem[];

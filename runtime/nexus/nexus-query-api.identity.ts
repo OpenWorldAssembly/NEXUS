@@ -19,6 +19,7 @@ export function fetchNexusLocationSearchPayload(
   options?: {
     level?: 'nation' | 'region' | 'city' | 'district' | null;
     parentScopeId?: string | null;
+    childrenOf?: string | null;
   }
 ): Promise<NexusLocationSearchPayload> {
   const params = new URLSearchParams({ query });
@@ -29,6 +30,10 @@ export function fetchNexusLocationSearchPayload(
 
   if (options?.parentScopeId) {
     params.set('parent_scope_id', options.parentScopeId);
+  }
+
+  if (options?.childrenOf) {
+    params.set('children_of', options.childrenOf);
   }
 
   return fetchJsonOrThrow<NexusLocationSearchPayload>(

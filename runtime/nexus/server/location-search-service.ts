@@ -4,12 +4,22 @@
  */
 
 import type { PacketEnvelopeByType } from '@core/schema/packet-schema';
-import type { NexusLocationSearchResult } from '@runtime/nexus/location-search';
+import {
+  createFallbackLocalityScopeDescriptor,
+  isLegacyLocalityLevel,
+  readLocalityManualStatus,
+  readLocalityScopeDescriptor,
+  type LocalityManualStatus,
+  type LocalityScopeDescriptor,
+  type NexusLocationSearchResult,
+} from '@runtime/nexus/location-search';
 import {
   createLocalityCanonicalNameKey,
   getLocalityFuzzySimilarity,
   getLocalitySearchMatchScore,
+  isUsefulLegacyAsciiAliasKey,
   matchesLocalitySearchScopeFilter,
+  normalizeLegacyAsciiLocalitySearchText,
   normalizeLocalitySearchText,
   toLocalitySearchLevel,
   type LocalitySearchLevel,
@@ -43,6 +53,8 @@ type ScopeSearchNode = {
   display_aliases: string[];
   description: string;
   parent_packet_id: string | null;
+  scope_descriptor: LocalityScopeDescriptor | null;
+  manual_status: LocalityManualStatus | null;
 };
 
 function buildScopePath(
@@ -69,6 +81,52 @@ function toDisclosureOptions(scopePath: ScopeSearchNode[]) {
     label: scopeNode.level.toUpperCase(),
     description: scopeNode.name,
   })) as NexusLocationSearchResult['disclosure_options'];
+}
+
+function toSearchPathEntries(
+  scopePath: ScopeSearchNode[]
+): NonNullable<NexusLocationSearchResult['path_entries']> {
+  return scopePath.map((scopeNode) => ({
+    scope_id: scopeNode.packet_id,
+    name: scopeNode.name,
+    level: scopeNode.level,
+    scope_type_label: scopeNode.scope_descriptor?.local_type_label ?? null,
+  }));
+}
+
+function buildSearchResult(input: {
+  scopeNode: ScopeSearchNode;
+  scopePath: ScopeSearchNode[];
+  matchType: NexusLocationSearchResult['match_type'];
+}): NexusLocationSearchResult {
+  const parentPath = input.scopePath.slice(0, -1);
+
+  return {
+    scope_id: input.scopeNode.packet_id,
+    name: input.scopeNode.name,
+    short_label: input.scopeNode.short_label,
+    locality_label: input.scopeNode.locality_label,
+    level: input.scopeNode.level,
+    path_label: input.scopePath.map((pathScope) => pathScope.name).join(' / '),
+    parent_path_label:
+      parentPath.length > 0
+        ? parentPath.map((pathScope) => pathScope.name).join(' / ')
+        : null,
+    canonical_name_key: input.scopeNode.canonical_name_key,
+    alias_keys: input.scopeNode.alias_keys,
+    display_aliases: input.scopeNode.display_aliases,
+    path_entries: toSearchPathEntries(input.scopePath),
+    match_type: input.matchType,
+    description: input.scopeNode.description,
+    disclosure_options: toDisclosureOptions(input.scopePath),
+    scope_descriptor: input.scopeNode.scope_descriptor,
+    scope_type_label: input.scopeNode.scope_descriptor?.local_type_label ?? null,
+    scope_type_key: input.scopeNode.scope_descriptor?.local_type_key ?? null,
+    scope_hierarchy_system:
+      input.scopeNode.scope_descriptor?.hierarchy_system ?? null,
+    legacy_level: input.scopeNode.scope_descriptor?.legacy_level ?? input.scopeNode.level,
+    manual_status: input.scopeNode.manual_status,
+  };
 }
 
 function buildLocalityAliases(scopeNode: ScopeSearchNode): string[] {
@@ -145,17 +203,63 @@ function getLocationSearchMatch(input: {
 
 async function listGraphLocationNodes(): Promise<ScopeSearchNode[]> {
   const services = await getNexusPacketServices();
-  const [elementPackets, relationPackets] = await Promise.all([
+  const [elementPackets, relationPackets, locationPackets] = await Promise.all([
     services.packetStore.listPreferredPacketsByFamily('Element') as Promise<
       PacketEnvelopeByType['Element'][]
     >,
     listRelationPackets(services.packetStore),
+    services.packetStore.listPreferredPacketsByFamily('Location') as Promise<
+      PacketEnvelopeByType['Location'][]
+    >,
   ]);
   const parentResolutions = resolveScopeParentResolutions({
     scopePackets: elementPackets,
     relationPackets,
     getCompatibilityParentPacketId: getLegacyParentScopePacketIdCompatibility,
   });
+  const locationPacketById = new Map(
+    locationPackets.map((packet) => [packet.header.packet_id, packet])
+  );
+  const scopeLocationMetadataByScopePacketId = new Map<
+    string,
+    {
+      scopeDescriptor: LocalityScopeDescriptor | null;
+      manualStatus: LocalityManualStatus | null;
+    }
+  >();
+
+  for (const relationPacket of relationPackets) {
+    if (
+      relationPacket.body.subtype !== 'defined_by_location' ||
+      relationPacket.body.status !== 'active'
+    ) {
+      continue;
+    }
+
+    const locationPacket = locationPacketById.get(
+      relationPacket.body.target_ref.packet_id
+    );
+
+    if (!locationPacket) {
+      continue;
+    }
+
+    const spatialPayload = locationPacket.body.spatial_payload;
+    const payloadLegacyLevel = isLegacyLocalityLevel(spatialPayload.locality_level)
+      ? spatialPayload.locality_level
+      : null;
+
+    scopeLocationMetadataByScopePacketId.set(relationPacket.body.subject_ref.packet_id, {
+      scopeDescriptor: readLocalityScopeDescriptor(
+        spatialPayload.scope_descriptor,
+        payloadLegacyLevel
+      ),
+      manualStatus: readLocalityManualStatus({
+        spatialPayload,
+        status: locationPacket.body.status,
+      }),
+    });
+  }
 
   return elementPackets
     .filter(
@@ -169,9 +273,27 @@ async function listGraphLocationNodes(): Promise<ScopeSearchNode[]> {
         return null;
       }
 
-      const canonicalNameKey =
-        packet.body.locality?.canonical_name_key ??
-        createLocalityCanonicalNameKey(packet.body.locality_label ?? packet.body.name);
+      const displayName = packet.body.locality_label ?? packet.body.name;
+      const canonicalNameKey = createLocalityCanonicalNameKey(displayName);
+      const storedCanonicalNameKey = packet.body.locality?.canonical_name_key ?? null;
+      const aliasKeys = new Set<string>(
+        (packet.body.locality?.alias_keys ?? []).map(createLocalityCanonicalNameKey)
+      );
+      const legacyAsciiAliasKey = normalizeLegacyAsciiLocalitySearchText(displayName);
+      const scopeLocationMetadata =
+        scopeLocationMetadataByScopePacketId.get(packet.header.packet_id) ?? null;
+
+      if (storedCanonicalNameKey && storedCanonicalNameKey !== canonicalNameKey) {
+        aliasKeys.add(storedCanonicalNameKey);
+      }
+
+      if (
+        legacyAsciiAliasKey &&
+        legacyAsciiAliasKey !== canonicalNameKey &&
+        isUsefulLegacyAsciiAliasKey(legacyAsciiAliasKey)
+      ) {
+        aliasKeys.add(legacyAsciiAliasKey);
+      }
 
       return {
         packet_id: packet.header.packet_id,
@@ -180,12 +302,16 @@ async function listGraphLocationNodes(): Promise<ScopeSearchNode[]> {
         locality_label: packet.body.locality_label ?? packet.body.name,
         level,
         canonical_name_key: canonicalNameKey,
-        alias_keys: packet.body.locality?.alias_keys ?? [],
+        alias_keys: Array.from(aliasKeys).filter(Boolean),
         display_aliases: packet.body.locality?.display_aliases ?? [],
         description:
           packet.body.summary ?? `${packet.body.name} assembly locality`,
         parent_packet_id:
           parentResolutions.get(packet.header.packet_id)?.parentPacketId ?? null,
+        scope_descriptor:
+          scopeLocationMetadata?.scopeDescriptor ??
+          createFallbackLocalityScopeDescriptor(level),
+        manual_status: scopeLocationMetadata?.manualStatus ?? null,
       } satisfies ScopeSearchNode;
     })
     .filter((value): value is ScopeSearchNode => value !== null);
@@ -223,26 +349,13 @@ const graphLocationLookupProvider: NexusLocationLookupProvider = {
         if (match === null) {
           return null;
         }
-        const parentPath = scopePath.slice(0, -1);
-
         return {
           score: match.score,
-          result: {
-            scope_id: scopeNode.packet_id,
-            name: scopeNode.name,
-            short_label: scopeNode.short_label,
-            locality_label: scopeNode.locality_label,
-            level: scopeNode.level,
-            path_label: scopePath.map((pathScope) => pathScope.name).join(' / '),
-            parent_path_label:
-              parentPath.length > 0
-                ? parentPath.map((pathScope) => pathScope.name).join(' / ')
-                : null,
-            canonical_name_key: scopeNode.canonical_name_key,
-            match_type: match.matchType,
-            description: scopeNode.description,
-            disclosure_options: toDisclosureOptions(scopePath),
-          } satisfies NexusLocationSearchResult,
+          result: buildSearchResult({
+            scopeNode,
+            scopePath,
+            matchType: match.matchType,
+          }),
         };
       })
       .filter(
@@ -275,4 +388,29 @@ export function searchNexusLocations(
     ...input,
     limit: input.limit ?? limit,
   });
+}
+
+export async function listNexusLocationChildren(input: {
+  parentScopeId: string;
+  limit?: number;
+}): Promise<NexusLocationSearchResult[]> {
+  const scopeNodes = await listGraphLocationNodes();
+  const scopeNodeMap = new Map(
+    scopeNodes.map((scopeNode) => [scopeNode.packet_id, scopeNode])
+  );
+  const limit = input.limit ?? 50;
+
+  return scopeNodes
+    .filter((scopeNode) => scopeNode.parent_packet_id === input.parentScopeId)
+    .sort((left, right) =>
+      left.name.localeCompare(right.name, undefined, { sensitivity: 'base' })
+    )
+    .slice(0, limit)
+    .map((scopeNode) =>
+      buildSearchResult({
+        scopeNode,
+        scopePath: buildScopePath(scopeNodeMap, scopeNode.packet_id),
+        matchType: 'path',
+      })
+    );
 }

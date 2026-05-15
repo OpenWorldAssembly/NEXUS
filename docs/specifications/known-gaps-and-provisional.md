@@ -14,8 +14,13 @@
 - `identity.location_disclosure` remains optional profile metadata rather than mounted-scope truth
 - `assembly_association` remains distinct from `home_locality`
 - followed scopes are now packet-native on the write path, but legacy shell-preference follows remain readable through an explicit compatibility bridge during transition
-- `Location` is now part of locality creation through provisional `region` packets, but provider-backed normalization, richer payload conventions, and external refs remain later work
+- `Location` is now part of locality creation through provisional `region` packets, and those packets now carry descriptor metadata in `spatial_payload.scope_descriptor`, but provider-backed normalization, richer external refs, and broader equivalence handling remain later work
+- legacy `nation | region | city | district` locality levels remain current compatibility buckets rather than the full future locality model
+- locality ancestry is now planned from ordered broad-to-narrow path entries, and sparse paths are valid current behavior; absolute depth is still projection-only and is not stored on packets
 - locality creation now has a real non-mutating review seam, but the home-branch inclusion checklist shown during review is still preview-only and does not yet alter stored `home_locality` relation semantics
+- locality confirm now applies home, association, follow, and temporary `main` visibility choices through one composite runtime write seam, but `main` itself is still only a runtime-owned temporary preference rather than a packet-backed preference model
+- associated and followed parent-context display is now a temporary runtime preference as well, with claimed-actor persistence and guest compatibility fallback, rather than a packet-backed preference surface
+- same-name locality matches in other parent branches no longer need to suppress the create-path handoff, but orphan existing-scope remounting is still intentionally unresolved rather than silently repaired in this phase
 - generic abstract assembly creation and richer locality governance are still later work
 
 ## Explorer caveats
@@ -31,6 +36,7 @@
 - a dedicated validation workflow screen is intentionally deferred
 - official versus unofficial initiative filtering is not active product behavior
 - initiative-version subscription behavior is not active product behavior
+- the generic scope graph is now decoupled from OWA-specific initiative-anchor policy lookup, but broader initiative and locality projection cleanup is still incomplete
 
 ## Moderation and governance caveats
 
@@ -49,4 +55,5 @@ The following areas should still be treated as provisional:
 - vote execution, delegation, and propagation semantics
 - long-term initiative filtering and visibility modes
 - packet actions that currently appear as disabled placeholders
+- packet-backed preference modeling for `main` and related shell display options
 - any architecture or theory in the implementation guide that is not already represented in executable code
