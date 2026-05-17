@@ -3,9 +3,14 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import {
+  getMutationIntentDescriptor,
+  listMutationIntentDescriptors,
+} from './mutation-intent-registry.ts';
+
 test('actor write-policy preparation resolves current policy before building the future policy', () => {
   const mutationSource = readFileSync(
-    join(process.cwd(), 'runtime', 'nexus', 'server', 'mutation-service.ts'),
+    join(process.cwd(), 'runtime', 'nexus', 'server', 'mutation-prepare-handlers.ts'),
     'utf8'
   );
   const policyGateSource = readFileSync(
@@ -48,7 +53,7 @@ test('actor write-policy preparation resolves current policy before building the
 
 test('legacy home-locality mutation intent delegates into the canonical relation-first prepare path', () => {
   const source = readFileSync(
-    join(process.cwd(), 'runtime', 'nexus', 'server', 'mutation-service.ts'),
+    join(process.cwd(), 'runtime', 'nexus', 'server', 'mutation-prepare-handlers.ts'),
     'utf8'
   );
   const aliasMethodIndex = source.indexOf(
@@ -77,7 +82,7 @@ test('legacy home-locality mutation intent delegates into the canonical relation
 
 test('legacy assembly-association mutation intent delegates into the canonical relation-first prepare path', () => {
   const source = readFileSync(
-    join(process.cwd(), 'runtime', 'nexus', 'server', 'mutation-service.ts'),
+    join(process.cwd(), 'runtime', 'nexus', 'server', 'mutation-prepare-handlers.ts'),
     'utf8'
   );
   const aliasMethodIndex = source.indexOf(
@@ -109,20 +114,37 @@ test('legacy assembly-association mutation intent delegates into the canonical r
 });
 
 test('home-locality finalization still accepts both canonical and compatibility tickets through one result path', () => {
-  const source = readFileSync(
-    join(process.cwd(), 'runtime', 'nexus', 'server', 'mutation-service.ts'),
+  assert.equal(
+    getMutationIntentDescriptor('home_locality.relation.set').finalize,
+    'finalizeHomeLocalityRelation'
+  );
+  assert.equal(
+    getMutationIntentDescriptor('home_locality.claim.set').finalize,
+    'finalizeHomeLocalityRelation'
+  );
+});
+
+
+test('registered mutation intent handlers resolve to concrete prepare and finalize implementations', () => {
+  const prepareSource = readFileSync(
+    join(process.cwd(), 'runtime', 'nexus', 'server', 'mutation-prepare-handlers.ts'),
     'utf8'
   );
-  const finalizeSwitchIndex = source.indexOf("case 'home_locality.relation.set':");
-  const compatibilityCaseIndex = source.indexOf("case 'home_locality.claim.set':");
-  const finalizeCallIndex = source.indexOf(
-    'await this.finalizeHomeLocalityRelation({',
-    finalizeSwitchIndex
+  const finalizerSource = readFileSync(
+    join(process.cwd(), 'runtime', 'nexus', 'server', 'mutation-finalize-handlers.ts'),
+    'utf8'
   );
 
-  assert.notEqual(finalizeSwitchIndex, -1);
-  assert.notEqual(compatibilityCaseIndex, -1);
-  assert.notEqual(finalizeCallIndex, -1);
-  assert.ok(finalizeSwitchIndex < compatibilityCaseIndex);
-  assert.ok(compatibilityCaseIndex < finalizeCallIndex);
+  for (const descriptor of listMutationIntentDescriptors()) {
+    assert.notEqual(
+      prepareSource.indexOf(`${descriptor.prepare}: async`),
+      -1,
+      `${descriptor.kind} prepare handler ${descriptor.prepare} is not wired`
+    );
+    assert.notEqual(
+      finalizerSource.indexOf(`async ${descriptor.finalize}`),
+      -1,
+      `${descriptor.kind} finalize handler ${descriptor.finalize} is not implemented`
+    );
+  }
 });

@@ -38,6 +38,8 @@ For the implementation guide, the chapter files under `docs/implementation-guide
 
 ## Chapters
 
+- [Packet Definition Manifest R&D](implementation-guide/packet-definition-manifest-rd.md)
+
 - [Architecture And Layers](implementation-guide/architecture-and-layers.md)
 - [Core Entities And Packet Model](implementation-guide/core-entities-and-packet-model.md)
 - [Trust, Moderation, And Policy](implementation-guide/trust-moderation-and-policy.md)
