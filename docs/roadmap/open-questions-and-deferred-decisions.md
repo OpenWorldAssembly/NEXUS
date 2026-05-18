@@ -8,7 +8,7 @@
 - Where should moderation preferences live: actor policy, client preference, or both?
 - What exact local trust state should be attached to imported or re-verified packets?
 - Which packet relationships should a future first-class `Bundle` packet record directly: carried packet refs, root refs, lineage refs, verification refs, or all of the above?
-- How should the temporary runtime-owned `main` visibility and section-display preferences migrate into the upcoming packet-backed preference model without losing current actor selections?
+- Which remaining shell/interface preferences should join `main` visibility and section-display options under the new packet-backed `Preference.element` model?
 
 ## Deeper design questions
 
@@ -36,7 +36,7 @@
 - first-class `Bundle` implementation before locality UX and geo standardization are settled
 - authoritative selective home-tree storage and projection semantics before the current locality descriptor, Unicode, and sparse-path foundations are settled
 - provider-backed locality candidate ingestion, geometry, and external locality APIs before the current descriptor and Unicode foundation pass is absorbed
-- extending the temporary runtime preference store for `main` and sidebar display beyond the current bridge role before the schema chapter lands
+- expanding the legacy runtime preference cache for new behavior instead of extending the packet-backed `Preference.element` bridge
 
 ## Bundle direction now decided
 

@@ -49,4 +49,8 @@ export const DIRECT_PACKET_WRITE_SEAMS = {
     category: 'system_backfill',
     reason: 'System bootstrap/backfill writer for initial packet dataset seeding and recovery.',
   },
+  'element-preference-packets.ts': {
+    category: 'temporary_bridge',
+    reason: 'Narrow Preference.element live bridge for claimed-actor scope-display preferences while the legacy runtime preference table remains a compatibility cache.',
+  },
 } satisfies Record<string, DirectPacketWriteSeam>;

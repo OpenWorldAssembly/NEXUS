@@ -1,23 +1,29 @@
 /**
  * File: preference-helpers.test.ts
- * Description: Shadow-mode tests for Preference.scope_display builders, projection, and compatibility helpers.
+ * Description: Tests for Preference.element builders, projection, compatibility helpers, and canonical schema alignment.
  */
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-  buildScopeDisplayPreferenceBody,
-  createScopeDisplayPreferenceContextKey,
-  createScopeDisplayPreferencePacketId,
+  ElementPreferenceBodySchema as CanonicalElementPreferenceBodySchema,
+} from '@core/schema/packet-body-schemas';
+import {
+  ElementPreferenceBodySchema as DefinitionElementPreferenceBodySchema,
+} from './preference.ts';
+import {
+  buildElementPreferenceBody,
+  createElementPreferenceContextKey,
+  createElementPreferencePacketId,
   downcastScopeDisplayPreferenceValueToLegacyV0,
   normalizeScopeDisplayPreferenceValue,
   projectLatestActiveScopeDisplayPreference,
   upcastLegacyScopeDisplayPreferenceValueV0,
 } from './preference-helpers.ts';
 
-test('Preference.scope_display builder normalizes current runtime preference shape', () => {
-  const body = buildScopeDisplayPreferenceBody({
+test('Preference.element builder normalizes current runtime preference shape', () => {
+  const body = buildElementPreferenceBody({
     owner_ref: { packet_id: 'nexus:element/person/alice' },
     value: {
       main_visible_scope_packet_ids: [
@@ -31,16 +37,16 @@ test('Preference.scope_display builder normalizes current runtime preference sha
   });
 
   assert.equal(body.type, 'preference');
-  assert.equal(body.subtype, 'scope_display');
+  assert.equal(body.subtype, 'element');
   assert.equal(body.status, 'active');
   assert.equal(body.privacy, 'private_sync');
-  assert.deepEqual(body.value.main_visible_scope_packet_ids, [
+  assert.deepEqual(body.value.interface.scope_display.main_visible_scope_packet_ids, [
     'nexus:element/locality/city/example',
     'nexus:element/locality/state/example',
   ]);
 });
 
-test('Preference.scope_display defaults match current runtime scope-display defaults', () => {
+test('Preference.element defaults match current runtime element defaults', () => {
   assert.deepEqual(normalizeScopeDisplayPreferenceValue({}), {
     main_visible_scope_packet_ids: [],
     show_associated_parent_chains: true,
@@ -48,40 +54,40 @@ test('Preference.scope_display defaults match current runtime scope-display defa
   });
 });
 
-test('Preference.scope_display derives deterministic context key and packet id', () => {
+test('Preference.element derives deterministic context key and packet id', () => {
   const context = {
     namespace: 'nexus',
     surface_key: 'sidebar',
   };
 
   assert.equal(
-    createScopeDisplayPreferenceContextKey(context),
+    createElementPreferenceContextKey(context),
     'nexus|||sidebar|'
   );
   assert.match(
-    createScopeDisplayPreferencePacketId({
+    createElementPreferencePacketId({
       owner_ref: { packet_id: 'nexus:element/person/alice' },
       context,
     }),
-    /^nexus:preference\/scope-display\//
+    /^nexus:preference\/element\//
   );
 });
 
-test('Preference.scope_display latest-active projection selects the newest matching active body', () => {
+test('Preference.element latest-active projection selects the newest matching active body', () => {
   const owner_ref = { packet_id: 'nexus:element/person/alice' };
-  const older = buildScopeDisplayPreferenceBody({
+  const older = buildElementPreferenceBody({
     owner_ref,
     value: {
       main_visible_scope_packet_ids: ['nexus:element/locality/city/older'],
     },
   });
-  const newer = buildScopeDisplayPreferenceBody({
+  const newer = buildElementPreferenceBody({
     owner_ref,
     value: {
       main_visible_scope_packet_ids: ['nexus:element/locality/city/newer'],
     },
   });
-  const otherOwner = buildScopeDisplayPreferenceBody({
+  const otherOwner = buildElementPreferenceBody({
     owner_ref: { packet_id: 'nexus:element/person/bob' },
     value: {
       main_visible_scope_packet_ids: ['nexus:element/locality/city/bob'],
@@ -97,12 +103,12 @@ test('Preference.scope_display latest-active projection selects the newest match
     ],
   });
 
-  assert.deepEqual(projected?.value.main_visible_scope_packet_ids, [
+  assert.deepEqual(projected?.value.interface.scope_display.main_visible_scope_packet_ids, [
     'nexus:element/locality/city/newer',
   ]);
 });
 
-test('Preference.scope_display compatibility helpers upcast and loss-aware downcast legacy values', () => {
+test('Preference.element compatibility helpers upcast and loss-aware downcast legacy values', () => {
   const upcast = upcastLegacyScopeDisplayPreferenceValueV0({
     main_scope_ids: ['nexus:element/a', 'nexus:element/a', ' nexus:element/b '],
     show_parent_chains: false,
@@ -123,4 +129,36 @@ test('Preference.scope_display compatibility helpers upcast and loss-aware downc
 
   assert.equal(downcast.value.show_parent_chains, false);
   assert.equal(downcast.loss_notes.length, 1);
+});
+
+test('Preference.element definition schema stays aligned with canonical packet body schema', () => {
+  const body = buildElementPreferenceBody({
+    owner_ref: { packet_id: 'nexus:element/person/alice' },
+    context: {
+      namespace: 'nexus',
+      surface_key: 'shell',
+    },
+    value: {
+      main_visible_scope_packet_ids: [
+        'nexus:element/locality/state/example',
+        'nexus:element/locality/city/example',
+        'nexus:element/locality/city/example',
+      ],
+      show_associated_parent_chains: false,
+      show_followed_parent_chains: true,
+    },
+  });
+
+  const definitionParsed = DefinitionElementPreferenceBodySchema.parse(body);
+  const canonicalParsed = CanonicalElementPreferenceBodySchema.parse(body);
+
+  assert.deepEqual(canonicalParsed, definitionParsed);
+  assert.deepEqual(canonicalParsed.value.interface.scope_display, {
+    main_visible_scope_packet_ids: [
+      'nexus:element/locality/city/example',
+      'nexus:element/locality/state/example',
+    ],
+    show_associated_parent_chains: false,
+    show_followed_parent_chains: true,
+  });
 });

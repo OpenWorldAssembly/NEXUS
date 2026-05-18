@@ -168,8 +168,16 @@ This monthly log condenses the May 2026 decisions that remain most important for
 
 ## 2026-05 locality runtime catch-up chapter
 
-- Locality confirmation now routes through one composite `locality.graph.apply` mutation intent above `locality.path.create`, so structural locality writes, selected home-locality changes, scope associations, follows, and temporary scope-display preferences are coordinated together instead of being chained from the client.
-- Partial success is now explicit at that runtime seam: structural locality planning and packet writes remain phase one, while relation and temporary preference writes report their own outcomes without pretending the whole flow is all-or-nothing.
+- Locality confirmation now routes through one composite `locality.graph.apply` mutation intent above `locality.path.create`, so structural locality writes, selected home-locality changes, scope associations, follows, and display preferences are coordinated together instead of being chained from the client.
+- Partial success is now explicit at that runtime seam: structural locality planning and packet writes remain phase one, while relation and display-preference writes report their own outcomes without pretending the whole flow is all-or-nothing.
 - Actor-to-scope relationship reads are now centralized through one runtime controller that treats canonical `home_locality`, `assembly_association`, and `follows` relations as the main truth, while preserving guest and compatibility follow behavior as an explicit fallback bridge.
-- `main` is now a runtime-owned temporary visible-scope preference for claimed actors rather than a relation, and associated/followed parent-context display toggles are now persisted alongside it until the upcoming schema chapter packetizes preferences properly.
+- `main` is a visible-scope preference rather than a relation, and associated/followed parent-context display toggles are persisted alongside it through the current claimed-actor preference bridge.
 - The generic scope-graph projection now returns server-projected `home`, `associated`, `followed`, `main`, and `discoverable` sections for the sidebar, and OWA-specific initiative-anchor relation-policy lookup has been moved out of the generic graph core into a narrower adapter layer.
+
+
+## 2026-05 Preference.element live bridge
+
+- `Preference` is now enrolled in the canonical packet ontology as a replaceable packet family, with `Preference.element` carrying actor-owned scope-display preferences.
+- Claimed actor scope-display writes now create live `Preference.element` packet revisions and also update the legacy runtime preference table as a compatibility cache.
+- Scope-display reads prefer the latest active `Preference.element` packet and fall back to the legacy table when no packet exists; guest preferences remain cookie/session compatibility state.
+- The manifest shadow fortress bridge remains non-executing and descriptor-only. The live path is intentionally narrow until generic policy/planner execution is hardened.

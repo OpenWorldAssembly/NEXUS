@@ -285,6 +285,129 @@ function auditCompatibilityPosture(input: {
   }
 }
 
+
+function auditDefinitionParts(input: {
+  findings: PacketDefinitionAuditFinding[];
+  definition: PacketTypeDefinition;
+  actionIds: Set<string>;
+  builderIds: Set<string>;
+  plannerIds: Set<string>;
+}): void {
+  const parts = input.definition.packet_definition_parts ?? [];
+
+  if (parts.length === 0) {
+    input.findings.push(
+      makeFinding({
+        severity: 'warning',
+        packet_type: input.definition.packet_type,
+        code: 'missing_definition_parts',
+        path: 'packet_definition_parts',
+        message: `Definition ${input.definition.packet_type} does not yet expose packet_definition_parts.`,
+      })
+    );
+    return;
+  }
+
+  pushDuplicateFindings({
+    findings: input.findings,
+    packetType: input.definition.packet_type,
+    collectionName: 'packet_definition_parts',
+    descriptors: parts,
+    getId: (descriptor) => descriptor.part_id,
+  });
+
+  const partIds = new Set(parts.map((part) => part.part_id));
+  const requiredPartSubtypes = new Set(parts.filter((part) => part.required).map((part) => part.part_subtype));
+
+  for (const requiredSubtype of [
+    'packet_definition',
+    'packet_schema',
+    'packet_action_registry',
+    'packet_builder_descriptor',
+    'packet_planner_descriptor',
+    'packet_projection_descriptor',
+    'packet_compatibility',
+    'packet_dependency',
+  ] as const) {
+    if (requiredPartSubtypes.has(requiredSubtype)) {
+      continue;
+    }
+
+    input.findings.push(
+      makeFinding({
+        severity: 'error',
+        packet_type: input.definition.packet_type,
+        code: 'missing_required_definition_part',
+        path: `packet_definition_parts.${requiredSubtype}`,
+        message: `Definition ${input.definition.packet_type} is missing required definition part subtype ${requiredSubtype}.`,
+      })
+    );
+  }
+
+  for (const part of parts) {
+    if (part.defines_packet_type !== input.definition.packet_type) {
+      input.findings.push(
+        makeFinding({
+          severity: 'error',
+          packet_type: input.definition.packet_type,
+          code: 'definition_part_packet_type_mismatch',
+          path: `packet_definition_parts.${part.part_id}.defines_packet_type`,
+          message: `Definition part ${part.part_id} defines ${part.defines_packet_type}, not ${input.definition.packet_type}.`,
+        })
+      );
+    }
+
+    for (const reference of part.references ?? []) {
+      const known =
+        partIds.has(reference) ||
+        input.actionIds.has(reference) ||
+        input.builderIds.has(reference) ||
+        input.plannerIds.has(reference) ||
+        input.definition.projections.some((projection) => projection.projection_key === reference) ||
+        input.definition.compatibility_adapters.some((adapter) => adapter.adapter_id === reference) ||
+        reference.startsWith('generic.') ||
+        reference.startsWith('runtime.') ||
+        reference.startsWith('core.');
+
+      if (known) {
+        continue;
+      }
+
+      input.findings.push(
+        makeFinding({
+          severity: 'warning',
+          packet_type: input.definition.packet_type,
+          code: 'unresolved_definition_part_reference',
+          path: `packet_definition_parts.${part.part_id}.references`,
+          message: `Definition part ${part.part_id} references unresolved descriptor ${reference}.`,
+        })
+      );
+    }
+  }
+
+  const schemaCoveredSubtypes = new Set(
+    parts
+      .filter((part) => part.part_subtype === 'packet_schema')
+      .flatMap((part) => part.covers_subtypes ?? [])
+  );
+
+  for (const declaredSubtype of input.definition.declared_subtypes) {
+    if (schemaCoveredSubtypes.has(declaredSubtype)) {
+      continue;
+    }
+
+    input.findings.push(
+      makeFinding({
+        severity: 'error',
+        packet_type: input.definition.packet_type,
+        code: 'declared_subtype_without_schema_part',
+        path: `declared_subtypes.${declaredSubtype}`,
+        message: `Declared subtype ${declaredSubtype} is not covered by a packet_schema definition part.`,
+      })
+    );
+  }
+}
+
 function auditRuntimeCapabilitySupport(input: {
   findings: PacketDefinitionAuditFinding[];
   definition: PacketTypeDefinition;
@@ -437,6 +560,8 @@ export function auditPacketTypeDefinition(input: {
     descriptors: definition.indexes,
     getId: (descriptor) => descriptor.index_key,
   });
+
+  auditDefinitionParts({ findings, definition, actionIds, builderIds, plannerIds });
 
   auditDescriptorSubtypes({
     findings,

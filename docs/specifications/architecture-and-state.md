@@ -49,9 +49,9 @@ Current scope consumer direction in code includes:
 - locality creation now emits provisional `Location(subtype: region)` packets plus `Relation(subtype: defined_by_location)` so linked location packets are part of the live writer path as well as the read seam
 - the active shell sidebar now consumes server-projected graph sections rather than reconstructing section truth from thin scope-id arrays
 - scope projection now returns `home`, `associated`, `followed`, `main`, and `discoverable` sections, with descriptor-aware grouping and optional lightweight parent-context chains for associated and followed scopes
-- locality confirmation now uses one composite runtime apply seam above `locality.path.create` so structural locality writes, scope relations, and temporary display preferences are coordinated together
-- `main` is currently a runtime-owned temporary visible-scope preference rather than a packet-backed relation or preference family
-- claimed-actor temporary scope-display preferences now persist in runtime storage, while guest preference behavior remains an explicit compatibility/session bridge
+- locality confirmation now uses one composite runtime apply seam above `locality.path.create` so structural locality writes, scope relations, and packet-backed claimed display preferences are coordinated together
+- `main` is a display preference, not a relation; claimed actors now persist it through `Preference.element` packets with the legacy runtime table kept as a compatibility cache
+- guest scope-display preference behavior remains an explicit compatibility/session bridge
 - the current home trunk renders broadest-to-smallest, while associated scopes remain mounted related scopes outside the geographic ancestry chain
 - shell UI actions for follow and association now route through the canonical mutation corridor and refresh scope projection after success instead of relying on local-only toggles
 - dashboard payloads are now scope-backed runtime projections rather than static shell filler

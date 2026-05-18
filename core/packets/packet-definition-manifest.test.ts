@@ -8,9 +8,9 @@ import test from 'node:test';
 
 import {
   BundleBodySchema,
-  CompatibilityBodySchema,
-  PACKET_MANIFEST_TEMPLATE_VERSION,
+  DefinitionBodySchema,
   PACKET_DEFINITION_MANIFEST,
+  PACKET_MANIFEST_TEMPLATE_VERSION,
   PreferenceBodySchema,
   derivePacketDefinitionActionKinds,
   getExperimentalPacketTypeDefinition,
@@ -20,92 +20,85 @@ import {
   listExperimentalPacketMutations,
   listExperimentalPacketPlanners,
   listExperimentalPacketTypeDefinitions,
+  listPacketDefinitionParts,
   listPacketManifestTemplateSections,
   validatePacketDefinitionTemplateCompliance,
 } from '@core/packets/packet-definition-manifest';
 
-test('experimental manifest exposes Preference, Bundle, and Compatibility packet types', () => {
+test('experimental manifest exposes Definition, Preference, and Bundle packet types', () => {
   const packetTypes = listExperimentalPacketTypeDefinitions().map(
     (definition) => definition.packet_type
   );
 
-  assert.deepEqual(packetTypes.sort(), ['Bundle', 'Compatibility', 'Preference']);
+  assert.deepEqual(packetTypes.sort(), ['Bundle', 'Definition', 'Preference']);
   assert.equal(PACKET_DEFINITION_MANIFEST.manifest_type, 'packet_definition_manifest');
   assert.equal(PACKET_DEFINITION_MANIFEST.template_version, PACKET_MANIFEST_TEMPLATE_VERSION);
   assert.ok(PACKET_DEFINITION_MANIFEST.items.every((item) => item.action_count > 0));
-  assert.ok(PACKET_DEFINITION_MANIFEST.items.every((item) => item.builder_count > 0));
-  assert.ok(PACKET_DEFINITION_MANIFEST.items.every((item) => item.planner_count > 0));
   assert.ok(
     PACKET_DEFINITION_MANIFEST.items.every((item) => item.action_kinds.length > 0)
   );
 });
 
-test('Preference.scope_display can represent current shell scope display preferences', () => {
+test('Definition packet can represent a packet_schema definition part', () => {
+  const parsed = DefinitionBodySchema.parse({
+    subtype: 'packet_schema',
+    defines_packet_type: 'Preference',
+    defines_packet_subtype: 'element',
+    summary: 'Defines the Preference.element body shape.',
+    schema_key: 'ElementPreferenceBodySchema',
+    supported_subtypes: ['element'],
+  });
+
+  assert.equal(parsed.type, 'definition');
+  assert.equal(parsed.subtype, 'packet_schema');
+  assert.deepEqual(parsed.supported_subtypes, ['element']);
+});
+
+test('Preference.element can represent current shell scope display preferences', () => {
   const parsed = PreferenceBodySchema.parse({
     owner_ref: { packet_id: 'nexus:element/person/alice' },
-    subtype: 'scope_display',
+    subtype: 'element',
     value: {
-      main_visible_scope_packet_ids: ['nexus:element/locality/city/example'],
-      show_associated_parent_chains: true,
-      show_followed_parent_chains: false,
+      interface: {
+        scope_display: {
+          main_visible_scope_packet_ids: ['nexus:element/locality/city/example'],
+          show_associated_parent_chains: true,
+          show_followed_parent_chains: false,
+        },
+      },
     },
   });
 
   assert.equal(parsed.type, 'preference');
   assert.equal(parsed.privacy, 'private_sync');
-  assert.deepEqual(parsed.value.main_visible_scope_packet_ids, [
+  assert.deepEqual(parsed.value.interface.scope_display.main_visible_scope_packet_ids, [
     'nexus:element/locality/city/example',
   ]);
 });
 
-test('Compatibility packet supports nearest-current two-way adapter metadata', () => {
-  const parsed = CompatibilityBodySchema.parse({
-    packet_type: 'Preference',
-    packet_subtype: 'scope_display',
-    current_schema_version: '0.2.0',
-    supported_schema_versions: ['0.1.0', '0.2.0'],
-    nearest_current_steps: [
-      {
-        adapter_id: 'preference.scope_display.0_1_to_0_2',
-        source_packet_type: 'Preference',
-        source_packet_subtype: 'scope_display',
-        source_schema_version: '0.1.0',
-        target_packet_type: 'Preference',
-        target_packet_subtype: 'scope_display',
-        target_schema_version: '0.2.0',
-        direction: 'bidirectional_neighbor',
-      },
-    ],
-  });
-
-  assert.equal(parsed.nearest_current_steps[0].direction, 'bidirectional_neighbor');
-});
-
-test('Bundle packet can carry compatibility-chain transport metadata', () => {
+test('Bundle packet stays a generic carrier inventory', () => {
   const parsed = BundleBodySchema.parse({
-    subtype: 'compatibility_bundle',
-    title: 'Preference compatibility bundle',
-    purpose: 'Transport full adapter chain for Preference.scope_display.',
-    compatibility_chains: [
+    subtype: 'packet_set',
+    title: 'Preference definition parts bundle',
+    purpose: 'Transport definition parts while preserving their own packet semantics.',
+    items: [
       {
-        packet_type: 'Preference',
-        packet_subtype: 'scope_display',
-        current_schema_version: '0.2.0',
-        known_schema_versions: ['0.1.0', '0.2.0'],
-        adapter_packet_refs: [{ packet_id: 'nexus:compatibility/preference/scope-display/0-1-0-2' }],
+        item_role: 'definition_part',
+        packet_type: 'Definition',
+        packet_subtype: 'packet_schema',
+        schema_version: '0.1.0',
       },
     ],
   });
 
   assert.equal(parsed.type, 'bundle');
-  assert.equal(parsed.compatibility_chains[0].packet_type, 'Preference');
+  assert.equal(parsed.items[0].item_role, 'definition_part');
 });
 
 test('manifest lookup returns null for packet types not enrolled in shadow mode', () => {
   assert.equal(getExperimentalPacketTypeDefinition('Relation')?.packet_type, undefined);
   assert.equal(getExperimentalPacketTypeDefinition('Preference')?.packet_type, 'Preference');
 });
-
 
 test('manifest exposes shadow action, builder, planner, and mutation descriptors', () => {
   const preferenceActions = listExperimentalPacketActions('Preference').map(
@@ -121,29 +114,27 @@ test('manifest exposes shadow action, builder, planner, and mutation descriptors
     (mutation) => mutation.mutation_intent
   );
 
-  assert.ok(preferenceActions.includes('preference.scope_display.create'));
-  assert.ok(preferenceBuilders.includes('preference.scope_display.body.v0'));
+  assert.ok(preferenceActions.includes('preference.element.create'));
+  assert.ok(preferenceBuilders.includes('preference.element.body.v0'));
   assert.ok(
-    preferencePlanners.includes('preference.scope_display.latest_active_revision.v0')
+    preferencePlanners.includes('preference.element.latest_active_revision.v0')
   );
-  assert.ok(preferenceMutations.includes('preference.scope_display.set'));
+  assert.ok(preferenceMutations.includes('preference.element.set'));
 });
 
-test('Bundle and Compatibility definitions include portable propagation affordances', () => {
-  const bundleActions = listExperimentalPacketActions('Bundle').map(
-    (action) => action.action_id
-  );
-  const compatibilityPlanners = listExperimentalPacketPlanners('Compatibility').map(
-    (planner) => planner.planner_id
+test('Preference definition exposes required Definition parts', () => {
+  const preferenceDefinition = getExperimentalPacketTypeDefinition('Preference');
+  assert.ok(preferenceDefinition);
+
+  const partSubtypes = listPacketDefinitionParts(preferenceDefinition).map(
+    (part) => part.part_subtype
   );
 
-  assert.ok(bundleActions.includes('bundle.schema_manifest.create'));
-  assert.ok(bundleActions.includes('bundle.compatibility_bundle.create'));
-  assert.ok(
-    compatibilityPlanners.includes('compatibility.nearest_current_adapter.v0')
-  );
+  assert.ok(partSubtypes.includes('packet_definition'));
+  assert.ok(partSubtypes.includes('packet_schema'));
+  assert.ok(partSubtypes.includes('packet_compatibility'));
+  assert.ok(partSubtypes.includes('packet_dependency'));
 });
-
 
 test('packet manifest template exposes the expected section contract', () => {
   const sections = listPacketManifestTemplateSections().map(
@@ -166,7 +157,6 @@ test('packet actions are the source of derived affordances', () => {
   assert.ok(actionKinds.includes('create'));
   assert.ok(actionKinds.includes('revise'));
   assert.ok(actionKinds.includes('project'));
-  assert.ok(actionKinds.includes('bundle'));
   assert.equal('affordances' in preferenceDefinition, false);
 });
 
@@ -192,7 +182,7 @@ test('Preference definition declares concrete shadow compatibility adapters', ()
     (adapter) => adapter.adapter_id
   );
 
-  assert.ok(adapterIds.includes('preference.scope_display.legacy_v0_to_0_1'));
-  assert.ok(adapterIds.includes('preference.scope_display.0_1_to_legacy_v0'));
-  assert.ok(adapterIds.includes('preference.scope_display.0_1_current_neighbor'));
+  assert.ok(adapterIds.includes('preference.element.legacy_v0_to_0_1'));
+  assert.ok(adapterIds.includes('preference.element.0_1_to_legacy_v0'));
+  assert.ok(adapterIds.includes('preference.element.0_1_current_neighbor'));
 });

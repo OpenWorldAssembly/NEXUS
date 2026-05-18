@@ -5,7 +5,7 @@
 
 import {
   bundlePacketDefinition,
-  compatibilityPacketDefinition,
+  definitionPacketDefinition,
   preferencePacketDefinition,
   type PacketDefinitionManifest,
   type PacketTypeDefinition,
@@ -14,9 +14,9 @@ import { derivePacketDefinitionActionKinds } from '@core/packets/packet-definiti
 import { PACKET_MANIFEST_TEMPLATE_VERSION } from '@core/packets/packet-definition-template.ts';
 
 export const EXPERIMENTAL_PACKET_TYPE_DEFINITIONS = {
+  Definition: definitionPacketDefinition,
   Preference: preferencePacketDefinition,
   Bundle: bundlePacketDefinition,
-  Compatibility: compatibilityPacketDefinition,
 } as const satisfies Record<string, PacketTypeDefinition>;
 
 export type ExperimentalPacketType =
@@ -40,15 +40,16 @@ export const PACKET_DEFINITION_MANIFEST = {
       manifest_role:
         definition.packet_type === 'Bundle'
           ? 'bundle_definition'
-          : definition.packet_type === 'Compatibility'
-            ? 'compatibility_definition'
+          : definition.packet_type === 'Definition'
+            ? 'definition_definition'
             : 'packet_type_definition',
     })
   ),
   dependencies: [],
   compatibility_notes: [
     'This manifest is a shadow-mode definition surface. It does not replace live PACKET_FAMILIES yet.',
-    'Individual Compatibility packets should carry nearest-current adapter steps; Bundle packets should carry full adapter chains.',
+    'Definition.packet_compatibility parts carry nearest-current adapter metadata in the current experiment.',
+    'Bundle packets remain carrier inventories and are not the semantic home for packet definitions.',
     'The manifest uses packet_type language as the forward-facing replacement for packet family terminology.',
   ],
 } as const satisfies PacketDefinitionManifest;

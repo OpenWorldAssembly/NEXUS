@@ -34,6 +34,7 @@ const FAMILY_LABELS: Record<PacketEnvelope['header']['family'], string> = {
   MissionReport: 'mission report',
   Module: 'module packet',
   Policy: 'policy packet',
+  Preference: 'preference packet',
   Discussion: 'discussion packet',
   DiscussionSpace: 'discussion space',
   DiscussionForum: 'discussion forum',
@@ -134,6 +135,10 @@ export function getPacketDisplayLabel(packet: PacketEnvelope): string {
       }
       return FAMILY_LABELS.Policy;
     }
+    case 'Preference': {
+      const body = packet.body as PacketBodyByType['Preference'];
+      return `${titleCase(body.subtype)} preference`;
+    }
     case 'Role': {
       const body = packet.body as PacketBodyByType['Role'];
       return `${titleCase(body.role_kind)} role`;
@@ -217,6 +222,10 @@ export function getPacketTitle(packet: PacketEnvelope): string {
       const body = packet.body as PacketBodyByType['Attestation'];
       return `${titleCase(body.subtype ?? body.attestation_kind)} attestation`;
     }
+    case 'Preference': {
+      const body = packet.body as PacketBodyByType['Preference'];
+      return `${titleCase(body.subtype)} preference`;
+    }
     case 'Discussion': {
       const body = packet.body as PacketBodyByType['Discussion'];
       return body.kind === 'message' && body.role === 'reply' ? 'Reply' : body.title;
@@ -271,6 +280,10 @@ export function getPacketSummary(packet: PacketEnvelope): string | null {
     case 'Policy': {
       const body = packet.body as PacketBodyByType['Policy'];
       return body.summary ?? null;
+    }
+    case 'Preference': {
+      const body = packet.body as PacketBodyByType['Preference'];
+      return body.note ?? null;
     }
     case 'Role': {
       const body = packet.body as PacketBodyByType['Role'];
@@ -328,6 +341,8 @@ export function getPacketStatus(packet: PacketEnvelope): string | null {
       return null;
     case 'Attestation':
       return (packet.body as PacketBodyByType['Attestation']).status;
+    case 'Preference':
+      return (packet.body as PacketBodyByType['Preference']).status;
     case 'Minutes':
       return null;
     case 'Artifact':

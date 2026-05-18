@@ -18,8 +18,8 @@
 - legacy `nation | region | city | district` locality levels remain current compatibility buckets rather than the full future locality model
 - locality ancestry is now planned from ordered broad-to-narrow path entries, and sparse paths are valid current behavior; absolute depth is still projection-only and is not stored on packets
 - locality creation now has a real non-mutating review seam, but the home-branch inclusion checklist shown during review is still preview-only and does not yet alter stored `home_locality` relation semantics
-- locality confirm now applies home, association, follow, and temporary `main` visibility choices through one composite runtime write seam, but `main` itself is still only a runtime-owned temporary preference rather than a packet-backed preference model
-- associated and followed parent-context display is now a temporary runtime preference as well, with claimed-actor persistence and guest compatibility fallback, rather than a packet-backed preference surface
+- locality confirm now applies home, association, follow, and `main` visibility choices through one composite runtime write seam; claimed `main` scope-display state now persists through `Preference.element` packets while guest/session behavior remains compatibility state
+- associated and followed parent-context display now persists through the same claimed-actor `Preference.element` bridge, with guest compatibility fallback still session/cookie-based
 - same-name locality matches in other parent branches no longer need to suppress the create-path handoff, but orphan existing-scope remounting is still intentionally unresolved rather than silently repaired in this phase
 - generic abstract assembly creation and richer locality governance are still later work
 
@@ -55,5 +55,5 @@ The following areas should still be treated as provisional:
 - vote execution, delegation, and propagation semantics
 - long-term initiative filtering and visibility modes
 - packet actions that currently appear as disabled placeholders
-- packet-backed preference modeling for `main` and related shell display options
+- expanding packet-backed `Preference.element` beyond scope-display into the remaining shell/interface preference sections
 - any architecture or theory in the implementation guide that is not already represented in executable code

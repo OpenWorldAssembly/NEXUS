@@ -7,10 +7,10 @@ import type { PacketRef, PacketRevisionRef } from '@core/schema/packet-schema';
 
 import {
   PreferenceContextSchema,
-  ScopeDisplayPreferenceBuilderInputSchema,
+  ElementPreferenceBuilderInputSchema,
   ScopeDisplayPreferenceValueSchema,
   type PreferenceBody,
-  type ScopeDisplayPreferenceBuilderInput,
+  type ElementPreferenceBuilderInput,
   type ScopeDisplayPreferenceContext,
   type ScopeDisplayPreferenceValue,
 } from './preference.ts';
@@ -20,13 +20,13 @@ export const DEFAULT_SCOPE_DISPLAY_PREFERENCE_CONTEXT = PreferenceContextSchema.
 export const DEFAULT_SCOPE_DISPLAY_PREFERENCE_VALUE =
   ScopeDisplayPreferenceValueSchema.parse({});
 
-export type ScopeDisplayPreferenceBody = Extract<
+export type ElementPreferenceBody = Extract<
   PreferenceBody,
-  { subtype: 'scope_display' }
+  { subtype: 'element' }
 >;
 
 export type ScopeDisplayPreferenceProjectionRecord = {
-  body: ScopeDisplayPreferenceBody;
+  body: ElementPreferenceBody;
   revision_ref?: PacketRevisionRef | null;
   recorded_at?: string | null;
 };
@@ -34,7 +34,7 @@ export type ScopeDisplayPreferenceProjectionRecord = {
 export type ScopeDisplayPreferenceProjectionInput = {
   owner_ref: PacketRef;
   context?: Partial<ScopeDisplayPreferenceContext> | null;
-  records: readonly (ScopeDisplayPreferenceBody | ScopeDisplayPreferenceProjectionRecord)[];
+  records: readonly (ElementPreferenceBody | ScopeDisplayPreferenceProjectionRecord)[];
 };
 
 export type LegacyScopeDisplayPreferenceValueV0 = {
@@ -87,7 +87,7 @@ export function normalizeScopeDisplayPreferenceValue(
   });
 }
 
-export function createScopeDisplayPreferenceContextKey(
+export function createElementPreferenceContextKey(
   context: Partial<ScopeDisplayPreferenceContext> | null | undefined
 ): string {
   const normalizedContext = normalizeContext(context);
@@ -101,43 +101,47 @@ export function createScopeDisplayPreferenceContextKey(
   ].join('|');
 }
 
-export function createScopeDisplayPreferencePacketId(input: {
+export function createElementPreferencePacketId(input: {
   owner_ref: PacketRef;
   context?: Partial<ScopeDisplayPreferenceContext> | null;
 }): string {
-  const contextKey = createScopeDisplayPreferenceContextKey(input.context);
+  const contextKey = createElementPreferenceContextKey(input.context);
 
   return [
     'nexus:preference',
-    'scope-display',
+    'element',
     encodePacketIdSegment(input.owner_ref.packet_id),
     encodePacketIdSegment(contextKey),
   ].join('/');
 }
 
-export function buildScopeDisplayPreferenceBody(
-  input: ScopeDisplayPreferenceBuilderInput
-): ScopeDisplayPreferenceBody {
-  const parsedInput = ScopeDisplayPreferenceBuilderInputSchema.parse({
+export function buildElementPreferenceBody(
+  input: ElementPreferenceBuilderInput
+): ElementPreferenceBody {
+  const parsedInput = ElementPreferenceBuilderInputSchema.parse({
     ...input,
     value: normalizeScopeDisplayPreferenceValue(input.value),
   });
 
   return {
     type: 'preference',
-    subtype: 'scope_display',
+    subtype: 'element',
     owner_ref: parsedInput.owner_ref,
     status: 'active',
     privacy: parsedInput.privacy ?? 'private_sync',
     context: normalizeContext(parsedInput.context),
     supersedes_ref: parsedInput.supersedes_ref ?? null,
     note: parsedInput.note ?? null,
-    value: normalizeScopeDisplayPreferenceValue(parsedInput.value),
+    value: {
+      interface: {
+        scope_display: normalizeScopeDisplayPreferenceValue(parsedInput.value),
+      },
+    },
   };
 }
 
 function unwrapProjectionRecord(
-  record: ScopeDisplayPreferenceBody | ScopeDisplayPreferenceProjectionRecord,
+  record: ElementPreferenceBody | ScopeDisplayPreferenceProjectionRecord,
   arrayIndex: number
 ): ScopeDisplayPreferenceProjectionRecord & { arrayIndex: number } {
   if ('body' in record) {
@@ -157,17 +161,17 @@ function unwrapProjectionRecord(
 
 export function projectLatestActiveScopeDisplayPreference(
   input: ScopeDisplayPreferenceProjectionInput
-): ScopeDisplayPreferenceBody | null {
+): ElementPreferenceBody | null {
   const targetOwnerPacketId = input.owner_ref.packet_id;
-  const targetContextKey = createScopeDisplayPreferenceContextKey(input.context);
+  const targetContextKey = createElementPreferenceContextKey(input.context);
 
   const candidates = input.records
     .map(unwrapProjectionRecord)
     .filter((record) => record.body.owner_ref.packet_id === targetOwnerPacketId)
-    .filter((record) => record.body.subtype === 'scope_display')
+    .filter((record) => record.body.subtype === 'element')
     .filter((record) => record.body.status === 'active')
     .filter(
-      (record) => createScopeDisplayPreferenceContextKey(record.body.context) === targetContextKey
+      (record) => createElementPreferenceContextKey(record.body.context) === targetContextKey
     );
 
   if (candidates.length === 0) {

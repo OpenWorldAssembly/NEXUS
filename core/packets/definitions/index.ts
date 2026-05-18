@@ -4,7 +4,8 @@
  */
 
 export * from './packet-definition-types.ts';
+export * from './definition.ts';
+export * from './definition-bootstrap.ts';
 export * from './preference.ts';
 export * from './preference-helpers.ts';
 export * from './bundle.ts';
-export * from './compatibility.ts';

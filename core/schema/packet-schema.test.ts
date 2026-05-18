@@ -1423,3 +1423,73 @@ test('current Policy packets parse relation requirement rules for supporting cla
     'home_locality'
   );
 });
+
+test('current Preference.element packets parse scope-display preferences', () => {
+  const packet = parsePacketEnvelope({
+    header: {
+      packet_id: 'nexus:preference/element/test-owner/default',
+      revision_id: 'nexus:preference/element/test-owner/default@r1',
+      family: 'Preference',
+      schema_version: '0.1.0',
+      protocol_version: 'nexus.packet/1.0',
+      created_at: '2026-05-17T00:00:00.000Z',
+      parent_revision_refs: [],
+      merge_strategy: 'last_write_wins',
+      authority_scope_ref: { packet_id: 'nexus:element/test-owner' },
+      applicable_scope_refs: [{ packet_id: 'nexus:element/test-owner' }],
+      edges: [],
+      provenance: {
+        created_by: { packet_id: 'nexus:element/test-owner' },
+        submitted_by: { packet_id: 'nexus:element/test-owner' },
+        adapter: 'nexus-runtime',
+        recorded_at: '2026-05-17T00:00:00.000Z',
+        imported_from_revision: null,
+      },
+      moderation: {
+        visibility: 'private',
+        moderation_state: 'open',
+        policy_refs: [],
+        content_warning_ids: [],
+      },
+      external_refs: [],
+      metadata: {
+        tags: ['preference', 'element', 'scope_display'],
+        language: null,
+        summary: 'Element scope-display preferences.',
+      },
+    },
+    body: {
+      type: 'preference',
+      subtype: 'element',
+      owner_ref: { packet_id: 'nexus:element/test-owner' },
+      status: 'active',
+      privacy: 'private_sync',
+      context: {
+        namespace: 'nexus',
+        initiative_ref: null,
+        scope_ref: null,
+        surface_key: null,
+        device_key: null,
+      },
+      supersedes_ref: null,
+      note: 'Element scope-display preferences.',
+      value: {
+        interface: {
+          scope_display: {
+            main_visible_scope_packet_ids: ['nexus:element/city'],
+            show_associated_parent_chains: false,
+            show_followed_parent_chains: true,
+          },
+        },
+      },
+    },
+  });
+
+  assert.equal(packet.header.family, 'Preference');
+  assert.equal(packet.body.subtype, 'element');
+  assert.deepEqual(packet.body.value.interface.scope_display, {
+    main_visible_scope_packet_ids: ['nexus:element/city'],
+    show_associated_parent_chains: false,
+    show_followed_parent_chains: true,
+  });
+});

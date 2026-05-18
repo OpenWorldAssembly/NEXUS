@@ -31,7 +31,7 @@ test('audits the experimental packet definition manifest', () => {
   });
 
   assert.equal(report.finding_counts.error, 0);
-  assert.deepEqual(report.checked_packet_types.sort(), ['Bundle', 'Compatibility', 'Preference']);
+  assert.deepEqual(report.checked_packet_types.sort(), ['Bundle', 'Definition', 'Preference']);
 });
 
 test('reports missing builder references as audit errors', () => {

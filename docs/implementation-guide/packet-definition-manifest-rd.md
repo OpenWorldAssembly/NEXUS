@@ -2,7 +2,7 @@
 
 ## Status
 
-Experimental shadow-mode design. This does not replace live packet families, builders, runtime writes, or the alpha demo storage model yet.
+Experimental design with one narrow live bridge. Most manifest work remains shadow-mode, but `Preference.element` is now enrolled as a canonical packet family for claimed actor scope-display preference writes while the legacy runtime table remains a compatibility cache.
 
 ## Intent
 
@@ -12,7 +12,9 @@ The forward-facing language is **packet type** and **packet subtype**. Current c
 
 ## Manifest shape
 
-The manifest is bundle-shaped: it lists items, schema versions, dependencies, compatibility notes, action kinds, and definition status. It is not yet emitted as a live Bundle packet.
+The manifest is now modeled around a native bootstrap `Definition` packet type. The TypeScript manifest remains shadow code, but its sections line up with Definition parts instead of treating Bundle as the semantic home for packet definitions.
+
+Bundle remains a carrier/inventory packet. It may transport Definition parts, Preference packets, resources, and adapter metadata, but those items keep their own packet semantics.
 
 The current experimental surface lives at:
 
@@ -64,31 +66,40 @@ The current descriptors are deliberately marked `shadow_only`. They document the
 
 ## Prototype packet types
 
+### Definition
+
+`Definition` is the bootstrap packet type for packet definitions. Version 0 is core-native so nodes can cold-start without fetching a definition packet before they know how to read definitions.
+
+Current experimental Definition subtypes are intentionally limited to packet-definition work we are actively using:
+
+- `packet_definition`
+- `packet_schema`
+- `packet_action_registry`
+- `packet_builder_descriptor`
+- `packet_planner_descriptor`
+- `packet_projection_descriptor`
+- `packet_compatibility`
+- `packet_dependency`
+
+The long-term model is graph-discoverable definition parts resolved into a pinned local definition profile. The current implementation only proves the shape in shadow mode.
+
 ### Preference
 
-`Preference.scope_display` models the runtime shell preferences that currently control:
+`Preference.element` models the runtime shell preferences that currently control:
 
 - visible main scope packet IDs
 - associated parent-chain display
 - followed parent-chain display
 
-The runtime preference store remains canonical for the alpha. Preference packets are a shadow-mode schema target.
+Preference is now enrolled as a canonical packet family for the first live R&D bridge. Claimed actor scope-display preferences write `Preference.element` packets and keep the legacy runtime preference table as a compatibility cache. Guest preferences remain cookie/session compatibility state.
 
 Preference packets are actor-owned configuration. They do not create relationships and should not make scopes eligible for the main graph. They only configure display of scopes already eligible through home, association, follow, or later relation types.
 
-### Compatibility
-
-Compatibility packets should carry nearest-current adapter information. The preferred model is not for every packet to carry a full historical chain. Instead:
-
-- individual Compatibility packets describe adapter steps to and from current or adjacent supported versions
-- Compatibility bundles carry full daisy chains when a node needs to update or force a packet into an earlier shape
-- downcasts must remain loss-aware and may require acknowledgement when fields are omitted, coerced, or safely defaulted
-
 ### Bundle
 
-Bundle packets are the intended transport vessel for packet sets, schema manifests, and compatibility chains.
+Bundle packets are generic carrier inventories for packet sets, exports, sync payloads, and archives. Bundle is not the semantic home for packet definitions or compatibility.
 
-The packet definition manifest is intentionally bundle-shaped so it can later become bundle-compatible without turning the current R&D file into a live packet write path.
+Definition parts such as `definition.packet_compatibility` and `definition.packet_dependency` may travel inside a Bundle inventory while retaining their own packet meaning.
 
 ## Helper model
 
@@ -103,28 +114,29 @@ Runtime should eventually pair these descriptors with a local allowlist of suppo
 The long-term portability model is:
 
 - packet definitions describe nearest-current builders, planners, actions, and adapter posture
-- Compatibility packets describe safe upcast/downcast steps near the current schema version
-- Bundle packets carry schema manifests and full compatibility-chain transport metadata across nodes
-- nodes can update their local systems by importing Bundle packets that include schema definitions, compatibility packets, adapter-chain metadata, fixtures, and safety/loss notes
+- Definition packets describe schemas, actions, builders, planners, projections, compatibility, and dependencies
+- `definition.packet_compatibility` parts describe safe upcast/downcast steps near the current schema version
+- Bundle packets carry Definition parts and related packet inventories across nodes
+- nodes can update their local systems by importing Bundle inventories that include definition parts, adapter metadata, fixtures, and safety/loss notes
 
-The manifest should eventually be exportable as a `Bundle.schema_manifest` packet, but the current file remains a shadow code manifest only.
+The manifest may eventually be carried inside a Bundle inventory, but the manifest itself is a Definition graph/profile concept, not a Bundle subtype.
 
 ## Next use
 
-The next safe runtime step is to complete `Preference.scope_display` as the first full template example, then build shadow conversion helpers between current runtime preferences and Preference packet bodies before any live-canonical flip.
+The current safe runtime step is to use `Preference.element` as the first full template example while still limiting the live bridge to scope-display preferences.
 
-## Preference.scope_display shadow prototype
+## Preference.element shadow prototype
 
-The first completed packet-type example is `Preference.scope_display`. It now has shadow helpers for:
+The first completed packet-type example is `Preference.element`. It now has shadow helpers for:
 
-- building a normalized Preference body from scope-display inputs
+- building a normalized Preference body from element inputs
 - deriving a deterministic owner/subtype/context packet ID
 - projecting the latest active preference for an owner and context
 - converting between runtime shell preferences and Preference packet bodies
 - upcasting the old one-toggle shape into current associated/followed parent-chain toggles
 - downcasting with loss notes when current state cannot fit the older shape exactly
 
-This remains non-canonical for the alpha demo. The runtime scope-display preference store still owns live reads and writes; Preference packets are only a shadow target for proving the manifest, builder, projection, and compatibility design.
+This is now partially live for claimed actor scope-display preferences. Runtime reads prefer the latest active `Preference.element` packet and fall back to the legacy table when no packet exists. The table remains a compatibility cache so the alpha demo keeps its current behavior while the packet path proves itself.
 
 
 ## Shadow action bridge
@@ -137,17 +149,17 @@ The bridge does not execute packet code from manifests. It only checks descripto
 - builder kinds
 - planner kinds
 
-For `Preference.scope_display`, the shadow bridge can resolve `preference.scope_display.set` into:
+For `Preference.element`, the shadow bridge can resolve `preference.element.set` into:
 
 - the declared mutation descriptor
 - the latest-active revision planner descriptor
-- the scope-display body builder descriptor
-- the `preference.scope_display.write` policy action ID
+- the element body builder descriptor
+- the `preference.element.write` policy action ID
 - a readiness flag for shadow runtime planning
 
-This is the first seam between the packet definition manifest and the fortress corridor. It is not wired into live prepare/finalize routes yet, and it does not create live `PacketEnvelope` records because `Preference` is still outside the canonical packet ontology.
+This is the first seam between the packet definition manifest and the fortress corridor. It is still not a fully manifest-executed prepare/finalize route, but `Preference` is now inside the canonical packet ontology and the scope-display bridge can create live `PacketEnvelope` records.
 
-The runtime shadow planner can now build a manifest-backed `Preference.scope_display` plan from the existing runtime preference payload. The plan includes the deterministic packet ID, normalized body, projected runtime preference shape, resolved action plan, storage class, revision behavior, and explicit `live_fortress_ready: false` marker.
+The runtime shadow planner can now build a manifest-backed `Preference.element` plan from the existing runtime preference payload. The plan includes the deterministic packet ID, normalized body, projected runtime preference shape, resolved action plan, storage class, revision behavior, and explicit `live_fortress_ready: false` marker.
 
 That marker is intentional. It keeps the alpha demo safe while proving that manifest-defined actions, builders, planners, policy action IDs, and ID strategy can line up before the live fortress accepts the new packet type.
 
@@ -158,12 +170,12 @@ The manifest layer now includes a shadow audit harness before any live fortress 
 - packet definitions are checked for template-section compliance;
 - descriptor IDs are checked for duplicates;
 - builders, planners, mutations, and actions are checked for broken references;
-- compatibility adapters are checked against the nearest-current design posture;
+- compatibility adapters and `definition.packet_compatibility` parts are checked against the nearest-current design posture;
 - mutation plans are checked against local supported generic builder/planner/action capabilities.
 
-`Preference.scope_display` also has a shadow seed candidate helper. The seed helper converts current runtime scope-display preferences into the experimental Preference body, projects that body back into the current runtime preference shape, and marks the candidate safe only when the projection is equivalent and the packet definition audit has no errors.
+`Preference.element` also has a shadow seed candidate helper. The seed helper converts current runtime element preferences into the experimental Preference body, projects that body back into the current runtime preference shape, and marks the candidate safe only when the projection is equivalent and the packet definition audit has no errors.
 
-These helpers still do not persist packets or change the live runtime preference source of truth. They exist to let us run the bridge in parallel, compare behavior, and catch descriptor drift before enabling live writes.
+The shadow helpers still exist for audit and descriptor comparison, but the claimed-actor scope-display path now persists a live `Preference.element` packet in parallel with the runtime compatibility cache.
 
 ## Shadow fortress bridge
 
@@ -176,10 +188,10 @@ The bridge translates packet-definition descriptors into fortress-shaped prepare
 - local planner and builder capability support;
 - manifest-derived action IDs;
 - manifest-derived policy action IDs;
-- deterministic shadow packet candidate identity and digest metadata for `Preference.scope_display`.
+- deterministic shadow packet candidate identity and digest metadata for `Preference.element`.
 
-This bridge deliberately returns `live_fortress_ready: false`. `Preference` is not yet enrolled in the live `PacketEnvelope` ontology, the live mutation intent registry, or the write-policy action union. The bridge exists to prove that the manifest can feed the shape of fortress preparation while runtime preferences remain canonical.
+This bridge still returns `live_fortress_ready: false` because manifest descriptors do not yet execute the live mutation corridor. `Preference` is now enrolled in the `PacketEnvelope` ontology, but the bridge remains a controlled runtime helper rather than arbitrary packet-defined server behavior.
 
-For `Preference.scope_display`, the shadow bridge can produce a prepare-shaped candidate from current runtime scope-display preferences, project that candidate back into runtime preference shape, and report which generic builder/planner/policy descriptors would be used once live enrollment is safe.
+For `Preference.element`, the shadow bridge can produce a prepare-shaped candidate from current runtime element preferences, project that candidate back into runtime preference shape, and report which generic builder/planner/policy descriptors would be used once live enrollment is safe.
 
-The live route and writer audits remain the boundary: manifest shadow actions must not appear in the live mutation intent registry until the packet type is intentionally promoted from shadow R&D to runtime-ready behavior.
+The live route and writer audits remain the boundary: manifest-defined actions should not enter the live mutation intent registry until the generic policy and planner seams are intentionally promoted. For now, only the narrow scope-display writer path is live.

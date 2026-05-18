@@ -160,6 +160,30 @@ export type PacketCompatibilityAdapterDescriptor = {
   notes: string;
 };
 
+
+export type PacketDefinitionPartSubtype =
+  | 'packet_definition'
+  | 'packet_schema'
+  | 'packet_action_registry'
+  | 'packet_builder_descriptor'
+  | 'packet_planner_descriptor'
+  | 'packet_projection_descriptor'
+  | 'packet_compatibility'
+  | 'packet_dependency';
+
+export type PacketDefinitionPartDescriptor = {
+  part_id: string;
+  part_subtype: PacketDefinitionPartSubtype;
+  defines_packet_type: string;
+  defines_packet_subtype: string | null;
+  schema_version: string;
+  availability: 'shadow_only' | 'runtime_ready' | 'canonical';
+  required: boolean;
+  references?: readonly string[];
+  covers_subtypes?: readonly string[];
+  notes: string;
+};
+
 export type PacketDefinitionSectionMap = Partial<
   Record<PacketManifestSectionKey, PacketManifestSectionStatus>
 >;
@@ -184,6 +208,7 @@ export type PacketTypeDefinition<TBodySchema extends z.ZodTypeAny = z.ZodTypeAny
   compatibility_adapters: readonly PacketCompatibilityAdapterDescriptor[];
   projections: readonly PacketProjectionDescriptor[];
   indexes: readonly PacketIndexDescriptor[];
+  packet_definition_parts?: readonly PacketDefinitionPartDescriptor[];
   fixtures?: readonly string[];
   notes: readonly string[];
 };
@@ -193,7 +218,7 @@ export type PacketDefinitionManifestItem = {
   schema_version: string;
   definition_status: PacketDefinitionStatus;
   storage_class: PacketStorageClass;
-  manifest_role: 'packet_type_definition' | 'compatibility_definition' | 'bundle_definition';
+  manifest_role: 'packet_type_definition' | 'definition_definition' | 'bundle_definition';
   action_kinds: readonly PacketActionKind[];
   action_count: number;
   builder_count: number;

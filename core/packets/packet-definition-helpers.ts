@@ -8,6 +8,8 @@ import type {
   PacketActionKind,
   PacketBuilderDescriptor,
   PacketCompatibilityAdapterDescriptor,
+  PacketDefinitionPartDescriptor,
+  PacketDefinitionPartSubtype,
   PacketIndexDescriptor,
   PacketManifestSectionKey,
   PacketManifestSectionStatus,
@@ -149,6 +151,27 @@ export function getPacketDefinitionCompatibility(definition: PacketTypeDefinitio
     posture: definition.compatibility,
     adapters: definition.compatibility_adapters,
   } as const;
+}
+
+
+export function listPacketDefinitionParts(
+  definition: PacketTypeDefinition,
+  partSubtype?: PacketDefinitionPartSubtype
+): PacketDefinitionPartDescriptor[] {
+  const parts = [...(definition.packet_definition_parts ?? [])];
+
+  return parts.filter(
+    (part) => partSubtype === undefined || part.part_subtype === partSubtype
+  );
+}
+
+export function getPacketDefinitionPart(
+  definition: PacketTypeDefinition,
+  partId: string
+): PacketDefinitionPartDescriptor | null {
+  return (
+    definition.packet_definition_parts?.find((part) => part.part_id === partId) ?? null
+  );
 }
 
 export function listPacketDefinitionCompatibilityAdapters(

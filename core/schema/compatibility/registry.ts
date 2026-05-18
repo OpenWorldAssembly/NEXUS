@@ -34,6 +34,7 @@ import {
   getPacketBodySchema,
   PacketRefSchema,
   PolicyBodySchema,
+  PreferenceBodySchema,
 } from '@core/schema/packet-body-schemas';
 import type { PacketEnvelopeByType } from '@core/schema/packet-body-schemas';
 
@@ -1022,6 +1023,20 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
   MissionPlan: createDefaultCompatibilityEntry('MissionPlan'),
   MissionReport: createDefaultCompatibilityEntry('MissionReport'),
   Module: createDefaultCompatibilityEntry('Module'),
+  Preference: {
+    current_schema_version: '0.1.0',
+    revision_mode: PACKET_FAMILY_REVISION_MODES.Preference,
+    support_level: 'current_only',
+    write_target_policy: 'current_only',
+    versions: {
+      '0.1.0': {
+        parseBody: (body) => {
+          rejectHeaderBodyCollisions(body, 'Preference');
+          return PreferenceBodySchema.parse(body);
+        },
+      },
+    },
+  },
   Policy: {
     current_schema_version: '1.2.0',
     revision_mode: PACKET_FAMILY_REVISION_MODES.Policy,

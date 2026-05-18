@@ -2,12 +2,12 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
-  createScopeDisplayPreferenceShadowSeed,
-  createScopeDisplayPreferenceShadowSeedBatch,
+  createElementPreferenceShadowSeed,
+  createElementPreferenceShadowSeedBatch,
 } from '@runtime/nexus/server/preference-packet-shadow';
 
 test('creates a safe shadow seed candidate for current runtime preferences', () => {
-  const seed = createScopeDisplayPreferenceShadowSeed({
+  const seed = createElementPreferenceShadowSeed({
     actorPacketId: 'nexus:element/person-alice',
     preferences: {
       main_visible_scope_packet_ids: ['scope-b', 'scope-a', 'scope-a'],
@@ -20,7 +20,7 @@ test('creates a safe shadow seed candidate for current runtime preferences', () 
     },
   });
 
-  assert.equal(seed.seed_kind, 'preference.scope_display.shadow_seed');
+  assert.equal(seed.seed_kind, 'preference.element.shadow_seed');
   assert.equal(seed.safe_to_seed_shadow, true);
   assert.equal(seed.live_fortress_ready, false);
   assert.equal(seed.packet_definition_audit_status, 'pass');
@@ -30,11 +30,11 @@ test('creates a safe shadow seed candidate for current runtime preferences', () 
     show_associated_parent_chains: true,
     show_followed_parent_chains: false,
   });
-  assert.match(seed.packet_id, /^nexus:preference\/scope-display\//);
+  assert.match(seed.packet_id, /^nexus:preference\/element\//);
 });
 
 test('creates a batch of shadow seed candidates without persisting anything', () => {
-  const seeds = createScopeDisplayPreferenceShadowSeedBatch([
+  const seeds = createElementPreferenceShadowSeedBatch([
     {
       actorPacketId: 'nexus:element/person-alice',
       preferences: {

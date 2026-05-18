@@ -633,6 +633,69 @@ export const PolicyBodySchema = z
   })
   .strict();
 
+
+export const PreferencePrivacyModeSchema = z.enum([
+  'local_only',
+  'private_sync',
+  'shared_with_trusted',
+  'public',
+]);
+
+export const PreferenceContextSchema = z
+  .object({
+    namespace: z.string().min(1).default('nexus'),
+    initiative_ref: PacketRefSchema.nullable().default(null),
+    scope_ref: PacketRefSchema.nullable().default(null),
+    surface_key: z.string().min(1).nullable().default(null),
+    device_key: z.string().min(1).nullable().default(null),
+  })
+  .strict();
+
+export const ScopeDisplayPreferenceValueSchema = z
+  .object({
+    main_visible_scope_packet_ids: z.array(z.string().min(1)).default([]),
+    show_associated_parent_chains: z.boolean().default(true),
+    show_followed_parent_chains: z.boolean().default(true),
+  })
+  .strict();
+
+export const ElementInterfacePreferenceValueSchema = z
+  .object({
+    scope_display: ScopeDisplayPreferenceValueSchema.default({}),
+  })
+  .strict();
+
+export const ElementPreferenceValueSchema = z
+  .object({
+    interface: ElementInterfacePreferenceValueSchema.default({}),
+  })
+  .strict();
+
+const PreferenceBaseBodySchema = z
+  .object({
+    type: z.literal('preference').default('preference'),
+    owner_ref: PacketRefSchema,
+    status: z.enum(['active', 'superseded', 'withdrawn']).default('active'),
+    privacy: PreferencePrivacyModeSchema.default('private_sync'),
+    context: PreferenceContextSchema.default({
+      namespace: 'nexus',
+      initiative_ref: null,
+      scope_ref: null,
+      surface_key: null,
+      device_key: null,
+    }),
+    supersedes_ref: PacketRevisionRefSchema.nullable().default(null),
+    note: z.string().min(1).nullable().default(null),
+  })
+  .strict();
+
+export const ElementPreferenceBodySchema = PreferenceBaseBodySchema.extend({
+  subtype: z.literal('element'),
+  value: ElementPreferenceValueSchema,
+}).strict();
+
+export const PreferenceBodySchema = ElementPreferenceBodySchema;
+
 export const DiscussionThreadBodySchema = z
   .object({
     title: z.string().min(1),
@@ -805,6 +868,7 @@ export const PACKET_BODY_SCHEMAS = {
   MissionReport: MissionReportBodySchema,
   Module: ModuleBodySchema,
   Policy: PolicyBodySchema,
+  Preference: PreferenceBodySchema,
   Discussion: DiscussionBodySchema,
   DiscussionSpace: DiscussionSpaceBodySchema,
   DiscussionForum: DiscussionForumBodySchema,

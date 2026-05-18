@@ -1,9 +1,13 @@
 /**
  * File: scope-display-preferences.ts
- * Description: Resolves temporary runtime-owned scope-display preferences for claimed actors and guest compatibility sessions.
+ * Description: Resolves Preference.element-backed scope-display preferences for claimed actors, with runtime-table and guest compatibility fallbacks.
  */
 
 import type { NexusScopeDisplayPreferencesPayload } from '@runtime/nexus/nexus-api-types';
+import {
+  readElementScopeDisplayPreferencePacket,
+  writeElementScopeDisplayPreferencePacket,
+} from '@runtime/nexus/server/element-preference-packets';
 import {
   readScopeDisplayPreferencesCompatibility,
 } from '@runtime/nexus/server/shell-preferences';
@@ -67,6 +71,15 @@ export async function readScopeDisplayPreferences(input: {
   actorPacketId?: string | null;
 }): Promise<NexusScopeDisplayPreferencesPayload> {
   if (input.actorPacketId) {
+    const preferencePacket = await readElementScopeDisplayPreferencePacket({
+      packetStore: input.packetStore,
+      actorPacketId: input.actorPacketId,
+    });
+
+    if (preferencePacket) {
+      return normalizePreferences(preferencePacket.preferences);
+    }
+
     const storedPreferences = await input.packetStore.readActorScopeDisplayPreferences(
       input.actorPacketId
     );
@@ -102,6 +115,15 @@ export async function writeClaimedScopeDisplayPreferences(input: {
     eligibleMainScopePacketIds: input.eligibleMainScopePacketIds,
   });
 
+  const updatedAt = new Date().toISOString();
+
+  await writeElementScopeDisplayPreferencePacket({
+    packetStore: input.packetStore,
+    actorPacketId: input.actorPacketId,
+    preferences: nextPreferences,
+    createdAt: updatedAt,
+  });
+
   await input.packetStore.writeActorScopeDisplayPreferences({
     actor_packet_id: input.actorPacketId,
     main_visible_scope_packet_ids: nextPreferences.main_visible_scope_packet_ids,
@@ -109,7 +131,7 @@ export async function writeClaimedScopeDisplayPreferences(input: {
       nextPreferences.show_associated_parent_chains,
     show_followed_parent_chains:
       nextPreferences.show_followed_parent_chains,
-    updated_at: new Date().toISOString(),
+    updated_at: updatedAt,
   });
 
   return nextPreferences;

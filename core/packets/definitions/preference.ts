@@ -1,6 +1,6 @@
 /**
  * File: preference.ts
- * Description: Experimental Preference packet type definition and body schema for shadow-mode runtime preference R&D.
+ * Description: Core-native bootstrap definition and body schema for Preference.element scope-display preferences.
  */
 
 import { z } from 'zod';
@@ -9,16 +9,7 @@ import { PacketRefSchema, PacketRevisionRefSchema } from '@core/schema/packet-sc
 
 import type { PacketTypeDefinition } from './packet-definition-types.ts';
 
-export const PREFERENCE_PACKET_SUBTYPES = [
-  'scope_display',
-  'draft_state',
-  'notification_settings',
-  'security_settings',
-  'theme_settings',
-  'packet_template_defaults',
-  'element_defaults',
-  'builder_defaults',
-] as const;
+export const PREFERENCE_PACKET_SUBTYPES = ['element'] as const;
 
 export const PreferencePrivacyModeSchema = z.enum([
   'local_only',
@@ -63,15 +54,27 @@ const PreferenceBaseBodySchema = z
   })
   .strict();
 
-export const ScopeDisplayPreferenceBodySchema = PreferenceBaseBodySchema.extend({
-  subtype: z.literal('scope_display'),
-  value: ScopeDisplayPreferenceValueSchema,
+export const ElementInterfacePreferenceValueSchema = z
+  .object({
+    scope_display: ScopeDisplayPreferenceValueSchema.default({}),
+  })
+  .strict();
+
+export const ElementPreferenceValueSchema = z
+  .object({
+    interface: ElementInterfacePreferenceValueSchema.default({}),
+  })
+  .strict();
+
+export const ElementPreferenceBodySchema = PreferenceBaseBodySchema.extend({
+  subtype: z.literal('element'),
+  value: ElementPreferenceValueSchema,
 }).strict();
 
-export const PreferenceBodySchema = ScopeDisplayPreferenceBodySchema;
+export const PreferenceBodySchema = ElementPreferenceBodySchema;
 
 
-export const ScopeDisplayPreferenceBuilderInputSchema = z
+export const ElementPreferenceBuilderInputSchema = z
   .object({
     owner_ref: PacketRefSchema,
     context: PreferenceContextSchema.optional(),
@@ -82,8 +85,8 @@ export const ScopeDisplayPreferenceBuilderInputSchema = z
   })
   .strict();
 
-export type ScopeDisplayPreferenceBuilderInput = z.input<
-  typeof ScopeDisplayPreferenceBuilderInputSchema
+export type ElementPreferenceBuilderInput = z.input<
+  typeof ElementPreferenceBuilderInputSchema
 >;
 
 export type PreferenceBody = z.infer<typeof PreferenceBodySchema>;
@@ -93,6 +96,7 @@ export type ScopeDisplayPreferenceContext = z.infer<
 export type ScopeDisplayPreferenceValue = z.infer<
   typeof ScopeDisplayPreferenceValueSchema
 >;
+export type ElementPreferenceValue = z.infer<typeof ElementPreferenceValueSchema>;
 
 export const preferencePacketDefinition = {
   packet_type: 'Preference',
@@ -103,7 +107,7 @@ export const preferencePacketDefinition = {
   revision_behavior: 'latest_active_projection',
   body_schema: PreferenceBodySchema,
   declared_subtypes: PREFERENCE_PACKET_SUBTYPES,
-  default_subtype: 'scope_display',
+  default_subtype: 'element',
   compatibility: {
     strategy: 'current_neighbor_adapters',
     current_schema_version: '0.1.0',
@@ -111,7 +115,7 @@ export const preferencePacketDefinition = {
     supports_downcast: true,
     loss_awareness: 'loss_annotated',
     notes:
-      'Preference packets use nearest-current adapters; long compatibility paths should travel in Compatibility bundles.',
+      'Preference.element compatibility is represented as definition.packet_compatibility in the experimental definition-part model.',
   },
   id_strategy: {
     strategy_id: 'preference.latest_active.owner_subtype_context',
@@ -131,98 +135,88 @@ export const preferencePacketDefinition = {
   },
   actions: [
     {
-      action_id: 'preference.scope_display.create',
+      action_id: 'preference.element.create',
       action_kind: 'create',
-      packet_subtype: 'scope_display',
-      label: 'Create scope display preference',
-      policy_action_id: 'preference.scope_display.write',
+      packet_subtype: 'element',
+      label: 'Create element preference',
+      policy_action_id: 'preference.element.write',
       availability: 'shadow_only',
       notes:
-        'Shadow action for creating an actor-owned scope display preference packet from runtime preference state.',
+        'Shadow action for creating an actor-owned element preference packet from runtime preference state.',
     },
     {
-      action_id: 'preference.scope_display.revise',
+      action_id: 'preference.element.revise',
       action_kind: 'revise',
-      packet_subtype: 'scope_display',
-      label: 'Revise scope display preference',
-      policy_action_id: 'preference.scope_display.write',
+      packet_subtype: 'element',
+      label: 'Revise element preference',
+      policy_action_id: 'preference.element.write',
       availability: 'shadow_only',
       notes:
         'Supersedes the previous active preference for the same owner/context without changing graph relations.',
     },
     {
-      action_id: 'preference.scope_display.withdraw',
+      action_id: 'preference.element.withdraw',
       action_kind: 'withdraw',
-      packet_subtype: 'scope_display',
-      label: 'Withdraw scope display preference',
-      policy_action_id: 'preference.scope_display.write',
+      packet_subtype: 'element',
+      label: 'Withdraw element preference',
+      policy_action_id: 'preference.element.write',
       availability: 'shadow_only',
       notes:
         'Marks the projected preference as withdrawn so runtime can fall back to defaults or older compatible state.',
     },
     {
-      action_id: 'preference.scope_display.project',
+      action_id: 'preference.element.project',
       action_kind: 'project',
-      packet_subtype: 'scope_display',
-      label: 'Project scope display preference',
+      packet_subtype: 'element',
+      label: 'Project element preference',
       policy_action_id: null,
       availability: 'shadow_only',
       notes:
-        'Read-side projection into the current shell scope display preference shape.',
+        'Read-side projection into the current shell element preference shape.',
     },
     {
-      action_id: 'preference.scope_display.index',
+      action_id: 'preference.element.index',
       action_kind: 'index',
-      packet_subtype: 'scope_display',
-      label: 'Index scope display preference',
+      packet_subtype: 'element',
+      label: 'Index element preference',
       policy_action_id: null,
       availability: 'shadow_only',
       notes:
         'Indexes owner/subtype/context fields for latest-active preference projection.',
     },
-    {
-      action_id: 'preference.scope_display.bundle',
-      action_kind: 'bundle',
-      packet_subtype: 'scope_display',
-      label: 'Bundle scope display preference',
-      policy_action_id: null,
-      availability: 'shadow_only',
-      notes:
-        'Allows private-sync preference packets to travel through bundle-aware node export/import flows when policy permits.',
-    },
   ],
   builders: [
     {
-      builder_id: 'preference.scope_display.body.v0',
-      packet_subtype: 'scope_display',
+      builder_id: 'preference.element.body.v0',
+      packet_subtype: 'element',
       builder_kind: 'single_packet_body',
-      action_ids: ['preference.scope_display.create', 'preference.scope_display.revise'],
-      input_schema_key: 'ScopeDisplayPreferenceBuilderInputSchema',
-      output_schema_key: 'ScopeDisplayPreferenceBodySchema',
+      action_ids: ['preference.element.create', 'preference.element.revise'],
+      input_schema_key: 'ElementPreferenceBuilderInputSchema',
+      output_schema_key: 'ElementPreferenceBodySchema',
       availability: 'shadow_only',
       notes:
-        'Experimental body builder descriptor only; live runtime preference writes still use the runtime store.',
+        'Experimental body builder descriptor only; live Preference.element writes currently use the narrow runtime bridge rather than manifest-driven builder execution.',
     },
   ],
   planners: [
     {
-      planner_id: 'preference.scope_display.latest_active_revision.v0',
+      planner_id: 'preference.element.latest_active_revision.v0',
       planner_kind: 'single_packet_revision',
       action_ids: [
-        'preference.scope_display.create',
-        'preference.scope_display.revise',
-        'preference.scope_display.withdraw',
+        'preference.element.create',
+        'preference.element.revise',
+        'preference.element.withdraw',
       ],
-      builder_ids: ['preference.scope_display.body.v0'],
-      policy_action_ids: ['preference.scope_display.write'],
+      builder_ids: ['preference.element.body.v0'],
+      policy_action_ids: ['preference.element.write'],
       availability: 'shadow_only',
       notes:
-        'Plans the latest-active/supersedes-chain preference write once Preference packets become canonical.',
+        'Plans the latest-active/supersedes-chain preference write before manifest-driven corridor enrollment.',
     },
     {
-      planner_id: 'preference.scope_display.projection.v0',
+      planner_id: 'preference.element.projection.v0',
       planner_kind: 'projection_only',
-      action_ids: ['preference.scope_display.project'],
+      action_ids: ['preference.element.project'],
       builder_ids: [],
       policy_action_ids: [],
       availability: 'shadow_only',
@@ -232,27 +226,27 @@ export const preferencePacketDefinition = {
   ],
   mutations: [
     {
-      mutation_intent: 'preference.scope_display.set',
-      action_ids: ['preference.scope_display.create', 'preference.scope_display.revise'],
-      planner_id: 'preference.scope_display.latest_active_revision.v0',
+      mutation_intent: 'preference.element.set',
+      action_ids: ['preference.element.create', 'preference.element.revise'],
+      planner_id: 'preference.element.latest_active_revision.v0',
       result_family: 'packet_write',
       availability: 'shadow_only',
       notes:
-        'Future manifest-driven mutation intent for creating or revising scope display preferences.',
+        'Future manifest-driven mutation intent for creating or revising element preferences.',
     },
     {
-      mutation_intent: 'preference.scope_display.withdraw',
-      action_ids: ['preference.scope_display.withdraw'],
-      planner_id: 'preference.scope_display.latest_active_revision.v0',
+      mutation_intent: 'preference.element.withdraw',
+      action_ids: ['preference.element.withdraw'],
+      planner_id: 'preference.element.latest_active_revision.v0',
       result_family: 'packet_write',
       availability: 'shadow_only',
-      notes: 'Future manifest-driven mutation intent for withdrawing scope display preferences.',
+      notes: 'Future manifest-driven mutation intent for withdrawing element preferences.',
     },
   ],
   compatibility_adapters: [
     {
-      adapter_id: 'preference.scope_display.legacy_v0_to_0_1',
-      packet_subtype: 'scope_display',
+      adapter_id: 'preference.element.legacy_v0_to_0_1',
+      packet_subtype: 'element',
       from_schema_version: 'legacy_v0',
       to_schema_version: '0.1.0',
       direction: 'upcast_to_current',
@@ -262,26 +256,26 @@ export const preferencePacketDefinition = {
         'Upcasts the old runtime-compatible shape using main_scope_ids and one show_parent_chains flag into current associated/followed parent-chain toggles.',
     },
     {
-      adapter_id: 'preference.scope_display.0_1_to_legacy_v0',
-      packet_subtype: 'scope_display',
+      adapter_id: 'preference.element.0_1_to_legacy_v0',
+      packet_subtype: 'element',
       from_schema_version: '0.1.0',
       to_schema_version: 'legacy_v0',
       direction: 'downcast_from_current',
       loss_awareness: 'loss_annotated',
       availability: 'shadow_only',
       notes:
-        'Downcasts current scope display preferences into the old one-toggle parent-chain shape; differing associated/followed toggles are loss-annotated.',
+        'Downcasts current element preferences into the old one-toggle parent-chain shape; differing associated/followed toggles are loss-annotated.',
     },
     {
-      adapter_id: 'preference.scope_display.0_1_current_neighbor',
-      packet_subtype: 'scope_display',
+      adapter_id: 'preference.element.0_1_current_neighbor',
+      packet_subtype: 'element',
       from_schema_version: '0.1.0',
       to_schema_version: '0.1.0',
       direction: 'bidirectional_neighbor',
       loss_awareness: 'none',
       availability: 'shadow_only',
       notes:
-        'Identity adapter placeholder for the initial Preference.scope_display schema; future versions should add nearest-current steps here.',
+        'Identity adapter placeholder for the initial Preference.element schema; future versions should add nearest-current steps here.',
     },
   ],
   projections: [
@@ -290,7 +284,7 @@ export const preferencePacketDefinition = {
       target_surface: 'nexus_shell',
       mode: 'derived',
       notes:
-        'Projects the latest active owner/context preference into the existing shell scope display preference shape.',
+        'Projects the latest active owner/context preference into the existing shell element preference shape.',
     },
   ],
   indexes: [
@@ -301,12 +295,132 @@ export const preferencePacketDefinition = {
         'Allows runtime to project the latest active preference for an owner, subtype, and context.',
     },
   ],
+  packet_definition_parts: [
+    {
+      part_id: 'preference.element.packet_definition.v0',
+      part_subtype: 'packet_definition',
+      defines_packet_type: 'Preference',
+      defines_packet_subtype: 'element',
+      schema_version: '0.1.0',
+      availability: 'shadow_only',
+      required: true,
+      references: [
+        'preference.element.packet_schema.v0',
+        'preference.element.packet_action_registry.v0',
+        'preference.element.packet_builder_descriptor.v0',
+        'preference.element.packet_planner_descriptor.v0',
+        'preference.element.packet_projection_descriptor.v0',
+        'preference.element.packet_compatibility.v0',
+        'preference.element.packet_dependency.v0',
+      ],
+      notes:
+        'Root definition record for the experimental Preference.element packet subtype.',
+    },
+    {
+      part_id: 'preference.element.packet_schema.v0',
+      part_subtype: 'packet_schema',
+      defines_packet_type: 'Preference',
+      defines_packet_subtype: 'element',
+      schema_version: '0.1.0',
+      availability: 'shadow_only',
+      required: true,
+      covers_subtypes: ['element'],
+      notes:
+        'Schema part covering only the active experimental element subtype.',
+    },
+    {
+      part_id: 'preference.element.packet_action_registry.v0',
+      part_subtype: 'packet_action_registry',
+      defines_packet_type: 'Preference',
+      defines_packet_subtype: 'element',
+      schema_version: '0.1.0',
+      availability: 'shadow_only',
+      required: true,
+      references: [
+        'preference.element.create',
+        'preference.element.revise',
+        'preference.element.withdraw',
+        'preference.element.project',
+        'preference.element.index',
+      ],
+      notes:
+        'Action registry part for the currently modeled element preference operations.',
+    },
+    {
+      part_id: 'preference.element.packet_builder_descriptor.v0',
+      part_subtype: 'packet_builder_descriptor',
+      defines_packet_type: 'Preference',
+      defines_packet_subtype: 'element',
+      schema_version: '0.1.0',
+      availability: 'shadow_only',
+      required: true,
+      references: ['preference.element.body.v0'],
+      notes: 'Builder descriptor part for the generic element preference body builder.',
+    },
+    {
+      part_id: 'preference.element.packet_planner_descriptor.v0',
+      part_subtype: 'packet_planner_descriptor',
+      defines_packet_type: 'Preference',
+      defines_packet_subtype: 'element',
+      schema_version: '0.1.0',
+      availability: 'shadow_only',
+      required: true,
+      references: [
+        'preference.element.latest_active_revision.v0',
+        'preference.element.projection.v0',
+      ],
+      notes: 'Planner descriptor part for latest-active write planning and read projection.',
+    },
+    {
+      part_id: 'preference.element.packet_projection_descriptor.v0',
+      part_subtype: 'packet_projection_descriptor',
+      defines_packet_type: 'Preference',
+      defines_packet_subtype: 'element',
+      schema_version: '0.1.0',
+      availability: 'shadow_only',
+      required: true,
+      references: ['scope_display_preferences'],
+      notes: 'Projection descriptor part for current shell element preference parity.',
+    },
+    {
+      part_id: 'preference.element.packet_compatibility.v0',
+      part_subtype: 'packet_compatibility',
+      defines_packet_type: 'Preference',
+      defines_packet_subtype: 'element',
+      schema_version: '0.1.0',
+      availability: 'shadow_only',
+      required: true,
+      references: [
+        'preference.element.legacy_v0_to_0_1',
+        'preference.element.0_1_to_legacy_v0',
+        'preference.element.0_1_current_neighbor',
+      ],
+      notes: 'Compatibility definition part for nearest-current, loss-aware element preference adapters.',
+    },
+    {
+      part_id: 'preference.element.packet_dependency.v0',
+      part_subtype: 'packet_dependency',
+      defines_packet_type: 'Preference',
+      defines_packet_subtype: 'element',
+      schema_version: '0.1.0',
+      availability: 'shadow_only',
+      required: true,
+      references: [
+        'generic.preference.builder',
+        'generic.preference.latest_active_planner',
+        'runtime.scope_display_projection',
+      ],
+      notes:
+        'Dependency definition part for the generic builder/planner/projection capabilities needed by the shadow bridge.',
+    },
+  ],
   fixtures: [
-    'preference.scope_display.current_runtime_equivalence',
-    'preference.scope_display.legacy_v0_adapter',
+    'preference.element.current_runtime_equivalence',
+    'preference.element.legacy_v0_adapter',
   ],
   notes: [
-    'Experimental shadow definition only; runtime preference storage remains canonical for the alpha demo.',
+    'Bootstrap definition only; Preference.element packets are canonical for claimed actor scope-display preferences, while manifest-driven execution remains shadow-only.',
     'Preference packets never create graph relationships. They only configure display/behavior for already eligible packets.',
+    'Only element is currently enrolled as a supported Preference subtype; scope_display is the first implemented section under value.interface. Other preference ideas remain deferred until implemented.',
   ],
 } as const satisfies PacketTypeDefinition<typeof PreferenceBodySchema>;

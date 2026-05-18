@@ -10,13 +10,13 @@ import {
   resolvePacketDefinitionMutationActionPlan,
   type PacketDefinitionMutationActionPlan,
   type PacketDefinitionRuntimeCapabilities,
-  type ScopeDisplayPreferenceBody,
+  type ElementPreferenceBody,
   type ScopeDisplayPreferenceContext,
 } from '@core/packets/packet-definition-manifest';
 import type { PacketRevisionRef } from '@core/schema/packet-schema';
 import {
-  createScopeDisplayPreferenceShadowSetPlan,
-  type ScopeDisplayPreferenceShadowPlan,
+  createElementPreferenceShadowSetPlan,
+  type ElementPreferenceShadowPlan,
 } from '@runtime/nexus/server/preference-packet-shadow';
 import type { NexusScopeDisplayPreferencesPayload } from '@runtime/nexus/nexus-api-types';
 
@@ -48,7 +48,8 @@ export type ManifestShadowFortressPreparedCandidate<TBody = unknown> = {
   revision_behavior: string;
   body: TBody;
   unsigned_digest: string;
-  current_packet_envelope_supported: false;
+  current_packet_envelope_supported: boolean;
+  live_signed_corridor_enrolled: false;
   notes: string[];
 };
 
@@ -63,16 +64,16 @@ export type ManifestShadowFortressPrepareShape = {
   notes: string[];
 };
 
-export type PreferenceScopeDisplayManifestShadowFortressPlan = {
-  bridge_kind: 'preference.scope_display.shadow_fortress_prepare';
+export type PreferenceElementManifestShadowFortressPlan = {
+  bridge_kind: 'preference.element.shadow_fortress_prepare';
   packet_type: 'Preference';
-  packet_subtype: 'scope_display';
-  mutation_intent: 'preference.scope_display.set';
+  packet_subtype: 'element';
+  mutation_intent: 'preference.element.set';
   ready_for_shadow_prepare: boolean;
   live_fortress_ready: false;
   action_plan: ManifestShadowFortressActionPlan;
-  preference_shadow_plan: ScopeDisplayPreferenceShadowPlan;
-  packet_candidate: ManifestShadowFortressPreparedCandidate<ScopeDisplayPreferenceBody>;
+  preference_shadow_plan: ElementPreferenceShadowPlan;
+  packet_candidate: ManifestShadowFortressPreparedCandidate<ElementPreferenceBody>;
   prepare_shape: ManifestShadowFortressPrepareShape;
   projected_runtime_preferences: NexusScopeDisplayPreferencesPayload;
   notes: string[];
@@ -167,21 +168,21 @@ export function resolveManifestShadowFortressActionPlan(input: {
   };
 }
 
-export function createPreferenceScopeDisplayManifestShadowFortressPlan(input: {
+export function createPreferenceElementManifestShadowFortressPlan(input: {
   actorPacketId: string;
   preferences: NexusScopeDisplayPreferencesPayload;
   context?: Partial<ScopeDisplayPreferenceContext> | null;
   supersedes_ref?: PacketRevisionRef | null;
   note?: string | null;
   capabilities?: PacketDefinitionRuntimeCapabilities;
-}): PreferenceScopeDisplayManifestShadowFortressPlan {
+}): PreferenceElementManifestShadowFortressPlan {
   const actionPlan = resolveManifestShadowFortressActionPlan({
     packet_type: 'Preference',
-    packet_subtype: 'scope_display',
-    mutation_intent: 'preference.scope_display.set',
+    packet_subtype: 'element',
+    mutation_intent: 'preference.element.set',
     capabilities: input.capabilities,
   });
-  const preferenceShadowPlan = createScopeDisplayPreferenceShadowSetPlan({
+  const preferenceShadowPlan = createElementPreferenceShadowSetPlan({
     actorPacketId: input.actorPacketId,
     preferences: input.preferences,
     context: input.context,
@@ -190,41 +191,42 @@ export function createPreferenceScopeDisplayManifestShadowFortressPlan(input: {
   });
   const candidateCore = {
     packet_type: 'Preference',
-    packet_subtype: 'scope_display',
+    packet_subtype: 'element',
     packet_id: preferenceShadowPlan.packet_id,
     schema_version: preferenceShadowPlan.schema_version,
     body: preferenceShadowPlan.body,
   };
 
-  const packetCandidate: ManifestShadowFortressPreparedCandidate<ScopeDisplayPreferenceBody> = {
+  const packetCandidate: ManifestShadowFortressPreparedCandidate<ElementPreferenceBody> = {
     candidate_kind: 'manifest.shadow_packet_candidate',
     packet_type: 'Preference',
-    packet_subtype: 'scope_display',
+    packet_subtype: 'element',
     packet_id: preferenceShadowPlan.packet_id,
     schema_version: preferenceShadowPlan.schema_version,
     storage_class: preferenceShadowPlan.storage_class,
     revision_behavior: preferenceShadowPlan.revision_behavior,
     body: preferenceShadowPlan.body,
     unsigned_digest: createShadowUnsignedDigest(candidateCore),
-    current_packet_envelope_supported: false,
+    current_packet_envelope_supported: true,
+    live_signed_corridor_enrolled: false,
     notes: [
-      'Preference is not yet part of the live PacketEnvelope ontology, so this is a shadow candidate rather than a signable live packet.',
+      'Preference.element is live PacketEnvelope-capable, but this manifest-derived candidate is not enrolled in the signed fortress corridor yet.',
       'The digest is deterministic shadow metadata for equivalence checks and future corridor comparison only.',
     ],
   };
 
   return {
-    bridge_kind: 'preference.scope_display.shadow_fortress_prepare',
+    bridge_kind: 'preference.element.shadow_fortress_prepare',
     packet_type: 'Preference',
-    packet_subtype: 'scope_display',
-    mutation_intent: 'preference.scope_display.set',
+    packet_subtype: 'element',
+    mutation_intent: 'preference.element.set',
     ready_for_shadow_prepare: actionPlan.supported,
     live_fortress_ready: false,
     action_plan: actionPlan,
     preference_shadow_plan: preferenceShadowPlan,
     packet_candidate: packetCandidate,
     prepare_shape: {
-      kind: 'preference.scope_display.set',
+      kind: 'preference.element.set',
       action_ids: actionPlan.action_ids,
       policy_action_ids: actionPlan.policy_action_ids,
       prepared_packet_count: 1,
@@ -239,7 +241,7 @@ export function createPreferenceScopeDisplayManifestShadowFortressPlan(input: {
     projected_runtime_preferences: preferenceShadowPlan.projected_runtime_preferences,
     notes: [
       'Shadow fortress bridge: proves manifest descriptors can resolve body, candidate identity, builder/planner metadata, and policy action IDs before live wiring.',
-      'Current runtime scope-display preferences remain canonical for the alpha demo.',
+      'Direct runtime helper writes are live for Preference.element; manifest-driven mutation remains shadow-only and not enrolled in the live fortress corridor.',
     ],
   };
 }
