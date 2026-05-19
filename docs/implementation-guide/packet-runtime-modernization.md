@@ -130,3 +130,28 @@ The first shadow workflow plans cover the generic-ready fortress candidates:
 These plans do not enroll live execution. They prove the manifest can describe packet-specific variables and ordered generic work while preserving the signed fortress as the only live prepare/finalize/proof/persistence authority.
 
 Policy and dependency descriptors now matter as referenced workflow metadata, but their full semantics remain a dedicated pre-reseed pass. Unused legacy packet families remain explicit planned gaps and do not block the generic workflow contract or switch-over planning.
+
+## Workflow Alignment Pass
+
+The workflow alignment pass connects the manifest workflow contract to the extracted fortress planner map. It adds a runtime-side audit that lists every live mutation intent, its genericization status, operation mapping, workflow-plan coverage, policy action IDs, trusted resolver/capability IDs, and remaining packet-specific assumptions.
+
+The alignment map is the working checklist for retiring packet-specific fortress code. Generic-ready intents must have clean workflow dry-runs and trusted local capability coverage. Planner-extraction intents may either have a shadow workflow plan or an explicit planned gap. Workflow-specific intents remain runtime-owned orchestration until their component operations can be split safely. Legacy bridge intents point at canonical workflow directions rather than receiving independent workflows.
+
+This pass expands shadow workflow coverage for knowable planner-extraction candidates:
+
+- `assembly_association.relation.set`
+- `assembly_association.relation.clear`
+- `home_locality.relation.set`
+- `discussion.reply.create`
+
+The alignment remains shadow-only. Existing runtime planner modules are registered as trusted local capabilities by descriptor, but their implementation is not moved, rewritten, or invoked through generic execution yet. Unused deferred packet families remain visible planned gaps and do not block switch-over planning.
+
+## Runtime Crossing Guard and Fortress Handoff Pass
+
+The crossing guard and fortress corridor remain separate layers. The runtime crossing guard owns GUI/API normalization, manifest/workflow lookup, connector selection, shadow handoff metadata, and response/refresh hints. The fortress corridor owns policy/proof authority, prepare/finalize lifecycle, mutation tickets, signed packet validation, persistence, and canonical mutation effects.
+
+The handoff pass adds a shadow `PacketRuntimeFortressHandoff` contract. A handoff records the normalized mutation direction, workflow alignment status, operation kinds, workflow plan IDs, trusted capability IDs, policy action IDs, dependency IDs, resolver IDs, fortress prepare/finalize handler names, and return refresh hints. It always carries `live_fortress_ready: false` in this pass.
+
+Generic-ready and workflow-aligned planner-extraction intents can now produce `shadow_ready` handoffs. Runtime-owned workflow intents produce explicit non-ready handoffs with orchestration reason codes. Legacy bridge intents point at canonical handoff directions. Unknown mutation intents fail closed before any fortress handoff.
+
+This does not change the live mutation routes. `NexusMutationService` remains the live signed fortress authority, and `Preference.element` remains the only live packet-runtime master-handler connector.

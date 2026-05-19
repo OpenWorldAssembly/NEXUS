@@ -117,6 +117,8 @@ Runtime should eventually pair these descriptors with a local allowlist of suppo
 
 Workflow-plan helpers follow the same rule. They can audit and dry-run descriptor shape, but runtime owns resolver execution, condition interpretation, operation planning, policy verification, proof handling, and persistence. Unknown workflow operation kinds, resolvers, dependencies, policy actions, condition operators, or step references fail closed.
 
+Workflow alignment now records which live fortress intents can be described through these workflow plans and which remain planned gaps. Relation, Claim, Attestation, and Discussion have the first shadow workflow descriptors tied to trusted local planner capabilities; the descriptors are narrower runtime recipes layered on top of the broader generic packet write descriptors.
+
 ## Portability model
 
 The long-term portability model is:

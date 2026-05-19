@@ -448,6 +448,198 @@ function createGenericReadyWorkflowPlans(input: {
         notes:
           'Describes the generic-ready follows.relation.clear fortress intent without enrolling live execution.',
       },
+      {
+        workflow_plan_id: 'relation.assembly_association.set.workflow.v0',
+        packet_type: 'Relation',
+        packet_subtype: 'assembly_association',
+        planner_id: input.writePlannerId,
+        mutation_intents: ['assembly_association.relation.set'],
+        operation_kinds: ['relation.set'],
+        resolver_ids: ['actor.ref', 'input.packet_ref', 'input.value', 'static.value', 'relation.active_lookup', 'compatibility.projection'],
+        policy_action_ids: ['assembly_association.relation.set'],
+        dependency_ids: [
+          'runtime.packet_store.read',
+          'runtime.policy_gate',
+          'generic.operation.relation',
+          'generic.resolver.actor_ref',
+          'generic.resolver.packet_ref',
+          'generic.resolver.input_value',
+          'generic.resolver.static_value',
+          'generic.resolver.relation_lookup',
+          'generic.compatibility_projection',
+          'runtime.planner.scoped_relation',
+        ],
+        steps: [
+          operationStep({
+            step_id: 'write_assembly_association_relation',
+            operation_kind: 'relation.set',
+            packet_type: 'Relation',
+            packet_subtype: 'assembly_association',
+            resolver_ids: ['actor.ref', 'input.packet_ref', 'input.value', 'static.value', 'relation.active_lookup', 'compatibility.projection'],
+            policy_action_ids: ['assembly_association.relation.set'],
+            dependency_ids: [
+              'runtime.packet_store.read',
+              'runtime.policy_gate',
+              'generic.operation.relation',
+              'generic.compatibility_projection',
+              'runtime.planner.scoped_relation',
+            ],
+            input_bindings: {
+              subject_ref: actorRef(),
+              target_ref: inputPath('assembly_packet_id'),
+              scope_ref: inputPath('scope_id'),
+              subtype: staticValue('assembly_association'),
+              status: staticValue('active'),
+              note: inputPath('note'),
+            },
+            output_key: 'relation_write',
+            notes:
+              'Shadow relation.set workflow for canonical assembly association writes, including compatibility projection dependency.',
+          }),
+        ],
+        availability: 'shadow_only',
+        notes:
+          'Describes the planner-extraction assembly_association.relation.set intent without enrolling live execution.',
+      },
+      {
+        workflow_plan_id: 'relation.assembly_association.clear.workflow.v0',
+        packet_type: 'Relation',
+        packet_subtype: 'assembly_association',
+        planner_id: input.writePlannerId,
+        mutation_intents: ['assembly_association.relation.clear'],
+        operation_kinds: ['relation.clear'],
+        resolver_ids: ['actor.ref', 'input.packet_ref', 'static.value', 'relation.active_lookup', 'compatibility.projection'],
+        policy_action_ids: ['assembly_association.relation.clear'],
+        dependency_ids: [
+          'runtime.packet_store.read',
+          'runtime.policy_gate',
+          'generic.operation.relation',
+          'generic.resolver.actor_ref',
+          'generic.resolver.packet_ref',
+          'generic.resolver.static_value',
+          'generic.resolver.relation_lookup',
+          'generic.compatibility_projection',
+          'runtime.planner.scoped_relation',
+        ],
+        steps: [
+          operationStep({
+            step_id: 'clear_assembly_association_relation',
+            operation_kind: 'relation.clear',
+            packet_type: 'Relation',
+            packet_subtype: 'assembly_association',
+            resolver_ids: ['actor.ref', 'input.packet_ref', 'static.value', 'relation.active_lookup', 'compatibility.projection'],
+            policy_action_ids: ['assembly_association.relation.clear'],
+            dependency_ids: [
+              'runtime.packet_store.read',
+              'runtime.policy_gate',
+              'generic.operation.relation',
+              'generic.compatibility_projection',
+              'runtime.planner.scoped_relation',
+            ],
+            input_bindings: {
+              subject_ref: actorRef(),
+              target_ref: inputPath('assembly_packet_id'),
+              scope_ref: inputPath('scope_id'),
+              subtype: staticValue('assembly_association'),
+              status: staticValue('withdrawn'),
+            },
+            output_key: 'relation_write',
+            notes:
+              'Shadow relation.clear workflow for canonical assembly association clears, including compatibility projection dependency.',
+          }),
+        ],
+        availability: 'shadow_only',
+        notes:
+          'Describes the planner-extraction assembly_association.relation.clear intent without enrolling live execution.',
+      },
+      {
+        workflow_plan_id: 'relation.home_locality.set.workflow.v0',
+        packet_type: 'Relation',
+        packet_subtype: 'home_locality',
+        planner_id: input.writePlannerId,
+        mutation_intents: ['home_locality.relation.set'],
+        operation_kinds: ['relation.set', 'relation.clear'],
+        resolver_ids: ['actor.ref', 'input.packet_ref', 'static.value', 'relation.active_lookup', 'compatibility.projection'],
+        policy_action_ids: ['home_locality.relation.set', 'home_locality.relation.clear'],
+        dependency_ids: [
+          'runtime.packet_store.read',
+          'runtime.policy_gate',
+          'generic.operation.relation',
+          'generic.resolver.actor_ref',
+          'generic.resolver.packet_ref',
+          'generic.resolver.static_value',
+          'generic.resolver.relation_lookup',
+          'generic.compatibility_projection',
+          'runtime.planner.scoped_relation',
+        ],
+        steps: [
+          {
+            step_id: 'choose_home_locality_mode',
+            step_kind: 'condition',
+            condition: {
+              condition_kind: 'present',
+              left: inputPath('home_scope_packet_id'),
+            },
+            then_steps: [
+              operationStep({
+                step_id: 'write_home_locality_relation',
+                operation_kind: 'relation.set',
+                packet_type: 'Relation',
+                packet_subtype: 'home_locality',
+                resolver_ids: ['actor.ref', 'input.packet_ref', 'static.value', 'relation.active_lookup', 'compatibility.projection'],
+                policy_action_ids: ['home_locality.relation.set'],
+                dependency_ids: [
+                  'runtime.packet_store.read',
+                  'runtime.policy_gate',
+                  'generic.operation.relation',
+                  'generic.compatibility_projection',
+                  'runtime.planner.scoped_relation',
+                ],
+                input_bindings: {
+                  subject_ref: actorRef(),
+                  target_ref: inputPath('home_scope_packet_id'),
+                  subtype: staticValue('home_locality'),
+                  status: staticValue('active'),
+                },
+                output_key: 'relation_write',
+                notes:
+                  'Shadow relation.set workflow for home locality selection.',
+              }),
+            ],
+            else_steps: [
+              operationStep({
+                step_id: 'clear_home_locality_relation',
+                operation_kind: 'relation.clear',
+                packet_type: 'Relation',
+                packet_subtype: 'home_locality',
+                resolver_ids: ['actor.ref', 'static.value', 'relation.active_lookup', 'compatibility.projection'],
+                policy_action_ids: ['home_locality.relation.clear'],
+                dependency_ids: [
+                  'runtime.packet_store.read',
+                  'runtime.policy_gate',
+                  'generic.operation.relation',
+                  'generic.compatibility_projection',
+                  'runtime.planner.scoped_relation',
+                ],
+                input_bindings: {
+                  subject_ref: actorRef(),
+                  subtype: staticValue('home_locality'),
+                  status: staticValue('withdrawn'),
+                },
+                output_key: 'relation_write',
+                notes:
+                  'Shadow relation.clear workflow for clearing home locality when no home scope is supplied.',
+              }),
+            ],
+            on_failure: 'abort_workflow',
+            notes:
+              'Branches home locality set/clear behavior from the presence of home_scope_packet_id.',
+          },
+        ],
+        availability: 'shadow_only',
+        notes:
+          'Describes the planner-extraction home_locality.relation.set intent without enrolling live execution.',
+      },
     ];
   }
 
@@ -460,7 +652,7 @@ function createGenericReadyWorkflowPlans(input: {
         planner_id: input.writePlannerId,
         mutation_intents: ['role_association.claim.set'],
         operation_kinds: ['claim.assert', 'claim.withdraw'],
-        resolver_ids: ['actor.ref', 'input.packet_ref', 'input.value', 'static.value'],
+        resolver_ids: ['actor.ref', 'input.packet_ref', 'input.value', 'static.value', 'role.scope'],
         policy_action_ids: [
           'role_association.claim.set',
           'role_association.claim.withdraw',
@@ -472,6 +664,7 @@ function createGenericReadyWorkflowPlans(input: {
           'generic.resolver.packet_ref',
           'generic.resolver.input_value',
           'generic.resolver.static_value',
+          'generic.resolver.role_scope',
         ],
         steps: [
           {
@@ -488,9 +681,9 @@ function createGenericReadyWorkflowPlans(input: {
                 operation_kind: 'claim.assert',
                 packet_type: 'Claim',
                 packet_subtype: 'relation_assertion',
-                resolver_ids: ['actor.ref', 'input.packet_ref', 'input.value', 'static.value'],
+                resolver_ids: ['actor.ref', 'input.packet_ref', 'input.value', 'static.value', 'role.scope'],
                 policy_action_ids: ['role_association.claim.set'],
-                dependency_ids: ['runtime.policy_gate', 'generic.operation.claim'],
+                dependency_ids: ['runtime.policy_gate', 'generic.operation.claim', 'generic.resolver.role_scope'],
                 input_bindings: {
                   actor_ref: actorRef(),
                   role_ref: inputPath('role_ref'),
@@ -508,9 +701,9 @@ function createGenericReadyWorkflowPlans(input: {
                 operation_kind: 'claim.withdraw',
                 packet_type: 'Claim',
                 packet_subtype: 'relation_assertion',
-                resolver_ids: ['actor.ref', 'input.packet_ref', 'input.value', 'static.value'],
+                resolver_ids: ['actor.ref', 'input.packet_ref', 'input.value', 'static.value', 'role.scope'],
                 policy_action_ids: ['role_association.claim.withdraw'],
-                dependency_ids: ['runtime.policy_gate', 'generic.operation.claim'],
+                dependency_ids: ['runtime.policy_gate', 'generic.operation.claim', 'generic.resolver.role_scope'],
                 input_bindings: {
                   actor_ref: actorRef(),
                   role_ref: inputPath('role_ref'),
@@ -618,6 +811,62 @@ function createGenericReadyWorkflowPlans(input: {
         availability: 'shadow_only',
         notes:
           'Describes the generic-ready attestation.packet_signal.set fortress intent without enrolling live execution.',
+      },
+    ];
+  }
+
+  if (input.family === 'Discussion') {
+    return [
+      {
+        workflow_plan_id: 'discussion.reply.create.workflow.v0',
+        packet_type: 'Discussion',
+        packet_subtype: 'message',
+        planner_id: input.writePlannerId,
+        mutation_intents: ['discussion.reply.create'],
+        operation_kinds: ['single_packet.create'],
+        resolver_ids: ['actor.ref', 'input.packet_ref', 'input.value', 'discussion.parent_thread'],
+        policy_action_ids: ['discussion.reply.create'],
+        dependency_ids: [
+          'runtime.packet_store.read',
+          'runtime.policy_gate',
+          'runtime.discussion_service.read',
+          'generic.operation.discussion',
+          'generic.resolver.actor_ref',
+          'generic.resolver.packet_ref',
+          'generic.resolver.input_value',
+          'generic.resolver.discussion_thread',
+          'runtime.planner.discussion_reply',
+        ],
+        steps: [
+          operationStep({
+            step_id: 'create_discussion_reply_message',
+            operation_kind: 'single_packet.create',
+            packet_type: 'Discussion',
+            packet_subtype: 'message',
+            resolver_ids: ['actor.ref', 'input.packet_ref', 'input.value', 'discussion.parent_thread'],
+            policy_action_ids: ['discussion.reply.create'],
+            dependency_ids: [
+              'runtime.packet_store.read',
+              'runtime.policy_gate',
+              'runtime.discussion_service.read',
+              'generic.operation.discussion',
+              'runtime.planner.discussion_reply',
+            ],
+            input_bindings: {
+              actor_ref: actorRef(),
+              scope_ref: inputPath('scope_id'),
+              parent_post_ref: inputPath('parent_post_packet_id'),
+              markdown: inputPath('reply_markdown'),
+              kind: staticValue('message'),
+            },
+            output_key: 'discussion_reply_write',
+            notes:
+              'Shadow single_packet.create workflow for discussion replies after parent/thread/forum resolution.',
+          }),
+        ],
+        availability: 'shadow_only',
+        notes:
+          'Describes the planner-extraction discussion.reply.create intent without enrolling live execution.',
       },
     ];
   }

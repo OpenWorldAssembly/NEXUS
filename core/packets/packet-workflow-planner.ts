@@ -79,9 +79,25 @@ export type PacketWorkflowResolverDescriptor = {
     | 'existing_active_relation_lookup'
     | 'target_summary_lookup'
     | 'current_projection_lookup'
+    | 'discussion_parent_thread_lookup'
+    | 'role_scope_lookup'
+    | 'compatibility_projection_lookup'
     | 'input_value'
     | 'static_value';
   availability: PacketWorkflowAvailability;
+  notes: string;
+};
+
+export type TrustedPlannerCapabilityDescriptor = {
+  capability_id: string;
+  capability_kind:
+    | 'planner'
+    | 'resolver'
+    | 'builder'
+    | 'projection'
+    | 'compatibility_bridge';
+  source_module: string;
+  dependency_ids: readonly string[];
   notes: string;
 };
 
@@ -187,7 +203,88 @@ export const PACKET_WORKFLOW_PLANNER_CAPABILITIES = [
     availability: 'shadow_only',
     notes: 'Reads current projection state for no-op and supersedes planning.',
   },
+  {
+    resolver_id: 'discussion.parent_thread',
+    resolver_kind: 'discussion_parent_thread_lookup',
+    availability: 'shadow_only',
+    notes: 'Resolves discussion reply parent, thread, forum, and scope context.',
+  },
+  {
+    resolver_id: 'role.scope',
+    resolver_kind: 'role_scope_lookup',
+    availability: 'shadow_only',
+    notes: 'Resolves the governing scope for role association claim planning.',
+  },
+  {
+    resolver_id: 'compatibility.projection',
+    resolver_kind: 'compatibility_projection_lookup',
+    availability: 'shadow_only',
+    notes: 'Describes compatibility projection support while legacy surfaces remain present.',
+  },
 ] as const satisfies readonly PacketWorkflowResolverDescriptor[];
+
+export const TRUSTED_PACKET_PLANNER_CAPABILITIES = [
+  {
+    capability_id: 'runtime.planner.scoped_relation',
+    capability_kind: 'planner',
+    source_module: 'runtime/nexus/server/elemental-scope-relation-planner.ts',
+    dependency_ids: [
+      'runtime.packet_store.read',
+      'runtime.policy_gate',
+      'generic.operation.relation',
+      'generic.resolver.relation_lookup',
+      'generic.compatibility_projection',
+    ],
+    notes:
+      'Existing local planner for assembly association, home locality, and follow relation packets plus compatibility claim projection.',
+  },
+  {
+    capability_id: 'runtime.planner.discussion_reply',
+    capability_kind: 'planner',
+    source_module: 'runtime/nexus/server/fortress-prepare-handler-implementation.ts',
+    dependency_ids: [
+      'runtime.packet_store.read',
+      'runtime.policy_gate',
+      'generic.operation.discussion',
+      'generic.resolver.discussion_thread',
+    ],
+    notes:
+      'Existing local discussion reply prepare path, awaiting extraction into a reusable discussion reply planner.',
+  },
+  {
+    capability_id: 'runtime.resolver.role_scope',
+    capability_kind: 'resolver',
+    source_module: 'runtime/nexus/server/fortress-prepare-handler-implementation.ts',
+    dependency_ids: [
+      'runtime.packet_store.read',
+      'generic.resolver.role_scope',
+    ],
+    notes:
+      'Existing role association claim resolver for authority scope and applicable scope refs.',
+  },
+  {
+    capability_id: 'runtime.resolver.target_summary',
+    capability_kind: 'resolver',
+    source_module: 'runtime/nexus/server/fortress-prepare-handler-implementation.ts',
+    dependency_ids: [
+      'runtime.packet_store.read',
+      'generic.resolver.target_summary',
+    ],
+    notes:
+      'Existing packet-signal target summary dependency used by Attestation planning.',
+  },
+  {
+    capability_id: 'runtime.projection.compatibility',
+    capability_kind: 'compatibility_bridge',
+    source_module: 'runtime/nexus/server/scope-graph-compatibility.ts',
+    dependency_ids: [
+      'generic.compatibility_projection',
+      'generic.operation.projection',
+    ],
+    notes:
+      'Existing compatibility projection bridge for legacy claim/relation surfaces while canonical relations settle.',
+  },
+] as const satisfies readonly TrustedPlannerCapabilityDescriptor[];
 
 export const PACKET_WORKFLOW_DEPENDENCY_IDS = [
   'runtime.packet_store.read',
@@ -195,6 +292,7 @@ export const PACKET_WORKFLOW_DEPENDENCY_IDS = [
   'generic.operation.relation',
   'generic.operation.claim',
   'generic.operation.attestation',
+  'generic.operation.discussion',
   'generic.operation.projection',
   'generic.resolver.actor_ref',
   'generic.resolver.packet_ref',
@@ -202,6 +300,13 @@ export const PACKET_WORKFLOW_DEPENDENCY_IDS = [
   'generic.resolver.static_value',
   'generic.resolver.relation_lookup',
   'generic.resolver.target_summary',
+  'generic.resolver.discussion_thread',
+  'generic.resolver.role_scope',
+  'generic.resolver.projection',
+  'generic.compatibility_projection',
+  'runtime.discussion_service.read',
+  'runtime.planner.scoped_relation',
+  'runtime.planner.discussion_reply',
 ] as const;
 
 export const PACKET_WORKFLOW_POLICY_ACTION_IDS = [
@@ -211,7 +316,13 @@ export const PACKET_WORKFLOW_POLICY_ACTION_IDS = [
   'role_association.claim.withdraw',
   'follows.relation.set',
   'follows.relation.clear',
+  'assembly_association.relation.set',
+  'assembly_association.relation.clear',
+  'home_locality.relation.set',
+  'home_locality.relation.clear',
+  'discussion.reply.create',
   'relation.generic.write',
+  'discussion.generic.write',
   'claim.generic.write',
   'attestation.generic.write',
   'preference.element.write',
@@ -243,6 +354,10 @@ function getWorkflowPlans(definition: PacketTypeDefinition): readonly PacketWork
 
 export function listPacketWorkflowPlannerCapabilities(): PacketWorkflowResolverDescriptor[] {
   return [...PACKET_WORKFLOW_PLANNER_CAPABILITIES];
+}
+
+export function listTrustedPacketPlannerCapabilities(): TrustedPlannerCapabilityDescriptor[] {
+  return [...TRUSTED_PACKET_PLANNER_CAPABILITIES];
 }
 
 export function listPacketWorkflowPlanDescriptorsFromDefinitions(input: {
