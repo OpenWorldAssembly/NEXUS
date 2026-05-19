@@ -14,6 +14,7 @@ import type { PreferenceElementInterfaceRuntimeResult } from '@runtime/nexus/ser
 import {
   writeScopeDisplayPreferencesCompatibility,
 } from '@runtime/nexus/server/shell-preferences';
+import { resolveShellPreferencesApiPreflight } from '@runtime/nexus/server/packet-api-crossing-guard';
 
 const ActorAssertionSchema = z
   .object({
@@ -82,6 +83,7 @@ export const POST: RequestHandler = async (request) => {
     const scopeDisplayPatch = buildScopeDisplayPatch(parsedBody);
 
     if (parsedBody.actor_packet && parsedBody.actor_assertion) {
+      resolveShellPreferencesApiPreflight();
       const { actor_assertion: _actorAssertion, ...signedRequestBody } =
         rawBody as Record<string, unknown>;
       const actorContext = await services.authService.verifyActorMutation({

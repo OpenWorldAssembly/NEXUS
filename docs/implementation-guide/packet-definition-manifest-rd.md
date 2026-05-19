@@ -119,6 +119,12 @@ Workflow-plan helpers follow the same rule. They can audit and dry-run descripto
 
 Workflow alignment now records which live fortress intents can be described through these workflow plans and which remain planned gaps. Relation, Claim, Attestation, and Discussion have the first shadow workflow descriptors tied to trusted local planner capabilities; the descriptors are narrower runtime recipes layered on top of the broader generic packet write descriptors.
 
+Policy and dependency descriptors stay packet-native. A workflow dependency must be explainable through `Policy` packet semantics, a Definition `packet_dependency` part, a manifest operation, a workflow resolver, or trusted local runtime code that points back to packet-defined meaning. Runtime registries validate and index these references; they are not a separate dependency ontology.
+
+Free-floating dependency strings should fail audit unless they are explicitly recorded as runtime metadata backed by a trusted local capability. This preserves the long-term portability model: packets define meaning and requirements, while local runtimes decide whether they have trusted engines capable of interpreting and executing those requirements.
+
+Client ingress metadata must stay interface-neutral for the same reason. A web shell, Raspberry Pi panel, automation script, or future adapter should map into portable client intent IDs rather than embedding frontend-specific concepts into packet definitions or runtime planners.
+
 ## Portability model
 
 The long-term portability model is:

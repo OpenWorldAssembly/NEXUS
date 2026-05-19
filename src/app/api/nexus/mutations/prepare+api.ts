@@ -13,6 +13,7 @@ import {
   toNexusAuthGatePayload,
 } from '@runtime/nexus/server/auth-service.utils';
 import { LocalityDuplicateWarningError } from '@runtime/nexus/server/locality-directory-service';
+import { resolvePrepareMutationApiPreflight } from '@runtime/nexus/server/packet-api-crossing-guard';
 
 const ActorAssertionSchema = z
   .object({
@@ -302,6 +303,7 @@ export const POST: RequestHandler = async (request) => {
   try {
     const rawBody = await request.json();
     const parsedBody = PrepareMutationRequestSchema.parse(rawBody);
+    resolvePrepareMutationApiPreflight(parsedBody.intent);
     const { actor_assertion: _actorAssertion, ...signedMutationBody } =
       rawBody as Record<string, unknown>;
     const services = await getNexusPacketServices();

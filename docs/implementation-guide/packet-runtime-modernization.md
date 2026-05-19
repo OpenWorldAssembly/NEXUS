@@ -84,7 +84,7 @@ The manifest audit now fails when compatibility posture and descriptors disagree
 
 ## Fortress Handler Extraction Pass
 
-The signed fortress corridor remains the live authority for prepare, proof, finalize, and persistence decisions. The packet-runtime master handler remains the GUI/API-to-runtime connector bridge; it does not own signed fortress internals yet.
+The signed fortress corridor remains the live authority for prepare, proof, finalize, and persistence decisions. The packet-runtime master handler remains the client/API-to-runtime connector bridge; it does not own signed fortress internals yet.
 
 The extraction pass introduces domain-composed fortress handler maps for locality, discussion, attestation, assembly, relation, role, and actor policy. `MutationPrepareHandlers` and `MutationFinalizeHandlers` remain compatibility facades for the current implementation, while the composed maps give the runtime a clearer stepping-stone toward generic packet planners.
 
@@ -112,7 +112,7 @@ The signed fortress genericization audit also records operation mappings for eve
 - `workflow_specific` intents map to `workflow.compose` or a composed operation set and remain runtime-owned until their component operations can be split safely.
 - `legacy_bridge` intents point at the canonical operation direction they should collapse into.
 
-This keeps the moat/drawbridge boundary intact. The runtime master handler can normalize GUI/API requests and eventually choose operation descriptors, while the fortress still owns trusted prepare/finalize/proof/persistence until a later pass promotes selected operation kinds through the generic path.
+This keeps the moat/drawbridge boundary intact. The runtime master handler can normalize client/API ingress requests and eventually choose operation descriptors, while the fortress still owns trusted prepare/finalize/proof/persistence until a later pass promotes selected operation kinds through the generic path.
 
 ## Generic Workflow Planner Contract Pass
 
@@ -148,10 +148,58 @@ The alignment remains shadow-only. Existing runtime planner modules are register
 
 ## Runtime Crossing Guard and Fortress Handoff Pass
 
-The crossing guard and fortress corridor remain separate layers. The runtime crossing guard owns GUI/API normalization, manifest/workflow lookup, connector selection, shadow handoff metadata, and response/refresh hints. The fortress corridor owns policy/proof authority, prepare/finalize lifecycle, mutation tickets, signed packet validation, persistence, and canonical mutation effects.
+The crossing guard and fortress corridor remain separate layers. The runtime crossing guard owns client/API ingress normalization, manifest/workflow lookup, connector selection, shadow handoff metadata, and response/refresh hints. The fortress corridor owns policy/proof authority, prepare/finalize lifecycle, mutation tickets, signed packet validation, persistence, and canonical mutation effects.
 
 The handoff pass adds a shadow `PacketRuntimeFortressHandoff` contract. A handoff records the normalized mutation direction, workflow alignment status, operation kinds, workflow plan IDs, trusted capability IDs, policy action IDs, dependency IDs, resolver IDs, fortress prepare/finalize handler names, and return refresh hints. It always carries `live_fortress_ready: false` in this pass.
 
 Generic-ready and workflow-aligned planner-extraction intents can now produce `shadow_ready` handoffs. Runtime-owned workflow intents produce explicit non-ready handoffs with orchestration reason codes. Legacy bridge intents point at canonical handoff directions. Unknown mutation intents fail closed before any fortress handoff.
 
 This does not change the live mutation routes. `NexusMutationService` remains the live signed fortress authority, and `Preference.element` remains the only live packet-runtime master-handler connector.
+
+## Packet-Based Policy, Dependency, and Client Ingress Enrollment Pass
+
+Policy and dependency requirements are now audited as packet-backed semantics rather than a second runtime-only dependency system. Workflow plans can reference policy action IDs and dependency IDs, but those references must resolve to packet policy semantics, packet Definition dependency parts, operation ontology entries, trusted workflow resolvers, or trusted local capability metadata. Runtime descriptors may index and validate those references, but they do not define packet meaning.
+
+`Policy` packets remain the semantic authority for live write-lock policy. `MutationPolicyGate` remains the live resolver for scope policy refs, actor security mode, proof level, and accepted proof methods. Shadow workflow policy descriptors record how policy action IDs map back to that packet-based enforcement model, while manifest-only actions remain shadow metadata until a later live write-policy enrollment pass.
+
+The runtime crossing guard now has a client/API ingress enrollment registry. The registry is an internal allowlist of adapter-originated transport routes and portable client intent IDs:
+
+- `/api/nexus/mutations/prepare` enrolls the current signed fortress mutation intents.
+- `/api/nexus/shell-preferences` enrolls the existing live `Preference.element` runtime connector.
+- each enrollment records route or transport source, client intent ID, mutation intent, operation kinds, workflow plans, policy actions, dependency refs, and current live mode.
+
+Unknown or custom route/intent pairings fail crossing-guard preflight. The preflight may resolve handoff metadata and packet-backed policy/dependency descriptors, but it does not authorize, ticket, sign, persist, finalize, or bypass the signed fortress. This keeps the future generic corridor aligned with enrolled client/API ingress from web, device, automation, or other adapters instead of accepting arbitrary injected operation requests.
+
+## Interface-Neutral API Crossing Guard Pass
+
+The enrollment layer is interface-neutral. Web shell, Raspberry Pi controls, local automation, and future adapters should all map their local events into the same portable client intent IDs, such as `scope.follow.set`, `scope.association.clear`, `discussion.reply.create`, and `preference.interface.set`. Runtime registries should not encode web UI concepts as packet meaning.
+
+The live API routes now consult crossing-guard preflight before delegating to the live corridor:
+
+- prepare parses the request intent, validates client/API ingress enrollment, then delegates to `NexusMutationService`;
+- finalize reads the stored ticket, validates the ticket's original mutation intent against enrolled prepare ingress, then delegates to `NexusMutationService`;
+- authenticated shell preferences validate the `Preference.element` connector enrollment before calling the packet-runtime connector;
+- guest shell preference compatibility writes remain outside packet-runtime connector enrollment.
+
+This pass is still not generic execution. Preflight validates allowlist and metadata alignment only; fortress policy/proof/ticketing/persistence remains authoritative.
+
+## No-Deferral Pre-Reseed Closure Program
+
+Reseed design is now gated on full closure of in-scope live runtime modernization work. The chapter can still be split across multiple implementation passes, but the remaining live runtime work is no longer tracked as open-ended planned gaps. The pre-reseed closure ledger classifies every live mutation intent, runtime connector path, workflow plan, policy/dependency requirement, client/API ingress enrollment, fortress handoff, and packet family as `closed`, `closing_now`, `queued_pre_reseed`, `blocked`, or `out_of_chapter_scope`.
+
+The first proving promotion is follow relation set/clear:
+
+- `follows.relation.set`
+- `follows.relation.clear`
+
+These intents now prepare through trusted generic workflow planning while `NexusMutationService` remains the signed fortress authority. API routes, route payloads, response shapes, policy action IDs, packet schemas, proof behavior, tickets, signatures, persistence, and projections remain unchanged. The promoted path uses manifest workflow metadata and trusted local relation planning to produce the same packet candidates and policy metadata as the previous fortress-specific follow planner path.
+
+The remaining pre-reseed queue is explicit:
+
+- relation, claim, and attestation generic enrollment for association, home locality, role claim, packet signal, and role attestation paths
+- discussion and locality workflow decomposition for reply/thread planners, default surfaces, locality path/graph planning, and assembly creation
+- packet-based policy/dependency semantic authority so Policy packets and Definition dependency parts carry enough meaning for reseed
+- legacy bridge retirement for compatibility aliases that should not survive into the fresh reseed world
+- a final reseed readiness audit after all in-scope modernization closure items are closed
+
+Unused never-live packet families remain visible as `out_of_chapter_scope`; they are not reseed blockers for this chapter and can be added when product flows need them.

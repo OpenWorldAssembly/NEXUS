@@ -42,6 +42,30 @@ export type MutationActionId =
 
 export const DEFAULT_MUTATION_PROOF_LEVEL: WriteProofLevel = 'session';
 export const WRITE_LOCK_POLICY_KIND = 'write_lock';
+export const MUTATION_ACTION_IDS = [
+  'discussion.thread.create',
+  'discussion.post.create',
+  'discussion.reply.create',
+  'attestation.packet_signal.set',
+  'attestation.packet_signal.clear',
+  'role_association.claim.set',
+  'role_association.claim.withdraw',
+  'role_association.attestation.support',
+  'role_association.attestation.dispute',
+  'role_association.attestation.clear',
+  'assembly_association.claim.set',
+  'assembly_association.claim.withdraw',
+  'assembly_association.relation.set',
+  'assembly_association.relation.clear',
+  'home_locality.relation.set',
+  'home_locality.relation.clear',
+  'follows.relation.set',
+  'follows.relation.clear',
+  'locality.element.create',
+  'assembly.element.create',
+  'discussion.surfaces.ensure',
+  'actor.write_policy.update',
+] as const satisfies readonly MutationActionId[];
 
 export interface ResolvedWritePolicyDecision {
   action_ids: MutationActionId[];
@@ -51,30 +75,7 @@ export interface ResolvedWritePolicyDecision {
 }
 
 function isMutationActionId(value: string): value is MutationActionId {
-  return (
-    value === 'discussion.thread.create' ||
-    value === 'discussion.post.create' ||
-    value === 'discussion.reply.create' ||
-    value === 'attestation.packet_signal.set' ||
-    value === 'attestation.packet_signal.clear' ||
-    value === 'role_association.claim.set' ||
-    value === 'role_association.claim.withdraw' ||
-    value === 'role_association.attestation.support' ||
-    value === 'role_association.attestation.dispute' ||
-    value === 'role_association.attestation.clear' ||
-    value === 'assembly_association.claim.set' ||
-    value === 'assembly_association.claim.withdraw' ||
-    value === 'assembly_association.relation.set' ||
-    value === 'assembly_association.relation.clear' ||
-    value === 'home_locality.relation.set' ||
-    value === 'home_locality.relation.clear' ||
-    value === 'follows.relation.set' ||
-    value === 'follows.relation.clear' ||
-    value === 'locality.element.create' ||
-    value === 'assembly.element.create' ||
-    value === 'discussion.surfaces.ensure' ||
-    value === 'actor.write_policy.update'
-  );
+  return (MUTATION_ACTION_IDS as readonly string[]).includes(value);
 }
 
 function resolvePolicyRequiredProofLevel(input: {

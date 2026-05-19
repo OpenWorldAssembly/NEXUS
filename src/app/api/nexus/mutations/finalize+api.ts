@@ -12,6 +12,7 @@ import {
   toNexusAuthFailurePayload,
   toNexusAuthGatePayload,
 } from '@runtime/nexus/server/auth-service.utils';
+import { resolveFinalizeMutationApiPreflight } from '@runtime/nexus/server/packet-api-crossing-guard';
 
 const ActorAssertionSchema = z
   .object({
@@ -57,6 +58,8 @@ export const POST: RequestHandler = async (request) => {
     if (!storedTicket) {
       throw new Error('Unknown mutation ticket.');
     }
+
+    resolveFinalizeMutationApiPreflight(storedTicket.intent);
 
     const actorContext = await services.authService.verifyActorMutation({
       request,

@@ -66,9 +66,9 @@ import {
 import { planLocalityGraphApplyPackets } from '@runtime/nexus/server/locality-graph-apply-planner';
 import {
   planAssemblyAssociationRelationPackets,
-  planFollowRelationPackets,
   planHomeLocalityRelationPackets,
 } from '@runtime/nexus/server/elemental-scope-relation-planner';
+import { runTrustedPacketWorkflowMutation } from '@runtime/nexus/server/trusted-packet-workflow-runtime';
 import { MutationPolicyGate } from '@runtime/nexus/server/mutation-policy-gate';
 import { MutationTicketService } from '@runtime/nexus/server/mutation-ticket-service';
 import type { MutationPrepareHandlerKey } from '@runtime/nexus/server/mutation-intent-registry';
@@ -187,11 +187,6 @@ function createAttestationPacketId(input: {
     input.contextPacketId ?? 'none',
   ].join('/');
 }
-
-function isClaimedActorPacket(actorPacket: PacketEnvelopeByType['Element']): boolean {
-  return actorPacket.body.identity?.claim_status === 'claimed';
-}
-
 
 export class MutationPrepareHandlers {
   constructor(
@@ -953,43 +948,12 @@ export class MutationPrepareHandlers {
       | Extract<MutationIntent, { kind: 'follows.relation.clear' }>;
     actorPacket: PacketEnvelopeByType['Element'];
   }): Promise<PreparedMutation> {
-    if (!isClaimedActorPacket(input.actorPacket)) {
-      throw new Error('Follow relations require a claimed identity.');
-    }
-
-    const targetScopePacket = await this.requirePacket({
-      packetId: input.intent.target_scope_packet_id,
-      family: 'Element',
-    });
-    const isSetIntent = input.intent.kind === 'follows.relation.set';
-    const relationPlan = await planFollowRelationPackets({
+    return runTrustedPacketWorkflowMutation({
       packetStore: this.packetStore,
+      policyGate: this.policyGate,
       actorPacket: input.actorPacket,
-      targetScopePacket,
-      mode: isSetIntent ? 'set' : 'clear',
+      intent: input.intent,
     });
-    const mergedPolicyDecision = await this.policyGate.resolveScopePolicyDecision({
-      governingScopePacket: targetScopePacket,
-      actorPacket: input.actorPacket,
-      actionIds: [isSetIntent ? 'follows.relation.set' : 'follows.relation.clear'],
-    });
-    const preparedPackets = await Promise.all(
-      relationPlan.packets.map(async (packet) => {
-        const digests = await getPacketUnsignedDigestCandidates(packet);
-
-        return {
-          packet,
-          unsigned_digest: digests[0]?.digest ?? '',
-        };
-      })
-    );
-
-    return {
-      kind: input.intent.kind,
-      ...mergedPolicyDecision,
-      governing_scope_packet_id: targetScopePacket.header.packet_id,
-      prepared_packets: preparedPackets,
-    };
   }
 
   async prepareRoleAssociationClaim(input: {
