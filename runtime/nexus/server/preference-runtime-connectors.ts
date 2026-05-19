@@ -5,11 +5,7 @@
 
 import { z } from 'zod';
 
-import {
-  ScopeDisplayPreferenceValueSchema,
-  ShellChromePreferenceValueSchema,
-  type ShellChromePreferenceValue,
-} from '@core/packets/packet-definition-manifest';
+import type { ShellChromePreferenceValue } from '@core/packets/packet-definition-manifest';
 import type { NexusScopeDisplayPreferencesPayload } from '@runtime/nexus/nexus-api-types';
 import {
   writeElementPreferenceInterfacePacket,
@@ -17,13 +13,50 @@ import {
 } from '@runtime/nexus/server/element-preference-packets';
 import type { PacketRuntimeConnector } from '@runtime/nexus/server/packet-runtime-master-handler';
 
-const PreferenceElementInterfacePatchSchema = z
+const ScopeDisplayPreferencePatchSchema = z
   .object({
-    scope_display: ScopeDisplayPreferenceValueSchema.partial().optional(),
-    shell_chrome: ShellChromePreferenceValueSchema.partial().optional(),
-    note: z.string().trim().min(1).max(240).optional(),
+    main_visible_scope_packet_ids: z.array(z.string().min(1)).optional(),
+    show_associated_parent_chains: z.boolean().optional(),
+    show_followed_parent_chains: z.boolean().optional(),
   })
   .strict();
+
+const ShellChromePreferencePatchSchema = z
+  .object({
+    navigation_mode: z.enum(['function', 'scope']).optional(),
+    theme_mode: z.enum(['dark', 'light']).optional(),
+    ui_density: z.enum(['small', 'large']).optional(),
+  })
+  .strict();
+
+function hasDefinedPatchField(
+  patch: Record<string, unknown> | undefined
+): boolean {
+  return Object.values(patch ?? {}).some((value) => value !== undefined);
+}
+
+const PreferenceElementInterfacePatchSchema = z
+  .object({
+    scope_display: ScopeDisplayPreferencePatchSchema.optional(),
+    shell_chrome: ShellChromePreferencePatchSchema.optional(),
+    note: z.string().trim().min(1).max(240).optional(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (
+      hasDefinedPatchField(value.scope_display) ||
+      hasDefinedPatchField(value.shell_chrome)
+    ) {
+      return;
+    }
+
+    context.addIssue({
+      code: 'custom',
+      message:
+        'Preference.element interface writes require at least one scope_display or shell_chrome field.',
+      path: ['scope_display'],
+    });
+  });
 
 export type PreferenceElementInterfaceRuntimeInput = {
   scope_display?: Partial<NexusScopeDisplayPreferencesPayload>;

@@ -673,10 +673,26 @@ export const ShellChromePreferenceValueSchema = z
   })
   .strict();
 
+const DEFAULT_SCOPE_DISPLAY_PREFERENCE_VALUE = {
+  main_visible_scope_packet_ids: [],
+  show_associated_parent_chains: true,
+  show_followed_parent_chains: true,
+};
+
+const DEFAULT_SHELL_CHROME_PREFERENCE_VALUE = {
+  navigation_mode: 'function',
+  theme_mode: 'dark',
+  ui_density: 'small',
+} as const;
+
 export const ElementInterfacePreferenceValueSchema = z
   .object({
-    scope_display: ScopeDisplayPreferenceValueSchema.default({}),
-    shell_chrome: ShellChromePreferenceValueSchema.default({}),
+    scope_display: ScopeDisplayPreferenceValueSchema.default(
+      DEFAULT_SCOPE_DISPLAY_PREFERENCE_VALUE
+    ),
+    shell_chrome: ShellChromePreferenceValueSchema.default(
+      DEFAULT_SHELL_CHROME_PREFERENCE_VALUE
+    ),
   })
   .strict();
 

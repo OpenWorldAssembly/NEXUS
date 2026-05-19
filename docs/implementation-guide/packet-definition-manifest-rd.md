@@ -4,6 +4,8 @@
 
 Experimental design with one narrow live bridge. Most manifest work remains shadow-mode, but `Preference.element` is now enrolled as a canonical packet family for claimed actor scope-display preference writes while the legacy runtime table remains a compatibility cache.
 
+For this chapter, `Preference` is the only manifest-defined packet type enrolled in the live `PacketEnvelope` ontology. `Definition` and `Bundle` remain experimental manifest packet types only; they define the portable definition and carrier shape, but they are not live packet families until a later enrollment pass explicitly updates the canonical ontology and compatibility registry.
+
 ## Intent
 
 Nexus needs a single exported packet-definition surface so future packet schema changes do not require edits across builders, policy gates, mutation dispatch, projection code, and UI assumptions.
@@ -124,7 +126,7 @@ The manifest may eventually be carried inside a Bundle inventory, but the manife
 
 ## Next use
 
-The current safe runtime step is to use `Preference.element` as the first full template example. The live bridge now runs through a generic packet-runtime master handler and dispatches to a local `preference.element.interface.set` connector. Scope-display and shell-chrome preferences are now UI-driven writes through the same connector, proving partial `Preference.element.value.interface` patches without a new packet shape.
+The current safe runtime step is to use `Preference.element` as the first full template example. The live bridge now runs through a generic packet-runtime master handler and dispatches to a local `preference.element.interface.set` connector. Scope-display and shell-chrome preferences are now UI-driven writes through the same connector, proving partial `Preference.element.value.interface` patches without a new packet shape. Empty interface patches are rejected before writing so the bridge cannot create default preference packets from requests that carry no actual preference change.
 
 ## Preference.element shadow prototype
 

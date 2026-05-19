@@ -347,6 +347,90 @@ test('packet runtime master handler dispatches Preference.element interface writ
   });
 });
 
+test('packet runtime master handler rejects empty Preference.element interface writes', async () => {
+  await withTemporaryPacketStore(async (packetStore) => {
+    const baseInput = {
+      packetStore,
+      actorContext: {
+        actorPacketId: 'nexus:element/test-actor',
+      },
+      mutationIntent: 'preference.element.set',
+      createdAt: '2026-05-17T00:00:00.000Z',
+    } as const;
+
+    await assert.rejects(
+      runRegisteredPacketRuntimeMutation<PreferenceElementInterfaceRuntimeResult>({
+        ...baseInput,
+        input: {},
+      }),
+      /require at least one scope_display or shell_chrome field/
+    );
+    await assert.rejects(
+      runRegisteredPacketRuntimeMutation<PreferenceElementInterfaceRuntimeResult>({
+        ...baseInput,
+        input: {
+          scope_display: {},
+        },
+      }),
+      /require at least one scope_display or shell_chrome field/
+    );
+    await assert.rejects(
+      runRegisteredPacketRuntimeMutation<PreferenceElementInterfaceRuntimeResult>({
+        ...baseInput,
+        input: {
+          shell_chrome: {},
+        },
+      }),
+      /require at least one scope_display or shell_chrome field/
+    );
+  });
+});
+
+test('packet runtime master handler allows same-value Preference.element patches as no-op writes', async () => {
+  await withTemporaryPacketStore(async (packetStore) => {
+    const firstWrite = await runRegisteredPacketRuntimeMutation<PreferenceElementInterfaceRuntimeResult>({
+      packetStore,
+      actorContext: {
+        actorPacketId: 'nexus:element/test-actor',
+      },
+      mutationIntent: 'preference.element.set',
+      input: {
+        scope_display: {
+          main_visible_scope_packet_ids: ['nexus:element/city'],
+          show_associated_parent_chains: false,
+          show_followed_parent_chains: true,
+        },
+        shell_chrome: {
+          navigation_mode: 'scope',
+          theme_mode: 'dark',
+          ui_density: 'large',
+        },
+      },
+      createdAt: '2026-05-17T00:00:00.000Z',
+    });
+    const secondWrite = await runRegisteredPacketRuntimeMutation<PreferenceElementInterfaceRuntimeResult>({
+      packetStore,
+      actorContext: {
+        actorPacketId: 'nexus:element/test-actor',
+      },
+      mutationIntent: 'preference.element.set',
+      input: {
+        scope_display: {
+          main_visible_scope_packet_ids: ['nexus:element/city'],
+        },
+        shell_chrome: {
+          ui_density: 'large',
+        },
+      },
+      createdAt: '2026-05-17T00:01:00.000Z',
+    });
+
+    assert.equal(firstWrite.result.wrote_revision, true);
+    assert.equal(secondWrite.result.wrote_revision, false);
+    assert.equal(secondWrite.result.revision_id, firstWrite.result.revision_id);
+  });
+});
+
 
 test('Preference.element shell chrome writes preserve existing scope-display preferences', async () => {
   await withTemporaryPacketStore(async (packetStore) => {

@@ -24,6 +24,8 @@ import {
   listPacketManifestTemplateSections,
   validatePacketDefinitionTemplateCompliance,
 } from '@core/packets/packet-definition-manifest';
+import { listDefinitionBootstrapParts } from '@core/packets/definitions/index.ts';
+import { PACKET_FAMILIES } from '@core/schema/packet-schema';
 
 test('experimental manifest exposes Definition, Preference, and Bundle packet types', () => {
   const packetTypes = listExperimentalPacketTypeDefinitions().map(
@@ -37,6 +39,12 @@ test('experimental manifest exposes Definition, Preference, and Bundle packet ty
   assert.ok(
     PACKET_DEFINITION_MANIFEST.items.every((item) => item.action_kinds.length > 0)
   );
+});
+
+test('Definition and Bundle remain manifest-only packet types for this chapter', () => {
+  assert.equal(PACKET_FAMILIES.includes('Preference'), true);
+  assert.equal((PACKET_FAMILIES as readonly string[]).includes('Definition'), false);
+  assert.equal((PACKET_FAMILIES as readonly string[]).includes('Bundle'), false);
 });
 
 test('Definition packet can represent a packet_schema definition part', () => {
@@ -139,6 +147,17 @@ test('Preference definition exposes required Definition parts', () => {
   assert.ok(partSubtypes.includes('packet_schema'));
   assert.ok(partSubtypes.includes('packet_compatibility'));
   assert.ok(partSubtypes.includes('packet_dependency'));
+});
+
+test('definitions barrel exposes bootstrap parts through prefixed aliases', () => {
+  const preferenceDefinition = getExperimentalPacketTypeDefinition('Preference');
+  assert.ok(preferenceDefinition);
+
+  const partIds = listDefinitionBootstrapParts(preferenceDefinition).map(
+    (part) => part.part_id
+  );
+
+  assert.ok(partIds.includes('preference.element.packet_definition.v0'));
 });
 
 test('packet manifest template exposes the expected section contract', () => {
