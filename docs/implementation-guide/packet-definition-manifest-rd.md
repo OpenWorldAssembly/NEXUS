@@ -64,6 +64,7 @@ Each packet type definition may declare:
 - builders: body or envelope builder descriptors, identified by schema keys rather than wired runtime functions
 - planners: planner descriptors that select local supported planner engines rather than shipping executable packet code
 - mutations: future mutation intent descriptors that can later be enrolled into the mutation intent registry
+- workflow plans: optional ordered shadow plans that compose known operation kinds, trusted resolvers, value bindings, simple conditions, policy action IDs, and dependency IDs
 - compatibility adapters: current identity descriptors plus adjacent schema-version adapter edges for the packet type itself
 
 The current descriptors are deliberately marked `shadow_only`. They document the target runtime shape without changing the alpha write path.
@@ -113,6 +114,8 @@ Helpers are intentionally boring. They retrieve and validate descriptor sections
 The current helper surface can derive identity, schema, storage, revision, actions, builders, planners, policy action IDs, projections, indexes, compatibility descriptors, bundle action IDs, and template compliance.
 
 Runtime should eventually pair these descriptors with a local allowlist of supported builder, planner, adapter, and projection engines.
+
+Workflow-plan helpers follow the same rule. They can audit and dry-run descriptor shape, but runtime owns resolver execution, condition interpretation, operation planning, policy verification, proof handling, and persistence. Unknown workflow operation kinds, resolvers, dependencies, policy actions, condition operators, or step references fail closed.
 
 ## Portability model
 
@@ -178,6 +181,7 @@ The manifest layer now includes a shadow audit harness before any live fortress 
 - compatibility adapters and `definition.packet_compatibility` parts are checked against the current compatibility standard;
 - every manifest definition must expose a current identity adapter and a required packet compatibility part;
 - legacy-aware definitions may expose full adjacent adapter ladders instead of only nearest-current edges;
+- workflow plans are checked against the operation ontology, trusted resolver/capability allowlists, declared policy action IDs, dependency IDs, and valid step references;
 - mutation plans are checked against local supported generic builder/planner/action capabilities.
 
 `Preference.element` also has a shadow seed candidate helper. The seed helper converts current runtime element preferences into the experimental Preference body, projects that body back into the current runtime preference shape, and marks the candidate safe only when the projection is equivalent and the packet definition audit has no errors.

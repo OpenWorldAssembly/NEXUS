@@ -25,6 +25,7 @@ import {
   validatePacketDefinitionTemplateCompliance,
 } from '@core/packets/packet-definition-helpers.ts';
 import { auditPacketDefinitionOperations } from '@core/packets/packet-operation-ontology.ts';
+import { auditPacketWorkflowPlanDescriptor } from '@core/packets/packet-workflow-planner.ts';
 import { PACKET_MANIFEST_TEMPLATE_VERSION } from '@core/packets/packet-definition-template.ts';
 
 export type PacketDefinitionAuditSeverity = 'error' | 'warning' | 'info';
@@ -422,6 +423,110 @@ function auditRuntimeCapabilitySupport(input: {
   }
 }
 
+function auditWorkflowPlanReferences(input: {
+  findings: PacketDefinitionAuditFinding[];
+  definition: PacketTypeDefinition;
+  plannerIds: Set<string>;
+  mutationIds: Set<string>;
+}): void {
+  const workflowPlans = input.definition.workflow_plans ?? [];
+  const workflowPlanIds = new Set(workflowPlans.map((plan) => plan.workflow_plan_id));
+
+  pushDuplicateFindings({
+    findings: input.findings,
+    packetType: input.definition.packet_type,
+    collectionName: 'workflow_plans',
+    descriptors: workflowPlans,
+    getId: (descriptor) => descriptor.workflow_plan_id,
+  });
+
+  for (const planner of input.definition.planners) {
+    for (const workflowPlanId of planner.workflow_plan_ids ?? []) {
+      if (workflowPlanIds.has(workflowPlanId)) {
+        continue;
+      }
+
+      input.findings.push(
+        makeFinding({
+          severity: 'error',
+          packet_type: input.definition.packet_type,
+          code: 'unknown_planner_workflow_plan_reference',
+          path: `planners.${planner.planner_id}.workflow_plan_ids`,
+          message: `Planner ${planner.planner_id} references unknown workflow plan ${workflowPlanId}.`,
+        })
+      );
+    }
+  }
+
+  for (const mutation of input.definition.mutations) {
+    for (const workflowPlanId of mutation.workflow_plan_ids ?? []) {
+      if (workflowPlanIds.has(workflowPlanId)) {
+        continue;
+      }
+
+      input.findings.push(
+        makeFinding({
+          severity: 'error',
+          packet_type: input.definition.packet_type,
+          code: 'unknown_mutation_workflow_plan_reference',
+          path: `mutations.${mutation.mutation_intent}.workflow_plan_ids`,
+          message: `Mutation ${mutation.mutation_intent} references unknown workflow plan ${workflowPlanId}.`,
+        })
+      );
+    }
+  }
+
+  for (const workflowPlan of workflowPlans) {
+    if (!input.plannerIds.has(workflowPlan.planner_id)) {
+      input.findings.push(
+        makeFinding({
+          severity: 'error',
+          packet_type: input.definition.packet_type,
+          code: 'unknown_workflow_planner_reference',
+          path: `workflow_plans.${workflowPlan.workflow_plan_id}.planner_id`,
+          message: `Workflow plan ${workflowPlan.workflow_plan_id} references unknown planner ${workflowPlan.planner_id}.`,
+        })
+      );
+    }
+
+    for (const mutationIntent of workflowPlan.mutation_intents) {
+      if (
+        input.mutationIds.has(mutationIntent) ||
+        mutationIntent.includes('.relation.') ||
+        mutationIntent.includes('.claim.') ||
+        mutationIntent.includes('.packet_signal.')
+      ) {
+        continue;
+      }
+
+      input.findings.push(
+        makeFinding({
+          severity: 'warning',
+          packet_type: input.definition.packet_type,
+          code: 'workflow_external_mutation_intent',
+          path: `workflow_plans.${workflowPlan.workflow_plan_id}.mutation_intents`,
+          message: `Workflow plan ${workflowPlan.workflow_plan_id} references external mutation intent ${mutationIntent}.`,
+        })
+      );
+    }
+
+    for (const issue of auditPacketWorkflowPlanDescriptor(
+      input.definition,
+      workflowPlan
+    ).findings) {
+      input.findings.push(
+        makeFinding({
+          severity: issue.severity,
+          packet_type: issue.packet_type,
+          code: issue.code,
+          path: issue.path,
+          message: issue.message,
+        })
+      );
+    }
+  }
+}
+
 export function auditPacketTypeDefinition(input: {
   definition: PacketTypeDefinition;
   capabilities?: PacketDefinitionRuntimeCapabilities;
@@ -473,6 +578,7 @@ export function auditPacketTypeDefinition(input: {
   const actionIds = new Set(definition.actions.map((descriptor) => descriptor.action_id));
   const builderIds = new Set(definition.builders.map((descriptor) => descriptor.builder_id));
   const plannerIds = new Set(definition.planners.map((descriptor) => descriptor.planner_id));
+  const mutationIds = new Set(definition.mutations.map((descriptor) => descriptor.mutation_intent));
 
   pushDuplicateFindings({
     findings,
@@ -559,6 +665,13 @@ export function auditPacketTypeDefinition(input: {
   for (const mutation of definition.mutations) {
     auditMutationReferences({ findings, definition, mutation, actionIds, plannerIds });
   }
+
+  auditWorkflowPlanReferences({
+    findings,
+    definition,
+    plannerIds,
+    mutationIds,
+  });
 
   for (const issue of auditPacketCompatibilityStandard(definition)) {
     findings.push(

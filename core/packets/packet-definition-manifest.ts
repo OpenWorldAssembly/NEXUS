@@ -26,6 +26,10 @@ import {
 } from '@core/packets/definitions/index.ts';
 import { derivePacketDefinitionActionKinds } from '@core/packets/packet-definition-helpers.ts';
 import { createPacketOperationModernizationCoverage } from '@core/packets/packet-operation-ontology.ts';
+import {
+  getPacketWorkflowPlanDescriptorFromDefinitions,
+  listPacketWorkflowPlanDescriptorsFromDefinitions,
+} from '@core/packets/packet-workflow-planner.ts';
 import { PACKET_MANIFEST_TEMPLATE_VERSION } from '@core/packets/packet-definition-template.ts';
 
 export const EXPERIMENTAL_PACKET_TYPE_DEFINITIONS = {
@@ -168,6 +172,24 @@ export function listPacketOperationModernizationCoverage() {
   );
 }
 
+export function listPacketWorkflowPlanDescriptors(packetType?: string) {
+  return listPacketWorkflowPlanDescriptorsFromDefinitions({
+    definitions: listExperimentalPacketTypeDefinitions(),
+    packetType,
+  });
+}
+
+export function getPacketWorkflowPlanDescriptor(
+  packetType: string,
+  workflowPlanId: string
+) {
+  return getPacketWorkflowPlanDescriptorFromDefinitions({
+    definitions: listExperimentalPacketTypeDefinitions(),
+    packetType,
+    workflowPlanId,
+  });
+}
+
 export * from '@core/packets/definitions/index.ts';
 export * from '@core/packets/packet-definition-helpers.ts';
 export * from '@core/packets/packet-definition-template.ts';
@@ -175,3 +197,4 @@ export * from '@core/packets/packet-definition-action-bridge.ts';
 export * from '@core/packets/packet-definition-audit.ts';
 export * from '@core/packets/packet-type-body-builders.ts';
 export * from '@core/packets/packet-operation-ontology.ts';
+export * from '@core/packets/packet-workflow-planner.ts';

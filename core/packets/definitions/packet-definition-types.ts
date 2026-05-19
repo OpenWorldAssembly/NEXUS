@@ -4,6 +4,7 @@
  */
 
 import type { z } from 'zod';
+import type { PacketWorkflowPlanDescriptor } from '@core/packets/packet-workflow-planner.ts';
 
 export type PacketDefinitionStatus =
   | 'experimental_shadow'
@@ -136,6 +137,7 @@ export type PacketPlannerDescriptor = {
   action_ids: readonly string[];
   builder_ids: readonly string[];
   policy_action_ids: readonly string[];
+  workflow_plan_ids?: readonly string[];
   availability: 'shadow_only' | 'runtime_ready' | 'canonical';
   notes: string;
 };
@@ -144,6 +146,7 @@ export type PacketMutationDescriptor = {
   mutation_intent: string;
   action_ids: readonly string[];
   planner_id: string;
+  workflow_plan_ids?: readonly string[];
   result_family: 'packet_write' | 'projection_update' | 'compatibility_update' | 'bundle_update';
   availability: 'shadow_only' | 'runtime_ready' | 'canonical';
   notes: string;
@@ -210,6 +213,7 @@ export type PacketTypeDefinition<TBodySchema extends z.ZodTypeAny = z.ZodTypeAny
   builders: readonly PacketBuilderDescriptor[];
   planners: readonly PacketPlannerDescriptor[];
   mutations: readonly PacketMutationDescriptor[];
+  workflow_plans?: readonly PacketWorkflowPlanDescriptor[];
   compatibility_adapters: readonly PacketCompatibilityAdapterDescriptor[];
   projections: readonly PacketProjectionDescriptor[];
   indexes: readonly PacketIndexDescriptor[];

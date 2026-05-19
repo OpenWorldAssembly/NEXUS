@@ -113,3 +113,20 @@ The signed fortress genericization audit also records operation mappings for eve
 - `legacy_bridge` intents point at the canonical operation direction they should collapse into.
 
 This keeps the moat/drawbridge boundary intact. The runtime master handler can normalize GUI/API requests and eventually choose operation descriptors, while the fortress still owns trusted prepare/finalize/proof/persistence until a later pass promotes selected operation kinds through the generic path.
+
+## Generic Workflow Planner Contract Pass
+
+The workflow planner contract pass adds the declarative layer above individual operation kinds. Packet definitions may now describe shadow workflow plans as ordered steps over known generic operations, trusted resolver IDs, value bindings, simple conditions, policy action IDs, and runtime dependency IDs.
+
+Workflow plans are data, not code. Definitions can say "resolve actor and target, then run `relation.set`" or "if the input value is present run `attestation.set`, otherwise run `attestation.clear`." They cannot introduce arbitrary functions, dynamic imports, persistence behavior, route payloads, or proof rules. The runtime interpreter validates every operation, resolver, dependency, condition operator, policy action, and step reference against local allowlists before producing a dry-run plan.
+
+The first shadow workflow plans cover the generic-ready fortress candidates:
+
+- `follows.relation.set`
+- `follows.relation.clear`
+- `role_association.claim.set`
+- `attestation.packet_signal.set`
+
+These plans do not enroll live execution. They prove the manifest can describe packet-specific variables and ordered generic work while preserving the signed fortress as the only live prepare/finalize/proof/persistence authority.
+
+Policy and dependency descriptors now matter as referenced workflow metadata, but their full semantics remain a dedicated pre-reseed pass. Unused legacy packet families remain explicit planned gaps and do not block the generic workflow contract or switch-over planning.

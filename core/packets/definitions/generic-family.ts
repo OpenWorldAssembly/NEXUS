@@ -21,6 +21,11 @@ import type {
   PacketRevisionBehavior,
   PacketTypeDefinition,
 } from './packet-definition-types.ts';
+import type { PacketOperationKind } from '@core/packets/packet-operation-ontology.ts';
+import type {
+  PacketWorkflowPlanDescriptor,
+  PacketWorkflowStepDescriptor,
+} from '@core/packets/packet-workflow-planner.ts';
 import {
   createRegistryCompatibilityAdapterDescriptors,
   derivePacketCompatibilityPosture,
@@ -301,6 +306,325 @@ function createDefinitionParts(input: {
   ];
 }
 
+function inputPath(path: string) {
+  return {
+    binding_kind: 'input_path',
+    path,
+    required: true,
+  } as const;
+}
+
+function actorRef() {
+  return {
+    binding_kind: 'actor_ref',
+    required: true,
+  } as const;
+}
+
+function staticValue(value: unknown) {
+  return {
+    binding_kind: 'static_value',
+    value,
+  } as const;
+}
+
+function operationStep(input: {
+  step_id: string;
+  operation_kind: PacketOperationKind;
+  packet_type: GenericBuilderFamily;
+  packet_subtype: string;
+  resolver_ids: readonly string[];
+  policy_action_ids: readonly string[];
+  dependency_ids: readonly string[];
+  input_bindings: Readonly<
+    Record<
+      string,
+      ReturnType<typeof inputPath> | ReturnType<typeof actorRef> | ReturnType<typeof staticValue>
+    >
+  >;
+  output_key: string;
+  notes: string;
+}): PacketWorkflowStepDescriptor {
+  return {
+    step_kind: 'operation',
+    on_failure: 'abort_workflow',
+    ...input,
+  };
+}
+
+function createGenericReadyWorkflowPlans(input: {
+  family: GenericBuilderFamily;
+  writePlannerId: string;
+}): PacketWorkflowPlanDescriptor[] {
+  if (input.family === 'Relation') {
+    return [
+      {
+        workflow_plan_id: 'relation.follows.set.workflow.v0',
+        packet_type: 'Relation',
+        packet_subtype: 'follows',
+        planner_id: input.writePlannerId,
+        mutation_intents: ['follows.relation.set'],
+        operation_kinds: ['relation.set'],
+        resolver_ids: ['actor.ref', 'input.packet_ref', 'static.value', 'relation.active_lookup'],
+        policy_action_ids: ['follows.relation.set'],
+        dependency_ids: [
+          'runtime.packet_store.read',
+          'runtime.policy_gate',
+          'generic.operation.relation',
+          'generic.resolver.actor_ref',
+          'generic.resolver.packet_ref',
+          'generic.resolver.static_value',
+          'generic.resolver.relation_lookup',
+        ],
+        steps: [
+          operationStep({
+            step_id: 'write_follows_relation',
+            operation_kind: 'relation.set',
+            packet_type: 'Relation',
+            packet_subtype: 'follows',
+            resolver_ids: ['actor.ref', 'input.packet_ref', 'static.value', 'relation.active_lookup'],
+            policy_action_ids: ['follows.relation.set'],
+            dependency_ids: [
+              'runtime.packet_store.read',
+              'runtime.policy_gate',
+              'generic.operation.relation',
+            ],
+            input_bindings: {
+              subject_ref: actorRef(),
+              target_ref: inputPath('target_ref'),
+              subtype: staticValue('follows'),
+              status: staticValue('active'),
+            },
+            output_key: 'relation_write',
+            notes: 'Shadow relation.set workflow for follow writes.',
+          }),
+        ],
+        availability: 'shadow_only',
+        notes:
+          'Describes the generic-ready follows.relation.set fortress intent without enrolling live execution.',
+      },
+      {
+        workflow_plan_id: 'relation.follows.clear.workflow.v0',
+        packet_type: 'Relation',
+        packet_subtype: 'follows',
+        planner_id: input.writePlannerId,
+        mutation_intents: ['follows.relation.clear'],
+        operation_kinds: ['relation.clear'],
+        resolver_ids: ['actor.ref', 'input.packet_ref', 'static.value', 'relation.active_lookup'],
+        policy_action_ids: ['follows.relation.clear'],
+        dependency_ids: [
+          'runtime.packet_store.read',
+          'runtime.policy_gate',
+          'generic.operation.relation',
+          'generic.resolver.actor_ref',
+          'generic.resolver.packet_ref',
+          'generic.resolver.static_value',
+          'generic.resolver.relation_lookup',
+        ],
+        steps: [
+          operationStep({
+            step_id: 'clear_follows_relation',
+            operation_kind: 'relation.clear',
+            packet_type: 'Relation',
+            packet_subtype: 'follows',
+            resolver_ids: ['actor.ref', 'input.packet_ref', 'static.value', 'relation.active_lookup'],
+            policy_action_ids: ['follows.relation.clear'],
+            dependency_ids: [
+              'runtime.packet_store.read',
+              'runtime.policy_gate',
+              'generic.operation.relation',
+            ],
+            input_bindings: {
+              subject_ref: actorRef(),
+              target_ref: inputPath('target_ref'),
+              subtype: staticValue('follows'),
+              status: staticValue('withdrawn'),
+            },
+            output_key: 'relation_write',
+            notes: 'Shadow relation.clear workflow for follow clears.',
+          }),
+        ],
+        availability: 'shadow_only',
+        notes:
+          'Describes the generic-ready follows.relation.clear fortress intent without enrolling live execution.',
+      },
+    ];
+  }
+
+  if (input.family === 'Claim') {
+    return [
+      {
+        workflow_plan_id: 'claim.role_association.set.workflow.v0',
+        packet_type: 'Claim',
+        packet_subtype: 'relation_assertion',
+        planner_id: input.writePlannerId,
+        mutation_intents: ['role_association.claim.set'],
+        operation_kinds: ['claim.assert', 'claim.withdraw'],
+        resolver_ids: ['actor.ref', 'input.packet_ref', 'input.value', 'static.value'],
+        policy_action_ids: [
+          'role_association.claim.set',
+          'role_association.claim.withdraw',
+        ],
+        dependency_ids: [
+          'runtime.policy_gate',
+          'generic.operation.claim',
+          'generic.resolver.actor_ref',
+          'generic.resolver.packet_ref',
+          'generic.resolver.input_value',
+          'generic.resolver.static_value',
+        ],
+        steps: [
+          {
+            step_id: 'choose_role_claim_mode',
+            step_kind: 'condition',
+            condition: {
+              condition_kind: 'equals',
+              left: inputPath('enabled'),
+              right: staticValue(true),
+            },
+            then_steps: [
+              operationStep({
+                step_id: 'assert_role_association_claim',
+                operation_kind: 'claim.assert',
+                packet_type: 'Claim',
+                packet_subtype: 'relation_assertion',
+                resolver_ids: ['actor.ref', 'input.packet_ref', 'input.value', 'static.value'],
+                policy_action_ids: ['role_association.claim.set'],
+                dependency_ids: ['runtime.policy_gate', 'generic.operation.claim'],
+                input_bindings: {
+                  actor_ref: actorRef(),
+                  role_ref: inputPath('role_ref'),
+                  subject_ref: inputPath('subject_ref'),
+                  claim_kind: staticValue('role_association'),
+                  status: staticValue('active'),
+                },
+                output_key: 'claim_write',
+                notes: 'Shadow claim.assert workflow for role association claims.',
+              }),
+            ],
+            else_steps: [
+              operationStep({
+                step_id: 'withdraw_role_association_claim',
+                operation_kind: 'claim.withdraw',
+                packet_type: 'Claim',
+                packet_subtype: 'relation_assertion',
+                resolver_ids: ['actor.ref', 'input.packet_ref', 'input.value', 'static.value'],
+                policy_action_ids: ['role_association.claim.withdraw'],
+                dependency_ids: ['runtime.policy_gate', 'generic.operation.claim'],
+                input_bindings: {
+                  actor_ref: actorRef(),
+                  role_ref: inputPath('role_ref'),
+                  subject_ref: inputPath('subject_ref'),
+                  claim_kind: staticValue('role_association'),
+                  status: staticValue('withdrawn'),
+                },
+                output_key: 'claim_write',
+                notes: 'Shadow claim.withdraw workflow for role association claims.',
+              }),
+            ],
+            on_failure: 'abort_workflow',
+            notes:
+              'Branches role association claim set/withdraw behavior from the typed enabled input.',
+          },
+        ],
+        availability: 'shadow_only',
+        notes:
+          'Describes the generic-ready role_association.claim.set fortress intent without enrolling live execution.',
+      },
+    ];
+  }
+
+  if (input.family === 'Attestation') {
+    return [
+      {
+        workflow_plan_id: 'attestation.packet_signal.set.workflow.v0',
+        packet_type: 'Attestation',
+        packet_subtype: 'packet_signal',
+        planner_id: input.writePlannerId,
+        mutation_intents: ['attestation.packet_signal.set'],
+        operation_kinds: ['attestation.set', 'attestation.clear'],
+        resolver_ids: ['actor.ref', 'input.packet_ref', 'input.value', 'attestation.target_summary'],
+        policy_action_ids: [
+          'attestation.packet_signal.set',
+          'attestation.packet_signal.clear',
+        ],
+        dependency_ids: [
+          'runtime.packet_store.read',
+          'runtime.policy_gate',
+          'generic.operation.attestation',
+          'generic.resolver.actor_ref',
+          'generic.resolver.packet_ref',
+          'generic.resolver.input_value',
+          'generic.resolver.target_summary',
+        ],
+        steps: [
+          {
+            step_id: 'choose_packet_signal_mode',
+            step_kind: 'condition',
+            condition: {
+              condition_kind: 'present',
+              left: inputPath('signal'),
+            },
+            then_steps: [
+              operationStep({
+                step_id: 'set_packet_signal_attestation',
+                operation_kind: 'attestation.set',
+                packet_type: 'Attestation',
+                packet_subtype: 'packet_signal',
+                resolver_ids: ['actor.ref', 'input.packet_ref', 'input.value', 'attestation.target_summary'],
+                policy_action_ids: ['attestation.packet_signal.set'],
+                dependency_ids: [
+                  'runtime.packet_store.read',
+                  'runtime.policy_gate',
+                  'generic.operation.attestation',
+                ],
+                input_bindings: {
+                  actor_ref: actorRef(),
+                  target_ref: inputPath('target_ref'),
+                  signal: inputPath('signal'),
+                  attestation_kind: staticValue('packet_signal'),
+                },
+                output_key: 'attestation_write',
+                notes: 'Shadow attestation.set workflow for packet signals.',
+              }),
+            ],
+            else_steps: [
+              operationStep({
+                step_id: 'clear_packet_signal_attestation',
+                operation_kind: 'attestation.clear',
+                packet_type: 'Attestation',
+                packet_subtype: 'packet_signal',
+                resolver_ids: ['actor.ref', 'input.packet_ref', 'attestation.target_summary'],
+                policy_action_ids: ['attestation.packet_signal.clear'],
+                dependency_ids: [
+                  'runtime.packet_store.read',
+                  'runtime.policy_gate',
+                  'generic.operation.attestation',
+                ],
+                input_bindings: {
+                  actor_ref: actorRef(),
+                  target_ref: inputPath('target_ref'),
+                  attestation_kind: staticValue('packet_signal'),
+                },
+                output_key: 'attestation_write',
+                notes: 'Shadow attestation.clear workflow for packet signals.',
+              }),
+            ],
+            on_failure: 'abort_workflow',
+            notes:
+              'Branches packet signal set/clear behavior from the presence of a signal value.',
+          },
+        ],
+        availability: 'shadow_only',
+        notes:
+          'Describes the generic-ready attestation.packet_signal.set fortress intent without enrolling live execution.',
+      },
+    ];
+  }
+
+  return [];
+}
+
 export function createGenericFamilyPacketDefinition<
   TFamily extends GenericBuilderFamily,
 >(
@@ -317,6 +641,11 @@ export function createGenericFamilyPacketDefinition<
   const builderId = `${baseId}.generic.body.v0`;
   const writePlannerId = `${baseId}.generic.write.v0`;
   const projectionPlannerId = `${baseId}.generic.projection.v0`;
+  const workflowPlans = createGenericReadyWorkflowPlans({
+    family,
+    writePlannerId,
+  });
+  const workflowPlanIds = workflowPlans.map((plan) => plan.workflow_plan_id);
   const projectionKey = `${baseId}.generic_projection`;
   const indexKey = `${baseId}.generic_index`;
   const compatibilityAdapters = createRegistryCompatibilityAdapterDescriptors({
@@ -409,6 +738,7 @@ export function createGenericFamilyPacketDefinition<
         action_ids: [createActionId, reviseActionId],
         builder_ids: [builderId],
         policy_action_ids: [`${baseId}.generic.write`],
+        workflow_plan_ids: workflowPlanIds.length > 0 ? workflowPlanIds : undefined,
         availability: 'shadow_only',
         notes: `Shadow write planner descriptor for generic ${family} packet revisions.`,
       },
@@ -427,12 +757,14 @@ export function createGenericFamilyPacketDefinition<
         mutation_intent: `${baseId}.generic.write`,
         action_ids: [createActionId, reviseActionId],
         planner_id: writePlannerId,
+        workflow_plan_ids: workflowPlanIds.length > 0 ? workflowPlanIds : undefined,
         result_family: 'packet_write',
         availability: 'shadow_only',
         notes:
           'Future manifest-driven generic write intent; live runtime routes are not enrolled in this pass.',
       },
     ],
+    workflow_plans: workflowPlans,
     compatibility_adapters: compatibilityAdapters,
     projections: config.projections ?? [
       {

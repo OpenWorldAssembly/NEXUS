@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { getPacketOperationDefinition } from '@core/packets/packet-operation-ontology';
+import {
+  getPacketOperationDefinition,
+  listPacketWorkflowPlanDescriptors,
+} from '@core/packets/packet-definition-manifest';
 import {
   auditFortressHandlerGenericization,
   listFortressHandlerGenericizationEntries,
@@ -104,6 +107,24 @@ test('fortress operation mappings preserve next-step gap classification', () => 
         entry.mutation_intent
       );
     }
+  }
+});
+
+test('generic-ready fortress intents have matching shadow workflow plans', () => {
+  const workflowMutationIntents = new Set(
+    listPacketWorkflowPlanDescriptors().flatMap((plan) => plan.mutation_intents)
+  );
+  const genericReadyEntries = listFortressHandlerGenericizationEntries().filter(
+    (entry) => entry.genericization_status === 'generic_ready'
+  );
+
+  assert.ok(genericReadyEntries.length > 0);
+  for (const entry of genericReadyEntries) {
+    assert.equal(entry.operation_mapping_status, 'directly_mapped');
+    assert.ok(
+      workflowMutationIntents.has(entry.mutation_intent),
+      entry.mutation_intent
+    );
   }
 });
 
