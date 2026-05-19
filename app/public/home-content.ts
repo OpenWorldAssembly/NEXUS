@@ -6,8 +6,11 @@ import type { ImageSource } from 'expo-image';
 
 import type { PublicPageAction } from '@app/public/content-types';
 import {
+  homeSectionBetterTechnologyImageSource,
+  homeSectionGrassrootsUnImageSource,
   homeSectionOpenAssemblyImageSource,
   homeSectionOwaClarityImageSource,
+  homeSectionUnityImageSource,
 } from './home-section-assets';
 import { buildPublicBackgroundImageUri } from './public-graphics';
 
@@ -120,6 +123,10 @@ const sections: HomeRailSection[] = [
       },
     }),
     align: 'left',
+    sideImageSource: homeSectionGrassrootsUnImageSource,
+    sideImageAlt:
+      'A decentralized global civic chamber linking local assemblies into a planetary coordination network.',
+    visualMode: 'image',
     action: { href: '/docs', label: 'Read Charter', variant: 'secondary' },
     mainPointScale: 'compact',
     variant: 'standard',
@@ -147,6 +154,10 @@ const sections: HomeRailSection[] = [
       },
     }),
     align: 'right',
+    sideImageSource: homeSectionBetterTechnologyImageSource,
+    sideImageAlt:
+      'A technological crossroads between extractive control systems and transparent civic coordination.',
+    visualMode: 'image',
     action: { href: '/nexus/dashboard', label: 'Enter Nexus', variant: 'secondary' },
     mainPointScale: 'compact',
     variant: 'standard',
@@ -174,6 +185,10 @@ const sections: HomeRailSection[] = [
       },
     }),
     align: 'left',
+    sideImageSource: homeSectionUnityImageSource,
+    sideImageAlt:
+      'Local community lights self-organizing into a peaceful global alignment network.',
+    visualMode: 'image',
     action: { href: '/support', label: 'Support OWA', variant: 'secondary' },
     mainPointScale: 'compact',
     variant: 'standard',
