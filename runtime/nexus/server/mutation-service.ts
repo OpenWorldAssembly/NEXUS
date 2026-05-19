@@ -15,22 +15,19 @@ import type {
 import type { MutationProofBundle } from '@core/auth/proof-types';
 import type {
   DiscussionActorClass,
-  PacketEnvelope,
   PacketEnvelopeByType,
 } from '@core/schema/packet-schema';
 import type { NexusAuthService } from '@runtime/nexus/server/auth-service';
 import { SQLiteAttestationService } from '@runtime/nexus/server/attestation-service';
 import { SQLiteDiscussionService } from '@runtime/nexus/server/discussion-service';
-import { MutationTicketStore, type StoredMutationTicket } from '@runtime/nexus/server/mutation-ticket-store';
+import { MutationTicketStore } from '@runtime/nexus/server/mutation-ticket-store';
 import { MutationTicketService } from '@runtime/nexus/server/mutation-ticket-service';
 import { MutationPolicyGate } from '@runtime/nexus/server/mutation-policy-gate';
 import { SignedPacketFinalizer } from '@runtime/nexus/server/signed-packet-finalizer';
-import {
-  getMutationIntentDescriptor,
-  type MutationFinalizeHandlerKey,
-} from '@runtime/nexus/server/mutation-intent-registry';
+import { getMutationIntentDescriptor } from '@runtime/nexus/server/mutation-intent-registry';
 import { MutationFinalizeHandlers } from '@runtime/nexus/server/mutation-finalize-handlers';
 import { MutationPrepareHandlers } from '@runtime/nexus/server/mutation-prepare-handlers';
+import { createMutationFinalizeHandlerMap } from '@runtime/nexus/server/fortress-handler-domains';
 import type { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store';
 
 type ActorContext = {
@@ -52,20 +49,6 @@ type FinalizedMutationResult = {
 };
 
 type PreparedMutationOrTicket = PreparedMutation | PreparedMutationResult;
-
-type FinalizeHandlerInput = {
-  storedTicket: StoredMutationTicket;
-  actorContext: ActorContext;
-  signedPackets: PacketEnvelope[];
-};
-
-type FinalizeHandlerResult = {
-  persist_effects: MutationPersistEffect[];
-  result: unknown;
-};
-
-type FinalizeHandler = (input: FinalizeHandlerInput) => Promise<FinalizeHandlerResult>;
-
 
 function isPreparedMutationResult(
   value: PreparedMutationOrTicket
@@ -133,90 +116,6 @@ export class NexusMutationService {
     });
   }
 
-  private createFinalizeHandlerMap(): Record<MutationFinalizeHandlerKey, FinalizeHandler> {
-    return {
-      finalizeLocalityPathCreate: async ({ storedTicket, actorContext, signedPackets }) =>
-        this.finalizeHandlers.finalizeLocalityPathCreate({
-          actorContext,
-          signedPackets,
-          storedTicket,
-        }),
-      finalizeLocalityGraphApply: async ({ storedTicket, actorContext, signedPackets }) =>
-        this.finalizeHandlers.finalizeLocalityGraphApply({
-          actorContext,
-          signedPackets,
-          storedTicket,
-        }),
-      finalizeDiscussionThreadPost: async ({ storedTicket, actorContext, signedPackets }) =>
-        this.finalizeHandlers.finalizeDiscussionThreadPost({
-          storedTicket,
-          actorContext,
-          signedPackets,
-        }),
-      finalizeDiscussionReply: async ({ storedTicket, actorContext, signedPackets }) =>
-        this.finalizeHandlers.finalizeDiscussionReply({
-          storedTicket,
-          actorContext,
-          signedPackets,
-        }),
-      finalizePacketSignal: async ({ actorContext, signedPackets }) =>
-        this.finalizeHandlers.finalizePacketSignal({
-          actorContext,
-          signedPackets: signedPackets as [PacketEnvelopeByType['Attestation']],
-        }),
-      finalizeAssemblyElementCreate: async ({ actorContext, signedPackets }) =>
-        this.finalizeHandlers.finalizeAssemblyElementCreate({
-          actorContext,
-          signedPackets,
-        }),
-      finalizeAssociationRelationUpdate: async ({ storedTicket, actorContext, signedPackets }) =>
-        this.finalizeHandlers.finalizeAssociationRelationUpdate({
-          actorContext,
-          signedPackets,
-          storedTicket,
-        }),
-      finalizeHomeLocalityRelation: async ({ storedTicket, actorContext, signedPackets }) =>
-        this.finalizeHandlers.finalizeHomeLocalityRelation({
-          actorContext,
-          signedPackets,
-          storedTicket,
-        }),
-      finalizeFollowRelationUpdate: async ({ storedTicket, actorContext, signedPackets }) =>
-        this.finalizeHandlers.finalizeFollowRelationUpdate({
-          actorContext,
-          signedPackets,
-          storedTicket,
-        }),
-      finalizeClaimUpdate: async ({ storedTicket, actorContext, signedPackets }) =>
-        this.finalizeHandlers.finalizeClaimUpdate({
-          actorContext,
-          signedPackets,
-          storedTicket,
-        }),
-      finalizeRoleAssociationAttestation: async ({
-        storedTicket,
-        actorContext,
-        signedPackets,
-      }) =>
-        this.finalizeHandlers.finalizeRoleAssociationAttestation({
-          actorContext,
-          signedPackets,
-          storedTicket,
-        }),
-      finalizeDiscussionSurfacesEnsure: async ({ storedTicket, actorContext, signedPackets }) =>
-        this.finalizeHandlers.finalizeDiscussionSurfacesEnsure({
-          actorContext,
-          signedPackets,
-          storedTicket,
-        }),
-      finalizeActorWritePolicyUpdate: async ({ actorContext, signedPackets }) =>
-        this.finalizeHandlers.finalizeActorWritePolicyUpdate({
-          actorContext,
-          signedPackets,
-        }),
-    };
-  }
-
   async finalizeMutation(input: {
     request: MutationFinalizeRequest;
     actorContext: ActorContext;
@@ -233,7 +132,9 @@ export class NexusMutationService {
     });
 
     const descriptor = getMutationIntentDescriptor(storedTicket.intent.kind);
-    const finalized = await this.createFinalizeHandlerMap()[descriptor.finalize]({
+    const finalized = await createMutationFinalizeHandlerMap(this.finalizeHandlers)[
+      descriptor.finalize
+    ]({
       storedTicket,
       actorContext: input.actorContext,
       signedPackets: input.request.signed_packets,

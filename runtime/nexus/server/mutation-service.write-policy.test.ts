@@ -7,10 +7,16 @@ import {
   getMutationIntentDescriptor,
   listMutationIntentDescriptors,
 } from './mutation-intent-registry.ts';
+import {
+  createMutationFinalizeHandlerMap,
+  createMutationPrepareHandlerMap,
+} from './fortress-handler-domains.ts';
+import type { MutationPrepareHandlers } from './mutation-prepare-handlers.ts';
+import type { MutationFinalizeHandlers } from './mutation-finalize-handlers.ts';
 
 test('actor write-policy preparation resolves current policy before building the future policy', () => {
   const mutationSource = readFileSync(
-    join(process.cwd(), 'runtime', 'nexus', 'server', 'mutation-prepare-handlers.ts'),
+    join(process.cwd(), 'runtime', 'nexus', 'server', 'fortress-prepare-handler-implementation.ts'),
     'utf8'
   );
   const policyGateSource = readFileSync(
@@ -18,7 +24,7 @@ test('actor write-policy preparation resolves current policy before building the
     'utf8'
   );
   const prepareActorWritePolicyUpdateIndex = mutationSource.indexOf(
-    'private async prepareActorWritePolicyUpdate'
+    'async prepareActorWritePolicyUpdate'
   );
   const policyGateCallIndex = mutationSource.indexOf(
     'await this.policyGate.resolveActorWritePolicyUpdate',
@@ -53,14 +59,14 @@ test('actor write-policy preparation resolves current policy before building the
 
 test('legacy home-locality mutation intent delegates into the canonical relation-first prepare path', () => {
   const source = readFileSync(
-    join(process.cwd(), 'runtime', 'nexus', 'server', 'mutation-prepare-handlers.ts'),
+    join(process.cwd(), 'runtime', 'nexus', 'server', 'fortress-prepare-handler-implementation.ts'),
     'utf8'
   );
   const aliasMethodIndex = source.indexOf(
-    'private async prepareHomeLocalityClaimCompatibilityAlias'
+    'async prepareHomeLocalityClaimCompatibilityAlias'
   );
   const canonicalMethodIndex = source.indexOf(
-    'private async prepareHomeLocalityRelation'
+    'async prepareHomeLocalityRelation'
   );
   const canonicalPrepareCallIndex = source.indexOf(
     'await this.prepareHomeLocalityRelation({',
@@ -82,14 +88,14 @@ test('legacy home-locality mutation intent delegates into the canonical relation
 
 test('legacy assembly-association mutation intent delegates into the canonical relation-first prepare path', () => {
   const source = readFileSync(
-    join(process.cwd(), 'runtime', 'nexus', 'server', 'mutation-prepare-handlers.ts'),
+    join(process.cwd(), 'runtime', 'nexus', 'server', 'fortress-prepare-handler-implementation.ts'),
     'utf8'
   );
   const aliasMethodIndex = source.indexOf(
-    'private async prepareAssemblyAssociationClaimCompatibilityAlias'
+    'async prepareAssemblyAssociationClaimCompatibilityAlias'
   );
   const canonicalMethodIndex = source.indexOf(
-    'private async prepareAssemblyAssociationRelation'
+    'async prepareAssemblyAssociationRelation'
   );
   const canonicalPrepareCallIndex = source.indexOf(
     'await this.prepareAssemblyAssociationRelation({',
@@ -126,25 +132,25 @@ test('home-locality finalization still accepts both canonical and compatibility 
 
 
 test('registered mutation intent handlers resolve to concrete prepare and finalize implementations', () => {
-  const prepareSource = readFileSync(
-    join(process.cwd(), 'runtime', 'nexus', 'server', 'mutation-prepare-handlers.ts'),
-    'utf8'
+  const prepareMap = createMutationPrepareHandlerMap(
+    new Proxy(
+      {},
+      {
+        get: () => async () => ({}),
+      }
+    ) as MutationPrepareHandlers
   );
-  const finalizerSource = readFileSync(
-    join(process.cwd(), 'runtime', 'nexus', 'server', 'mutation-finalize-handlers.ts'),
-    'utf8'
+  const finalizeMap = createMutationFinalizeHandlerMap(
+    new Proxy(
+      {},
+      {
+        get: () => async () => ({ persist_effects: [], result: null }),
+      }
+    ) as MutationFinalizeHandlers
   );
 
   for (const descriptor of listMutationIntentDescriptors()) {
-    assert.notEqual(
-      prepareSource.indexOf(`${descriptor.prepare}: async`),
-      -1,
-      `${descriptor.kind} prepare handler ${descriptor.prepare} is not wired`
-    );
-    assert.notEqual(
-      finalizerSource.indexOf(`async ${descriptor.finalize}`),
-      -1,
-      `${descriptor.kind} finalize handler ${descriptor.finalize} is not implemented`
-    );
+    assert.equal(typeof prepareMap[descriptor.prepare], 'function');
+    assert.equal(typeof finalizeMap[descriptor.finalize], 'function');
   }
 });

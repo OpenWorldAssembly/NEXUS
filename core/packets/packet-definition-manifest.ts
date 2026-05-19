@@ -25,6 +25,7 @@ import {
   type PacketTypeDefinition,
 } from '@core/packets/definitions/index.ts';
 import { derivePacketDefinitionActionKinds } from '@core/packets/packet-definition-helpers.ts';
+import { createPacketOperationModernizationCoverage } from '@core/packets/packet-operation-ontology.ts';
 import { PACKET_MANIFEST_TEMPLATE_VERSION } from '@core/packets/packet-definition-template.ts';
 
 export const EXPERIMENTAL_PACKET_TYPE_DEFINITIONS = {
@@ -76,7 +77,7 @@ export const PACKET_DEFINITION_MANIFEST = {
   dependencies: [],
   compatibility_notes: [
     'This manifest is a shadow-mode definition surface. It does not replace live PACKET_FAMILIES yet.',
-    'Definition.packet_compatibility parts carry nearest-current adapter metadata in the current experiment.',
+    'Definition.packet_compatibility parts carry current identity and adjacent version-ladder adapter metadata.',
     'Bundle packets remain carrier inventories and are not the semantic home for packet definitions.',
     'The manifest uses packet_type language as the forward-facing replacement for packet family terminology.',
   ],
@@ -161,9 +162,16 @@ export function listExperimentalPacketMutations(packetType?: string) {
   );
 }
 
+export function listPacketOperationModernizationCoverage() {
+  return createPacketOperationModernizationCoverage(
+    listExperimentalPacketTypeDefinitions()
+  );
+}
+
 export * from '@core/packets/definitions/index.ts';
 export * from '@core/packets/packet-definition-helpers.ts';
 export * from '@core/packets/packet-definition-template.ts';
 export * from '@core/packets/packet-definition-action-bridge.ts';
 export * from '@core/packets/packet-definition-audit.ts';
 export * from '@core/packets/packet-type-body-builders.ts';
+export * from '@core/packets/packet-operation-ontology.ts';

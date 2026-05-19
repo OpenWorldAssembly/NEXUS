@@ -64,7 +64,7 @@ Each packet type definition may declare:
 - builders: body or envelope builder descriptors, identified by schema keys rather than wired runtime functions
 - planners: planner descriptors that select local supported planner engines rather than shipping executable packet code
 - mutations: future mutation intent descriptors that can later be enrolled into the mutation intent registry
-- compatibility adapters: nearest-current adapter descriptors for the packet type itself
+- compatibility adapters: current identity descriptors plus adjacent schema-version adapter edges for the packet type itself
 
 The current descriptors are deliberately marked `shadow_only`. They document the target runtime shape without changing the alpha write path.
 
@@ -118,11 +118,11 @@ Runtime should eventually pair these descriptors with a local allowlist of suppo
 
 The long-term portability model is:
 
-- packet definitions describe nearest-current builders, planners, actions, and adapter posture
+- packet definitions describe current builders, planners, actions, and compatibility posture
 - Definition packets describe schemas, actions, builders, planners, projections, compatibility, and dependencies
-- `definition.packet_compatibility` parts describe safe upcast/downcast steps near the current schema version
+- `definition.packet_compatibility` parts describe safe upcast/downcast steps as adjacent version-ladder edges, including current identity, default-fill, conversion, and loss posture notes
 - Bundle packets carry Definition parts and related packet inventories across nodes
-- nodes can update their local systems by importing Bundle inventories that include definition parts, adapter metadata, fixtures, and safety/loss notes
+- nodes can eventually update their local systems by importing Bundle inventories that include definition parts, adapter metadata, fixtures, and safety/loss notes
 
 The manifest may eventually be carried inside a Bundle inventory, but the manifest itself is a Definition graph/profile concept, not a Bundle subtype.
 
@@ -175,7 +175,9 @@ The manifest layer now includes a shadow audit harness before any live fortress 
 - packet definitions are checked for template-section compliance;
 - descriptor IDs are checked for duplicates;
 - builders, planners, mutations, and actions are checked for broken references;
-- compatibility adapters and `definition.packet_compatibility` parts are checked against the nearest-current design posture;
+- compatibility adapters and `definition.packet_compatibility` parts are checked against the current compatibility standard;
+- every manifest definition must expose a current identity adapter and a required packet compatibility part;
+- legacy-aware definitions may expose full adjacent adapter ladders instead of only nearest-current edges;
 - mutation plans are checked against local supported generic builder/planner/action capabilities.
 
 `Preference.element` also has a shadow seed candidate helper. The seed helper converts current runtime element preferences into the experimental Preference body, projects that body back into the current runtime preference shape, and marks the candidate safe only when the projection is equivalent and the packet definition audit has no errors.

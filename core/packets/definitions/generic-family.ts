@@ -16,12 +16,15 @@ import {
 } from '@core/schema/packet-schema';
 
 import type {
-  PacketCompatibilityAdapterDescriptor,
   PacketDefinitionPartDescriptor,
   PacketProjectionDescriptor,
   PacketRevisionBehavior,
   PacketTypeDefinition,
 } from './packet-definition-types.ts';
+import {
+  createRegistryCompatibilityAdapterDescriptors,
+  derivePacketCompatibilityPosture,
+} from './compatibility-standard.ts';
 
 type GenericBuilderFamily =
   | 'Element'
@@ -180,67 +183,6 @@ function toRevisionBehavior(family: PacketFamily): PacketRevisionBehavior {
   return 'replaceable';
 }
 
-function createCompatibilityAdapters(
-  family: GenericBuilderFamily
-): PacketCompatibilityAdapterDescriptor[] {
-  const entry = PACKET_COMPATIBILITY_REGISTRY[family];
-  const currentVersion = entry.current_schema_version;
-  const adapters: PacketCompatibilityAdapterDescriptor[] = [];
-
-  for (const [schemaVersion, versionDefinition] of Object.entries(entry.versions)) {
-    if (
-      versionDefinition.next_schema_version === currentVersion &&
-      typeof versionDefinition.adaptToNext === 'function'
-    ) {
-      adapters.push({
-        adapter_id: `${lowerFirst(family)}.${schemaVersion}_to_${currentVersion}`,
-        packet_subtype: null,
-        from_schema_version: schemaVersion,
-        to_schema_version: currentVersion,
-        direction: 'upcast_to_current',
-        loss_awareness: 'loss_annotated',
-        availability: 'shadow_only',
-        notes:
-          'Shadow descriptor for the existing compatibility-registry upcast path into the current schema.',
-      });
-    }
-
-    if (
-      schemaVersion === currentVersion &&
-      versionDefinition.previous_schema_version &&
-      typeof versionDefinition.adaptToPrevious === 'function'
-    ) {
-      adapters.push({
-        adapter_id: `${lowerFirst(family)}.${currentVersion}_to_${versionDefinition.previous_schema_version}`,
-        packet_subtype: null,
-        from_schema_version: currentVersion,
-        to_schema_version: versionDefinition.previous_schema_version,
-        direction: 'downcast_from_current',
-        loss_awareness: 'loss_annotated',
-        availability: 'shadow_only',
-        notes:
-          'Shadow descriptor for the existing compatibility-registry downcast path from the current schema.',
-      });
-    }
-  }
-
-  if (adapters.length === 0) {
-    adapters.push({
-      adapter_id: `${lowerFirst(family)}.${currentVersion}_current_neighbor`,
-      packet_subtype: null,
-      from_schema_version: currentVersion,
-      to_schema_version: currentVersion,
-      direction: 'bidirectional_neighbor',
-      loss_awareness: 'none',
-      availability: 'shadow_only',
-      notes:
-        'Identity adapter placeholder for current-only schema compatibility in the manifest definition surface.',
-    });
-  }
-
-  return adapters;
-}
-
 function createDefinitionParts(input: {
   family: GenericBuilderFamily;
   defaultSubtype: string;
@@ -377,7 +319,13 @@ export function createGenericFamilyPacketDefinition<
   const projectionPlannerId = `${baseId}.generic.projection.v0`;
   const projectionKey = `${baseId}.generic_projection`;
   const indexKey = `${baseId}.generic_index`;
-  const compatibilityAdapters = createCompatibilityAdapters(family);
+  const compatibilityAdapters = createRegistryCompatibilityAdapterDescriptors({
+    packetType: family,
+    family,
+    baseId,
+    currentSchemaVersion: schemaVersion,
+    entry: PACKET_COMPATIBILITY_REGISTRY[family],
+  });
 
   return {
     packet_type: family,
@@ -389,26 +337,12 @@ export function createGenericFamilyPacketDefinition<
     body_schema: PACKET_BODY_SCHEMAS[family] as (typeof PACKET_BODY_SCHEMAS)[TFamily],
     declared_subtypes: config.declared_subtypes,
     default_subtype: config.default_subtype,
-    compatibility: {
-      strategy:
-        PACKET_COMPATIBILITY_REGISTRY[family].support_level === 'legacy_supported'
-          ? 'current_neighbor_adapters'
-          : 'current_only',
-      current_schema_version: schemaVersion,
-      supports_upcast: compatibilityAdapters.some(
-        (adapter) => adapter.direction === 'upcast_to_current'
-      ),
-      supports_downcast: compatibilityAdapters.some(
-        (adapter) => adapter.direction === 'downcast_from_current'
-      ),
-      loss_awareness: compatibilityAdapters.some(
-        (adapter) => adapter.loss_awareness !== 'none'
-      )
-        ? 'loss_annotated'
-        : 'none',
+    compatibility: derivePacketCompatibilityPosture({
+      currentSchemaVersion: schemaVersion,
+      adapters: compatibilityAdapters,
       notes:
         'Compatibility posture is summarized from the existing canonical compatibility registry; manifest descriptors do not implement new adapters.',
-    },
+    }),
     id_strategy: {
       strategy_id: `${baseId}.generic.import_preserved`,
       packet_id_mode: 'import_preserved',

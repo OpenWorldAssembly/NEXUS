@@ -118,13 +118,13 @@ export const definitionPacketDefinition = {
     bundling: 'supported',
   },
   compatibility: {
-    strategy: 'current_neighbor_adapters',
+    strategy: 'current_only',
     current_schema_version: '0.1.0',
     supports_upcast: false,
     supports_downcast: false,
     loss_awareness: 'none',
     notes:
-      'Definition v0 is core-native/bootstrap. Packetized self-definition may be introduced after the bootstrap kernel is stable.',
+        'Definition v0 is current-only/bootstrap. Packetized compatibility ladders can be added after the bootstrap kernel is stable.',
   },
   id_strategy: {
     strategy_id: 'definition.packet_type.subtype.part',

@@ -54,6 +54,53 @@ test('every registered definition audits without errors', () => {
   }
 });
 
+test('compatibility standard accepts full-chain adapter graphs', () => {
+  for (const packetType of ['Element', 'Claim', 'Policy']) {
+    const definition = getExperimentalPacketTypeDefinition(packetType);
+    assert.ok(definition);
+
+    const report = auditPacketTypeDefinition({
+      definition,
+      requireShadowRuntimeReady: false,
+    });
+
+    assert.equal(definition.compatibility.strategy, 'full_chain_bundle', packetType);
+    assert.equal(report.finding_counts.error, 0, packetType);
+    assert.equal(
+      report.findings.some(
+        (finding) => finding.code === 'compatibility_adapter_not_current_neighbor'
+      ),
+      false,
+      packetType
+    );
+  }
+});
+
+test('compatibility audit fails when posture is not backed by descriptors', () => {
+  const definition = getExperimentalPacketTypeDefinition('Element');
+  assert.ok(definition);
+
+  const brokenDefinition = {
+    ...definition,
+    compatibility: {
+      ...definition.compatibility,
+      supports_downcast: false,
+    },
+  };
+
+  const report = auditPacketTypeDefinition({
+    definition: brokenDefinition,
+    requireShadowRuntimeReady: false,
+  });
+
+  assert.equal(report.status, 'fail');
+  assert.ok(
+    report.findings.some(
+      (finding) => finding.code === 'compatibility_downcast_adapter_without_posture'
+    )
+  );
+});
+
 test('generic family mutation descriptors are shadow-runtime resolvable', () => {
   for (const family of GENERIC_PACKET_BUILD_FAMILIES) {
     const definition = getExperimentalPacketTypeDefinition(family);

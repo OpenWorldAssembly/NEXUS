@@ -154,7 +154,12 @@ export type PacketCompatibilityAdapterDescriptor = {
   packet_subtype: string | null;
   from_schema_version: string;
   to_schema_version: string;
-  direction: 'upcast_to_current' | 'downcast_from_current' | 'bidirectional_neighbor';
+  direction:
+    | 'upcast_to_current'
+    | 'upcast_to_next'
+    | 'downcast_from_current'
+    | 'downcast_to_previous'
+    | 'bidirectional_neighbor';
   loss_awareness: 'none' | 'loss_annotated' | 'loss_ack_required';
   availability: 'shadow_only' | 'runtime_ready' | 'canonical';
   notes: string;

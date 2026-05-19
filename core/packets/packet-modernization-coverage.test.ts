@@ -167,5 +167,17 @@ test('manifest-native packet types have executable body-builder coverage', () =>
     assert.equal(entry.descriptor_builder_status, 'defined');
     assert.equal(entry.body_builder_status, 'supported');
     assert.equal(entry.shadow_mutation_plan_status, 'supported');
+    assert.equal(entry.compatibility_standard_status, 'supported');
+  }
+});
+
+test('packet-type modernization coverage reports compatibility standard coverage', () => {
+  for (const entry of listPacketTypeModernizationCoverage()) {
+    assert.equal(entry.compatibility_standard_status, 'supported', entry.packet_type);
+    assert.equal(
+      entry.planned_gaps.some((gap) => gap.area === 'compatibility_definition'),
+      false,
+      entry.packet_type
+    );
   }
 });

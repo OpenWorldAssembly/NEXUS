@@ -73,3 +73,43 @@ The next implementation pass shifts the forward-looking checklist from legacy `P
 The pass adds shadow body-candidate builders for manifest-native packet types. `Definition` builds parsed Definition part bodies from local definition descriptors, `Bundle.packet_set` builds parsed bundle inventory bodies, and `Preference.element` uses the existing element preference body helper. These builders return body candidates and metadata only; they do not create signed/stored `PacketEnvelope` records.
 
 Packet-type modernization coverage is now the forward-looking audit surface for manifest definitions. The legacy family coverage remains as a migration bridge for live packet families and should keep planned gaps visible until those families are converted into packet-type definitions and runtime connectors.
+
+## Compatibility Definition Standard Pass
+
+The compatibility standardization pass makes compatibility a required, auditable definition contract. Every manifest packet type now needs a required `packet_compatibility` Definition part and a current-version identity adapter descriptor.
+
+Generic family definitions derive shadow compatibility descriptors from the canonical compatibility registry. Current-only families expose identity compatibility, while legacy-aware families expose adjacent upcast/downcast ladder edges where the registry has adapter functions. Multi-step ladders use the `full_chain_bundle` strategy so future bundles can carry discoverable adapter metadata without pretending every adapter must touch the current schema directly.
+
+The manifest audit now fails when compatibility posture and descriptors disagree, when downcast edges lack loss awareness, when duplicate adapter edges exist, or when a claimed full-chain graph is disconnected from the current version. This keeps reseed and import/export planning honest before runtime handler extraction or generic fortress promotion begins.
+
+## Fortress Handler Extraction Pass
+
+The signed fortress corridor remains the live authority for prepare, proof, finalize, and persistence decisions. The packet-runtime master handler remains the GUI/API-to-runtime connector bridge; it does not own signed fortress internals yet.
+
+The extraction pass introduces domain-composed fortress handler maps for locality, discussion, attestation, assembly, relation, role, and actor policy. `MutationPrepareHandlers` and `MutationFinalizeHandlers` remain compatibility facades for the current implementation, while the composed maps give the runtime a clearer stepping-stone toward generic packet planners.
+
+Each live mutation intent now has a genericization classification:
+
+- `generic_ready` means the intent is close to manifest/action/planner routing once its local read dependencies are isolated.
+- `planner_extraction_needed` means reusable packet planning must be extracted before generic routing.
+- `workflow_specific` means runtime orchestration still coordinates multiple packet operations or projections.
+- `legacy_bridge` means the intent is a compatibility alias that should collapse into a canonical intent.
+
+This pass intentionally preserves behavior. It records which fortress code should be retired, which should become reusable planners, and which orchestration remains runtime-owned before any live generic fortress promotion.
+
+## Packet Operation Ontology Pass
+
+The operation ontology pass adds the missing contract between packet definitions and trusted runtime execution. Packet definitions may now describe allowed mutation semantics by mapping their manifest mutation descriptors to known operation kinds such as `single_packet.create`, `single_packet.revise`, `relation.set`, `claim.assert`, `attestation.set`, `bundle.import`, `projection.refresh`, `compatibility.adapt`, and `workflow.compose`.
+
+This ontology is an allowlist, not executable packet-defined code. Each operation records its expected planner kind, builder kind, result family, trusted local runtime engine, generic capability posture, and safety notes. Packet definitions can request known operation semantics, but only local trusted engines may execute builders, planners, adapters, workflows, or persistence.
+
+The manifest audit now fails closed when a mutation descriptor cannot map to a known operation kind. The forward-looking packet operation modernization coverage lists every manifest mutation, the operation kinds it resolves to, the trusted local engine requested, and whether the gap is already mapped or still planned.
+
+The signed fortress genericization audit also records operation mappings for every live mutation intent:
+
+- `generic_ready` intents map directly to concrete operation kinds, but still wait for the later live promotion pass.
+- `planner_extraction_needed` intents map to their target operation kind and keep an explicit planner extraction gap.
+- `workflow_specific` intents map to `workflow.compose` or a composed operation set and remain runtime-owned until their component operations can be split safely.
+- `legacy_bridge` intents point at the canonical operation direction they should collapse into.
+
+This keeps the moat/drawbridge boundary intact. The runtime master handler can normalize GUI/API requests and eventually choose operation descriptors, while the fortress still owns trusted prepare/finalize/proof/persistence until a later pass promotes selected operation kinds through the generic path.

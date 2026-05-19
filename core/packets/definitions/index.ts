@@ -4,6 +4,7 @@
  */
 
 export * from './packet-definition-types.ts';
+export * from './compatibility-standard.ts';
 export * from './definition.ts';
 export * from './generic-family.ts';
 export {

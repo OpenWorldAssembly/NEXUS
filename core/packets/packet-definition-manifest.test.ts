@@ -26,7 +26,10 @@ import {
 } from '@core/packets/packet-definition-manifest';
 import { GENERIC_PACKET_BUILD_FAMILIES } from '@core/packets/packet-build-pipeline';
 import { listDefinitionBootstrapParts } from '@core/packets/definitions/index.ts';
-import { PACKET_FAMILIES } from '@core/schema/packet-schema';
+import {
+  PACKET_COMPATIBILITY_REGISTRY,
+  PACKET_FAMILIES,
+} from '@core/schema/packet-schema';
 
 const EXPECTED_MANIFEST_PACKET_TYPES = [
   'Definition',
@@ -76,6 +79,26 @@ test('Definition and Bundle expose manifest-native builder descriptors', () => {
       (adapter) => adapter.adapter_id === 'bundle.0_1_current_neighbor'
     )
   );
+});
+
+test('every manifest definition exposes required compatibility parts and current identity', () => {
+  for (const definition of listExperimentalPacketTypeDefinitions()) {
+    assert.ok(
+      listPacketDefinitionParts(definition).some(
+        (part) => part.required && part.part_subtype === 'packet_compatibility'
+      ),
+      `${definition.packet_type} compatibility part`
+    );
+    assert.ok(
+      definition.compatibility_adapters.some(
+        (adapter) =>
+          adapter.from_schema_version === definition.current_schema_version &&
+          adapter.to_schema_version === definition.current_schema_version &&
+          adapter.direction === 'bidirectional_neighbor'
+      ),
+      `${definition.packet_type} current identity adapter`
+    );
+  }
 });
 
 test('Definition packet can represent a packet_schema definition part', () => {
@@ -261,4 +284,46 @@ test('Preference definition declares concrete shadow compatibility adapters', ()
   assert.ok(adapterIds.includes('preference.element.legacy_v0_to_0_1'));
   assert.ok(adapterIds.includes('preference.element.0_1_to_legacy_v0'));
   assert.ok(adapterIds.includes('preference.element.0_1_current_neighbor'));
+});
+
+test('generic legacy families expose registry-derived compatibility ladders', () => {
+  for (const family of ['Element', 'Claim', 'Attestation', 'Policy'] as const) {
+    const definition = getExperimentalPacketTypeDefinition(family);
+    assert.ok(definition);
+
+    const registryEntry = PACKET_COMPATIBILITY_REGISTRY[family];
+    const edges = new Set(
+      definition.compatibility_adapters.map(
+        (adapter) => `${adapter.from_schema_version}->${adapter.to_schema_version}`
+      )
+    );
+
+    assert.ok(
+      edges.has(
+        `${registryEntry.current_schema_version}->${registryEntry.current_schema_version}`
+      ),
+      `${family} identity edge`
+    );
+
+    for (const [schemaVersion, versionDefinition] of Object.entries(
+      registryEntry.versions
+    )) {
+      if (versionDefinition.next_schema_version && versionDefinition.adaptToNext) {
+        assert.ok(
+          edges.has(`${schemaVersion}->${versionDefinition.next_schema_version}`),
+          `${family} upcast edge ${schemaVersion}`
+        );
+      }
+
+      if (
+        versionDefinition.previous_schema_version &&
+        versionDefinition.adaptToPrevious
+      ) {
+        assert.ok(
+          edges.has(`${schemaVersion}->${versionDefinition.previous_schema_version}`),
+          `${family} downcast edge ${schemaVersion}`
+        );
+      }
+    }
+  }
 });

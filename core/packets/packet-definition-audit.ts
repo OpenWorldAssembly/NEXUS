@@ -14,6 +14,7 @@ import type {
   PacketProjectionDescriptor,
   PacketTypeDefinition,
 } from '@core/packets/definitions/packet-definition-types.ts';
+import { auditPacketCompatibilityStandard } from '@core/packets/definitions/compatibility-standard.ts';
 import type { PacketDefinitionRuntimeCapabilities } from '@core/packets/packet-definition-action-bridge.ts';
 import {
   GENERIC_SHADOW_PACKET_RUNTIME_CAPABILITIES,
@@ -23,6 +24,7 @@ import {
   getPacketDefinitionSectionStatus,
   validatePacketDefinitionTemplateCompliance,
 } from '@core/packets/packet-definition-helpers.ts';
+import { auditPacketDefinitionOperations } from '@core/packets/packet-operation-ontology.ts';
 import { PACKET_MANIFEST_TEMPLATE_VERSION } from '@core/packets/packet-definition-template.ts';
 
 export type PacketDefinitionAuditSeverity = 'error' | 'warning' | 'info';
@@ -246,45 +248,6 @@ function auditMutationReferences(input: {
     );
   }
 }
-
-function auditCompatibilityPosture(input: {
-  findings: PacketDefinitionAuditFinding[];
-  definition: PacketTypeDefinition;
-}): void {
-  const currentVersion = input.definition.current_schema_version;
-
-  if (input.definition.compatibility.current_schema_version !== currentVersion) {
-    input.findings.push(
-      makeFinding({
-        severity: 'error',
-        packet_type: input.definition.packet_type,
-        code: 'compatibility_version_mismatch',
-        path: 'compatibility.current_schema_version',
-        message: `Compatibility posture current version ${input.definition.compatibility.current_schema_version} does not match definition current version ${currentVersion}`,
-      })
-    );
-  }
-
-  for (const adapter of input.definition.compatibility_adapters) {
-    const touchesCurrent =
-      adapter.from_schema_version === currentVersion || adapter.to_schema_version === currentVersion;
-
-    if (touchesCurrent) {
-      continue;
-    }
-
-    input.findings.push(
-      makeFinding({
-        severity: 'warning',
-        packet_type: input.definition.packet_type,
-        code: 'compatibility_adapter_not_current_neighbor',
-        path: `compatibility_adapters.${adapter.adapter_id}`,
-        message: `Adapter ${adapter.adapter_id} does not touch current schema version ${currentVersion}; full chains should usually travel in Bundle packets instead.`,
-      })
-    );
-  }
-}
-
 
 function auditDefinitionParts(input: {
   findings: PacketDefinitionAuditFinding[];
@@ -597,7 +560,30 @@ export function auditPacketTypeDefinition(input: {
     auditMutationReferences({ findings, definition, mutation, actionIds, plannerIds });
   }
 
-  auditCompatibilityPosture({ findings, definition });
+  for (const issue of auditPacketCompatibilityStandard(definition)) {
+    findings.push(
+      makeFinding({
+        severity: issue.severity,
+        packet_type: definition.packet_type,
+        code: issue.code,
+        path: issue.path,
+        message: issue.message,
+      })
+    );
+  }
+
+  for (const issue of auditPacketDefinitionOperations(definition).findings) {
+    findings.push(
+      makeFinding({
+        severity: issue.severity,
+        packet_type: issue.packet_type,
+        code: issue.code,
+        path: issue.path,
+        message: issue.message,
+      })
+    );
+  }
+
   auditRuntimeCapabilitySupport({
     findings,
     definition,

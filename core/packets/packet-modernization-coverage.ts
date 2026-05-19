@@ -4,6 +4,7 @@
  */
 
 import {
+  auditPacketCompatibilityStandard,
   getExperimentalPacketTypeDefinition,
   listExperimentalPacketTypeDefinitions,
   listPacketDefinitionParts,
@@ -27,6 +28,7 @@ export type PacketModernizationCoverageArea =
   | 'build_pipeline'
   | 'manifest_definition'
   | 'definition_parts'
+  | 'compatibility_definition'
   | 'runtime_connector';
 
 export type PacketModernizationStatus =
@@ -91,6 +93,10 @@ export interface PacketTypeModernizationCoverage {
     'supported' | 'planned_gap'
   >;
   shadow_mutation_plan_status: Extract<
+    PacketModernizationStatus,
+    'supported' | 'planned_gap'
+  >;
+  compatibility_standard_status: Extract<
     PacketModernizationStatus,
     'supported' | 'planned_gap'
   >;
@@ -220,6 +226,7 @@ export function getPacketTypeModernizationCoverage(
       mutation_intent: mutation.mutation_intent,
     })
   );
+  const compatibilityIssues = auditPacketCompatibilityStandard(definition);
 
   const definition_parts_status =
     parts.length > 0 ? 'complete' : 'planned_gap';
@@ -271,6 +278,19 @@ export function getPacketTypeModernizationCoverage(
     );
   }
 
+  const compatibility_standard_status =
+    compatibilityIssues.some((issue) => issue.severity === 'error')
+      ? 'planned_gap'
+      : 'supported';
+  if (compatibility_standard_status === 'planned_gap') {
+    planned_gaps.push(
+      plannedGap(
+        'compatibility_definition',
+        'Manifest compatibility descriptors do not yet meet the current adapter graph standard.'
+      )
+    );
+  }
+
   return {
     packet_type: definition.packet_type,
     manifest_definition_status: 'defined',
@@ -279,6 +299,7 @@ export function getPacketTypeModernizationCoverage(
     descriptor_builder_status,
     body_builder_status,
     shadow_mutation_plan_status,
+    compatibility_standard_status,
     runtime_connector_status: 'not_checked_in_core',
     planned_gaps,
   };

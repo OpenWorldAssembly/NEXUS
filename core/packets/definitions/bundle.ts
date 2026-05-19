@@ -55,7 +55,7 @@ export const bundlePacketDefinition = {
   declared_subtypes: BUNDLE_PACKET_SUBTYPES,
   default_subtype: 'packet_set',
   compatibility: {
-    strategy: 'current_neighbor_adapters',
+    strategy: 'current_only',
     current_schema_version: '0.1.0',
     supports_upcast: false,
     supports_downcast: false,
