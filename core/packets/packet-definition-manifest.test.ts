@@ -55,6 +55,29 @@ test('Definition and Bundle remain manifest-only packet types for this chapter',
   assert.equal((PACKET_FAMILIES as readonly string[]).includes('Bundle'), false);
 });
 
+test('Definition and Bundle expose manifest-native builder descriptors', () => {
+  const definition = getExperimentalPacketTypeDefinition('Definition');
+  const bundle = getExperimentalPacketTypeDefinition('Bundle');
+  assert.ok(definition);
+  assert.ok(bundle);
+
+  assert.ok(
+    definition.builders.some(
+      (builder) => builder.builder_id === 'definition.part.body.v0'
+    )
+  );
+  assert.ok(
+    definition.compatibility_adapters.some(
+      (adapter) => adapter.adapter_id === 'definition.0_1_current_neighbor'
+    )
+  );
+  assert.ok(
+    bundle.compatibility_adapters.some(
+      (adapter) => adapter.adapter_id === 'bundle.0_1_current_neighbor'
+    )
+  );
+});
+
 test('Definition packet can represent a packet_schema definition part', () => {
   const parsed = DefinitionBodySchema.parse({
     subtype: 'packet_schema',

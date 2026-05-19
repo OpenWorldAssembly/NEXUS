@@ -9,7 +9,9 @@ import test from 'node:test';
 import {
   listPacketFamilyModernizationCoverage,
   listPacketNextPhaseLiveEnrollmentTargets,
+  listPacketTypeModernizationCoverage,
 } from '@core/packets/packet-modernization-coverage';
+import { listExperimentalPacketTypeDefinitions } from '@core/packets/packet-definition-manifest';
 import { GENERIC_PACKET_BUILD_FAMILIES } from '@core/packets/packet-build-pipeline';
 import { PACKET_FAMILIES } from '@core/schema/packet-schema';
 
@@ -122,7 +124,7 @@ test('Preference remains manifest-defined with its expected build-pipeline plann
   );
 });
 
-test('Definition and Bundle are recorded as next-phase live-enrollment targets', () => {
+test('Definition and Bundle are recorded as manifest-native packet types', () => {
   const targets = listPacketNextPhaseLiveEnrollmentTargets();
 
   assert.deepEqual(
@@ -131,9 +133,39 @@ test('Definition and Bundle are recorded as next-phase live-enrollment targets',
   );
 
   for (const target of targets) {
-    assert.equal(target.target_status, 'next_phase_live_enrollment');
+    assert.equal(target.target_status, 'manifest_native');
     assert.equal(target.currently_in_packet_families, false);
     assert.equal(target.manifest_definition_status, 'defined');
-    assert.ok(target.reason.includes('not live PacketEnvelope families yet'));
+    assert.ok(target.reason.includes('should not be enrolled'));
+  }
+});
+
+test('packet-type modernization coverage includes every experimental manifest definition', () => {
+  const coveredPacketTypes = listPacketTypeModernizationCoverage()
+    .map((entry) => entry.packet_type)
+    .sort();
+  const manifestPacketTypes = listExperimentalPacketTypeDefinitions()
+    .map((definition) => definition.packet_type)
+    .sort();
+
+  assert.deepEqual(coveredPacketTypes, manifestPacketTypes);
+});
+
+test('manifest-native packet types have executable body-builder coverage', () => {
+  const coverageByPacketType = new Map(
+    listPacketTypeModernizationCoverage().map((entry) => [
+      entry.packet_type,
+      entry,
+    ])
+  );
+
+  for (const packetType of ['Definition', 'Bundle', 'Preference']) {
+    const entry = coverageByPacketType.get(packetType);
+    assert.ok(entry);
+    assert.equal(entry.manifest_definition_status, 'defined');
+    assert.equal(entry.definition_parts_status, 'complete');
+    assert.equal(entry.descriptor_builder_status, 'defined');
+    assert.equal(entry.body_builder_status, 'supported');
+    assert.equal(entry.shadow_mutation_plan_status, 'supported');
   }
 });

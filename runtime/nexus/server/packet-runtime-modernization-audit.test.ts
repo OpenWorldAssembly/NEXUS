@@ -9,6 +9,7 @@ import test from 'node:test';
 import {
   listMutationRuntimeModernizationCoverage,
   listPacketFamilyRuntimeModernizationCoverage,
+  listPacketTypeRuntimeModernizationCoverage,
 } from '@runtime/nexus/server/packet-runtime-modernization-audit';
 import { listMutationIntentDescriptors } from '@runtime/nexus/server/mutation-intent-registry';
 
@@ -54,6 +55,32 @@ test('Preference.element is recognized as master-handler enrolled', () => {
   );
   assert.ok(
     preferenceCoverage.runtime_connector_ids.includes(
+      'preference.element.interface.set'
+    )
+  );
+});
+
+test('packet-type runtime coverage treats Definition and Bundle as manifest-native', () => {
+  const coverageByPacketType = new Map(
+    listPacketTypeRuntimeModernizationCoverage().map((entry) => [
+      entry.packet_type,
+      entry,
+    ])
+  );
+
+  for (const packetType of ['Definition', 'Bundle']) {
+    const entry = coverageByPacketType.get(packetType);
+    assert.ok(entry);
+    assert.equal(entry.body_builder_status, 'supported');
+    assert.equal(entry.shadow_mutation_plan_status, 'supported');
+    assert.equal(entry.runtime_connector_status, 'planned_gap');
+  }
+
+  const preferenceEntry = coverageByPacketType.get('Preference');
+  assert.ok(preferenceEntry);
+  assert.equal(preferenceEntry.runtime_connector_status, 'master_handler_enrolled');
+  assert.ok(
+    preferenceEntry.runtime_connector_ids.includes(
       'preference.element.interface.set'
     )
   );

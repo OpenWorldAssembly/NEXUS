@@ -59,9 +59,9 @@ test('reports unsupported manifest planner capabilities without throwing', () =>
 
 test('refuses unknown packet types, subtypes, and mutation descriptors cleanly', () => {
   const unknownPacketType = resolveManifestShadowFortressActionPlan({
-    packet_type: 'Relation',
-    packet_subtype: 'home_locality',
-    mutation_intent: 'relation.home.set',
+    packet_type: 'Signal',
+    packet_subtype: 'signal',
+    mutation_intent: 'signal.generic.write',
   });
   const unknownSubtype = resolveManifestShadowFortressActionPlan({
     packet_type: 'Preference',

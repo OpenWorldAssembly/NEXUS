@@ -100,6 +100,16 @@ export const bundlePacketDefinition = {
       notes: 'Future manifest-driven import action for validating and hydrating packet sets.',
     },
     {
+      action_id: 'bundle.inventory.revise',
+      action_kind: 'revise',
+      packet_subtype: null,
+      label: 'Revise bundle inventory',
+      policy_action_id: 'bundle.packet_set.write',
+      availability: 'shadow_only',
+      notes:
+        'Revises a manifest-native Bundle body candidate without enrolling Bundle in legacy PACKET_FAMILIES.',
+    },
+    {
       action_id: 'bundle.packet_set.export',
       action_kind: 'export',
       packet_subtype: 'packet_set',
@@ -125,24 +135,59 @@ export const bundlePacketDefinition = {
     {
       planner_id: 'bundle.packet_set.export.v0',
       planner_kind: 'multi_packet_orchestration',
-      action_ids: ['bundle.packet_set.create', 'bundle.packet_set.export'],
+      action_ids: [
+        'bundle.packet_set.create',
+        'bundle.inventory.revise',
+        'bundle.packet_set.export',
+      ],
       builder_ids: ['bundle.packet_set.body.v0'],
       policy_action_ids: ['bundle.packet_set.write'],
       availability: 'shadow_only',
       notes: 'Plans a bundle inventory from a root packet set and declared dependencies.',
     },
+    {
+      planner_id: 'bundle.packet_set.import.v0',
+      planner_kind: 'multi_packet_orchestration',
+      action_ids: ['bundle.packet_set.import', 'bundle.inspect'],
+      builder_ids: [],
+      policy_action_ids: ['bundle.packet_set.import'],
+      availability: 'shadow_only',
+      notes:
+        'Plans manifest-native import review for packet-set bundle inventories without performing live hydration.',
+    },
   ],
   mutations: [
     {
       mutation_intent: 'bundle.packet_set.create',
-      action_ids: ['bundle.packet_set.create'],
+      action_ids: ['bundle.packet_set.create', 'bundle.inventory.revise'],
       planner_id: 'bundle.packet_set.export.v0',
       result_family: 'bundle_update',
       availability: 'shadow_only',
       notes: 'Future manifest-driven mutation for creating bundle inventory packets.',
     },
+    {
+      mutation_intent: 'bundle.packet_set.import',
+      action_ids: ['bundle.packet_set.import'],
+      planner_id: 'bundle.packet_set.import.v0',
+      result_family: 'bundle_update',
+      availability: 'shadow_only',
+      notes:
+        'Future manifest-driven mutation for reviewing and hydrating bundle inventory imports.',
+    },
   ],
-  compatibility_adapters: [],
+  compatibility_adapters: [
+    {
+      adapter_id: 'bundle.0_1_current_neighbor',
+      packet_subtype: null,
+      from_schema_version: '0.1.0',
+      to_schema_version: '0.1.0',
+      direction: 'bidirectional_neighbor',
+      loss_awareness: 'none',
+      availability: 'shadow_only',
+      notes:
+        'Identity adapter placeholder for Bundle v0 manifest-native inventory compatibility.',
+    },
+  ],
   projections: [
     {
       projection_key: 'bundle_inventory',
@@ -192,6 +237,7 @@ export const bundlePacketDefinition = {
         'bundle.packet_set.create',
         'bundle.inspect',
         'bundle.packet_set.import',
+        'bundle.inventory.revise',
         'bundle.packet_set.export',
       ],
       notes: 'Action registry part for the currently modeled generic bundle carrier actions.',
@@ -215,7 +261,7 @@ export const bundlePacketDefinition = {
       schema_version: '0.1.0',
       availability: 'shadow_only',
       required: true,
-      references: ['bundle.packet_set.export.v0'],
+      references: ['bundle.packet_set.export.v0', 'bundle.packet_set.import.v0'],
       notes: 'Planner descriptor part for bundle inventory export planning.',
     },
     {
@@ -237,8 +283,8 @@ export const bundlePacketDefinition = {
       schema_version: '0.1.0',
       availability: 'shadow_only',
       required: true,
-      references: [],
-      notes: 'Compatibility part records that Bundle v0 has no external adapter enrolled yet.',
+      references: ['bundle.0_1_current_neighbor'],
+      notes: 'Compatibility part records Bundle v0 identity current-neighbor compatibility.',
     },
     {
       part_id: 'bundle.packet_set.packet_dependency.v0',
@@ -248,7 +294,10 @@ export const bundlePacketDefinition = {
       schema_version: '0.1.0',
       availability: 'shadow_only',
       required: true,
-      references: ['generic.bundle.builder'],
+      references: [
+        'generic.bundle.builder',
+        'generic.packet_type.body_builder_registry',
+      ],
       notes: 'Dependency definition part for the generic bundle inventory builder capability.',
     },
   ],

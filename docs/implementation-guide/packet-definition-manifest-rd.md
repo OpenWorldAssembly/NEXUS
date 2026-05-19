@@ -4,7 +4,7 @@
 
 Experimental design with one narrow live bridge. Most manifest work remains shadow-mode, but `Preference.element` is now enrolled as a canonical packet family for claimed actor scope-display preference writes while the legacy runtime table remains a compatibility cache.
 
-For this chapter, `Preference` is the only manifest-defined packet type enrolled in the live `PacketEnvelope` ontology. `Definition` and `Bundle` remain experimental manifest packet types only; they define the portable definition and carrier shape, but they are not live packet families until a later enrollment pass explicitly updates the canonical ontology and compatibility registry.
+For this chapter, `Preference` is the only manifest-defined packet type enrolled in the live `PacketEnvelope` ontology. `Definition` and `Bundle` remain experimental manifest-native packet types: they define the portable definition and carrier shape without being added to legacy `PACKET_FAMILIES`.
 
 ## Intent
 
@@ -17,6 +17,8 @@ The forward-facing language is **packet type** and **packet subtype**. Current c
 The manifest is now modeled around a native bootstrap `Definition` packet type. The TypeScript manifest remains shadow code, but its sections line up with Definition parts instead of treating Bundle as the semantic home for packet definitions.
 
 Bundle remains a carrier/inventory packet. It may transport Definition parts, Preference packets, resources, and adapter metadata, but those items keep their own packet semantics.
+
+Manifest-native packet types now have shadow body-candidate builders. These builders parse `Definition`, `Bundle.packet_set`, and `Preference.element` bodies for audit and future runtime planning, but they do not create signed/stored packet envelopes.
 
 The current experimental surface lives at:
 

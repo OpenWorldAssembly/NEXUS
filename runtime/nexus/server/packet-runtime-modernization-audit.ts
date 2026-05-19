@@ -7,10 +7,11 @@ import type { MutationIntent } from '@core/auth/mutation-corridor';
 import type { MutationActionId } from '@core/auth/write-policy';
 import {
   listPacketFamilyModernizationCoverage,
+  listPacketTypeModernizationCoverage,
   type PacketFamilyModernizationCoverage,
+  type PacketTypeModernizationCoverage,
   type PacketModernizationPlannedGap,
 } from '@core/packets/packet-modernization-coverage';
-import type { PacketFamily } from '@core/schema/packet-schema';
 import { PACKET_RUNTIME_CONNECTORS } from '@runtime/nexus/server/packet-runtime-connectors';
 import {
   listMutationIntentDescriptors,
@@ -23,6 +24,12 @@ export type RuntimeConnectorStatus =
 
 export interface PacketFamilyRuntimeModernizationCoverage
   extends PacketFamilyModernizationCoverage {
+  runtime_connector_status: RuntimeConnectorStatus;
+  runtime_connector_ids: string[];
+}
+
+export interface PacketTypeRuntimeModernizationCoverage
+  extends PacketTypeModernizationCoverage {
   runtime_connector_status: RuntimeConnectorStatus;
   runtime_connector_ids: string[];
 }
@@ -95,9 +102,9 @@ const MUTATION_POLICY_ACTION_IDS = {
   'actor.write_policy.update': ['actor.write_policy.update'],
 } as const satisfies Record<MutationIntent['kind'], readonly MutationActionId[]>;
 
-function connectorIdsForFamily(family: PacketFamily): string[] {
+function connectorIdsForPacketType(packetType: string): string[] {
   return PACKET_RUNTIME_CONNECTORS.filter(
-    (connector) => connector.packet_type === family
+    (connector) => connector.packet_type === packetType
   ).map((connector) => connector.connector_id);
 }
 
@@ -106,13 +113,33 @@ function plannedRuntimeConnectorGap(): PacketModernizationPlannedGap {
     area: 'runtime_connector',
     status: 'planned_gap',
     reason:
-      'Runtime connector enrollment is intentionally staged behind manifest definition coverage and master-handler integration.',
+      'Runtime connector enrollment is intentionally staged behind manifest-native packet-type builder coverage and master-handler integration.',
   };
 }
 
 export function listPacketFamilyRuntimeModernizationCoverage(): PacketFamilyRuntimeModernizationCoverage[] {
   return listPacketFamilyModernizationCoverage().map((coverage) => {
-    const runtime_connector_ids = connectorIdsForFamily(coverage.family);
+    const runtime_connector_ids = connectorIdsForPacketType(coverage.family);
+    const runtime_connector_status =
+      runtime_connector_ids.length > 0
+        ? 'master_handler_enrolled'
+        : 'planned_gap';
+
+    return {
+      ...coverage,
+      runtime_connector_status,
+      runtime_connector_ids,
+      planned_gaps:
+        runtime_connector_status === 'planned_gap'
+          ? [...coverage.planned_gaps, plannedRuntimeConnectorGap()]
+          : coverage.planned_gaps,
+    };
+  });
+}
+
+export function listPacketTypeRuntimeModernizationCoverage(): PacketTypeRuntimeModernizationCoverage[] {
+  return listPacketTypeModernizationCoverage().map((coverage) => {
+    const runtime_connector_ids = connectorIdsForPacketType(coverage.packet_type);
     const runtime_connector_status =
       runtime_connector_ids.length > 0
         ? 'master_handler_enrolled'

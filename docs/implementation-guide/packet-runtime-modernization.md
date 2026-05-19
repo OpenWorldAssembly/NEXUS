@@ -65,3 +65,11 @@ The first chunky implementation pass expands the experimental manifest from the 
 This pass remains shadow-only. The new definitions describe existing body schemas, compatibility registry posture, generic builder support, action descriptors, planner descriptors, projection/index descriptors, and Definition parts. They do not change route payloads, packet schemas, runtime mutation behavior, or master-handler connector enrollment.
 
 Builder-missing families remain explicit planned gaps in the modernization audit, and Preference remains manifest-defined while keeping its expected generic build-pipeline gap until a dedicated Preference builder pass.
+
+## Packet-Type Authority Pass
+
+The next implementation pass shifts the forward-looking checklist from legacy `PACKET_FAMILIES` enrollment toward manifest `packet_type` authority. `Definition` and `Bundle` remain outside `PACKET_FAMILIES`; they are manifest-native packet types for this chapter rather than future legacy family-enrollment targets.
+
+The pass adds shadow body-candidate builders for manifest-native packet types. `Definition` builds parsed Definition part bodies from local definition descriptors, `Bundle.packet_set` builds parsed bundle inventory bodies, and `Preference.element` uses the existing element preference body helper. These builders return body candidates and metadata only; they do not create signed/stored `PacketEnvelope` records.
+
+Packet-type modernization coverage is now the forward-looking audit surface for manifest definitions. The legacy family coverage remains as a migration bridge for live packet families and should keep planned gaps visible until those families are converted into packet-type definitions and runtime connectors.

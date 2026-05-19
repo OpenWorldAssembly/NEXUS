@@ -115,10 +115,6 @@ export const definitionPacketDefinition = {
   declared_subtypes: DEFINITION_PACKET_SUBTYPES,
   default_subtype: 'packet_definition',
   section_statuses: {
-    builders: 'deferred',
-    policy: 'deferred',
-    indexing: 'deferred',
-    compatibility: 'deferred',
     bundling: 'supported',
   },
   compatibility: {
@@ -145,6 +141,26 @@ export const definitionPacketDefinition = {
   },
   actions: [
     {
+      action_id: 'definition.part.create',
+      action_kind: 'create',
+      packet_subtype: null,
+      label: 'Create definition part',
+      policy_action_id: 'definition.part.write',
+      availability: 'shadow_only',
+      notes:
+        'Creates a manifest-native Definition body candidate for one packet definition part.',
+    },
+    {
+      action_id: 'definition.part.revise',
+      action_kind: 'revise',
+      packet_subtype: null,
+      label: 'Revise definition part',
+      policy_action_id: 'definition.part.write',
+      availability: 'shadow_only',
+      notes:
+        'Revises a manifest-native Definition body candidate without enrolling Definition in legacy PACKET_FAMILIES.',
+    },
+    {
       action_id: 'definition.packet_definition.project',
       action_kind: 'project',
       packet_subtype: 'packet_definition',
@@ -165,8 +181,30 @@ export const definitionPacketDefinition = {
         'Allows definition parts to travel in a carrier bundle without making Bundle the semantic home for definitions.',
     },
   ],
-  builders: [],
+  builders: [
+    {
+      builder_id: 'definition.part.body.v0',
+      packet_subtype: null,
+      builder_kind: 'single_packet_body',
+      action_ids: ['definition.part.create', 'definition.part.revise'],
+      input_schema_key: 'DefinitionPartBodyBuilderInput',
+      output_schema_key: 'DefinitionBodySchema',
+      availability: 'shadow_only',
+      notes:
+        'Builds manifest-native Definition body candidates from PacketDefinitionPartDescriptor records.',
+    },
+  ],
   planners: [
+    {
+      planner_id: 'definition.part.write.v0',
+      planner_kind: 'single_packet_revision',
+      action_ids: ['definition.part.create', 'definition.part.revise'],
+      builder_ids: ['definition.part.body.v0'],
+      policy_action_ids: ['definition.part.write'],
+      availability: 'shadow_only',
+      notes:
+        'Plans shadow Definition part writes as packet-type body candidates, not legacy PacketEnvelope writes.',
+    },
     {
       planner_id: 'definition.packet_definition.resolve.v0',
       planner_kind: 'projection_only',
@@ -178,8 +216,30 @@ export const definitionPacketDefinition = {
         'Bootstrap resolver for combining Definition parts into a local resolved definition shape.',
     },
   ],
-  mutations: [],
-  compatibility_adapters: [],
+  mutations: [
+    {
+      mutation_intent: 'definition.part.write',
+      action_ids: ['definition.part.create', 'definition.part.revise'],
+      planner_id: 'definition.part.write.v0',
+      result_family: 'packet_write',
+      availability: 'shadow_only',
+      notes:
+        'Future manifest-native mutation for creating or revising Definition body candidates.',
+    },
+  ],
+  compatibility_adapters: [
+    {
+      adapter_id: 'definition.0_1_current_neighbor',
+      packet_subtype: null,
+      from_schema_version: '0.1.0',
+      to_schema_version: '0.1.0',
+      direction: 'bidirectional_neighbor',
+      loss_awareness: 'none',
+      availability: 'shadow_only',
+      notes:
+        'Identity adapter placeholder for Definition v0 while packet_type compatibility metadata is still manifest-native.',
+    },
+  ],
   projections: [
     {
       projection_key: 'resolved_packet_definition',
@@ -189,7 +249,19 @@ export const definitionPacketDefinition = {
         'Projects definition parts into a resolved packet definition for local audit and shadow fortress planning.',
     },
   ],
-  indexes: [],
+  indexes: [
+    {
+      index_key: 'definition_target_subtype_version',
+      fields: [
+        'body.defines_packet_type',
+        'body.defines_packet_subtype',
+        'body.subtype',
+        'body.definition_version',
+      ],
+      notes:
+        'Indexes Definition parts by defined packet type, subtype, part subtype, and definition version.',
+    },
+  ],
   packet_definition_parts: [
     {
       part_id: 'definition.bootstrap.packet_definition.v0',
@@ -220,7 +292,12 @@ export const definitionPacketDefinition = {
       schema_version: '0.1.0',
       availability: 'shadow_only',
       required: true,
-      references: ['definition.packet_definition.project', 'definition.packet_definition.bundle'],
+      references: [
+        'definition.part.create',
+        'definition.part.revise',
+        'definition.packet_definition.project',
+        'definition.packet_definition.bundle',
+      ],
       notes: 'Bootstrap action registry part for projecting and bundling definition parts.',
     },
     {
@@ -231,8 +308,8 @@ export const definitionPacketDefinition = {
       schema_version: '0.1.0',
       availability: 'shadow_only',
       required: true,
-      references: [],
-      notes: 'Definition v0 has no generic builder enrolled yet; this part records the explicit absence.',
+      references: ['definition.part.body.v0'],
+      notes: 'Builder descriptor part for manifest-native Definition body candidates.',
     },
     {
       part_id: 'definition.bootstrap.packet_planner_descriptor.v0',
@@ -242,7 +319,10 @@ export const definitionPacketDefinition = {
       schema_version: '0.1.0',
       availability: 'shadow_only',
       required: true,
-      references: ['definition.packet_definition.resolve.v0'],
+      references: [
+        'definition.part.write.v0',
+        'definition.packet_definition.resolve.v0',
+      ],
       notes: 'Bootstrap planner descriptor part for resolving definition parts into local profiles.',
     },
     {
@@ -264,8 +344,8 @@ export const definitionPacketDefinition = {
       schema_version: '0.1.0',
       availability: 'shadow_only',
       required: true,
-      references: [],
-      notes: 'Definition v0 compatibility is native/bootstrap and has no external adapter enrolled yet.',
+      references: ['definition.0_1_current_neighbor'],
+      notes: 'Definition v0 compatibility uses an identity current-neighbor adapter descriptor.',
     },
     {
       part_id: 'definition.bootstrap.packet_dependency.v0',
@@ -275,7 +355,10 @@ export const definitionPacketDefinition = {
       schema_version: '0.1.0',
       availability: 'shadow_only',
       required: true,
-      references: ['core.definition_bootstrap.v0'],
+      references: [
+        'core.definition_bootstrap.v0',
+        'generic.packet_type.body_builder_registry',
+      ],
       notes: 'Definition v0 depends on the local core-native bootstrap parser.',
     },
   ],

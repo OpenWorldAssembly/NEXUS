@@ -12,7 +12,6 @@ import {
 } from '@core/packets/packet-definition-manifest';
 import type {
   PacketEnvelopeByType,
-  PacketFamily,
 } from '@core/schema/packet-schema';
 import type { MutationProofBundle } from '@core/auth/proof-types';
 import type { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store';
@@ -34,7 +33,7 @@ export type PacketRuntimeConnectorContext = {
 
 export type PacketRuntimeConnector<TResult = unknown> = {
   connector_id: string;
-  packet_type: PacketFamily;
+  packet_type: string;
   packet_subtype: string;
   mutation_intent: string;
   availability: 'shadow' | 'live_bridge' | 'fortress_enrolled';
@@ -56,7 +55,7 @@ export type PacketRuntimeMutationInput = {
 export type PacketRuntimeMutationResult<TResult = unknown> = {
   corridor_kind: 'packet_runtime_master_handler';
   connector_id: string;
-  packet_type: PacketFamily;
+  packet_type: string;
   packet_subtype: string;
   mutation_intent: string;
   availability: PacketRuntimeConnector['availability'];

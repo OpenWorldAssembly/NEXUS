@@ -72,6 +72,37 @@ test('generic family mutation descriptors are shadow-runtime resolvable', () => 
   }
 });
 
+test('manifest-native packet types audit and plan as first-class packet types', () => {
+  for (const packetType of ['Definition', 'Bundle', 'Preference']) {
+    const definition = getExperimentalPacketTypeDefinition(packetType);
+    assert.ok(definition);
+
+    const auditReport = auditPacketTypeDefinition({
+      definition,
+      requireShadowRuntimeReady: true,
+    });
+    assert.equal(auditReport.finding_counts.error, 0, packetType);
+
+    for (const mutation of definition.mutations) {
+      const plan = resolvePacketDefinitionMutationActionPlan({
+        definition,
+        mutation_intent: mutation.mutation_intent,
+      });
+
+      assert.equal(plan.ready_for_shadow_runtime, true, mutation.mutation_intent);
+    }
+  }
+});
+
+test('Definition no longer carries deferred core manifest sections', () => {
+  const definition = getExperimentalPacketTypeDefinition('Definition');
+  assert.ok(definition);
+
+  assert.notEqual(definition.section_statuses?.builders, 'deferred');
+  assert.notEqual(definition.section_statuses?.indexing, 'deferred');
+  assert.notEqual(definition.section_statuses?.compatibility, 'deferred');
+});
+
 test('reports missing builder references as audit errors', () => {
   const preferenceDefinition = getExperimentalPacketTypeDefinition('Preference');
   assert.ok(preferenceDefinition);
