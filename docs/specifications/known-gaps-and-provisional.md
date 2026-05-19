@@ -55,5 +55,5 @@ The following areas should still be treated as provisional:
 - vote execution, delegation, and propagation semantics
 - long-term initiative filtering and visibility modes
 - packet actions that currently appear as disabled placeholders
-- expanding packet-backed `Preference.element` beyond scope-display into the remaining shell/interface preference sections
+- hardening the remaining Preference runtime connector corridor before applying the same procedure to other packet families
 - any architecture or theory in the implementation guide that is not already represented in executable code

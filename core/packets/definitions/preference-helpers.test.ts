@@ -18,6 +18,7 @@ import {
   createElementPreferencePacketId,
   downcastScopeDisplayPreferenceValueToLegacyV0,
   normalizeScopeDisplayPreferenceValue,
+  normalizeShellChromePreferenceValue,
   projectLatestActiveScopeDisplayPreference,
   upcastLegacyScopeDisplayPreferenceValueV0,
 } from './preference-helpers.ts';
@@ -44,6 +45,11 @@ test('Preference.element builder normalizes current runtime preference shape', (
     'nexus:element/locality/city/example',
     'nexus:element/locality/state/example',
   ]);
+  assert.deepEqual(body.value.interface.shell_chrome, {
+    navigation_mode: 'function',
+    theme_mode: 'dark',
+    ui_density: 'small',
+  });
 });
 
 test('Preference.element defaults match current runtime element defaults', () => {
@@ -51,6 +57,29 @@ test('Preference.element defaults match current runtime element defaults', () =>
     main_visible_scope_packet_ids: [],
     show_associated_parent_chains: true,
     show_followed_parent_chains: true,
+  });
+  assert.deepEqual(normalizeShellChromePreferenceValue({}), {
+    navigation_mode: 'function',
+    theme_mode: 'dark',
+    ui_density: 'small',
+  });
+});
+
+test('Preference.element accepts the prepared interface shell chrome section', () => {
+  const body = buildElementPreferenceBody({
+    owner_ref: { packet_id: 'nexus:element/person/alice' },
+    value: {},
+    shell_chrome: {
+      navigation_mode: 'scope',
+      theme_mode: 'light',
+      ui_density: 'large',
+    },
+  });
+
+  assert.deepEqual(body.value.interface.shell_chrome, {
+    navigation_mode: 'scope',
+    theme_mode: 'light',
+    ui_density: 'large',
   });
 });
 

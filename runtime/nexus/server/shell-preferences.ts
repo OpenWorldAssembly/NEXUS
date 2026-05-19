@@ -8,6 +8,12 @@ import type { NexusScopeDisplayPreferencesPayload } from '@runtime/nexus/nexus-a
 const SHELL_PREFERENCES_COOKIE = 'owa_nexus_shell_preferences';
 const SHELL_PREFERENCES_COOKIE_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
 
+export type ShellChromePreferenceValue = {
+  navigation_mode: 'function' | 'scope';
+  theme_mode: 'dark' | 'light';
+  ui_density: 'small' | 'large';
+};
+
 type ShellSectionDisplayPreferenceState = {
   show_associated_parent_chains?: boolean;
   show_followed_parent_chains?: boolean;
@@ -20,6 +26,8 @@ type ShellPreferenceState = {
   guest_main_visible_scope_ids: string[];
   section_display_by_actor: Record<string, ShellSectionDisplayPreferenceState>;
   guest_section_display: ShellSectionDisplayPreferenceState;
+  shell_chrome_by_actor: Record<string, Partial<ShellChromePreferenceValue>>;
+  guest_shell_chrome: Partial<ShellChromePreferenceValue>;
 };
 
 const DEFAULT_SCOPE_DISPLAY_PREFERENCES: NexusScopeDisplayPreferencesPayload = {
@@ -27,6 +35,9 @@ const DEFAULT_SCOPE_DISPLAY_PREFERENCES: NexusScopeDisplayPreferencesPayload = {
   show_associated_parent_chains: true,
   show_followed_parent_chains: true,
 };
+
+export const DEFAULT_SHELL_CHROME_PREFERENCES: ShellChromePreferenceValue =
+  normalizeShellChromePreferenceValue({});
 
 function parseCookieHeader(cookieHeader: string | null): Record<string, string> {
   if (!cookieHeader) {
@@ -45,7 +56,7 @@ function parseCookieHeader(cookieHeader: string | null): Record<string, string> 
           part.slice(0, separatorIndex),
           decodeURIComponent(part.slice(separatorIndex + 1)),
         ];
-      })
+      }),
   );
 }
 
@@ -84,36 +95,75 @@ function parseJson<TValue>(input: string | null, fallback: TValue): TValue {
 function normalizeScopeIds(scopeIds: string[]): string[] {
   return Array.from(
     new Set(
-      scopeIds.map((scopeId) => scopeId.trim()).filter((scopeId) => scopeId.length > 0)
-    )
-  ).sort((leftScopeId, rightScopeId) => leftScopeId.localeCompare(rightScopeId));
+      scopeIds
+        .map((scopeId) => scopeId.trim())
+        .filter((scopeId) => scopeId.length > 0),
+    ),
+  ).sort((leftScopeId, rightScopeId) =>
+    leftScopeId.localeCompare(rightScopeId),
+  );
 }
 
 function normalizeSectionDisplayPreferenceState(
-  input: ShellSectionDisplayPreferenceState | null | undefined
+  input: ShellSectionDisplayPreferenceState | null | undefined,
 ): Required<ShellSectionDisplayPreferenceState> {
   return {
-    show_associated_parent_chains: input?.show_associated_parent_chains !== false,
+    show_associated_parent_chains:
+      input?.show_associated_parent_chains !== false,
     show_followed_parent_chains: input?.show_followed_parent_chains !== false,
   };
 }
 
-function readPreferenceState(request: Request | null | undefined): ShellPreferenceState {
-  const cookies = parseCookieHeader(request?.headers.get('cookie') ?? null);
+function normalizeShellChromePreferenceValue(
+  input: Partial<ShellChromePreferenceValue> | null | undefined
+): ShellChromePreferenceValue {
+  return {
+    navigation_mode: input?.navigation_mode === 'scope' ? 'scope' : 'function',
+    theme_mode: input?.theme_mode === 'light' ? 'light' : 'dark',
+    ui_density: input?.ui_density === 'large' ? 'large' : 'small',
+  };
+}
 
-  return parseJson<ShellPreferenceState>(cookies[SHELL_PREFERENCES_COOKIE] ?? null, {
+function createDefaultPreferenceState(): ShellPreferenceState {
+  return {
     follows_by_actor: {},
     guest_scope_ids: [],
     main_visible_scope_ids_by_actor: {},
     guest_main_visible_scope_ids: [],
     section_display_by_actor: {},
     guest_section_display: {},
-  });
+    shell_chrome_by_actor: {},
+    guest_shell_chrome: {},
+  };
+}
+
+function readPreferenceState(
+  request: Request | null | undefined,
+): ShellPreferenceState {
+  const cookies = parseCookieHeader(request?.headers.get('cookie') ?? null);
+  const parsedState = parseJson<Partial<ShellPreferenceState>>(
+    cookies[SHELL_PREFERENCES_COOKIE] ?? null,
+    createDefaultPreferenceState(),
+  );
+
+  return {
+    ...createDefaultPreferenceState(),
+    ...parsedState,
+    follows_by_actor: parsedState.follows_by_actor ?? {},
+    guest_scope_ids: parsedState.guest_scope_ids ?? [],
+    main_visible_scope_ids_by_actor:
+      parsedState.main_visible_scope_ids_by_actor ?? {},
+    guest_main_visible_scope_ids: parsedState.guest_main_visible_scope_ids ?? [],
+    section_display_by_actor: parsedState.section_display_by_actor ?? {},
+    guest_section_display: parsedState.guest_section_display ?? {},
+    shell_chrome_by_actor: parsedState.shell_chrome_by_actor ?? {},
+    guest_shell_chrome: parsedState.guest_shell_chrome ?? {},
+  };
 }
 
 function getBucketScopeIds(
   state: ShellPreferenceState,
-  actorPacketId?: string | null
+  actorPacketId?: string | null,
 ): string[] {
   if (actorPacketId) {
     return normalizeScopeIds(state.follows_by_actor[actorPacketId] ?? []);
@@ -124,13 +174,17 @@ function getBucketScopeIds(
 
 function getBucketScopeDisplayPreferences(
   state: ShellPreferenceState,
-  actorPacketId?: string | null
+  actorPacketId?: string | null,
 ): NexusScopeDisplayPreferencesPayload {
   const mainVisibleScopePacketIds = actorPacketId
-    ? normalizeScopeIds(state.main_visible_scope_ids_by_actor[actorPacketId] ?? [])
+    ? normalizeScopeIds(
+        state.main_visible_scope_ids_by_actor[actorPacketId] ?? [],
+      )
     : normalizeScopeIds(state.guest_main_visible_scope_ids);
   const sectionDisplayPreferences = actorPacketId
-    ? normalizeSectionDisplayPreferenceState(state.section_display_by_actor[actorPacketId])
+    ? normalizeSectionDisplayPreferenceState(
+        state.section_display_by_actor[actorPacketId],
+      )
     : normalizeSectionDisplayPreferenceState(state.guest_section_display);
 
   return {
@@ -140,6 +194,17 @@ function getBucketScopeDisplayPreferences(
     show_followed_parent_chains:
       sectionDisplayPreferences.show_followed_parent_chains,
   };
+}
+
+function getBucketShellChromePreferences(
+  state: ShellPreferenceState,
+  actorPacketId?: string | null,
+): ShellChromePreferenceValue {
+  const rawPreference = actorPacketId
+    ? state.shell_chrome_by_actor?.[actorPacketId]
+    : state.guest_shell_chrome;
+
+  return normalizeShellChromePreferenceValue(rawPreference);
 }
 
 function toSetCookieHeader(state: ShellPreferenceState): string {
@@ -152,7 +217,7 @@ function toSetCookieHeader(state: ShellPreferenceState): string {
 
 export function readFollowedScopeIdsCompatibility(
   request: Request | null | undefined,
-  actorPacketId?: string | null
+  actorPacketId?: string | null,
 ): string[] {
   return getBucketScopeIds(readPreferenceState(request), actorPacketId);
 }
@@ -171,7 +236,7 @@ export function writeFollowedScopePreferenceCompatibility(input: {
   const nextScopeIds = normalizeScopeIds(
     input.isFollowed
       ? [...currentScopeIds, input.scopeId]
-      : currentScopeIds.filter((scopeId) => scopeId !== input.scopeId)
+      : currentScopeIds.filter((scopeId) => scopeId !== input.scopeId),
   );
 
   if (input.actorPacketId) {
@@ -188,36 +253,63 @@ export function writeFollowedScopePreferenceCompatibility(input: {
 
 export function readScopeDisplayPreferencesCompatibility(
   request: Request | null | undefined,
-  actorPacketId?: string | null
+  actorPacketId?: string | null,
 ): NexusScopeDisplayPreferencesPayload {
   return {
     ...DEFAULT_SCOPE_DISPLAY_PREFERENCES,
-    ...getBucketScopeDisplayPreferences(readPreferenceState(request), actorPacketId),
+    ...getBucketScopeDisplayPreferences(
+      readPreferenceState(request),
+      actorPacketId,
+    ),
   };
+}
+
+export function readShellChromePreferencesCompatibility(
+  request: Request | null | undefined,
+  actorPacketId?: string | null,
+): ShellChromePreferenceValue {
+  return getBucketShellChromePreferences(
+    readPreferenceState(request),
+    actorPacketId,
+  );
 }
 
 export function writeScopeDisplayPreferencesCompatibility(input: {
   request: Request;
   actorPacketId?: string | null;
-  preferences: Partial<NexusScopeDisplayPreferencesPayload>;
+  preferences?: Partial<NexusScopeDisplayPreferencesPayload>;
+  shellChrome?: Partial<ShellChromePreferenceValue> | null;
 }): {
   preferences: NexusScopeDisplayPreferencesPayload;
+  shell_chrome: ShellChromePreferenceValue;
   setCookieHeader: string;
 } {
   const state = readPreferenceState(input.request);
-  const currentPreferences = getBucketScopeDisplayPreferences(state, input.actorPacketId);
+  const currentPreferences = getBucketScopeDisplayPreferences(
+    state,
+    input.actorPacketId,
+  );
   const nextPreferences: NexusScopeDisplayPreferencesPayload = {
     main_visible_scope_packet_ids: normalizeScopeIds(
-      input.preferences.main_visible_scope_packet_ids ??
-        currentPreferences.main_visible_scope_packet_ids
+      input.preferences?.main_visible_scope_packet_ids ??
+        currentPreferences.main_visible_scope_packet_ids,
     ),
     show_associated_parent_chains:
-      input.preferences.show_associated_parent_chains ??
+      input.preferences?.show_associated_parent_chains ??
       currentPreferences.show_associated_parent_chains,
     show_followed_parent_chains:
-      input.preferences.show_followed_parent_chains ??
+      input.preferences?.show_followed_parent_chains ??
       currentPreferences.show_followed_parent_chains,
   };
+
+  const currentShellChrome = getBucketShellChromePreferences(
+    state,
+    input.actorPacketId,
+  );
+  const nextShellChrome = normalizeShellChromePreferenceValue({
+    ...currentShellChrome,
+    ...(input.shellChrome ?? {}),
+  });
 
   if (input.actorPacketId) {
     state.main_visible_scope_ids_by_actor[input.actorPacketId] =
@@ -227,20 +319,28 @@ export function writeScopeDisplayPreferencesCompatibility(input: {
         nextPreferences.show_associated_parent_chains,
       show_followed_parent_chains: nextPreferences.show_followed_parent_chains,
     };
+    state.shell_chrome_by_actor[input.actorPacketId] = nextShellChrome;
   } else {
-    state.guest_main_visible_scope_ids = nextPreferences.main_visible_scope_packet_ids;
+    state.guest_main_visible_scope_ids =
+      nextPreferences.main_visible_scope_packet_ids;
     state.guest_section_display = {
       show_associated_parent_chains:
         nextPreferences.show_associated_parent_chains,
       show_followed_parent_chains: nextPreferences.show_followed_parent_chains,
     };
+    state.guest_shell_chrome = nextShellChrome;
   }
 
   return {
     preferences: nextPreferences,
+    shell_chrome: nextShellChrome,
     setCookieHeader: toSetCookieHeader(state),
   };
 }
 
 export const readFollowedScopeIds = readFollowedScopeIdsCompatibility;
-export const writeFollowedScopePreference = writeFollowedScopePreferenceCompatibility;
+export const writeFollowedScopePreference =
+  writeFollowedScopePreferenceCompatibility;
+
+export const readShellChromePreferences =
+  readShellChromePreferencesCompatibility;

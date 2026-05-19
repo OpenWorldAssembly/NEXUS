@@ -51,6 +51,6 @@ export const DIRECT_PACKET_WRITE_SEAMS = {
   },
   'element-preference-packets.ts': {
     category: 'temporary_bridge',
-    reason: 'Narrow Preference.element live bridge for claimed-actor scope-display preferences while the legacy runtime preference table remains a compatibility cache.',
+    reason: 'Narrow Preference.element live bridge for claimed-actor scope-display and shell-chrome preferences while the legacy scope-display table remains a compatibility cache.',
   },
 } satisfies Record<string, DirectPacketWriteSeam>;

@@ -32,6 +32,7 @@ import {
   getNexusSectionMenuTitle,
   getNexusRailWidth,
   getNexusAncestorIds,
+  isNexusGeographicTreeScope,
   NEXUS_COLLAPSED_RAIL_WIDTH,
   type NexusProjectedScopeGroup,
   type NexusProjectedScopeSection,
@@ -96,12 +97,14 @@ type NexusScopeMenuContentProps = {
   homeGraph: NexusProjectedScopeSection;
   mainGraph: NexusProjectedScopeSection;
   scopeSummaries: NexusScopeSummary[];
+  mainVisibleScopePacketIds: string[];
   themeMode: NexusThemeMode;
   uiDensity: NexusUiDensity;
   onOpenInExplorerPress: (scope: NexusScopeSummary) => void;
   onScopeAssociatePress: (scopeId: string, isAssociated: boolean) => void;
   onScopePress: (scopeId: string) => void;
   onScopeFollowPress: (scopeId: string, isFollowed: boolean) => void;
+  onScopeMainVisiblePress: (scopeId: string, isMainVisible: boolean) => void;
   onSetSectionParentChains: (
     sectionId: Extract<NexusSidebarScopeSectionId, 'associated' | 'followed'>,
     showParentChains: boolean
@@ -523,6 +526,14 @@ function isNexusScopeSummary(
   return Boolean(scope);
 }
 
+function isMainTreeEligibleScope(scope: NexusScopeSummary): boolean {
+  return (
+    scope.isAssociated ||
+    scope.isFollowed ||
+    isNexusGeographicTreeScope(scope)
+  );
+}
+
 /**
  * Inputs: a small menu section label.
  * Output: a consistently styled eyebrow label inside nexus menu cards.
@@ -687,9 +698,11 @@ function NexusScopeSectionHeader({
 
 function NexusScopeActionMenu({
   align = 'top',
+  isInMainTree,
   isOpen,
   onAssociatePress,
   onFollowPress,
+  onMainTreePress,
   onOpenInExplorerPress,
   onOpenPress,
   onToggle,
@@ -698,9 +711,11 @@ function NexusScopeActionMenu({
   uiDensity,
 }: {
   align?: 'top' | 'bottom';
+  isInMainTree: boolean;
   isOpen: boolean;
   onAssociatePress: () => void;
   onFollowPress: () => void;
+  onMainTreePress: () => void;
   onOpenInExplorerPress: () => void;
   onOpenPress: () => void;
   onToggle: () => void;
@@ -710,6 +725,8 @@ function NexusScopeActionMenu({
 }) {
   const chrome = getNexusChromeClasses(themeMode, uiDensity);
   const canMutateScope = scope.level !== 'personal';
+  const canSetMainTreeVisibility =
+    isMainTreeEligibleScope(scope) || isInMainTree;
 
   return (
     <View className="relative z-50 overflow-visible">
@@ -743,6 +760,14 @@ function NexusScopeActionMenu({
               label: scope.isAssociated ? 'Disassociate' : 'Associate',
               onPress: onAssociatePress,
               visible: canMutateScope,
+            },
+            {
+              key: 'main-tree',
+              label: isInMainTree
+                ? 'Remove from main tree'
+                : 'Add to main tree',
+              onPress: onMainTreePress,
+              visible: canSetMainTreeVisibility,
             },
             {
               key: 'explorer',
@@ -853,9 +878,11 @@ function NexusScopeListRow({
 function NexusGroupedScopeRows({
   activeScopeId,
   groups,
+  mainVisibleScopePacketIds,
   onOpenInExplorerPress,
   onScopeAssociatePress,
   onScopeFollowPress,
+  onScopeMainVisiblePress,
   onScopePress,
   openMenuScopeId,
   showParentChains,
@@ -870,7 +897,9 @@ function NexusGroupedScopeRows({
   onOpenInExplorerPress: (scope: NexusScopeSummary) => void;
   onScopeAssociatePress: (scopeId: string, isAssociated: boolean) => void;
   onScopeFollowPress: (scopeId: string, isFollowed: boolean) => void;
+  onScopeMainVisiblePress: (scopeId: string, isMainVisible: boolean) => void;
   onScopePress: (scopeId: string) => void;
+  mainVisibleScopePacketIds: string[];
   openMenuScopeId: string | null;
   showParentChains: boolean;
   scopeSectionId: NexusSidebarScopeSectionId;
@@ -925,6 +954,10 @@ function NexusGroupedScopeRows({
                     return null;
                   }
 
+                  const isInMainTree = mainVisibleScopePacketIds.includes(
+                    scope.packetId
+                  );
+
                   return (
                     <NexusScopeListRow
                       key={scope.id}
@@ -940,6 +973,7 @@ function NexusGroupedScopeRows({
                                 : 'top'
                               : 'bottom'
                           }
+                          isInMainTree={isInMainTree}
                           isOpen={openMenuScopeId === scope.id}
                           onAssociatePress={() => {
                             setOpenMenuScopeId(null);
@@ -948,6 +982,10 @@ function NexusGroupedScopeRows({
                           onFollowPress={() => {
                             setOpenMenuScopeId(null);
                             onScopeFollowPress(scope.id, !scope.isFollowed);
+                          }}
+                          onMainTreePress={() => {
+                            setOpenMenuScopeId(null);
+                            onScopeMainVisiblePress(scope.id, !isInMainTree);
                           }}
                           onOpenInExplorerPress={() => {
                             setOpenMenuScopeId(null);
@@ -1018,12 +1056,14 @@ function NexusScopeMenuContent({
   homeGraph,
   mainGraph,
   scopeSummaries,
+  mainVisibleScopePacketIds,
   themeMode,
   uiDensity,
   onOpenInExplorerPress,
   onScopeAssociatePress,
   onScopePress,
   onScopeFollowPress,
+  onScopeMainVisiblePress,
   onSetSectionParentChains,
 }: NexusScopeMenuContentProps) {
   const [sectionVisibility, setSectionVisibility] = useState<NexusScopeSectionVisibilityState>({
@@ -1097,9 +1137,11 @@ function NexusScopeMenuContent({
               <NexusGroupedScopeRows
                 activeScopeId={activeScopeId}
                 groups={section.groups}
+                mainVisibleScopePacketIds={mainVisibleScopePacketIds}
                 onOpenInExplorerPress={onOpenInExplorerPress}
                 onScopeAssociatePress={onScopeAssociatePress}
                 onScopeFollowPress={onScopeFollowPress}
+                onScopeMainVisiblePress={onScopeMainVisiblePress}
                 onScopePress={onScopePress}
                 openMenuScopeId={openMenuScopeId}
                 scopeSectionId={section.id}
@@ -1138,6 +1180,7 @@ export default function NexusSidebar({
     followedGraph,
     homeGraph,
     mainGraph,
+    mainVisibleScopePacketIds,
     navigationMode,
     scopeSummaries,
     themeMode,
@@ -1149,6 +1192,7 @@ export default function NexusSidebar({
     setActiveSection,
     setScopeAssociated,
     setScopeFollowed,
+    setScopeMainVisible,
     setScopeSectionParentChains,
     setNavigationMode,
     setThemeMode,
@@ -1314,6 +1358,25 @@ export default function NexusSidebar({
     };
 
     await runScopeAssociation();
+  };
+
+  const handleScopeMainVisiblePress = async (
+    scopeId: string,
+    isMainVisible: boolean
+  ) => {
+    const runScopeMainVisibility = async () => {
+      try {
+        await setScopeMainVisible(scopeId, isMainVisible);
+      } catch (error: unknown) {
+        if (openNexusAuthGateForError(error, runScopeMainVisibility)) {
+          return;
+        }
+
+        throw error;
+      }
+    };
+
+    await runScopeMainVisibility();
   };
 
   const handleOpenScopeInExplorer = (scope: NexusScopeSummary) => {
@@ -1700,6 +1763,7 @@ export default function NexusSidebar({
                     homeGraph={homeGraph}
                     mainGraph={mainGraph}
                     scopeSummaries={scopeSummaries}
+                    mainVisibleScopePacketIds={mainVisibleScopePacketIds}
                     onOpenInExplorerPress={handleOpenScopeInExplorer}
                     onSetSectionParentChains={(sectionId, showParentChains) => {
                       void setScopeSectionParentChains(
@@ -1717,6 +1781,12 @@ export default function NexusSidebar({
                       void handleScopeFollowPress(scopeId, isFollowed).catch(
                         () => undefined
                       );
+                    }}
+                    onScopeMainVisiblePress={(scopeId, isMainVisible) => {
+                      void handleScopeMainVisiblePress(
+                        scopeId,
+                        isMainVisible
+                      ).catch(() => undefined);
                     }}
                     themeMode={themeMode}
                     uiDensity={uiDensity}
@@ -1802,6 +1872,7 @@ export default function NexusSidebar({
                     homeGraph={homeGraph}
                     mainGraph={mainGraph}
                     scopeSummaries={scopeSummaries}
+                    mainVisibleScopePacketIds={mainVisibleScopePacketIds}
                     onOpenInExplorerPress={handleOpenScopeInExplorer}
                     onSetSectionParentChains={(sectionId, showParentChains) => {
                       void setScopeSectionParentChains(
@@ -1819,6 +1890,12 @@ export default function NexusSidebar({
                       void handleScopeFollowPress(scopeId, isFollowed).catch(
                         () => undefined
                       );
+                    }}
+                    onScopeMainVisiblePress={(scopeId, isMainVisible) => {
+                      void handleScopeMainVisiblePress(
+                        scopeId,
+                        isMainVisible
+                      ).catch(() => undefined);
                     }}
                     themeMode={themeMode}
                     uiDensity={uiDensity}

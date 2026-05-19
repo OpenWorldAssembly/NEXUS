@@ -1457,6 +1457,10 @@ test('current Preference.element packets parse scope-display preferences', () =>
         language: null,
         summary: 'Element scope-display preferences.',
       },
+      producer: {
+        adapter: 'test',
+        app_version: null,
+      },
     },
     body: {
       type: 'preference',
@@ -1480,6 +1484,11 @@ test('current Preference.element packets parse scope-display preferences', () =>
             show_associated_parent_chains: false,
             show_followed_parent_chains: true,
           },
+          shell_chrome: {
+            navigation_mode: 'scope',
+            theme_mode: 'light',
+            ui_density: 'large',
+          },
         },
       },
     },
@@ -1491,5 +1500,10 @@ test('current Preference.element packets parse scope-display preferences', () =>
     main_visible_scope_packet_ids: ['nexus:element/city'],
     show_associated_parent_chains: false,
     show_followed_parent_chains: true,
+  });
+  assert.deepEqual(packet.body.value.interface.shell_chrome, {
+    navigation_mode: 'scope',
+    theme_mode: 'light',
+    ui_density: 'large',
   });
 });

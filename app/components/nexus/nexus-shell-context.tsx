@@ -7,6 +7,9 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 import type { Href } from 'expo-router';
 import { usePathname, useRouter } from 'expo-router';
 
+import type {
+  ShellChromePreferenceValue,
+} from '@core/packets/packet-definition-manifest';
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
 import type { NexusShellGateSession } from '@runtime/nexus/nexus-shell-gates';
 import {
@@ -91,6 +94,7 @@ type NexusShellContextValue = NexusShellState & {
   setActiveSection: (section: NexusSection) => void;
   setScopeFollowed: (scopeId: string, isFollowed: boolean) => Promise<void>;
   setScopeAssociated: (scopeId: string, isAssociated: boolean) => Promise<void>;
+  setScopeMainVisible: (scopeId: string, isMainVisible: boolean) => Promise<void>;
   setScopeSectionParentChains: (
     sectionId: Extract<NexusSidebarScopeSectionId, 'associated' | 'followed'>,
     showParentChains: boolean
@@ -252,9 +256,10 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
   const [guestCapabilities, setGuestCapabilities] = useState(
     NEXUS_GUEST_CAPABILITIES,
   );
-  const [navigationMode, setNavigationMode] = useState<NexusNavMode>('function');
-  const [themeMode, setThemeMode] = useState<NexusThemeMode>('dark');
-  const [uiDensity, setUiDensity] = useState<NexusUiDensity>('small');
+  const [navigationMode, setNavigationModeState] =
+    useState<NexusNavMode>('function');
+  const [themeMode, setThemeModeState] = useState<NexusThemeMode>('dark');
+  const [uiDensity, setUiDensityState] = useState<NexusUiDensity>('small');
   const [activeScopeId, setActiveScopeIdState] = useState(
     FALLBACK_SCOPE_SUMMARY.id,
   );
@@ -313,6 +318,9 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
     setMainGraph(shellPayload.main_graph);
     setDiscoverableSection(shellPayload.discoverable_section);
     setGuestCapabilities(shellPayload.guest_capabilities);
+    setNavigationModeState(shellPayload.shell_chrome.navigation_mode);
+    setThemeModeState(shellPayload.shell_chrome.theme_mode);
+    setUiDensityState(shellPayload.shell_chrome.ui_density);
     setActiveScopeIdState((currentScopeId) => {
       const currentScope = nextScopeSummaries.find(
         (scopeSummary) => scopeSummary.id === currentScopeId
@@ -404,6 +412,53 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
     router.push(getNexusSectionHref(section) as Href);
   };
 
+  const persistShellChromePreference = useCallback(
+    async (shellChromePatch: Partial<ShellChromePreferenceValue>) => {
+      const preferencePayload = { shell_chrome: shellChromePatch };
+      const requestBody =
+        currentMode === 'claimed'
+          ? await createVerifiedRequestBody(
+              '/api/nexus/shell-preferences',
+              'POST',
+              preferencePayload
+            )
+          : preferencePayload;
+      const updated = await updateNexusScopeDisplayPreferences({
+        requestBody,
+      });
+
+      if (updated.shell_chrome) {
+        setNavigationModeState(updated.shell_chrome.navigation_mode);
+        setThemeModeState(updated.shell_chrome.theme_mode);
+        setUiDensityState(updated.shell_chrome.ui_density);
+      }
+    },
+    [createVerifiedRequestBody, currentMode]
+  );
+
+  const persistShellChromePreferenceSafely = (
+    shellChromePatch: Partial<ShellChromePreferenceValue>
+  ) => {
+    void persistShellChromePreference(shellChromePatch).catch((error) => {
+      console.warn('Unable to persist shell chrome preference.', error);
+    });
+  };
+
+  const setNavigationMode = (mode: NexusNavMode) => {
+    setNavigationModeState(mode);
+    persistShellChromePreferenceSafely({ navigation_mode: mode });
+  };
+
+  const setThemeMode = (mode: NexusThemeMode) => {
+    setThemeModeState(mode);
+    persistShellChromePreferenceSafely({ theme_mode: mode });
+  };
+
+  const setUiDensity = (density: NexusUiDensity) => {
+    setUiDensityState(density);
+    persistShellChromePreferenceSafely({ ui_density: density });
+  };
+
   const setScopeFollowed = async (scopeId: string, isFollowed: boolean) => {
     const targetScope = scopeSummaries.find((scope) => scope.id === scopeId) ?? null;
 
@@ -448,6 +503,37 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
           },
       writeRisk: 'standard',
     });
+    await refreshShellData();
+  };
+
+  const setScopeMainVisible = async (scopeId: string, isMainVisible: boolean) => {
+    const targetScope = scopeSummaries.find((scope) => scope.id === scopeId) ?? null;
+
+    if (!targetScope) {
+      throw new Error('Unknown main-tree scope target.');
+    }
+
+    const nextMainVisibleScopePacketIds = isMainVisible
+      ? Array.from(new Set([...mainVisibleScopePacketIds, targetScope.packetId]))
+      : mainVisibleScopePacketIds.filter(
+          (packetId) => packetId !== targetScope.packetId
+        );
+    const preferencePayload = {
+      main_visible_scope_packet_ids: nextMainVisibleScopePacketIds,
+    };
+    const requestBody =
+      currentMode === 'claimed'
+        ? await createVerifiedRequestBody(
+            '/api/nexus/shell-preferences',
+            'POST',
+            preferencePayload
+          )
+        : preferencePayload;
+    const updated = await updateNexusScopeDisplayPreferences({
+      requestBody,
+    });
+
+    setMainVisibleScopePacketIds(updated.preferences.main_visible_scope_packet_ids);
     await refreshShellData();
   };
 
@@ -723,6 +809,7 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
         setActiveSection,
         setScopeFollowed,
         setScopeAssociated,
+        setScopeMainVisible,
         setScopeSectionParentChains,
         refreshShellData,
         togglePreferencesDrawer,

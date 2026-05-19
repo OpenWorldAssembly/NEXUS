@@ -51,7 +51,9 @@ Current scope consumer direction in code includes:
 - scope projection now returns `home`, `associated`, `followed`, `main`, and `discoverable` sections, with descriptor-aware grouping and optional lightweight parent-context chains for associated and followed scopes
 - locality confirmation now uses one composite runtime apply seam above `locality.path.create` so structural locality writes, scope relations, and packet-backed claimed display preferences are coordinated together
 - `main` is a display preference, not a relation; claimed actors now persist it through `Preference.element` packets with the legacy runtime table kept as a compatibility cache
+- claimed shell preference reads are session-bound before projecting private `Preference.element` state
 - guest scope-display preference behavior remains an explicit compatibility/session bridge
+- `Preference.element.value.interface.shell_chrome` now carries live navigation mode, theme mode, and UI density reads/writes through the shell preferences API
 - the current home trunk renders broadest-to-smallest, while associated scopes remain mounted related scopes outside the geographic ancestry chain
 - shell UI actions for follow and association now route through the canonical mutation corridor and refresh scope projection after success instead of relying on local-only toggles
 - dashboard payloads are now scope-backed runtime projections rather than static shell filler

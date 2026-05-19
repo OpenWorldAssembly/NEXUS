@@ -4,6 +4,7 @@
  */
 
 import type { NexusPacketCardProjection, NexusScopeLens } from '@core/contracts';
+import type { ShellChromePreferenceValue } from '@core/packets/packet-definition-manifest';
 import type {
   NexusGuestChecklistItem,
   NexusGuestProfile,
@@ -22,6 +23,7 @@ export interface NexusShellPayload {
   associated_scope_ids: string[];
   followed_scope_ids: string[];
   main_visible_scope_packet_ids: string[];
+  shell_chrome: ShellChromePreferenceValue;
   known_scope_ids: string[];
   known_unmounted_scope_ids: string[];
   personal_parent_scope_id: string | null;

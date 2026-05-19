@@ -74,6 +74,11 @@ test('Preference.element can represent current shell scope display preferences',
   assert.deepEqual(parsed.value.interface.scope_display.main_visible_scope_packet_ids, [
     'nexus:element/locality/city/example',
   ]);
+  assert.deepEqual(parsed.value.interface.shell_chrome, {
+    navigation_mode: 'function',
+    theme_mode: 'dark',
+    ui_density: 'small',
+  });
 });
 
 test('Bundle packet stays a generic carrier inventory', () => {

@@ -85,13 +85,14 @@ The long-term model is graph-discoverable definition parts resolved into a pinne
 
 ### Preference
 
-`Preference.element` models the runtime shell preferences that currently control:
+`Preference.element` models the runtime shell preferences that currently control or are prepared to control:
 
 - visible main scope packet IDs
 - associated parent-chain display
 - followed parent-chain display
+- `interface.shell_chrome` defaults for navigation mode, theme mode, and UI density
 
-Preference is now enrolled as a canonical packet family for the first live R&D bridge. Claimed actor scope-display preferences write `Preference.element` packets and keep the legacy runtime preference table as a compatibility cache. Guest preferences remain cookie/session compatibility state.
+Preference is now enrolled as a canonical packet family for the first live R&D bridge. Claimed actor scope-display preferences write `Preference.element` packets and keep the legacy runtime preference table as a compatibility cache. Guest preferences remain cookie/session compatibility state. Claimed shell preference reads are now bound to the authenticated session actor before private `Preference.element` state is projected; mismatched actor query params fall back to guest preference projection.
 
 Preference packets are actor-owned configuration. They do not create relationships and should not make scopes eligible for the main graph. They only configure display of scopes already eligible through home, association, follow, or later relation types.
 
@@ -123,7 +124,7 @@ The manifest may eventually be carried inside a Bundle inventory, but the manife
 
 ## Next use
 
-The current safe runtime step is to use `Preference.element` as the first full template example while still limiting the live bridge to scope-display preferences.
+The current safe runtime step is to use `Preference.element` as the first full template example. The live bridge now runs through a generic packet-runtime master handler and dispatches to a local `preference.element.interface.set` connector. Scope-display and shell-chrome preferences are now UI-driven writes through the same connector, proving partial `Preference.element.value.interface` patches without a new packet shape.
 
 ## Preference.element shadow prototype
 
@@ -136,7 +137,7 @@ The first completed packet-type example is `Preference.element`. It now has shad
 - upcasting the old one-toggle shape into current associated/followed parent-chain toggles
 - downcasting with loss notes when current state cannot fit the older shape exactly
 
-This is now partially live for claimed actor scope-display preferences. Runtime reads prefer the latest active `Preference.element` packet and fall back to the legacy table when no packet exists. The table remains a compatibility cache so the alpha demo keeps its current behavior while the packet path proves itself.
+This is now partially live for claimed actor interface preferences. Runtime reads prefer the latest active `Preference.element` packet and fall back to the legacy table when no packet exists. The table remains a compatibility cache for scope-display state so the alpha demo keeps its current behavior while the packet path proves itself.
 
 
 ## Shadow action bridge
@@ -157,7 +158,7 @@ For `Preference.element`, the shadow bridge can resolve `preference.element.set`
 - the `preference.element.write` policy action ID
 - a readiness flag for shadow runtime planning
 
-This is the first seam between the packet definition manifest and the fortress corridor. It is still not a fully manifest-executed prepare/finalize route, but `Preference` is now inside the canonical packet ontology and the scope-display bridge can create live `PacketEnvelope` records.
+This is the first seam between the packet definition manifest and the fortress corridor. It is still not a fully manifest-executed prepare/finalize route, but `Preference` is now inside the canonical packet ontology and the runtime master handler can dispatch a trusted local connector that creates live `PacketEnvelope` records.
 
 The runtime shadow planner can now build a manifest-backed `Preference.element` plan from the existing runtime preference payload. The plan includes the deterministic packet ID, normalized body, projected runtime preference shape, resolved action plan, storage class, revision behavior, and explicit `live_fortress_ready: false` marker.
 
@@ -175,7 +176,7 @@ The manifest layer now includes a shadow audit harness before any live fortress 
 
 `Preference.element` also has a shadow seed candidate helper. The seed helper converts current runtime element preferences into the experimental Preference body, projects that body back into the current runtime preference shape, and marks the candidate safe only when the projection is equivalent and the packet definition audit has no errors.
 
-The shadow helpers still exist for audit and descriptor comparison, but the claimed-actor scope-display path now persists a live `Preference.element` packet in parallel with the runtime compatibility cache.
+The shadow helpers still exist for audit and descriptor comparison, but the claimed-actor interface preference path now persists a live `Preference.element` packet in parallel with the runtime compatibility cache.
 
 ## Shadow fortress bridge
 
@@ -194,4 +195,4 @@ This bridge still returns `live_fortress_ready: false` because manifest descript
 
 For `Preference.element`, the shadow bridge can produce a prepare-shaped candidate from current runtime element preferences, project that candidate back into runtime preference shape, and report which generic builder/planner/policy descriptors would be used once live enrollment is safe.
 
-The live route and writer audits remain the boundary: manifest-defined actions should not enter the live mutation intent registry until the generic policy and planner seams are intentionally promoted. For now, only the narrow scope-display writer path is live.
+The live route and writer audits remain the boundary: manifest-defined actions should not enter the live mutation intent registry until the generic policy and planner seams are intentionally promoted. For now, the live path is the narrow `Preference.element` interface connector. It resolves manifest descriptors but still executes trusted runtime code rather than imported definition behavior.

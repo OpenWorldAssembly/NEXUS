@@ -3,6 +3,7 @@
  * Description: Client-side query helpers for shell and dashboard payloads.
  */
 
+import type { ShellChromePreferenceValue } from '@core/packets/packet-definition-manifest';
 import type {
   NexusDashboardPayload,
   NexusScopeDisplayPreferencesPayload,
@@ -53,9 +54,11 @@ export function updateNexusScopeDisplayPreferences(input: {
   headers?: Record<string, string>;
 }): Promise<{
   preferences: NexusScopeDisplayPreferencesPayload;
+  shell_chrome?: ShellChromePreferenceValue;
 }> {
   return fetchMutationJsonOrThrow<{
     preferences: NexusScopeDisplayPreferencesPayload;
+    shell_chrome?: ShellChromePreferenceValue;
   }>({
     path: '/api/nexus/shell-preferences',
     method: 'POST',

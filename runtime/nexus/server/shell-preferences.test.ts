@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   readFollowedScopeIds,
   readScopeDisplayPreferencesCompatibility,
+  readShellChromePreferencesCompatibility,
   writeFollowedScopePreference,
   writeScopeDisplayPreferencesCompatibility,
 } from './shell-preferences.ts';
@@ -38,16 +39,22 @@ test('scope display preferences are stored per actor and preserve main visibilit
     request,
     actorPacketId: 'nexus:element/person-a',
     preferences: {
-      main_visible_scope_packet_ids: ['nexus:element/moreno-valley', 'nexus:element/canyon-lake'],
+      main_visible_scope_packet_ids: [
+        'nexus:element/moreno-valley',
+        'nexus:element/canyon-lake',
+      ],
       show_associated_parent_chains: false,
       show_followed_parent_chains: true,
     },
   });
-  const persistedRequest = new Request('https://example.test/api/nexus/shell-preferences', {
-    headers: {
-      cookie: firstUpdate.setCookieHeader.split(';')[0] ?? '',
-    },
-  });
+  const persistedRequest = new Request(
+    'https://example.test/api/nexus/shell-preferences',
+    {
+      headers: {
+        cookie: firstUpdate.setCookieHeader.split(';')[0] ?? '',
+      },
+    }
+  );
 
   assert.deepEqual(
     readScopeDisplayPreferencesCompatibility(
@@ -72,6 +79,50 @@ test('scope display preferences are stored per actor and preserve main visibilit
       main_visible_scope_packet_ids: [],
       show_associated_parent_chains: true,
       show_followed_parent_chains: true,
+    }
+  );
+});
+
+test('shell chrome preferences are stored with the same compatibility cookie as scope display preferences', () => {
+  const request = new Request('https://example.test/api/nexus/shell-preferences');
+  const firstUpdate = writeScopeDisplayPreferencesCompatibility({
+    request,
+    actorPacketId: 'nexus:element/person-a',
+    shellChrome: {
+      navigation_mode: 'scope',
+      theme_mode: 'light',
+      ui_density: 'large',
+    },
+  });
+  const persistedRequest = new Request(
+    'https://example.test/api/nexus/shell-preferences',
+    {
+      headers: {
+        cookie: firstUpdate.setCookieHeader.split(';')[0] ?? '',
+      },
+    }
+  );
+
+  assert.deepEqual(
+    readShellChromePreferencesCompatibility(
+      persistedRequest,
+      'nexus:element/person-a'
+    ),
+    {
+      navigation_mode: 'scope',
+      theme_mode: 'light',
+      ui_density: 'large',
+    }
+  );
+  assert.deepEqual(
+    readShellChromePreferencesCompatibility(
+      persistedRequest,
+      'nexus:element/person-b'
+    ),
+    {
+      navigation_mode: 'function',
+      theme_mode: 'dark',
+      ui_density: 'small',
     }
   );
 });

@@ -1,6 +1,6 @@
 /**
  * File: preference.ts
- * Description: Core-native bootstrap definition and body schema for Preference.element scope-display preferences.
+ * Description: Core-native bootstrap definition and body schema for actor-owned Preference.element values.
  */
 
 import { z } from 'zod';
@@ -36,6 +36,20 @@ export const ScopeDisplayPreferenceValueSchema = z
   })
   .strict();
 
+export const ShellChromeNavigationModeSchema = z.enum(['function', 'scope']);
+
+export const ShellChromeThemeModeSchema = z.enum(['dark', 'light']);
+
+export const ShellChromeUiDensitySchema = z.enum(['small', 'large']);
+
+export const ShellChromePreferenceValueSchema = z
+  .object({
+    navigation_mode: ShellChromeNavigationModeSchema.default('function'),
+    theme_mode: ShellChromeThemeModeSchema.default('dark'),
+    ui_density: ShellChromeUiDensitySchema.default('small'),
+  })
+  .strict();
+
 const PreferenceBaseBodySchema = z
   .object({
     type: z.literal('preference').default('preference'),
@@ -57,6 +71,7 @@ const PreferenceBaseBodySchema = z
 export const ElementInterfacePreferenceValueSchema = z
   .object({
     scope_display: ScopeDisplayPreferenceValueSchema.default({}),
+    shell_chrome: ShellChromePreferenceValueSchema.default({}),
   })
   .strict();
 
@@ -82,6 +97,7 @@ export const ElementPreferenceBuilderInputSchema = z
     supersedes_ref: PacketRevisionRefSchema.nullable().optional(),
     note: z.string().min(1).nullable().optional(),
     value: ScopeDisplayPreferenceValueSchema,
+    shell_chrome: ShellChromePreferenceValueSchema.optional(),
   })
   .strict();
 
@@ -95,6 +111,9 @@ export type ScopeDisplayPreferenceContext = z.infer<
 >;
 export type ScopeDisplayPreferenceValue = z.infer<
   typeof ScopeDisplayPreferenceValueSchema
+>;
+export type ShellChromePreferenceValue = z.infer<
+  typeof ShellChromePreferenceValueSchema
 >;
 export type ElementPreferenceValue = z.infer<typeof ElementPreferenceValueSchema>;
 
@@ -409,6 +428,7 @@ export const preferencePacketDefinition = {
         'generic.preference.builder',
         'generic.preference.latest_active_planner',
         'runtime.scope_display_projection',
+        'runtime.shell_chrome_projection',
       ],
       notes:
         'Dependency definition part for the generic builder/planner/projection capabilities needed by the shadow bridge.',
@@ -419,8 +439,8 @@ export const preferencePacketDefinition = {
     'preference.element.legacy_v0_adapter',
   ],
   notes: [
-    'Bootstrap definition only; Preference.element packets are canonical for claimed actor scope-display preferences, while manifest-driven execution remains shadow-only.',
+    'Bootstrap definition only; Preference.element packets are canonical for claimed actor preferences, while manifest-driven execution remains shadow-only.',
     'Preference packets never create graph relationships. They only configure display/behavior for already eligible packets.',
-    'Only element is currently enrolled as a supported Preference subtype; scope_display is the first implemented section under value.interface. Other preference ideas remain deferred until implemented.',
+    'Only element is currently enrolled as a supported Preference subtype; scope_display is the first live section under value.interface and shell_chrome is schema/helper-ready for the next bridge pass.',
   ],
 } as const satisfies PacketTypeDefinition<typeof PreferenceBodySchema>;

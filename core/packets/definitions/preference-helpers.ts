@@ -9,16 +9,21 @@ import {
   PreferenceContextSchema,
   ElementPreferenceBuilderInputSchema,
   ScopeDisplayPreferenceValueSchema,
+  ShellChromePreferenceValueSchema,
   type PreferenceBody,
   type ElementPreferenceBuilderInput,
   type ScopeDisplayPreferenceContext,
   type ScopeDisplayPreferenceValue,
+  type ShellChromePreferenceValue,
 } from './preference.ts';
 
 export const DEFAULT_SCOPE_DISPLAY_PREFERENCE_CONTEXT = PreferenceContextSchema.parse({});
 
 export const DEFAULT_SCOPE_DISPLAY_PREFERENCE_VALUE =
   ScopeDisplayPreferenceValueSchema.parse({});
+
+export const DEFAULT_SHELL_CHROME_PREFERENCE_VALUE =
+  ShellChromePreferenceValueSchema.parse({});
 
 export type ElementPreferenceBody = Extract<
   PreferenceBody,
@@ -87,6 +92,15 @@ export function normalizeScopeDisplayPreferenceValue(
   });
 }
 
+export function normalizeShellChromePreferenceValue(
+  value: Partial<ShellChromePreferenceValue> | null | undefined
+): ShellChromePreferenceValue {
+  return ShellChromePreferenceValueSchema.parse({
+    ...DEFAULT_SHELL_CHROME_PREFERENCE_VALUE,
+    ...(value ?? {}),
+  });
+}
+
 export function createElementPreferenceContextKey(
   context: Partial<ScopeDisplayPreferenceContext> | null | undefined
 ): string {
@@ -121,6 +135,7 @@ export function buildElementPreferenceBody(
   const parsedInput = ElementPreferenceBuilderInputSchema.parse({
     ...input,
     value: normalizeScopeDisplayPreferenceValue(input.value),
+    shell_chrome: normalizeShellChromePreferenceValue(input.shell_chrome),
   });
 
   return {
@@ -135,6 +150,7 @@ export function buildElementPreferenceBody(
     value: {
       interface: {
         scope_display: normalizeScopeDisplayPreferenceValue(parsedInput.value),
+        shell_chrome: normalizeShellChromePreferenceValue(parsedInput.shell_chrome),
       },
     },
   };

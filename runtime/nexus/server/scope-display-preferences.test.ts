@@ -4,8 +4,19 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
+import {
+  GENERIC_SHADOW_PACKET_RUNTIME_CAPABILITIES,
+  type ShellChromePreferenceValue,
+} from '@core/packets/packet-definition-manifest';
+import type { NexusScopeDisplayPreferencesPayload } from '@runtime/nexus/nexus-api-types';
 import { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store';
-import { writeElementScopeDisplayPreferencePacket } from './element-preference-packets.ts';
+import {
+  readElementPreferencePacket,
+  writeElementPreferenceInterfacePacket,
+  writeElementScopeDisplayPreferencePacket,
+} from './element-preference-packets.ts';
+import { runRegisteredPacketRuntimeMutation } from './packet-runtime-connectors.ts';
+import type { PreferenceElementInterfaceRuntimeResult } from './preference-runtime-connectors.ts';
 import {
   readScopeDisplayPreferences,
   reconcileScopeDisplayPreferences,
@@ -239,5 +250,227 @@ test('Preference.element revisions supersede the previous active scope-display p
       show_associated_parent_chains: false,
       show_followed_parent_chains: true,
     });
+  });
+});
+
+
+test('Preference.element scope-display writes preserve existing shell chrome preferences', async () => {
+  await withTemporaryPacketStore(async (packetStore) => {
+    await writeElementPreferenceInterfacePacket({
+      packetStore,
+      actorPacketId: 'nexus:element/test-actor',
+      patch: {
+        shell_chrome: {
+          navigation_mode: 'scope',
+          theme_mode: 'light',
+          ui_density: 'large',
+        },
+      },
+      createdAt: '2026-05-17T00:00:00.000Z',
+    });
+
+    await writeElementScopeDisplayPreferencePacket({
+      packetStore,
+      actorPacketId: 'nexus:element/test-actor',
+      preferences: {
+        main_visible_scope_packet_ids: ['nexus:element/new-city'],
+        show_associated_parent_chains: false,
+        show_followed_parent_chains: true,
+      },
+      createdAt: '2026-05-17T00:01:00.000Z',
+    });
+
+    const packet = await readElementPreferencePacket({
+      packetStore,
+      actorPacketId: 'nexus:element/test-actor',
+    });
+
+    assert.deepEqual(packet?.shell_chrome, {
+      navigation_mode: 'scope',
+      theme_mode: 'light',
+      ui_density: 'large',
+    });
+    assert.deepEqual(packet?.preferences, {
+      main_visible_scope_packet_ids: ['nexus:element/new-city'],
+      show_associated_parent_chains: false,
+      show_followed_parent_chains: true,
+    });
+  });
+});
+
+test('packet runtime master handler dispatches Preference.element interface writes', async () => {
+  await withTemporaryPacketStore(async (packetStore) => {
+    const runtimeResult = await runRegisteredPacketRuntimeMutation<PreferenceElementInterfaceRuntimeResult>({
+      packetStore,
+      actorContext: {
+        actorPacketId: 'nexus:element/test-actor',
+      },
+      mutationIntent: 'preference.element.set',
+      input: {
+        scope_display: {
+          main_visible_scope_packet_ids: ['nexus:element/city'],
+          show_associated_parent_chains: false,
+          show_followed_parent_chains: true,
+        },
+        shell_chrome: {
+          navigation_mode: 'scope',
+          theme_mode: 'dark',
+          ui_density: 'large',
+        },
+      },
+      createdAt: '2026-05-17T00:00:00.000Z',
+    });
+    const storedCache = await packetStore.readActorScopeDisplayPreferences(
+      'nexus:element/test-actor'
+    );
+
+    assert.equal(runtimeResult.corridor_kind, 'packet_runtime_master_handler');
+    assert.equal(runtimeResult.connector_id, 'preference.element.interface.set');
+    assert.equal(runtimeResult.packet_type, 'Preference');
+    assert.equal(runtimeResult.packet_subtype, 'element');
+    assert.equal(runtimeResult.mutation_intent, 'preference.element.set');
+    assert.equal(runtimeResult.action_plan_ready, true);
+    assert.ok(runtimeResult.action_ids.includes('preference.element.revise'));
+    assert.deepEqual(runtimeResult.result.preferences, {
+      main_visible_scope_packet_ids: ['nexus:element/city'],
+      show_associated_parent_chains: false,
+      show_followed_parent_chains: true,
+    });
+    assert.deepEqual(runtimeResult.result.shell_chrome, {
+      navigation_mode: 'scope',
+      theme_mode: 'dark',
+      ui_density: 'large',
+    });
+    assert.deepEqual(storedCache?.main_visible_scope_packet_ids, [
+      'nexus:element/city',
+    ]);
+  });
+});
+
+
+test('Preference.element shell chrome writes preserve existing scope-display preferences', async () => {
+  await withTemporaryPacketStore(async (packetStore) => {
+    await writeElementPreferenceInterfacePacket({
+      packetStore,
+      actorPacketId: 'nexus:element/test-actor',
+      patch: {
+        scope_display: {
+          main_visible_scope_packet_ids: ['nexus:element/original-city'],
+          show_associated_parent_chains: false,
+          show_followed_parent_chains: true,
+        },
+      },
+      createdAt: '2026-05-17T00:00:00.000Z',
+    });
+
+    await writeElementPreferenceInterfacePacket({
+      packetStore,
+      actorPacketId: 'nexus:element/test-actor',
+      patch: {
+        shell_chrome: {
+          navigation_mode: 'scope',
+          theme_mode: 'light',
+          ui_density: 'large',
+        },
+      },
+      createdAt: '2026-05-17T00:01:00.000Z',
+    });
+
+    const packet = await readElementPreferencePacket({
+      packetStore,
+      actorPacketId: 'nexus:element/test-actor',
+    });
+
+    assert.deepEqual(packet?.preferences, {
+      main_visible_scope_packet_ids: ['nexus:element/original-city'],
+      show_associated_parent_chains: false,
+      show_followed_parent_chains: true,
+    });
+    assert.deepEqual(packet?.shell_chrome, {
+      navigation_mode: 'scope',
+      theme_mode: 'light',
+      ui_density: 'large',
+    });
+  });
+});
+
+test('Preference.element sparse scope-display patches ignore undefined route-style fields', async () => {
+  await withTemporaryPacketStore(async (packetStore) => {
+    await writeElementPreferenceInterfacePacket({
+      packetStore,
+      actorPacketId: 'nexus:element/test-actor',
+      patch: {
+        scope_display: {
+          main_visible_scope_packet_ids: ['nexus:element/original-city'],
+          show_associated_parent_chains: false,
+          show_followed_parent_chains: false,
+        },
+        shell_chrome: {
+          navigation_mode: 'scope',
+          theme_mode: 'light',
+          ui_density: 'large',
+        },
+      },
+      createdAt: '2026-05-17T00:00:00.000Z',
+    });
+
+    await writeElementPreferenceInterfacePacket({
+      packetStore,
+      actorPacketId: 'nexus:element/test-actor',
+      patch: {
+        scope_display: {
+          main_visible_scope_packet_ids: ['nexus:element/new-city'],
+          show_associated_parent_chains: undefined,
+          show_followed_parent_chains: undefined,
+        } as Partial<NexusScopeDisplayPreferencesPayload>,
+        shell_chrome: {
+          navigation_mode: undefined,
+          theme_mode: 'dark',
+          ui_density: undefined,
+        } as Partial<ShellChromePreferenceValue>,
+      },
+      createdAt: '2026-05-17T00:01:00.000Z',
+    });
+
+    const packet = await readElementPreferencePacket({
+      packetStore,
+      actorPacketId: 'nexus:element/test-actor',
+    });
+
+    assert.deepEqual(packet?.preferences, {
+      main_visible_scope_packet_ids: ['nexus:element/new-city'],
+      show_associated_parent_chains: false,
+      show_followed_parent_chains: false,
+    });
+    assert.deepEqual(packet?.shell_chrome, {
+      navigation_mode: 'scope',
+      theme_mode: 'dark',
+      ui_density: 'large',
+    });
+  });
+});
+
+test('packet runtime master handler resolves Preference.element by mutation intent and fails closed on unsupported capabilities', async () => {
+  await withTemporaryPacketStore(async (packetStore) => {
+    await assert.rejects(
+      runRegisteredPacketRuntimeMutation<PreferenceElementInterfaceRuntimeResult>({
+        packetStore,
+        actorContext: {
+          actorPacketId: 'nexus:element/test-actor',
+        },
+        mutationIntent: 'preference.element.set',
+        capabilities: {
+          ...GENERIC_SHADOW_PACKET_RUNTIME_CAPABILITIES,
+          builder_kinds: [],
+        },
+        input: {
+          shell_chrome: {
+            theme_mode: 'light',
+          },
+        },
+        createdAt: '2026-05-17T00:00:00.000Z',
+      }),
+      /Unsupported capabilities: builder_kind:single_packet_body/
+    );
   });
 });

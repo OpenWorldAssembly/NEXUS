@@ -659,9 +659,24 @@ export const ScopeDisplayPreferenceValueSchema = z
   })
   .strict();
 
+export const ShellChromeNavigationModeSchema = z.enum(['function', 'scope']);
+
+export const ShellChromeThemeModeSchema = z.enum(['dark', 'light']);
+
+export const ShellChromeUiDensitySchema = z.enum(['small', 'large']);
+
+export const ShellChromePreferenceValueSchema = z
+  .object({
+    navigation_mode: ShellChromeNavigationModeSchema.default('function'),
+    theme_mode: ShellChromeThemeModeSchema.default('dark'),
+    ui_density: ShellChromeUiDensitySchema.default('small'),
+  })
+  .strict();
+
 export const ElementInterfacePreferenceValueSchema = z
   .object({
     scope_display: ScopeDisplayPreferenceValueSchema.default({}),
+    shell_chrome: ShellChromePreferenceValueSchema.default({}),
   })
   .strict();
 

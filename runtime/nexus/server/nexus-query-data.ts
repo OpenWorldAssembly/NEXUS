@@ -8,6 +8,7 @@ import type {
   NexusPacketCardProjection,
   NexusScopeLens,
 } from '@core/contracts';
+import { normalizeShellChromePreferenceValue } from '@core/packets/packet-definition-manifest';
 import {
   PACKET_FAMILIES,
   getElementSubtypeLeaf,
@@ -49,7 +50,9 @@ import {
   buildNexusProjectedScopeSection,
 } from '@runtime/nexus/nexus-shell';
 import { getNexusPacketServices } from '@runtime/nexus/server/nexus-packet-services';
+import { readElementPreferencePacket } from '@runtime/nexus/server/element-preference-packets';
 import { readScopeDisplayPreferences } from '@runtime/nexus/server/scope-display-preferences';
+import { readShellChromePreferencesCompatibility } from '@runtime/nexus/server/shell-preferences';
 import {
   DEFAULT_TRUST_POLICY_SNAPSHOT,
   deriveTrustStage,
@@ -717,6 +720,19 @@ export async function getNexusShellPayload(
     request: request ?? null,
     actorPacketId: actorPacketId ?? null,
   });
+  const elementPreferenceProjection = actorPacketId
+    ? await readElementPreferencePacket({
+        packetStore: services.packetStore,
+        actorPacketId,
+      })
+    : null;
+  const shellChromePreferences = normalizeShellChromePreferenceValue(
+    elementPreferenceProjection?.shell_chrome ??
+      readShellChromePreferencesCompatibility(
+        request ?? null,
+        actorPacketId ?? null
+      )
+  );
   const scopeGraph = await buildNexusScopeGraphProjection({
     packetStore: services.packetStore,
     actorPacketId: actorPacketId ?? null,
@@ -859,6 +875,7 @@ export async function getNexusShellPayload(
     followed_scope_ids: Array.from(scopeGraph.followedScopeIds),
     main_visible_scope_packet_ids:
       scopeDisplayPreferences.main_visible_scope_packet_ids,
+    shell_chrome: shellChromePreferences,
     known_scope_ids: Array.from(scopeGraph.knownScopeIds),
     known_unmounted_scope_ids: scopeGraph.knownUnmountedScopeIds,
     personal_parent_scope_id: personalParentScopeId,
