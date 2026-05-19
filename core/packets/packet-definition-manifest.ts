@@ -4,9 +4,23 @@
  */
 
 import {
+  actionPacketDefinition,
+  attestationPacketDefinition,
   bundlePacketDefinition,
+  causePacketDefinition,
+  claimPacketDefinition,
   definitionPacketDefinition,
+  decisionPacketDefinition,
+  discussionPacketDefinition,
+  elementPacketDefinition,
+  locationPacketDefinition,
+  policyPacketDefinition,
   preferencePacketDefinition,
+  proposalPacketDefinition,
+  relationPacketDefinition,
+  reportPacketDefinition,
+  rolePacketDefinition,
+  votePacketDefinition,
   type PacketDefinitionManifest,
   type PacketTypeDefinition,
 } from '@core/packets/definitions/index.ts';
@@ -15,6 +29,20 @@ import { PACKET_MANIFEST_TEMPLATE_VERSION } from '@core/packets/packet-definitio
 
 export const EXPERIMENTAL_PACKET_TYPE_DEFINITIONS = {
   Definition: definitionPacketDefinition,
+  Element: elementPacketDefinition,
+  Location: locationPacketDefinition,
+  Role: rolePacketDefinition,
+  Claim: claimPacketDefinition,
+  Relation: relationPacketDefinition,
+  Report: reportPacketDefinition,
+  Proposal: proposalPacketDefinition,
+  Vote: votePacketDefinition,
+  Attestation: attestationPacketDefinition,
+  Decision: decisionPacketDefinition,
+  Cause: causePacketDefinition,
+  Action: actionPacketDefinition,
+  Discussion: discussionPacketDefinition,
+  Policy: policyPacketDefinition,
   Preference: preferencePacketDefinition,
   Bundle: bundlePacketDefinition,
 } as const satisfies Record<string, PacketTypeDefinition>;

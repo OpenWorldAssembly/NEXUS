@@ -5,6 +5,7 @@
 
 export * from './packet-definition-types.ts';
 export * from './definition.ts';
+export * from './generic-family.ts';
 export {
   DEFINITION_BOOTSTRAP_VERSION,
   REQUIRED_PACKET_DEFINITION_PARTS,

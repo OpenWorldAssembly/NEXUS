@@ -39,6 +39,7 @@ For the implementation guide, the chapter files under `docs/implementation-guide
 ## Chapters
 
 - [Packet Definition Manifest R&D](implementation-guide/packet-definition-manifest-rd.md)
+- [Packet Runtime Modernization](implementation-guide/packet-runtime-modernization.md)
 
 - [Architecture And Layers](implementation-guide/architecture-and-layers.md)
 - [Core Entities And Packet Model](implementation-guide/core-entities-and-packet-model.md)

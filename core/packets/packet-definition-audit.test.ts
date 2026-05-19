@@ -2,12 +2,21 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
+  resolvePacketDefinitionMutationActionPlan,
   auditPacketDefinitionManifest,
   auditPacketTypeDefinition,
   getExperimentalPacketTypeDefinition,
   listExperimentalPacketTypeDefinitions,
   PACKET_DEFINITION_MANIFEST,
 } from '@core/packets/packet-definition-manifest';
+import { GENERIC_PACKET_BUILD_FAMILIES } from '@core/packets/packet-build-pipeline';
+
+const EXPECTED_MANIFEST_PACKET_TYPES = [
+  'Definition',
+  ...GENERIC_PACKET_BUILD_FAMILIES,
+  'Preference',
+  'Bundle',
+].sort();
 
 test('audits Preference packet definition descriptor graph cleanly', () => {
   const preferenceDefinition = getExperimentalPacketTypeDefinition('Preference');
@@ -31,7 +40,36 @@ test('audits the experimental packet definition manifest', () => {
   });
 
   assert.equal(report.finding_counts.error, 0);
-  assert.deepEqual(report.checked_packet_types.sort(), ['Bundle', 'Definition', 'Preference']);
+  assert.deepEqual(report.checked_packet_types.sort(), EXPECTED_MANIFEST_PACKET_TYPES);
+});
+
+test('every registered definition audits without errors', () => {
+  for (const definition of listExperimentalPacketTypeDefinitions()) {
+    const report = auditPacketTypeDefinition({
+      definition,
+      requireShadowRuntimeReady: false,
+    });
+
+    assert.equal(report.finding_counts.error, 0, definition.packet_type);
+  }
+});
+
+test('generic family mutation descriptors are shadow-runtime resolvable', () => {
+  for (const family of GENERIC_PACKET_BUILD_FAMILIES) {
+    const definition = getExperimentalPacketTypeDefinition(family);
+    assert.ok(definition);
+
+    for (const mutation of definition.mutations) {
+      const plan = resolvePacketDefinitionMutationActionPlan({
+        definition,
+        mutation_intent: mutation.mutation_intent,
+      });
+
+      assert.equal(plan.ready_for_shadow_runtime, true, mutation.mutation_intent);
+      assert.equal(plan.missing_descriptor_ids.length, 0);
+      assert.equal(plan.unsupported_capabilities.length, 0);
+    }
+  }
 });
 
 test('reports missing builder references as audit errors', () => {

@@ -24,15 +24,23 @@ import {
   listPacketManifestTemplateSections,
   validatePacketDefinitionTemplateCompliance,
 } from '@core/packets/packet-definition-manifest';
+import { GENERIC_PACKET_BUILD_FAMILIES } from '@core/packets/packet-build-pipeline';
 import { listDefinitionBootstrapParts } from '@core/packets/definitions/index.ts';
 import { PACKET_FAMILIES } from '@core/schema/packet-schema';
 
-test('experimental manifest exposes Definition, Preference, and Bundle packet types', () => {
+const EXPECTED_MANIFEST_PACKET_TYPES = [
+  'Definition',
+  ...GENERIC_PACKET_BUILD_FAMILIES,
+  'Preference',
+  'Bundle',
+].sort();
+
+test('experimental manifest exposes core generic packet definitions', () => {
   const packetTypes = listExperimentalPacketTypeDefinitions().map(
     (definition) => definition.packet_type
   );
 
-  assert.deepEqual(packetTypes.sort(), ['Bundle', 'Definition', 'Preference']);
+  assert.deepEqual(packetTypes.sort(), EXPECTED_MANIFEST_PACKET_TYPES);
   assert.equal(PACKET_DEFINITION_MANIFEST.manifest_type, 'packet_definition_manifest');
   assert.equal(PACKET_DEFINITION_MANIFEST.template_version, PACKET_MANIFEST_TEMPLATE_VERSION);
   assert.ok(PACKET_DEFINITION_MANIFEST.items.every((item) => item.action_count > 0));
@@ -108,9 +116,10 @@ test('Bundle packet stays a generic carrier inventory', () => {
   assert.equal(parsed.items[0].item_role, 'definition_part');
 });
 
-test('manifest lookup returns null for packet types not enrolled in shadow mode', () => {
-  assert.equal(getExperimentalPacketTypeDefinition('Relation')?.packet_type, undefined);
+test('manifest lookup returns definitions for generic families and null for deferred families', () => {
+  assert.equal(getExperimentalPacketTypeDefinition('Relation')?.packet_type, 'Relation');
   assert.equal(getExperimentalPacketTypeDefinition('Preference')?.packet_type, 'Preference');
+  assert.equal(getExperimentalPacketTypeDefinition('Signal'), null);
 });
 
 test('manifest exposes shadow action, builder, planner, and mutation descriptors', () => {
@@ -147,6 +156,26 @@ test('Preference definition exposes required Definition parts', () => {
   assert.ok(partSubtypes.includes('packet_schema'));
   assert.ok(partSubtypes.includes('packet_compatibility'));
   assert.ok(partSubtypes.includes('packet_dependency'));
+});
+
+test('generic family definitions expose required Definition parts', () => {
+  for (const family of GENERIC_PACKET_BUILD_FAMILIES) {
+    const definition = getExperimentalPacketTypeDefinition(family);
+    assert.ok(definition, `${family} should have a shadow definition`);
+
+    const partSubtypes = listPacketDefinitionParts(definition).map(
+      (part) => part.part_subtype
+    );
+
+    assert.ok(partSubtypes.includes('packet_definition'), `${family} root part`);
+    assert.ok(partSubtypes.includes('packet_schema'), `${family} schema part`);
+    assert.ok(partSubtypes.includes('packet_action_registry'), `${family} action part`);
+    assert.ok(partSubtypes.includes('packet_builder_descriptor'), `${family} builder part`);
+    assert.ok(partSubtypes.includes('packet_planner_descriptor'), `${family} planner part`);
+    assert.ok(partSubtypes.includes('packet_projection_descriptor'), `${family} projection part`);
+    assert.ok(partSubtypes.includes('packet_compatibility'), `${family} compatibility part`);
+    assert.ok(partSubtypes.includes('packet_dependency'), `${family} dependency part`);
+  }
 });
 
 test('definitions barrel exposes bootstrap parts through prefixed aliases', () => {
