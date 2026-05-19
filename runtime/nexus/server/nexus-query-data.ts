@@ -388,9 +388,13 @@ function buildShellGraphSections(input: {
   followedGraph: NexusProjectedScopeSection;
   mainGraph: NexusProjectedScopeSection;
   discoverableSection: NexusProjectedScopeSection;
+  mainVisibleScopePacketIds: string[];
 } {
   const scopeIdByPacketId = new Map(
     input.scopeSummaries.map((scopeSummary) => [scopeSummary.packetId, scopeSummary.id])
+  );
+  const scopeSummaryById = new Map(
+    input.scopeSummaries.map((scopeSummary) => [scopeSummary.id, scopeSummary])
   );
   const homeScopeIds = buildNexusHomeScopeIds(input.scopeSummaries);
   const associatedScopeIds = input.scopeSummaries
@@ -414,7 +418,7 @@ function buildShellGraphSections(input: {
   const eligibleMainScopeIds = new Set(
     [...homeScopeIds, ...associatedScopeIds, ...followedScopeIds]
   );
-  const mainScopeIds = Array.from(
+  const preferredMainScopeIds = Array.from(
     new Set(
       input.preferences.main_visible_scope_packet_ids
         .map((packetId) => scopeIdByPacketId.get(packetId) ?? null)
@@ -422,6 +426,12 @@ function buildShellGraphSections(input: {
         .filter((scopeId) => eligibleMainScopeIds.has(scopeId))
     )
   );
+  const mainScopeIds = preferredMainScopeIds.length > 0
+    ? preferredMainScopeIds
+    : homeScopeIds;
+  const mainVisibleScopePacketIds = mainScopeIds
+    .map((scopeId) => scopeSummaryById.get(scopeId)?.packetId ?? null)
+    .filter((packetId): packetId is string => Boolean(packetId));
 
   return {
     homeGraph: buildNexusProjectedScopeSection({
@@ -447,11 +457,12 @@ function buildShellGraphSections(input: {
     }),
     mainGraph: buildNexusProjectedScopeSection({
       id: 'main',
-      title: 'Main scopes',
+      title: 'Main tree',
       scopeSummaries: input.scopeSummaries,
       directScopeIds: mainScopeIds,
       showParentChains: true,
     }),
+    mainVisibleScopePacketIds,
     discoverableSection: buildNexusProjectedScopeSection({
       id: 'discoverable',
       title: 'Discoverable scopes',
@@ -861,6 +872,7 @@ export async function getNexusShellPayload(
     followedGraph,
     mainGraph,
     discoverableSection,
+    mainVisibleScopePacketIds,
   } = buildShellGraphSections({
     scopeSummaries,
     preferences: scopeDisplayPreferences,
@@ -873,8 +885,7 @@ export async function getNexusShellPayload(
     geographic_mounted_scope_ids: scopeGraph.geographicMountedScopeIds,
     associated_scope_ids: Array.from(scopeGraph.associatedScopeIds),
     followed_scope_ids: Array.from(scopeGraph.followedScopeIds),
-    main_visible_scope_packet_ids:
-      scopeDisplayPreferences.main_visible_scope_packet_ids,
+    main_visible_scope_packet_ids: mainVisibleScopePacketIds,
     shell_chrome: shellChromePreferences,
     known_scope_ids: Array.from(scopeGraph.knownScopeIds),
     known_unmounted_scope_ids: scopeGraph.knownUnmountedScopeIds,

@@ -240,7 +240,7 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
   });
   const [mainGraph, setMainGraph] = useState<NexusProjectedScopeSection>({
     id: 'main',
-    title: 'Main scopes',
+    title: 'Main tree',
     count: 0,
     showParentChains: true,
     groups: [],

@@ -884,11 +884,11 @@ function NexusGroupedScopeRows({
   onScopeFollowPress,
   onScopeMainVisiblePress,
   onScopePress,
-  openMenuScopeId,
+  openMenuKey,
   showParentChains,
   scopeSectionId,
   scopeSummaryById,
-  setOpenMenuScopeId,
+  setOpenMenuKey,
   themeMode,
   uiDensity,
 }: {
@@ -900,11 +900,11 @@ function NexusGroupedScopeRows({
   onScopeMainVisiblePress: (scopeId: string, isMainVisible: boolean) => void;
   onScopePress: (scopeId: string) => void;
   mainVisibleScopePacketIds: string[];
-  openMenuScopeId: string | null;
+  openMenuKey: string | null;
   showParentChains: boolean;
   scopeSectionId: NexusSidebarScopeSectionId;
   scopeSummaryById: Map<string, NexusScopeSummary>;
-  setOpenMenuScopeId: (scopeId: string | null) => void;
+  setOpenMenuKey: (menuKey: string | null) => void;
   themeMode: NexusThemeMode;
   uiDensity: NexusUiDensity;
 }) {
@@ -957,13 +957,14 @@ function NexusGroupedScopeRows({
                   const isInMainTree = mainVisibleScopePacketIds.includes(
                     scope.packetId
                   );
+                  const menuKey = `${scopeSectionId}:${group.id}:${row.scopeId}`;
 
                   return (
                     <NexusScopeListRow
                       key={scope.id}
                       activeScopeId={activeScopeId}
                       depth={scopeSectionId === 'home' ? row.projectedDepth : 0}
-                      isMenuOpen={openMenuScopeId === scope.id}
+                      isMenuOpen={openMenuKey === menuKey}
                       menuButton={
                         <NexusScopeActionMenu
                           align={
@@ -974,30 +975,30 @@ function NexusGroupedScopeRows({
                               : 'bottom'
                           }
                           isInMainTree={isInMainTree}
-                          isOpen={openMenuScopeId === scope.id}
+                          isOpen={openMenuKey === menuKey}
                           onAssociatePress={() => {
-                            setOpenMenuScopeId(null);
+                            setOpenMenuKey(null);
                             onScopeAssociatePress(scope.id, !scope.isAssociated);
                           }}
                           onFollowPress={() => {
-                            setOpenMenuScopeId(null);
+                            setOpenMenuKey(null);
                             onScopeFollowPress(scope.id, !scope.isFollowed);
                           }}
                           onMainTreePress={() => {
-                            setOpenMenuScopeId(null);
+                            setOpenMenuKey(null);
                             onScopeMainVisiblePress(scope.id, !isInMainTree);
                           }}
                           onOpenInExplorerPress={() => {
-                            setOpenMenuScopeId(null);
+                            setOpenMenuKey(null);
                             onOpenInExplorerPress(scope);
                           }}
                           onOpenPress={() => {
-                            setOpenMenuScopeId(null);
+                            setOpenMenuKey(null);
                             onScopePress(scope.id);
                           }}
                           onToggle={() =>
-                            setOpenMenuScopeId(
-                              openMenuScopeId === scope.id ? null : scope.id
+                            setOpenMenuKey(
+                              openMenuKey === menuKey ? null : menuKey
                             )
                           }
                           scope={scope}
@@ -1005,7 +1006,10 @@ function NexusGroupedScopeRows({
                           uiDensity={uiDensity}
                         />
                       }
-                      onPress={() => onScopePress(scope.id)}
+                      onPress={() => {
+                        setOpenMenuKey(null);
+                        onScopePress(scope.id);
+                      }}
                       parentChainPath={row.parentChainPath}
                       scope={scope}
                       showParentChain={showParentChains}
@@ -1073,21 +1077,29 @@ function NexusScopeMenuContent({
     main: true,
     discoverable: false,
   });
-  const [openMenuScopeId, setOpenMenuScopeId] = useState<string | null>(null);
+  const [openMenuKey, setOpenMenuKey] = useState<string | null>(null);
   const scopeSummaryById = useMemo(
     () => new Map(scopeSummaries.map((scopeSummary) => [scopeSummary.id, scopeSummary])),
     [scopeSummaries]
   );
   const projectedSections = [
+    mainGraph,
     homeGraph,
     associatedGraph,
     followedGraph,
-    mainGraph,
     discoverableSection,
   ];
 
   return (
-    <View className="gap-4">
+    <View className="relative gap-4">
+      {openMenuKey ? (
+        <Pressable
+          accessibilityLabel="Close scope actions"
+          accessibilityRole="button"
+          className="absolute inset-0 z-40"
+          onPress={() => setOpenMenuKey(null)}
+        />
+      ) : null}
       {projectedSections.map((section) => {
         const sectionId = section.id;
         const supportsParentToggle =
@@ -1098,12 +1110,13 @@ function NexusScopeMenuContent({
             <NexusScopeSectionHeader
               count={section.count}
               isOpen={sectionVisibility[sectionId]}
-              onPress={() =>
+              onPress={() => {
+                setOpenMenuKey(null);
                 setSectionVisibility((currentValue) => ({
                   ...currentValue,
                   [sectionId]: !currentValue[sectionId],
-                }))
-              }
+                }));
+              }}
               themeMode={themeMode}
               title={section.title}
               uiDensity={uiDensity}
@@ -1112,12 +1125,13 @@ function NexusScopeMenuContent({
               <Pressable
                 accessibilityRole="button"
                 className="self-start"
-                onPress={() =>
+                onPress={() => {
+                  setOpenMenuKey(null);
                   onSetSectionParentChains(
                     sectionId,
                     !section.showParentChains
-                  )
-                }
+                  );
+                }}
               >
                 <Text
                   className={joinClasses(
@@ -1143,10 +1157,10 @@ function NexusScopeMenuContent({
                 onScopeFollowPress={onScopeFollowPress}
                 onScopeMainVisiblePress={onScopeMainVisiblePress}
                 onScopePress={onScopePress}
-                openMenuScopeId={openMenuScopeId}
+                openMenuKey={openMenuKey}
                 scopeSectionId={section.id}
                 scopeSummaryById={scopeSummaryById}
-                setOpenMenuScopeId={setOpenMenuScopeId}
+                setOpenMenuKey={setOpenMenuKey}
                 showParentChains={section.showParentChains}
                 themeMode={themeMode}
                 uiDensity={uiDensity}

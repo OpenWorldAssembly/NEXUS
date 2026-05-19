@@ -117,12 +117,12 @@ Dashboard is now a real packet-backed preview workspace rather than only a shell
 
 The Nexus scope sidebar now reflects the packet-native scope graph more directly.
 
-- it groups scope context into `Home scopes`, `Associated scopes`, `Followed scopes`, `Main scopes`, and `Discoverable scopes`
+- it groups scope context into `Main tree`, `Home scopes`, `Associated scopes`, `Followed scopes`, and `Discoverable scopes`
 - `Home scopes` render as a projected trunk ordered from the broadest mounted geography down toward the personal `You` scope
 - associated scopes now count as mounted related scopes, but remain outside the geographic home trunk rather than being mixed into its ancestry chain
 - associated, followed, main, and discoverable scopes are now server-projected grouped sections instead of thin client-side reconstructions from id arrays
 - associated and followed sections can now persist lightweight parent-context display independently, using text-only contextual chains rather than full extra scope cards
-- `Main scopes` are currently derived from explicit temporary runtime visibility preferences over eligible home, associated, and followed scopes rather than from a packet-backed relation
+- `Main tree` defaults to the home scope trunk when no explicit visibility preference has been saved, then uses explicit packet-backed display preferences for add/remove actions over eligible home, associated, and followed scopes
 - scope rows stay click-to-open, while secondary actions move into compact side overflow menus
 - section placement now carries most of the relationship meaning, rather than depending on inline badge clutter
 - follow and association actions now use the canonical packet-native mutation corridor and then refresh shell projection from the server result

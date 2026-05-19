@@ -348,7 +348,7 @@ test('projected main sections dedupe overlapping relation ids', () => {
   };
   const projectedSection = buildNexusProjectedScopeSection({
     id: 'main',
-    title: 'Main scopes',
+    title: 'Main tree',
     scopeSummaries: [GLOBAL_SCOPE, bothRelationScope],
     directScopeIds: ['canyon-lake', 'canyon-lake'],
     showParentChains: true,
