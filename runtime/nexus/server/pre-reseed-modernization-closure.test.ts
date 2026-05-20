@@ -92,22 +92,15 @@ test('remaining direct relation claim and attestation operation paths are closed
   }
 });
 
-test('legacy bridge retirement remains sequenced before reseed', () => {
+test('legacy bridge mutation intents are retired before reseed readiness', () => {
   const report = createPreReseedModernizationClosureReport();
-  const queued = report.live_mutation_intents.filter(
-    (entry) => entry.status === 'queued_pre_reseed'
+  const mutationIntentIds = new Set(
+    report.live_mutation_intents.map((entry) => entry.subject_id)
   );
 
-  assert.ok(queued.length > 0);
-  assert.deepEqual(
-    queued.map((entry) => entry.queue).sort(),
-    ['legacy_bridge_retirement', 'legacy_bridge_retirement']
-  );
-  assert.ok(
-    report.follow_on_pass_queue.some(
-      (entry) => entry.subject_id === 'legacy_bridge_retirement'
-    )
-  );
+  assert.equal(mutationIntentIds.has('assembly_association.claim.set'), false);
+  assert.equal(mutationIntentIds.has('home_locality.claim.set'), false);
+  assert.deepEqual(report.follow_on_pass_queue, []);
 });
 
 test('composite workflow mutation intents are closed as live generic-composite work', () => {

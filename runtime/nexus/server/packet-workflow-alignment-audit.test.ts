@@ -142,24 +142,17 @@ test('complex graph workflow intents name reusable composite adapters', () => {
   ]);
 });
 
-test('legacy bridge intents point at canonical workflow directions', () => {
+test('legacy bridge intents are absent from live workflow alignment coverage', () => {
   const legacyEntries = listFortressHandlerGenericizationEntries().filter(
     (entry) => entry.genericization_status === 'legacy_bridge'
   );
 
-  assert.ok(legacyEntries.length > 0);
-
-  for (const entry of legacyEntries) {
-    const coverage = getPacketWorkflowAlignmentCoverage(entry.mutation_intent);
-    assert.ok(coverage, entry.mutation_intent);
-    assert.equal(coverage.workflow_alignment_status, 'legacy_bridge');
-    assert.equal(coverage.canonical_intent, entry.canonical_intent);
-    assert.ok(coverage.workflow_plan_ids.length > 0, entry.mutation_intent);
-    assert.ok(
-      coverage.planned_gaps.some((gap) => gap.area === 'legacy_bridge'),
-      entry.mutation_intent
-    );
-  }
+  assert.deepEqual(legacyEntries, []);
+  assert.equal(getPacketWorkflowAlignmentCoverage('home_locality.claim.set' as never), null);
+  assert.equal(
+    getPacketWorkflowAlignmentCoverage('assembly_association.claim.set' as never),
+    null
+  );
 });
 
 test('unused deferred packet families do not block workflow alignment', () => {

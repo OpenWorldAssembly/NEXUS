@@ -74,17 +74,9 @@ const MUTATION_POLICY_ACTION_IDS = {
     'attestation.packet_signal.clear',
   ],
   'assembly.element.create': ['assembly.element.create'],
-  'assembly_association.claim.set': [
-    'assembly_association.claim.set',
-    'assembly_association.claim.withdraw',
-  ],
   'assembly_association.relation.set': ['assembly_association.relation.set'],
   'assembly_association.relation.clear': ['assembly_association.relation.clear'],
   'home_locality.relation.set': [
-    'home_locality.relation.set',
-    'home_locality.relation.clear',
-  ],
-  'home_locality.claim.set': [
     'home_locality.relation.set',
     'home_locality.relation.clear',
   ],

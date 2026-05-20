@@ -68,7 +68,7 @@ Current home-locality direction:
 
 - canonical writes now use `home_locality.relation.set`
 - that write produces `Relation(subtype: home_locality)` plus a supporting `Claim(subtype: relation_assertion)`
-- legacy `home_locality.claim.set` remains compatibility-only and should be treated as an alias onto the canonical relation-first prepare path
+- legacy `home_locality.claim.set` is retired from live fresh writes; historical `Claim(home_locality)` material remains readable through compatibility projections
 - revise and withdraw semantics remain packet-native: status changes are represented by newly signed packet material rather than in-place mutation
 
 ### Attestation

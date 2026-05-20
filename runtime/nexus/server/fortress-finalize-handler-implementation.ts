@@ -38,8 +38,8 @@ export type MutationFinalizeActorContext = {
 
 function isHomeLocalityMutationKind(
   kind: MutationIntent['kind']
-): kind is 'home_locality.relation.set' | 'home_locality.claim.set' {
-  return kind === 'home_locality.relation.set' || kind === 'home_locality.claim.set';
+): kind is 'home_locality.relation.set' {
+  return kind === 'home_locality.relation.set';
 }
 
 export class MutationFinalizeHandlers {
@@ -325,9 +325,7 @@ export class MutationFinalizeHandlers {
         (packet as PacketEnvelopeByType['Claim']).body.status === 'active'
     );
     const wasClearIntent =
-      input.storedTicket.intent.kind === 'assembly_association.relation.clear' ||
-      (input.storedTicket.intent.kind === 'assembly_association.claim.set' &&
-        input.storedTicket.intent.value !== 1);
+      input.storedTicket.intent.kind === 'assembly_association.relation.clear';
 
     return {
       persist_effects: toMutationPersistEffects(input.signedPackets),
@@ -340,8 +338,7 @@ export class MutationFinalizeHandlers {
           activeClaimPacket?.body.status ?? (wasClearIntent ? 'withdrawn' : null),
         assembly_packet_id:
           input.storedTicket.intent.kind === 'assembly_association.relation.set' ||
-          input.storedTicket.intent.kind === 'assembly_association.relation.clear' ||
-          input.storedTicket.intent.kind === 'assembly_association.claim.set'
+          input.storedTicket.intent.kind === 'assembly_association.relation.clear'
             ? input.storedTicket.intent.assembly_packet_id
             : null,
       },

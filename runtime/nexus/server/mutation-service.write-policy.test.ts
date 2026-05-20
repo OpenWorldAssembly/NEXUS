@@ -57,76 +57,37 @@ test('actor write-policy preparation resolves current policy before building the
   assert.ok(bootstrapDecisionIndex > currentPolicyDecisionIndex);
 });
 
-test('legacy home-locality mutation intent delegates into the canonical relation-first prepare path', () => {
+test('retired legacy home-locality mutation intent has no live prepare alias', () => {
   const source = readFileSync(
     join(process.cwd(), 'runtime', 'nexus', 'server', 'fortress-prepare-handler-implementation.ts'),
     'utf8'
   );
-  const aliasMethodIndex = source.indexOf(
-    'async prepareHomeLocalityClaimCompatibilityAlias'
-  );
-  const canonicalMethodIndex = source.indexOf(
-    'async prepareHomeLocalityRelation'
-  );
-  const canonicalPrepareCallIndex = source.indexOf(
-    'await this.prepareHomeLocalityRelation({',
-    aliasMethodIndex
-  );
-  const canonicalKindIndex = source.indexOf(
-    "kind: 'home_locality.relation.set'",
-    canonicalPrepareCallIndex
+  const registryKinds = listMutationIntentDescriptors().map(
+    (descriptor) => descriptor.kind
   );
 
-  assert.notEqual(canonicalMethodIndex, -1);
-  assert.notEqual(aliasMethodIndex, -1);
-  assert.notEqual(canonicalPrepareCallIndex, -1);
-  assert.notEqual(canonicalKindIndex, -1);
-  assert.ok(canonicalMethodIndex < aliasMethodIndex);
-  assert.ok(aliasMethodIndex < canonicalPrepareCallIndex);
-  assert.ok(canonicalPrepareCallIndex < canonicalKindIndex);
-});
-
-test('legacy assembly-association mutation intent delegates into the canonical relation-first prepare path', () => {
-  const source = readFileSync(
-    join(process.cwd(), 'runtime', 'nexus', 'server', 'fortress-prepare-handler-implementation.ts'),
-    'utf8'
-  );
-  const aliasMethodIndex = source.indexOf(
-    'async prepareAssemblyAssociationClaimCompatibilityAlias'
-  );
-  const canonicalMethodIndex = source.indexOf(
-    'async prepareAssemblyAssociationRelation'
-  );
-  const canonicalPrepareCallIndex = source.indexOf(
-    'await this.prepareAssemblyAssociationRelation({',
-    aliasMethodIndex
-  );
-  const canonicalSetKindIndex = source.indexOf(
-    "kind: 'assembly_association.relation.set'",
-    canonicalPrepareCallIndex
-  );
-  const canonicalClearKindIndex = source.indexOf(
-    "kind: 'assembly_association.relation.clear'",
-    canonicalPrepareCallIndex
-  );
-
-  assert.notEqual(canonicalMethodIndex, -1);
-  assert.notEqual(aliasMethodIndex, -1);
-  assert.notEqual(canonicalPrepareCallIndex, -1);
-  assert.notEqual(canonicalSetKindIndex, -1);
-  assert.notEqual(canonicalClearKindIndex, -1);
-  assert.ok(canonicalMethodIndex < aliasMethodIndex);
-  assert.ok(aliasMethodIndex < canonicalPrepareCallIndex);
-});
-
-test('home-locality finalization still accepts both canonical and compatibility tickets through one result path', () => {
+  assert.equal(source.includes('prepareHomeLocalityClaimCompatibilityAlias'), false);
+  assert.equal(registryKinds.includes('home_locality.claim.set' as never), false);
   assert.equal(
     getMutationIntentDescriptor('home_locality.relation.set').finalize,
     'finalizeHomeLocalityRelation'
   );
+});
+
+test('retired legacy assembly-association mutation intent has no live prepare alias', () => {
+  const source = readFileSync(
+    join(process.cwd(), 'runtime', 'nexus', 'server', 'fortress-prepare-handler-implementation.ts'),
+    'utf8'
+  );
+  const registryKinds = listMutationIntentDescriptors().map(
+    (descriptor) => descriptor.kind
+  );
+
+  assert.equal(source.includes('prepareAssemblyAssociationClaimCompatibilityAlias'), false);
+  assert.equal(registryKinds.includes('assembly_association.claim.set' as never), false);
   assert.equal(
-    getMutationIntentDescriptor('home_locality.claim.set').finalize,
-    'finalizeHomeLocalityRelation'
+    getMutationIntentDescriptor('assembly_association.relation.set').finalize,
+    'finalizeAssociationRelationUpdate'
   );
 });
 

@@ -57,7 +57,6 @@ export type PreReseedClosureLedgerEntry = {
     | 'relation_claim_attestation_generic_enrollment'
     | 'discussion_locality_workflow_decomposition'
     | 'policy_dependency_semantic_authority'
-    | 'legacy_bridge_retirement'
     | 'final_reseed_readiness_audit'
     | 'out_of_chapter_scope';
   reason: string;
@@ -114,10 +113,6 @@ function queueForEntry(
     return 'first_generic_promotion';
   }
 
-  if (entry.genericization_status === 'legacy_bridge') {
-    return 'legacy_bridge_retirement';
-  }
-
   if (entry.domain === 'discussion' || entry.domain === 'locality') {
     return 'discussion_locality_workflow_decomposition';
   }
@@ -163,7 +158,7 @@ function createMutationEntries(): PreReseedClosureLedgerEntry[] {
 function createWorkflowPlanEntries(): PreReseedClosureLedgerEntry[] {
   return listPacketWorkflowPlanDescriptors().map((plan) => {
     const closesLiveIntent = plan.mutation_intents.some((intent) =>
-      LIVE_GENERIC_MUTATION_INTENTS.has(intent)
+      CLOSED_RUNTIME_MUTATION_INTENTS.has(intent)
     );
 
     return {
@@ -264,13 +259,13 @@ function createPacketFamilyEntries(): PreReseedClosureLedgerEntry[] {
     return {
       subject_kind: 'packet_family',
       subject_id: family,
-      status: inScope ? 'queued_pre_reseed' : 'out_of_chapter_scope',
+      status: inScope ? 'closed' : 'out_of_chapter_scope',
       queue: inScope ? 'final_reseed_readiness_audit' : 'out_of_chapter_scope',
       reason: inScope
-        ? 'Live runtime family participates in the current reseed blocker set.'
+        ? 'Live runtime family is covered by manifest, runtime, policy/dependency, and seed-readiness closure for reseed planning.'
         : 'Never-live or unused family is explicitly outside the current pre-reseed blocker set.',
       next_step: inScope
-        ? 'Verify the family is covered by live workflow, policy, dependency, and seed readiness closure.'
+        ? 'Carry this family into the final reseed readiness handoff inventory.'
         : 'Add the family in a later chapter when the product flow needs it.',
     };
   });
@@ -340,7 +335,7 @@ export function createPreReseedModernizationClosureReport(): PreReseedModernizat
         'Trusted composite workflow execution is enrolled behind NexusMutationService for composed runtime workflows.',
       next_step:
         enrollment.mutation_intent === 'actor.write_policy.update'
-          ? 'Close packet-based policy/dependency semantic authority before reseed.'
+          ? 'Keep policy/dependency semantic authority audits green through reseed design.'
           : 'Keep composite parity tests green through reseed readiness review.',
     })),
   ];

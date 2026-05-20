@@ -84,23 +84,24 @@ test('runtime-owned workflow intents produce explicit non-ready handoffs', () =>
   }
 });
 
-test('legacy bridge handoffs point at canonical directions', () => {
+test('retired legacy bridge intents fail closed before fortress handoff', () => {
   const legacyEntries = listFortressHandlerGenericizationEntries().filter(
     (entry) => entry.genericization_status === 'legacy_bridge'
   );
 
-  assert.ok(legacyEntries.length > 0);
+  assert.deepEqual(legacyEntries, []);
 
-  for (const entry of legacyEntries) {
+  for (const mutationIntent of [
+    'assembly_association.claim.set',
+    'home_locality.claim.set',
+  ]) {
     const handoff = resolvePacketRuntimeFortressHandoff({
-      mutationIntent: entry.mutation_intent,
+      mutationIntent,
     });
 
-    assert.equal(handoff.status, 'legacy_bridge');
-    assert.equal(handoff.canonical_intent, entry.canonical_intent);
-    assert.equal(handoff.normalized_prepare_intent_kind, entry.canonical_intent);
-    assert.ok(handoff.reason_codes.includes('legacy_bridge_to_canonical'));
-    assert.ok(handoff.workflow_plan_ids.length > 0);
+    assert.equal(handoff.status, 'blocked');
+    assert.deepEqual(handoff.reason_codes, ['unknown_mutation_intent']);
+    assert.equal(handoff.normalized_prepare_intent_kind, null);
   }
 });
 

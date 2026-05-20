@@ -85,3 +85,18 @@ test('custom or unregistered client intent requests fail closed', () => {
   assert.equal(preflight.status, 'blocked');
   assert.deepEqual(preflight.reason_codes, ['unknown_client_intent_enrollment']);
 });
+
+test('retired legacy bridge client intents fail closed', () => {
+  for (const mutationIntent of [
+    'assembly_association.claim.set',
+    'home_locality.claim.set',
+  ]) {
+    const preflight = resolvePacketClientIntentPreflight({
+      sourceRoute: '/api/nexus/mutations/prepare',
+      mutationIntent,
+    });
+
+    assert.equal(preflight.status, 'blocked');
+    assert.deepEqual(preflight.reason_codes, ['unknown_client_intent_enrollment']);
+  }
+});

@@ -33,6 +33,21 @@ test('prepare API preflight rejects custom mutation intents', () => {
   );
 });
 
+test('prepare API preflight rejects retired legacy bridge mutation intents', () => {
+  for (const kind of [
+    'assembly_association.claim.set',
+    'home_locality.claim.set',
+  ]) {
+    assert.throws(
+      () =>
+        resolvePrepareMutationApiPreflight({
+          kind,
+        } as never),
+      /Packet API ingress is not enrolled/
+    );
+  }
+});
+
 test('finalize API preflight uses the stored ticket intent direction', () => {
   const preflight = resolveFinalizeMutationApiPreflight({
     kind: 'follows.relation.set',

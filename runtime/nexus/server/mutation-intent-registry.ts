@@ -12,10 +12,8 @@ export type MutationPrepareHandlerKey =
   | 'prepareDiscussionReply'
   | 'preparePacketSignal'
   | 'prepareAssemblyElementCreate'
-  | 'prepareAssemblyAssociationClaimCompatibilityAlias'
   | 'prepareAssemblyAssociationRelation'
   | 'prepareHomeLocalityRelation'
-  | 'prepareHomeLocalityClaimCompatibilityAlias'
   | 'prepareFollowRelation'
   | 'prepareRoleAssociationClaim'
   | 'prepareRoleAssociationAttestation'
@@ -88,12 +86,6 @@ const MUTATION_INTENT_DESCRIPTORS = [
     finalize: 'finalizeAssemblyElementCreate',
   },
   {
-    kind: 'assembly_association.claim.set',
-    domain: 'relation',
-    prepare: 'prepareAssemblyAssociationClaimCompatibilityAlias',
-    finalize: 'finalizeAssociationRelationUpdate',
-  },
-  {
     kind: 'assembly_association.relation.set',
     domain: 'relation',
     prepare: 'prepareAssemblyAssociationRelation',
@@ -109,12 +101,6 @@ const MUTATION_INTENT_DESCRIPTORS = [
     kind: 'home_locality.relation.set',
     domain: 'relation',
     prepare: 'prepareHomeLocalityRelation',
-    finalize: 'finalizeHomeLocalityRelation',
-  },
-  {
-    kind: 'home_locality.claim.set',
-    domain: 'relation',
-    prepare: 'prepareHomeLocalityClaimCompatibilityAlias',
     finalize: 'finalizeHomeLocalityRelation',
   },
   {

@@ -27,8 +27,6 @@ export type MutationActionId =
   | 'role_association.attestation.support'
   | 'role_association.attestation.dispute'
   | 'role_association.attestation.clear'
-  | 'assembly_association.claim.set'
-  | 'assembly_association.claim.withdraw'
   | 'assembly_association.relation.set'
   | 'assembly_association.relation.clear'
   | 'home_locality.relation.set'
@@ -53,8 +51,6 @@ export const MUTATION_ACTION_IDS = [
   'role_association.attestation.support',
   'role_association.attestation.dispute',
   'role_association.attestation.clear',
-  'assembly_association.claim.set',
-  'assembly_association.claim.withdraw',
   'assembly_association.relation.set',
   'assembly_association.relation.clear',
   'home_locality.relation.set',

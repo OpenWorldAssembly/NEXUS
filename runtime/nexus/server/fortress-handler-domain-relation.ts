@@ -15,24 +15,11 @@ export function createRelationPrepareHandlers(
   handlers: MutationPrepareHandlers
 ): Pick<
   FortressPrepareHandlerMap,
-  | 'prepareAssemblyAssociationClaimCompatibilityAlias'
   | 'prepareAssemblyAssociationRelation'
   | 'prepareHomeLocalityRelation'
-  | 'prepareHomeLocalityClaimCompatibilityAlias'
   | 'prepareFollowRelation'
 > {
   return {
-    prepareAssemblyAssociationClaimCompatibilityAlias: async ({
-      intent,
-      actorPacket,
-    }) =>
-      handlers.prepareAssemblyAssociationClaimCompatibilityAlias({
-        intent: intent as Extract<
-          MutationIntent,
-          { kind: 'assembly_association.claim.set' }
-        >,
-        actorPacket,
-      }),
     prepareAssemblyAssociationRelation: async ({ intent, actorPacket }) =>
       handlers.prepareAssemblyAssociationRelation({
         intent: intent as Extract<
@@ -51,11 +38,6 @@ export function createRelationPrepareHandlers(
           MutationIntent,
           { kind: 'home_locality.relation.set' }
         >,
-        actorPacket,
-      }),
-    prepareHomeLocalityClaimCompatibilityAlias: async ({ intent, actorPacket }) =>
-      handlers.prepareHomeLocalityClaimCompatibilityAlias({
-        intent: intent as Extract<MutationIntent, { kind: 'home_locality.claim.set' }>,
         actorPacket,
       }),
     prepareFollowRelation: async ({ intent, actorPacket }) =>

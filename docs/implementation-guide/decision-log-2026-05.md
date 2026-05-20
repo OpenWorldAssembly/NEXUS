@@ -198,3 +198,9 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - `Policy` current schema now includes nullable `default_policy` and `governance_policy` sections so default inheritance and governance readiness are packet-backed before reseed design.
 - Dependency refs in Definition parts and workflow plans now resolve through packet dependency semantics, Policy semantics, operation ontology entries, trusted workflow resolvers, or explicit local engine contracts instead of loose runtime-only strings.
 - The seeded OWA `Action(subtype: initiative)` is now the preferred policy/default anchor and links to default-inheritance and governance-baseline policies, while `Cause(subtype: initiative)` remains readable compatibility input.
+
+## 2026-05 final pre-reseed wrap-up
+
+- Live fresh writes no longer accept `assembly_association.claim.set` or `home_locality.claim.set`; canonical association and home-locality writes now use relation-first mutation intents only.
+- Legacy claim/home-locality material remains compatibility-readable and importable, but it is no longer a live mutation corridor entrypoint.
+- A final pre-reseed readiness report now inventories canonical write intents, compatibility-only surfaces, OWA default anchors, required seed policies, discussion defaults, manifest-native packet types, and out-of-scope packet families for the separate reseed design pass.

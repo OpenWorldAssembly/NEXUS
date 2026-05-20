@@ -199,7 +199,7 @@ The remaining pre-reseed queue is explicit:
 - relation, claim, and attestation generic enrollment for association, home locality, role claim, packet signal, and role attestation paths
 - discussion and locality workflow decomposition for reply/thread planners, default surfaces, locality path/graph planning, and assembly creation
 - packet-based policy/dependency semantic authority so Policy packets and Definition dependency parts carry enough meaning for reseed
-- legacy bridge retirement for compatibility aliases that should not survive into the fresh reseed world
+- legacy bridge retirement for compatibility aliases that should not survive into the fresh reseed world, now closed by removing legacy bridge intents from the live prepare corridor
 - a final reseed readiness audit after all in-scope modernization closure items are closed
 
 Unused never-live packet families remain visible as `out_of_chapter_scope`; they are not reseed blockers for this chapter and can be added when product flows need them.
@@ -276,3 +276,14 @@ Policy packets are the semantic home for write locks, trust baselines, relation 
 Definition `packet_dependency` parts now carry meaningful dependency refs for packet operations, builder pipelines, shadow action bridges, manifest-native builders, Preference projections, Bundle inventory building, and trusted compatibility/projection seams. Workflow and runtime dependency IDs must resolve through one of these anchors, Policy packet semantics, the operation ontology, a trusted workflow resolver, or an explicit trusted local engine contract.
 
 The seeded OWA `Action(subtype: initiative)` now links to default-inheritance and governance-baseline policies. Runtime relation policy discovery still supports the compatibility `Cause(subtype: initiative)` path, but forward default/policy resolution prefers the Action initiative anchor when it is present.
+
+## Final Pre-Reseed Wrap-Up
+
+The final wrap-up retires the remaining live legacy bridge mutation intents from fresh writes:
+
+- `assembly_association.claim.set`
+- `home_locality.claim.set`
+
+Canonical writes now enter through `assembly_association.relation.set`, `assembly_association.relation.clear`, and `home_locality.relation.set`. Historical legacy claim material remains readable/importable/projectable through compatibility surfaces, but the signed fortress prepare corridor, client ingress registry, handoff coverage, and live write-policy action list no longer enroll the legacy bridge intents.
+
+The final readiness handoff lives in runtime audit code as `createFinalPreReseedReadinessReport()`. It records canonical write intents, compatibility-only legacy surfaces, OWA seed/default anchors, required default policies, discussion default packets, manifest-native packet types, and out-of-scope never-live packet families. Reseed design should start from that report rather than rediscovering chapter state from scattered modernization audits.

@@ -56,17 +56,12 @@ test('fortress genericization audit classifies every live mutation intent', () =
   assert.deepEqual(report.findings, []);
 });
 
-test('legacy bridge intents identify canonical replacement direction', () => {
+test('legacy bridge intents have been retired from the live genericization map', () => {
   const legacyEntries = listFortressHandlerGenericizationEntries().filter(
     (entry) => entry.genericization_status === 'legacy_bridge'
   );
 
-  assert.ok(legacyEntries.length > 0);
-  for (const entry of legacyEntries) {
-    assert.ok(entry.canonical_intent, entry.mutation_intent);
-    assert.notEqual(entry.canonical_intent, entry.mutation_intent);
-    assert.ok(entry.next_step.length > 0);
-  }
+  assert.deepEqual(legacyEntries, []);
 });
 
 test('every fortress genericization entry maps to known packet operations', () => {

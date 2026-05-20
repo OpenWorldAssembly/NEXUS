@@ -122,37 +122,6 @@ export class MutationPrepareHandlers {
     });
   }
 
-  async prepareAssemblyAssociationClaimCompatibilityAlias(input: {
-    intent: Extract<MutationIntent, { kind: 'assembly_association.claim.set' }>;
-    actorPacket: PacketEnvelopeByType['Element'];
-  }): Promise<PreparedMutation> {
-    const preparedMutation = await this.prepareAssemblyAssociationRelation({
-      intent:
-        input.intent.value === 1
-          ? {
-              kind: 'assembly_association.relation.set',
-              assembly_packet_id: input.intent.assembly_packet_id,
-              scope_id: input.intent.scope_id,
-              note: input.intent.note ?? null,
-              created_at: input.intent.created_at,
-              mutation_nonce: input.intent.mutation_nonce,
-            }
-          : {
-              kind: 'assembly_association.relation.clear',
-              assembly_packet_id: input.intent.assembly_packet_id,
-              scope_id: input.intent.scope_id,
-              created_at: input.intent.created_at,
-              mutation_nonce: input.intent.mutation_nonce,
-            },
-      actorPacket: input.actorPacket,
-    });
-
-    return {
-      ...preparedMutation,
-      kind: input.intent.kind,
-    };
-  }
-
   async prepareHomeLocalityRelation(input: {
     intent: Extract<MutationIntent, { kind: 'home_locality.relation.set' }>;
     actorPacket: PacketEnvelopeByType['Element'];
@@ -163,26 +132,6 @@ export class MutationPrepareHandlers {
       actorPacket: input.actorPacket,
       intent: input.intent,
     });
-  }
-
-  async prepareHomeLocalityClaimCompatibilityAlias(input: {
-    intent: Extract<MutationIntent, { kind: 'home_locality.claim.set' }>;
-    actorPacket: PacketEnvelopeByType['Element'];
-  }): Promise<PreparedMutation> {
-    const preparedMutation = await this.prepareHomeLocalityRelation({
-      intent: {
-        kind: 'home_locality.relation.set',
-        home_scope_packet_id: input.intent.home_scope_packet_id,
-        created_at: input.intent.created_at,
-        mutation_nonce: input.intent.mutation_nonce,
-      },
-      actorPacket: input.actorPacket,
-    });
-
-    return {
-      ...preparedMutation,
-      kind: input.intent.kind,
-    };
   }
 
   async prepareFollowRelation(input: {

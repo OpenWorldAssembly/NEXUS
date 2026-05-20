@@ -53,16 +53,6 @@ export type AssemblyElementCreateMutationIntent = {
   mutation_nonce?: string | null;
 };
 
-export type AssemblyAssociationClaimMutationIntent = {
-  kind: 'assembly_association.claim.set';
-  assembly_packet_id: string;
-  scope_id: string;
-  note?: string | null;
-  value: -1 | 0 | 1;
-  created_at?: string | null;
-  mutation_nonce?: string | null;
-};
-
 export type AssemblyAssociationRelationSetMutationIntent = {
   kind: 'assembly_association.relation.set';
   assembly_packet_id: string;
@@ -82,13 +72,6 @@ export type AssemblyAssociationRelationClearMutationIntent = {
 
 export type HomeLocalityRelationMutationIntent = {
   kind: 'home_locality.relation.set';
-  home_scope_packet_id: string | null;
-  created_at?: string | null;
-  mutation_nonce?: string | null;
-};
-
-export type HomeLocalityClaimCompatibilityMutationIntent = {
-  kind: 'home_locality.claim.set';
   home_scope_packet_id: string | null;
   created_at?: string | null;
   mutation_nonce?: string | null;
@@ -193,11 +176,9 @@ export type MutationIntent =
   | DiscussionReplyMutationIntent
   | PacketSignalMutationIntent
   | AssemblyElementCreateMutationIntent
-  | AssemblyAssociationClaimMutationIntent
   | AssemblyAssociationRelationSetMutationIntent
   | AssemblyAssociationRelationClearMutationIntent
   | HomeLocalityRelationMutationIntent
-  | HomeLocalityClaimCompatibilityMutationIntent
   | FollowRelationSetMutationIntent
   | FollowRelationClearMutationIntent
   | RoleAssociationClaimMutationIntent

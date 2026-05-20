@@ -164,25 +164,6 @@ export const FORTRESS_HANDLER_GENERICIZATION_ENTRIES = [
       'Creates an assembly scope and may also seed discussion surfaces and association packets.',
   },
   {
-    mutation_intent: 'assembly_association.claim.set',
-    domain: 'relation',
-    prepare_handler: 'prepareAssemblyAssociationClaimCompatibilityAlias',
-    finalize_handler: 'finalizeAssociationRelationUpdate',
-    packet_families_touched: ['Relation', 'Claim'],
-    policy_action_ids: [
-      'assembly_association.claim.set',
-      'assembly_association.claim.withdraw',
-    ],
-    operation_kinds: ['relation.set'],
-    operation_mapping_status: 'legacy_bridge_gap',
-    genericization_status: 'legacy_bridge',
-    canonical_intent: 'assembly_association.relation.set',
-    next_step:
-      'Retire this compatibility alias after relation-first assembly association writes are fully canonical.',
-    notes:
-      'Compatibility intent delegates into the canonical relation-first prepare path.',
-  },
-  {
     mutation_intent: 'assembly_association.relation.set',
     domain: 'relation',
     prepare_handler: 'prepareAssemblyAssociationRelation',
@@ -226,22 +207,6 @@ export const FORTRESS_HANDLER_GENERICIZATION_ENTRIES = [
       'Promote home-locality relation planning into generic Relation/Claim planners.',
     notes:
       'Canonical relation-first home locality write with compatibility claim projection.',
-  },
-  {
-    mutation_intent: 'home_locality.claim.set',
-    domain: 'relation',
-    prepare_handler: 'prepareHomeLocalityClaimCompatibilityAlias',
-    finalize_handler: 'finalizeHomeLocalityRelation',
-    packet_families_touched: ['Relation', 'Claim'],
-    policy_action_ids: ['home_locality.relation.set', 'home_locality.relation.clear'],
-    operation_kinds: ['relation.set', 'relation.clear'],
-    operation_mapping_status: 'legacy_bridge_gap',
-    genericization_status: 'legacy_bridge',
-    canonical_intent: 'home_locality.relation.set',
-    next_step:
-      'Retire this compatibility alias after home-locality relation writes are fully canonical.',
-    notes:
-      'Compatibility intent delegates into the canonical relation-first prepare path.',
   },
   {
     mutation_intent: 'follows.relation.set',
