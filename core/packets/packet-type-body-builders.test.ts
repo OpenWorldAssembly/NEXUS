@@ -1,6 +1,6 @@
 /**
  * File: packet-type-body-builders.test.ts
- * Description: Tests for manifest-native packet-type body candidate builders.
+ * Description: Tests for canonical packet-type body candidate builders.
  */
 
 import assert from 'node:assert/strict';
@@ -45,7 +45,7 @@ test('Bundle.packet_set builder creates a valid inventory body candidate', () =>
     packet_type: 'Bundle',
     packet_subtype: 'packet_set',
     title: 'Preference definition bundle',
-    purpose: 'Carry Preference definition parts for shadow import review.',
+    purpose: 'Carry Preference definition parts for canonical profile review.',
     items: [
       {
         item_role: 'definition_part',
@@ -83,12 +83,17 @@ test('Preference.element builder candidate matches the existing helper output', 
   assert.deepEqual(candidate.body, buildElementPreferenceBody(input));
 });
 
-test('packet-type body builder registry exposes manifest-native builders', () => {
-  const builderIds = listPacketTypeBodyBuilders().map((builder) => builder.builder_id);
+test('packet-type body builder registry exposes runtime-ready canonical builders', () => {
+  const builders = listPacketTypeBodyBuilders();
+  const builderIds = builders.map((builder) => builder.builder_id);
 
   assert.ok(builderIds.includes('definition.part.body.v0'));
   assert.ok(builderIds.includes('bundle.packet_set.body.v0'));
   assert.ok(builderIds.includes('preference.element.body.v0'));
+  assert.equal(
+    builders.every((builder) => builder.availability === 'runtime_ready'),
+    true
+  );
 });
 
 test('unknown packet type body builder requests fail closed', () => {

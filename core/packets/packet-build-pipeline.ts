@@ -22,13 +22,16 @@ import type {
 } from '@core/packets/builders';
 import { actionBuildDefinition } from '@core/packets/families/action';
 import { attestationBuildDefinition } from '@core/packets/families/attestation';
+import { bundleBuildDefinition } from '@core/packets/families/bundle';
 import { causeBuildDefinition } from '@core/packets/families/cause';
 import { claimBuildDefinition } from '@core/packets/families/claim';
+import { definitionBuildDefinition } from '@core/packets/families/definition';
 import { decisionBuildDefinition } from '@core/packets/families/decision';
 import { discussionBuildDefinition } from '@core/packets/families/discussion';
 import { elementBuildDefinition } from '@core/packets/families/element';
 import { locationBuildDefinition } from '@core/packets/families/location';
 import { policyBuildDefinition } from '@core/packets/families/policy';
+import { preferenceBuildDefinition } from '@core/packets/families/preference';
 import { proposalBuildDefinition } from '@core/packets/families/proposal';
 import { reportBuildDefinition } from '@core/packets/families/report';
 import { relationBuildDefinition } from '@core/packets/families/relation';
@@ -38,6 +41,7 @@ import { createInitialRevisionId } from '@core/packets/packet-build-helpers';
 import {
   createPacketEnvelope,
   getPacketCurrentSchemaVersion,
+  type PacketBodyByType,
   type PacketRef,
   type PacketEdge,
   type PacketEnvelopeByType,
@@ -138,6 +142,7 @@ type PacketBuildHeaderInput = {
 };
 
 export const GENERIC_PACKET_BUILD_FAMILIES = [
+  'Definition',
   'Element',
   'Location',
   'Role',
@@ -152,6 +157,8 @@ export const GENERIC_PACKET_BUILD_FAMILIES = [
   'Action',
   'Discussion',
   'Policy',
+  'Preference',
+  'Bundle',
 ] as const;
 
 function dedupeEdges(edges: PacketEdge[]): PacketEdge[] {
@@ -267,6 +274,9 @@ function buildPacketWithDefinition<
 }
 
 export function buildPacket(
+  request: PacketBuildRequest<'Definition', PacketBodyByType['Definition']>
+): PacketEnvelopeByType['Definition'];
+export function buildPacket(
   request: PacketBuildRequest<'Element', ElementPacketInput>
 ): PacketEnvelopeByType['Element'];
 export function buildPacket(
@@ -309,9 +319,20 @@ export function buildPacket(
   request: PacketBuildRequest<'Policy', PolicyPacketInput>
 ): PacketEnvelopeByType['Policy'];
 export function buildPacket(
+  request: PacketBuildRequest<'Preference', PacketBodyByType['Preference']>
+): PacketEnvelopeByType['Preference'];
+export function buildPacket(
+  request: PacketBuildRequest<'Bundle', PacketBodyByType['Bundle']>
+): PacketEnvelopeByType['Bundle'];
+export function buildPacket(
   request: PacketBuildRequest<PacketFamily, unknown>
 ): PacketEnvelopeByType[PacketFamily] {
   switch (request.family) {
+    case 'Definition':
+      return buildPacketWithDefinition(
+        request as PacketBuildRequest<'Definition', PacketBodyByType['Definition']>,
+        definitionBuildDefinition
+      );
     case 'Element':
       return buildPacketWithDefinition(
         request as PacketBuildRequest<'Element', ElementPacketInput>,
@@ -381,6 +402,16 @@ export function buildPacket(
       return buildPacketWithDefinition(
         request as PacketBuildRequest<'Policy', PolicyPacketInput>,
         policyBuildDefinition
+      );
+    case 'Preference':
+      return buildPacketWithDefinition(
+        request as PacketBuildRequest<'Preference', PacketBodyByType['Preference']>,
+        preferenceBuildDefinition
+      );
+    case 'Bundle':
+      return buildPacketWithDefinition(
+        request as PacketBuildRequest<'Bundle', PacketBodyByType['Bundle']>,
+        bundleBuildDefinition
       );
     default:
       throw new Error(

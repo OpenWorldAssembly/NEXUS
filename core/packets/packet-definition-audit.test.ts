@@ -12,10 +12,7 @@ import {
 import { GENERIC_PACKET_BUILD_FAMILIES } from '@core/packets/packet-build-pipeline';
 
 const EXPECTED_MANIFEST_PACKET_TYPES = [
-  'Definition',
   ...GENERIC_PACKET_BUILD_FAMILIES,
-  'Preference',
-  'Bundle',
 ].sort();
 
 test('audits Preference packet definition descriptor graph cleanly', () => {
@@ -32,7 +29,7 @@ test('audits Preference packet definition descriptor graph cleanly', () => {
   assert.deepEqual(report.checked_packet_types, ['Preference']);
 });
 
-test('audits the experimental packet definition manifest', () => {
+test('audits the active packet definition manifest', () => {
   const report = auditPacketDefinitionManifest({
     manifest: PACKET_DEFINITION_MANIFEST,
     definitions: listExperimentalPacketTypeDefinitions(),
@@ -119,7 +116,7 @@ test('generic family mutation descriptors are shadow-runtime resolvable', () => 
   }
 });
 
-test('manifest-native packet types audit and plan as first-class packet types', () => {
+test('canonical Definition, Bundle, and Preference packet types audit cleanly', () => {
   for (const packetType of ['Definition', 'Bundle', 'Preference']) {
     const definition = getExperimentalPacketTypeDefinition(packetType);
     assert.ok(definition);

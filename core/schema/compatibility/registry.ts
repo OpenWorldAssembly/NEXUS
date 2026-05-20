@@ -30,7 +30,9 @@ import {
 import {
   ActionBodySchema,
   AttestationBodySchema,
+  BundleBodySchema,
   ClaimBodySchema,
+  DefinitionBodySchema,
   DiscussionBodySchema,
   ElementBodySchema,
   getPacketBodySchema,
@@ -604,6 +606,20 @@ function stripActionV1_1CompatibilityFields(
 }
 
 export const PACKET_COMPATIBILITY_REGISTRY = {
+  Definition: {
+    current_schema_version: '0.1.0',
+    revision_mode: PACKET_FAMILY_REVISION_MODES.Definition,
+    support_level: 'current_only',
+    write_target_policy: 'current_only',
+    versions: {
+      '0.1.0': {
+        parseBody: (body) => {
+          rejectHeaderBodyCollisions(body, 'Definition');
+          return DefinitionBodySchema.parse(body);
+        },
+      },
+    },
+  },
   Element: {
     current_schema_version: '1.1.0',
     revision_mode: PACKET_FAMILY_REVISION_MODES.Element,
@@ -1714,6 +1730,20 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
   DiscussionReply: createDefaultCompatibilityEntry('DiscussionReply'),
   Minutes: createDefaultCompatibilityEntry('Minutes'),
   Artifact: createDefaultCompatibilityEntry('Artifact'),
+  Bundle: {
+    current_schema_version: '0.1.0',
+    revision_mode: PACKET_FAMILY_REVISION_MODES.Bundle,
+    support_level: 'current_only',
+    write_target_policy: 'current_only',
+    versions: {
+      '0.1.0': {
+        parseBody: (body) => {
+          rejectHeaderBodyCollisions(body, 'Bundle');
+          return BundleBodySchema.parse(body);
+        },
+      },
+    },
+  },
 } satisfies {
   [TFamily in PacketFamily]: PacketCompatibilityEntry<TFamily>;
 };

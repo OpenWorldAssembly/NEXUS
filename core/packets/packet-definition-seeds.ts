@@ -1,10 +1,14 @@
 /**
  * File: packet-definition-seeds.ts
- * Description: Packet-shaped seed material and audits for manifest-native Definition and Bundle profiles.
+ * Description: Canonical Definition and Bundle seed material plus audits for the active definition profile.
  */
 
 import { createHash } from 'node:crypto';
 
+import {
+  createBundlePacket,
+  createDefinitionPacket,
+} from '@core/packets/builders.ts';
 import { listPacketDefinitionParts } from '@core/packets/packet-definition-helpers.ts';
 import {
   buildPacketTypeBodyCandidate,
@@ -20,7 +24,11 @@ import {
   listExperimentalPacketTypeDefinitions,
   PACKET_DEFINITION_MANIFEST,
 } from '@core/packets/packet-definition-manifest.ts';
-import type { PacketRef, PacketRevisionRef } from '@core/schema/packet-schema';
+import type {
+  PacketEnvelopeByType,
+  PacketRef,
+  PacketRevisionRef,
+} from '@core/schema/packet-schema';
 
 export const SEEDED_DEFINITION_PROFILE_ID =
   'nexus:definition-profile/pre-reseed-active-manifest';
@@ -39,6 +47,7 @@ export type SeededDefinitionPacketCandidate = {
   schema_version: string;
   body_candidate: PacketTypeBodyCandidate<DefinitionBody>;
   body_digest: string;
+  packet: PacketEnvelopeByType['Definition'];
 };
 
 export type SeededDefinitionBundleCandidate = {
@@ -48,6 +57,7 @@ export type SeededDefinitionBundleCandidate = {
   body_candidate: PacketTypeBodyCandidate<BundleBody>;
   body_digest: string;
   manifest_digest: string;
+  packet: PacketEnvelopeByType['Bundle'];
 };
 
 export type SeededPacketDefinitionProfile = {
@@ -120,13 +130,23 @@ function buildDefinitionCandidate(input: {
   }) as PacketTypeBodyCandidate<DefinitionBody>;
   const bodyDigest = sha256Digest(bodyCandidate.body);
   const packetId = createDefinitionPacketId(input.part);
+  const revisionId = createRevisionId({ packetId, bodyDigest });
+  const packet = createDefinitionPacket({
+    packet_id: packetId,
+    revision_id: revisionId,
+    schema_version: bodyCandidate.schema_version,
+    created_at: SEEDED_DEFINITION_CREATED_AT,
+    adapter: 'definition-profile-seed',
+    metadata_tags: ['packet-definition-profile', input.part.part_subtype],
+    body: bodyCandidate.body,
+  });
 
   return {
     seed_kind: 'packet_definition.seed_candidate',
     packet_ref: { packet_id: packetId },
     revision_ref: {
       packet_id: packetId,
-      revision_id: createRevisionId({ packetId, bodyDigest }),
+      revision_id: revisionId,
     },
     defines_packet_type: input.part.defines_packet_type,
     defines_packet_subtype: input.part.defines_packet_subtype,
@@ -135,6 +155,7 @@ function buildDefinitionCandidate(input: {
     schema_version: input.part.schema_version,
     body_candidate: bodyCandidate,
     body_digest: bodyDigest,
+    packet,
   };
 }
 
@@ -197,21 +218,44 @@ export function buildDefinitionBundlePacketSetCandidate(input?: {
     },
   }) as PacketTypeBodyCandidate<BundleBody>;
   const bodyDigest = sha256Digest(bodyCandidate.body);
+  const revisionId = createRevisionId({
+    packetId: SEEDED_DEFINITION_BUNDLE_PACKET_ID,
+    bodyDigest,
+  });
+  const packet = createBundlePacket({
+    packet_id: SEEDED_DEFINITION_BUNDLE_PACKET_ID,
+    revision_id: revisionId,
+    schema_version: bodyCandidate.schema_version,
+    created_at: SEEDED_DEFINITION_CREATED_AT,
+    adapter: 'definition-profile-seed',
+    metadata_tags: ['packet-definition-profile', 'definition-bundle'],
+    body: bodyCandidate.body,
+  });
 
   return {
     seed_kind: 'packet_definition.bundle_seed_candidate',
     packet_ref: { packet_id: SEEDED_DEFINITION_BUNDLE_PACKET_ID },
     revision_ref: {
       packet_id: SEEDED_DEFINITION_BUNDLE_PACKET_ID,
-      revision_id: createRevisionId({
-        packetId: SEEDED_DEFINITION_BUNDLE_PACKET_ID,
-        bodyDigest,
-      }),
+      revision_id: revisionId,
     },
     body_candidate: bodyCandidate,
     body_digest: bodyDigest,
     manifest_digest: manifestDigest,
+    packet,
   };
+}
+
+export function buildDefinitionPacketSeedEnvelopes(input?: {
+  definitions?: readonly PacketTypeDefinition[];
+}): PacketEnvelopeByType['Definition'][] {
+  return buildDefinitionPacketSeedCandidates(input).map((candidate) => candidate.packet);
+}
+
+export function buildDefinitionBundleSeedEnvelope(input?: {
+  definitionPackets?: readonly SeededDefinitionPacketCandidate[];
+}): PacketEnvelopeByType['Bundle'] {
+  return buildDefinitionBundlePacketSetCandidate(input).packet;
 }
 
 export function resolveSeededPacketDefinitionProfile(input?: {
@@ -274,6 +318,14 @@ export function auditSeededPacketDefinitionProfile(input?: {
       findings.push(`${candidate.part_id} body digest does not match its body.`);
     }
 
+    if (candidate.packet.header.family !== 'Definition') {
+      findings.push(`${candidate.part_id} did not produce a Definition packet envelope.`);
+    }
+
+    if (candidate.packet.body.subtype !== candidate.part_subtype) {
+      findings.push(`${candidate.part_id} packet body subtype does not match its definition part.`);
+    }
+
     if (!bundledRevisionIds.has(candidate.revision_ref.revision_id)) {
       findings.push(`${candidate.part_id} is missing from the definition bundle.`);
     }
@@ -292,6 +344,14 @@ export function auditSeededPacketDefinitionProfile(input?: {
     findings.push('Definition bundle manifest digest does not match profile digest.');
   }
 
+  if (profile.bundle_packet.packet.header.family !== 'Bundle') {
+    findings.push('Definition profile bundle did not produce a Bundle packet envelope.');
+  }
+
+  if (profile.bundle_packet.packet.body.subtype !== 'packet_set') {
+    findings.push('Definition profile bundle packet is not a packet_set bundle.');
+  }
+
   return {
     report_kind: 'packet_definition.seed_profile_audit',
     status: findings.length > 0 ? 'fail' : 'pass',
@@ -302,3 +362,6 @@ export function auditSeededPacketDefinitionProfile(input?: {
     findings,
   };
 }
+
+export const auditSeededCanonicalDefinitionProfile =
+  auditSeededPacketDefinitionProfile;

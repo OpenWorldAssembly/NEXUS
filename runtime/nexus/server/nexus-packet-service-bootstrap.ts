@@ -11,8 +11,8 @@ import {
   createClaimPacketId,
 } from '@core/packets/claims';
 import {
+  CANONICAL_SEED_PACKETS,
   DISCUSSION_SEED_VERSION,
-  PERSONAL_SEED_PACKETS,
 } from '@core/packets/seeds';
 import type { PacketEnvelope, PacketEnvelopeByType, PacketRef } from '@core/schema/packet-schema';
 import type { NodeSQLiteQueryServices } from '@runtime/storage/node-sqlite-query-services';
@@ -66,7 +66,7 @@ async function writeRevisionIfMissing(
 async function ensureSeedPackets(
   services: NodeSQLiteQueryServices
 ): Promise<void> {
-  for (const seedPacket of PERSONAL_SEED_PACKETS) {
+  for (const seedPacket of CANONICAL_SEED_PACKETS) {
     await writeRevisionIfMissing(services, seedPacket);
   }
 }

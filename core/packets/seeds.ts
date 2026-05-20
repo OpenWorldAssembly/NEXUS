@@ -10,6 +10,10 @@ import type {
 } from '@core/schema/packet-schema';
 
 import {
+  buildDefinitionBundleSeedEnvelope,
+  buildDefinitionPacketSeedEnvelopes,
+} from '@core/packets/packet-definition-seeds';
+import {
   createActionPacket,
   createAssemblyPacket,
   createCausePacket,
@@ -1021,3 +1025,11 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
 }
 
 export const PERSONAL_SEED_PACKETS = createPersonalSeedPackets();
+export const DEFINITION_PROFILE_SEED_PACKETS = [
+  ...buildDefinitionPacketSeedEnvelopes(),
+  buildDefinitionBundleSeedEnvelope(),
+];
+export const CANONICAL_SEED_PACKETS = [
+  ...PERSONAL_SEED_PACKETS,
+  ...DEFINITION_PROFILE_SEED_PACKETS,
+];

@@ -7,6 +7,7 @@ import { z } from 'zod';
 
 import { WRITE_PROOF_LEVELS } from '@core/auth/proof-types';
 import type { PacketFamily } from '@core/schema/packet-ontology';
+import { DefinitionBodySchema } from '@core/packets/definitions/definition.ts';
 import {
   AttestationStatusSchema,
   AttestationValueSchema,
@@ -27,6 +28,8 @@ import {
   RelationSubjectMatchModeSchema,
   TrustStageSchema,
 } from '@core/schema/packet-ontology';
+
+export { DefinitionBodySchema } from '@core/packets/definitions/definition.ts';
 
 export const PacketRefSchema = z
   .object({
@@ -946,7 +949,40 @@ export const ArtifactBodySchema = z
   })
   .strict();
 
+export const BUNDLE_PACKET_SUBTYPES = ['packet_set', 'export', 'sync', 'archive'] as const;
+
+export const BundleItemSchema = z
+  .object({
+    item_role: z.enum(['root', 'dependency', 'reference', 'definition_part', 'fixture']),
+    packet_ref: PacketRefSchema.nullable().default(null),
+    revision_ref: PacketRevisionRefSchema.nullable().default(null),
+    packet_type: z.string().min(1).nullable().default(null),
+    packet_subtype: z.string().min(1).nullable().default(null),
+    schema_version: z.string().min(1).nullable().default(null),
+    digest: z.string().min(1).nullable().default(null),
+    required: z.boolean().default(true),
+    notes: z.string().min(1).nullable().default(null),
+  })
+  .strict();
+
+export const BundleBodySchema = z
+  .object({
+    type: z.literal('bundle').default('bundle'),
+    subtype: z.enum(BUNDLE_PACKET_SUBTYPES),
+    title: z.string().min(1),
+    summary: z.string().min(1).nullable().default(null),
+    status: z.enum(['active', 'superseded', 'withdrawn']).default('active'),
+    bundle_version: z.string().min(1).default('0.1.0'),
+    purpose: z.string().min(1),
+    root_refs: z.array(PacketRefSchema).default([]),
+    items: z.array(BundleItemSchema).default([]),
+    manifest_digest: z.string().min(1).nullable().default(null),
+    bundle_data: z.record(z.string(), z.unknown()).default({}),
+  })
+  .strict();
+
 export const PACKET_BODY_SCHEMAS = {
+  Definition: DefinitionBodySchema,
   Element: ElementBodySchema,
   Location: LocationBodySchema,
   Role: RoleBodySchema,
@@ -977,6 +1013,7 @@ export const PACKET_BODY_SCHEMAS = {
   DiscussionReply: DiscussionReplyBodySchema,
   Minutes: MinutesBodySchema,
   Artifact: ArtifactBodySchema,
+  Bundle: BundleBodySchema,
 } satisfies Record<PacketFamily, z.ZodTypeAny>;
 
 export type PacketRef = z.infer<typeof PacketRefSchema>;

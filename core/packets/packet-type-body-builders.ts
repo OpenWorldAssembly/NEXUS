@@ -1,6 +1,6 @@
 /**
  * File: packet-type-body-builders.ts
- * Description: Shadow body-candidate builders for manifest-native packet types.
+ * Description: Canonical body builders for packetized Definition, Bundle, and Preference bodies.
  */
 
 import {
@@ -83,7 +83,7 @@ export type PacketTypeBodyBuilderDescriptor = {
   builder_id: PacketTypeBodyBuilderId;
   packet_type: 'Definition' | 'Bundle' | 'Preference';
   packet_subtype: string;
-  availability: 'shadow_only';
+  availability: 'runtime_ready';
 };
 
 const PACKET_TYPE_BODY_BUILDERS = [
@@ -91,19 +91,19 @@ const PACKET_TYPE_BODY_BUILDERS = [
     builder_id: 'definition.part.body.v0',
     packet_type: 'Definition',
     packet_subtype: '*',
-    availability: 'shadow_only',
+    availability: 'runtime_ready',
   },
   {
     builder_id: 'bundle.packet_set.body.v0',
     packet_type: 'Bundle',
     packet_subtype: 'packet_set',
-    availability: 'shadow_only',
+    availability: 'runtime_ready',
   },
   {
     builder_id: 'preference.element.body.v0',
     packet_type: 'Preference',
     packet_subtype: 'element',
-    availability: 'shadow_only',
+    availability: 'runtime_ready',
   },
 ] as const satisfies readonly PacketTypeBodyBuilderDescriptor[];
 

@@ -9,11 +9,14 @@ import test from 'node:test';
 import {
   auditSeededPacketDefinitionProfile,
   buildDefinitionBundlePacketSetCandidate,
+  buildDefinitionBundleSeedEnvelope,
   buildDefinitionPacketSeedCandidates,
+  buildDefinitionPacketSeedEnvelopes,
   listExperimentalPacketTypeDefinitions,
   listPacketDefinitionParts,
   resolveSeededPacketDefinitionProfile,
 } from '@core/packets/packet-definition-manifest';
+import { CANONICAL_SEED_PACKETS } from '@core/packets/seeds';
 
 test('every active manifest definition part produces a Definition seed candidate', () => {
   const definitions = listExperimentalPacketTypeDefinitions();
@@ -31,7 +34,10 @@ test('every active manifest definition part produces a Definition seed candidate
   for (const candidate of candidates) {
     assert.equal(candidate.seed_kind, 'packet_definition.seed_candidate');
     assert.equal(candidate.body_candidate.packet_type, 'Definition');
+    assert.equal(candidate.packet.header.family, 'Definition');
+    assert.equal(candidate.packet.header.packet_id, candidate.packet_ref.packet_id);
     assert.equal(candidate.body_candidate.body.type, 'definition');
+    assert.equal(candidate.packet.body.type, 'definition');
     assert.equal(
       candidate.body_candidate.body.defines_packet_type,
       candidate.defines_packet_type
@@ -49,6 +55,8 @@ test('definition bundle includes every Definition seed candidate exactly once', 
 
   assert.equal(bundle.body_candidate.packet_type, 'Bundle');
   assert.equal(bundle.body_candidate.packet_subtype, 'packet_set');
+  assert.equal(bundle.packet.header.family, 'Bundle');
+  assert.equal(bundle.packet.body.subtype, 'packet_set');
   assert.equal(bundle.body_candidate.body.items.length, definitionPackets.length);
   assert.equal(new Set(bundledRevisionIds).size, definitionPackets.length);
 
@@ -58,6 +66,27 @@ test('definition bundle includes every Definition seed candidate exactly once', 
       candidate.part_id
     );
   }
+});
+
+test('definition seed helpers expose canonical packet envelopes in bootstrap seeds', () => {
+  const definitionEnvelopes = buildDefinitionPacketSeedEnvelopes();
+  const bundleEnvelope = buildDefinitionBundleSeedEnvelope();
+  const seedPacketIds = new Set(
+    CANONICAL_SEED_PACKETS.map((packet) => packet.header.packet_id)
+  );
+
+  assert.ok(definitionEnvelopes.length > 0);
+  assert.equal(
+    definitionEnvelopes.every((packet) => packet.header.family === 'Definition'),
+    true
+  );
+  assert.equal(bundleEnvelope.header.family, 'Bundle');
+  assert.equal(bundleEnvelope.body.items.length, definitionEnvelopes.length);
+  assert.equal(
+    definitionEnvelopes.every((packet) => seedPacketIds.has(packet.header.packet_id)),
+    true
+  );
+  assert.equal(seedPacketIds.has(bundleEnvelope.header.packet_id), true);
 });
 
 test('seeded definition profile audit passes and fails closed on drift', () => {

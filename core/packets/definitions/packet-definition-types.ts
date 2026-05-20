@@ -1,6 +1,6 @@
 /**
  * File: packet-definition-types.ts
- * Description: Shared experimental packet type manifest contracts for schema R&D definitions.
+ * Description: Shared packet type manifest contracts for canonical and staged packet definitions.
  */
 
 import type { z } from 'zod';

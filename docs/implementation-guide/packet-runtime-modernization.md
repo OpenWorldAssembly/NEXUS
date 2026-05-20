@@ -6,7 +6,7 @@ Pre-reseed modernization chapter status. The early sections preserve the chapter
 
 ## Summary
 
-This chapter brings the packet system, generic fortress, runtime connectors, and mutation orchestration up to the Preference-as-template direction. Preference remains the working example: it has a manifest definition, definition parts, a fortress-enrolled write path, and shadow runtime connector coverage for comparison. The broader goal is to make every live packet family visible through the same coverage map before expanding definitions and moving mutations into a standardized runtime path.
+This chapter brings the packet system, generic fortress, runtime connectors, and mutation orchestration up to the Preference-as-template direction. `Definition`, `Bundle`, and `Preference` are now canonical packet families; Preference remains the working runtime example with a fortress-enrolled write path and shadow runtime connector coverage for comparison. The broader goal is to keep every live packet family visible through the same coverage map while moving mutations into standardized trusted-local runtime paths.
 
 The work should preserve current behavior while replacing hidden assumptions with typed registries, explicit planned gaps, and tests that fail when the modernization map drifts.
 
@@ -14,8 +14,8 @@ The work should preserve current behavior while replacing hidden assumptions wit
 
 - packet families should have body schemas, compatibility entries, builder support, manifest definitions, definition parts, and runtime connector status recorded in one audit surface
 - runtime mutations should map to prepare handlers, finalize handlers, policy action IDs, signed corridor use, and master-handler connector enrollment status
-- Preference stays the only manifest-defined packet family currently enrolled in the canonical packet ontology for this chapter baseline
-- Definition and Bundle stay experimental manifest packet types until a later live-enrollment pass
+- Definition, Bundle, and Preference are canonical packet families with body schemas, compatibility entries, builder support, definition parts, and seed/profile coverage
+- imported Definition and Bundle packets describe semantics but never introduce executable server behavior
 - the generic fortress and master handler should become the standard runtime orchestration path after coverage is complete
 
 ## Phase Plan
@@ -40,10 +40,10 @@ The first pass is intentionally non-behavioral:
 
 ## Guardrails
 
-- do not add Definition or Bundle to `PACKET_FAMILIES` in this chapter baseline
+- historical baseline: Definition and Bundle were initially kept out of `PACKET_FAMILIES`; the current promotion pass enrolls them as canonical packet families
 - do not change `MutationIntent`, route payloads, packet schemas, or compatibility registry behavior during the audit pass
 - do not migrate legacy scope-display caches until a dedicated compatibility pass
-- do not introduce signed fortress enrollment for `Preference.element` until that work is scoped separately
+- the initial audit baseline kept `Preference.element` out of signed fortress enrollment; the current corridor now enrolls `preference.element.set` through prepare/finalize
 - do not rebuild generated public docs artifacts as part of this first pass
 
 ## Test Plan
@@ -64,13 +64,13 @@ The first chunky implementation pass expands the experimental manifest from the 
 
 This pass remains shadow-only. The new definitions describe existing body schemas, compatibility registry posture, generic builder support, action descriptors, planner descriptors, projection/index descriptors, and Definition parts. They do not change route payloads, packet schemas, runtime mutation behavior, or master-handler connector enrollment.
 
-Builder-missing families remain explicit planned gaps in the modernization audit, and Preference remains manifest-defined while keeping its expected generic build-pipeline gap until a dedicated Preference builder pass.
+Builder-missing families remain explicit planned gaps in the modernization audit. Preference later received canonical builder support and signed-corridor write enrollment.
 
 ## Packet-Type Authority Pass
 
-The next implementation pass shifts the forward-looking checklist from legacy `PACKET_FAMILIES` enrollment toward manifest `packet_type` authority. `Definition` and `Bundle` remain outside `PACKET_FAMILIES`; they are manifest-native packet types for this chapter rather than future legacy family-enrollment targets.
+The next implementation pass shifted the forward-looking checklist from legacy family enrollment toward manifest `packet_type` authority. The later promotion pass enrolled `Definition` and `Bundle` as canonical packet families while preserving packet_type language as the forward-facing semantic layer.
 
-The pass adds shadow body-candidate builders for manifest-native packet types. `Definition` builds parsed Definition part bodies from local definition descriptors, `Bundle.packet_set` builds parsed bundle inventory bodies, and `Preference.element` uses the existing element preference body helper. These builders return body candidates and metadata only; later seed-profile helpers now use them to create auditable packet-shaped Definition candidates and a local Bundle inventory for reseed material.
+The pass added body builders for Definition, Bundle, and Preference. Those builders now feed canonical seed-profile helpers that create real Definition packet envelopes and a Bundle packet inventory for reseed material.
 
 Packet-type modernization coverage is now the forward-looking audit surface for manifest definitions. The legacy family coverage remains as a migration bridge for live packet families and should keep planned gaps visible until those families are converted into packet-type definitions and runtime connectors.
 
@@ -273,7 +273,7 @@ Policy and dependency semantic authority is now closed for reseed readiness, whi
 
 Policy packets are the semantic home for write locks, trust baselines, relation requirements, dependency and alignment rules, default inheritance, and governance hooks. The live write-lock path still runs through `MutationPolicyGate`; the new semantic helpers resolve and audit packet meaning without executing proposal/vote/decision behavior.
 
-Definition `packet_dependency` parts now carry meaningful dependency refs for packet operations, builder pipelines, shadow action bridges, manifest-native builders, Preference projections, Bundle inventory building, and trusted compatibility/projection seams. Workflow and runtime dependency IDs must resolve through one of these anchors, Policy packet semantics, the operation ontology, a trusted workflow resolver, or an explicit trusted local engine contract.
+Definition `packet_dependency` parts now carry meaningful dependency refs for packet operations, builder pipelines, action bridges, canonical packet-type builders, Preference projections, Bundle inventory building, and trusted compatibility/projection seams. Workflow and runtime dependency IDs must resolve through one of these anchors, Policy packet semantics, the operation ontology, a trusted workflow resolver, or an explicit trusted local engine contract.
 
 The seeded OWA `Action(subtype: initiative)` now links to default-inheritance and governance-baseline policies. Runtime relation policy discovery still supports the compatibility `Cause(subtype: initiative)` path, but forward default/policy resolution prefers the Action initiative anchor when it is present.
 
@@ -286,11 +286,13 @@ The final wrap-up retires the remaining live legacy bridge mutation intents from
 
 Canonical writes now enter through `assembly_association.relation.set`, `assembly_association.relation.clear`, and `home_locality.relation.set`. Historical legacy claim material remains readable/importable/projectable through compatibility surfaces, but the signed fortress prepare corridor, client ingress registry, handoff coverage, and live write-policy action list no longer enroll the legacy bridge intents.
 
-The final readiness handoff lives in runtime audit code as `createFinalPreReseedReadinessReport()`. It records canonical write intents, compatibility-only legacy surfaces, OWA seed/default anchors, required default policies, discussion default packets, manifest-native packet types, and out-of-scope never-live packet families. Reseed design should start from that report rather than rediscovering chapter state from scattered modernization audits.
+The final readiness handoff lives in runtime audit code as `createFinalPreReseedReadinessReport()`. It records canonical write intents, compatibility-only legacy surfaces, OWA seed/default anchors, required default policies, discussion default packets, canonical definition packet types, and out-of-scope never-live packet families. Reseed design should start from that report rather than rediscovering chapter state from scattered modernization audits.
 
 ## Definition Packetization and Preference Fortress Promotion
 
-Active manifest definitions now have reseed-facing packet material. `buildDefinitionPacketSeedCandidates()` emits one schema-validated `Definition` packet candidate for every active manifest definition part, and `buildDefinitionBundlePacketSetCandidate()` groups those candidates into one `Bundle.packet_set` definition profile inventory. `auditSeededPacketDefinitionProfile()` compares that packet material back to the core manifest and fails on missing parts, duplicate or stale bundle refs, digest drift, or manifest/profile mismatch.
+Active manifest definitions now have canonical packet material. `buildDefinitionPacketSeedEnvelopes()` emits schema-validated `Definition` packet envelopes for every active manifest definition part, and `buildDefinitionBundleSeedEnvelope()` groups those envelopes into one `Bundle.packet_set` definition profile inventory. `auditSeededPacketDefinitionProfile()` compares that packet material back to the core manifest and fails on missing parts, duplicate or stale bundle refs, digest drift, or manifest/profile mismatch.
+
+`Definition`, `Bundle`, and `Preference` are now first-class canonical packet families. The active definition profile is seeded as real packet material, but execution remains trusted-local: imported Definition or Bundle packets can describe schemas, operations, policies, dependencies, planners, and builders, but cannot introduce executable server behavior.
 
 This is packetized seed truth, not imported-code execution. Stored Definition and Bundle packets may describe schemas, operations, policies, dependencies, planners, and builders; trusted local runtime registries remain the only executable authority.
 

@@ -68,6 +68,25 @@ export const PACKET_PIPELINE_INVENTORY: Record<
   PacketFamily,
   PacketPipelineInventoryEntry
 > = {
+  Definition: createEntry('Definition', {
+    canonical_structure: 'Definition(subtype, defines_packet_type, definition parts)',
+    builder_path:
+      'core/packets/packet-build-pipeline.ts + core/packets/families/definition.ts',
+    compatibility_stance: 'current_only',
+    read_projection_path:
+      'core/packets/packet-definition-seeds.ts canonical definition profile audit',
+    ui_consumers: [],
+    write_paths: ['Bootstrap definition profile seed material'],
+    known_manual_assumptions: [
+      'Definition packets describe packet semantics; trusted local code remains the only executable authority.',
+    ],
+    builder_pipeline_status: 'production',
+    same_family_adapter_status: 'tested',
+    family_evolution_status: 'none',
+    read_model_status: 'tested',
+    next_migration_step:
+      'Keep Definition bootstrap validation small while reseed starts from the active definition profile bundle.',
+  }),
   Element: createEntry('Element', {
     canonical_structure: 'Element(type, subtype, legacy kind)',
     builder_path:
@@ -347,6 +366,25 @@ export const PACKET_PIPELINE_INVENTORY: Record<
     read_model_status: 'partial',
     next_migration_step: 'Keep as the small proof family for the generic builder while read models mature.',
   }),
+  Preference: createEntry('Preference', {
+    canonical_structure: 'Preference(subtype: element)',
+    builder_path:
+      'core/packets/packet-build-pipeline.ts + core/packets/definitions/preference-helpers.ts',
+    compatibility_stance: 'current_only',
+    read_projection_path:
+      'runtime/nexus/server/element-preference-packets.ts + legacy compatibility cache fallback',
+    ui_consumers: ['Shell preferences', 'Scope display preferences'],
+    write_paths: ['Signed Preference.element mutation corridor'],
+    known_manual_assumptions: [
+      'Guest compatibility writes remain outside canonical claimed Preference packet enrollment.',
+    ],
+    builder_pipeline_status: 'production',
+    same_family_adapter_status: 'tested',
+    family_evolution_status: 'none',
+    read_model_status: 'production',
+    next_migration_step:
+      'Keep Preference.element as the canonical claimed interface preference exemplar for reseed.',
+  }),
   Discussion: createEntry('Discussion', {
     canonical_structure: 'Discussion(kind, role)',
     builder_path:
@@ -437,6 +475,28 @@ export const PACKET_PIPELINE_INVENTORY: Record<
   }),
   Minutes: createReservedEntry('Minutes', 'Family reserved but not actively surfaced.'),
   Artifact: createReservedEntry('Artifact', 'Family reserved but not actively surfaced.'),
+  Bundle: createEntry('Bundle', {
+    canonical_structure: 'Bundle(packet_set inventory)',
+    builder_path:
+      'core/packets/packet-build-pipeline.ts + core/packets/families/bundle.ts',
+    compatibility_stance: 'current_only',
+    read_projection_path:
+      'core/packets/packet-definition-seeds.ts canonical bundle/profile audit',
+    ui_consumers: [],
+    write_paths: [
+      'Bootstrap definition profile seed material',
+      'Import/export bundle validation',
+    ],
+    known_manual_assumptions: [
+      'Bundle packets carry packet inventories and do not move packet semantics away from the packets they reference.',
+    ],
+    builder_pipeline_status: 'production',
+    same_family_adapter_status: 'tested',
+    family_evolution_status: 'none',
+    read_model_status: 'tested',
+    next_migration_step:
+      'Use Bundle.packet_set as the active definition-profile carrier for reseed verification.',
+  }),
 };
 
 export function listPacketPipelineInventory(): PacketPipelineInventoryEntry[] {

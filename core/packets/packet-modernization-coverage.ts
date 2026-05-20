@@ -70,8 +70,8 @@ export interface PacketFamilyModernizationCoverage {
 
 export interface PacketNextPhaseLiveEnrollmentTarget {
   packet_type: 'Definition' | 'Bundle';
-  target_status: 'manifest_native';
-  currently_in_packet_families: false;
+  target_status: 'canonical_family';
+  currently_in_packet_families: true;
   manifest_definition_status: 'defined';
   reason: string;
 }
@@ -234,7 +234,7 @@ export function getPacketTypeModernizationCoverage(
     planned_gaps.push(
       plannedGap(
         'definition_parts',
-        'Manifest-native packet types should expose Definition parts before runtime enrollment.'
+        'Packet types should expose Definition parts before runtime enrollment.'
       )
     );
   }
@@ -245,7 +245,7 @@ export function getPacketTypeModernizationCoverage(
     planned_gaps.push(
       plannedGap(
         'build_pipeline',
-        'Manifest definition has no builder descriptor for packet-type body candidates.'
+        'Packet definition has no builder descriptor for packet-type body candidates.'
       )
     );
   }
@@ -273,7 +273,7 @@ export function getPacketTypeModernizationCoverage(
     planned_gaps.push(
       plannedGap(
         'manifest_definition',
-        'Manifest-native mutation descriptors are missing or not shadow-runtime ready.'
+        'Packet mutation descriptors are missing or not shadow-runtime ready.'
       )
     );
   }
@@ -323,11 +323,11 @@ export function listPacketNextPhaseLiveEnrollmentTargets(): PacketNextPhaseLiveE
 
     return {
       packet_type,
-      target_status: 'manifest_native',
-      currently_in_packet_families: false,
+      target_status: 'canonical_family',
+      currently_in_packet_families: true,
       manifest_definition_status: 'defined',
       reason:
-        'Definition and Bundle are manifest-native packet types for this chapter and should not be enrolled in legacy PACKET_FAMILIES.',
+        'Definition and Bundle are now canonical packet families with packetized definition-profile seed material.',
     };
   });
 }

@@ -6,6 +6,7 @@
 import { z } from 'zod';
 
 export const PACKET_FAMILIES = [
+  'Definition',
   'Element',
   'Location',
   'Role',
@@ -36,6 +37,7 @@ export const PACKET_FAMILIES = [
   'DiscussionReply',
   'Minutes',
   'Artifact',
+  'Bundle',
 ] as const;
 
 export const ELEMENT_KINDS = [
@@ -454,6 +456,7 @@ export const LocalityLevelSchema = z.enum(LOCALITY_LEVELS);
 export type LocalityLevel = z.infer<typeof LocalityLevelSchema>;
 
 export const PACKET_FAMILY_REVISION_MODES = {
+  Definition: 'replaceable',
   Element: 'replaceable',
   Location: 'replaceable',
   Role: 'replaceable',
@@ -484,4 +487,5 @@ export const PACKET_FAMILY_REVISION_MODES = {
   DiscussionReply: 'append_only',
   Minutes: 'append_only',
   Artifact: 'append_only',
+  Bundle: 'replaceable',
 } satisfies Record<PacketFamily, PacketRevisionMode>;

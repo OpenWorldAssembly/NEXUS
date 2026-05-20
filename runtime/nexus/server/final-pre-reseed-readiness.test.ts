@@ -78,3 +78,19 @@ test('final readiness handoff records seed/default anchors and discussion defaul
   );
   assert.ok(report.discussion_default_packet_ids.length > 0);
 });
+
+test('final readiness handoff records canonical Definition and Bundle seed material', () => {
+  const report = createFinalPreReseedReadinessReport();
+
+  assert.ok(report.seeded_definition_packet_count > 0);
+  assert.ok(
+    report.canonical_definition_seed_packet_ids.some((packetId) =>
+      packetId.startsWith('nexus:definition/')
+    )
+  );
+  assert.ok(
+    report.canonical_definition_seed_packet_ids.includes(
+      report.seeded_definition_bundle_packet_id
+    )
+  );
+});

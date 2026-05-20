@@ -107,7 +107,7 @@ export type DefinitionBody = z.infer<typeof DefinitionBodySchema>;
 export const definitionPacketDefinition = {
   packet_type: 'Definition',
   canonical_body_type: 'definition',
-  definition_status: 'experimental_shadow',
+  definition_status: 'canonical',
   current_schema_version: '0.1.0',
   storage_class: 'public_record',
   revision_behavior: 'supersedes_chain',
@@ -146,9 +146,9 @@ export const definitionPacketDefinition = {
       packet_subtype: null,
       label: 'Create definition part',
       policy_action_id: 'definition.part.write',
-      availability: 'shadow_only',
+      availability: 'canonical',
       notes:
-        'Creates a manifest-native Definition body candidate for one packet definition part.',
+        'Creates a canonical Definition packet body for one packet definition part.',
     },
     {
       action_id: 'definition.part.revise',
@@ -156,9 +156,9 @@ export const definitionPacketDefinition = {
       packet_subtype: null,
       label: 'Revise definition part',
       policy_action_id: 'definition.part.write',
-      availability: 'shadow_only',
+      availability: 'canonical',
       notes:
-        'Revises a manifest-native Definition body candidate without enrolling Definition in legacy PACKET_FAMILIES.',
+        'Revises a canonical Definition packet body for one packet definition part.',
     },
     {
       action_id: 'definition.packet_definition.project',
@@ -166,7 +166,7 @@ export const definitionPacketDefinition = {
       packet_subtype: 'packet_definition',
       label: 'Project packet definition',
       policy_action_id: null,
-      availability: 'shadow_only',
+      availability: 'canonical',
       notes:
         'Reads a packet definition and its parts into a resolved local definition profile.',
     },
@@ -176,7 +176,7 @@ export const definitionPacketDefinition = {
       packet_subtype: 'packet_definition',
       label: 'Bundle packet definition parts',
       policy_action_id: null,
-      availability: 'shadow_only',
+      availability: 'canonical',
       notes:
         'Allows definition parts to travel in a carrier bundle without making Bundle the semantic home for definitions.',
     },
@@ -189,9 +189,9 @@ export const definitionPacketDefinition = {
       action_ids: ['definition.part.create', 'definition.part.revise'],
       input_schema_key: 'DefinitionPartBodyBuilderInput',
       output_schema_key: 'DefinitionBodySchema',
-      availability: 'shadow_only',
+      availability: 'canonical',
       notes:
-        'Builds manifest-native Definition body candidates from PacketDefinitionPartDescriptor records.',
+        'Builds canonical Definition packet bodies from PacketDefinitionPartDescriptor records.',
     },
   ],
   planners: [
@@ -201,9 +201,9 @@ export const definitionPacketDefinition = {
       action_ids: ['definition.part.create', 'definition.part.revise'],
       builder_ids: ['definition.part.body.v0'],
       policy_action_ids: ['definition.part.write'],
-      availability: 'shadow_only',
+      availability: 'canonical',
       notes:
-        'Plans shadow Definition part writes as packet-type body candidates, not legacy PacketEnvelope writes.',
+        'Plans trusted-local Definition part writes as canonical packet bodies.',
     },
     {
       planner_id: 'definition.packet_definition.resolve.v0',
@@ -211,7 +211,7 @@ export const definitionPacketDefinition = {
       action_ids: ['definition.packet_definition.project'],
       builder_ids: [],
       policy_action_ids: [],
-      availability: 'shadow_only',
+      availability: 'canonical',
       notes:
         'Bootstrap resolver for combining Definition parts into a local resolved definition shape.',
     },
@@ -222,9 +222,9 @@ export const definitionPacketDefinition = {
       action_ids: ['definition.part.create', 'definition.part.revise'],
       planner_id: 'definition.part.write.v0',
       result_family: 'packet_write',
-      availability: 'shadow_only',
+      availability: 'canonical',
       notes:
-        'Future manifest-native mutation for creating or revising Definition body candidates.',
+        'Manifest mutation for creating or revising Definition packet bodies through trusted local code.',
     },
   ],
   compatibility_adapters: [
@@ -235,9 +235,9 @@ export const definitionPacketDefinition = {
       to_schema_version: '0.1.0',
       direction: 'bidirectional_neighbor',
       loss_awareness: 'none',
-      availability: 'shadow_only',
+      availability: 'canonical',
       notes:
-        'Identity adapter placeholder for Definition v0 while packet_type compatibility metadata is still manifest-native.',
+        'Identity adapter for canonical Definition v0 packet_type compatibility metadata.',
     },
   ],
   projections: [
@@ -246,7 +246,7 @@ export const definitionPacketDefinition = {
       target_surface: 'definition_bootstrap',
       mode: 'derived',
       notes:
-        'Projects definition parts into a resolved packet definition for local audit and shadow fortress planning.',
+        'Projects definition parts into a resolved packet definition for local audit and trusted planning.',
     },
   ],
   indexes: [
@@ -269,7 +269,7 @@ export const definitionPacketDefinition = {
       defines_packet_type: 'Definition',
       defines_packet_subtype: null,
       schema_version: '0.1.0',
-      availability: 'shadow_only',
+      availability: 'canonical',
       required: true,
       notes: 'Core-native bootstrap definition for the Definition packet type itself.',
     },
@@ -279,7 +279,7 @@ export const definitionPacketDefinition = {
       defines_packet_type: 'Definition',
       defines_packet_subtype: null,
       schema_version: '0.1.0',
-      availability: 'shadow_only',
+      availability: 'canonical',
       required: true,
       covers_subtypes: DEFINITION_PACKET_SUBTYPES,
       notes: 'Local Zod binding for bootstrap Definition body schemas.',
@@ -290,7 +290,7 @@ export const definitionPacketDefinition = {
       defines_packet_type: 'Definition',
       defines_packet_subtype: null,
       schema_version: '0.1.0',
-      availability: 'shadow_only',
+      availability: 'canonical',
       required: true,
       references: [
         'definition.part.create',
@@ -306,10 +306,10 @@ export const definitionPacketDefinition = {
       defines_packet_type: 'Definition',
       defines_packet_subtype: null,
       schema_version: '0.1.0',
-      availability: 'shadow_only',
+      availability: 'canonical',
       required: true,
       references: ['definition.part.body.v0'],
-      notes: 'Builder descriptor part for manifest-native Definition body candidates.',
+      notes: 'Builder descriptor part for canonical Definition packet bodies.',
     },
     {
       part_id: 'definition.bootstrap.packet_planner_descriptor.v0',
@@ -317,7 +317,7 @@ export const definitionPacketDefinition = {
       defines_packet_type: 'Definition',
       defines_packet_subtype: null,
       schema_version: '0.1.0',
-      availability: 'shadow_only',
+      availability: 'canonical',
       required: true,
       references: [
         'definition.part.write.v0',
@@ -331,7 +331,7 @@ export const definitionPacketDefinition = {
       defines_packet_type: 'Definition',
       defines_packet_subtype: null,
       schema_version: '0.1.0',
-      availability: 'shadow_only',
+      availability: 'canonical',
       required: true,
       references: ['resolved_packet_definition'],
       notes: 'Bootstrap projection descriptor part for resolved packet definitions.',
@@ -342,7 +342,7 @@ export const definitionPacketDefinition = {
       defines_packet_type: 'Definition',
       defines_packet_subtype: null,
       schema_version: '0.1.0',
-      availability: 'shadow_only',
+      availability: 'canonical',
       required: true,
       references: ['definition.0_1_current_neighbor'],
       notes: 'Definition v0 compatibility uses an identity current-neighbor adapter descriptor.',
@@ -353,7 +353,7 @@ export const definitionPacketDefinition = {
       defines_packet_type: 'Definition',
       defines_packet_subtype: null,
       schema_version: '0.1.0',
-      availability: 'shadow_only',
+      availability: 'canonical',
       required: true,
       references: [
         'core.definition_bootstrap.v0',

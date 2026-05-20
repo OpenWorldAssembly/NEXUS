@@ -1,45 +1,22 @@
 /**
  * File: bundle.ts
- * Description: Experimental Bundle packet type definition for portable packet collection inventories.
+ * Description: Canonical Bundle packet type definition for portable packet collection inventories.
  */
 
-import { z } from 'zod';
-
-import { PacketRefSchema, PacketRevisionRefSchema } from '@core/schema/packet-schema';
+import {
+  BUNDLE_PACKET_SUBTYPES,
+  BundleBodySchema,
+  BundleItemSchema,
+} from '@core/schema/packet-schema';
+import type { z } from 'zod';
 
 import type { PacketTypeDefinition } from './packet-definition-types.ts';
 
-export const BUNDLE_PACKET_SUBTYPES = ['packet_set', 'export', 'sync', 'archive'] as const;
-
-export const BundleItemSchema = z
-  .object({
-    item_role: z.enum(['root', 'dependency', 'reference', 'definition_part', 'fixture']),
-    packet_ref: PacketRefSchema.nullable().default(null),
-    revision_ref: PacketRevisionRefSchema.nullable().default(null),
-    packet_type: z.string().min(1).nullable().default(null),
-    packet_subtype: z.string().min(1).nullable().default(null),
-    schema_version: z.string().min(1).nullable().default(null),
-    digest: z.string().min(1).nullable().default(null),
-    required: z.boolean().default(true),
-    notes: z.string().min(1).nullable().default(null),
-  })
-  .strict();
-
-export const BundleBodySchema = z
-  .object({
-    type: z.literal('bundle').default('bundle'),
-    subtype: z.enum(BUNDLE_PACKET_SUBTYPES),
-    title: z.string().min(1),
-    summary: z.string().min(1).nullable().default(null),
-    status: z.enum(['active', 'superseded', 'withdrawn']).default('active'),
-    bundle_version: z.string().min(1).default('0.1.0'),
-    purpose: z.string().min(1),
-    root_refs: z.array(PacketRefSchema).default([]),
-    items: z.array(BundleItemSchema).default([]),
-    manifest_digest: z.string().min(1).nullable().default(null),
-    bundle_data: z.record(z.string(), z.unknown()).default({}),
-  })
-  .strict();
+export {
+  BUNDLE_PACKET_SUBTYPES,
+  BundleBodySchema,
+  BundleItemSchema,
+} from '@core/schema/packet-schema';
 
 export type BundleBody = z.infer<typeof BundleBodySchema>;
 export type BundleItem = z.infer<typeof BundleItemSchema>;
@@ -47,7 +24,7 @@ export type BundleItem = z.infer<typeof BundleItemSchema>;
 export const bundlePacketDefinition = {
   packet_type: 'Bundle',
   canonical_body_type: 'bundle',
-  definition_status: 'experimental_shadow',
+  definition_status: 'canonical',
   current_schema_version: '0.1.0',
   storage_class: 'public_record',
   revision_behavior: 'supersedes_chain',
@@ -78,7 +55,7 @@ export const bundlePacketDefinition = {
       packet_subtype: 'packet_set',
       label: 'Create packet bundle inventory',
       policy_action_id: 'bundle.packet_set.write',
-      availability: 'shadow_only',
+      availability: 'canonical',
       notes: 'Creates a portable packet-set inventory for export/import or local transport.',
     },
     {
@@ -87,7 +64,7 @@ export const bundlePacketDefinition = {
       packet_subtype: null,
       label: 'Inspect bundle inventory',
       policy_action_id: null,
-      availability: 'shadow_only',
+      availability: 'canonical',
       notes: 'Projects bundle contents for import/export review without writing packets.',
     },
     {
@@ -96,8 +73,8 @@ export const bundlePacketDefinition = {
       packet_subtype: 'packet_set',
       label: 'Import packet bundle',
       policy_action_id: 'bundle.packet_set.import',
-      availability: 'shadow_only',
-      notes: 'Future manifest-driven import action for validating and hydrating packet sets.',
+      availability: 'canonical',
+      notes: 'Trusted-local import action descriptor for validating and hydrating packet sets.',
     },
     {
       action_id: 'bundle.inventory.revise',
@@ -105,9 +82,9 @@ export const bundlePacketDefinition = {
       packet_subtype: null,
       label: 'Revise bundle inventory',
       policy_action_id: 'bundle.packet_set.write',
-      availability: 'shadow_only',
+      availability: 'canonical',
       notes:
-        'Revises a manifest-native Bundle body candidate without enrolling Bundle in legacy PACKET_FAMILIES.',
+        'Revises a canonical Bundle packet inventory body.',
     },
     {
       action_id: 'bundle.packet_set.export',
@@ -115,8 +92,8 @@ export const bundlePacketDefinition = {
       packet_subtype: 'packet_set',
       label: 'Export packet bundle',
       policy_action_id: 'bundle.packet_set.export',
-      availability: 'shadow_only',
-      notes: 'Future manifest-driven export action for collecting packet dependencies and definition parts.',
+      availability: 'canonical',
+      notes: 'Trusted-local export action descriptor for collecting packet dependencies and definition parts.',
     },
   ],
   builders: [
@@ -127,7 +104,7 @@ export const bundlePacketDefinition = {
       action_ids: ['bundle.packet_set.create'],
       input_schema_key: 'BundleBodySchema',
       output_schema_key: 'BundleBodySchema',
-      availability: 'shadow_only',
+      availability: 'canonical',
       notes: 'Descriptor for packet-set bundle construction from packet refs and revision refs.',
     },
   ],
@@ -142,7 +119,7 @@ export const bundlePacketDefinition = {
       ],
       builder_ids: ['bundle.packet_set.body.v0'],
       policy_action_ids: ['bundle.packet_set.write'],
-      availability: 'shadow_only',
+      availability: 'canonical',
       notes: 'Plans a bundle inventory from a root packet set and declared dependencies.',
     },
     {
@@ -151,9 +128,9 @@ export const bundlePacketDefinition = {
       action_ids: ['bundle.packet_set.import', 'bundle.inspect'],
       builder_ids: [],
       policy_action_ids: ['bundle.packet_set.import'],
-      availability: 'shadow_only',
+      availability: 'canonical',
       notes:
-        'Plans manifest-native import review for packet-set bundle inventories without performing live hydration.',
+        'Plans trusted-local import review for packet-set bundle inventories without performing live hydration.',
     },
   ],
   mutations: [
@@ -162,17 +139,17 @@ export const bundlePacketDefinition = {
       action_ids: ['bundle.packet_set.create', 'bundle.inventory.revise'],
       planner_id: 'bundle.packet_set.export.v0',
       result_family: 'bundle_update',
-      availability: 'shadow_only',
-      notes: 'Future manifest-driven mutation for creating bundle inventory packets.',
+      availability: 'canonical',
+      notes: 'Manifest mutation descriptor for creating canonical bundle inventory packets.',
     },
     {
       mutation_intent: 'bundle.packet_set.import',
       action_ids: ['bundle.packet_set.import'],
       planner_id: 'bundle.packet_set.import.v0',
       result_family: 'bundle_update',
-      availability: 'shadow_only',
+      availability: 'canonical',
       notes:
-        'Future manifest-driven mutation for reviewing and hydrating bundle inventory imports.',
+        'Manifest mutation descriptor for reviewing and hydrating bundle inventory imports.',
     },
   ],
   compatibility_adapters: [
@@ -183,9 +160,9 @@ export const bundlePacketDefinition = {
       to_schema_version: '0.1.0',
       direction: 'bidirectional_neighbor',
       loss_awareness: 'none',
-      availability: 'shadow_only',
+      availability: 'canonical',
       notes:
-        'Identity adapter placeholder for Bundle v0 manifest-native inventory compatibility.',
+        'Identity adapter for canonical Bundle v0 inventory compatibility.',
     },
   ],
   projections: [
@@ -210,7 +187,7 @@ export const bundlePacketDefinition = {
       defines_packet_type: 'Bundle',
       defines_packet_subtype: 'packet_set',
       schema_version: '0.1.0',
-      availability: 'shadow_only',
+      availability: 'canonical',
       required: true,
       notes: 'Root definition part for Bundle.packet_set as a generic packet inventory carrier.',
     },
@@ -220,7 +197,7 @@ export const bundlePacketDefinition = {
       defines_packet_type: 'Bundle',
       defines_packet_subtype: 'packet_set',
       schema_version: '0.1.0',
-      availability: 'shadow_only',
+      availability: 'canonical',
       required: true,
       covers_subtypes: BUNDLE_PACKET_SUBTYPES,
       notes: 'Schema part for bundle carrier inventory bodies.',
@@ -231,7 +208,7 @@ export const bundlePacketDefinition = {
       defines_packet_type: 'Bundle',
       defines_packet_subtype: 'packet_set',
       schema_version: '0.1.0',
-      availability: 'shadow_only',
+      availability: 'canonical',
       required: true,
       references: [
         'bundle.packet_set.create',
@@ -248,7 +225,7 @@ export const bundlePacketDefinition = {
       defines_packet_type: 'Bundle',
       defines_packet_subtype: 'packet_set',
       schema_version: '0.1.0',
-      availability: 'shadow_only',
+      availability: 'canonical',
       required: true,
       references: ['bundle.packet_set.body.v0'],
       notes: 'Builder descriptor part for packet-set bundle inventory construction.',
@@ -259,7 +236,7 @@ export const bundlePacketDefinition = {
       defines_packet_type: 'Bundle',
       defines_packet_subtype: 'packet_set',
       schema_version: '0.1.0',
-      availability: 'shadow_only',
+      availability: 'canonical',
       required: true,
       references: ['bundle.packet_set.export.v0', 'bundle.packet_set.import.v0'],
       notes: 'Planner descriptor part for bundle inventory export planning.',
@@ -270,7 +247,7 @@ export const bundlePacketDefinition = {
       defines_packet_type: 'Bundle',
       defines_packet_subtype: 'packet_set',
       schema_version: '0.1.0',
-      availability: 'shadow_only',
+      availability: 'canonical',
       required: true,
       references: ['bundle_inventory'],
       notes: 'Projection descriptor part for bundle inventory review.',
@@ -281,7 +258,7 @@ export const bundlePacketDefinition = {
       defines_packet_type: 'Bundle',
       defines_packet_subtype: 'packet_set',
       schema_version: '0.1.0',
-      availability: 'shadow_only',
+      availability: 'canonical',
       required: true,
       references: ['bundle.0_1_current_neighbor'],
       notes: 'Compatibility part records Bundle v0 identity current-neighbor compatibility.',
@@ -292,7 +269,7 @@ export const bundlePacketDefinition = {
       defines_packet_type: 'Bundle',
       defines_packet_subtype: 'packet_set',
       schema_version: '0.1.0',
-      availability: 'shadow_only',
+      availability: 'canonical',
       required: true,
       references: [
         'generic.bundle.builder',

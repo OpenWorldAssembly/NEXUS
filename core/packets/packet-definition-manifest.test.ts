@@ -1,6 +1,6 @@
 /**
  * File: packet-definition-manifest.test.ts
- * Description: Regression coverage for the experimental packet definition manifest and shadow-mode packet schemas.
+ * Description: Regression coverage for the active packet definition manifest and canonical packet schemas.
  */
 
 import assert from 'node:assert/strict';
@@ -32,13 +32,10 @@ import {
 } from '@core/schema/packet-schema';
 
 const EXPECTED_MANIFEST_PACKET_TYPES = [
-  'Definition',
   ...GENERIC_PACKET_BUILD_FAMILIES,
-  'Preference',
-  'Bundle',
 ].sort();
 
-test('experimental manifest exposes core generic packet definitions', () => {
+test('active manifest exposes core generic packet definitions', () => {
   const packetTypes = listExperimentalPacketTypeDefinitions().map(
     (definition) => definition.packet_type
   );
@@ -52,13 +49,13 @@ test('experimental manifest exposes core generic packet definitions', () => {
   );
 });
 
-test('Definition and Bundle remain manifest-only packet types for this chapter', () => {
+test('Definition, Bundle, and Preference are canonical packet families', () => {
   assert.equal(PACKET_FAMILIES.includes('Preference'), true);
-  assert.equal((PACKET_FAMILIES as readonly string[]).includes('Definition'), false);
-  assert.equal((PACKET_FAMILIES as readonly string[]).includes('Bundle'), false);
+  assert.equal(PACKET_FAMILIES.includes('Definition'), true);
+  assert.equal(PACKET_FAMILIES.includes('Bundle'), true);
 });
 
-test('Definition and Bundle expose manifest-native builder descriptors', () => {
+test('Definition and Bundle expose canonical builder descriptors', () => {
   const definition = getExperimentalPacketTypeDefinition('Definition');
   const bundle = getExperimentalPacketTypeDefinition('Bundle');
   assert.ok(definition);
@@ -79,6 +76,18 @@ test('Definition and Bundle expose manifest-native builder descriptors', () => {
       (adapter) => adapter.adapter_id === 'bundle.0_1_current_neighbor'
     )
   );
+});
+
+test('active Definition, Bundle, and Preference descriptors are no longer shadow-only', () => {
+  for (const packetType of ['Definition', 'Bundle', 'Preference']) {
+    const definition = getExperimentalPacketTypeDefinition(packetType);
+    assert.ok(definition);
+    const serializedDefinition = JSON.stringify(definition);
+
+    assert.equal(definition.definition_status, 'canonical');
+    assert.equal(serializedDefinition.includes('experimental_shadow'), false);
+    assert.equal(serializedDefinition.includes('shadow_only'), false);
+  }
 });
 
 test('every manifest definition exposes required compatibility parts and current identity', () => {
@@ -168,7 +177,7 @@ test('manifest lookup returns definitions for generic families and null for defe
   assert.equal(getExperimentalPacketTypeDefinition('Signal'), null);
 });
 
-test('manifest exposes shadow action, builder, planner, and mutation descriptors', () => {
+test('manifest exposes action, builder, planner, and mutation descriptors', () => {
   const preferenceActions = listExperimentalPacketActions('Preference').map(
     (action) => action.action_id
   );
@@ -207,7 +216,7 @@ test('Preference definition exposes required Definition parts', () => {
 test('generic family definitions expose required Definition parts', () => {
   for (const family of GENERIC_PACKET_BUILD_FAMILIES) {
     const definition = getExperimentalPacketTypeDefinition(family);
-    assert.ok(definition, `${family} should have a shadow definition`);
+    assert.ok(definition, `${family} should have a staged definition`);
 
     const partSubtypes = listPacketDefinitionParts(definition).map(
       (part) => part.part_subtype
@@ -273,7 +282,7 @@ test('section helpers report template compliance for shadow packet definitions',
   }
 });
 
-test('Preference definition declares concrete shadow compatibility adapters', () => {
+test('Preference definition declares concrete compatibility adapters', () => {
   const preferenceDefinition = getExperimentalPacketTypeDefinition('Preference');
   assert.ok(preferenceDefinition);
 

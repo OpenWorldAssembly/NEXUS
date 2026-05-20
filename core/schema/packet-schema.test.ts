@@ -13,6 +13,7 @@ import {
   preparePacketEnvelopeForVersionedWrite,
   getPacketFamilyRevisionMode,
   parsePacketEnvelope,
+  PACKET_FAMILIES,
 } from './packet-schema.ts';
 
 function requirePreparedPacket(preparedPacket: {
@@ -1632,4 +1633,92 @@ test('current Preference.element packets parse scope-display preferences', () =>
     theme_mode: 'light',
     ui_density: 'large',
   });
+});
+
+test('Definition and Bundle packets parse as canonical packet envelopes', () => {
+  assert.equal(PACKET_FAMILIES.includes('Definition'), true);
+  assert.equal(PACKET_FAMILIES.includes('Bundle'), true);
+  assert.equal(getPacketFamilyRevisionMode('Definition'), 'replaceable');
+  assert.equal(getPacketFamilyRevisionMode('Bundle'), 'replaceable');
+
+  const definitionPacket = parsePacketEnvelope({
+    header: {
+      packet_id: 'nexus:definition/test/preference-schema',
+      revision_id: 'nexus:definition/test/preference-schema@r1',
+      family: 'Definition',
+      schema_version: '0.1.0',
+      protocol_version: '0.1.0',
+      created_at: '2026-05-20T00:00:00.000Z',
+      parent_revision_refs: [],
+      merge_strategy: null,
+      authority_scope_ref: null,
+      applicable_scope_refs: [],
+      edges: [],
+      provenance: {
+        created_by: null,
+        submitted_by: null,
+        adapter: 'test',
+        recorded_at: '2026-05-20T00:00:00.000Z',
+        imported_from_revision: null,
+      },
+      moderation: {
+        visibility: 'public',
+        moderation_state: 'open',
+        policy_refs: [],
+        content_warning_ids: [],
+      },
+      external_refs: [],
+      metadata: {
+        tags: [],
+        language: null,
+        summary: null,
+        compatibility: null,
+      },
+      producer: {
+        adapter: 'test',
+        app_version: null,
+      },
+    },
+    body: {
+      subtype: 'packet_schema',
+      defines_packet_type: 'Preference',
+      defines_packet_subtype: 'element',
+      summary: 'Defines Preference.element schema.',
+      schema_key: 'ElementPreferenceBodySchema',
+      supported_subtypes: ['element'],
+    },
+  });
+
+  const bundlePacket = parsePacketEnvelope({
+    ...definitionPacket,
+    header: {
+      ...definitionPacket.header,
+      packet_id: 'nexus:bundle/test-definitions',
+      revision_id: 'nexus:bundle/test-definitions@r1',
+      family: 'Bundle',
+      schema_version: '0.1.0',
+    },
+    body: {
+      subtype: 'packet_set',
+      title: 'Definition packet set',
+      purpose: 'Carry definition packet refs.',
+      items: [
+        {
+          item_role: 'definition_part',
+          packet_ref: { packet_id: definitionPacket.header.packet_id },
+          revision_ref: {
+            packet_id: definitionPacket.header.packet_id,
+            revision_id: definitionPacket.header.revision_id,
+          },
+          packet_type: 'Definition',
+          packet_subtype: 'packet_schema',
+          schema_version: '0.1.0',
+        },
+      ],
+    },
+  });
+
+  assert.equal(definitionPacket.header.family, 'Definition');
+  assert.equal(bundlePacket.header.family, 'Bundle');
+  assert.equal(bundlePacket.body.items[0].packet_type, 'Definition');
 });

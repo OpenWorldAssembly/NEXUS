@@ -107,7 +107,7 @@ function plannedRuntimeConnectorGap(): PacketModernizationPlannedGap {
     area: 'runtime_connector',
     status: 'planned_gap',
     reason:
-      'Runtime connector enrollment is intentionally staged behind manifest-native packet-type builder coverage and master-handler integration.',
+      'Runtime connector enrollment is intentionally staged behind canonical packet-type builder coverage and master-handler integration.',
   };
 }
 
@@ -167,7 +167,7 @@ export function listMutationRuntimeModernizationCoverage(): MutationRuntimeModer
         status: 'planned_gap',
         reason:
           descriptor.kind === 'preference.element.set'
-            ? 'Preference.element is now fortress-enrolled; the old direct runtime connector remains shadow-only for compatibility tests and local comparison.'
+            ? 'Preference.element is now fortress-enrolled; the old connector remains shadow-only for compatibility tests and local comparison.'
             : 'This live mutation intent still runs through the signed fortress corridor and is scheduled for connector enrollment in the modernization chapter.',
       },
     ],

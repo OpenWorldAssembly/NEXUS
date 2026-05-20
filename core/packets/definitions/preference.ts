@@ -136,7 +136,7 @@ export type ElementPreferenceValue = z.infer<typeof ElementPreferenceValueSchema
 export const preferencePacketDefinition = {
   packet_type: 'Preference',
   canonical_body_type: 'preference',
-  definition_status: 'experimental_shadow',
+  definition_status: 'canonical',
   current_schema_version: '0.1.0',
   storage_class: 'private_sync',
   revision_behavior: 'latest_active_projection',
@@ -150,7 +150,7 @@ export const preferencePacketDefinition = {
     supports_downcast: true,
     loss_awareness: 'loss_annotated',
     notes:
-      'Preference.element compatibility is represented as definition.packet_compatibility in the experimental definition-part model.',
+      'Preference.element compatibility is represented as definition.packet_compatibility in the canonical definition-part model.',
   },
   id_strategy: {
     strategy_id: 'preference.latest_active.owner_subtype_context',
@@ -175,7 +175,7 @@ export const preferencePacketDefinition = {
       packet_subtype: 'element',
       label: 'Create element preference',
       policy_action_id: 'preference.element.write',
-      availability: 'shadow_only',
+      availability: 'canonical',
       notes:
         'Shadow action for creating an actor-owned element preference packet from runtime preference state.',
     },
@@ -185,7 +185,7 @@ export const preferencePacketDefinition = {
       packet_subtype: 'element',
       label: 'Revise element preference',
       policy_action_id: 'preference.element.write',
-      availability: 'shadow_only',
+      availability: 'canonical',
       notes:
         'Supersedes the previous active preference for the same owner/context without changing graph relations.',
     },
@@ -195,7 +195,7 @@ export const preferencePacketDefinition = {
       packet_subtype: 'element',
       label: 'Withdraw element preference',
       policy_action_id: 'preference.element.write',
-      availability: 'shadow_only',
+      availability: 'canonical',
       notes:
         'Marks the projected preference as withdrawn so runtime can fall back to defaults or older compatible state.',
     },
@@ -205,7 +205,7 @@ export const preferencePacketDefinition = {
       packet_subtype: 'element',
       label: 'Project element preference',
       policy_action_id: null,
-      availability: 'shadow_only',
+      availability: 'canonical',
       notes:
         'Read-side projection into the current shell element preference shape.',
     },
@@ -215,7 +215,7 @@ export const preferencePacketDefinition = {
       packet_subtype: 'element',
       label: 'Index element preference',
       policy_action_id: null,
-      availability: 'shadow_only',
+      availability: 'canonical',
       notes:
         'Indexes owner/subtype/context fields for latest-active preference projection.',
     },
@@ -228,7 +228,7 @@ export const preferencePacketDefinition = {
       action_ids: ['preference.element.create', 'preference.element.revise'],
       input_schema_key: 'ElementPreferenceBuilderInputSchema',
       output_schema_key: 'ElementPreferenceBodySchema',
-      availability: 'shadow_only',
+      availability: 'canonical',
       notes:
         'Experimental body builder descriptor only; claimed Preference.element writes now enter the fortress-enrolled preference workflow, while this descriptor remains manifest metadata rather than executable imported code.',
     },
@@ -244,7 +244,7 @@ export const preferencePacketDefinition = {
       ],
       builder_ids: ['preference.element.body.v0'],
       policy_action_ids: ['preference.element.write'],
-      availability: 'shadow_only',
+      availability: 'canonical',
       notes:
         'Plans the latest-active/supersedes-chain preference write before manifest-driven corridor enrollment.',
     },
@@ -254,7 +254,7 @@ export const preferencePacketDefinition = {
       action_ids: ['preference.element.project'],
       builder_ids: [],
       policy_action_ids: [],
-      availability: 'shadow_only',
+      availability: 'canonical',
       notes:
         'Projects latest active preference packets into shell display preferences without creating relations.',
     },
@@ -265,17 +265,17 @@ export const preferencePacketDefinition = {
       action_ids: ['preference.element.create', 'preference.element.revise'],
       planner_id: 'preference.element.latest_active_revision.v0',
       result_family: 'packet_write',
-      availability: 'shadow_only',
+      availability: 'canonical',
       notes:
-        'Future manifest-driven mutation intent for creating or revising element preferences.',
+        'Manifest mutation intent for creating or revising element preferences through the signed corridor.',
     },
     {
       mutation_intent: 'preference.element.withdraw',
       action_ids: ['preference.element.withdraw'],
       planner_id: 'preference.element.latest_active_revision.v0',
       result_family: 'packet_write',
-      availability: 'shadow_only',
-      notes: 'Future manifest-driven mutation intent for withdrawing element preferences.',
+      availability: 'canonical',
+      notes: 'Manifest mutation intent for withdrawing element preferences.',
     },
   ],
   workflow_plans: [
@@ -328,7 +328,7 @@ export const preferencePacketDefinition = {
             'Shadow workflow for claimed actor interface preference revisions through the fortress corridor.',
         },
       ],
-      availability: 'shadow_only',
+      availability: 'canonical',
       notes:
         'Describes Preference.element set semantics; trusted runtime code interprets and enforces the live write path.',
     },
@@ -341,7 +341,7 @@ export const preferencePacketDefinition = {
       to_schema_version: '0.1.0',
       direction: 'upcast_to_current',
       loss_awareness: 'none',
-      availability: 'shadow_only',
+      availability: 'canonical',
       notes:
         'Upcasts the old runtime-compatible shape using main_scope_ids and one show_parent_chains flag into current associated/followed parent-chain toggles.',
     },
@@ -352,7 +352,7 @@ export const preferencePacketDefinition = {
       to_schema_version: 'legacy_v0',
       direction: 'downcast_from_current',
       loss_awareness: 'loss_annotated',
-      availability: 'shadow_only',
+      availability: 'canonical',
       notes:
         'Downcasts current element preferences into the old one-toggle parent-chain shape; differing associated/followed toggles are loss-annotated.',
     },
@@ -363,7 +363,7 @@ export const preferencePacketDefinition = {
       to_schema_version: '0.1.0',
       direction: 'bidirectional_neighbor',
       loss_awareness: 'none',
-      availability: 'shadow_only',
+      availability: 'canonical',
       notes:
         'Identity adapter placeholder for the initial Preference.element schema; future versions should add nearest-current steps here.',
     },
@@ -392,7 +392,7 @@ export const preferencePacketDefinition = {
       defines_packet_type: 'Preference',
       defines_packet_subtype: 'element',
       schema_version: '0.1.0',
-      availability: 'shadow_only',
+      availability: 'canonical',
       required: true,
       references: [
         'preference.element.packet_schema.v0',
@@ -404,7 +404,7 @@ export const preferencePacketDefinition = {
         'preference.element.packet_dependency.v0',
       ],
       notes:
-        'Root definition record for the experimental Preference.element packet subtype.',
+        'Root definition record for the canonical Preference.element packet subtype.',
     },
     {
       part_id: 'preference.element.packet_schema.v0',
@@ -412,11 +412,11 @@ export const preferencePacketDefinition = {
       defines_packet_type: 'Preference',
       defines_packet_subtype: 'element',
       schema_version: '0.1.0',
-      availability: 'shadow_only',
+      availability: 'canonical',
       required: true,
       covers_subtypes: ['element'],
       notes:
-        'Schema part covering only the active experimental element subtype.',
+        'Schema part covering the active canonical element subtype.',
     },
     {
       part_id: 'preference.element.packet_action_registry.v0',
@@ -424,7 +424,7 @@ export const preferencePacketDefinition = {
       defines_packet_type: 'Preference',
       defines_packet_subtype: 'element',
       schema_version: '0.1.0',
-      availability: 'shadow_only',
+      availability: 'canonical',
       required: true,
       references: [
         'preference.element.create',
@@ -442,7 +442,7 @@ export const preferencePacketDefinition = {
       defines_packet_type: 'Preference',
       defines_packet_subtype: 'element',
       schema_version: '0.1.0',
-      availability: 'shadow_only',
+      availability: 'canonical',
       required: true,
       references: ['preference.element.body.v0'],
       notes: 'Builder descriptor part for the generic element preference body builder.',
@@ -453,7 +453,7 @@ export const preferencePacketDefinition = {
       defines_packet_type: 'Preference',
       defines_packet_subtype: 'element',
       schema_version: '0.1.0',
-      availability: 'shadow_only',
+      availability: 'canonical',
       required: true,
       references: [
         'preference.element.latest_active_revision.v0',
@@ -467,7 +467,7 @@ export const preferencePacketDefinition = {
       defines_packet_type: 'Preference',
       defines_packet_subtype: 'element',
       schema_version: '0.1.0',
-      availability: 'shadow_only',
+      availability: 'canonical',
       required: true,
       references: ['scope_display_preferences'],
       notes: 'Projection descriptor part for current shell element preference parity.',
@@ -478,7 +478,7 @@ export const preferencePacketDefinition = {
       defines_packet_type: 'Preference',
       defines_packet_subtype: 'element',
       schema_version: '0.1.0',
-      availability: 'shadow_only',
+      availability: 'canonical',
       required: true,
       references: [
         'preference.element.legacy_v0_to_0_1',
@@ -493,7 +493,7 @@ export const preferencePacketDefinition = {
       defines_packet_type: 'Preference',
       defines_packet_subtype: 'element',
       schema_version: '0.1.0',
-      availability: 'shadow_only',
+      availability: 'canonical',
       required: true,
       references: [
         'generic.preference.builder',
@@ -502,7 +502,7 @@ export const preferencePacketDefinition = {
         'runtime.shell_chrome_projection',
       ],
       notes:
-        'Dependency definition part for the generic builder/planner/projection capabilities needed by the shadow bridge.',
+        'Dependency definition part for the generic builder/planner/projection capabilities needed by trusted-local Preference planning.',
     },
   ],
   fixtures: [

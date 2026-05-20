@@ -91,6 +91,38 @@ test('retired legacy assembly-association mutation intent has no live prepare al
   );
 });
 
+test('Preference no-op finalize keeps the standard wrapped result shape', () => {
+  const source = readFileSync(
+    join(
+      process.cwd(),
+      'runtime',
+      'nexus',
+      'server',
+      'fortress-finalize-handler-implementation.ts'
+    ),
+    'utf8'
+  );
+  const noOpBranchIndex = source.indexOf(
+    'if (preparedResult.wrote_revision === false)'
+  );
+  const signedWriteBranchIndex = source.indexOf(
+    "throw new Error('Preference finalize requires signed packet candidates.')",
+    noOpBranchIndex
+  );
+  const wrappedNoOpResultIndex = source.indexOf(
+    'result: toPreferenceElementFortressResult(preparedResult.plan)',
+    noOpBranchIndex
+  );
+  const emptyPersistEffectsIndex = source.indexOf('persist_effects: []', noOpBranchIndex);
+
+  assert.notEqual(noOpBranchIndex, -1);
+  assert.notEqual(signedWriteBranchIndex, -1);
+  assert.notEqual(wrappedNoOpResultIndex, -1);
+  assert.notEqual(emptyPersistEffectsIndex, -1);
+  assert.ok(emptyPersistEffectsIndex < signedWriteBranchIndex);
+  assert.ok(wrappedNoOpResultIndex < signedWriteBranchIndex);
+});
+
 
 test('registered mutation intent handlers resolve to concrete prepare and finalize implementations', () => {
   const prepareMap = createMutationPrepareHandlerMap(

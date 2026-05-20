@@ -14,6 +14,8 @@ import {
   resolveSeededPacketDefinitionProfile,
 } from '@core/packets/packet-definition-manifest';
 import {
+  CANONICAL_SEED_PACKETS,
+  DEFINITION_PROFILE_SEED_PACKETS,
   PERSONAL_TREE_PACKET_IDS,
   PERSONAL_TREE_REFS,
   PERSONAL_SEED_PACKETS,
@@ -40,10 +42,11 @@ export type FinalPreReseedReadinessReport = {
   seed_default_anchor_packet_ids: string[];
   required_default_policy_packet_ids: string[];
   discussion_default_packet_ids: string[];
-  manifest_native_packet_types: string[];
+  canonical_definition_packet_types: string[];
   seeded_definition_profile_id: string;
   seeded_definition_packet_count: number;
   seeded_definition_bundle_packet_id: string;
+  canonical_definition_seed_packet_ids: string[];
   out_of_scope_packet_families: PacketFamily[];
   findings: string[];
 };
@@ -134,7 +137,10 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
     PERSONAL_TREE_PACKET_IDS.visitor_lobby_policy,
   ];
   const seedPacketIds = new Set(
-    PERSONAL_SEED_PACKETS.map((packet) => packet.header.packet_id)
+    CANONICAL_SEED_PACKETS.map((packet) => packet.header.packet_id)
+  );
+  const definitionSeedPacketIds = DEFINITION_PROFILE_SEED_PACKETS.map(
+    (packet) => packet.header.packet_id
   );
   const findings = [
     ...closureReport.findings,
@@ -157,10 +163,20 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
     ...requiredDefaultPolicyPacketIds
       .filter((packetId) => !seedPacketIds.has(packetId))
       .map((packetId) => `Required default policy seed is missing: ${packetId}.`),
+    ...seededDefinitionProfile.definition_packets
+      .filter((candidate) => !seedPacketIds.has(candidate.packet.header.packet_id))
+      .map(
+        (candidate) =>
+          `Canonical Definition seed packet is missing: ${candidate.packet.header.packet_id}.`
+      ),
   ];
 
   if (!seedPacketIds.has(PERSONAL_TREE_REFS.owa_action.packet_id)) {
     findings.push('Forward OWA Action initiative anchor is missing from seeds.');
+  }
+
+  if (!seedPacketIds.has(seededDefinitionProfile.bundle_packet.packet.header.packet_id)) {
+    findings.push('Canonical Definition profile Bundle seed packet is missing.');
   }
 
   return {
@@ -178,7 +194,7 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
     seed_default_anchor_packet_ids: seedDefaultAnchorPacketIds,
     required_default_policy_packet_ids: requiredDefaultPolicyPacketIds,
     discussion_default_packet_ids: listDiscussionSeedPacketIds(),
-    manifest_native_packet_types: uniqueSorted(
+    canonical_definition_packet_types: uniqueSorted(
       definitions.map(
         (definition) => definition.packet_type
       )
@@ -188,6 +204,7 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
       seededDefinitionProfile.definition_packets.length,
     seeded_definition_bundle_packet_id:
       seededDefinitionProfile.bundle_packet.packet_ref.packet_id,
+    canonical_definition_seed_packet_ids: uniqueSorted(definitionSeedPacketIds),
     out_of_scope_packet_families: listOutOfScopePacketFamilies(
       closureReport.packet_families
     ),

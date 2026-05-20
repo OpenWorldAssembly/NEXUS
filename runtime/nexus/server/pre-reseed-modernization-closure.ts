@@ -313,7 +313,7 @@ export function createPreReseedModernizationClosureReport(): PreReseedModernizat
       status: 'closed',
       queue: 'first_generic_promotion',
       reason:
-        'Preference.element direct connector is retained as a shadow comparison bridge while authenticated writes are enrolled through the fortress.',
+        'Preference.element keeps a shadow comparison connector only; authenticated writes are enrolled through the signed fortress corridor.',
       next_step:
         'Keep guest compatibility writes outside canonical packet enrollment until reseed policy is designed.',
     },

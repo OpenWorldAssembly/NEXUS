@@ -1,6 +1,6 @@
 /**
  * File: packet-definition-manifest.ts
- * Description: Experimental manifest surface for packet type definitions, compatibility posture, and future manifest-driven builders.
+ * Description: Active manifest surface for packet type definitions, compatibility posture, and trusted local builders.
  */
 
 import {
@@ -67,7 +67,7 @@ export type ExperimentalPacketType =
 export const PACKET_DEFINITION_MANIFEST = {
   manifest_type: 'packet_definition_manifest',
   manifest_version: '0.1.0',
-  status: 'experimental_shadow',
+  status: 'active',
   template_version: PACKET_MANIFEST_TEMPLATE_VERSION,
   items: Object.values(EXPERIMENTAL_PACKET_TYPE_DEFINITIONS).map(
     (definition) => ({
@@ -89,10 +89,10 @@ export const PACKET_DEFINITION_MANIFEST = {
   ),
   dependencies: [],
   compatibility_notes: [
-    'This manifest is a shadow-mode definition surface. It does not replace live PACKET_FAMILIES yet.',
+    'Definition, Bundle, and Preference are canonical packet families; generic family descriptors remain staged where their live runtime enrollment is still shadowed.',
     'Definition.packet_compatibility parts carry current identity and adjacent version-ladder adapter metadata.',
     'Bundle packets remain carrier inventories and are not the semantic home for packet definitions.',
-    'The manifest uses packet_type language as the forward-facing replacement for packet family terminology.',
+    'Stored Definition and Bundle packets describe packet semantics, but executable behavior remains trusted-local.',
   ],
 } as const satisfies PacketDefinitionManifest;
 
@@ -239,4 +239,19 @@ export * from '@core/packets/packet-definition-seeds.ts';
 export * from '@core/packets/packet-operation-ontology.ts';
 export * from '@core/packets/packet-workflow-planner.ts';
 export * from '@core/packets/packet-policy-dependency.ts';
-export * from '@core/packets/packet-policy-semantics.ts';
+export {
+  auditPacketPolicySemanticAuthority,
+  listPacketPolicySemanticDescriptors,
+  resolveInitiativePolicyAnchorRefs,
+  resolvePacketDefaultPolicyRefs,
+  resolvePacketDependencySemanticDescriptor,
+  resolvePolicyPacketSemantics,
+  type PacketDependencyAuthorityAuditReport,
+  type PacketDependencySemanticAnchorKind,
+  type PacketDependencySemanticDescriptor,
+  type PacketPolicyAuthorityAuditReport,
+  type PacketPolicySemanticDescriptor,
+  type PacketPolicySemanticKind,
+  type PacketSemanticAuthorityAuditFinding,
+  type ResolvedPolicyPacketSemantics,
+} from '@core/packets/packet-policy-semantics.ts';

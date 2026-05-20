@@ -1,9 +1,9 @@
 /**
  * File: compatibility.ts
- * Description: Compatibility packet-type R&D has moved under Definition.packet_compatibility for the current shadow experiment.
+ * Description: Compatibility packet-type work lives under Definition.packet_compatibility.
  *
  * This file remains as a narrow transition shim so older local imports fail less abruptly while the active
- * experimental manifest enrolls Definition, Preference, and Bundle only.
+ * manifest exposes Definition, Preference, and Bundle as canonical packet families.
  */
 
 export {

@@ -60,6 +60,10 @@ test('every manifest mutation maps to known packet operations', () => {
 
 test('generic family writes map to single-packet create and revise operations', () => {
   for (const family of GENERIC_PACKET_BUILD_FAMILIES) {
+    if (['Definition', 'Bundle', 'Preference'].includes(family)) {
+      continue;
+    }
+
     const definition = getExperimentalPacketTypeDefinition(family);
     assert.ok(definition);
 
@@ -75,7 +79,7 @@ test('generic family writes map to single-packet create and revise operations', 
   }
 });
 
-test('manifest-native packet types map to their shadow operation descriptors', () => {
+test('canonical Definition, Bundle, and Preference map to operation descriptors', () => {
   const expectedOperations = new Map([
     ['Definition', ['single_packet.create', 'single_packet.revise']],
     ['Preference', ['single_packet.create', 'single_packet.revise', 'single_packet.withdraw']],

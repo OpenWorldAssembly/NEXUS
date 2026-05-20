@@ -203,12 +203,13 @@ This monthly log condenses the May 2026 decisions that remain most important for
 
 - Live fresh writes no longer accept `assembly_association.claim.set` or `home_locality.claim.set`; canonical association and home-locality writes now use relation-first mutation intents only.
 - Legacy claim/home-locality material remains compatibility-readable and importable, but it is no longer a live mutation corridor entrypoint.
-- A final pre-reseed readiness report now inventories canonical write intents, compatibility-only surfaces, OWA default anchors, required seed policies, discussion defaults, manifest-native packet types, and out-of-scope packet families for the separate reseed design pass.
+- A final pre-reseed readiness report now inventories canonical write intents, compatibility-only surfaces, OWA default anchors, required seed policies, discussion defaults, canonical definition packet types, and out-of-scope packet families for the separate reseed design pass.
 
 ## 2026-05 definition packetization and Preference fortress promotion
 
-- Active manifest definition parts now produce schema-validated `Definition` packet candidates, and those candidates are grouped into one `Bundle.packet_set` definition profile inventory for reseed readiness.
+- Active manifest definition parts now produce schema-validated canonical `Definition` packet envelopes, and those envelopes are grouped into one canonical `Bundle.packet_set` definition profile inventory for reseed readiness.
 - The seeded definition profile audit compares packet material back to the core manifest and fails closed on missing parts, unexpected parts, stale profile metadata, duplicate bundle refs, or digest drift.
 - Stored Definition and Bundle packet material is now reseed truth material, but execution remains trusted-local; imported definition packets may describe schemas, operations, policies, dependencies, planners, and builders, but they cannot introduce server code.
+- `Definition`, `Bundle`, and `Preference` are now canonical packet families with body schemas, compatibility entries, builder support, pipeline inventory coverage, and packet-store validation like other active packet families.
 - Claimed shell preference writes now run through the standard signed mutation prepare/finalize corridor as `preference.element.set`, preserving projected responses, actor proof/session checks, same-value no-op behavior, and legacy cache sync. `/api/nexus/shell-preferences` remains guest compatibility state only.
 - The direct `preference.element.interface.set` runtime connector is retained as a shadow/internal comparison bridge rather than the live claimed-write corridor.

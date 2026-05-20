@@ -126,6 +126,10 @@ export interface ElementPacketInput extends PacketBuilderBaseInput {
   claimed_role_refs?: PacketRef[];
 }
 
+export interface DefinitionPacketInput extends PacketBuilderBaseInput {
+  body: z.input<(typeof PACKET_BODY_SCHEMAS)['Definition']>;
+}
+
 export interface LocationPacketInput extends PacketBuilderBaseInput {
   subtype: string;
   title: string;
@@ -295,6 +299,10 @@ export interface PolicyPacketInput extends PacketBuilderBaseInput {
   governance_policy?: PacketBodyByType['Policy']['governance_policy'];
 }
 
+export interface PreferencePacketInput extends PacketBuilderBaseInput {
+  body: z.input<(typeof PACKET_BODY_SCHEMAS)['Preference']>;
+}
+
 export interface VotePacketInput extends PacketBuilderBaseInput {
   title: string;
   proposal_ref: PacketRef;
@@ -349,6 +357,10 @@ export interface AttestationPacketInput extends PacketBuilderBaseInput {
   supporting_refs?: PacketRef[];
   note?: string | null;
   supersedes_ref?: PacketRef | null;
+}
+
+export interface BundlePacketInput extends PacketBuilderBaseInput {
+  body: z.input<(typeof PACKET_BODY_SCHEMAS)['Bundle']>;
 }
 
 const DEFAULT_CREATED_AT = '2026-04-08T00:00:00.000Z';
@@ -441,6 +453,19 @@ export function createElementPacket(
       ...input,
       metadata_tags: input.metadata_tags ?? input.tags ?? [],
       metadata_summary: input.metadata_summary ?? input.summary ?? null,
+    },
+  });
+}
+
+export function createDefinitionPacket(
+  input: DefinitionPacketInput
+): PacketEnvelopeByType['Definition'] {
+  return buildPacket({
+    family: 'Definition',
+    body: input.body,
+    header: {
+      ...input,
+      metadata_summary: input.metadata_summary ?? input.body.summary,
     },
   });
 }
@@ -789,6 +814,21 @@ export function createPolicyPacket(
   });
 }
 
+export function createPreferencePacket(
+  input: PreferencePacketInput
+): PacketEnvelopeByType['Preference'] {
+  return buildPacket({
+    family: 'Preference',
+    body: input.body,
+    header: {
+      ...input,
+      metadata_summary:
+        input.metadata_summary ??
+        `Preference ${input.body.subtype} for ${input.body.owner_ref.packet_id}`,
+    },
+  });
+}
+
 /**
  * Inputs: common packet header fields plus the vote body data.
  * Output: a vote packet with an explicit edge back to the proposal it evaluates.
@@ -869,6 +909,20 @@ export function createAttestationPacket(
     header: {
       ...input,
       metadata_summary: input.metadata_summary ?? input.note ?? null,
+    },
+  });
+}
+
+export function createBundlePacket(
+  input: BundlePacketInput
+): PacketEnvelopeByType['Bundle'] {
+  return buildPacket({
+    family: 'Bundle',
+    body: input.body,
+    header: {
+      ...input,
+      metadata_summary:
+        input.metadata_summary ?? input.body.summary ?? input.body.purpose,
     },
   });
 }

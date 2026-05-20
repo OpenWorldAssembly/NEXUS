@@ -56,7 +56,7 @@ test('Preference.element direct master-handler connector is no longer live-enrol
   assert.deepEqual(preferenceCoverage.runtime_connector_ids, []);
 });
 
-test('packet-type runtime coverage treats Definition and Bundle as manifest-native', () => {
+test('packet-type runtime coverage treats Definition and Bundle as canonical packet types', () => {
   const coverageByPacketType = new Map(
     listPacketTypeRuntimeModernizationCoverage().map((entry) => [
       entry.packet_type,

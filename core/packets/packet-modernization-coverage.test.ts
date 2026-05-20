@@ -98,7 +98,7 @@ test('families without generic builders remain explicit planned gaps', () => {
   const genericFamilies = new Set<string>(GENERIC_PACKET_BUILD_FAMILIES);
 
   for (const entry of coverage) {
-    if (genericFamilies.has(entry.family) || entry.family === 'Preference') {
+    if (genericFamilies.has(entry.family)) {
       continue;
     }
 
@@ -110,7 +110,7 @@ test('families without generic builders remain explicit planned gaps', () => {
   }
 });
 
-test('Preference remains manifest-defined with its expected build-pipeline planned gap', () => {
+test('Preference is manifest-defined with canonical builder support', () => {
   const preferenceCoverage = listPacketFamilyModernizationCoverage().find(
     (entry) => entry.family === 'Preference'
   );
@@ -118,13 +118,14 @@ test('Preference remains manifest-defined with its expected build-pipeline plann
   assert.ok(preferenceCoverage);
   assert.equal(preferenceCoverage.manifest_definition_status, 'defined');
   assert.equal(preferenceCoverage.definition_parts_status, 'complete');
-  assert.equal(preferenceCoverage.build_pipeline_status, 'planned_gap');
-  assert.ok(
-    preferenceCoverage.planned_gaps.some((gap) => gap.area === 'build_pipeline')
+  assert.equal(preferenceCoverage.build_pipeline_status, 'supported');
+  assert.equal(
+    preferenceCoverage.planned_gaps.some((gap) => gap.area === 'build_pipeline'),
+    false
   );
 });
 
-test('Definition and Bundle are recorded as manifest-native packet types', () => {
+test('Definition and Bundle are recorded as canonical packet families', () => {
   const targets = listPacketNextPhaseLiveEnrollmentTargets();
 
   assert.deepEqual(
@@ -133,10 +134,10 @@ test('Definition and Bundle are recorded as manifest-native packet types', () =>
   );
 
   for (const target of targets) {
-    assert.equal(target.target_status, 'manifest_native');
-    assert.equal(target.currently_in_packet_families, false);
+    assert.equal(target.target_status, 'canonical_family');
+    assert.equal(target.currently_in_packet_families, true);
     assert.equal(target.manifest_definition_status, 'defined');
-    assert.ok(target.reason.includes('should not be enrolled'));
+    assert.ok(target.reason.includes('canonical packet families'));
   }
 });
 
@@ -151,7 +152,7 @@ test('packet-type modernization coverage includes every experimental manifest de
   assert.deepEqual(coveredPacketTypes, manifestPacketTypes);
 });
 
-test('manifest-native packet types have executable body-builder coverage', () => {
+test('canonical packet types have executable body-builder coverage', () => {
   const coverageByPacketType = new Map(
     listPacketTypeModernizationCoverage().map((entry) => [
       entry.packet_type,

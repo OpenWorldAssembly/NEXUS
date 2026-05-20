@@ -725,7 +725,10 @@ export class MutationFinalizeHandlers {
       if (signedPackets.length > 0) {
         throw new Error('Preference no-op finalize does not accept signed packets.');
       }
-      finalized = toPreferenceElementFortressResult(preparedResult, []);
+      finalized = {
+        persist_effects: [],
+        result: toPreferenceElementFortressResult(preparedResult.plan),
+      };
     } else {
       if (!input.actorContext) {
         throw new Error('Preference signed finalize requires actor context.');
