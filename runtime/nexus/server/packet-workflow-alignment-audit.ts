@@ -21,6 +21,9 @@ import {
   listFortressHandlerGenericizationEntries,
 } from '@runtime/nexus/server/fortress-handler-genericization-audit';
 import { listMutationIntentDescriptors } from '@runtime/nexus/server/mutation-intent-registry';
+import {
+  listTrustedCompositeWorkflowAdapters,
+} from '@runtime/nexus/server/trusted-composite-workflow-adapters';
 
 export type PacketWorkflowAlignmentStatus =
   | 'workflow_aligned'
@@ -47,6 +50,7 @@ export type PacketWorkflowAlignmentCoverage = {
   workflow_alignment_status: PacketWorkflowAlignmentStatus;
   workflow_plan_ids: string[];
   workflow_plan_packet_types: string[];
+  composition_adapter_ids: string[];
   dry_run_ready: boolean;
   resolver_ids: string[];
   dependency_ids: string[];
@@ -152,6 +156,21 @@ function getTrustedCapabilities(
   );
 }
 
+function getCompositeAdapterIdsByIntent(): Map<string, string[]> {
+  const adapterIdsByIntent = new Map<string, string[]>();
+
+  for (const adapter of listTrustedCompositeWorkflowAdapters()) {
+    for (const mutationIntent of adapter.mutation_intents) {
+      adapterIdsByIntent.set(mutationIntent, [
+        ...(adapterIdsByIntent.get(mutationIntent) ?? []),
+        adapter.adapter_id,
+      ]);
+    }
+  }
+
+  return adapterIdsByIntent;
+}
+
 function resolveAlignmentStatus(input: {
   genericizationStatus: FortressGenericizationStatus;
   hasWorkflowPlans: boolean;
@@ -169,10 +188,14 @@ function resolveAlignmentStatus(input: {
 
 export function listPacketWorkflowAlignmentCoverage(): PacketWorkflowAlignmentCoverage[] {
   const plansByIntent = getWorkflowPlansByIntent();
+  const compositeAdapterIdsByIntent = getCompositeAdapterIdsByIntent();
 
   return listFortressHandlerGenericizationEntries().map((entry) => {
     const lookupIntent = entry.canonical_intent ?? entry.mutation_intent;
     const workflowPlans = plansByIntent.get(lookupIntent) ?? [];
+    const compositionAdapterIds = uniqueSorted(
+      compositeAdapterIdsByIntent.get(lookupIntent) ?? []
+    );
     const dryRuns = resolveDryRuns(workflowPlans);
     const resolverIds = uniqueSorted(dryRuns.flatMap((dryRun) => dryRun.resolver_ids));
     const dependencyIds = uniqueSorted(dryRuns.flatMap((dryRun) => dryRun.dependency_ids));
@@ -227,6 +250,7 @@ export function listPacketWorkflowAlignmentCoverage(): PacketWorkflowAlignmentCo
       workflow_plan_packet_types: uniqueSorted(
         workflowPlans.map((plan) => plan.packet_type)
       ),
+      composition_adapter_ids: compositionAdapterIds,
       dry_run_ready:
         workflowPlans.length > 0 &&
         dryRuns.every((dryRun) => dryRun.ready_for_shadow_interpretation),

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { createAssemblyPacket } from '@core/packets/builders';
+import { createAssemblyPacket, createRolePacket } from '@core/packets/builders';
 import { createPersonIdentityPacket } from '@core/packets/identity';
 import type {
   MutationIntent,
@@ -10,11 +10,16 @@ import type {
 import type { MutationActionId } from '@core/auth/write-policy';
 import type { PacketEnvelope } from '@core/schema/packet-schema';
 import { createIdentityKeyBinding } from '@runtime/nexus/identity-crypto';
-import { planFollowRelationPackets } from './elemental-scope-relation-planner.ts';
+import {
+  planAssemblyAssociationRelationPackets,
+  planFollowRelationPackets,
+  planHomeLocalityRelationPackets,
+} from './elemental-scope-relation-planner.ts';
 import type { MutationPolicyGate } from './mutation-policy-gate.ts';
 import {
   auditLiveGenericWorkflowEnrollments,
   listLiveGenericWorkflowEnrollments,
+  resolveTrustedClaimOperationPlan,
   resolveTrustedRelationOperationPlan,
   runTrustedPacketWorkflowMutation,
 } from './trusted-packet-workflow-runtime.ts';
@@ -49,21 +54,30 @@ function createTargetScope() {
 
 function createFakeStore(input: {
   targetScopePacket: PacketEnvelope;
+  extraPackets?: PacketEnvelope[];
   existingRelationPacket?: PacketEnvelope | null;
+  existingClaimRevision?: { packet_id: string; revision_id: string } | null;
 }) {
+  const packetsById = new Map(
+    [input.targetScopePacket, ...(input.extraPackets ?? [])].map((packet) => [
+      packet.header.packet_id,
+      packet,
+    ])
+  );
+
   return {
     async fetchByPacket({ packet_id }: { packet_id: string }) {
-      if (packet_id === input.targetScopePacket.header.packet_id) {
-        return input.targetScopePacket;
-      }
-
       if (packet_id === input.existingRelationPacket?.header.packet_id) {
         return input.existingRelationPacket;
       }
 
-      return null;
+      return packetsById.get(packet_id) ?? null;
     },
     async fetchPreferredRevision({ packet_id }: { packet_id: string }) {
+      if (packet_id === input.existingClaimRevision?.packet_id) {
+        return input.existingClaimRevision;
+      }
+
       if (packet_id === input.existingRelationPacket?.header.packet_id) {
         return {
           packet_id,
@@ -73,13 +87,22 @@ function createFakeStore(input: {
 
       return null;
     },
+    async listPreferredPacketsByFamily(family: string) {
+      return [
+        input.existingRelationPacket,
+        ...(input.extraPackets ?? []),
+      ].filter(
+        (packet): packet is PacketEnvelope =>
+          !!packet && packet.header.family === family
+      );
+    },
   };
 }
 
 function createPolicyGate() {
   return {
     async resolveScopePolicyDecision(input: {
-      governingScopePacket: PacketEnvelope;
+      governingScopePacket: PacketEnvelope | null;
       actionIds: MutationActionId[];
     }) {
       return {
@@ -87,7 +110,7 @@ function createPolicyGate() {
         required_proof_level: 'claimed_session' as const,
         accepted_proof_methods: ['claimed_session' as const],
         source_policy_packet_ids: ['nexus:policy/write-lock'],
-        governing_scope_packet_id: input.governingScopePacket.header.packet_id,
+        governing_scope_packet_id: input.governingScopePacket?.header.packet_id ?? null,
       };
     },
   } as MutationPolicyGate;
@@ -102,17 +125,93 @@ function normalizeGeneratedTimestamps(packet: PacketEnvelope) {
   );
 }
 
-test('live generic workflow enrollment includes only follow set and clear', () => {
+test('live generic workflow enrollment includes relation, claim, and attestation direct operations', () => {
   assert.deepEqual(
     listLiveGenericWorkflowEnrollments().map(
       (enrollment) => enrollment.mutation_intent
     ),
-    ['follows.relation.set', 'follows.relation.clear']
+    [
+      'assembly_association.relation.set',
+      'assembly_association.relation.clear',
+      'home_locality.relation.set',
+      'follows.relation.set',
+      'follows.relation.clear',
+      'role_association.claim.set',
+      'attestation.packet_signal.set',
+    ]
   );
 
   const report = auditLiveGenericWorkflowEnrollments();
   assert.equal(report.status, 'pass');
   assert.deepEqual(report.findings, []);
+});
+
+test('trusted assembly association planner matches the existing relation planner oracle', async () => {
+  const actorPacket = await createClaimedActor();
+  const targetScopePacket = createTargetScope();
+  const packetStore = createFakeStore({ targetScopePacket });
+  const intent: Extract<
+    MutationIntent,
+    { kind: 'assembly_association.relation.set' }
+  > = {
+    kind: 'assembly_association.relation.set',
+    scope_id: 'target-scope',
+    assembly_packet_id: targetScopePacket.header.packet_id,
+    note: 'Joining the assembly',
+  };
+
+  const trustedPlan = await resolveTrustedRelationOperationPlan({
+    packetStore: packetStore as never,
+    policyGate: createPolicyGate(),
+    actorPacket,
+    intent,
+  });
+  const oraclePlan = await planAssemblyAssociationRelationPackets({
+    packetStore: packetStore as never,
+    actorPacket,
+    targetScopePacket,
+    mode: 'set',
+    note: intent.note,
+  });
+
+  assert.equal(trustedPlan.operation_kind, 'relation.set');
+  assert.equal(
+    trustedPlan.workflow_plan_id,
+    'relation.assembly_association.set.workflow.v0'
+  );
+  assert.deepEqual(
+    trustedPlan.relation_plan.packets.map(normalizeGeneratedTimestamps),
+    oraclePlan.packets.map(normalizeGeneratedTimestamps)
+  );
+});
+
+test('trusted home locality planner matches the existing relation planner oracle', async () => {
+  const actorPacket = await createClaimedActor();
+  const targetScopePacket = createTargetScope();
+  const packetStore = createFakeStore({ targetScopePacket });
+  const intent: Extract<MutationIntent, { kind: 'home_locality.relation.set' }> = {
+    kind: 'home_locality.relation.set',
+    home_scope_packet_id: targetScopePacket.header.packet_id,
+  };
+
+  const trustedPlan = await resolveTrustedRelationOperationPlan({
+    packetStore: packetStore as never,
+    policyGate: createPolicyGate(),
+    actorPacket,
+    intent,
+  });
+  const oraclePlan = await planHomeLocalityRelationPackets({
+    packetStore: packetStore as never,
+    actorPacket,
+    homeScopePacket: targetScopePacket,
+    forceSelectedRevision: true,
+  });
+
+  assert.equal(trustedPlan.operation_kind, 'relation.set');
+  assert.deepEqual(
+    trustedPlan.relation_plan.packets.map(normalizeGeneratedTimestamps),
+    oraclePlan.packets.map(normalizeGeneratedTimestamps)
+  );
 });
 
 test('trusted follow set planner matches the existing relation planner oracle', async () => {
@@ -220,6 +319,52 @@ test('trusted workflow mutation returns existing fortress prepare shape', async 
   assert.ok(preparedMutation.prepared_packets[0].unsigned_digest);
 });
 
+test('trusted role claim planner creates assert and withdraw operations from packet-defined values', async () => {
+  const actorPacket = await createClaimedActor();
+  const targetScopePacket = createTargetScope();
+  const rolePacket = createRolePacket({
+    packet_id: 'nexus:role/facilitator',
+    created_at: '2026-05-19T00:02:00.000Z',
+    authority_scope_ref: { packet_id: targetScopePacket.header.packet_id },
+    applicable_scope_refs: [{ packet_id: targetScopePacket.header.packet_id }],
+    created_by: { packet_id: actorPacket.header.packet_id },
+    title: 'Facilitator',
+    role_kind: 'facilitator',
+    status: 'active',
+  });
+  const packetStore = createFakeStore({
+    targetScopePacket,
+    extraPackets: [rolePacket],
+  });
+
+  const setPlan = await resolveTrustedClaimOperationPlan({
+    packetStore: packetStore as never,
+    policyGate: createPolicyGate(),
+    actorPacket,
+    intent: {
+      kind: 'role_association.claim.set',
+      role_packet_id: rolePacket.header.packet_id,
+      claimed: true,
+    },
+  });
+  const withdrawPlan = await resolveTrustedClaimOperationPlan({
+    packetStore: packetStore as never,
+    policyGate: createPolicyGate(),
+    actorPacket,
+    intent: {
+      kind: 'role_association.claim.set',
+      role_packet_id: rolePacket.header.packet_id,
+      claimed: false,
+    },
+  });
+
+  assert.equal(setPlan.operation_kind, 'claim.assert');
+  assert.equal(setPlan.claim_packet.body.status, 'active');
+  assert.equal(withdrawPlan.operation_kind, 'claim.withdraw');
+  assert.equal(withdrawPlan.claim_packet.body.status, 'withdrawn');
+  assert.equal(setPlan.scope_packet_id, targetScopePacket.header.packet_id);
+});
+
 test('unsupported generic workflow requests fail closed', async () => {
   const actorPacket = await createClaimedActor();
   const targetScopePacket = createTargetScope();
@@ -231,10 +376,11 @@ test('unsupported generic workflow requests fail closed', async () => {
         policyGate: createPolicyGate(),
         actorPacket,
         intent: {
-          kind: 'home_locality.relation.set',
-          home_scope_packet_id: targetScopePacket.header.packet_id,
+          kind: 'role_association.claim.set',
+          role_packet_id: 'nexus:role/facilitator',
+          claimed: true,
         } as never,
       }),
-    /Unsupported live generic workflow mutation intent/
+    /Unsupported relation workflow mutation intent/
   );
 });

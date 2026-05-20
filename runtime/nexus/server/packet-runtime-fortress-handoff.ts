@@ -50,6 +50,7 @@ export type PacketRuntimeFortressHandoff = {
   operation_kinds: string[];
   workflow_plan_ids: string[];
   workflow_plan_packet_types: string[];
+  composition_adapter_ids: string[];
   trusted_capability_ids: string[];
   policy_action_ids: string[];
   dependency_ids: string[];
@@ -69,6 +70,7 @@ export type PacketRuntimeFortressHandoffCoverage = {
   canonical_intent: MutationIntent['kind'] | null;
   reason_codes: PacketRuntimeFortressHandoffReasonCode[];
   workflow_plan_ids: string[];
+  composition_adapter_ids: string[];
   trusted_capability_ids: string[];
   policy_action_ids: string[];
   dependency_ids: string[];
@@ -195,6 +197,7 @@ export function resolvePacketRuntimeFortressHandoff(input: {
       operation_kinds: [],
       workflow_plan_ids: [],
       workflow_plan_packet_types: [],
+      composition_adapter_ids: [],
       trusted_capability_ids: [],
       policy_action_ids: [],
       dependency_ids: [],
@@ -232,6 +235,7 @@ export function resolvePacketRuntimeFortressHandoff(input: {
       operation_kinds: [],
       workflow_plan_ids: [],
       workflow_plan_packet_types: [],
+      composition_adapter_ids: [],
       trusted_capability_ids: [],
       policy_action_ids: [],
       dependency_ids: [],
@@ -267,6 +271,7 @@ export function resolvePacketRuntimeFortressHandoff(input: {
     operation_kinds: coverage.operation_kinds,
     workflow_plan_ids: coverage.workflow_plan_ids,
     workflow_plan_packet_types: coverage.workflow_plan_packet_types,
+    composition_adapter_ids: coverage.composition_adapter_ids,
     trusted_capability_ids: coverage.trusted_capability_ids,
     policy_action_ids: coverage.policy_action_ids,
     dependency_ids: coverage.dependency_ids,
@@ -300,6 +305,7 @@ export function listPacketRuntimeFortressHandoffCoverage(): PacketRuntimeFortres
       canonical_intent: handoff.canonical_intent,
       reason_codes: handoff.reason_codes,
       workflow_plan_ids: handoff.workflow_plan_ids,
+      composition_adapter_ids: handoff.composition_adapter_ids,
       trusted_capability_ids: handoff.trusted_capability_ids,
       policy_action_ids: handoff.policy_action_ids,
       dependency_ids: handoff.dependency_ids,

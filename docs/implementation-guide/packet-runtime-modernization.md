@@ -203,3 +203,41 @@ The remaining pre-reseed queue is explicit:
 - a final reseed readiness audit after all in-scope modernization closure items are closed
 
 Unused never-live packet families remain visible as `out_of_chapter_scope`; they are not reseed blockers for this chapter and can be added when product flows need them.
+
+## Generic Composite Workflow Adapter Pass
+
+Complex graph workflows now use named trusted composite adapter shapes in shadow. These adapters are local runtime-owned orchestration patterns that compose known packet operations, policy actions, dependency refs, and result metadata. Packet definitions and workflow alignment may reference adapter IDs, but packet definitions still cannot provide executable code.
+
+The first adapter shape is `composite.batch.packet_operations`, used by `locality.graph.apply`. It describes the reusable graph pattern: resolve inputs, plan structural packets, plan relation operation batches, resolve grouped policy, prepare unsigned digests, carry prepared-result metadata, and classify projection/refresh side effects as runtime return extensions.
+
+Two additional graph-style shapes are recorded for reuse:
+
+- `composite.default_packet_set.ensure` for idempotent default packet-set creation, first represented by `discussion.surfaces.ensure`.
+- `composite.entity_create.with_followups` for a primary entity packet plus optional follow-up operations, first represented by `assembly.element.create`.
+
+This pass remains shadow-only. Live API routes, payloads, fortress ticketing, signing, persistence, projections, and response shapes remain unchanged. Complex workflows stay queued for live promotion until adapter parity tests prove prepare/finalize behavior against the current fortress oracle.
+
+## Remaining Runtime Genericization Closure Pass
+
+The second live generic promotion expands the trusted workflow seam beyond follow relations. The direct operation paths now enrolled behind `NexusMutationService` are:
+
+- `follows.relation.set`
+- `follows.relation.clear`
+- `assembly_association.relation.set`
+- `assembly_association.relation.clear`
+- `home_locality.relation.set`
+- `role_association.claim.set`
+- `attestation.packet_signal.set`
+
+The live behavior contract is unchanged: API payloads, policy action IDs, ticketing, signatures, packet schemas, persistence, projections, and finalize handlers remain the current fortress authority. The prepare side now resolves these direct operations through trusted local generic planners for scoped Relation, role Claim, and packet-signal Attestation writes, using the current fortress planners/builders as the behavior oracle.
+
+The remaining composed workflows now have named adapter shapes instead of open-ended gaps:
+
+- `composite.locality_path.create.v0` for reusable entity/path creation and directory projection refresh.
+- `composite.discussion_thread_post.create.v0` and `composite.discussion_reply.create.v0` for future canonical `Discussion(kind: message)` writes with legacy thread/post/reply projection compatibility.
+- `composite.role_attestation.set.v0` for mutual-exclusion support/dispute/clear attestation composition.
+- `composite.actor_write_policy.update.v0` for actor-owned Policy packet revision plus actor projection refresh.
+
+Discussion follow-up is explicit: new discussion writes should converge on canonical `Discussion(kind: message)` semantics, while `DiscussionThread`, `DiscussionPost`, and `DiscussionReply` remain compatibility projections until reseed and import/export compatibility work are closed.
+
+Initiative follow-up is also explicit: OWA remains the default `Cause(subtype: initiative)` anchor for this chapter, and pre-reseed schema/definition hardening should make later multi-initiative selection possible for branding, locality policy, voting policy, and governance defaults. This pass does not add an initiative selector or UI behavior.

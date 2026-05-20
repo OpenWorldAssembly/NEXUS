@@ -19,6 +19,7 @@ function allEntries(): PreReseedClosureLedgerEntry[] {
     ...report.dependency_requirements,
     ...report.client_ingress_enrollments,
     ...report.fortress_handoffs,
+    ...report.composite_workflow_adapters,
     ...report.packet_families,
     ...report.follow_on_pass_queue,
   ];
@@ -70,6 +71,27 @@ test('follow set and clear are closed as the first live generic workflow promoti
   }
 });
 
+test('remaining direct relation claim and attestation operation paths are closed', () => {
+  const report = createPreReseedModernizationClosureReport();
+  const closureByIntent = new Map(
+    report.live_mutation_intents.map((entry) => [entry.subject_id, entry])
+  );
+
+  for (const mutationIntent of [
+    'assembly_association.relation.set',
+    'assembly_association.relation.clear',
+    'home_locality.relation.set',
+    'role_association.claim.set',
+    'attestation.packet_signal.set',
+  ] as const) {
+    const entry = closureByIntent.get(mutationIntent);
+
+    assert.ok(entry, mutationIntent);
+    assert.equal(entry.status, 'closed', mutationIntent);
+    assert.equal(entry.queue, 'first_generic_promotion', mutationIntent);
+  }
+});
+
 test('remaining in-scope runtime work is sequenced before reseed', () => {
   const report = createPreReseedModernizationClosureReport();
   const queued = report.live_mutation_intents.filter(
@@ -91,6 +113,49 @@ test('remaining in-scope runtime work is sequenced before reseed', () => {
     report.follow_on_pass_queue.some(
       (entry) => entry.subject_id === 'legacy_bridge_retirement'
     )
+  );
+});
+
+test('composite workflow adapters are tracked as closed shadow extraction work', () => {
+  const report = createPreReseedModernizationClosureReport();
+  const adapterStatus = new Map(
+    report.composite_workflow_adapters.map((entry) => [
+      entry.subject_id,
+      entry.status,
+    ])
+  );
+
+  assert.equal(
+    adapterStatus.get('composite.locality_graph.apply.v0'),
+    'closed'
+  );
+  assert.equal(
+    adapterStatus.get('composite.discussion_surfaces.ensure.v0'),
+    'closed'
+  );
+  assert.equal(
+    adapterStatus.get('composite.assembly_element.create.v0'),
+    'closed'
+  );
+  assert.equal(
+    adapterStatus.get('composite.locality_path.create.v0'),
+    'closed'
+  );
+  assert.equal(
+    adapterStatus.get('composite.discussion_thread_post.create.v0'),
+    'closed'
+  );
+  assert.equal(
+    adapterStatus.get('composite.discussion_reply.create.v0'),
+    'closed'
+  );
+  assert.equal(
+    adapterStatus.get('composite.role_attestation.set.v0'),
+    'closed'
+  );
+  assert.equal(
+    adapterStatus.get('composite.actor_write_policy.update.v0'),
+    'closed'
   );
 });
 

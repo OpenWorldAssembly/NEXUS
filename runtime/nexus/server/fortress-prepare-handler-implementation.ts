@@ -17,7 +17,6 @@ import {
 } from '@core/auth/mutation-verifier';
 import { getPacketUnsignedDigestCandidates } from '@core/auth/mutation-digests';
 import {
-  createAssociationClaimPacket,
   createClaimPacketId,
   createRelationAssertionClaimPacket,
 } from '@core/packets/claims';
@@ -33,7 +32,6 @@ import {
   createRelationPacketId,
   createScopedRelationPacket,
 } from '@core/packets/relations';
-import { buildPacketSignalAttestationPacket } from '@core/packets/discussion';
 import {
   createCanonicalDiscussionPacketId,
   isDiscussionMessagePacket,
@@ -64,10 +62,6 @@ import {
   type LocalityCreatePathEntry,
 } from '@runtime/nexus/server/locality-directory-service';
 import { planLocalityGraphApplyPackets } from '@runtime/nexus/server/locality-graph-apply-planner';
-import {
-  planAssemblyAssociationRelationPackets,
-  planHomeLocalityRelationPackets,
-} from '@runtime/nexus/server/elemental-scope-relation-planner';
 import { runTrustedPacketWorkflowMutation } from '@runtime/nexus/server/trusted-packet-workflow-runtime';
 import { MutationPolicyGate } from '@runtime/nexus/server/mutation-policy-gate';
 import { MutationTicketService } from '@runtime/nexus/server/mutation-ticket-service';
@@ -515,75 +509,14 @@ export class MutationPrepareHandlers {
     actorPacket: PacketEnvelopeByType['Element'];
     actorKey: string;
   }): Promise<PreparedMutation> {
-    const targetPacket = await this.packetStore.fetchByPacket({
-      packet_id: input.intent.target_packet_id,
-    });
-
-    if (
-      !targetPacket ||
-      (targetPacket.header.family !== 'DiscussionPost' &&
-        targetPacket.header.family !== 'DiscussionReply' &&
-        !isDiscussionMessagePacket(targetPacket))
-    ) {
-      throw new Error(`Unknown packet vote target: ${input.intent.target_packet_id}`);
-    }
-
-    const summary = await this.attestationService.getTargetSummary({
-      target_packet_id: input.intent.target_packet_id,
-      viewer_actor_key: input.actorKey,
-    });
-    const attestationPacket = buildPacketSignalAttestationPacket({
-      scopeId: input.intent.scope_id,
+    return runTrustedPacketWorkflowMutation({
+      packetStore: this.packetStore,
+      policyGate: this.policyGate,
+      attestationService: this.attestationService,
+      actorKey: input.actorKey,
       actorPacket: input.actorPacket,
-      targetPost: {
-        packet: { packet_id: targetPacket.header.packet_id },
-        authority_scope_packet_id:
-          targetPacket.header.authority_scope_ref?.packet_id ?? null,
-        applicable_scope_packet_ids: targetPacket.header.applicable_scope_refs.map(
-          (scopeRef) => scopeRef.packet_id
-        ),
-        vote_summary: summary,
-      },
-      value: input.intent.value,
-      createdAt: input.intent.created_at ?? new Date().toISOString(),
+      intent: input.intent,
     });
-
-    if (!attestationPacket) {
-      throw new Error('The packet vote is already cleared.');
-    }
-
-    const digests = await getPacketUnsignedDigestCandidates(attestationPacket);
-
-    const governingScopePacket = targetPacket.header.authority_scope_ref
-      ? await this.requirePacket({
-          packetId: targetPacket.header.authority_scope_ref.packet_id,
-          family: 'Element',
-        })
-      : null;
-    const actionId: MutationActionId =
-      input.intent.value === 0
-        ? 'attestation.packet_signal.clear'
-        : 'attestation.packet_signal.set';
-    const mergedPolicyDecision = await this.policyGate.resolveScopePolicyDecision({
-      governingScopePacket,
-      actorPacket: input.actorPacket,
-      actionIds: [actionId],
-    });
-
-    return {
-      kind: input.intent.kind,
-      ...mergedPolicyDecision,
-      governing_scope_packet_id:
-        attestationPacket.header.authority_scope_ref?.packet_id ??
-        governingScopePacket?.header.packet_id ??
-        null,
-      prepared_packets: [
-        {
-          packet: attestationPacket,
-          unsigned_digest: digests[0]?.digest ?? '',
-        },
-      ],
-    };
   }
 
   async prepareActorWritePolicyUpdate(input: {
@@ -805,44 +738,12 @@ export class MutationPrepareHandlers {
       | Extract<MutationIntent, { kind: 'assembly_association.relation.clear' }>;
     actorPacket: PacketEnvelopeByType['Element'];
   }): Promise<PreparedMutation> {
-    const assemblyPacket = await this.requirePacket({
-      packetId: input.intent.assembly_packet_id,
-      family: 'Element',
-    });
-    const isSetIntent = input.intent.kind === 'assembly_association.relation.set';
-    const relationPlan = await planAssemblyAssociationRelationPackets({
+    return runTrustedPacketWorkflowMutation({
       packetStore: this.packetStore,
+      policyGate: this.policyGate,
       actorPacket: input.actorPacket,
-      targetScopePacket: assemblyPacket,
-      mode: isSetIntent ? 'set' : 'clear',
-      note: isSetIntent ? input.intent.note ?? null : null,
+      intent: input.intent,
     });
-    const mergedPolicyDecision = await this.policyGate.resolveScopePolicyDecision({
-      governingScopePacket: assemblyPacket,
-      actorPacket: input.actorPacket,
-      actionIds: [
-        isSetIntent
-          ? 'assembly_association.relation.set'
-          : 'assembly_association.relation.clear',
-      ],
-    });
-    const preparedPackets = await Promise.all(
-      relationPlan.packets.map(async (packet) => {
-        const digests = await getPacketUnsignedDigestCandidates(packet);
-
-        return {
-          packet,
-          unsigned_digest: digests[0]?.digest ?? '',
-        };
-      })
-    );
-
-    return {
-      kind: input.intent.kind,
-      ...mergedPolicyDecision,
-      governing_scope_packet_id: assemblyPacket.header.packet_id,
-      prepared_packets: preparedPackets,
-    };
   }
 
   async prepareAssemblyAssociationClaimCompatibilityAlias(input: {
@@ -880,46 +781,12 @@ export class MutationPrepareHandlers {
     intent: Extract<MutationIntent, { kind: 'home_locality.relation.set' }>;
     actorPacket: PacketEnvelopeByType['Element'];
   }): Promise<PreparedMutation> {
-    const homeScopePacket = input.intent.home_scope_packet_id
-      ? await this.requirePacket({
-          packetId: input.intent.home_scope_packet_id,
-          family: 'Element',
-        })
-      : null;
-    const relationPlan = await planHomeLocalityRelationPackets({
+    return runTrustedPacketWorkflowMutation({
       packetStore: this.packetStore,
+      policyGate: this.policyGate,
       actorPacket: input.actorPacket,
-      homeScopePacket,
-      forceSelectedRevision: true,
+      intent: input.intent,
     });
-    const actionIds: MutationActionId[] = [
-      input.intent.home_scope_packet_id
-        ? 'home_locality.relation.set'
-        : 'home_locality.relation.clear',
-    ];
-    const mergedPolicyDecision = await this.policyGate.resolveScopePolicyDecision({
-      governingScopePacket: relationPlan.governingScopePacket,
-      actorPacket: input.actorPacket,
-      actionIds,
-    });
-    const preparedPackets = await Promise.all(
-      relationPlan.packets.map(async (packet) => {
-        const digests = await getPacketUnsignedDigestCandidates(packet);
-
-        return {
-          packet,
-          unsigned_digest: digests[0]?.digest ?? '',
-        };
-      })
-    );
-
-    return {
-      kind: input.intent.kind,
-      ...mergedPolicyDecision,
-      governing_scope_packet_id:
-        relationPlan.governingScopePacket?.header.packet_id ?? input.actorPacket.header.packet_id,
-      prepared_packets: preparedPackets,
-    };
   }
 
   async prepareHomeLocalityClaimCompatibilityAlias(input: {
@@ -960,67 +827,12 @@ export class MutationPrepareHandlers {
     intent: Extract<MutationIntent, { kind: 'role_association.claim.set' }>;
     actorPacket: PacketEnvelopeByType['Element'];
   }): Promise<PreparedMutation> {
-    const rolePacket = await this.requirePacket({
-      packetId: input.intent.role_packet_id,
-      family: 'Role',
-    });
-    const governingScopePacket = rolePacket.header.authority_scope_ref
-      ? await this.requirePacket({
-          packetId: rolePacket.header.authority_scope_ref.packet_id,
-          family: 'Element',
-        })
-      : null;
-    const scopePacketId =
-      governingScopePacket?.header.packet_id ??
-      rolePacket.header.authority_scope_ref?.packet_id ??
-      input.actorPacket.header.packet_id;
-    const claimPacketId = createClaimPacketId({
-      claimKind: 'role_association',
-      subjectPacketId: input.actorPacket.header.packet_id,
-      targetPacketId: rolePacket.header.packet_id,
-      scopePacketId,
-    });
-    const existingPreferredRevision = await this.packetStore.fetchPreferredRevision({
-      packet_id: claimPacketId,
-    });
-    const claimPacket = createAssociationClaimPacket({
-      claimKind: 'role_association',
-      subjectPacketId: input.actorPacket.header.packet_id,
-      targetPacketId: rolePacket.header.packet_id,
-      scopePacketId,
-      applicableScopeRefs:
-        governingScopePacket?.header.applicable_scope_refs.length
-          ? governingScopePacket.header.applicable_scope_refs
-          : rolePacket.header.applicable_scope_refs.length > 0
-            ? rolePacket.header.applicable_scope_refs
-            : [{ packet_id: scopePacketId }],
-      createdByPacketId: input.actorPacket.header.packet_id,
-      status: input.intent.claimed ? 'active' : 'withdrawn',
-      packetId: claimPacketId,
-      parentRevisionRefs: existingPreferredRevision ? [existingPreferredRevision] : [],
-    });
-    const mergedPolicyDecision = await this.policyGate.resolveScopePolicyDecision({
-      governingScopePacket,
+    return runTrustedPacketWorkflowMutation({
+      packetStore: this.packetStore,
+      policyGate: this.policyGate,
       actorPacket: input.actorPacket,
-      actionIds: [
-        input.intent.claimed
-          ? 'role_association.claim.set'
-          : 'role_association.claim.withdraw',
-      ],
+      intent: input.intent,
     });
-    const digests = await getPacketUnsignedDigestCandidates(claimPacket);
-
-    return {
-      kind: input.intent.kind,
-      ...mergedPolicyDecision,
-      governing_scope_packet_id: scopePacketId,
-      prepared_packets: [
-        {
-          packet: claimPacket,
-          unsigned_digest: digests[0]?.digest ?? '',
-        },
-      ],
-    };
   }
 
   async prepareRoleAssociationAttestation(input: {

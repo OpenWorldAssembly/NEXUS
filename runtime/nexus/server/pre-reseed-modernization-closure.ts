@@ -22,6 +22,10 @@ import {
   auditLiveGenericWorkflowEnrollments,
   listLiveGenericWorkflowEnrollments,
 } from '@runtime/nexus/server/trusted-packet-workflow-runtime';
+import {
+  auditTrustedCompositeWorkflowAdapters,
+  listTrustedCompositeWorkflowAdapters,
+} from '@runtime/nexus/server/trusted-composite-workflow-adapters';
 
 export type PreReseedClosureStatus =
   | 'closed'
@@ -39,6 +43,7 @@ export type PreReseedClosureLedgerEntry = {
     | 'dependency_requirement'
     | 'client_ingress_enrollment'
     | 'fortress_handoff'
+    | 'composite_workflow_adapter'
     | 'packet_family';
   subject_id: string;
   status: PreReseedClosureStatus;
@@ -64,6 +69,7 @@ export type PreReseedModernizationClosureReport = {
   dependency_requirements: PreReseedClosureLedgerEntry[];
   client_ingress_enrollments: PreReseedClosureLedgerEntry[];
   fortress_handoffs: PreReseedClosureLedgerEntry[];
+  composite_workflow_adapters: PreReseedClosureLedgerEntry[];
   packet_families: PreReseedClosureLedgerEntry[];
   follow_on_pass_queue: PreReseedClosureLedgerEntry[];
   findings: string[];
@@ -131,10 +137,10 @@ function createMutationEntries(): PreReseedClosureLedgerEntry[] {
       status: mutationStatus(entry),
       queue: queueForEntry(entry),
       reason: isClosed
-        ? 'Follow set/clear now prepare through the trusted generic workflow runtime while the fortress remains the live authority.'
+        ? 'Direct relation, claim, and attestation operations now prepare through the trusted generic workflow runtime while the fortress remains the live authority.'
         : 'In-scope live runtime work is sequenced into the pre-reseed queue.',
       next_step: isClosed
-        ? 'Use this proving path as the oracle for the next relation, claim, and attestation enrollments.'
+        ? 'Keep parity tests green while decomposing the remaining composed workflows.'
         : entry.next_step,
     };
   });
@@ -154,7 +160,7 @@ function createWorkflowPlanEntries(): PreReseedClosureLedgerEntry[] {
         ? 'first_generic_promotion'
         : 'relation_claim_attestation_generic_enrollment',
       reason: closesLiveIntent
-        ? 'This workflow plan is now exercised by the live generic follow prepare path.'
+        ? 'This workflow plan is now exercised by a live trusted generic prepare path.'
         : 'Workflow plan remains shadow/alignment coverage until its live runtime intent is enrolled.',
       next_step: closesLiveIntent
         ? 'Keep parity tests green while promoting the next workflow.'
@@ -226,7 +232,7 @@ function createFortressHandoffEntries(): PreReseedClosureLedgerEntry[] {
       status: isLiveGeneric ? 'closed' : 'queued_pre_reseed',
       queue: isLiveGeneric ? 'first_generic_promotion' : 'final_reseed_readiness_audit',
       reason: isLiveGeneric
-        ? 'Handoff metadata resolves and the existing fortress corridor now calls the trusted generic follow planner.'
+        ? 'Handoff metadata resolves and the existing fortress corridor now calls a trusted generic operation planner.'
         : 'Handoff metadata remains shadow coverage until the owning workflow is promoted.',
       next_step: isLiveGeneric
         ? 'Preserve signed fortress authority while expanding generic execution.'
@@ -254,16 +260,37 @@ function createPacketFamilyEntries(): PreReseedClosureLedgerEntry[] {
   });
 }
 
+function createCompositeWorkflowAdapterEntries(): PreReseedClosureLedgerEntry[] {
+  const audit = auditTrustedCompositeWorkflowAdapters();
+
+  return listTrustedCompositeWorkflowAdapters().map((adapter) => ({
+    subject_kind: 'composite_workflow_adapter',
+    subject_id: adapter.adapter_id,
+    status: audit.status === 'pass' ? 'closed' : 'blocked',
+    queue: 'discussion_locality_workflow_decomposition',
+    reason:
+      audit.status === 'pass'
+        ? 'Reusable trusted composite workflow adapter has shadow dry-run coverage and anchored policy/dependency metadata.'
+        : 'Composite workflow adapter audit has blockers.',
+    next_step:
+      audit.status === 'pass'
+        ? 'Use this adapter shape for parity tests before live promotion.'
+        : 'Resolve composite adapter audit findings before live workflow enrollment.',
+  }));
+}
+
 export function createPreReseedModernizationClosureReport(): PreReseedModernizationClosureReport {
   const liveGenericAudit = auditLiveGenericWorkflowEnrollments();
   const policyDependencyAudit = auditPacketPolicyDependencyCoverage();
   const clientIngressAudit = auditPacketClientIntentEnrollments();
+  const compositeAdapterAudit = auditTrustedCompositeWorkflowAdapters();
   const live_mutation_intents = createMutationEntries();
   const workflow_plans = createWorkflowPlanEntries();
   const policy_requirements = createPolicyRequirementEntries();
   const dependency_requirements = createDependencyRequirementEntries();
   const client_ingress_enrollments = createClientIngressEntries();
   const fortress_handoffs = createFortressHandoffEntries();
+  const composite_workflow_adapters = createCompositeWorkflowAdapterEntries();
   const packet_families = createPacketFamilyEntries();
   const runtime_connector_paths: PreReseedClosureLedgerEntry[] = [
     {
@@ -282,15 +309,16 @@ export function createPreReseedModernizationClosureReport(): PreReseedModernizat
       status: 'closed' as const,
       queue: 'first_generic_promotion' as const,
       reason:
-        'Trusted generic workflow execution is enrolled behind NexusMutationService for follow set/clear.',
+        'Trusted generic workflow execution is enrolled behind NexusMutationService for direct relation, claim, and attestation operations.',
       next_step:
-        'Use this path for the next relation, claim, and attestation generic enrollments.',
+        'Use this path while decomposing composed locality, discussion, role-attestation, and actor-policy workflows.',
     })),
   ];
   const findings = [
     ...liveGenericAudit.findings.map((finding) => finding.message),
     ...policyDependencyAudit.findings.map((finding) => finding.message),
     ...clientIngressAudit.findings.map((finding) => finding.message),
+    ...compositeAdapterAudit.findings.map((finding) => finding.message),
   ];
   const follow_on_pass_queue = uniqueSorted(
     live_mutation_intents
@@ -315,6 +343,7 @@ export function createPreReseedModernizationClosureReport(): PreReseedModernizat
     dependency_requirements,
     client_ingress_enrollments,
     fortress_handoffs,
+    composite_workflow_adapters,
     packet_families,
     follow_on_pass_queue,
     findings,

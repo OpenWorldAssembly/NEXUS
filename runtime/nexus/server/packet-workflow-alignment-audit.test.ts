@@ -108,6 +108,40 @@ test('workflow-specific intents remain runtime-owned with orchestration reasons'
   }
 });
 
+test('complex graph workflow intents name reusable composite adapters', () => {
+  const adapterIdsByIntent = new Map(
+    listPacketWorkflowAlignmentCoverage().map((coverage) => [
+      coverage.mutation_intent,
+      coverage.composition_adapter_ids,
+    ])
+  );
+
+  assert.deepEqual(adapterIdsByIntent.get('locality.graph.apply'), [
+    'composite.locality_graph.apply.v0',
+  ]);
+  assert.deepEqual(adapterIdsByIntent.get('discussion.surfaces.ensure'), [
+    'composite.discussion_surfaces.ensure.v0',
+  ]);
+  assert.deepEqual(adapterIdsByIntent.get('assembly.element.create'), [
+    'composite.assembly_element.create.v0',
+  ]);
+  assert.deepEqual(adapterIdsByIntent.get('locality.path.create'), [
+    'composite.locality_path.create.v0',
+  ]);
+  assert.deepEqual(adapterIdsByIntent.get('discussion.thread_post.create'), [
+    'composite.discussion_thread_post.create.v0',
+  ]);
+  assert.deepEqual(adapterIdsByIntent.get('discussion.reply.create'), [
+    'composite.discussion_reply.create.v0',
+  ]);
+  assert.deepEqual(adapterIdsByIntent.get('role_association.attestation.set'), [
+    'composite.role_attestation.set.v0',
+  ]);
+  assert.deepEqual(adapterIdsByIntent.get('actor.write_policy.update'), [
+    'composite.actor_write_policy.update.v0',
+  ]);
+});
+
 test('legacy bridge intents point at canonical workflow directions', () => {
   const legacyEntries = listFortressHandlerGenericizationEntries().filter(
     (entry) => entry.genericization_status === 'legacy_bridge'
