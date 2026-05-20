@@ -47,6 +47,8 @@ import {
   fetchNexusShellPayload,
   updateNexusScopeDisplayPreferences,
 } from '@runtime/nexus/nexus-query-api';
+import type { NexusScopeDisplayPreferencesPayload } from '@runtime/nexus/nexus-api-types';
+import { persistNexusElementPreference } from '@app/components/nexus/nexus-shell-preferences';
 import {
   buildNexusBranchNodes,
   getNexusScopeSelectionHref,
@@ -209,7 +211,6 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
     currentActorPacketId,
     currentLabel,
     currentMode,
-    createVerifiedRequestBody,
     runFortressMutation,
   } = useIdentityShell();
   const [scopeSummaries, setScopeSummaries] = useState<NexusScopeSummary[]>([
@@ -412,19 +413,35 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
     router.push(getNexusSectionHref(section) as Href);
   };
 
+  const persistElementPreference = useCallback(
+    async (input: {
+      scopeDisplay?: Partial<NexusScopeDisplayPreferencesPayload>;
+      shellChrome?: Partial<ShellChromePreferenceValue>;
+      note: string;
+    }): Promise<{
+      preferences: NexusScopeDisplayPreferencesPayload;
+      shell_chrome?: ShellChromePreferenceValue;
+    }> => {
+      return persistNexusElementPreference({
+        currentMode,
+        scopeDisplay: input.scopeDisplay,
+        shellChrome: input.shellChrome,
+        note: input.note,
+        runFortressMutation,
+        updateCompatibilityPreferences: (requestBody) =>
+          updateNexusScopeDisplayPreferences({
+            requestBody,
+          }),
+      });
+    },
+    [currentMode, runFortressMutation]
+  );
+
   const persistShellChromePreference = useCallback(
     async (shellChromePatch: Partial<ShellChromePreferenceValue>) => {
-      const preferencePayload = { shell_chrome: shellChromePatch };
-      const requestBody =
-        currentMode === 'claimed'
-          ? await createVerifiedRequestBody(
-              '/api/nexus/shell-preferences',
-              'POST',
-              preferencePayload
-            )
-          : preferencePayload;
-      const updated = await updateNexusScopeDisplayPreferences({
-        requestBody,
+      const updated = await persistElementPreference({
+        shellChrome: shellChromePatch,
+        note: 'Element interface preferences.',
       });
 
       if (updated.shell_chrome) {
@@ -433,7 +450,7 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
         setUiDensityState(updated.shell_chrome.ui_density);
       }
     },
-    [createVerifiedRequestBody, currentMode]
+    [persistElementPreference]
   );
 
   const persistShellChromePreferenceSafely = (
@@ -518,19 +535,12 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
       : mainVisibleScopePacketIds.filter(
           (packetId) => packetId !== targetScope.packetId
         );
-    const preferencePayload = {
+    const scopeDisplayPatch = {
       main_visible_scope_packet_ids: nextMainVisibleScopePacketIds,
     };
-    const requestBody =
-      currentMode === 'claimed'
-        ? await createVerifiedRequestBody(
-            '/api/nexus/shell-preferences',
-            'POST',
-            preferencePayload
-          )
-        : preferencePayload;
-    const updated = await updateNexusScopeDisplayPreferences({
-      requestBody,
+    const updated = await persistElementPreference({
+      scopeDisplay: scopeDisplayPatch,
+      note: 'Element scope-display preferences.',
     });
 
     setMainVisibleScopePacketIds(updated.preferences.main_visible_scope_packet_ids);
@@ -541,20 +551,13 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
     sectionId: Extract<NexusSidebarScopeSectionId, 'associated' | 'followed'>,
     showParentChains: boolean
   ) => {
-    const preferencePayload =
+    const scopeDisplayPatch =
       sectionId === 'associated'
         ? { show_associated_parent_chains: showParentChains }
         : { show_followed_parent_chains: showParentChains };
-    const requestBody =
-      currentMode === 'claimed'
-        ? await createVerifiedRequestBody(
-            '/api/nexus/shell-preferences',
-            'POST',
-            preferencePayload
-          )
-        : preferencePayload;
-    const updated = await updateNexusScopeDisplayPreferences({
-      requestBody,
+    const updated = await persistElementPreference({
+      scopeDisplay: scopeDisplayPatch,
+      note: 'Element scope-display preferences.',
     });
 
     setAssociatedGraph((currentGraph) =>

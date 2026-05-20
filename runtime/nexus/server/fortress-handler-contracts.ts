@@ -79,4 +79,5 @@ export type FortressHandlerDomain =
   | 'assembly'
   | 'relation'
   | 'role'
-  | 'actor_policy';
+  | 'actor_policy'
+  | 'preference';

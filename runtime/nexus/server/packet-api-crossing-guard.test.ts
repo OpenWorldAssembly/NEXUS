@@ -6,7 +6,6 @@ import {
   listPacketApiEnrollmentCoverage,
   resolveFinalizeMutationApiPreflight,
   resolvePrepareMutationApiPreflight,
-  resolveShellPreferencesApiPreflight,
 } from './packet-api-crossing-guard.ts';
 import { listMutationIntentDescriptors } from './mutation-intent-registry.ts';
 
@@ -66,16 +65,7 @@ test('finalize API preflight uses the stored ticket intent direction', () => {
   );
 });
 
-test('shell preferences API preflight resolves the live Preference.element connector', () => {
-  const preflight = resolveShellPreferencesApiPreflight();
-
-  assert.equal(preflight.source_route, '/api/nexus/shell-preferences');
-  assert.equal(preflight.mutation_intent, 'preference.element.set');
-  assert.equal(preflight.connector_id, 'preference.element.interface.set');
-  assert.equal(preflight.status, 'allowed_live_connector');
-});
-
-test('API enrollment coverage reports prepare and shell preference routes', () => {
+test('API enrollment coverage reports prepare route enrollment only', () => {
   const coverageByRoute = new Map(
     listPacketApiEnrollmentCoverage().map((coverage) => [
       coverage.source_route,
@@ -89,12 +79,7 @@ test('API enrollment coverage reports prepare and shell preference routes', () =
     prepareCoverage.enrollment_count,
     listMutationIntentDescriptors().length
   );
-
-  const preferenceCoverage = coverageByRoute.get('/api/nexus/shell-preferences');
-  assert.ok(preferenceCoverage);
-  assert.deepEqual(preferenceCoverage.connector_ids, [
-    'preference.element.interface.set',
-  ]);
+  assert.equal(coverageByRoute.has('/api/nexus/shell-preferences'), false);
 });
 
 test('API enrollment audit delegates to neutral client ingress audit', () => {

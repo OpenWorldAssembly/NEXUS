@@ -82,6 +82,7 @@ const CLIENT_INTENT_BY_MUTATION_INTENT: Record<string, string> = {
   'role_association.claim.set': 'role.association.claim.set',
   'role_association.attestation.set': 'role.association.attestation.set',
   'actor.write_policy.update': 'actor.write_policy.update',
+  'preference.element.set': 'preference.interface.set',
 };
 
 function uniqueSorted(values: readonly string[]): string[] {
@@ -116,35 +117,8 @@ function createPrepareEnrollment(
   };
 }
 
-function createPreferenceConnectorEnrollment(): PacketClientIntentEnrollment {
-  const connector = PACKET_RUNTIME_CONNECTORS.find(
-    (candidate) => candidate.connector_id === 'preference.element.interface.set'
-  );
-
-  return {
-    enrollment_id: 'client.connector.preference.element.interface.set',
-    source_route: '/api/nexus/shell-preferences',
-    client_intent_id: 'preference.interface.set',
-    mutation_intent: 'preference.element.set',
-    connector_id: connector?.connector_id ?? 'preference.element.interface.set',
-    packet_type: connector?.packet_type ?? 'Preference',
-    packet_subtype: connector?.packet_subtype ?? 'element',
-    operation_kinds: ['single_packet.revise'],
-    workflow_plan_ids: [],
-    policy_action_ids: ['preference.element.write'],
-    packet_dependency_ids: ['preference.element.packet_dependency.v0'],
-    live_mode: 'live_connector',
-    handoff_status: 'connector_live',
-    notes:
-      'Existing live Preference.element runtime connector. Guest compatibility writes remain outside the connector path.',
-  };
-}
-
 export function listPacketClientIntentEnrollments(): PacketClientIntentEnrollment[] {
-  return [
-    ...listMutationIntentDescriptors().map(createPrepareEnrollment),
-    createPreferenceConnectorEnrollment(),
-  ];
+  return listMutationIntentDescriptors().map(createPrepareEnrollment);
 }
 
 export function getPacketClientIntentEnrollment(

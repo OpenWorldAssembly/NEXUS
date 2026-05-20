@@ -147,5 +147,4 @@ export class NexusMutationService {
       result: finalized.result,
     };
   }
-
 }

@@ -182,15 +182,15 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - The generic scope-graph projection now returns server-projected `home`, `associated`, `followed`, `main`, and `discoverable` sections for the sidebar, and OWA-specific initiative-anchor relation-policy lookup has been moved out of the generic graph core into a narrower adapter layer.
 
 
-## 2026-05 Preference.element live bridge
+## 2026-05 Preference.element packet write corridor
 
 - `Preference` is now enrolled in the canonical packet ontology as a replaceable packet family, with `Preference.element` carrying actor-owned scope-display preferences.
 - Claimed actor scope-display writes now create live `Preference.element` packet revisions and also update the legacy runtime preference table as a compatibility cache.
 - Scope-display reads prefer the latest active `Preference.element` packet and fall back to the legacy table when no packet exists; guest preferences remain cookie/session compatibility state.
 - Claimed shell preference reads now resolve the actor from the authenticated session; actor query mismatches use guest projection instead of reading another actor's private preference packet.
 - `Preference.element` now includes an `interface.shell_chrome` section for navigation mode, theme mode, and UI density so remaining shell-interface preferences can move into the same body without redefining the packet shape.
-- `runtime/nexus/server/packet-runtime-master-handler.ts` is the first generic runtime connector corridor: routes request a connector id, the handler resolves the packet definition and mutation action plan, then dispatches to a local connector instead of hardcoding route-specific packet writes.
-- `preference.element.interface.set` is enrolled in that master handler as a live bridge. It writes `Preference.element.value.interface.scope_display`, can preserve or update `interface.shell_chrome`, and keeps the legacy scope-display table as a compatibility cache.
+- `runtime/nexus/server/packet-runtime-master-handler.ts` is the first generic runtime connector corridor: routes can request a connector id, the handler resolves the packet definition and mutation action plan, then dispatches to local trusted connector code instead of hardcoding route-specific packet writes.
+- `preference.element.interface.set` was initially enrolled in that master handler as a live bridge. It wrote `Preference.element.value.interface.scope_display`, could preserve or update `interface.shell_chrome`, and kept the legacy scope-display table as a compatibility cache. The later fortress promotion pass moves claimed writes to `preference.element.set` and keeps this connector shadow-only.
 - The manifest shadow fortress bridge remains non-executing and descriptor-only. The new runtime master handler still runs trusted local connector code; it does not execute arbitrary behavior from imported definitions.
 
 ## 2026-05 policy/dependency semantic authority
@@ -204,3 +204,11 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - Live fresh writes no longer accept `assembly_association.claim.set` or `home_locality.claim.set`; canonical association and home-locality writes now use relation-first mutation intents only.
 - Legacy claim/home-locality material remains compatibility-readable and importable, but it is no longer a live mutation corridor entrypoint.
 - A final pre-reseed readiness report now inventories canonical write intents, compatibility-only surfaces, OWA default anchors, required seed policies, discussion defaults, manifest-native packet types, and out-of-scope packet families for the separate reseed design pass.
+
+## 2026-05 definition packetization and Preference fortress promotion
+
+- Active manifest definition parts now produce schema-validated `Definition` packet candidates, and those candidates are grouped into one `Bundle.packet_set` definition profile inventory for reseed readiness.
+- The seeded definition profile audit compares packet material back to the core manifest and fails closed on missing parts, unexpected parts, stale profile metadata, duplicate bundle refs, or digest drift.
+- Stored Definition and Bundle packet material is now reseed truth material, but execution remains trusted-local; imported definition packets may describe schemas, operations, policies, dependencies, planners, and builders, but they cannot introduce server code.
+- Claimed shell preference writes now run through the standard signed mutation prepare/finalize corridor as `preference.element.set`, preserving projected responses, actor proof/session checks, same-value no-op behavior, and legacy cache sync. `/api/nexus/shell-preferences` remains guest compatibility state only.
+- The direct `preference.element.interface.set` runtime connector is retained as a shadow/internal comparison bridge rather than the live claimed-write corridor.

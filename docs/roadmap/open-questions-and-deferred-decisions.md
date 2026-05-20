@@ -36,7 +36,7 @@
 - first-class `Bundle` implementation before locality UX and geo standardization are settled
 - authoritative selective home-tree storage and projection semantics before the current locality descriptor, Unicode, and sparse-path foundations are settled
 - provider-backed locality candidate ingestion, geometry, and external locality APIs before the current descriptor and Unicode foundation pass is absorbed
-- expanding the legacy runtime preference cache for new behavior instead of extending the packet-backed `Preference.element` bridge
+- expanding the legacy runtime preference cache for new behavior instead of extending the signed packet-backed `Preference.element` corridor
 
 ## Bundle direction now decided
 

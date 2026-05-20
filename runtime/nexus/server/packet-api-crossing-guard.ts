@@ -77,24 +77,6 @@ export function resolveFinalizeMutationApiPreflight(
   });
 }
 
-export function resolveShellPreferencesApiPreflight(): PacketApiPreflightResult {
-  const clientPreflight = resolvePacketClientIntentPreflight({
-    sourceRoute: '/api/nexus/shell-preferences',
-    mutationIntent: 'preference.element.set',
-    connectorId: 'preference.element.interface.set',
-  });
-
-  return assertPreflightAllowed({
-    preflight_kind: 'packet.api_ingress.preflight',
-    status: clientPreflight.status,
-    source_route: '/api/nexus/shell-preferences',
-    mutation_intent: 'preference.element.set',
-    client_intent_id: clientPreflight.enrollment?.client_intent_id ?? null,
-    connector_id: 'preference.element.interface.set',
-    client_preflight: clientPreflight,
-  });
-}
-
 export function listPacketApiEnrollmentCoverage(): PacketApiEnrollmentCoverage[] {
   const enrollmentsByRoute = new Map<
     string,

@@ -82,9 +82,9 @@ test('refuses unknown packet types, subtypes, and mutation descriptors cleanly',
   assert.ok(unknownMutation.reason_codes.includes('missing_descriptor:preference.unknown.set'));
 });
 
-test('keeps Preference manifest mutation out of the live fortress intent registry', () => {
+test('enrolls Preference set but keeps withdraw out of the live fortress intent registry', () => {
   const liveKinds = listMutationIntentDescriptors().map((descriptor) => descriptor.kind as string);
 
-  assert.equal(liveKinds.includes('preference.element.set'), false);
+  assert.equal(liveKinds.includes('preference.element.set'), true);
   assert.equal(liveKinds.includes('preference.element.withdraw'), false);
 });

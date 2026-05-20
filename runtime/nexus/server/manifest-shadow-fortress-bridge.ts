@@ -210,7 +210,7 @@ export function createPreferenceElementManifestShadowFortressPlan(input: {
     current_packet_envelope_supported: true,
     live_signed_corridor_enrolled: false,
     notes: [
-      'Preference.element is live PacketEnvelope-capable, but this manifest-derived candidate is not enrolled in the signed fortress corridor yet.',
+      'Preference.element is live PacketEnvelope-capable and has a fortress-enrolled shell write path; this manifest-derived candidate remains shadow comparison metadata.',
       'The digest is deterministic shadow metadata for equivalence checks and future corridor comparison only.',
     ],
   };
@@ -234,14 +234,14 @@ export function createPreferenceElementManifestShadowFortressPlan(input: {
       governing_scope_packet_id: null,
       live_ticket_ready: false,
       notes: [
-        'This mirrors the data shape the fortress prepare corridor will eventually need, but intentionally does not create a ticket.',
-        'Policy action IDs are manifest-derived strings and are not yet enrolled in the live write-policy action union.',
+        'This mirrors the data shape the fortress prepare corridor uses, but this shadow bridge intentionally does not create a ticket.',
+        'Policy action IDs resolve to the live Preference.element write-policy action while remaining descriptor-derived metadata here.',
       ],
     },
     projected_runtime_preferences: preferenceShadowPlan.projected_runtime_preferences,
     notes: [
       'Shadow fortress bridge: proves manifest descriptors can resolve body, candidate identity, builder/planner metadata, and policy action IDs before live wiring.',
-      'Direct runtime helper writes are live for Preference.element; manifest-driven mutation remains shadow-only and not enrolled in the live fortress corridor.',
+      'Authenticated Preference.element shell writes are now fortress-enrolled; this manifest bridge remains shadow-only and does not execute imported definition behavior.',
     ],
   };
 }

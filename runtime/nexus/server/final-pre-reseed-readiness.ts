@@ -8,8 +8,10 @@ import {
   auditPacketDependencySemanticAuthority,
   auditPacketPolicyDependencyCoverage,
   auditPacketPolicySemanticAuthority,
+  auditSeededPacketDefinitionProfile,
   listExperimentalPacketTypeDefinitions,
   PACKET_DEFINITION_MANIFEST,
+  resolveSeededPacketDefinitionProfile,
 } from '@core/packets/packet-definition-manifest';
 import {
   PERSONAL_TREE_PACKET_IDS,
@@ -39,6 +41,9 @@ export type FinalPreReseedReadinessReport = {
   required_default_policy_packet_ids: string[];
   discussion_default_packet_ids: string[];
   manifest_native_packet_types: string[];
+  seeded_definition_profile_id: string;
+  seeded_definition_packet_count: number;
+  seeded_definition_bundle_packet_id: string;
   out_of_scope_packet_families: PacketFamily[];
   findings: string[];
 };
@@ -79,6 +84,11 @@ function listOutOfScopePacketFamilies(
 export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessReport {
   const closureReport = createPreReseedModernizationClosureReport();
   const definitions = listExperimentalPacketTypeDefinitions();
+  const seededDefinitionProfile = resolveSeededPacketDefinitionProfile({ definitions });
+  const seededDefinitionAudit = auditSeededPacketDefinitionProfile({
+    definitions,
+    profile: seededDefinitionProfile,
+  });
   const manifestAudit = auditPacketDefinitionManifest({
     manifest: PACKET_DEFINITION_MANIFEST,
     definitions,
@@ -131,6 +141,7 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
     ...manifestAudit.findings
       .filter((finding) => finding.severity === 'error')
       .map((finding) => finding.message),
+    ...seededDefinitionAudit.findings,
     ...policyDependencyAudit.findings.map((finding) => finding.message),
     ...dependencySemanticAudit.findings.map((finding) => finding.message),
     ...policySemanticAudit.findings.map((finding) => finding.message),
@@ -172,6 +183,11 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
         (definition) => definition.packet_type
       )
     ),
+    seeded_definition_profile_id: seededDefinitionProfile.profile_id,
+    seeded_definition_packet_count:
+      seededDefinitionProfile.definition_packets.length,
+    seeded_definition_bundle_packet_id:
+      seededDefinitionProfile.bundle_packet.packet_ref.packet_id,
     out_of_scope_packet_families: listOutOfScopePacketFamilies(
       closureReport.packet_families
     ),

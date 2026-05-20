@@ -43,7 +43,7 @@ test('runtime mutation modernization coverage maps handlers, policy actions, and
   }
 });
 
-test('Preference.element is recognized as master-handler enrolled', () => {
+test('Preference.element direct master-handler connector is no longer live-enrolled', () => {
   const preferenceCoverage = listPacketFamilyRuntimeModernizationCoverage().find(
     (entry) => entry.family === 'Preference'
   );
@@ -51,13 +51,9 @@ test('Preference.element is recognized as master-handler enrolled', () => {
   assert.ok(preferenceCoverage);
   assert.equal(
     preferenceCoverage.runtime_connector_status,
-    'master_handler_enrolled'
+    'planned_gap'
   );
-  assert.ok(
-    preferenceCoverage.runtime_connector_ids.includes(
-      'preference.element.interface.set'
-    )
-  );
+  assert.deepEqual(preferenceCoverage.runtime_connector_ids, []);
 });
 
 test('packet-type runtime coverage treats Definition and Bundle as manifest-native', () => {
@@ -78,12 +74,8 @@ test('packet-type runtime coverage treats Definition and Bundle as manifest-nati
 
   const preferenceEntry = coverageByPacketType.get('Preference');
   assert.ok(preferenceEntry);
-  assert.equal(preferenceEntry.runtime_connector_status, 'master_handler_enrolled');
-  assert.ok(
-    preferenceEntry.runtime_connector_ids.includes(
-      'preference.element.interface.set'
-    )
-  );
+  assert.equal(preferenceEntry.runtime_connector_status, 'planned_gap');
+  assert.deepEqual(preferenceEntry.runtime_connector_ids, []);
 });
 
 test('non-enrolled runtime families explain connector modernization gaps', () => {

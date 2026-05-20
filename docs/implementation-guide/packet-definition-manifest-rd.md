@@ -2,7 +2,7 @@
 
 ## Status
 
-Experimental design with one narrow live bridge. Most manifest work remains shadow-mode, but `Preference.element` is now enrolled as a canonical packet family for claimed actor scope-display preference writes while the legacy runtime table remains a compatibility cache.
+Experimental design with seeded Definition/Bundle packet material and one fortress-enrolled Preference exemplar. Most manifest execution remains trusted-local rather than imported-definition-driven, but active definition parts now have auditable `Definition` packet candidates, a `Bundle.packet_set` inventory, and `Preference.element` is enrolled as a canonical packet family for claimed actor interface preference writes while the legacy runtime table remains a compatibility cache.
 
 For this chapter, `Preference` is the only manifest-defined packet type enrolled in the live `PacketEnvelope` ontology. `Definition` and `Bundle` remain experimental manifest-native packet types: they define the portable definition and carrier shape without being added to legacy `PACKET_FAMILIES`.
 
@@ -18,7 +18,7 @@ The manifest is now modeled around a native bootstrap `Definition` packet type. 
 
 Bundle remains a carrier/inventory packet. It may transport Definition parts, Preference packets, resources, and adapter metadata, but those items keep their own packet semantics.
 
-Manifest-native packet types now have shadow body-candidate builders. These builders parse `Definition`, `Bundle.packet_set`, and `Preference.element` bodies for audit and future runtime planning, but they do not create signed/stored packet envelopes.
+Manifest-native packet types now have shadow body-candidate builders. These builders parse `Definition`, `Bundle.packet_set`, and `Preference.element` bodies for audit and future runtime planning. The definition seed helpers use those builders to produce packet-shaped seed candidates and a local definition bundle inventory, but imported or stored definitions still cannot introduce executable server behavior.
 
 The current experimental surface lives at:
 
@@ -86,7 +86,7 @@ Current experimental Definition subtypes are intentionally limited to packet-def
 - `packet_compatibility`
 - `packet_dependency`
 
-The long-term model is graph-discoverable definition parts resolved into a pinned local definition profile. The current implementation only proves the shape in shadow mode.
+The long-term model is graph-discoverable definition parts resolved into a pinned local definition profile. The current implementation now also builds a local seeded definition profile: every active manifest definition part can be represented as a valid `Definition` packet candidate and grouped into one `Bundle.packet_set` inventory for reseed readiness. Runtime execution still resolves trusted local code rather than executing behavior supplied by those packets.
 
 ### Preference
 
@@ -141,7 +141,7 @@ The manifest may eventually be carried inside a Bundle inventory, but the manife
 
 ## Next use
 
-The current safe runtime step is to use `Preference.element` as the first full template example. The live bridge now runs through a generic packet-runtime master handler and dispatches to a local `preference.element.interface.set` connector. Scope-display and shell-chrome preferences are now UI-driven writes through the same connector, proving partial `Preference.element.value.interface` patches without a new packet shape. Empty interface patches are rejected before writing so the bridge cannot create default preference packets from requests that carry no actual preference change.
+The current safe runtime step is to use `Preference.element` as the first full template example. Claimed scope-display and shell-chrome writes now enter the signed prepare/finalize corridor as `preference.element.set`, while the old direct `preference.element.interface.set` connector is retained as a shadow/internal comparison bridge. Partial `Preference.element.value.interface` patches keep the same projection shape. Empty interface patches are rejected before prepare so the corridor cannot create default preference packets from requests that carry no actual preference change.
 
 ## Preference.element shadow prototype
 
@@ -154,7 +154,7 @@ The first completed packet-type example is `Preference.element`. It now has shad
 - upcasting the old one-toggle shape into current associated/followed parent-chain toggles
 - downcasting with loss notes when current state cannot fit the older shape exactly
 
-This is now partially live for claimed actor interface preferences. Runtime reads prefer the latest active `Preference.element` packet and fall back to the legacy table when no packet exists. The table remains a compatibility cache for scope-display state so the alpha demo keeps its current behavior while the packet path proves itself.
+This is now live for claimed actor interface preferences through the fortress-enrolled preference workflow. Runtime reads prefer the latest active `Preference.element` packet and fall back to the legacy table when no packet exists. The table remains a compatibility cache for scope-display state so the alpha demo keeps its current behavior while the packet path proves itself.
 
 
 ## Shadow action bridge
@@ -175,11 +175,11 @@ For `Preference.element`, the shadow bridge can resolve `preference.element.set`
 - the `preference.element.write` policy action ID
 - a readiness flag for shadow runtime planning
 
-This is the first seam between the packet definition manifest and the fortress corridor. It is still not a fully manifest-executed prepare/finalize route, but `Preference` is now inside the canonical packet ontology and the runtime master handler can dispatch a trusted local connector that creates live `PacketEnvelope` records.
+This is the first seam between the packet definition manifest and the fortress corridor. `Preference` is now inside the canonical packet ontology and claimed interface writes enter a fortress-enrolled mutation path, but the route still executes trusted local workflow code. Manifest descriptors describe the operation; imported definition packets do not execute server behavior.
 
-The runtime shadow planner can now build a manifest-backed `Preference.element` plan from the existing runtime preference payload. The plan includes the deterministic packet ID, normalized body, projected runtime preference shape, resolved action plan, storage class, revision behavior, and explicit `live_fortress_ready: false` marker.
+The runtime shadow planner can now build a manifest-backed `Preference.element` plan from the existing runtime preference payload. The plan includes the deterministic packet ID, normalized body, projected runtime preference shape, resolved action plan, storage class, revision behavior, and explicit shadow-only marker.
 
-That marker is intentional. It keeps the alpha demo safe while proving that manifest-defined actions, builders, planners, policy action IDs, and ID strategy can line up before the live fortress accepts the new packet type.
+That marker is intentional. It distinguishes descriptor/audit planning from the live fortress-enrolled preference workflow and keeps imported definition behavior non-executable.
 
 ## Shadow audit and seed readiness
 
@@ -195,6 +195,8 @@ The manifest layer now includes a shadow audit harness before any live fortress 
 - mutation plans are checked against local supported generic builder/planner/action capabilities.
 
 `Preference.element` also has a shadow seed candidate helper. The seed helper converts current runtime element preferences into the experimental Preference body, projects that body back into the current runtime preference shape, and marks the candidate safe only when the projection is equivalent and the packet definition audit has no errors.
+
+Active packet definitions now have the same packetization treatment at profile scale. `buildDefinitionPacketSeedCandidates()` emits one valid `Definition` packet candidate for every active manifest definition part, `buildDefinitionBundlePacketSetCandidate()` groups those refs into one `Bundle.packet_set` inventory, and `auditSeededPacketDefinitionProfile()` fails closed on missing parts, unexpected parts, duplicate bundle refs, digest drift, or stale profile metadata.
 
 The shadow helpers still exist for audit and descriptor comparison, but the claimed-actor interface preference path now persists a live `Preference.element` packet in parallel with the runtime compatibility cache.
 
@@ -213,6 +215,6 @@ The bridge translates packet-definition descriptors into fortress-shaped prepare
 
 This bridge still returns `live_fortress_ready: false` because manifest descriptors do not yet execute the live mutation corridor. `Preference` is now enrolled in the `PacketEnvelope` ontology, but the bridge remains a controlled runtime helper rather than arbitrary packet-defined server behavior.
 
-For `Preference.element`, the shadow bridge can produce a prepare-shaped candidate from current runtime element preferences, project that candidate back into runtime preference shape, and report which generic builder/planner/policy descriptors would be used once live enrollment is safe.
+For `Preference.element`, the shadow bridge can produce a prepare-shaped candidate from current runtime element preferences, project that candidate back into runtime preference shape, and report which generic builder/planner/policy descriptors are used by the trusted local preference workflow.
 
-The live route and writer audits remain the boundary: manifest-defined actions should not enter the live mutation intent registry until the generic policy and planner seams are intentionally promoted. For now, the live path is the narrow `Preference.element` interface connector. It resolves manifest descriptors but still executes trusted runtime code rather than imported definition behavior.
+The live route and writer audits remain the boundary: manifest-defined actions should enter the live mutation intent registry only when the generic policy and planner seams are intentionally promoted. `Preference.element.set` is now promoted through the fortress service path. It resolves manifest descriptors but still executes trusted runtime code rather than imported definition behavior.

@@ -15,6 +15,9 @@ import { MutationPolicyGate } from '@runtime/nexus/server/mutation-policy-gate';
 import { MutationTicketService } from '@runtime/nexus/server/mutation-ticket-service';
 import type { MutationPrepareHandlerKey } from '@runtime/nexus/server/mutation-intent-registry';
 import { createMutationPrepareHandlerMap } from '@runtime/nexus/server/fortress-handler-domains';
+import {
+  preparePreferenceElementFortressMutation,
+} from '@runtime/nexus/server/preference-fortress-workflow';
 import type { SQLiteAttestationService } from '@runtime/nexus/server/attestation-service';
 import type { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store';
 
@@ -211,6 +214,25 @@ export class MutationPrepareHandlers {
       actorPacket: input.actorPacket,
       intent: input.intent,
     }) as Promise<PreparedMutation>;
+  }
+
+  async preparePreferenceElementSet(input: {
+    intent: Extract<MutationIntent, { kind: 'preference.element.set' }>;
+    actorPacket: PacketEnvelopeByType['Element'];
+  }): Promise<PreparedMutationResult> {
+    const prepared = await preparePreferenceElementFortressMutation({
+      packetStore: this.packetStore,
+      policyGate: this.policyGate,
+      actorPacket: input.actorPacket,
+      intent: input.intent,
+    });
+
+    return this.ticketService.createPreparedMutationTicket({
+      actorPacketId: input.actorPacket.header.packet_id,
+      preparedMutation: prepared.preparedMutation,
+      intent: input.intent,
+      preparedResult: prepared.preparedResult,
+    });
   }
 
   private createPrepareHandlerMap(): Record<MutationPrepareHandlerKey, PrepareHandler> {

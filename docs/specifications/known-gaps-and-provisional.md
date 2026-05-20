@@ -19,7 +19,7 @@
 - locality ancestry is now planned from ordered broad-to-narrow path entries, and sparse paths are valid current behavior; absolute depth is still projection-only and is not stored on packets
 - locality creation now has a real non-mutating review seam, but the home-branch inclusion checklist shown during review is still preview-only and does not yet alter stored `home_locality` relation semantics
 - locality confirm now applies home, association, follow, and `main` visibility choices through one composite runtime write seam; claimed `main` scope-display state now persists through `Preference.element` packets while guest/session behavior remains compatibility state
-- associated and followed parent-context display now persists through the same claimed-actor `Preference.element` bridge, with guest compatibility fallback still session/cookie-based
+- associated and followed parent-context display now persists through the same claimed-actor fortress-enrolled `Preference.element` path, with guest compatibility fallback still session/cookie-based
 - same-name locality matches in other parent branches no longer need to suppress the create-path handoff, but orphan existing-scope remounting is still intentionally unresolved rather than silently repaired in this phase
 - generic abstract assembly creation and richer locality governance are still later work
 

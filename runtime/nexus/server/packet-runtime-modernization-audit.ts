@@ -92,11 +92,13 @@ const MUTATION_POLICY_ACTION_IDS = {
     'role_association.attestation.clear',
   ],
   'actor.write_policy.update': ['actor.write_policy.update'],
+  'preference.element.set': ['preference.element.write'],
 } as const satisfies Record<MutationIntent['kind'], readonly MutationActionId[]>;
 
 function connectorIdsForPacketType(packetType: string): string[] {
   return PACKET_RUNTIME_CONNECTORS.filter(
-    (connector) => connector.packet_type === packetType
+    (connector) =>
+      connector.packet_type === packetType && connector.availability !== 'shadow'
   ).map((connector) => connector.connector_id);
 }
 
@@ -164,7 +166,9 @@ export function listMutationRuntimeModernizationCoverage(): MutationRuntimeModer
         area: 'master_handler_connector',
         status: 'planned_gap',
         reason:
-          'This live mutation intent still runs through the signed fortress corridor and is scheduled for connector enrollment in the modernization chapter.',
+          descriptor.kind === 'preference.element.set'
+            ? 'Preference.element is now fortress-enrolled; the old direct runtime connector remains shadow-only for compatibility tests and local comparison.'
+            : 'This live mutation intent still runs through the signed fortress corridor and is scheduled for connector enrollment in the modernization chapter.',
       },
     ],
   }));

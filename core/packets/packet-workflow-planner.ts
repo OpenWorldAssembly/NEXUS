@@ -284,6 +284,21 @@ export const TRUSTED_PACKET_PLANNER_CAPABILITIES = [
     notes:
       'Existing compatibility projection bridge for legacy claim/relation surfaces while canonical relations settle.',
   },
+  {
+    capability_id: 'runtime.planner.preference_element',
+    capability_kind: 'planner',
+    source_module: 'runtime/nexus/server/preference-fortress-workflow.ts',
+    dependency_ids: [
+      'runtime.packet_store.read',
+      'runtime.policy_gate',
+      'generic.preference.builder',
+      'generic.preference.latest_active_planner',
+      'runtime.scope_display_projection',
+      'runtime.shell_chrome_projection',
+    ],
+    notes:
+      'Trusted local Preference.element planner for latest-active interface preference revisions and compatibility-cache projection.',
+  },
 ] as const satisfies readonly TrustedPlannerCapabilityDescriptor[];
 
 export const PACKET_WORKFLOW_DEPENDENCY_IDS = [
@@ -304,9 +319,14 @@ export const PACKET_WORKFLOW_DEPENDENCY_IDS = [
   'generic.resolver.role_scope',
   'generic.resolver.projection',
   'generic.compatibility_projection',
+  'generic.preference.builder',
+  'generic.preference.latest_active_planner',
+  'runtime.scope_display_projection',
+  'runtime.shell_chrome_projection',
   'runtime.discussion_service.read',
   'runtime.planner.scoped_relation',
   'runtime.planner.discussion_reply',
+  'runtime.planner.preference_element',
 ] as const;
 
 export const PACKET_WORKFLOW_POLICY_ACTION_IDS = [

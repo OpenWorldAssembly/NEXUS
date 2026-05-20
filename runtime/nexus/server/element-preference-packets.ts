@@ -40,6 +40,10 @@ export type ElementPreferencePacketWriteResult = {
   wrote_revision: boolean;
 };
 
+export type ElementPreferencePacketPlan = ElementPreferencePacketWriteResult & {
+  parent_revision_ref: PacketRevisionRef | null;
+};
+
 function stableJson(value: unknown): string {
   if (Array.isArray(value)) {
     return `[${value.map((item) => stableJson(item)).join(',')}]`;
@@ -195,13 +199,13 @@ export async function readElementScopeDisplayPreferencePacket(input: {
   };
 }
 
-export async function writeElementPreferenceInterfacePacket(input: {
+export async function createElementPreferenceInterfacePacketPlan(input: {
   packetStore: NodeSQLitePacketStore;
   actorPacketId: string;
   patch: ElementPreferenceInterfacePatch;
   createdAt?: string | null;
   note?: string | null;
-}): Promise<ElementPreferencePacketWriteResult> {
+}): Promise<ElementPreferencePacketPlan> {
   const createdAt = input.createdAt ?? new Date().toISOString();
   const currentProjection = await readElementPreferencePacket({
     packetStore: input.packetStore,
@@ -251,6 +255,7 @@ export async function writeElementPreferenceInterfacePacket(input: {
       preferences: currentProjection.preferences,
       shell_chrome: currentProjection.shell_chrome,
       wrote_revision: false,
+      parent_revision_ref: parentRevisionRef,
     };
   }
 
@@ -281,13 +286,39 @@ export async function writeElementPreferenceInterfacePacket(input: {
     adapter: 'nexus-runtime',
     body,
   });
-  const revisionRef = await input.packetStore.writeRevision(packet);
-
   return {
     packet,
-    revision_ref: revisionRef,
+    revision_ref: {
+      packet_id: packet.header.packet_id,
+      revision_id: packet.header.revision_id,
+    },
     preferences: nextPreferences,
     shell_chrome: nextChrome,
+    wrote_revision: true,
+    parent_revision_ref: parentRevisionRef,
+  };
+}
+
+export async function writeElementPreferenceInterfacePacket(input: {
+  packetStore: NodeSQLitePacketStore;
+  actorPacketId: string;
+  patch: ElementPreferenceInterfacePatch;
+  createdAt?: string | null;
+  note?: string | null;
+}): Promise<ElementPreferencePacketWriteResult> {
+  const plan = await createElementPreferenceInterfacePacketPlan(input);
+
+  if (!plan.wrote_revision) {
+    return plan;
+  }
+
+  const revisionRef = await input.packetStore.writeRevision(plan.packet);
+
+  return {
+    packet: plan.packet,
+    revision_ref: revisionRef,
+    preferences: plan.preferences,
+    shell_chrome: plan.shell_chrome,
     wrote_revision: true,
   };
 }

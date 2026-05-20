@@ -92,6 +92,7 @@ const LIVE_COMPOSITE_MUTATION_INTENTS = new Set<string>(
 const CLOSED_RUNTIME_MUTATION_INTENTS = new Set<string>([
   ...LIVE_GENERIC_MUTATION_INTENTS,
   ...LIVE_COMPOSITE_MUTATION_INTENTS,
+  'preference.element.set',
 ]);
 
 const LIVE_RUNTIME_PACKET_FAMILIES = new Set<PacketFamily>([
@@ -146,7 +147,7 @@ function createMutationEntries(): PreReseedClosureLedgerEntry[] {
       status: mutationStatus(entry),
       queue: queueForEntry(entry),
       reason: isClosed
-        ? 'In-scope runtime intent now prepares through a trusted generic operation or composite workflow while the fortress remains the live authority.'
+        ? 'In-scope runtime intent now prepares through a trusted generic operation, composite workflow, or fortress-enrolled Preference workflow while the fortress remains the live authority.'
         : 'In-scope live runtime work is sequenced into the pre-reseed queue.',
       next_step: isClosed
         ? 'Keep parity tests green while closing policy/dependency semantics and legacy bridge retirement.'
@@ -312,9 +313,9 @@ export function createPreReseedModernizationClosureReport(): PreReseedModernizat
       status: 'closed',
       queue: 'first_generic_promotion',
       reason:
-        'Preference.element remains the only live packet runtime connector and is already enrolled through the master handler.',
+        'Preference.element direct connector is retained as a shadow comparison bridge while authenticated writes are enrolled through the fortress.',
       next_step:
-        'Keep guest compatibility writes outside connector enrollment until reseed policy is designed.',
+        'Keep guest compatibility writes outside canonical packet enrollment until reseed policy is designed.',
     },
     ...listLiveGenericWorkflowEnrollments().map((enrollment) => ({
       subject_kind: 'runtime_connector_path' as const,

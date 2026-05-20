@@ -18,7 +18,8 @@ export type MutationPrepareHandlerKey =
   | 'prepareRoleAssociationClaim'
   | 'prepareRoleAssociationAttestation'
   | 'prepareDiscussionSurfacesEnsure'
-  | 'prepareActorWritePolicyUpdate';
+  | 'prepareActorWritePolicyUpdate'
+  | 'preparePreferenceElementSet';
 
 export type MutationFinalizeHandlerKey =
   | 'finalizeLocalityPathCreate'
@@ -33,11 +34,12 @@ export type MutationFinalizeHandlerKey =
   | 'finalizeClaimUpdate'
   | 'finalizeRoleAssociationAttestation'
   | 'finalizeDiscussionSurfacesEnsure'
-  | 'finalizeActorWritePolicyUpdate';
+  | 'finalizeActorWritePolicyUpdate'
+  | 'finalizePreferenceElementSet';
 
 export type MutationIntentDescriptor = {
   kind: MutationIntent['kind'];
-  domain: 'locality' | 'discussion' | 'attestation' | 'assembly' | 'relation' | 'role' | 'actor_policy';
+  domain: 'locality' | 'discussion' | 'attestation' | 'assembly' | 'relation' | 'role' | 'actor_policy' | 'preference';
   prepare: MutationPrepareHandlerKey;
   finalize: MutationFinalizeHandlerKey;
 };
@@ -132,6 +134,12 @@ const MUTATION_INTENT_DESCRIPTORS = [
     domain: 'actor_policy',
     prepare: 'prepareActorWritePolicyUpdate',
     finalize: 'finalizeActorWritePolicyUpdate',
+  },
+  {
+    kind: 'preference.element.set',
+    domain: 'preference',
+    prepare: 'preparePreferenceElementSet',
+    finalize: 'finalizePreferenceElementSet',
   },
 ] as const satisfies readonly MutationIntentDescriptor[];
 

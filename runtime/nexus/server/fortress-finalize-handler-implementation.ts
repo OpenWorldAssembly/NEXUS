@@ -27,6 +27,10 @@ import {
   reconcileScopeDisplayPreferences,
   writeClaimedScopeDisplayPreferences,
 } from '@runtime/nexus/server/scope-display-preferences';
+import {
+  toPreferenceElementFortressResult,
+  type PreparedPreferenceElementFortressResult,
+} from '@runtime/nexus/server/preference-fortress-workflow';
 import type { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store';
 
 export type MutationFinalizeActorContext = {
@@ -694,6 +698,73 @@ export class MutationFinalizeHandlers {
         discussions,
       },
     };
+  }
+
+  async finalizePreferenceElementSet(input: {
+    storedTicket: StoredMutationTicket;
+    actorContext?: MutationFinalizeActorContext;
+    signedPackets?: PacketEnvelope[];
+  }) {
+    if (input.storedTicket.intent.kind !== 'preference.element.set') {
+      throw new Error('Unexpected preference mutation ticket.');
+    }
+
+    const preparedResult =
+      input.storedTicket.prepared_result as
+        | PreparedPreferenceElementFortressResult
+        | undefined;
+
+    if (!preparedResult) {
+      throw new Error('Preference mutation ticket is missing prepared result metadata.');
+    }
+
+    let finalized;
+    const signedPackets = input.signedPackets ?? [];
+
+    if (preparedResult.wrote_revision === false) {
+      if (signedPackets.length > 0) {
+        throw new Error('Preference no-op finalize does not accept signed packets.');
+      }
+      finalized = toPreferenceElementFortressResult(preparedResult, []);
+    } else {
+      if (!input.actorContext) {
+        throw new Error('Preference signed finalize requires actor context.');
+      }
+      if (signedPackets.length === 0) {
+        throw new Error('Preference finalize requires signed packet candidates.');
+      }
+
+      await this.signedPacketFinalizer.persistSignedPacketsForActor({
+        actorPacket: input.actorContext.actorPacket,
+        signedPackets,
+      });
+      finalized = {
+        persist_effects: toMutationPersistEffects(signedPackets),
+        result: {
+          packet_id: preparedResult.packet_id,
+          revision_id: preparedResult.revision_id,
+          wrote_revision: preparedResult.wrote_revision,
+          preferences: preparedResult.preferences,
+          shell_chrome: preparedResult.shell_chrome,
+        },
+      };
+    }
+
+    if (input.storedTicket.intent.scope_display) {
+      await this.packetStore.writeActorScopeDisplayPreferences({
+        actor_packet_id: input.storedTicket.actor_packet_id,
+        main_visible_scope_packet_ids:
+          finalized.result.preferences.main_visible_scope_packet_ids,
+        show_associated_parent_chains:
+          finalized.result.preferences.show_associated_parent_chains,
+        show_followed_parent_chains:
+          finalized.result.preferences.show_followed_parent_chains,
+        updated_at:
+          input.storedTicket.intent.created_at ?? new Date().toISOString(),
+      });
+    }
+
+    return finalized;
   }
 
 

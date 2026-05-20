@@ -235,6 +235,7 @@ export * from '@core/packets/packet-definition-template.ts';
 export * from '@core/packets/packet-definition-action-bridge.ts';
 export * from '@core/packets/packet-definition-audit.ts';
 export * from '@core/packets/packet-type-body-builders.ts';
+export * from '@core/packets/packet-definition-seeds.ts';
 export * from '@core/packets/packet-operation-ontology.ts';
 export * from '@core/packets/packet-workflow-planner.ts';
 export * from '@core/packets/packet-policy-dependency.ts';

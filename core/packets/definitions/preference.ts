@@ -230,7 +230,7 @@ export const preferencePacketDefinition = {
       output_schema_key: 'ElementPreferenceBodySchema',
       availability: 'shadow_only',
       notes:
-        'Experimental body builder descriptor only; live Preference.element writes currently use the narrow runtime bridge rather than manifest-driven builder execution.',
+        'Experimental body builder descriptor only; claimed Preference.element writes now enter the fortress-enrolled preference workflow, while this descriptor remains manifest metadata rather than executable imported code.',
     },
   ],
   planners: [
@@ -276,6 +276,61 @@ export const preferencePacketDefinition = {
       result_family: 'packet_write',
       availability: 'shadow_only',
       notes: 'Future manifest-driven mutation intent for withdrawing element preferences.',
+    },
+  ],
+  workflow_plans: [
+    {
+      workflow_plan_id: 'preference.element.set.workflow.v0',
+      packet_type: 'Preference',
+      packet_subtype: 'element',
+      planner_id: 'preference.element.latest_active_revision.v0',
+      mutation_intents: ['preference.element.set'],
+      operation_kinds: ['single_packet.revise'],
+      resolver_ids: ['actor.ref', 'input.value', 'projection.current'],
+      policy_action_ids: ['preference.element.write'],
+      dependency_ids: [
+        'runtime.packet_store.read',
+        'runtime.policy_gate',
+        'generic.preference.builder',
+        'generic.preference.latest_active_planner',
+        'runtime.scope_display_projection',
+        'runtime.shell_chrome_projection',
+      ],
+      steps: [
+        {
+          step_id: 'revise_element_interface_preference',
+          step_kind: 'operation',
+          operation_kind: 'single_packet.revise',
+          packet_type: 'Preference',
+          packet_subtype: 'element',
+          resolver_ids: ['actor.ref', 'input.value', 'projection.current'],
+          input_bindings: {
+            owner_ref: {
+              binding_kind: 'actor_ref',
+              required: true,
+            },
+            interface_patch: {
+              binding_kind: 'input_path',
+              path: 'interface',
+              required: true,
+            },
+          },
+          policy_action_ids: ['preference.element.write'],
+          dependency_ids: [
+            'runtime.packet_store.read',
+            'runtime.policy_gate',
+            'generic.preference.builder',
+            'generic.preference.latest_active_planner',
+          ],
+          output_key: 'preference_revision',
+          on_failure: 'abort_workflow',
+          notes:
+            'Shadow workflow for claimed actor interface preference revisions through the fortress corridor.',
+        },
+      ],
+      availability: 'shadow_only',
+      notes:
+        'Describes Preference.element set semantics; trusted runtime code interprets and enforces the live write path.',
     },
   ],
   compatibility_adapters: [
@@ -455,7 +510,7 @@ export const preferencePacketDefinition = {
     'preference.element.legacy_v0_adapter',
   ],
   notes: [
-    'Bootstrap definition only; Preference.element packets are canonical for claimed actor preferences, while manifest-driven execution remains shadow-only.',
+    'Bootstrap definition plus seeded Definition material; Preference.element packets are canonical for claimed actor preferences, while execution remains trusted-local.',
     'Preference packets never create graph relationships. They only configure display/behavior for already eligible packets.',
     'Only element is currently enrolled as a supported Preference subtype; scope_display is the first live section under value.interface and shell_chrome is schema/helper-ready for the next bridge pass.',
   ],

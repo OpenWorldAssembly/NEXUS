@@ -36,7 +36,8 @@ export type MutationActionId =
   | 'locality.element.create'
   | 'assembly.element.create'
   | 'discussion.surfaces.ensure'
-  | 'actor.write_policy.update';
+  | 'actor.write_policy.update'
+  | 'preference.element.write';
 
 export const DEFAULT_MUTATION_PROOF_LEVEL: WriteProofLevel = 'session';
 export const WRITE_LOCK_POLICY_KIND = 'write_lock';
@@ -61,6 +62,7 @@ export const MUTATION_ACTION_IDS = [
   'assembly.element.create',
   'discussion.surfaces.ensure',
   'actor.write_policy.update',
+  'preference.element.write',
 ] as const satisfies readonly MutationActionId[];
 
 export interface ResolvedWritePolicyDecision {

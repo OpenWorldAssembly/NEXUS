@@ -37,6 +37,10 @@ import {
   createRoleFinalizeHandlers,
   createRolePrepareHandlers,
 } from '@runtime/nexus/server/fortress-handler-domain-role';
+import {
+  createPreferenceFinalizeHandlers,
+  createPreferencePrepareHandlers,
+} from '@runtime/nexus/server/fortress-handler-domain-preference';
 
 export function createMutationPrepareHandlerMap(
   handlers: MutationPrepareHandlers
@@ -49,6 +53,7 @@ export function createMutationPrepareHandlerMap(
     ...createRelationPrepareHandlers(handlers),
     ...createRolePrepareHandlers(handlers),
     ...createActorPolicyPrepareHandlers(handlers),
+    ...createPreferencePrepareHandlers(handlers),
   };
 }
 
@@ -63,5 +68,6 @@ export function createMutationFinalizeHandlerMap(
     ...createRelationFinalizeHandlers(handlers),
     ...createRoleFinalizeHandlers(handlers),
     ...createActorPolicyFinalizeHandlers(handlers),
+    ...createPreferenceFinalizeHandlers(handlers),
   };
 }

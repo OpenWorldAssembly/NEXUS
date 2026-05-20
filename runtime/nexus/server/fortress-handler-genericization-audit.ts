@@ -287,6 +287,21 @@ export const FORTRESS_HANDLER_GENERICIZATION_ENTRIES = [
     notes:
       'Updates the actor write policy and may publish a new actor Element policy-ref revision.',
   },
+  {
+    mutation_intent: 'preference.element.set',
+    domain: 'preference',
+    prepare_handler: 'preparePreferenceElementSet',
+    finalize_handler: 'finalizePreferenceElementSet',
+    packet_families_touched: ['Preference'],
+    policy_action_ids: ['preference.element.write'],
+    operation_kinds: ['single_packet.revise'],
+    operation_mapping_status: 'directly_mapped',
+    genericization_status: 'generic_ready',
+    next_step:
+      'Keep Preference.element on the trusted fortress workflow and use seeded Definition material for reseed verification.',
+    notes:
+      'Single private Preference.element revision with latest-active lookup and compatibility cache projection.',
+  },
 ] as const satisfies readonly FortressHandlerGenericizationEntry[];
 
 export type FortressHandlerGenericizationAuditFinding = {

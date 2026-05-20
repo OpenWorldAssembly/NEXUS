@@ -171,6 +171,23 @@ export type ActorWritePolicyMutationIntent = {
   mutation_nonce?: string | null;
 };
 
+export type PreferenceElementSetMutationIntent = {
+  kind: 'preference.element.set';
+  scope_display?: {
+    main_visible_scope_packet_ids?: string[];
+    show_associated_parent_chains?: boolean;
+    show_followed_parent_chains?: boolean;
+  };
+  shell_chrome?: {
+    navigation_mode?: 'function' | 'scope';
+    theme_mode?: 'dark' | 'light';
+    ui_density?: 'small' | 'large';
+  };
+  note?: string | null;
+  created_at?: string | null;
+  mutation_nonce?: string | null;
+};
+
 export type MutationIntent =
   | DiscussionThreadPostMutationIntent
   | DiscussionReplyMutationIntent
@@ -186,7 +203,8 @@ export type MutationIntent =
   | LocalityPathCreateMutationIntent
   | LocalityGraphApplyMutationIntent
   | DiscussionSurfacesEnsureMutationIntent
-  | ActorWritePolicyMutationIntent;
+  | ActorWritePolicyMutationIntent
+  | PreferenceElementSetMutationIntent;
 
 // This typed corridor is the temporary containment seam for explicit per-intent mutation
 // planners until a future packet-declared or registry-driven mutation model is affordable.

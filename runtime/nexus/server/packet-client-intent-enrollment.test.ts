@@ -51,29 +51,34 @@ test('enrolled prepare intent preflight resolves handoff and packet-backed requi
   assert.ok(preflight.reason_codes.includes('registered_signed_fortress_prepare'));
 });
 
-test('Preference.element remains the only live runtime connector enrollment', () => {
+test('Preference.element direct connector is shadow-only and claimed writes use prepare enrollment', () => {
   assert.deepEqual(
-    PACKET_RUNTIME_CONNECTORS.map((connector) => connector.connector_id),
-    ['preference.element.interface.set']
+    PACKET_RUNTIME_CONNECTORS.map((connector) => ({
+      connector_id: connector.connector_id,
+      availability: connector.availability,
+    })),
+    [
+      {
+        connector_id: 'preference.element.interface.set',
+        availability: 'shadow',
+      },
+    ]
   );
 
   const connectorEnrollments = listPacketClientIntentEnrollments().filter(
     (enrollment) => enrollment.live_mode === 'live_connector'
   );
 
-  assert.equal(connectorEnrollments.length, 1);
-  assert.equal(
-    connectorEnrollments[0].connector_id,
-    'preference.element.interface.set'
-  );
+  assert.equal(connectorEnrollments.length, 0);
 
   const preflight = resolvePacketClientIntentPreflight({
-    sourceRoute: '/api/nexus/shell-preferences',
-    connectorId: 'preference.element.interface.set',
+    sourceRoute: '/api/nexus/mutations/prepare',
+    clientIntentId: 'preference.interface.set',
     mutationIntent: 'preference.element.set',
   });
 
-  assert.equal(preflight.status, 'allowed_live_connector');
+  assert.equal(preflight.status, 'allowed_shadow');
+  assert.equal(preflight.enrollment?.live_mode, 'signed_fortress_prepare');
 });
 
 test('custom or unregistered client intent requests fail closed', () => {

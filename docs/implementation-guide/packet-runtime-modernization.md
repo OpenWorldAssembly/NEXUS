@@ -2,11 +2,11 @@
 
 ## Status
 
-Broad chapter plan. The first implementation pass saves this plan and adds executable coverage audits only; it does not migrate packet schemas, replace routes, or move existing fortress mutations into runtime connectors.
+Pre-reseed modernization chapter status. The early sections preserve the chapter history; the current state has seeded Definition/Bundle packet material, closed in-scope runtime genericization, packet-based policy/dependency semantics, retired legacy bridge write intents, and fortress-enrolled `Preference.element` writes.
 
 ## Summary
 
-This chapter brings the packet system, generic fortress, runtime connectors, and mutation orchestration up to the Preference-as-template direction. Preference remains the working example: it has a manifest definition, definition parts, a runtime connector, and master-handler enrollment. The broader goal is to make every live packet family visible through the same coverage map before expanding definitions and moving mutations into a standardized runtime path.
+This chapter brings the packet system, generic fortress, runtime connectors, and mutation orchestration up to the Preference-as-template direction. Preference remains the working example: it has a manifest definition, definition parts, a fortress-enrolled write path, and shadow runtime connector coverage for comparison. The broader goal is to make every live packet family visible through the same coverage map before expanding definitions and moving mutations into a standardized runtime path.
 
 The work should preserve current behavior while replacing hidden assumptions with typed registries, explicit planned gaps, and tests that fail when the modernization map drifts.
 
@@ -70,7 +70,7 @@ Builder-missing families remain explicit planned gaps in the modernization audit
 
 The next implementation pass shifts the forward-looking checklist from legacy `PACKET_FAMILIES` enrollment toward manifest `packet_type` authority. `Definition` and `Bundle` remain outside `PACKET_FAMILIES`; they are manifest-native packet types for this chapter rather than future legacy family-enrollment targets.
 
-The pass adds shadow body-candidate builders for manifest-native packet types. `Definition` builds parsed Definition part bodies from local definition descriptors, `Bundle.packet_set` builds parsed bundle inventory bodies, and `Preference.element` uses the existing element preference body helper. These builders return body candidates and metadata only; they do not create signed/stored `PacketEnvelope` records.
+The pass adds shadow body-candidate builders for manifest-native packet types. `Definition` builds parsed Definition part bodies from local definition descriptors, `Bundle.packet_set` builds parsed bundle inventory bodies, and `Preference.element` uses the existing element preference body helper. These builders return body candidates and metadata only; later seed-profile helpers now use them to create auditable packet-shaped Definition candidates and a local Bundle inventory for reseed material.
 
 Packet-type modernization coverage is now the forward-looking audit surface for manifest definitions. The legacy family coverage remains as a migration bridge for live packet families and should keep planned gaps visible until those families are converted into packet-type definitions and runtime connectors.
 
@@ -154,7 +154,7 @@ The handoff pass adds a shadow `PacketRuntimeFortressHandoff` contract. A handof
 
 Generic-ready and workflow-aligned planner-extraction intents can now produce `shadow_ready` handoffs. Runtime-owned workflow intents produce explicit non-ready handoffs with orchestration reason codes. Legacy bridge intents point at canonical handoff directions. Unknown mutation intents fail closed before any fortress handoff.
 
-This does not change the live mutation routes. `NexusMutationService` remains the live signed fortress authority, and `Preference.element` remains the only live packet-runtime master-handler connector.
+At the time of this pass, this did not change the live mutation routes. The current state is stricter: `NexusMutationService` remains the live signed fortress authority, and authenticated `Preference.element` writes now enter that fortress service path rather than the old direct packet-runtime connector.
 
 ## Packet-Based Policy, Dependency, and Client Ingress Enrollment Pass
 
@@ -165,7 +165,7 @@ Policy and dependency requirements are now audited as packet-backed semantics ra
 The runtime crossing guard now has a client/API ingress enrollment registry. The registry is an internal allowlist of adapter-originated transport routes and portable client intent IDs:
 
 - `/api/nexus/mutations/prepare` enrolls the current signed fortress mutation intents.
-- `/api/nexus/shell-preferences` enrolls the existing live `Preference.element` runtime connector.
+- `/api/nexus/mutations/prepare` enrolls the `Preference.element` client intent; authenticated shell preference writes now use the same prepare/finalize corridor as other claimed mutations, while `/api/nexus/shell-preferences` remains guest compatibility state only.
 - each enrollment records route or transport source, client intent ID, mutation intent, operation kinds, workflow plans, policy actions, dependency refs, and current live mode.
 
 Unknown or custom route/intent pairings fail crossing-guard preflight. The preflight may resolve handoff metadata and packet-backed policy/dependency descriptors, but it does not authorize, ticket, sign, persist, finalize, or bypass the signed fortress. This keeps the future generic corridor aligned with enrolled client/API ingress from web, device, automation, or other adapters instead of accepting arbitrary injected operation requests.
@@ -178,8 +178,8 @@ The live API routes now consult crossing-guard preflight before delegating to th
 
 - prepare parses the request intent, validates client/API ingress enrollment, then delegates to `NexusMutationService`;
 - finalize reads the stored ticket, validates the ticket's original mutation intent against enrolled prepare ingress, then delegates to `NexusMutationService`;
-- authenticated shell preferences validate the `Preference.element` connector enrollment before calling the packet-runtime connector;
-- guest shell preference compatibility writes remain outside packet-runtime connector enrollment.
+- authenticated shell preferences use the standard prepare/finalize mutation routes with `preference.element.set`;
+- `/api/nexus/shell-preferences` remains a guest compatibility route and is outside packet-runtime connector enrollment.
 
 This pass is still not generic execution. Preflight validates allowlist and metadata alignment only; fortress policy/proof/ticketing/persistence remains authoritative.
 
@@ -287,3 +287,11 @@ The final wrap-up retires the remaining live legacy bridge mutation intents from
 Canonical writes now enter through `assembly_association.relation.set`, `assembly_association.relation.clear`, and `home_locality.relation.set`. Historical legacy claim material remains readable/importable/projectable through compatibility surfaces, but the signed fortress prepare corridor, client ingress registry, handoff coverage, and live write-policy action list no longer enroll the legacy bridge intents.
 
 The final readiness handoff lives in runtime audit code as `createFinalPreReseedReadinessReport()`. It records canonical write intents, compatibility-only legacy surfaces, OWA seed/default anchors, required default policies, discussion default packets, manifest-native packet types, and out-of-scope never-live packet families. Reseed design should start from that report rather than rediscovering chapter state from scattered modernization audits.
+
+## Definition Packetization and Preference Fortress Promotion
+
+Active manifest definitions now have reseed-facing packet material. `buildDefinitionPacketSeedCandidates()` emits one schema-validated `Definition` packet candidate for every active manifest definition part, and `buildDefinitionBundlePacketSetCandidate()` groups those candidates into one `Bundle.packet_set` definition profile inventory. `auditSeededPacketDefinitionProfile()` compares that packet material back to the core manifest and fails on missing parts, duplicate or stale bundle refs, digest drift, or manifest/profile mismatch.
+
+This is packetized seed truth, not imported-code execution. Stored Definition and Bundle packets may describe schemas, operations, policies, dependencies, planners, and builders; trusted local runtime registries remain the only executable authority.
+
+Claimed `Preference.element` writes now use the signed fortress prepare/finalize path as `preference.element.set`. The client prepares through `/api/nexus/mutations/prepare`, signs the prepared Preference packet candidate, finalizes through `/api/nexus/mutations/finalize`, and then receives the same projected Preference result shape from the mutation result. `/api/nexus/shell-preferences` is now guest compatibility state only. The old direct `preference.element.interface.set` connector is retained as a shadow/internal comparison bridge rather than the live claimed-write path.
