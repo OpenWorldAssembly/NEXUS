@@ -332,7 +332,7 @@ test('legacy policy revisions upcast missing trust_policy to null', () => {
     null
   );
   requirePreparedPacket(preparedPacket);
-  assert.equal(preparedPacket.prepared_packet.header.schema_version, '1.2.0');
+  assert.equal(preparedPacket.prepared_packet.header.schema_version, '1.3.0');
   const changePaths = preparedPacket.changes.map((change) => change.path);
 
   assert.equal(changePaths.includes('body.trust_policy'), true);
@@ -340,6 +340,8 @@ test('legacy policy revisions upcast missing trust_policy to null', () => {
   assert.equal(changePaths.includes('body.dependency_policy'), true);
   assert.equal(changePaths.includes('body.alignment_policy'), true);
   assert.equal(changePaths.includes('body.relation_requirements'), true);
+  assert.equal(changePaths.includes('body.default_policy'), true);
+  assert.equal(changePaths.includes('body.governance_policy'), true);
   assert.equal(changePaths.includes('header.schema_version'), true);
 });
 
@@ -667,11 +669,17 @@ test('compatibility audit summaries classify legacy support and write preparatio
   assert.equal(policySummary.has_write_preparation, true);
 
   const discussionSummary = getPacketCompatibilityAuditSummary('Discussion');
+  const actionSummary = getPacketCompatibilityAuditSummary('Action');
+  const reportSummary = getPacketCompatibilityAuditSummary('Report');
 
   assert.equal(discussionSummary.support_level, 'legacy_supported');
-  assert.equal(discussionSummary.has_legacy_versions, false);
+  assert.equal(discussionSummary.has_legacy_versions, true);
   assert.equal(discussionSummary.write_target_policy, 'supported_versions');
-  assert.deepEqual(discussionSummary.supported_schema_versions, ['1.0.0']);
+  assert.deepEqual(discussionSummary.supported_schema_versions, ['1.0.0', '1.1.0']);
+  assert.equal(actionSummary.support_level, 'legacy_supported');
+  assert.deepEqual(actionSummary.supported_schema_versions, ['1.0.0', '1.1.0']);
+  assert.equal(reportSummary.support_level, 'legacy_supported');
+  assert.deepEqual(reportSummary.supported_schema_versions, ['1.0.0', '1.1.0']);
 
   const discussionFamilies = [
     'DiscussionSpace',
@@ -839,6 +847,26 @@ test('cause, action, relation, and location packets parse with forward subtype s
       status: 'planned',
     },
   });
+  const initiativeAction = parsePacketEnvelope({
+    header: {
+      ...baseHeader,
+      schema_version: '1.1.0',
+      packet_id: 'nexus:action/owa',
+      revision_id: 'nexus:action/owa@r1',
+      family: 'Action',
+    },
+    body: {
+      type: 'action',
+      subtype: 'initiative',
+      title: 'OWA',
+      summary: 'Open World Assembly',
+      status: 'active',
+      objective_markdown: 'Default OWA initiative action.',
+      policy_refs: [{ packet_id: 'nexus:policy/global-trust-baseline' }],
+      template_refs: [{ packet_id: 'nexus:definition/owa-element-defaults' }],
+      default_packet_set_refs: [{ packet_id: 'nexus:bundle/owa-defaults' }],
+    },
+  });
   const relation = parsePacketEnvelope({
     header: {
       ...baseHeader,
@@ -880,6 +908,13 @@ test('cause, action, relation, and location packets parse with forward subtype s
   assert.equal((cause.body as { subtype: string }).subtype, 'initiative');
   assert.equal(action.header.family, 'Action');
   assert.equal((action.body as { subtype: string }).subtype, 'mission');
+  assert.equal((action.body as { policy_refs: unknown[] }).policy_refs.length, 0);
+  assert.equal((initiativeAction.body as { subtype: string }).subtype, 'initiative');
+  assert.equal(
+    (initiativeAction.body as { default_packet_set_refs: unknown[] })
+      .default_packet_set_refs.length,
+    1
+  );
   assert.equal(relation.header.family, 'Relation');
   assert.equal((relation.body as { subtype: string }).subtype, 'follows');
   assert.equal(location.header.family, 'Location');
@@ -1422,6 +1457,97 @@ test('current Policy packets parse relation requirement rules for supporting cla
     packet.body.relation_requirements?.rules[0]?.relation_subtype,
     'home_locality'
   );
+  assert.equal(packet.body.default_policy, null);
+  assert.equal(packet.body.governance_policy, null);
+});
+
+test('current Policy packets parse default inheritance and governance hooks', () => {
+  const packet = parsePacketEnvelope({
+    header: {
+      packet_id: 'nexus:policy/owa-defaults',
+      revision_id: 'nexus:policy/owa-defaults@r1',
+      family: 'Policy',
+      schema_version: '1.3.0',
+      protocol_version: 'nexus.packet/1.0',
+      created_at: '2026-05-19T00:00:00.000Z',
+      parent_revision_refs: [],
+      merge_strategy: 'last_write_wins',
+      authority_scope_ref: null,
+      applicable_scope_refs: [],
+      edges: [],
+      provenance: {
+        created_by: null,
+        submitted_by: null,
+        adapter: 'test',
+        recorded_at: '2026-05-19T00:00:00.000Z',
+        imported_from_revision: null,
+      },
+      integrity: {
+        canonicalization: 'RFC8785',
+        hash_alg: 'sha-256',
+        digest: null,
+        embedded_signatures: [],
+        signature_refs: [],
+      },
+      moderation: {
+        visibility: 'public',
+        moderation_state: 'open',
+        policy_refs: [],
+        content_warning_ids: [],
+      },
+      external_refs: [],
+      metadata: {
+        tags: [],
+        language: null,
+        summary: null,
+      },
+      producer: {
+        adapter: 'test',
+        app_version: null,
+      },
+    },
+    body: {
+      title: 'OWA defaults',
+      summary: null,
+      policy_kind: 'default_inheritance',
+      body_markdown: 'Packet-backed defaults.',
+      status: 'active',
+      trust_policy: null,
+      write_policy: null,
+      dependency_policy: null,
+      alignment_policy: null,
+      relation_requirements: null,
+      default_policy: {
+        policy_refs: [{ packet_id: 'nexus:policy/global-trust-baseline' }],
+        template_refs: [{ packet_id: 'nexus:definition/template/discussion-surfaces' }],
+        default_packet_set_refs: [],
+        preference_refs: [],
+      },
+      governance_policy: {
+        minimum_trust_stage: 'recognized',
+        voter_eligibility: {
+          eligible_scope_refs: [{ packet_id: 'nexus:element/global-commons' }],
+          eligible_role_refs: [],
+        },
+        quorum_rule: {
+          quorum_kind: 'none',
+          minimum_count: null,
+          percentage: null,
+        },
+        approval_threshold: {
+          threshold_kind: 'simple_majority',
+          percentage: null,
+        },
+        vote_method: 'simple_majority',
+        decision_report_required: true,
+      },
+    },
+  });
+
+  assert.equal(packet.header.family, 'Policy');
+  assert.equal(packet.body.default_policy?.policy_refs.length, 1);
+  assert.equal(packet.body.governance_policy?.vote_method, 'simple_majority');
+  assert.equal(packet.body.governance_policy?.decision_report_required, true);
 });
 
 test('current Preference.element packets parse scope-display preferences', () => {

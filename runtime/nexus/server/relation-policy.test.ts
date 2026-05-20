@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  createActionPacket,
   createAttestationPacket,
   createCausePacket,
   createClaimPacket,
@@ -86,6 +87,35 @@ test('relation policy evaluation recognizes a supporting home-locality claim fro
   assert.deepEqual(evaluation.evaluations[0]?.supporting_claim_packet_ids, [
     supportingClaim.header.packet_id,
   ]);
+});
+
+test('relation policy collection supports the forward Action initiative anchor', () => {
+  const policy = createPolicyPacket({
+    packet_id: 'nexus:policy/owa-home-locality',
+    created_at: '2026-05-07T00:05:00.000Z',
+    title: 'OWA home locality policy',
+    policy_kind: 'charter',
+    body_markdown: 'Require a relation assertion claim for home locality relations.',
+    status: 'active',
+  });
+  const owaAction = createActionPacket({
+    packet_id: 'nexus:action/owa',
+    created_at: '2026-05-07T00:06:00.000Z',
+    subtype: 'initiative',
+    title: 'OWA',
+    status: 'active',
+    policy_refs: [{ packet_id: policy.header.packet_id }],
+  });
+
+  const policies = collectPoliciesForCauseAnchor({
+    anchorPacket: owaAction,
+    policyPackets: [policy],
+  });
+
+  assert.deepEqual(
+    policies.map((packet) => packet.header.packet_id),
+    [policy.header.packet_id]
+  );
 });
 
 test('relation policy evaluation fails when the supporting claim subject does not match the relation subject', () => {

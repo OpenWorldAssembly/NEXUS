@@ -92,28 +92,46 @@ test('remaining direct relation claim and attestation operation paths are closed
   }
 });
 
-test('remaining in-scope runtime work is sequenced before reseed', () => {
+test('legacy bridge retirement remains sequenced before reseed', () => {
   const report = createPreReseedModernizationClosureReport();
   const queued = report.live_mutation_intents.filter(
     (entry) => entry.status === 'queued_pre_reseed'
   );
 
   assert.ok(queued.length > 0);
-  assert.ok(
-    report.follow_on_pass_queue.some(
-      (entry) => entry.subject_id === 'relation_claim_attestation_generic_enrollment'
-    )
-  );
-  assert.ok(
-    report.follow_on_pass_queue.some(
-      (entry) => entry.subject_id === 'discussion_locality_workflow_decomposition'
-    )
+  assert.deepEqual(
+    queued.map((entry) => entry.queue).sort(),
+    ['legacy_bridge_retirement', 'legacy_bridge_retirement']
   );
   assert.ok(
     report.follow_on_pass_queue.some(
       (entry) => entry.subject_id === 'legacy_bridge_retirement'
     )
   );
+});
+
+test('composite workflow mutation intents are closed as live generic-composite work', () => {
+  const report = createPreReseedModernizationClosureReport();
+  const closureByIntent = new Map(
+    report.live_mutation_intents.map((entry) => [entry.subject_id, entry])
+  );
+
+  for (const mutationIntent of [
+    'locality.path.create',
+    'locality.graph.apply',
+    'discussion.surfaces.ensure',
+    'assembly.element.create',
+    'discussion.thread_post.create',
+    'discussion.reply.create',
+    'role_association.attestation.set',
+    'actor.write_policy.update',
+  ] as const) {
+    const entry = closureByIntent.get(mutationIntent);
+
+    assert.ok(entry, mutationIntent);
+    assert.equal(entry.status, 'closed', mutationIntent);
+    assert.equal(entry.queue, 'first_generic_promotion', mutationIntent);
+  }
 });
 
 test('composite workflow adapters are tracked as closed shadow extraction work', () => {

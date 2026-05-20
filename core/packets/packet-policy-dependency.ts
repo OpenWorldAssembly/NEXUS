@@ -13,6 +13,10 @@ import {
   resolvePacketWorkflowDryRunPlan,
   type PacketWorkflowPlanDescriptor,
 } from '@core/packets/packet-workflow-planner.ts';
+import {
+  auditPacketDependencySemanticAuthority,
+  resolvePacketDependencySemanticDescriptor,
+} from '@core/packets/packet-policy-semantics.ts';
 
 export type PacketPolicyRequirementDescriptor = {
   policy_requirement_id: string;
@@ -266,6 +270,9 @@ export function auditPacketPolicyDependencyCoverageFromDefinitions(input: {
   const findings: PacketPolicyDependencyAuditFinding[] = [];
   const policyDescriptors = listPacketPolicyRequirementDescriptorsFromDefinitions(input);
   const dependencyDescriptors = listPacketDependencyRequirementDescriptorsFromDefinitions(input);
+  const dependencySemanticAudit = auditPacketDependencySemanticAuthority({
+    definitions: input.definitions,
+  });
   const policyById = new Map(
     policyDescriptors.map((descriptor) => [
       descriptor.policy_action_id,
@@ -345,6 +352,19 @@ export function auditPacketPolicyDependencyCoverageFromDefinitions(input: {
       }
 
       if (
+        !resolvePacketDependencySemanticDescriptor(dependencyId, {
+          definitions: input.definitions,
+        })
+      ) {
+        findings.push({
+          severity: 'error',
+          code: 'workflow_dependency_missing_semantic_authority',
+          subject_id: workflowPlan.workflow_plan_id,
+          message: `${workflowPlan.workflow_plan_id} references ${dependencyId}, but no packet dependency semantic descriptor resolves it.`,
+        });
+      }
+
+      if (
         descriptor.anchor_kind === 'packet_definition_part' &&
         descriptor.packet_definition_part_ids.length === 0
       ) {
@@ -369,6 +389,15 @@ export function auditPacketPolicyDependencyCoverageFromDefinitions(input: {
         });
       }
     }
+  }
+
+  for (const finding of dependencySemanticAudit.findings) {
+    findings.push({
+      severity: finding.severity,
+      code: finding.code,
+      subject_id: finding.subject_id,
+      message: finding.message,
+    });
   }
 
   return {

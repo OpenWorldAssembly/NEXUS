@@ -249,16 +249,16 @@ export const PACKET_PIPELINE_INVENTORY: Record<
     ui_consumers: [],
     write_paths: ['Forward packet builders only'],
     known_manual_assumptions: [
-      'Cause is the forward purpose/alignment family; legacy initiative-family packets remain readable separately.',
+      'Cause remains readable compatibility input for purpose/alignment anchors while Action becomes the forward initiative/work hierarchy.',
     ],
     builder_pipeline_status: 'production',
     same_family_adapter_status: 'tested',
     family_evolution_status: 'none',
     read_model_status: 'declared',
-    next_migration_step: 'Use Cause as the forward home for initiative/campaign/program semantics before UI/workflow rollout.',
+    next_migration_step: 'Project previous Cause initiative anchors toward Action(subtype: initiative) defaults before reseed.',
   }),
   Action: createEntry('Action', {
-    canonical_structure: 'Action(type, subtype)',
+    canonical_structure: 'Action(type, subtype, hierarchy/default refs)',
     builder_path:
       'core/packets/packet-build-pipeline.ts + core/packets/families/action.ts',
     compatibility_stance: 'current_only',
@@ -266,13 +266,13 @@ export const PACKET_PIPELINE_INVENTORY: Record<
     ui_consumers: [],
     write_paths: ['Forward packet builders only'],
     known_manual_assumptions: [
-      'Action is the forward execution family; legacy mission-family packets remain readable separately.',
+      'Action is the forward initiative/work hierarchy for initiative, campaign, program, mission, and task semantics.',
     ],
     builder_pipeline_status: 'production',
     same_family_adapter_status: 'tested',
     family_evolution_status: 'none',
     read_model_status: 'declared',
-    next_migration_step: 'Use Action as the forward home for mission/task/event semantics before workflow rollout.',
+    next_migration_step: 'Use Action(subtype: initiative) as the OWA default anchor for reseed policy/template/default packet sets.',
   }),
   Initiative: createEntry('Initiative', {
     canonical_structure: 'Legacy initiative packet',
@@ -286,7 +286,7 @@ export const PACKET_PIPELINE_INVENTORY: Record<
     same_family_adapter_status: 'declared',
     family_evolution_status: 'declared',
     read_model_status: 'declared',
-    next_migration_step: 'Project legacy Initiative packets into Cause(subtype: initiative) reads and avoid new forward writes here.',
+    next_migration_step: 'Project legacy Initiative packets into Action(subtype: initiative) reads and avoid new forward writes here.',
   }),
   Program: createEntry('Program', {
     canonical_structure: 'Legacy program packet',
@@ -300,7 +300,7 @@ export const PACKET_PIPELINE_INVENTORY: Record<
     same_family_adapter_status: 'declared',
     family_evolution_status: 'declared',
     read_model_status: 'declared',
-    next_migration_step: 'Project legacy Program packets into Cause(subtype: program) reads and avoid new forward writes here.',
+    next_migration_step: 'Project legacy Program packets into Action(subtype: program) reads and avoid new forward writes here.',
   }),
   Campaign: createEntry('Campaign', {
     canonical_structure: 'Legacy campaign packet',
@@ -314,7 +314,7 @@ export const PACKET_PIPELINE_INVENTORY: Record<
     same_family_adapter_status: 'declared',
     family_evolution_status: 'declared',
     read_model_status: 'declared',
-    next_migration_step: 'Project legacy Campaign packets into Cause(subtype: campaign) reads and avoid new forward writes here.',
+    next_migration_step: 'Project legacy Campaign packets into Action(subtype: campaign) reads and avoid new forward writes here.',
   }),
   MissionTemplate: createReservedEntry(
     'MissionTemplate',

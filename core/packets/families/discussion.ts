@@ -55,7 +55,7 @@ export const discussionBuildDefinition: PacketFamilyBuildDefinition<
       };
     }
 
-    if (input.kind === 'topic') {
+    if (input.kind === 'topic' || input.kind === 'post') {
       return {
         dependencies: [input.parent_ref as PacketRef],
         references: input.related_refs ?? [],
@@ -89,11 +89,23 @@ export const discussionBuildDefinition: PacketFamilyBuildDefinition<
       })
     );
 
-    if (input.kind === 'topic') {
+    if (input.kind === 'topic' || input.kind === 'post') {
       for (const relatedRef of relationships?.references ?? []) {
         edges.push(
           createPacketEdge('references', relatedRef, {
             source_field: 'related_refs',
+          })
+        );
+      }
+
+      return edges;
+    }
+
+    if (input.kind === 'post') {
+      for (const attachmentRef of input.attachment_refs ?? []) {
+        edges.push(
+          createPacketEdge('references', attachmentRef, {
+            source_field: 'attachment_refs',
           })
         );
       }
@@ -166,6 +178,22 @@ export const discussionBuildDefinition: PacketFamilyBuildDefinition<
         related_refs: input.related_refs ?? [],
         participation_rules: createParticipationRules(input),
         default_sort: input.default_sort ?? 'new',
+      };
+    }
+
+    if (input.kind === 'post') {
+      return {
+        kind: 'post',
+        role: input.role,
+        title: input.title,
+        summary: input.summary ?? null,
+        status: input.status ?? 'open',
+        parent_ref: input.parent_ref as PacketRef,
+        related_refs: input.related_refs ?? [],
+        participation_rules: createParticipationRules(input),
+        default_sort: input.default_sort ?? 'new',
+        content_markdown: input.content_markdown ?? null,
+        attachment_refs: input.attachment_refs ?? [],
       };
     }
 

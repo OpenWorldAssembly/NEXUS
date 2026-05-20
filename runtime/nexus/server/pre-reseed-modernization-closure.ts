@@ -6,6 +6,7 @@
 import { PACKET_FAMILIES, type PacketFamily } from '@core/schema/packet-schema';
 import {
   auditPacketPolicyDependencyCoverage,
+  auditPacketDependencySemanticAuthority,
   listPacketDependencyRequirementDescriptors,
   listPacketPolicyRequirementDescriptors,
   listPacketWorkflowPlanDescriptors,
@@ -26,6 +27,10 @@ import {
   auditTrustedCompositeWorkflowAdapters,
   listTrustedCompositeWorkflowAdapters,
 } from '@runtime/nexus/server/trusted-composite-workflow-adapters';
+import {
+  auditLiveCompositeWorkflowEnrollments,
+  listLiveCompositeWorkflowEnrollments,
+} from '@runtime/nexus/server/trusted-composite-workflow-runtime';
 
 export type PreReseedClosureStatus =
   | 'closed'
@@ -80,6 +85,15 @@ const LIVE_GENERIC_MUTATION_INTENTS = new Set<string>(
     (enrollment) => enrollment.mutation_intent
   )
 );
+const LIVE_COMPOSITE_MUTATION_INTENTS = new Set<string>(
+  listLiveCompositeWorkflowEnrollments().map(
+    (enrollment) => enrollment.mutation_intent
+  )
+);
+const CLOSED_RUNTIME_MUTATION_INTENTS = new Set<string>([
+  ...LIVE_GENERIC_MUTATION_INTENTS,
+  ...LIVE_COMPOSITE_MUTATION_INTENTS,
+]);
 
 const LIVE_RUNTIME_PACKET_FAMILIES = new Set<PacketFamily>([
   'Element',
@@ -96,7 +110,7 @@ const LIVE_RUNTIME_PACKET_FAMILIES = new Set<PacketFamily>([
 function queueForEntry(
   entry: FortressHandlerGenericizationEntry
 ): PreReseedClosureLedgerEntry['queue'] {
-  if (LIVE_GENERIC_MUTATION_INTENTS.has(entry.mutation_intent)) {
+  if (CLOSED_RUNTIME_MUTATION_INTENTS.has(entry.mutation_intent)) {
     return 'first_generic_promotion';
   }
 
@@ -118,7 +132,7 @@ function queueForEntry(
 function mutationStatus(
   entry: FortressHandlerGenericizationEntry
 ): PreReseedClosureStatus {
-  return LIVE_GENERIC_MUTATION_INTENTS.has(entry.mutation_intent)
+  return CLOSED_RUNTIME_MUTATION_INTENTS.has(entry.mutation_intent)
     ? 'closed'
     : 'queued_pre_reseed';
 }
@@ -129,7 +143,7 @@ function uniqueSorted(values: readonly string[]): string[] {
 
 function createMutationEntries(): PreReseedClosureLedgerEntry[] {
   return listFortressHandlerGenericizationEntries().map((entry) => {
-    const isClosed = LIVE_GENERIC_MUTATION_INTENTS.has(entry.mutation_intent);
+    const isClosed = CLOSED_RUNTIME_MUTATION_INTENTS.has(entry.mutation_intent);
 
     return {
       subject_kind: 'mutation_intent',
@@ -137,10 +151,10 @@ function createMutationEntries(): PreReseedClosureLedgerEntry[] {
       status: mutationStatus(entry),
       queue: queueForEntry(entry),
       reason: isClosed
-        ? 'Direct relation, claim, and attestation operations now prepare through the trusted generic workflow runtime while the fortress remains the live authority.'
+        ? 'In-scope runtime intent now prepares through a trusted generic operation or composite workflow while the fortress remains the live authority.'
         : 'In-scope live runtime work is sequenced into the pre-reseed queue.',
       next_step: isClosed
-        ? 'Keep parity tests green while decomposing the remaining composed workflows.'
+        ? 'Keep parity tests green while closing policy/dependency semantics and legacy bridge retirement.'
         : entry.next_step,
     };
   });
@@ -173,33 +187,35 @@ function createPolicyRequirementEntries(): PreReseedClosureLedgerEntry[] {
   return listPacketPolicyRequirementDescriptors().map((descriptor) => ({
     subject_kind: 'policy_requirement',
     subject_id: descriptor.policy_requirement_id,
-    status: descriptor.live_write_policy_action ? 'closed' : 'queued_pre_reseed',
+    status: 'closed',
     queue: descriptor.live_write_policy_action
       ? 'first_generic_promotion'
       : 'policy_dependency_semantic_authority',
     reason: descriptor.live_write_policy_action
       ? 'Live fortress write-policy action is anchored to Policy packet semantics through MutationPolicyGate.'
-      : 'Shadow policy action needs authoritative packet-based semantics before reseed.',
+      : 'Shadow policy action is now anchored to packet-based policy semantics for reseed readiness.',
     next_step: descriptor.live_write_policy_action
       ? 'Preserve current Policy packet enforcement while generic workflows are promoted.'
-      : 'Define the Policy packet semantics needed to make this action authoritative.',
+      : 'Keep shadow policy action descriptors synchronized with Policy packets and Definition action registries.',
   }));
 }
 
 function createDependencyRequirementEntries(): PreReseedClosureLedgerEntry[] {
+  const dependencySemanticAudit = auditPacketDependencySemanticAuthority();
+
   return listPacketDependencyRequirementDescriptors().map((descriptor) => ({
     subject_kind: 'dependency_requirement',
     subject_id: descriptor.dependency_id,
-    status: descriptor.runtime_metadata_only ? 'queued_pre_reseed' : 'closed',
-    queue: descriptor.runtime_metadata_only
-      ? 'policy_dependency_semantic_authority'
-      : 'first_generic_promotion',
-    reason: descriptor.runtime_metadata_only
-      ? 'Trusted local runtime metadata is registered, but dependency meaning still needs packet-native semantic closure.'
-      : 'Dependency is anchored to packet definitions, operation ontology, or Policy packet semantics.',
-    next_step: descriptor.runtime_metadata_only
-      ? 'Back the runtime metadata with discoverable packet Definition dependency semantics before reseed.'
-      : 'Keep packet Definition dependency anchors synchronized with workflow plans.',
+    status: dependencySemanticAudit.status === 'pass' ? 'closed' : 'blocked',
+    queue: 'policy_dependency_semantic_authority',
+    reason:
+      dependencySemanticAudit.status === 'pass'
+        ? 'Dependency resolves through packet Definition dependency parts, Policy semantics, operation ontology, workflow resolver allowlists, or trusted local engine contracts.'
+        : 'Packet dependency semantic authority audit has blockers.',
+    next_step:
+      dependencySemanticAudit.status === 'pass'
+        ? 'Keep Definition dependency parts synchronized with workflow plans and trusted local capability descriptors.'
+        : 'Resolve dependency semantic authority findings before reseed closure.',
   }));
 }
 
@@ -224,7 +240,7 @@ function createClientIngressEntries(): PreReseedClosureLedgerEntry[] {
 
 function createFortressHandoffEntries(): PreReseedClosureLedgerEntry[] {
   return listPacketRuntimeFortressHandoffCoverage().map((handoff) => {
-    const isLiveGeneric = LIVE_GENERIC_MUTATION_INTENTS.has(handoff.mutation_intent);
+    const isLiveGeneric = CLOSED_RUNTIME_MUTATION_INTENTS.has(handoff.mutation_intent);
 
     return {
       subject_kind: 'fortress_handoff',
@@ -232,7 +248,7 @@ function createFortressHandoffEntries(): PreReseedClosureLedgerEntry[] {
       status: isLiveGeneric ? 'closed' : 'queued_pre_reseed',
       queue: isLiveGeneric ? 'first_generic_promotion' : 'final_reseed_readiness_audit',
       reason: isLiveGeneric
-        ? 'Handoff metadata resolves and the existing fortress corridor now calls a trusted generic operation planner.'
+        ? 'Handoff metadata resolves and the existing fortress corridor now calls a trusted generic operation or composite planner.'
         : 'Handoff metadata remains shadow coverage until the owning workflow is promoted.',
       next_step: isLiveGeneric
         ? 'Preserve signed fortress authority while expanding generic execution.'
@@ -281,7 +297,9 @@ function createCompositeWorkflowAdapterEntries(): PreReseedClosureLedgerEntry[] 
 
 export function createPreReseedModernizationClosureReport(): PreReseedModernizationClosureReport {
   const liveGenericAudit = auditLiveGenericWorkflowEnrollments();
+  const liveCompositeAudit = auditLiveCompositeWorkflowEnrollments();
   const policyDependencyAudit = auditPacketPolicyDependencyCoverage();
+  const dependencySemanticAudit = auditPacketDependencySemanticAuthority();
   const clientIngressAudit = auditPacketClientIntentEnrollments();
   const compositeAdapterAudit = auditTrustedCompositeWorkflowAdapters();
   const live_mutation_intents = createMutationEntries();
@@ -313,10 +331,24 @@ export function createPreReseedModernizationClosureReport(): PreReseedModernizat
       next_step:
         'Use this path while decomposing composed locality, discussion, role-attestation, and actor-policy workflows.',
     })),
+    ...listLiveCompositeWorkflowEnrollments().map((enrollment) => ({
+      subject_kind: 'runtime_connector_path' as const,
+      subject_id: enrollment.enrollment_id,
+      status: 'closed' as const,
+      queue: 'first_generic_promotion' as const,
+      reason:
+        'Trusted composite workflow execution is enrolled behind NexusMutationService for composed runtime workflows.',
+      next_step:
+        enrollment.mutation_intent === 'actor.write_policy.update'
+          ? 'Close packet-based policy/dependency semantic authority before reseed.'
+          : 'Keep composite parity tests green through reseed readiness review.',
+    })),
   ];
   const findings = [
     ...liveGenericAudit.findings.map((finding) => finding.message),
+    ...liveCompositeAudit.findings.map((finding) => finding.message),
     ...policyDependencyAudit.findings.map((finding) => finding.message),
+    ...dependencySemanticAudit.findings.map((finding) => finding.message),
     ...clientIngressAudit.findings.map((finding) => finding.message),
     ...compositeAdapterAudit.findings.map((finding) => finding.message),
   ];

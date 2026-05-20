@@ -1,5 +1,12 @@
 # Decision Log 2026-05
 
+## 2026-05-19 initiative action and discussion schema readiness
+
+- Pre-reseed initiative semantics now point to `Action(subtype: initiative)` as the forward top-level initiative/work hierarchy above campaign, program, mission, and provisional task semantics.
+- `Cause(subtype: initiative)` remains readable compatibility input from the previous chapter rather than the fresh-reseed target.
+- Canonical discussions now reserve `Discussion(kind: post)` for top-level forum artifacts that start threads, while reply chains use `Discussion(kind: message)` and legacy discussion thread/post/reply packets remain compatibility projections.
+- Governance schema hooks remain policy-backed: quorum, minimum trust, voting gates, and decision-report closure semantics should be expressed through linked Policy/default material, `Decision`, and `Report(subtype: decision_report)`.
+
 This monthly log condenses the May 2026 decisions that remain most important for current public-surface and documentation shape.
 
 ## 2026-05-01 public surface convergence
@@ -185,3 +192,9 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - `runtime/nexus/server/packet-runtime-master-handler.ts` is the first generic runtime connector corridor: routes request a connector id, the handler resolves the packet definition and mutation action plan, then dispatches to a local connector instead of hardcoding route-specific packet writes.
 - `preference.element.interface.set` is enrolled in that master handler as a live bridge. It writes `Preference.element.value.interface.scope_display`, can preserve or update `interface.shell_chrome`, and keeps the legacy scope-display table as a compatibility cache.
 - The manifest shadow fortress bridge remains non-executing and descriptor-only. The new runtime master handler still runs trusted local connector code; it does not execute arbitrary behavior from imported definitions.
+
+## 2026-05 policy/dependency semantic authority
+
+- `Policy` current schema now includes nullable `default_policy` and `governance_policy` sections so default inheritance and governance readiness are packet-backed before reseed design.
+- Dependency refs in Definition parts and workflow plans now resolve through packet dependency semantics, Policy semantics, operation ontology entries, trusted workflow resolvers, or explicit local engine contracts instead of loose runtime-only strings.
+- The seeded OWA `Action(subtype: initiative)` is now the preferred policy/default anchor and links to default-inheritance and governance-baseline policies, while `Cause(subtype: initiative)` remains readable compatibility input.

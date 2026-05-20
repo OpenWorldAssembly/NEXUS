@@ -437,6 +437,11 @@ export const ActionBodySchema = z
     cause_refs: z.array(PacketRefSchema).default([]),
     location_refs: z.array(PacketRefSchema).default([]),
     action_refs: z.array(PacketRefSchema).default([]),
+    parent_action_ref: PacketRefSchema.nullable().default(null),
+    child_action_refs: z.array(PacketRefSchema).default([]),
+    policy_refs: z.array(PacketRefSchema).default([]),
+    template_refs: z.array(PacketRefSchema).default([]),
+    default_packet_set_refs: z.array(PacketRefSchema).default([]),
   })
   .strict();
 
@@ -545,7 +550,7 @@ export const MissionReportBodySchema = z
 export const ReportBodySchema = z
   .object({
     type: z.literal('report').default('report'),
-    subtype: z.enum(['verification_report', 'import_report']),
+    subtype: z.enum(['verification_report', 'import_report', 'decision_report']),
     status: z.enum(['active', 'superseded']).default('active'),
     target_ref: PacketRefSchema.nullable().default(null),
     scope_ref: PacketRefSchema.nullable().default(null),
@@ -626,6 +631,61 @@ export const PolicyBodySchema = z
               .strict()
           )
           .default([]),
+      })
+      .strict()
+      .nullable()
+      .default(null),
+    default_policy: z
+      .object({
+        policy_refs: z.array(PacketRefSchema).default([]),
+        template_refs: z.array(PacketRefSchema).default([]),
+        default_packet_set_refs: z.array(PacketRefSchema).default([]),
+        preference_refs: z.array(PacketRefSchema).default([]),
+      })
+      .strict()
+      .nullable()
+      .default(null),
+    governance_policy: z
+      .object({
+        minimum_trust_stage: TrustStageSchema.default('recognized'),
+        voter_eligibility: z
+          .object({
+            eligible_scope_refs: z.array(PacketRefSchema).default([]),
+            eligible_role_refs: z.array(PacketRefSchema).default([]),
+          })
+          .strict()
+          .default({
+            eligible_scope_refs: [],
+            eligible_role_refs: [],
+          }),
+        quorum_rule: z
+          .object({
+            quorum_kind: z
+              .enum(['none', 'fixed_count', 'eligible_actor_percent'])
+              .default('none'),
+            minimum_count: z.number().int().nonnegative().nullable().default(null),
+            percentage: z.number().min(0).max(1).nullable().default(null),
+          })
+          .strict()
+          .default({
+            quorum_kind: 'none',
+            minimum_count: null,
+            percentage: null,
+          }),
+        approval_threshold: z
+          .object({
+            threshold_kind: z
+              .enum(['simple_majority', 'supermajority_percent', 'unanimity'])
+              .default('simple_majority'),
+            percentage: z.number().min(0).max(1).nullable().default(null),
+          })
+          .strict()
+          .default({
+            threshold_kind: 'simple_majority',
+            percentage: null,
+          }),
+        vote_method: z.string().min(1).default('simple_majority'),
+        decision_report_required: z.boolean().default(true),
       })
       .strict()
       .nullable()
@@ -793,6 +853,15 @@ export const DiscussionBodySchema = z.discriminatedUnion('kind', [
     related_refs: z.array(PacketRefSchema).default([]),
     participation_rules: DiscussionParticipationRulesSchema,
     default_sort: DiscussionSortSchema.default('new'),
+  }).strict(),
+  DiscussionBaseBodySchema.extend({
+    kind: z.literal('post'),
+    parent_ref: PacketRefSchema,
+    related_refs: z.array(PacketRefSchema).default([]),
+    participation_rules: DiscussionParticipationRulesSchema,
+    default_sort: DiscussionSortSchema.default('new'),
+    content_markdown: z.string().min(1).nullable().default(null),
+    attachment_refs: z.array(PacketRefSchema).default([]),
   }).strict(),
   DiscussionBaseBodySchema.extend({
     kind: z.literal('message'),

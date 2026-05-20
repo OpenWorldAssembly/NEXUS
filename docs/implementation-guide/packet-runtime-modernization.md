@@ -238,6 +238,41 @@ The remaining composed workflows now have named adapter shapes instead of open-e
 - `composite.role_attestation.set.v0` for mutual-exclusion support/dispute/clear attestation composition.
 - `composite.actor_write_policy.update.v0` for actor-owned Policy packet revision plus actor projection refresh.
 
-Discussion follow-up is explicit: new discussion writes should converge on canonical `Discussion(kind: message)` semantics, while `DiscussionThread`, `DiscussionPost`, and `DiscussionReply` remain compatibility projections until reseed and import/export compatibility work are closed.
+Discussion follow-up is explicit: new top-level discussion writes should converge on canonical `Discussion(kind: post)` semantics, while replies use `Discussion(kind: message)`. `DiscussionThread`, `DiscussionPost`, and `DiscussionReply` remain compatibility projections until reseed and import/export compatibility work are closed.
 
-Initiative follow-up is also explicit: OWA remains the default `Cause(subtype: initiative)` anchor for this chapter, and pre-reseed schema/definition hardening should make later multi-initiative selection possible for branding, locality policy, voting policy, and governance defaults. This pass does not add an initiative selector or UI behavior.
+Initiative follow-up is also explicit: the fresh-reseed direction is `Action(subtype: initiative)` as the default OWA anchor for policy, template, branding, locality, voting, and governance defaults. Existing `Cause(subtype: initiative)` material remains compatibility input. This pass does not add an initiative selector or UI behavior.
+
+## Live Composite Workflow Promotion Pass
+
+The runtime genericization lane is now closed for in-scope live prepare handling. Direct packet operations continue through the trusted generic operation seam, and composed workflows now prepare through trusted generic-composite workflow resolvers:
+
+- `composite.locality_path.create.v0`
+- `composite.locality_graph.apply.v0`
+- `composite.discussion_surfaces.ensure.v0`
+- `composite.assembly_element.create.v0`
+- `composite.discussion_thread_post.create.v0`
+- `composite.discussion_reply.create.v0`
+- `composite.role_attestation.set.v0`
+- `composite.actor_write_policy.update.v0`
+
+These resolvers execute trusted local runtime code only. Adapter descriptors describe the reusable workflow shape and audit metadata; packet definitions still cannot inject executable behavior. `MutationPrepareHandlers` remains the compatibility facade, `NexusMutationService` remains the signed fortress authority, and finalize handlers remain unchanged.
+
+Actor write-policy update is mechanically promoted through the composite seam, but reseed remains blocked until the packet-based policy/dependency semantic authority pass makes Policy packets and Definition dependency parts authoritative enough for a fresh genesis. Discussion canonicalization to top-level `Discussion(kind: post)` plus reply `Discussion(kind: message)` and OWA `Action(subtype: initiative)` readiness also remain explicit pre-reseed chapter-close passes.
+
+## Initiative Action Hierarchy and Discussion Schema Readiness
+
+The pre-reseed packet model now treats `Action(subtype: initiative)` as the forward initiative/work hierarchy anchor. `Action` packets can carry hierarchy refs plus packet-backed policy, template, and default packet-set refs so OWA defaults can be overridden without adding OWA-specific fields to `Element` or hardcoding defaults in runtime.
+
+Canonical discussion shape now reserves `Discussion(kind: post)` for top-level multimedia forum artifacts that start a thread, while `Discussion(kind: message)` remains the reply/comment shape. Legacy thread/post/reply packet families remain readable and projectable during the reseed transition.
+
+Governance hooks remain schema-ready rather than workflow-complete: quorum, minimum trust, voter eligibility, approval thresholds, and voting gates should be expressed through packet-backed Policy/default material linked from the applicable initiative Action, scope, proposal, or definition context. `Decision` is the formal outcome packet; `Report(subtype: decision_report)` is reserved for future tally/evidence/process closure material.
+
+## Packet-Based Policy and Dependency Semantic Authority
+
+Policy and dependency semantic authority is now closed for reseed readiness, while live governance execution remains later work. `Policy` current schema includes nullable `default_policy` and `governance_policy` sections. Older Policy revisions upcast those sections to explicit `null`; downcasts to older schema versions report loss when non-null default or governance material cannot be represented.
+
+Policy packets are the semantic home for write locks, trust baselines, relation requirements, dependency and alignment rules, default inheritance, and governance hooks. The live write-lock path still runs through `MutationPolicyGate`; the new semantic helpers resolve and audit packet meaning without executing proposal/vote/decision behavior.
+
+Definition `packet_dependency` parts now carry meaningful dependency refs for packet operations, builder pipelines, shadow action bridges, manifest-native builders, Preference projections, Bundle inventory building, and trusted compatibility/projection seams. Workflow and runtime dependency IDs must resolve through one of these anchors, Policy packet semantics, the operation ontology, a trusted workflow resolver, or an explicit trusted local engine contract.
+
+The seeded OWA `Action(subtype: initiative)` now links to default-inheritance and governance-baseline policies. Runtime relation policy discovery still supports the compatibility `Cause(subtype: initiative)` path, but forward default/policy resolution prefers the Action initiative anchor when it is present.

@@ -75,7 +75,7 @@ test('legacy discussion packets interpret as canonical discussion nodes', () => 
   assert.equal(interpretDiscussionPacket(topic).kind, 'topic');
 
   const postNode = interpretDiscussionPacket(post);
-  assert.equal(postNode.kind, 'message');
+  assert.equal(postNode.kind, 'post');
   assert.equal(postNode.parent_packet_id, createCanonicalDiscussionPacketId(topic.header.packet_id));
   assert.equal(postNode.adaptation.direction, 'legacy_to_canonical');
 
@@ -85,7 +85,7 @@ test('legacy discussion packets interpret as canonical discussion nodes', () => 
   assert.equal(replyNode.adaptation.is_lossy, false);
 });
 
-test('canonical discussion messages can virtually downcast to legacy post and reply views', () => {
+test('canonical discussion posts and messages can virtually downcast to legacy post and reply views', () => {
   const topic = createDiscussionPacket({
     packet_id: 'nexus:discussion/topic/scope-a-general-topic',
     created_at: '2026-04-28T00:00:00.000Z',
@@ -96,16 +96,15 @@ test('canonical discussion messages can virtually downcast to legacy post and re
     parent_ref: { packet_id: 'nexus:discussion/forum/scope-a-general' },
     status: 'open',
   });
-  const rootMessage = createDiscussionPacket({
-    packet_id: 'nexus:discussion/message/scope-a-general-root',
+  const rootPost = createDiscussionPacket({
+    packet_id: 'nexus:discussion/post/scope-a-general-root',
     created_at: '2026-04-28T00:01:00.000Z',
-    kind: 'message',
+    kind: 'post',
     role: 'forum_post',
     title: 'Hello',
     parent_ref: { packet_id: topic.header.packet_id },
-    topic_ref: { packet_id: topic.header.packet_id },
-    root_message_ref: null,
     content_markdown: 'Root message',
+    attachment_refs: [{ packet_id: 'nexus:artifact/example' }],
   });
   const reply = createDiscussionPacket({
     packet_id: 'nexus:discussion/message/scope-a-general-reply',
@@ -113,13 +112,13 @@ test('canonical discussion messages can virtually downcast to legacy post and re
     kind: 'message',
     role: 'reply',
     title: 'Reply',
-    parent_ref: { packet_id: rootMessage.header.packet_id },
-    topic_ref: { packet_id: topic.header.packet_id },
-    root_message_ref: { packet_id: rootMessage.header.packet_id },
+    parent_ref: { packet_id: rootPost.header.packet_id },
+    topic_ref: { packet_id: rootPost.header.packet_id },
+    root_message_ref: { packet_id: rootPost.header.packet_id },
     content_markdown: 'Child message',
   });
 
-  const legacyPost = projectDiscussionPacketToLegacy(rootMessage, 'DiscussionPost');
+  const legacyPost = projectDiscussionPacketToLegacy(rootPost, 'DiscussionPost');
   const legacyReply = projectDiscussionPacketToLegacy(reply, 'DiscussionReply');
   const projectedPost = legacyPost as PacketEnvelopeByType['DiscussionPost'];
   const projectedReply = legacyReply as PacketEnvelopeByType['DiscussionReply'];
@@ -127,7 +126,7 @@ test('canonical discussion messages can virtually downcast to legacy post and re
   assert.equal(legacyPost?.header.family, 'DiscussionPost');
   assert.equal(projectedPost.body.thread_ref.packet_id, topic.header.packet_id);
   assert.equal(legacyReply?.header.family, 'DiscussionReply');
-  assert.equal(projectedReply.body.root_post_ref.packet_id, rootMessage.header.packet_id);
+  assert.equal(projectedReply.body.root_post_ref.packet_id, rootPost.header.packet_id);
   assert.equal(projectDiscussionPacketToLegacy(topic, 'DiscussionReply'), null);
 });
 

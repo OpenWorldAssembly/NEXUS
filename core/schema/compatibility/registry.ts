@@ -28,13 +28,16 @@ import {
   TrustStageSchema,
 } from '@core/schema/packet-ontology';
 import {
+  ActionBodySchema,
   AttestationBodySchema,
   ClaimBodySchema,
+  DiscussionBodySchema,
   ElementBodySchema,
   getPacketBodySchema,
   PacketRefSchema,
   PolicyBodySchema,
   PreferenceBodySchema,
+  ReportBodySchema,
 } from '@core/schema/packet-body-schemas';
 import type { PacketEnvelopeByType } from '@core/schema/packet-body-schemas';
 
@@ -79,10 +82,19 @@ const PolicyBodySchemaV1_0 = PolicyBodySchema.omit({
   dependency_policy: true,
   alignment_policy: true,
   relation_requirements: true,
+  default_policy: true,
+  governance_policy: true,
 });
 
 const PolicyBodySchemaV1_1 = PolicyBodySchema.omit({
   relation_requirements: true,
+  default_policy: true,
+  governance_policy: true,
+});
+
+const PolicyBodySchemaV1_2 = PolicyBodySchema.omit({
+  default_policy: true,
+  governance_policy: true,
 });
 
 const LegacyPolicyBodySchema = PolicyBodySchemaV1_0.omit({
@@ -152,6 +164,26 @@ const AttestationBodySchemaV1_0 = AttestationBodySchema.omit({
   type: true,
   subtype: true,
 });
+
+const ActionBodySchemaV1_0 = ActionBodySchema.omit({
+  parent_action_ref: true,
+  child_action_refs: true,
+  policy_refs: true,
+  template_refs: true,
+  default_packet_set_refs: true,
+});
+
+const ReportBodySchemaV1_0 = ReportBodySchema.extend({
+  subtype: z.enum(['verification_report', 'import_report']),
+});
+
+const DiscussionBodySchemaV1_0 = DiscussionBodySchema.refine(
+  (body) => body.kind !== 'post',
+  {
+    message:
+      'Discussion schema 1.0.0 does not support canonical post nodes.',
+  }
+);
 
 function createDefaultCompatibilityEntry<TFamily extends PacketFamily>(
   family: TFamily
@@ -452,6 +484,47 @@ function stripPolicyV1_1CompatibilityFields(
   return changed ? nextBody : null;
 }
 
+function stripPolicyV1_2CompatibilityFields(
+  body: Record<string, unknown>
+): {
+  body: Record<string, unknown>;
+  losses: PacketAdaptationLoss[];
+  changed: boolean;
+} {
+  let nextBody = body;
+  let changed = false;
+  const losses: PacketAdaptationLoss[] = [];
+
+  for (const field of ['default_policy', 'governance_policy'] as const) {
+    if (!Object.prototype.hasOwnProperty.call(nextBody, field)) {
+      continue;
+    }
+
+    const value = nextBody[field];
+    const { [field]: _removed, ...withoutField } = nextBody;
+    nextBody = withoutField;
+    changed = true;
+
+    if (value !== null) {
+      losses.push(
+        createAdaptationLoss({
+          kind: 'unsupported_target_feature_omission',
+          path: `body.${field}`,
+          fromSchemaVersion: '1.3.0',
+          toSchemaVersion: '1.2.0',
+          message: `Dropped non-null ${field} because Policy schema version 1.2.0 does not support reseed-grade semantic policy sections.`,
+        })
+      );
+    }
+  }
+
+  return {
+    body: nextBody,
+    losses,
+    changed,
+  };
+}
+
 function stripPolicyV1_0CompatibilityFields(
   body: Record<string, unknown>
 ): Record<string, unknown> | null {
@@ -478,6 +551,56 @@ function stripPolicyV1_0CompatibilityFields(
   }
 
   return changed ? nextBody : null;
+}
+
+function stripActionV1_1CompatibilityFields(
+  body: Record<string, unknown>
+): {
+  body: Record<string, unknown>;
+  losses: PacketAdaptationLoss[];
+  changed: boolean;
+} {
+  let nextBody = body;
+  let changed = false;
+  const losses: PacketAdaptationLoss[] = [];
+  const fields = [
+    'parent_action_ref',
+    'child_action_refs',
+    'policy_refs',
+    'template_refs',
+    'default_packet_set_refs',
+  ] as const;
+
+  for (const field of fields) {
+    if (!Object.prototype.hasOwnProperty.call(nextBody, field)) {
+      continue;
+    }
+
+    const value = nextBody[field];
+    const isEmptyDefault =
+      value === null || (Array.isArray(value) && value.length === 0);
+    const { [field]: _removed, ...withoutField } = nextBody;
+    nextBody = withoutField;
+    changed = true;
+
+    if (!isEmptyDefault) {
+      losses.push(
+        createAdaptationLoss({
+          kind: 'unsupported_target_feature_omission',
+          path: `body.${field}`,
+          fromSchemaVersion: '1.1.0',
+          toSchemaVersion: '1.0.0',
+          message: `Dropped Action ${field} because schema version 1.0.0 does not support initiative hierarchy/default refs.`,
+        })
+      );
+    }
+  }
+
+  return {
+    body: nextBody,
+    losses,
+    changed,
+  };
 }
 
 export const PACKET_COMPATIBILITY_REGISTRY = {
@@ -930,7 +1053,83 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
     },
   },
   Relation: createDefaultCompatibilityEntry('Relation'),
-  Report: createDefaultCompatibilityEntry('Report'),
+  Report: {
+    current_schema_version: '1.1.0',
+    revision_mode: PACKET_FAMILY_REVISION_MODES.Report,
+    support_level: 'legacy_supported',
+    write_target_policy: 'supported_versions',
+    versions: {
+      '1.0.0': {
+        parseBody: (body) => {
+          rejectHeaderBodyCollisions(body, 'Report');
+          return ReportBodySchemaV1_0.parse(body);
+        },
+        next_schema_version: '1.1.0',
+        adaptToNext: (body) => ({
+          body: ReportBodySchemaV1_0.parse(body),
+          changes: [
+            createAdaptationChange({
+              kind: 'schema_version_bump',
+              path: 'body.subtype',
+              fromSchemaVersion: '1.0.0',
+              toSchemaVersion: '1.1.0',
+              message:
+                'Report schema now reserves decision_report as a governance closure report subtype.',
+            }),
+          ],
+        }),
+      },
+      '1.1.0': {
+        parseBody: (body) => {
+          rejectHeaderBodyCollisions(body, 'Report');
+          return ReportBodySchema.parse(body);
+        },
+        previous_schema_version: '1.0.0',
+        adaptToPrevious: (body) => {
+          const currentBody = ReportBodySchema.parse(body);
+
+          if (currentBody.subtype !== 'decision_report') {
+            return {
+              body: currentBody,
+              changes: [],
+              losses: [],
+            };
+          }
+
+          return {
+            body: {
+              ...currentBody,
+              subtype: 'import_report',
+              report_data: {
+                ...currentBody.report_data,
+                original_report_subtype: 'decision_report',
+              },
+            },
+            changes: [
+              createAdaptationChange({
+                kind: 'renamed_field',
+                path: 'body.subtype',
+                fromSchemaVersion: '1.1.0',
+                toSchemaVersion: '1.0.0',
+                message:
+                  'Projected decision_report to import_report for schema 1.0.0 compatibility.',
+              }),
+            ],
+            losses: [
+              createAdaptationLoss({
+                kind: 'unsupported_target_feature_omission',
+                path: 'body.subtype',
+                fromSchemaVersion: '1.1.0',
+                toSchemaVersion: '1.0.0',
+                message:
+                  'Schema version 1.0.0 cannot preserve decision_report subtype semantics.',
+              }),
+            ],
+          };
+        },
+      },
+    },
+  },
   Signal: createDefaultCompatibilityEntry('Signal'),
   Proposal: createDefaultCompatibilityEntry('Proposal'),
   Vote: createDefaultCompatibilityEntry('Vote'),
@@ -1015,7 +1214,110 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
   },
   Decision: createDefaultCompatibilityEntry('Decision'),
   Cause: createDefaultCompatibilityEntry('Cause'),
-  Action: createDefaultCompatibilityEntry('Action'),
+  Action: {
+    current_schema_version: '1.1.0',
+    revision_mode: PACKET_FAMILY_REVISION_MODES.Action,
+    support_level: 'legacy_supported',
+    write_target_policy: 'supported_versions',
+    versions: {
+      '1.0.0': {
+        parseBody: (body) => {
+          rejectHeaderBodyCollisions(body, 'Action');
+          return ActionBodySchemaV1_0.parse(body);
+        },
+        next_schema_version: '1.1.0',
+        adaptToNext: (body) => {
+          const currentBody = ActionBodySchemaV1_0.parse(body);
+
+          return {
+            body: {
+              ...currentBody,
+              parent_action_ref: null,
+              child_action_refs: [],
+              policy_refs: [],
+              template_refs: [],
+              default_packet_set_refs: [],
+            },
+            changes: [
+              createAdaptationChange({
+                kind: 'normalized_null_default',
+                path: 'body.parent_action_ref',
+                fromSchemaVersion: '1.0.0',
+                toSchemaVersion: '1.1.0',
+                message:
+                  'Added parent_action_ref for the forward Action initiative hierarchy.',
+              }),
+              createAdaptationChange({
+                kind: 'added_default_field',
+                path: 'body.child_action_refs',
+                fromSchemaVersion: '1.0.0',
+                toSchemaVersion: '1.1.0',
+                message:
+                  'Added empty child_action_refs for the forward Action initiative hierarchy.',
+              }),
+              createAdaptationChange({
+                kind: 'added_default_field',
+                path: 'body.policy_refs',
+                fromSchemaVersion: '1.0.0',
+                toSchemaVersion: '1.1.0',
+                message:
+                  'Added empty policy_refs so initiative Actions can carry packet-backed policy overrides.',
+              }),
+              createAdaptationChange({
+                kind: 'added_default_field',
+                path: 'body.template_refs',
+                fromSchemaVersion: '1.0.0',
+                toSchemaVersion: '1.1.0',
+                message:
+                  'Added empty template_refs so initiative Actions can carry packet-backed defaults.',
+              }),
+              createAdaptationChange({
+                kind: 'added_default_field',
+                path: 'body.default_packet_set_refs',
+                fromSchemaVersion: '1.0.0',
+                toSchemaVersion: '1.1.0',
+                message:
+                  'Added empty default_packet_set_refs for bundle-backed initiative defaults.',
+              }),
+            ],
+          };
+        },
+      },
+      '1.1.0': {
+        parseBody: (body) => {
+          rejectHeaderBodyCollisions(body, 'Action');
+          return ActionBodySchema.parse(body);
+        },
+        previous_schema_version: '1.0.0',
+        adaptToPrevious: (body) => {
+          const currentBody = ActionBodySchema.parse(body);
+          const stripped = stripActionV1_1CompatibilityFields(
+            currentBody as Record<string, unknown>
+          );
+
+          return {
+            body: stripped.changed ? stripped.body : currentBody,
+            changes: [],
+            losses: stripped.losses,
+          };
+        },
+        createUnsignedPacketCandidate: (packet) => {
+          const stripped = stripActionV1_1CompatibilityFields(
+            packet.body as Record<string, unknown>
+          );
+
+          if (!stripped.changed || stripped.losses.length > 0) {
+            return null;
+          }
+
+          return {
+            ...packet,
+            body: stripped.body,
+          } as PacketEnvelopeByType['Action'];
+        },
+      },
+    },
+  },
   Initiative: createDefaultCompatibilityEntry('Initiative'),
   Program: createDefaultCompatibilityEntry('Program'),
   Campaign: createDefaultCompatibilityEntry('Campaign'),
@@ -1038,7 +1340,7 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
     },
   },
   Policy: {
-    current_schema_version: '1.2.0',
+    current_schema_version: '1.3.0',
     revision_mode: PACKET_FAMILY_REVISION_MODES.Policy,
     support_level: 'legacy_supported',
     write_target_policy: 'supported_versions',
@@ -1215,11 +1517,11 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
       '1.2.0': {
         parseBody: (body) => {
           rejectHeaderBodyCollisions(body, 'Policy');
-          return PolicyBodySchema.parse(body);
+          return PolicyBodySchemaV1_2.parse(body);
         },
         previous_schema_version: '1.1.0',
         adaptToPrevious: (body) => {
-          const currentBody = PolicyBodySchema.parse(body);
+          const currentBody = PolicyBodySchemaV1_2.parse(body);
           const nextBody = stripPolicyV1_1CompatibilityFields(
             currentBody as Record<string, unknown>
           );
@@ -1228,6 +1530,36 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
             body: nextBody ?? currentBody,
             changes: [],
             losses: [],
+          };
+        },
+        next_schema_version: '1.3.0',
+        adaptToNext: (body) => {
+          const currentBody = PolicyBodySchemaV1_2.parse(body);
+
+          return {
+            body: {
+              ...currentBody,
+              default_policy: null,
+              governance_policy: null,
+            },
+            changes: [
+              createAdaptationChange({
+                kind: 'normalized_null_default',
+                path: 'body.default_policy',
+                fromSchemaVersion: '1.2.0',
+                toSchemaVersion: '1.3.0',
+                message:
+                  'Normalized missing default_policy field to explicit null for packet-backed default inheritance semantics.',
+              }),
+              createAdaptationChange({
+                kind: 'normalized_null_default',
+                path: 'body.governance_policy',
+                fromSchemaVersion: '1.2.0',
+                toSchemaVersion: '1.3.0',
+                message:
+                  'Normalized missing governance_policy field to explicit null for governance hook semantics.',
+              }),
+            ],
           };
         },
         createUnsignedPacketCandidate: (packet) => {
@@ -1245,12 +1577,135 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
           } as PacketEnvelopeByType['Policy'];
         },
       },
+      '1.3.0': {
+        parseBody: (body) => {
+          rejectHeaderBodyCollisions(body, 'Policy');
+          return PolicyBodySchema.parse(body);
+        },
+        previous_schema_version: '1.2.0',
+        adaptToPrevious: (body) => {
+          const currentBody = PolicyBodySchema.parse(body);
+          const stripped = stripPolicyV1_2CompatibilityFields(
+            currentBody as Record<string, unknown>
+          );
+
+          return {
+            body: stripped.changed ? stripped.body : currentBody,
+            changes: [],
+            losses: stripped.losses,
+          };
+        },
+        createUnsignedPacketCandidate: (packet) => {
+          const stripped = stripPolicyV1_2CompatibilityFields(
+            packet.body as Record<string, unknown>
+          );
+
+          if (!stripped.changed || stripped.losses.length > 0) {
+            return null;
+          }
+
+          return {
+            ...packet,
+            body: stripped.body,
+          } as PacketEnvelopeByType['Policy'];
+        },
+      },
     },
   },
   Discussion: {
-    ...createDefaultCompatibilityEntry('Discussion'),
+    current_schema_version: '1.1.0',
+    revision_mode: PACKET_FAMILY_REVISION_MODES.Discussion,
     support_level: 'legacy_supported',
     write_target_policy: 'supported_versions',
+    versions: {
+      '1.0.0': {
+        parseBody: (body) => {
+          rejectHeaderBodyCollisions(body, 'Discussion');
+          return DiscussionBodySchemaV1_0.parse(body);
+        },
+        next_schema_version: '1.1.0',
+        adaptToNext: (body) => ({
+          body: DiscussionBodySchemaV1_0.parse(body),
+          changes: [
+            createAdaptationChange({
+              kind: 'schema_version_bump',
+              path: 'body.kind',
+              fromSchemaVersion: '1.0.0',
+              toSchemaVersion: '1.1.0',
+              message:
+                'Discussion schema now supports canonical post nodes for top-level multimedia forum artifacts.',
+            }),
+          ],
+        }),
+      },
+      '1.1.0': {
+        parseBody: (body) => {
+          rejectHeaderBodyCollisions(body, 'Discussion');
+          return DiscussionBodySchema.parse(body);
+        },
+        previous_schema_version: '1.0.0',
+        adaptToPrevious: (body) => {
+          const currentBody = DiscussionBodySchema.parse(body);
+
+          if (currentBody.kind !== 'post') {
+            return {
+              body: currentBody,
+              changes: [],
+              losses: [],
+            };
+          }
+
+          return {
+            body: {
+              kind: 'message',
+              role: currentBody.role,
+              title: currentBody.title,
+              summary: currentBody.summary ?? null,
+              status: currentBody.status,
+              parent_ref: currentBody.parent_ref,
+              topic_ref: currentBody.parent_ref,
+              root_message_ref: null,
+              content_markdown:
+                currentBody.content_markdown ??
+                currentBody.summary ??
+                currentBody.title,
+            },
+            changes: [
+              createAdaptationChange({
+                kind: 'renamed_field',
+                path: 'body.kind',
+                fromSchemaVersion: '1.1.0',
+                toSchemaVersion: '1.0.0',
+                message:
+                  'Projected canonical Discussion post to root message shape for schema 1.0.0 compatibility.',
+              }),
+            ],
+            losses: [
+              createAdaptationLoss({
+                kind: 'unsupported_target_feature_omission',
+                path: 'body.kind',
+                fromSchemaVersion: '1.1.0',
+                toSchemaVersion: '1.0.0',
+                message:
+                  'Schema version 1.0.0 cannot preserve first-class Discussion post semantics.',
+              }),
+              ...(currentBody.attachment_refs.length > 0
+                ? [
+                    createAdaptationLoss({
+                      kind: 'unsupported_target_feature_omission',
+                      path: 'body.attachment_refs',
+                      fromSchemaVersion: '1.1.0',
+                      toSchemaVersion: '1.0.0',
+                      message:
+                        'Schema version 1.0.0 cannot preserve post attachment refs.',
+                    }),
+                  ]
+                : []),
+            ],
+          };
+        },
+      },
+    },
   },
   DiscussionSpace: createDefaultCompatibilityEntry('DiscussionSpace'),
   DiscussionForum: createDefaultCompatibilityEntry('DiscussionForum'),

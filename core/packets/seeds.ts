@@ -10,6 +10,7 @@ import type {
 } from '@core/schema/packet-schema';
 
 import {
+  createActionPacket,
   createAssemblyPacket,
   createCausePacket,
   createClaimPacket,
@@ -39,7 +40,10 @@ export const PERSONAL_TREE_PACKET_IDS = {
   sunnymead_ranch: 'nexus:element/sunnymead-ranch',
   aaron: 'nexus:element/aaron',
   owa_cause: 'nexus:cause/owa',
+  owa_action: 'nexus:action/owa',
   owa_home_locality_policy: 'nexus:policy/owa-home-locality',
+  owa_default_inheritance_policy: 'nexus:policy/owa-default-inheritance',
+  owa_governance_baseline_policy: 'nexus:policy/owa-governance-baseline',
   visitor_lobby_policy: 'nexus:policy/visitor-lobby-baseline',
   trust_baseline_policy: 'nexus:policy/global-trust-baseline',
   facilitator_role: 'nexus:role/facilitator',
@@ -58,8 +62,15 @@ export const PERSONAL_TREE_REFS = {
   sunnymead_ranch: createPacketRef(PERSONAL_TREE_PACKET_IDS.sunnymead_ranch),
   aaron: createPacketRef(PERSONAL_TREE_PACKET_IDS.aaron),
   owa_cause: createPacketRef(PERSONAL_TREE_PACKET_IDS.owa_cause),
+  owa_action: createPacketRef(PERSONAL_TREE_PACKET_IDS.owa_action),
   owa_home_locality_policy: createPacketRef(
     PERSONAL_TREE_PACKET_IDS.owa_home_locality_policy
+  ),
+  owa_default_inheritance_policy: createPacketRef(
+    PERSONAL_TREE_PACKET_IDS.owa_default_inheritance_policy
+  ),
+  owa_governance_baseline_policy: createPacketRef(
+    PERSONAL_TREE_PACKET_IDS.owa_governance_baseline_policy
   ),
   visitor_lobby_policy: createPacketRef(
     PERSONAL_TREE_PACKET_IDS.visitor_lobby_policy
@@ -686,6 +697,27 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     policy_refs: [PERSONAL_TREE_REFS.owa_home_locality_policy],
   });
 
+  const owaActionPacket = createActionPacket({
+    packet_id: PERSONAL_TREE_PACKET_IDS.owa_action,
+    created_at: SEED_CREATED_AT,
+    authority_scope_ref: PERSONAL_TREE_REFS.global_commons,
+    applicable_scope_refs: globalApplicableScopeRefs,
+    title: 'OWA',
+    summary:
+      'The forward OWA initiative action for policy, defaults, and later work hierarchy selection.',
+    subtype: 'initiative',
+    status: 'active',
+    objective_markdown:
+      'Provides the default initiative action for OWA policy, template defaults, and schema-aware scope behavior.',
+    cause_refs: [PERSONAL_TREE_REFS.owa_cause],
+    policy_refs: [
+      PERSONAL_TREE_REFS.owa_home_locality_policy,
+      PERSONAL_TREE_REFS.trust_baseline_policy,
+      PERSONAL_TREE_REFS.owa_default_inheritance_policy,
+      PERSONAL_TREE_REFS.owa_governance_baseline_policy,
+    ],
+  });
+
   const unitedStatesAncestryRelation = createRelationPacket({
     packet_id: 'nexus:relation/default-ancestry-parent/united-states',
     created_at: SEED_CREATED_AT,
@@ -783,6 +815,72 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     },
   });
 
+  const owaDefaultInheritancePolicyPacket = createPolicyPacket({
+    packet_id: PERSONAL_TREE_PACKET_IDS.owa_default_inheritance_policy,
+    created_at: SEED_CREATED_AT,
+    authority_scope_ref: PERSONAL_TREE_REFS.global_commons,
+    applicable_scope_refs: globalApplicableScopeRefs,
+    title: 'OWA Default Inheritance Policy',
+    summary:
+      'Packet-backed default stack for OWA discussion surfaces, trust baseline, visitor lobby expectations, and future preference/template material.',
+    policy_kind: 'default_inheritance',
+    body_markdown: [
+      '# OWA Default Inheritance',
+      '',
+      '- Defaults resolve through packet refs rather than runtime constants.',
+      '- Initiative Actions may override these refs before element-local policies or actor preferences apply.',
+      '- Fresh reseed material should keep default packet sets and preferences bundled rather than hardcoded into Element fields.',
+    ].join('\n'),
+    status: 'active',
+    default_policy: {
+      policy_refs: [
+        PERSONAL_TREE_REFS.owa_home_locality_policy,
+        PERSONAL_TREE_REFS.visitor_lobby_policy,
+        PERSONAL_TREE_REFS.trust_baseline_policy,
+      ],
+      template_refs: [],
+      default_packet_set_refs: [],
+      preference_refs: [],
+    },
+  });
+
+  const owaGovernanceBaselinePolicyPacket = createPolicyPacket({
+    packet_id: PERSONAL_TREE_PACKET_IDS.owa_governance_baseline_policy,
+    created_at: SEED_CREATED_AT,
+    authority_scope_ref: PERSONAL_TREE_REFS.global_commons,
+    applicable_scope_refs: globalApplicableScopeRefs,
+    title: 'OWA Governance Baseline Policy',
+    summary:
+      'Reseed-ready governance hooks for quorum, eligibility, vote method, and decision-report expectations without executing voting yet.',
+    policy_kind: 'governance_baseline',
+    body_markdown: [
+      '# OWA Governance Baseline',
+      '',
+      '- Voting execution remains future work.',
+      '- Proposal and decision flows should discover quorum, trust, eligibility, and report requirements through Policy packets.',
+      '- Decision reports are expected for formal outcomes once proposal/vote execution is live.',
+    ].join('\n'),
+    status: 'active',
+    governance_policy: {
+      minimum_trust_stage: 'recognized',
+      voter_eligibility: {
+        eligible_scope_refs: [PERSONAL_TREE_REFS.global_commons],
+        eligible_role_refs: [],
+      },
+      quorum_rule: {
+        quorum_kind: 'none',
+        minimum_count: null,
+        percentage: null,
+      },
+      approval_threshold: {
+        threshold_kind: 'simple_majority',
+        percentage: null,
+      },
+      vote_method: 'simple_majority',
+      decision_report_required: true,
+    },
+  });
+
   const facilitatorRolePacket = createRolePacket({
     packet_id: PERSONAL_TREE_PACKET_IDS.facilitator_role,
     created_at: SEED_CREATED_AT,
@@ -874,8 +972,11 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     aaronPacket,
     owaHomeLocalityPolicyPacket,
     owaCausePacket,
+    owaActionPacket,
     visitorLobbyPolicyPacket,
     trustBaselinePolicyPacket,
+    owaDefaultInheritancePolicyPacket,
+    owaGovernanceBaselinePolicyPacket,
     unitedStatesAncestryRelation,
     californiaAncestryRelation,
     morenoValleyAncestryRelation,

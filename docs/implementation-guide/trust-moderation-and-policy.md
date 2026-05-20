@@ -62,16 +62,24 @@ Status: canon candidate
 Current implementation note:
 
 - the new `Policy.relation_requirements` seam exists so rules like OWA home-locality support can be expressed generically instead of being hardcoded as route-only logic
+- `Policy.default_policy` now carries packet-backed default refs for policies, templates, default packet sets, and preference material; it must not introduce runtime-only default labels
+- `Policy.governance_policy` now reserves packet-backed governance hooks for voter eligibility, minimum trust stage, quorum, approval threshold, vote method, and decision-report expectations
 - this chapter should be read before changing `Claim`, `Attestation`, `Relation`, or `Policy` semantics because it owns the intended separation between assertion, evidence, graph structure, and policy requirements
 - packet-native follow does not currently require a supporting claim in this phase
 - packet-native assembly association does currently keep a supporting self-issued `Claim(subtype: relation_assertion)` alongside the structural relation
 
 Current home-locality policy note:
 
-- OWA-sensitive home-locality legitimacy now resolves from the forward `Cause(subtype: initiative)` anchor plus linked policy packets
+- OWA-sensitive home-locality legitimacy remains compatible with the previous `Cause(subtype: initiative)` anchor path, while the fresh-reseed direction now prefers `Action(subtype: initiative)` as the forward OWA policy/default anchor
 - a canonical `Relation(subtype: home_locality)` can exist structurally without counting as the effective mounted home locality if its governing `Policy.relation_requirements` are unsatisfied
 - the expected support model in this phase is a supporting `Claim(subtype: relation_assertion)`, not a required attestation
 - legacy claim-only home-locality reads remain compatibility projections, not the forward legitimacy model
+
+Current dependency authority note:
+
+- Definition `packet_dependency` parts describe packet requirements and local engine contracts; runtime registries only validate and interpret those refs
+- workflow dependency IDs must resolve to a Definition dependency part, Policy semantic, operation ontology entry, workflow resolver allowlist, or trusted local engine contract
+- trusted runtime capability metadata is allowed only when it points back to packet meaning or an explicit local engine contract
 
 ## Longer-term civic review framing
 
@@ -82,6 +90,7 @@ Direction:
 - a `Vote` should remain a governed attestation inside a recognized process with eligibility and policy rules
 - `Report` should be the long-term home for findings, outcomes, and context around a target
 - a resolution or decision artifact should eventually read as a process-backed closure report rather than as unexplained authority
+- quorum, minimum trust, eligibility, approval thresholds, and voting gates should be policy-backed defaults that can be inherited from the applicable initiative Action or scope policy and overridden by explicit packet refs
 
 This framing is architectural direction, not a statement that all of those packet families or workflow surfaces already exist as live runtime behavior.
 

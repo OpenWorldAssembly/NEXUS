@@ -35,6 +35,10 @@ import {
   listPacketDependencyRequirementDescriptorsFromDefinitions,
   listPacketPolicyRequirementDescriptorsFromDefinitions,
 } from '@core/packets/packet-policy-dependency.ts';
+import {
+  auditPacketDependencySemanticAuthority as auditPacketDependencySemanticAuthorityFromDefinitions,
+  listPacketDependencySemanticDescriptors as listPacketDependencySemanticDescriptorsFromDefinitions,
+} from '@core/packets/packet-policy-semantics.ts';
 import { PACKET_MANIFEST_TEMPLATE_VERSION } from '@core/packets/packet-definition-template.ts';
 
 export const EXPERIMENTAL_PACKET_TYPE_DEFINITIONS = {
@@ -213,6 +217,18 @@ export function auditPacketPolicyDependencyCoverage() {
   });
 }
 
+export function listPacketDependencySemanticDescriptors() {
+  return listPacketDependencySemanticDescriptorsFromDefinitions({
+    definitions: listExperimentalPacketTypeDefinitions(),
+  });
+}
+
+export function auditPacketDependencySemanticAuthority() {
+  return auditPacketDependencySemanticAuthorityFromDefinitions({
+    definitions: listExperimentalPacketTypeDefinitions(),
+  });
+}
+
 export * from '@core/packets/definitions/index.ts';
 export * from '@core/packets/packet-definition-helpers.ts';
 export * from '@core/packets/packet-definition-template.ts';
@@ -222,3 +238,4 @@ export * from '@core/packets/packet-type-body-builders.ts';
 export * from '@core/packets/packet-operation-ontology.ts';
 export * from '@core/packets/packet-workflow-planner.ts';
 export * from '@core/packets/packet-policy-dependency.ts';
+export * from '@core/packets/packet-policy-semantics.ts';

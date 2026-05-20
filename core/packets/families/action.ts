@@ -32,6 +32,33 @@ export const actionBuildDefinition: PacketFamilyBuildDefinition<
         source_field: 'action_refs',
       })
     ),
+    ...(input.parent_action_ref
+      ? [
+          createPacketEdge('belongs_to', input.parent_action_ref, {
+            source_field: 'parent_action_ref',
+          }),
+        ]
+      : []),
+    ...(input.child_action_refs ?? []).map((actionRef) =>
+      createPacketEdge('references', actionRef, {
+        source_field: 'child_action_refs',
+      })
+    ),
+    ...(input.policy_refs ?? []).map((policyRef) =>
+      createPacketEdge('governed_by', policyRef, {
+        source_field: 'policy_refs',
+      })
+    ),
+    ...(input.template_refs ?? []).map((templateRef) =>
+      createPacketEdge('uses_template', templateRef, {
+        source_field: 'template_refs',
+      })
+    ),
+    ...(input.default_packet_set_refs ?? []).map((packetSetRef) =>
+      createPacketEdge('depends_on', packetSetRef, {
+        source_field: 'default_packet_set_refs',
+      })
+    ),
   ],
   finalizeBody: (input) => ({
     type: 'action',
@@ -43,6 +70,11 @@ export const actionBuildDefinition: PacketFamilyBuildDefinition<
     cause_refs: input.cause_refs ?? [],
     location_refs: input.location_refs ?? [],
     action_refs: input.action_refs ?? [],
+    parent_action_ref: input.parent_action_ref ?? null,
+    child_action_refs: input.child_action_refs ?? [],
+    policy_refs: input.policy_refs ?? [],
+    template_refs: input.template_refs ?? [],
+    default_packet_set_refs: input.default_packet_set_refs ?? [],
   }),
   prepareMetadataSummary: (input) =>
     input.summary ?? input.objective_markdown ?? null,

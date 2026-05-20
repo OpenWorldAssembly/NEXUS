@@ -101,7 +101,7 @@ const GENERIC_FAMILY_CONFIGS = [
   {
     family: 'Report',
     canonical_body_type: 'report',
-    declared_subtypes: ['verification_report', 'import_report'],
+    declared_subtypes: ['verification_report', 'import_report', 'decision_report'],
     default_subtype: 'verification_report',
     index_fields: ['body.subtype', 'body.target_ref.packet_id', 'body.status'],
   },
@@ -143,8 +143,8 @@ const GENERIC_FAMILY_CONFIGS = [
   {
     family: 'Action',
     canonical_body_type: 'action',
-    declared_subtypes: ['action'],
-    default_subtype: 'action',
+    declared_subtypes: ['initiative', 'campaign', 'program', 'mission', 'task'],
+    default_subtype: 'initiative',
     index_fields: ['body.subtype', 'body.title', 'body.status'],
   },
   {
@@ -186,6 +186,23 @@ function toRevisionBehavior(family: PacketFamily): PacketRevisionBehavior {
   }
 
   return 'replaceable';
+}
+
+function createDependencyReferences(family: GenericBuilderFamily): string[] {
+  const references = new Set([
+    'generic.packet.builder_pipeline',
+    'generic.packet.definition_action_bridge',
+  ]);
+
+  if (family === 'Action') references.add('generic.operation.action');
+  if (family === 'Policy') references.add('generic.operation.policy');
+  if (family === 'Relation') references.add('generic.operation.relation');
+  if (family === 'Claim') references.add('generic.operation.claim');
+  if (family === 'Attestation') references.add('generic.operation.attestation');
+  if (family === 'Discussion') references.add('generic.operation.discussion');
+  if (family === 'Report') references.add('generic.operation.report');
+
+  return Array.from(references).sort((left, right) => left.localeCompare(right));
 }
 
 function createDefinitionParts(input: {
@@ -296,12 +313,9 @@ function createDefinitionParts(input: {
       schema_version: input.schemaVersion,
       availability: 'shadow_only',
       required: true,
-      references: [
-        'generic.packet.builder_pipeline',
-        'generic.packet.definition_action_bridge',
-      ],
+      references: createDependencyReferences(input.family),
       notes:
-        'Dependency definition part for the generic builder pipeline and shadow action-plan resolver.',
+        'Dependency definition part for the generic builder pipeline, shadow action-plan resolver, and packet-specific semantic operation anchors.',
     },
   ];
 }

@@ -16,7 +16,7 @@ import type { MutationFinalizeHandlers } from './mutation-finalize-handlers.ts';
 
 test('actor write-policy preparation resolves current policy before building the future policy', () => {
   const mutationSource = readFileSync(
-    join(process.cwd(), 'runtime', 'nexus', 'server', 'fortress-prepare-handler-implementation.ts'),
+    join(process.cwd(), 'runtime', 'nexus', 'server', 'trusted-composite-workflow-runtime.ts'),
     'utf8'
   );
   const policyGateSource = readFileSync(
@@ -24,10 +24,10 @@ test('actor write-policy preparation resolves current policy before building the
     'utf8'
   );
   const prepareActorWritePolicyUpdateIndex = mutationSource.indexOf(
-    'async prepareActorWritePolicyUpdate'
+    'resolveTrustedActorPolicyCompositePlan'
   );
   const policyGateCallIndex = mutationSource.indexOf(
-    'await this.policyGate.resolveActorWritePolicyUpdate',
+    'await input.policyGate.resolveActorWritePolicyUpdate',
     prepareActorWritePolicyUpdateIndex
   );
   const nextWritePolicyIndex = mutationSource.indexOf(

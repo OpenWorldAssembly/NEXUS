@@ -224,6 +224,10 @@ test('generic builder pipeline builds canonical Cause, Action, Relation, and Loc
     title: 'Launch rideshare network',
     status: 'planned',
     cause_refs: [{ packet_id: cause.header.packet_id }],
+    parent_action_ref: { packet_id: 'nexus:action/owa' },
+    policy_refs: [{ packet_id: 'nexus:policy/owa-baseline' }],
+    template_refs: [{ packet_id: 'nexus:definition/owa-mission-template' }],
+    default_packet_set_refs: [{ packet_id: 'nexus:bundle/owa-defaults' }],
   });
   const relation = createRelationPacket({
     packet_id: 'nexus:relation/alice-follows-owa',
@@ -247,6 +251,10 @@ test('generic builder pipeline builds canonical Cause, Action, Relation, and Loc
   assert.equal(cause.body.type, 'cause');
   assert.equal(action.header.family, 'Action');
   assert.equal(action.body.type, 'action');
+  assert.equal(action.body.parent_action_ref?.packet_id, 'nexus:action/owa');
+  assert.equal(action.body.policy_refs.length, 1);
+  assert.equal(action.body.template_refs.length, 1);
+  assert.equal(action.body.default_packet_set_refs.length, 1);
   assert.equal(relation.header.family, 'Relation');
   assert.equal(relation.body.type, 'relation');
   assert.equal(location.header.family, 'Location');
@@ -257,6 +265,14 @@ test('generic builder pipeline builds canonical Cause, Action, Relation, and Loc
   );
   assert.equal(
     action.header.edges.some((edge) => edge.edge_type === 'references'),
+    true
+  );
+  assert.equal(
+    action.header.edges.some((edge) => edge.edge_type === 'governed_by'),
+    true
+  );
+  assert.equal(
+    action.header.edges.some((edge) => edge.edge_type === 'uses_template'),
     true
   );
 });

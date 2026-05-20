@@ -7,6 +7,11 @@ import {
   listTrustedCompositeWorkflowAdapters,
   resolveCompositeWorkflowDryRun,
 } from './trusted-composite-workflow-adapters.ts';
+import {
+  auditLiveCompositeWorkflowEnrollments,
+  listLiveCompositeWorkflowEnrollments,
+  runTrustedCompositeWorkflowMutation,
+} from './trusted-composite-workflow-runtime.ts';
 
 test('trusted composite workflow adapter audit passes', () => {
   const report = auditTrustedCompositeWorkflowAdapters();
@@ -107,4 +112,32 @@ test('unknown composite adapter requests fail closed', () => {
 
   assert.equal(dryRun.ready_for_shadow_interpretation, false);
   assert.equal(dryRun.findings[0]?.code, 'unknown_adapter');
+});
+
+test('every trusted composite adapter has a live composite workflow enrollment', () => {
+  const adapterIds = listTrustedCompositeWorkflowAdapters()
+    .map((adapter) => adapter.adapter_id)
+    .sort();
+  const enrollmentAdapterIds = listLiveCompositeWorkflowEnrollments()
+    .map((enrollment) => enrollment.adapter_id)
+    .sort();
+  const report = auditLiveCompositeWorkflowEnrollments();
+
+  assert.deepEqual(enrollmentAdapterIds, adapterIds);
+  assert.equal(report.status, 'pass');
+  assert.deepEqual(report.findings, []);
+});
+
+test('unsupported live composite workflow requests fail closed', async () => {
+  await assert.rejects(
+    () =>
+      runTrustedCompositeWorkflowMutation({
+        packetStore: {} as never,
+        policyGate: {} as never,
+        ticketService: {} as never,
+        actorPacket: {} as never,
+        intent: { kind: 'follows.relation.set' } as never,
+      }),
+    /Missing live composite workflow adapter/
+  );
 });

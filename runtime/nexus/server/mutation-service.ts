@@ -81,7 +81,8 @@ export class NexusMutationService {
     this.prepareHandlers = new MutationPrepareHandlers(
       packetStore,
       this.policyGate,
-      this.ticketService
+      this.ticketService,
+      attestationService
     );
     this.finalizeHandlers = new MutationFinalizeHandlers(
       packetStore,

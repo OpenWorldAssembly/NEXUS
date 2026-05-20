@@ -11,14 +11,16 @@ Status: canon candidate
 
 ### Direction
 
-- `Initiative` should be treated as a generic Nexus concept for policy and template lineage
-- `OWA` should be modeled as an initiative element inside Nexus, not as a hardcoded exception
+- `Action(subtype: initiative)` is the forward top-level initiative packet for policy, template lineage, default packet sets, and later work hierarchy
+- `OWA` should be modeled as an initiative Action inside Nexus, not as a hardcoded exception
+- `Cause(subtype: initiative)` remains readable previous-chapter compatibility input, not the fresh-reseed target
+- lower work hierarchy levels should be represented through Action subtypes such as `campaign`, `program`, `mission`, and provisional `task`
 - "official OWA" should mean conforming to recognized OWA dependencies, templates, and policies
 - assemblies remain valid Nexus objects even when they fork or diverge from canonical OWA lineage
 
 ### Unresolved
 
-- the exact packet/API shape for initiative conformance and recognition
+- the exact packet/API shape for initiative conformance and recognition beyond Action refs and policies
 - how official, unofficial, derived, and forked initiative states should be encoded
 
 ## Initiative versioning and subscriptions
@@ -78,6 +80,8 @@ Status: canon candidate
 - decisions should begin as legitimacy records and civic signals
 - policy may later allow some decisions to activate real effects
 - proposals should declare their intended outcome as explicitly and programmatically as possible
+- quorum, eligibility, minimum trust, approval thresholds, and voting gates should come from packet-backed Policy defaults attached through the applicable initiative Action, scope, or proposal context rather than from hardcoded Vote fields
+- a `Decision` should remain the formal outcome artifact, while `Report(subtype: decision_report)` is reserved for evidence, tally, and process-context closure material
 
 Proposal outcome categories should eventually include:
 

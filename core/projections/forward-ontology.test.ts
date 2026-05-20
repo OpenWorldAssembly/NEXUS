@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  createActionPacket,
   createCausePacket,
   createClaimPacket,
   createElementPacket,
@@ -13,7 +14,7 @@ import {
   projectPacketToForwardOntology,
 } from './forward-ontology.ts';
 
-test('legacy initiative-family packets project into the forward cause ontology', () => {
+test('legacy initiative-family packets project into the forward action ontology', () => {
   const packet = {
     header: {
       packet_id: 'nexus:initiative/owa',
@@ -68,7 +69,7 @@ test('legacy initiative-family packets project into the forward cause ontology',
 
   const projection = projectPacketToForwardOntology(packet);
 
-  assert.equal(projection.type, 'cause');
+  assert.equal(projection.type, 'action');
   assert.equal(projection.subtype, 'initiative');
   assert.equal(projection.is_legacy_projection, true);
 });
@@ -88,13 +89,24 @@ test('forward packets project with their canonical type and subtype', () => {
     title: 'Service Area',
     status: 'active',
   });
+  const action = createActionPacket({
+    packet_id: 'nexus:action/owa',
+    created_at: '2026-05-07T00:01:30.000Z',
+    subtype: 'initiative',
+    title: 'OWA',
+    status: 'active',
+  });
 
   const causeProjection = projectPacketToForwardOntology(cause);
   const locationProjection = projectPacketToForwardOntology(location);
+  const actionProjection = projectPacketToForwardOntology(action);
 
   assert.equal(causeProjection.type, 'cause');
   assert.equal(causeProjection.subtype, 'initiative');
   assert.equal(causeProjection.is_legacy_projection, false);
+  assert.equal(actionProjection.type, 'action');
+  assert.equal(actionProjection.subtype, 'initiative');
+  assert.equal(actionProjection.is_legacy_projection, false);
   assert.equal(locationProjection.type, 'location');
   assert.equal(locationProjection.subtype, 'service_area');
 });

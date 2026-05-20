@@ -392,7 +392,10 @@ export function interpretDiscussionPacket(
         body.kind === 'message' ? body.root_message_ref?.packet_id ?? null : null,
       title: body.title,
       summary: body.summary ?? null,
-      content_markdown: body.kind === 'message' ? body.content_markdown : null,
+      content_markdown:
+        body.kind === 'message' || body.kind === 'post'
+          ? body.content_markdown
+          : null,
       status: body.status,
       adaptation: createReport({
         sourceFamily: 'Discussion',
@@ -478,15 +481,12 @@ export function interpretDiscussionPacket(
     const discussionPostPacket = packet as PacketEnvelopeByType['DiscussionPost'];
     return {
       ...base,
-      kind: 'message',
+      kind: 'post',
       role: discussionPostPacket.body.post_kind,
       parent_packet_id: createCanonicalDiscussionPacketId(
-        discussionPostPacket.body.reply_to_ref?.packet_id ??
-          discussionPostPacket.body.thread_ref.packet_id
-      ),
-      topic_packet_id: createCanonicalDiscussionPacketId(
         discussionPostPacket.body.thread_ref.packet_id
       ),
+      topic_packet_id: null,
       root_message_packet_id: null,
       title: discussionPostPacket.body.title,
       summary: null,
@@ -591,17 +591,15 @@ export function createCanonicalDiscussionMirrorPacket(
     const discussionPostPacket = packet as PacketEnvelopeByType['DiscussionPost'];
     return createDiscussionPacket({
       ...common,
-      metadata_tags: ['discussion', 'message', discussionPostPacket.body.post_kind, 'compat'],
-      kind: 'message',
+      metadata_tags: ['discussion', 'post', discussionPostPacket.body.post_kind, 'compat'],
+      kind: 'post',
       role: discussionPostPacket.body.post_kind,
       title: discussionPostPacket.body.title,
       status: 'open',
-      parent_ref: canonicalRef(
-        discussionPostPacket.body.reply_to_ref?.packet_id ??
-          discussionPostPacket.body.thread_ref.packet_id
-      ),
-      topic_ref: canonicalRef(discussionPostPacket.body.thread_ref.packet_id),
-      root_message_ref: null,
+      parent_ref: canonicalRef(discussionPostPacket.body.thread_ref.packet_id),
+      related_refs: discussionPostPacket.body.reply_to_ref
+        ? [discussionPostPacket.body.reply_to_ref]
+        : [],
       content_markdown: discussionPostPacket.body.content_markdown,
     });
   }
@@ -968,6 +966,17 @@ export function projectDiscussionPacketToLegacy(
       related_refs: body.related_refs,
       participation_rules: body.participation_rules,
       default_sort: body.default_sort,
+    }) as PacketEnvelopeByType[DiscussionLegacyFamily];
+  }
+
+  if (targetFamily === 'DiscussionPost' && body.kind === 'post') {
+    return createDiscussionPostPacket({
+      ...common,
+      title: body.title,
+      thread_ref: body.parent_ref,
+      post_kind: body.role,
+      content_markdown: body.content_markdown ?? body.summary ?? body.title,
+      reply_to_ref: null,
     }) as PacketEnvelopeByType[DiscussionLegacyFamily];
   }
 

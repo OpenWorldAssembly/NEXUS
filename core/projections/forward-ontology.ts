@@ -79,11 +79,11 @@ function toForwardType(family: PacketFamily): ForwardPacketType {
     case 'Decision':
       return 'decision';
     case 'Cause':
+      return 'cause';
+    case 'Action':
     case 'Initiative':
     case 'Program':
     case 'Campaign':
-      return 'cause';
-    case 'Action':
     case 'MissionTemplate':
     case 'MissionPlan':
     case 'MissionReport':

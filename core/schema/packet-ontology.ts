@@ -152,7 +152,13 @@ export const DISCUSSION_REPLY_SORTS = [
   'old',
 ] as const;
 
-export const DISCUSSION_KINDS = ['space', 'forum', 'topic', 'message'] as const;
+export const DISCUSSION_KINDS = [
+  'space',
+  'forum',
+  'topic',
+  'post',
+  'message',
+] as const;
 
 export const ATTESTATION_VALUES = [1, -1] as const;
 export const ATTESTATION_STATUSES = ['active', 'cleared'] as const;

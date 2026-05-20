@@ -35,8 +35,9 @@ export type RelationPolicyEvaluation = {
 type RelationPacket = PacketEnvelopeByType['Relation'];
 type PolicyPacket = PacketEnvelopeByType['Policy'];
 type AttestationPacket = PacketEnvelopeByType['Attestation'];
-type CauseLikePacket =
+type PolicyAnchorPacket =
   | PacketEnvelopeByType['Cause']
+  | PacketEnvelopeByType['Action']
   | PacketEnvelopeByType['Initiative']
   | PacketEnvelopeByType['Program']
   | PacketEnvelopeByType['Campaign'];
@@ -104,25 +105,36 @@ export function listAttestationsTargetingClaim(input: {
   });
 }
 
-export function getCausePolicyRefs(anchorPacket: CauseLikePacket): PacketRef[] {
-  if (anchorPacket.header.family === 'Cause') {
+export function getPolicyAnchorRefs(anchorPacket: PolicyAnchorPacket): PacketRef[] {
+  if (anchorPacket.header.family === 'Cause' || anchorPacket.header.family === 'Action') {
     return anchorPacket.body.policy_refs ?? [];
   }
 
   return [];
 }
 
+export function getCausePolicyRefs(anchorPacket: PolicyAnchorPacket): PacketRef[] {
+  return getPolicyAnchorRefs(anchorPacket);
+}
+
 export function collectPoliciesForCauseAnchor(input: {
-  anchorPacket: CauseLikePacket;
+  anchorPacket: PolicyAnchorPacket;
   policyPackets: PolicyPacket[];
 }): PolicyPacket[] {
   const policyPacketIdSet = new Set(
-    getCausePolicyRefs(input.anchorPacket).map((policyRef) => policyRef.packet_id)
+    getPolicyAnchorRefs(input.anchorPacket).map((policyRef) => policyRef.packet_id)
   );
 
   return input.policyPackets.filter((policyPacket) =>
     policyPacketIdSet.has(policyPacket.header.packet_id)
   );
+}
+
+export function collectPoliciesForPolicyAnchor(input: {
+  anchorPacket: PolicyAnchorPacket;
+  policyPackets: PolicyPacket[];
+}): PolicyPacket[] {
+  return collectPoliciesForCauseAnchor(input);
 }
 
 export function evaluateRelationPolicyRequirements(input: {

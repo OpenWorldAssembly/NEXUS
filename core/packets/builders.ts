@@ -177,7 +177,7 @@ export interface RelationPacketInput extends PacketBuilderBaseInput {
 }
 
 export interface ReportPacketInput extends PacketBuilderBaseInput {
-  subtype: 'verification_report' | 'import_report';
+  subtype: 'verification_report' | 'import_report' | 'decision_report';
   status?: 'active' | 'superseded';
   target_ref?: PacketRef | null;
   scope_ref?: PacketRef | null;
@@ -261,7 +261,8 @@ export interface DiscussionPacketInput extends PacketBuilderBaseInput {
     top_level_post_cost?: number;
   };
   default_sort?: DiscussionSort;
-  content_markdown?: string;
+  content_markdown?: string | null;
+  attachment_refs?: PacketRef[];
 }
 
 export interface ProposalPacketInput extends PacketBuilderBaseInput {
@@ -290,6 +291,8 @@ export interface PolicyPacketInput extends PacketBuilderBaseInput {
   dependency_policy?: PacketBodyByType['Policy']['dependency_policy'];
   alignment_policy?: PacketBodyByType['Policy']['alignment_policy'];
   relation_requirements?: PacketBodyByType['Policy']['relation_requirements'];
+  default_policy?: PacketBodyByType['Policy']['default_policy'];
+  governance_policy?: PacketBodyByType['Policy']['governance_policy'];
 }
 
 export interface VotePacketInput extends PacketBuilderBaseInput {
@@ -329,6 +332,11 @@ export interface ActionPacketInput extends PacketBuilderBaseInput {
   cause_refs?: PacketRef[];
   location_refs?: PacketRef[];
   action_refs?: PacketRef[];
+  parent_action_ref?: PacketRef | null;
+  child_action_refs?: PacketRef[];
+  policy_refs?: PacketRef[];
+  template_refs?: PacketRef[];
+  default_packet_set_refs?: PacketRef[];
 }
 
 export interface AttestationPacketInput extends PacketBuilderBaseInput {

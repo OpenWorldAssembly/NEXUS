@@ -65,6 +65,43 @@ export const policyBuildDefinition: PacketFamilyBuildDefinition<
           })),
         }
       : null,
+    default_policy: input.default_policy
+      ? {
+          policy_refs: input.default_policy.policy_refs ?? [],
+          template_refs: input.default_policy.template_refs ?? [],
+          default_packet_set_refs: input.default_policy.default_packet_set_refs ?? [],
+          preference_refs: input.default_policy.preference_refs ?? [],
+        }
+      : null,
+    governance_policy: input.governance_policy
+      ? {
+          minimum_trust_stage:
+            input.governance_policy.minimum_trust_stage ?? 'recognized',
+          voter_eligibility: {
+            eligible_scope_refs:
+              input.governance_policy.voter_eligibility?.eligible_scope_refs ?? [],
+            eligible_role_refs:
+              input.governance_policy.voter_eligibility?.eligible_role_refs ?? [],
+          },
+          quorum_rule: {
+            quorum_kind:
+              input.governance_policy.quorum_rule?.quorum_kind ?? 'none',
+            minimum_count:
+              input.governance_policy.quorum_rule?.minimum_count ?? null,
+            percentage: input.governance_policy.quorum_rule?.percentage ?? null,
+          },
+          approval_threshold: {
+            threshold_kind:
+              input.governance_policy.approval_threshold?.threshold_kind ??
+              'simple_majority',
+            percentage:
+              input.governance_policy.approval_threshold?.percentage ?? null,
+          },
+          vote_method: input.governance_policy.vote_method ?? 'simple_majority',
+          decision_report_required:
+            input.governance_policy.decision_report_required ?? true,
+        }
+      : null,
   }),
   prepareMetadataSummary: (input) =>
     input.summary ?? createTextExcerpt(input.body_markdown),

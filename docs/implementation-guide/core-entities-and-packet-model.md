@@ -45,7 +45,7 @@ A policy-governed civic or geographic element subtype, not a separate storage pr
 
 ### Initiative
 
-A generic Nexus concept for policy and template lineage in legacy/current compatibility terms. Forward ontology work now models this as `Cause(subtype: initiative)`, and OWA should be treated as one such initiative anchor rather than as a hardcoded exception.
+A generic Nexus concept for policy, template lineage, defaults, and work hierarchy. Previous chapter work modeled this as `Cause(subtype: initiative)`; the pre-reseed forward model now treats `Action(subtype: initiative)` as the canonical top-level initiative anchor above campaign, program, mission, and task semantics. Existing `Cause(subtype: initiative)` material remains readable compatibility input rather than the fresh-reseed target.
 
 ### Claim
 
@@ -95,6 +95,8 @@ Current direction:
 - asserted or disputable statements belong in `Claim`
 - evidence and support/dispute posture belong in `Attestation`
 - legitimacy-sensitive relation rules belong in `Policy.relation_requirements`
+- default inheritance belongs in `Policy.default_policy`, using packet refs for policies, templates, default packet sets, and preference material rather than runtime-only default names
+- governance readiness belongs in `Policy.governance_policy`, reserving voter eligibility, trust stage, quorum, approval, vote method, and decision-report hooks without executing voting yet
 
 ### Decision
 
@@ -112,14 +114,29 @@ The long-term Nexus direction is converging on a smaller reusable civic grammar:
 - `Action`
 - `Policy`
 
-Current code already implements most of that grammar directly. `Report` has now landed as a real packet family, but its live use is still intentionally narrow.
+Current code already implements most of that grammar directly. `Action` now carries the forward initiative/work hierarchy and packet-backed default override refs, while `Report` has landed as a real packet family but its live use is still intentionally narrow.
 
 Current code now ships the first concrete `Report` family use:
 
 - `Report(subtype: verification_report)`
 - `Report(subtype: import_report)`
+- `Report(subtype: decision_report)` as reserved governance closure-report shape
 
 This first live usage should still be understood narrowly. The family now exists as real packet infrastructure, but broader audit, incident, decision, or resolution report semantics remain later architectural work rather than implicit current product truth.
+
+## Packet-backed defaults
+
+Defaults should remain packet-native rather than becoming `Element` fields or runtime constants. The current pre-reseed inheritance direction is:
+
+- packet definition defaults
+- bundle/default packet-set material
+- initiative `Action` policy/template/default packet-set refs
+- element policy/template refs or relations
+- actor/client `Preference`
+
+OWA-specific behavior should be represented by the default OWA `Action(subtype: initiative)` packet and its linked policies, templates, bundles, and preferences, not by special cases in generic packet schemas.
+
+The default OWA seed now links its forward `Action(subtype: initiative)` anchor to default-inheritance and governance-baseline `Policy` packets. The compatibility `Cause(subtype: initiative)` anchor remains readable, but new default/policy resolution should prefer the Action anchor when both are available.
 
 ## Schema evolution discipline
 

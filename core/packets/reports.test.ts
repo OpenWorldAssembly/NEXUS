@@ -77,4 +77,29 @@ test('report packets round-trip with verification and import reporting fields in
     source_digest: 'digest',
     validation_mode: 'validate_before_commit',
   });
+
+  const decisionReport = createReportPacket({
+    packet_id: 'nexus:report/decision-test',
+    revision_id: 'nexus:report/decision-test@r1',
+    created_at: '2026-05-12T00:00:00.000Z',
+    adapter: 'test',
+    subtype: 'decision_report',
+    status: 'active',
+    target_ref: { packet_id: 'nexus:decision/example' },
+    scope_ref: { packet_id: 'nexus:element/global-commons' },
+    summary_markdown: 'Decision closure report.',
+    report_markdown: 'Decision passed under the applicable governance policy.',
+    supporting_refs: [{ packet_id: 'nexus:vote/example' }],
+    report_data: {
+      outcome: 'passed',
+    },
+  });
+  const parsedDecisionReport = parsePacketEnvelope(decisionReport);
+
+  assert.equal(parsedDecisionReport.header.family, 'Report');
+  assert.equal(parsedDecisionReport.body.subtype, 'decision_report');
+  assert.equal(
+    parsedDecisionReport.body.target_ref?.packet_id,
+    'nexus:decision/example'
+  );
 });

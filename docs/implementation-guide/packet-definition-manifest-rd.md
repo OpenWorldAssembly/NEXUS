@@ -123,6 +123,8 @@ Policy and dependency descriptors stay packet-native. A workflow dependency must
 
 Free-floating dependency strings should fail audit unless they are explicitly recorded as runtime metadata backed by a trusted local capability. This preserves the long-term portability model: packets define meaning and requirements, while local runtimes decide whether they have trusted engines capable of interpreting and executing those requirements.
 
+The current semantic authority helpers expose this contract directly: `listPacketPolicySemanticDescriptors`, `resolvePolicyPacketSemantics`, `auditPacketPolicySemanticAuthority`, `listPacketDependencySemanticDescriptors`, `resolvePacketDependencySemanticDescriptor`, and `auditPacketDependencySemanticAuthority`. These helpers are audit and interpretation surfaces only; they do not authorize, ticket, sign, persist, or execute packet-defined code.
+
 Client ingress metadata must stay interface-neutral for the same reason. A web shell, Raspberry Pi panel, automation script, or future adapter should map into portable client intent IDs rather than embedding frontend-specific concepts into packet definitions or runtime planners.
 
 ## Portability model
