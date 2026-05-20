@@ -11,6 +11,7 @@ import {
   homeSectionOpenAssemblyImageSource,
   homeSectionOwaClarityImageSource,
   homeSectionUnityImageSource,
+  homeSectionUtilitarianImageSource,
 } from './home-section-assets';
 import { buildPublicBackgroundImageUri } from './public-graphics';
 
@@ -190,6 +191,37 @@ const sections: HomeRailSection[] = [
       'Local community lights self-organizing into a peaceful global alignment network.',
     visualMode: 'image',
     action: { href: '/support', label: 'Support OWA', variant: 'secondary' },
+    mainPointScale: 'compact',
+    variant: 'standard',
+  },
+  {
+    id: 'utilitarian',
+    mainPoint: 'Not utopian \nUtilitarian',
+    subPoints: [
+      'Built for coordination under real-world pressure',
+      'Useful even when people disagree',
+      'Clear tools for decisions, action, and review',
+      'Measure what works, repair what fails',
+    ],
+    backgroundImageUri: buildPublicBackgroundImageUri({
+      variant: 'card',
+      motif: 'choiceCircuit',
+      motifOpacity: 0.09,
+      motifSide: 'left',
+      palette: {
+        base: '#08111d',
+        accent: '#a6d6ff',
+        accentSoft: '#f0d79a',
+        glow: '#16324b',
+        ridge: '#425b70',
+      },
+    }),
+    align: 'right',
+    sideImageSource: homeSectionUtilitarianImageSource,
+    sideImageAlt:
+      'A practical field operations hub with maps, tools, supplies, and coordination equipment ready for use.',
+    visualMode: 'image',
+    action: { href: '/nexus/dashboard', label: 'Enter Nexus', variant: 'secondary' },
     mainPointScale: 'compact',
     variant: 'standard',
   },
