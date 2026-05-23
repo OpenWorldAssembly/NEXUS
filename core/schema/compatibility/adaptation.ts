@@ -23,14 +23,14 @@ import {
   PACKET_COMPATIBILITY_REGISTRY,
 } from '@core/schema/compatibility/registry';
 import type {
-  PacketFamily,
+  PacketType,
   PacketRevisionMode,
   PacketWriteTargetPolicy,
   PacketWriteTargetSupport,
 } from '@core/schema/packet-ontology';
 import {
   DEFAULT_SCHEMA_VERSION,
-  PacketFamilySchema,
+  PacketTypeSchema,
 } from '@core/schema/packet-ontology';
 import {
   PACKET_BODY_SCHEMAS,
@@ -46,7 +46,7 @@ import type {
 export interface RawPacketHeaderInput {
   packet_id: string;
   revision_id: string;
-  family: PacketFamily;
+  type: PacketType;
   schema_version?: string;
   protocol_version?: string;
   [key: string]: unknown;
@@ -61,7 +61,7 @@ const RawPacketHeaderInputSchema = z
   .object({
     packet_id: z.string().min(1),
     revision_id: z.string().min(1),
-    family: PacketFamilySchema,
+    type: PacketTypeSchema,
     schema_version: z.string().min(1).optional(),
     protocol_version: z.string().min(1).optional(),
   })
@@ -90,23 +90,23 @@ function createAdaptationChange(input: {
   };
 }
 
-function resolveEffectiveSourceSchemaVersion<TFamily extends PacketFamily>(input: {
-  family: TFamily;
+function resolveEffectiveSourceSchemaVersion<TType extends PacketType>(input: {
+  type: TType;
   declaredSchemaVersion: string;
   body: unknown;
 }): string {
-  const familyEntry = PACKET_COMPATIBILITY_REGISTRY[input.family];
+  const typeEntry = PACKET_COMPATIBILITY_REGISTRY[input.type];
 
   if (
     !Object.prototype.hasOwnProperty.call(
-      familyEntry.versions,
+      typeEntry.versions,
       input.declaredSchemaVersion
     )
   ) {
     return input.declaredSchemaVersion;
   }
 
-  const candidateVersions = Object.keys(familyEntry.versions)
+  const candidateVersions = Object.keys(typeEntry.versions)
     .filter(
       (schemaVersion) =>
         schemaVersion !== input.declaredSchemaVersion &&
@@ -115,7 +115,7 @@ function resolveEffectiveSourceSchemaVersion<TFamily extends PacketFamily>(input
     .sort((left, right) => right.localeCompare(left));
 
   for (const schemaVersion of candidateVersions) {
-    const versionDefinition = familyEntry.versions[schemaVersion];
+    const versionDefinition = typeEntry.versions[schemaVersion];
 
     if (versionDefinition?.matchesDeclaredCurrentBodyShape?.(input.body)) {
       return schemaVersion;
@@ -133,8 +133,8 @@ type PacketAdaptationPathStep = {
   parseTargetBody: (body: unknown) => unknown;
 };
 
-export function resolvePacketAdaptationPath<TFamily extends PacketFamily>(input: {
-  family: TFamily;
+export function resolvePacketAdaptationPath<TType extends PacketType>(input: {
+  type: TType;
   sourceSchemaVersion: string;
   targetSchemaVersion: string;
 }): PacketAdaptationPathStep[] {
@@ -156,7 +156,7 @@ export function resolvePacketAdaptationPath<TFamily extends PacketFamily>(input:
     }
 
     const versionDefinition = getPacketVersionDefinition(
-      input.family,
+      input.type,
       current.schemaVersion
     );
     const nextSteps: PacketAdaptationPathStep[] = [];
@@ -169,7 +169,7 @@ export function resolvePacketAdaptationPath<TFamily extends PacketFamily>(input:
         apply: versionDefinition.adaptToNext,
         parseTargetBody: (body: unknown) =>
           getPacketVersionDefinition(
-            input.family,
+            input.type,
             versionDefinition.next_schema_version as string
           ).parseBody(body),
       });
@@ -186,7 +186,7 @@ export function resolvePacketAdaptationPath<TFamily extends PacketFamily>(input:
         apply: versionDefinition.adaptToPrevious,
         parseTargetBody: (body: unknown) =>
           getPacketVersionDefinition(
-            input.family,
+            input.type,
             versionDefinition.previous_schema_version as string
           ).parseBody(body),
       });
@@ -215,39 +215,39 @@ export function resolvePacketAdaptationPath<TFamily extends PacketFamily>(input:
 
   throw new PacketCompatibilityError({
     code: 'missing_adapter_path',
-    family: input.family,
+    type: input.type,
     sourceSchemaVersion: input.sourceSchemaVersion,
     targetSchemaVersion: input.targetSchemaVersion,
-    message: `Missing adapter path from schema version ${input.sourceSchemaVersion} to ${input.targetSchemaVersion} for packet family ${input.family}.`,
+    message: `Missing adapter path from schema version ${input.sourceSchemaVersion} to ${input.targetSchemaVersion} for packet type ${input.type}.`,
   });
 }
 
-function adaptPacketBodyToTarget<TFamily extends PacketFamily>(input: {
-  family: TFamily;
+function adaptPacketBodyToTarget<TType extends PacketType>(input: {
+  type: TType;
   schemaVersion: string;
   targetSchemaVersion: string;
   body: unknown;
 }): {
-  body: PacketBodyByType[TFamily];
+  body: PacketBodyByType[TType];
   changes: PacketAdaptationChange[];
   losses: PacketAdaptationLoss[];
   effectiveSourceSchemaVersion: string;
   direction: PacketAdaptationDirection;
 } {
   const effectiveSourceSchemaVersion = resolveEffectiveSourceSchemaVersion({
-    family: input.family,
+    type: input.type,
     declaredSchemaVersion: input.schemaVersion,
     body: input.body,
   });
   let currentSchemaVersion = effectiveSourceSchemaVersion;
   let currentBody = getPacketVersionDefinition(
-    input.family,
+    input.type,
     currentSchemaVersion
   ).parseBody(input.body);
   const changes: PacketAdaptationChange[] = [];
   const losses: PacketAdaptationLoss[] = [];
   const path = resolvePacketAdaptationPath({
-    family: input.family,
+    type: input.type,
     sourceSchemaVersion: effectiveSourceSchemaVersion,
     targetSchemaVersion: input.targetSchemaVersion,
   });
@@ -261,7 +261,7 @@ function adaptPacketBodyToTarget<TFamily extends PacketFamily>(input: {
   }
 
   return {
-    body: currentBody as PacketBodyByType[TFamily],
+    body: currentBody as PacketBodyByType[TType],
     changes,
     losses,
     effectiveSourceSchemaVersion,
@@ -291,22 +291,22 @@ export function inspectPacketEnvelopeForTarget(
   const rawEnvelope = parseRawPacketEnvelopeInput(input);
   const declaredSchemaVersion =
     rawEnvelope.header.schema_version ?? DEFAULT_SCHEMA_VERSION;
-  const familyEntry = PACKET_COMPATIBILITY_REGISTRY[rawEnvelope.header.family];
+  const typeEntry = PACKET_COMPATIBILITY_REGISTRY[rawEnvelope.header.type];
   const targetSchemaVersion =
-    options.target_schema_version ?? familyEntry.current_schema_version;
+    options.target_schema_version ?? typeEntry.current_schema_version;
 
   if (
     !Object.prototype.hasOwnProperty.call(
-      familyEntry.versions,
+      typeEntry.versions,
       targetSchemaVersion
     )
   ) {
     throw new PacketCompatibilityError({
       code: 'unsupported_schema_version',
-      family: rawEnvelope.header.family,
+      type: rawEnvelope.header.type,
       sourceSchemaVersion: declaredSchemaVersion,
       targetSchemaVersion,
-      message: `Unsupported target schema version ${targetSchemaVersion} for packet family ${rawEnvelope.header.family}.`,
+      message: `Unsupported target schema version ${targetSchemaVersion} for packet type ${rawEnvelope.header.type}.`,
     });
   }
 
@@ -315,7 +315,7 @@ export function inspectPacketEnvelopeForTarget(
     schema_version: targetSchemaVersion,
   });
   const adaptedBody = adaptPacketBodyToTarget({
-    family: rawEnvelope.header.family,
+    type: rawEnvelope.header.type,
     schemaVersion: declaredSchemaVersion,
     targetSchemaVersion,
     body: rawEnvelope.body,
@@ -329,8 +329,8 @@ export function inspectPacketEnvelopeForTarget(
   const writableAsIs =
     isExact && adaptedBody.effectiveSourceSchemaVersion === targetSchemaVersion;
   const supportedWriteTarget: PacketWriteTargetSupport =
-    targetSchemaVersion !== familyEntry.current_schema_version &&
-    familyEntry.write_target_policy !== 'supported_versions'
+    targetSchemaVersion !== typeEntry.current_schema_version &&
+    typeEntry.write_target_policy !== 'supported_versions'
       ? 'blocked'
       : adaptedBody.losses.length > 0
         ? 'lossy_allowed'
@@ -343,7 +343,7 @@ export function inspectPacketEnvelopeForTarget(
       body: adaptedBody.body,
     } as PacketEnvelope,
     status: {
-      family: rawEnvelope.header.family,
+      type: rawEnvelope.header.type,
       declared_schema_version: declaredSchemaVersion,
       effective_source_schema_version: adaptedBody.effectiveSourceSchemaVersion,
       interpreted_as_legacy_profile: interpretedAsLegacyProfile,
@@ -357,7 +357,7 @@ export function inspectPacketEnvelopeForTarget(
       writable_as_is: writableAsIs,
       requires_guarded_upgrade:
         supportedWriteTarget !== 'blocked' &&
-        targetSchemaVersion === familyEntry.current_schema_version &&
+        targetSchemaVersion === typeEntry.current_schema_version &&
         !writableAsIs,
       requires_loss_acknowledgement:
         supportedWriteTarget === 'lossy_allowed',
@@ -380,7 +380,7 @@ export function getPacketSignatureCanonicalCandidateDetails(
   const sourceSchemaVersion =
     packet.header.schema_version ?? DEFAULT_SCHEMA_VERSION;
   const versionDefinition = getPacketVersionDefinition(
-    packet.header.family,
+    packet.header.type,
     sourceSchemaVersion
   );
   const candidates: PacketSignatureCanonicalCandidate<PacketEnvelope>[] = [
@@ -390,7 +390,7 @@ export function getPacketSignatureCanonicalCandidateDetails(
     },
   ];
   const compatibilityCandidate = versionDefinition.createUnsignedPacketCandidate?.(
-    packet as PacketEnvelopeByType[PacketFamily]
+    packet as PacketEnvelopeByType[PacketType]
   );
 
   if (compatibilityCandidate) {
@@ -400,7 +400,7 @@ export function getPacketSignatureCanonicalCandidateDetails(
     if (compatibilityCanonicalPacket !== currentCanonicalPacket) {
       candidates.push({
         packet: compatibilityCandidate as PacketEnvelope,
-        source: 'family_compatibility',
+        source: 'type_compatibility',
       });
     }
   }
@@ -443,7 +443,7 @@ function createRawHeaderCompatibilityCandidate(
   };
 }
 
-function createRawFamilyCompatibilityBodyCandidate(
+function createRawTypeCompatibilityBodyCandidate(
   packet: RawPacketEnvelopeInput
 ): unknown | null {
   try {
@@ -451,11 +451,11 @@ function createRawFamilyCompatibilityBodyCandidate(
     const sourceSchemaVersion =
       packet.header.schema_version ?? DEFAULT_SCHEMA_VERSION;
     const versionDefinition = getPacketVersionDefinition(
-      packet.header.family,
+      packet.header.type,
       sourceSchemaVersion
     );
     const compatibilityCandidate = versionDefinition.createUnsignedPacketCandidate?.(
-      adaptedPacket as PacketEnvelopeByType[PacketFamily]
+      adaptedPacket as PacketEnvelopeByType[PacketType]
     );
 
     return compatibilityCandidate?.body ?? null;
@@ -505,23 +505,23 @@ export function getRawPacketSignatureCanonicalCandidateDetails(
     pushCandidate(headerCompatibilityCandidate, 'header_compatibility');
   }
 
-  const familyCompatibilityBody =
-    createRawFamilyCompatibilityBodyCandidate(packet);
+  const typeCompatibilityBody =
+    createRawTypeCompatibilityBodyCandidate(packet);
 
-  if (familyCompatibilityBody) {
+  if (typeCompatibilityBody) {
     pushCandidate(
       {
         ...packet,
-        body: familyCompatibilityBody,
+        body: typeCompatibilityBody,
       },
-      'family_compatibility'
+      'type_compatibility'
     );
 
     if (headerCompatibilityCandidate) {
       pushCandidate(
         {
           ...headerCompatibilityCandidate,
-          body: familyCompatibilityBody,
+          body: typeCompatibilityBody,
         },
         'combined_compatibility'
       );
@@ -627,10 +627,10 @@ export function preparePacketEnvelopeForVersionedWrite(
 }
 
 export function describePacketCompatibility(
-  family: PacketFamily,
+  type: PacketType,
   schemaVersion: string
 ): {
-  family: PacketFamily;
+  type: PacketType;
   schema_version: string;
   current_schema_version: string;
   revision_mode: PacketRevisionMode;
@@ -638,43 +638,43 @@ export function describePacketCompatibility(
   is_supported: boolean;
   is_current: boolean;
 } {
-  const familyEntry = PACKET_COMPATIBILITY_REGISTRY[family];
+  const typeEntry = PACKET_COMPATIBILITY_REGISTRY[type];
 
   return {
-    family,
+    type,
     schema_version: schemaVersion,
-    current_schema_version: familyEntry.current_schema_version,
-    revision_mode: familyEntry.revision_mode,
-    write_target_policy: familyEntry.write_target_policy,
+    current_schema_version: typeEntry.current_schema_version,
+    revision_mode: typeEntry.revision_mode,
+    write_target_policy: typeEntry.write_target_policy,
     is_supported:
-      Object.prototype.hasOwnProperty.call(familyEntry.versions, schemaVersion),
-    is_current: schemaVersion === familyEntry.current_schema_version,
+      Object.prototype.hasOwnProperty.call(typeEntry.versions, schemaVersion),
+    is_current: schemaVersion === typeEntry.current_schema_version,
   };
 }
 
-export function parsePacketBody<TFamily extends PacketFamily>(
-  family: TFamily,
+export function parsePacketBody<TType extends PacketType>(
+  type: TType,
   body: unknown,
   schemaVersion = DEFAULT_SCHEMA_VERSION
-): PacketBodyByType[TFamily] {
-  return parsePacketBodyForTarget(family, body, {
+): PacketBodyByType[TType] {
+  return parsePacketBodyForTarget(type, body, {
     schema_version: schemaVersion,
   });
 }
 
-export function parsePacketBodyForTarget<TFamily extends PacketFamily>(
-  family: TFamily,
+export function parsePacketBodyForTarget<TType extends PacketType>(
+  type: TType,
   body: unknown,
   options: {
     schema_version?: string;
     target_schema_version?: string;
   } = {}
-): PacketBodyByType[TFamily] {
+): PacketBodyByType[TType] {
   return adaptPacketBodyToTarget({
-    family,
+    type,
     schemaVersion: options.schema_version ?? DEFAULT_SCHEMA_VERSION,
     targetSchemaVersion:
-      options.target_schema_version ?? getPacketCurrentSchemaVersion(family),
+      options.target_schema_version ?? getPacketCurrentSchemaVersion(type),
     body,
   }).body;
 }
@@ -692,19 +692,19 @@ export function parsePacketEnvelopeForTarget(
   return inspectPacketEnvelopeForTarget(input, options).adapted_packet;
 }
 
-export function createPacketEnvelope<TFamily extends PacketFamily>(input: {
-  header: z.input<typeof PacketHeaderSchema> & { family: TFamily };
-  body: z.input<(typeof PACKET_BODY_SCHEMAS)[TFamily]>;
-}): PacketEnvelopeByType[TFamily] {
+export function createPacketEnvelope<TType extends PacketType>(input: {
+  header: z.input<typeof PacketHeaderSchema> & { type: TType };
+  body: z.input<(typeof PACKET_BODY_SCHEMAS)[TType]>;
+}): PacketEnvelopeByType[TType] {
   const header = PacketHeaderSchema.parse(input.header);
   const body = parsePacketBody(
-    input.header.family,
+    input.header.type,
     input.body,
     header.schema_version
   );
 
   return {
-    header: header as PacketHeader & { family: TFamily },
+    header: header as PacketHeader & { type: TType },
     body,
-  } as PacketEnvelopeByType[TFamily];
+  } as PacketEnvelopeByType[TType];
 }

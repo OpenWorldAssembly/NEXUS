@@ -1,6 +1,6 @@
 /**
  * File: trusted-composite-workflow-adapters.ts
- * Description: Shadow registry for reusable trusted composite workflow adapter shapes.
+ * Description: Definition registry for reusable trusted composite workflow adapter shapes.
  */
 
 import {
@@ -51,12 +51,12 @@ export type TrustedCompositeWorkflowAdapterDescriptor = {
   dependency_ids: string[];
   phase_order: string[];
   phases: CompositeWorkflowPhaseDescriptor[];
-  availability: 'shadow_only' | 'runtime_ready';
+  availability: 'runtime_ready' | 'runtime_ready';
   notes: string;
 };
 
 export type CompositeWorkflowDryRunPlan = {
-  dry_run_kind: 'trusted_composite_workflow.shadow_dry_run';
+  dry_run_kind: 'trusted_composite_workflow.runtime_dry_run';
   adapter_id: string;
   adapter_kind: TrustedCompositeWorkflowAdapterKind;
   mutation_intents: MutationIntent['kind'][];
@@ -65,7 +65,7 @@ export type CompositeWorkflowDryRunPlan = {
   dependency_ids: string[];
   phase_order: string[];
   phases: CompositeWorkflowPhaseDescriptor[];
-  ready_for_shadow_interpretation: boolean;
+  ready_for_interpretation: boolean;
   findings: TrustedCompositeWorkflowAdapterAuditFinding[];
 };
 
@@ -221,7 +221,7 @@ const TRUSTED_COMPOSITE_WORKFLOW_ADAPTERS = [
           'Classifies scope display preference reconciliation and shell payload refresh as a post-fortress runtime extension, not hidden packet write authority.',
       },
     ],
-    availability: 'shadow_only',
+    availability: 'runtime_ready',
     notes:
       'Reusable composite-batch adapter for graph-style workflows that create packet sets, plan operation batches, resolve grouped policy, and carry result metadata.',
   },
@@ -302,7 +302,7 @@ const TRUSTED_COMPOSITE_WORKFLOW_ADAPTERS = [
           'Records discussion feed refresh as a derived runtime extension after persistence.',
       },
     ],
-    availability: 'shadow_only',
+    availability: 'runtime_ready',
     notes:
       'Reusable default-packet-set ensure adapter for idempotent fixture-like packet creation.',
   },
@@ -411,7 +411,7 @@ const TRUSTED_COMPOSITE_WORKFLOW_ADAPTERS = [
           'Prepares unsigned digest candidates for the primary packet and enabled follow-ups.',
       },
     ],
-    availability: 'shadow_only',
+    availability: 'runtime_ready',
     notes:
       'Reusable entity-create adapter for a primary packet plus optional default surfaces and association follow-ups.',
   },
@@ -498,7 +498,7 @@ const TRUSTED_COMPOSITE_WORKFLOW_ADAPTERS = [
           'Carries directory/projection refresh metadata without granting packet write authority outside fortress finalization.',
       },
     ],
-    availability: 'shadow_only',
+    availability: 'runtime_ready',
     notes:
       'Reusable entity/path creation adapter for canonical locality path creation and later initiative-scoped locality policy defaults.',
   },
@@ -593,7 +593,7 @@ const TRUSTED_COMPOSITE_WORKFLOW_ADAPTERS = [
           'Keeps DiscussionThread/Post compatibility projection explicit until canonical Discussion message reseed work lands.',
       },
     ],
-    availability: 'shadow_only',
+    availability: 'runtime_ready',
     notes:
       'Reusable canonical discussion-message creation adapter for thread-starting posts with legacy thread/post projections.',
   },
@@ -690,7 +690,7 @@ const TRUSTED_COMPOSITE_WORKFLOW_ADAPTERS = [
           'Preserves legacy DiscussionReply projection behavior until reseed collapses thread/post/reply packets into Discussion messages.',
       },
     ],
-    availability: 'shadow_only',
+    availability: 'runtime_ready',
     notes:
       'Reusable canonical discussion-message creation adapter for replies with legacy reply projection compatibility.',
   },
@@ -781,7 +781,7 @@ const TRUSTED_COMPOSITE_WORKFLOW_ADAPTERS = [
           'Prepares unsigned digest candidates for the selected attestation operation batch.',
       },
     ],
-    availability: 'shadow_only',
+    availability: 'runtime_ready',
     notes:
       'Reusable mutual-exclusion attestation adapter for support/dispute/clear workflows over a packet-addressable claim.',
   },
@@ -878,7 +878,7 @@ const TRUSTED_COMPOSITE_WORKFLOW_ADAPTERS = [
           'Captures actor projection refresh as a runtime return extension after fortress finalization.',
       },
     ],
-    availability: 'shadow_only',
+    availability: 'runtime_ready',
     notes:
       'Reusable policy self-update adapter for actor-owned write policy changes without making runtime policy semantics free-floating.',
   },
@@ -1020,7 +1020,7 @@ export function resolveCompositeWorkflowDryRun(input: {
 
   if (!adapter) {
     return {
-      dry_run_kind: 'trusted_composite_workflow.shadow_dry_run',
+      dry_run_kind: 'trusted_composite_workflow.runtime_dry_run',
       adapter_id: input.adapterId,
       adapter_kind: 'composite.batch.packet_operations',
       mutation_intents: [],
@@ -1029,7 +1029,7 @@ export function resolveCompositeWorkflowDryRun(input: {
       dependency_ids: [],
       phase_order: [],
       phases: [],
-      ready_for_shadow_interpretation: false,
+      ready_for_interpretation: false,
       findings: [
         {
           severity: 'error',
@@ -1044,7 +1044,7 @@ export function resolveCompositeWorkflowDryRun(input: {
   const findings = validateAdapter(adapter);
 
   return {
-    dry_run_kind: 'trusted_composite_workflow.shadow_dry_run',
+    dry_run_kind: 'trusted_composite_workflow.runtime_dry_run',
     adapter_id: adapter.adapter_id,
     adapter_kind: adapter.adapter_kind,
     mutation_intents: [...adapter.mutation_intents],
@@ -1066,7 +1066,7 @@ export function resolveCompositeWorkflowDryRun(input: {
         adapter.phase_order.indexOf(left.phase_id) -
         adapter.phase_order.indexOf(right.phase_id)
     ),
-    ready_for_shadow_interpretation: findings.length === 0,
+    ready_for_interpretation: findings.length === 0,
     findings,
   };
 }

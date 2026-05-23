@@ -16,7 +16,8 @@ import type {
   DiscussionSort,
   PacketEdge,
   PacketEnvelope,
-  PacketFamily,
+  PacketEnvelopeByType,
+  PacketType,
   PacketReadMode,
   PacketMergeStrategy,
   PacketRevisionState,
@@ -137,9 +138,9 @@ export interface PacketStore {
   ): Promise<PacketRevisionRef>;
   importBundle(bundle: Uint8Array | ArrayBuffer | string): Promise<BundleImportResult>;
   exportBundle(packet_refs: PacketRef[]): Promise<BundleExportResult>;
-  listPreferredPacketsByFamily<TFamily extends PacketFamily>(
-    family: TFamily
-  ): Promise<PacketEnvelopeByType[TFamily][]>;
+  listPreferredPacketsByType<TType extends PacketType>(
+    type: TType
+  ): Promise<PacketEnvelopeByType[TType][]>;
   listPreferredPackets(): Promise<PacketEnvelope[]>;
   getPacketVerificationSummary(
     packet: PacketRef
@@ -153,7 +154,7 @@ export interface PacketStore {
 export interface BrowserPacketProjection {
   packet: PacketRef;
   revision: PacketRevisionRef;
-  family: PacketFamily;
+  type: PacketType;
   label: string;
   title: string;
   summary: string | null;
@@ -216,7 +217,7 @@ export interface NexusActionState {
   auth_gate_reason?: string | null;
   target_packet_id?: string | null;
   target_revision_id?: string | null;
-  target_family?: PacketFamily | null;
+  target_type?: PacketType | null;
   target_surface?: string | null;
   target_intent?: string | null;
   target_view?: string | null;
@@ -240,7 +241,7 @@ export type NexusActionMap = Partial<Record<NexusActionId, NexusActionState>>;
 export interface NexusPacketCardProjection {
   packet: PacketRef;
   revision: PacketRevisionRef;
-  family: PacketFamily;
+  type: PacketType;
   label: string;
   title: string;
   summary: string | null;
@@ -259,7 +260,7 @@ export interface NexusQueryService {
   listDiscussions(lens: NexusScopeLens): Promise<NexusPacketCardProjection[]>;
   listLibraryPackets(
     lens: NexusScopeLens,
-    family?: PacketFamily,
+    type?: PacketType,
     options?: NexusLibraryQueryOptions
   ): Promise<NexusPacketCardProjection[]>;
 }

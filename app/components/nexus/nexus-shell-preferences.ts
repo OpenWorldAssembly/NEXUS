@@ -33,7 +33,15 @@ export type PersistNexusElementPreferenceInput = {
   }>;
 };
 
-export async function persistNexusElementPreference(input: PersistNexusElementPreferenceInput) {
+export type PersistNexusElementPreferenceResult = {
+  preferences: NexusScopeDisplayPreferencesPayload;
+  shell_chrome?: ShellChromePreferenceValue;
+  wrote_revision?: boolean;
+};
+
+export async function persistNexusElementPreference(
+  input: PersistNexusElementPreferenceInput
+): Promise<PersistNexusElementPreferenceResult> {
   if (input.currentMode === 'claimed') {
     const finalized = await input.runFortressMutation<{
       preferences: NexusScopeDisplayPreferencesPayload;

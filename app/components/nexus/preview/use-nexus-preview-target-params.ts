@@ -10,7 +10,7 @@ export type NexusPreviewTargetParams = {
   revisionId: string | null;
   focusPacketId: string | null;
   highlightPacketId: string | null;
-  packetFamily: string | null;
+  packetType: string | null;
   targetIntent: string | null;
 };
 
@@ -36,7 +36,7 @@ export function useNexusPreviewTargetParams(): NexusPreviewTargetParams {
     revision_id?: string | string[];
     focus_packet_id?: string | string[];
     highlight_packet_id?: string | string[];
-    packet_family?: string | string[];
+    packet_type?: string | string[];
     target_intent?: string | string[];
   }>();
 
@@ -50,13 +50,13 @@ export function useNexusPreviewTargetParams(): NexusPreviewTargetParams {
       revisionId: normalizeParam(localParams.revision_id),
       focusPacketId,
       highlightPacketId,
-      packetFamily: normalizeParam(localParams.packet_family),
+      packetType: normalizeParam(localParams.packet_type),
       targetIntent: normalizeParam(localParams.target_intent),
     };
   }, [
     localParams.focus_packet_id,
     localParams.highlight_packet_id,
-    localParams.packet_family,
+    localParams.packet_type,
     localParams.packet_id,
     localParams.revision_id,
     localParams.target_intent,

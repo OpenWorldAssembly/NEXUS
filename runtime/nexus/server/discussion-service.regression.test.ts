@@ -167,11 +167,19 @@ async function seedVisitorLobbyContext(packetStore: NodeSQLitePacketStore) {
     legacyForumPacket
   );
 
-  await writePreferredPacket(packetStore, assemblyPacket);
-  await writePreferredPacket(packetStore, legacySpacePacket);
-  await writePreferredPacket(packetStore, legacyForumPacket);
-  await writePreferredPacket(packetStore, canonicalSpacePacket);
-  await writePreferredPacket(packetStore, canonicalForumPacket);
+  const packetsById = new Map(
+    [
+      assemblyPacket,
+      legacySpacePacket,
+      legacyForumPacket,
+      canonicalSpacePacket,
+      canonicalForumPacket,
+    ].map((packet) => [packet.header.packet_id, packet])
+  );
+
+  for (const packet of packetsById.values()) {
+    await writePreferredPacket(packetStore, packet);
+  }
 
   return {
     legacyForumPacket,
@@ -198,7 +206,7 @@ test('guest top-level canonical posts stay visible and navigable under a legacy 
       applicable_scope_refs: [{ packet_id: SCOPE_PACKET_ID }],
       adapter: 'nexus-web',
       created_by: { packet_id: guestActor.actorPacket.header.packet_id },
-      kind: 'topic',
+      subtype: 'topic',
       role: 'visitor_lobby',
       title: 'for all your testing needs',
       summary: 'for all your testing needs',
@@ -211,7 +219,7 @@ test('guest top-level canonical posts stay visible and navigable under a legacy 
           target: { packet_id: legacyForumPacket.header.packet_id },
           metadata: {
             source_field: 'legacy_context_packet_ids',
-            adapter_profile: 'discussion-family-unification',
+            adapter_profile: 'discussion-type-unification',
           },
         },
       ],
@@ -225,7 +233,7 @@ test('guest top-level canonical posts stay visible and navigable under a legacy 
       applicable_scope_refs: [{ packet_id: SCOPE_PACKET_ID }],
       adapter: 'nexus-web',
       created_by: { packet_id: guestActor.actorPacket.header.packet_id },
-      kind: 'message',
+      subtype: 'message',
       role: 'forum_post',
       title: 'for all your testing needs',
       parent_ref: { packet_id: topicPacket.header.packet_id },
@@ -239,7 +247,7 @@ test('guest top-level canonical posts stay visible and navigable under a legacy 
           target: { packet_id: legacyForumPacket.header.packet_id },
           metadata: {
             source_field: 'legacy_context_packet_ids',
-            adapter_profile: 'discussion-family-unification',
+            adapter_profile: 'discussion-type-unification',
           },
         },
       ],
@@ -319,7 +327,7 @@ test('guest replies to canonical roots and nested replies without duplicate sema
       authority_scope_ref: { packet_id: SCOPE_PACKET_ID },
       applicable_scope_refs: [{ packet_id: SCOPE_PACKET_ID }],
       adapter: 'seed',
-      kind: 'topic',
+      subtype: 'topic',
       role: 'visitor_lobby',
       title: 'OP',
       summary: 'OP',
@@ -335,7 +343,7 @@ test('guest replies to canonical roots and nested replies without duplicate sema
       authority_scope_ref: { packet_id: SCOPE_PACKET_ID },
       applicable_scope_refs: [{ packet_id: SCOPE_PACKET_ID }],
       adapter: 'seed',
-      kind: 'message',
+      subtype: 'message',
       role: 'forum_post',
       title: 'OP',
       parent_ref: { packet_id: topicPacket.header.packet_id },
@@ -362,7 +370,7 @@ test('guest replies to canonical roots and nested replies without duplicate sema
       applicable_scope_refs: [{ packet_id: SCOPE_PACKET_ID }],
       adapter: 'nexus-web',
       created_by: { packet_id: guestActor.actorPacket.header.packet_id },
-      kind: 'message',
+      subtype: 'message',
       role: 'reply',
       title: 'Reply from Guest Reply',
       parent_ref: { packet_id: rootPostPacket.header.packet_id },
@@ -408,7 +416,7 @@ test('guest replies to canonical roots and nested replies without duplicate sema
       applicable_scope_refs: [{ packet_id: SCOPE_PACKET_ID }],
       adapter: 'nexus-web',
       created_by: { packet_id: guestActor.actorPacket.header.packet_id },
-      kind: 'message',
+      subtype: 'message',
       role: 'reply',
       title: 'Reply from Guest Reply',
       parent_ref: { packet_id: firstReplyResult.post.packet.packet_id },
@@ -535,14 +543,19 @@ test('mixed legacy and canonical discussion ids resolve as one operational threa
       createCanonicalDiscussionMirrorPacket(legacyReplyPacket),
     ];
 
-    await writePreferredPacket(harness.packetStore, legacySpacePacket);
-    await writePreferredPacket(harness.packetStore, legacyForumPacket);
-    await writePreferredPacket(harness.packetStore, legacyThreadPacket);
-    await writePreferredPacket(harness.packetStore, legacyRootPostPacket);
-    await writePreferredPacket(harness.packetStore, legacyReplyPacket);
+    const packetsById = new Map(
+      [
+        legacySpacePacket,
+        legacyForumPacket,
+        legacyThreadPacket,
+        legacyRootPostPacket,
+        legacyReplyPacket,
+        ...canonicalPackets,
+      ].map((packet) => [packet.header.packet_id, packet])
+    );
 
-    for (const canonicalPacket of canonicalPackets) {
-      await writePreferredPacket(harness.packetStore, canonicalPacket);
+    for (const packet of packetsById.values()) {
+      await writePreferredPacket(harness.packetStore, packet);
     }
 
     const thread = await harness.discussionService.getThreadDetail({
@@ -591,7 +604,7 @@ test('discussion workspace projections expose runtime-owned action maps and desc
       applicable_scope_refs: [{ packet_id: SCOPE_PACKET_ID }],
       adapter: 'nexus-web',
       created_by: { packet_id: guestActor.actorPacket.header.packet_id },
-      kind: 'topic',
+      subtype: 'topic',
       role: 'visitor_lobby',
       title: 'Workspace topic',
       summary: 'Workspace topic',
@@ -607,7 +620,7 @@ test('discussion workspace projections expose runtime-owned action maps and desc
       applicable_scope_refs: [{ packet_id: SCOPE_PACKET_ID }],
       adapter: 'nexus-web',
       created_by: { packet_id: guestActor.actorPacket.header.packet_id },
-      kind: 'message',
+      subtype: 'message',
       role: 'forum_post',
       title: 'Workspace root',
       parent_ref: { packet_id: topicPacket.header.packet_id },

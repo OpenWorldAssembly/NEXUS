@@ -8,6 +8,7 @@ import type {
 } from '@core/contracts';
 import type {
   PacketEnvelope,
+  PacketEnvelopeByType,
   PacketReadMode,
   PacketRevisionRef,
 } from '@core/schema/packet-schema';
@@ -36,16 +37,22 @@ function createPacketStoreStub(input: {
     fetchByRevision: async () => input.packet,
     resolveRevisionRef: async () => preferredRevision,
     fetchPreferredRevision: async () => preferredRevision,
+    listPreferredPacketsByType: async <TType extends PacketEnvelope['header']['type']>() =>
+      [input.packet] as unknown as PacketEnvelopeByType[TType][],
+    listPreferredPackets: async () => [input.packet],
     fetchRevisionHeads: async () => headStatus,
     queryEdges: async () => [],
     mergeRevisions: async () => preferredRevision,
     readByPacket: async <TMode extends PacketReadMode>() =>
-      input.packet as PacketReadValue<TMode>,
+      input.packet as PacketReadValue<TMode> | null,
     readByRevision: async <TMode extends PacketReadMode>() =>
-      input.packet as PacketReadValue<TMode>,
+      input.packet as PacketReadValue<TMode> | null,
     prepareRevisionForAdaptedSave: async () => null,
     prepareRevisionForVersionedSave: async () => null,
     writePreparedRevision: async () => preferredRevision,
+    getPacketVerificationSummary: async () => null,
+    listPacketVerificationSummaries: async () => [],
+    writePacketVerificationSummary: async () => undefined,
     importBundle: async () => ({ packet_count: 0, revision_count: 0, edge_count: 0 }),
     exportBundle: async () => ({ bytes: new Uint8Array(), packet_count: 0, revision_count: 0 }),
   };
@@ -68,5 +75,5 @@ test('browser packet projection uses the shared packet title helper', async () =
     packet_id: packet.header.packet_id,
   });
 
-  assert.equal(projection?.title, 'Role Association claim');
+  assert.equal(projection?.title, 'Relation Assertion claim');
 });

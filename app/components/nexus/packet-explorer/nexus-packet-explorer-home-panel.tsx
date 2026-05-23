@@ -14,7 +14,7 @@ type PacketExplorerRoutePacketInput = {
   preferredRevisionId?: string | null;
   titleSnapshot?: string | null;
   seedSummary?: {
-    family: string | null;
+    type: string | null;
     summary: string | null;
       label: string | null;
     } | null;

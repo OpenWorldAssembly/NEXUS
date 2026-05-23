@@ -32,6 +32,10 @@ function formatTrustStage(stage: NexusRolesPayload['role_cards'][number]['claima
   return stage.replace(/_/g, ' ');
 }
 
+function formatEvidenceActor(label: string | null, packetId: string | null): string {
+  return label ?? packetId ?? 'Unknown actor';
+}
+
 export default function NexusRolesPage() {
   const router = useRouter();
   const appearance = useNexusAppearance();

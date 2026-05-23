@@ -26,7 +26,7 @@ type NexusPacketExplorerLinksPanelProps = {
     packetId: string;
     titleSnapshot?: string | null;
     seedSummary?: {
-      family: string | null;
+      type: string | null;
       summary: string | null;
       label: string | null;
     } | null;
@@ -35,12 +35,12 @@ type NexusPacketExplorerLinksPanelProps = {
     packetId: string;
     titleSnapshot?: string | null;
     seedSummary?: {
-      family: string | null;
+      type: string | null;
       summary: string | null;
       label: string | null;
     } | null;
   }) => void;
-  onViewInLibrary: (packetId: string, family?: string | null) => void;
+  onViewInLibrary: (packetId: string, type?: string | null) => void;
 };
 
 function createGroupKey(group: NexusPacketExplorerLinkGroup): string {
@@ -68,7 +68,7 @@ function NexusPacketExplorerLinkDirectionSection({
     packetId: string;
     titleSnapshot?: string | null;
     seedSummary?: {
-      family: string | null;
+      type: string | null;
       summary: string | null;
       label: string | null;
     } | null;
@@ -77,12 +77,12 @@ function NexusPacketExplorerLinkDirectionSection({
     packetId: string;
     titleSnapshot?: string | null;
     seedSummary?: {
-      family: string | null;
+      type: string | null;
       summary: string | null;
       label: string | null;
     } | null;
   }) => void;
-  onViewInLibrary: (packetId: string, family?: string | null) => void;
+  onViewInLibrary: (packetId: string, type?: string | null) => void;
 }) {
   const appearance = useNexusAppearance();
 
@@ -114,8 +114,8 @@ function NexusPacketExplorerLinkDirectionSection({
                   <Text className={appearance.surfaceTitleClass}>
                     {getLinkTitle(group)}
                   </Text>
-                  {group.family ? (
-                    <NexusBadge label={group.family} tone="default" />
+                  {group.type ? (
+                    <NexusBadge label={group.type} tone="default" />
                   ) : null}
                   <NexusBadge label={`${group.total_count} link${group.total_count === 1 ? '' : 's'}`} tone="sky" />
                 </View>
@@ -144,7 +144,7 @@ function NexusPacketExplorerLinkDirectionSection({
                       packetId: group.packet_id,
                       titleSnapshot: group.title ?? group.label ?? group.packet_id,
                       seedSummary: {
-                        family: group.family,
+                        type: group.type,
                         summary: null,
                         label: group.label,
                       },
@@ -158,7 +158,7 @@ function NexusPacketExplorerLinkDirectionSection({
                       packetId: group.packet_id,
                       titleSnapshot: group.title ?? group.label ?? group.packet_id,
                       seedSummary: {
-                        family: group.family,
+                        type: group.type,
                         summary: null,
                         label: group.label,
                       },
@@ -167,7 +167,7 @@ function NexusPacketExplorerLinkDirectionSection({
                 />
                 <NexusActionButton
                   label="View in Library"
-                  onPress={() => onViewInLibrary(group.packet_id, group.family)}
+                  onPress={() => onViewInLibrary(group.packet_id, group.type)}
                 />
               </View>
 
@@ -264,9 +264,9 @@ export function NexusPacketExplorerLinksPanel({
             featureStatusId="explorer.links.by_edge_type"
           />
           <NexusActionButton
-            label="By family"
+            label="By type"
             disabled
-            featureStatusId="explorer.links.by_family"
+            featureStatusId="explorer.links.by_type"
           />
         </View>
       </NexusCard>

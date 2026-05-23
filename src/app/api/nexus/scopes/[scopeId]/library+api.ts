@@ -8,7 +8,7 @@ import type { RequestHandler } from 'expo-router/server';
 import {
   getNexusLibraryPayload,
   getNexusShellPayload,
-  parseFamilyFilter,
+  parseTypeFilter,
   resolveScopeIdFromShell,
 } from '@runtime/nexus/server/nexus-query-data';
 
@@ -22,7 +22,7 @@ function createJsonResponse(body: unknown, status = 200): Response {
 }
 
 /**
- * Inputs: route scope id and optional `family` query parameter.
+ * Inputs: route scope id and optional `type` query parameter.
  * Output: library payload resolved to a valid packet-backed scope id.
  */
 export const GET: RequestHandler = async (request, params) => {
@@ -35,10 +35,10 @@ export const GET: RequestHandler = async (request, params) => {
       params.scopeId,
       actorPacketId
     );
-    const familyFilter = parseFamilyFilter(requestUrl.searchParams.get('family'));
+    const typeFilter = parseTypeFilter(requestUrl.searchParams.get('type'));
     const libraryPayload = await getNexusLibraryPayload({
       scopeId,
-      familyFilter,
+      typeFilter,
       actorPacketId,
     });
 

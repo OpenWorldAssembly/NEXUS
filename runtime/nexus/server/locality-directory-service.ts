@@ -172,7 +172,7 @@ function toLocalityNode(
   parentByPacketId: Map<string, string | null>,
   scopeLocationMetadataByScopePacketId: Map<string, ScopeLocationMetadata>
 ): LocalityNode | null {
-  if (packet.body.kind !== 'assembly') {
+  if (packet.body.subtype !== 'assembly') {
     return null;
   }
 
@@ -225,7 +225,7 @@ function getGlobalAssemblyPacket(
   return (
     elementPackets.find(
       (packet) =>
-        packet.body.kind === 'assembly' &&
+        packet.body.subtype === 'assembly' &&
         (getElementSubtypeLeaf(packet.body.subtype) === 'global' ||
           packet.header.packet_id === 'nexus:element/global-commons')
     ) ?? null
@@ -554,20 +554,20 @@ function createPacketStoreOverlay(input: {
   packetStore: NodeSQLiteQueryServices['packetStore'];
   stagedPackets: PacketEnvelope[];
 }): NodeSQLiteQueryServices['packetStore'] {
-  const stagedPacketsByFamily = new Map<string, PacketEnvelope[]>();
+  const stagedPacketsByType = new Map<string, PacketEnvelope[]>();
 
   for (const packet of input.stagedPackets) {
-    stagedPacketsByFamily.set(packet.header.family, [
-      ...(stagedPacketsByFamily.get(packet.header.family) ?? []),
+    stagedPacketsByType.set(packet.header.type, [
+      ...(stagedPacketsByType.get(packet.header.type) ?? []),
       packet,
     ]);
   }
 
   return {
     ...input.packetStore,
-    async listPreferredPacketsByFamily(family) {
-      const basePackets = await input.packetStore.listPreferredPacketsByFamily(family);
-      const stagedPackets = stagedPacketsByFamily.get(family) ?? [];
+    async listPreferredPacketsByType(type) {
+      const basePackets = await input.packetStore.listPreferredPacketsByType(type);
+      const stagedPackets = stagedPacketsByType.get(type) ?? [];
       const packetById = new Map<string, PacketEnvelope>();
 
       [...(basePackets as PacketEnvelope[]), ...stagedPackets].forEach((packet) => {
@@ -585,11 +585,11 @@ export async function planCanonicalLocalityPathWithPacketStore(input: LocalityPl
   validatePathOrder(input.path);
 
   const [elementPackets, relationPackets, locationPackets] = await Promise.all([
-    input.packetStore.listPreferredPacketsByFamily('Element') as Promise<
+    input.packetStore.listPreferredPacketsByType('Element') as Promise<
       PacketEnvelopeByType['Element'][]
     >,
     listRelationPackets(input.packetStore),
-    input.packetStore.listPreferredPacketsByFamily('Location') as Promise<
+    input.packetStore.listPreferredPacketsByType('Location') as Promise<
       PacketEnvelopeByType['Location'][]
     >,
   ]);
@@ -772,7 +772,6 @@ export async function planCanonicalLocalityPathWithPacketStore(input: LocalityPl
       name: entry.name.trim(),
       subtype: getLocalitySubtype(entry.level),
       summary: `A ${entry.level} locality assembly for ${entry.name.trim()}.`,
-      scope_kind: 'locality',
       scope_system: scopeDescriptor.hierarchy_system,
       locality_label: entry.name.trim(),
       locality: {

@@ -1,12 +1,12 @@
 /**
- * File: families/definition.ts
- * Description: Family-owned build rules for canonical Definition packets.
+ * File: types/definition.ts
+ * Description: Type-owned build rules for canonical Definition packets.
  */
 
-import type { PacketFamilyBuildDefinition } from '@core/packets/packet-build-pipeline';
+import type { PacketTypeBuildDefinition } from '@core/packets/packet-build-pipeline';
 import type { PacketBodyByType } from '@core/schema/packet-schema';
 
-export const definitionBuildDefinition: PacketFamilyBuildDefinition<
+export const definitionBuildDefinition: PacketTypeBuildDefinition<
   'Definition',
   PacketBodyByType['Definition']
 > = {

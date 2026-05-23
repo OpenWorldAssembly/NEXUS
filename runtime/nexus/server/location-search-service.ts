@@ -204,11 +204,11 @@ function getLocationSearchMatch(input: {
 async function listGraphLocationNodes(): Promise<ScopeSearchNode[]> {
   const services = await getNexusPacketServices();
   const [elementPackets, relationPackets, locationPackets] = await Promise.all([
-    services.packetStore.listPreferredPacketsByFamily('Element') as Promise<
+    services.packetStore.listPreferredPacketsByType('Element') as Promise<
       PacketEnvelopeByType['Element'][]
     >,
     listRelationPackets(services.packetStore),
-    services.packetStore.listPreferredPacketsByFamily('Location') as Promise<
+    services.packetStore.listPreferredPacketsByType('Location') as Promise<
       PacketEnvelopeByType['Location'][]
     >,
   ]);
@@ -264,9 +264,9 @@ async function listGraphLocationNodes(): Promise<ScopeSearchNode[]> {
   return elementPackets
     .filter(
       (packet): packet is PacketEnvelopeByType['Element'] =>
-        packet.body.kind === 'assembly'
+        packet.body.subtype === 'assembly'
     )
-    .map((packet) => {
+    .map((packet): ScopeSearchNode | null => {
       const level = packet.body.locality?.level ?? toLocalitySearchLevel(packet.body.subtype);
 
       if (!level) {

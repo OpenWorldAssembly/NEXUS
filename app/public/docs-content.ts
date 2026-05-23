@@ -92,7 +92,7 @@ export const PUBLIC_DOCS_DIRECTORY: PublicDocumentDirectoryItem[] = [
   {
     slug: 'roadmap',
     title: 'Roadmap',
-    summary: 'Near-term priorities, known gaps, deferred work, and next development milestones.',
+    summary: 'Near-term priorities, known gaps, future work, and next development milestones.',
     status: 'draft',
     typeLabel: 'Planning document',
     readableDocumentSlug: 'roadmap',

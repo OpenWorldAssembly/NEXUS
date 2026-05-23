@@ -4,9 +4,9 @@ import test from 'node:test';
 import {
   auditPacketTypeDefinition,
   auditPacketWorkflowPlanDescriptor,
-  getExperimentalPacketTypeDefinition,
+  getDefinedPacketTypeDefinition,
   getPacketWorkflowPlanDescriptor,
-  listExperimentalPacketTypeDefinitions,
+  listDefinedPacketTypeDefinitions,
   listPacketWorkflowPlanDescriptors,
   listPacketWorkflowPlannerCapabilities,
   resolvePacketWorkflowDryRunPlan,
@@ -21,7 +21,7 @@ const GENERIC_READY_WORKFLOW_PLAN_IDS = [
 ] as const;
 
 function getWorkflowFixture(packetType: string, workflowPlanId: string) {
-  const definition = getExperimentalPacketTypeDefinition(packetType);
+  const definition = getDefinedPacketTypeDefinition(packetType);
   assert.ok(definition);
 
   const workflowPlan = getPacketWorkflowPlanDescriptor(packetType, workflowPlanId);
@@ -48,7 +48,7 @@ test('generic-ready workflow plans audit cleanly', () => {
     );
     assert.ok(workflowPlan, workflowPlanId);
 
-    const definition = getExperimentalPacketTypeDefinition(workflowPlan.packet_type);
+    const definition = getDefinedPacketTypeDefinition(workflowPlan.packet_type);
     assert.ok(definition);
 
     const report = auditPacketWorkflowPlanDescriptor(definition, workflowPlan);
@@ -69,7 +69,7 @@ test('workflow dry-run interpretation preserves order and metadata', () => {
     workflowPlanId: 'attestation.packet_signal.set.workflow.v0',
   });
 
-  assert.equal(dryRun.ready_for_shadow_interpretation, true);
+  assert.equal(dryRun.ready_for_interpretation, true);
   assert.deepEqual(dryRun.step_order, [
     'choose_packet_signal_mode',
     'set_packet_signal_attestation',
@@ -96,7 +96,7 @@ test('workflow audit fails closed for unknown operation kinds', () => {
         operation_kind: 'relation.teleport',
       },
     ],
-  } as PacketWorkflowPlanDescriptor;
+  } as unknown as PacketWorkflowPlanDescriptor;
 
   const report = auditPacketWorkflowPlanDescriptor(definition, brokenWorkflow);
 
@@ -124,7 +124,7 @@ test('workflow audit fails closed for unknown resolver and dependency ids', () =
         dependency_ids: ['runtime.packet_store.read', 'dependency.nope'],
       },
     ],
-  } as PacketWorkflowPlanDescriptor;
+  } as unknown as PacketWorkflowPlanDescriptor;
 
   const report = auditPacketWorkflowPlanDescriptor(definition, brokenWorkflow);
 
@@ -155,7 +155,7 @@ test('workflow audit fails closed for unknown policy action ids', () => {
         policy_action_ids: ['follows.relation.teleport'],
       },
     ],
-  } as PacketWorkflowPlanDescriptor;
+  } as unknown as PacketWorkflowPlanDescriptor;
 
   const report = auditPacketWorkflowPlanDescriptor(definition, brokenWorkflow);
 
@@ -187,7 +187,7 @@ test('workflow audit fails closed for invalid step references', () => {
         },
       },
     ],
-  } as PacketWorkflowPlanDescriptor;
+  } as unknown as PacketWorkflowPlanDescriptor;
 
   const report = auditPacketWorkflowPlanDescriptor(definition, brokenWorkflow);
 
@@ -218,7 +218,7 @@ test('workflow audit fails closed for unsupported condition operators', () => {
         },
       },
     ],
-  } as PacketWorkflowPlanDescriptor;
+  } as unknown as PacketWorkflowPlanDescriptor;
 
   const report = auditPacketWorkflowPlanDescriptor(definition, brokenWorkflow);
 
@@ -231,10 +231,10 @@ test('workflow audit fails closed for unsupported condition operators', () => {
 });
 
 test('definition audit accepts workflow references for manifest definitions', () => {
-  for (const definition of listExperimentalPacketTypeDefinitions()) {
+  for (const definition of listDefinedPacketTypeDefinitions()) {
     const report = auditPacketTypeDefinition({
       definition,
-      requireShadowRuntimeReady: false,
+      requireDefinitionRuntimeReady: false,
     });
 
     assert.equal(report.finding_counts.error, 0, definition.packet_type);

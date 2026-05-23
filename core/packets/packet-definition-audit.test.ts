@@ -5,23 +5,23 @@ import {
   resolvePacketDefinitionMutationActionPlan,
   auditPacketDefinitionManifest,
   auditPacketTypeDefinition,
-  getExperimentalPacketTypeDefinition,
-  listExperimentalPacketTypeDefinitions,
+  getDefinedPacketTypeDefinition,
+  listDefinedPacketTypeDefinitions,
   PACKET_DEFINITION_MANIFEST,
 } from '@core/packets/packet-definition-manifest';
-import { GENERIC_PACKET_BUILD_FAMILIES } from '@core/packets/packet-build-pipeline';
+import { GENERIC_PACKET_BUILD_TYPES } from '@core/packets/packet-build-pipeline';
 
 const EXPECTED_MANIFEST_PACKET_TYPES = [
-  ...GENERIC_PACKET_BUILD_FAMILIES,
+  ...GENERIC_PACKET_BUILD_TYPES,
 ].sort();
 
 test('audits Preference packet definition descriptor graph cleanly', () => {
-  const preferenceDefinition = getExperimentalPacketTypeDefinition('Preference');
+  const preferenceDefinition = getDefinedPacketTypeDefinition('Preference');
   assert.ok(preferenceDefinition);
 
   const report = auditPacketTypeDefinition({
     definition: preferenceDefinition,
-    requireShadowRuntimeReady: true,
+    requireDefinitionRuntimeReady: true,
   });
 
   assert.equal(report.status, 'pass');
@@ -32,8 +32,8 @@ test('audits Preference packet definition descriptor graph cleanly', () => {
 test('audits the active packet definition manifest', () => {
   const report = auditPacketDefinitionManifest({
     manifest: PACKET_DEFINITION_MANIFEST,
-    definitions: listExperimentalPacketTypeDefinitions(),
-    requireShadowRuntimeReady: false,
+    definitions: listDefinedPacketTypeDefinitions(),
+    requireDefinitionRuntimeReady: false,
   });
 
   assert.equal(report.finding_counts.error, 0);
@@ -41,10 +41,10 @@ test('audits the active packet definition manifest', () => {
 });
 
 test('every registered definition audits without errors', () => {
-  for (const definition of listExperimentalPacketTypeDefinitions()) {
+  for (const definition of listDefinedPacketTypeDefinitions()) {
     const report = auditPacketTypeDefinition({
       definition,
-      requireShadowRuntimeReady: false,
+      requireDefinitionRuntimeReady: false,
     });
 
     assert.equal(report.finding_counts.error, 0, definition.packet_type);
@@ -53,12 +53,12 @@ test('every registered definition audits without errors', () => {
 
 test('compatibility standard accepts full-chain adapter graphs', () => {
   for (const packetType of ['Element', 'Claim', 'Policy']) {
-    const definition = getExperimentalPacketTypeDefinition(packetType);
+    const definition = getDefinedPacketTypeDefinition(packetType);
     assert.ok(definition);
 
     const report = auditPacketTypeDefinition({
       definition,
-      requireShadowRuntimeReady: false,
+      requireDefinitionRuntimeReady: false,
     });
 
     assert.equal(definition.compatibility.strategy, 'full_chain_bundle', packetType);
@@ -74,7 +74,7 @@ test('compatibility standard accepts full-chain adapter graphs', () => {
 });
 
 test('compatibility audit fails when posture is not backed by descriptors', () => {
-  const definition = getExperimentalPacketTypeDefinition('Element');
+  const definition = getDefinedPacketTypeDefinition('Element');
   assert.ok(definition);
 
   const brokenDefinition = {
@@ -87,7 +87,7 @@ test('compatibility audit fails when posture is not backed by descriptors', () =
 
   const report = auditPacketTypeDefinition({
     definition: brokenDefinition,
-    requireShadowRuntimeReady: false,
+    requireDefinitionRuntimeReady: false,
   });
 
   assert.equal(report.status, 'fail');
@@ -98,9 +98,9 @@ test('compatibility audit fails when posture is not backed by descriptors', () =
   );
 });
 
-test('generic family mutation descriptors are shadow-runtime resolvable', () => {
-  for (const family of GENERIC_PACKET_BUILD_FAMILIES) {
-    const definition = getExperimentalPacketTypeDefinition(family);
+test('generic type mutation descriptors are runtime resolvable', () => {
+  for (const type of GENERIC_PACKET_BUILD_TYPES) {
+    const definition = getDefinedPacketTypeDefinition(type);
     assert.ok(definition);
 
     for (const mutation of definition.mutations) {
@@ -109,7 +109,7 @@ test('generic family mutation descriptors are shadow-runtime resolvable', () => 
         mutation_intent: mutation.mutation_intent,
       });
 
-      assert.equal(plan.ready_for_shadow_runtime, true, mutation.mutation_intent);
+      assert.equal(plan.ready_for_runtime, true, mutation.mutation_intent);
       assert.equal(plan.missing_descriptor_ids.length, 0);
       assert.equal(plan.unsupported_capabilities.length, 0);
     }
@@ -118,12 +118,12 @@ test('generic family mutation descriptors are shadow-runtime resolvable', () => 
 
 test('canonical Definition, Bundle, and Preference packet types audit cleanly', () => {
   for (const packetType of ['Definition', 'Bundle', 'Preference']) {
-    const definition = getExperimentalPacketTypeDefinition(packetType);
+    const definition = getDefinedPacketTypeDefinition(packetType);
     assert.ok(definition);
 
     const auditReport = auditPacketTypeDefinition({
       definition,
-      requireShadowRuntimeReady: true,
+      requireDefinitionRuntimeReady: true,
     });
     assert.equal(auditReport.finding_counts.error, 0, packetType);
 
@@ -133,22 +133,22 @@ test('canonical Definition, Bundle, and Preference packet types audit cleanly', 
         mutation_intent: mutation.mutation_intent,
       });
 
-      assert.equal(plan.ready_for_shadow_runtime, true, mutation.mutation_intent);
+      assert.equal(plan.ready_for_runtime, true, mutation.mutation_intent);
     }
   }
 });
 
-test('Definition no longer carries deferred core manifest sections', () => {
-  const definition = getExperimentalPacketTypeDefinition('Definition');
+test('Definition no longer carries unsupported core manifest sections', () => {
+  const definition = getDefinedPacketTypeDefinition('Definition');
   assert.ok(definition);
 
-  assert.notEqual(definition.section_statuses?.builders, 'deferred');
-  assert.notEqual(definition.section_statuses?.indexing, 'deferred');
-  assert.notEqual(definition.section_statuses?.compatibility, 'deferred');
+  assert.notEqual(definition.section_statuses?.builders, 'unsupported');
+  assert.notEqual(definition.section_statuses?.indexing, 'unsupported');
+  assert.notEqual(definition.section_statuses?.compatibility, 'unsupported');
 });
 
 test('reports missing builder references as audit errors', () => {
-  const preferenceDefinition = getExperimentalPacketTypeDefinition('Preference');
+  const preferenceDefinition = getDefinedPacketTypeDefinition('Preference');
   assert.ok(preferenceDefinition);
 
   const brokenDefinition = {
@@ -164,7 +164,7 @@ test('reports missing builder references as audit errors', () => {
 
   const report = auditPacketTypeDefinition({
     definition: brokenDefinition,
-    requireShadowRuntimeReady: true,
+    requireDefinitionRuntimeReady: true,
   });
 
   assert.equal(report.status, 'fail');

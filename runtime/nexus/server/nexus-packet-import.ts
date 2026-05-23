@@ -161,7 +161,7 @@ function buildBlockedPreviewPayload(input: {
     affected_packet_ids: [],
     missing_parent_count: 0,
     invalid_entry_count: 0,
-    family_conflict_count: 0,
+    type_conflict_count: 0,
     status: input.status,
     blocking_errors: input.blockingErrors,
     warnings: [],
@@ -454,23 +454,23 @@ async function analyzeImportRequest(input: {
   const warnings: string[] = [];
   const validEntries: NormalizedImportEntry[] = [];
   const packetIdsWithConflicts = new Set<string>();
-  const packetFamiliesById = new Map<string, string>();
+  const packetTypesById = new Map<string, string>();
 
   normalizedSource.rawEntries.forEach((rawEntry, entryIndex) => {
     try {
       const compatibilityRead = inspectPacketEnvelope(rawEntry);
       const adaptedPacket = compatibilityRead.adapted_packet;
       const packetId = adaptedPacket.header.packet_id;
-      const family = adaptedPacket.header.family;
-      const knownFamily = packetFamiliesById.get(packetId) ?? null;
+      const type = adaptedPacket.header.type;
+      const knownType = packetTypesById.get(packetId) ?? null;
 
-      if (knownFamily && knownFamily !== family) {
+      if (knownType && knownType !== type) {
         packetIdsWithConflicts.add(packetId);
         blockingErrors.push(
-          `Packet ${packetId} appears with conflicting families (${knownFamily} and ${family}) inside this import source.`
+          `Packet ${packetId} appears with conflicting types (${knownType} and ${type}) inside this import source.`
         );
       } else {
-        packetFamiliesById.set(packetId, family);
+        packetTypesById.set(packetId, type);
       }
 
       validEntries.push({
@@ -505,7 +505,7 @@ async function analyzeImportRequest(input: {
 
     if (
       existingPacket &&
-      existingPacket.header.family !== entry.adaptedPacket.header.family
+      existingPacket.header.type !== entry.adaptedPacket.header.type
     ) {
       packetIdsWithConflicts.add(packetId);
     }
@@ -516,7 +516,7 @@ async function analyzeImportRequest(input: {
 
     if (existingPacket) {
       blockingErrors.push(
-        `Packet ${packetId} already exists locally as ${existingPacket.header.family}, which conflicts with this import source.`
+        `Packet ${packetId} already exists locally as ${existingPacket.header.type}, which conflicts with this import source.`
       );
     }
   }
@@ -624,7 +624,7 @@ async function analyzeImportRequest(input: {
   ).sort();
   const uniqueRevisionCount = seenRevisionKeys.size;
   const invalidEntryCount = normalizedSource.rawEntries.length - validEntries.length;
-  const familyConflictCount = packetIdsWithConflicts.size;
+  const typeConflictCount = packetIdsWithConflicts.size;
   const openPacketId =
     normalizedSource.exportMode === 'full_store'
       ? null
@@ -683,7 +683,7 @@ async function analyzeImportRequest(input: {
       affected_packet_ids: affectedPacketIds,
       missing_parent_count: missingParentCount,
       invalid_entry_count: invalidEntryCount,
-      family_conflict_count: familyConflictCount,
+      type_conflict_count: typeConflictCount,
       status,
       blocking_errors: Array.from(new Set(blockingErrors)),
       warnings,

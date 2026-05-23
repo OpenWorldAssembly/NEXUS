@@ -1,13 +1,13 @@
 /**
- * File: families/decision.ts
- * Description: Family-owned build rules for canonical Decision packets.
+ * File: types/decision.ts
+ * Description: Type-owned build rules for canonical Decision packets.
  */
 
 import type { DecisionPacketInput } from '@core/packets/builders';
-import type { PacketFamilyBuildDefinition } from '@core/packets/packet-build-pipeline';
+import type { PacketTypeBuildDefinition } from '@core/packets/packet-build-pipeline';
 import { createPacketEdge } from '@core/packets/packet-build-helpers';
 
-export const decisionBuildDefinition: PacketFamilyBuildDefinition<
+export const decisionBuildDefinition: PacketTypeBuildDefinition<
   'Decision',
   DecisionPacketInput
 > = {
@@ -35,6 +35,7 @@ export const decisionBuildDefinition: PacketFamilyBuildDefinition<
       : []),
   ],
   finalizeBody: (input) => ({
+    subtype: 'decision',
     title: input.title,
     summary: input.summary ?? null,
     outcome: input.outcome,

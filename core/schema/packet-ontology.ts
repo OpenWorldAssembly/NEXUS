@@ -1,11 +1,11 @@
 /**
  * File: packet-ontology.ts
- * Description: Declares canonical packet families, subtype registries, ontology helpers, and shared packet-level enums/types.
+ * Description: Declares canonical packet types, subtype registries, ontology helpers, and shared packet-level enums/types.
  */
 
 import { z } from 'zod';
 
-export const PACKET_FAMILIES = [
+export const PACKET_TYPES = [
   'Definition',
   'Element',
   'Location',
@@ -13,34 +13,18 @@ export const PACKET_FAMILIES = [
   'Claim',
   'Relation',
   'Report',
-  'Signal',
   'Proposal',
   'Vote',
   'Attestation',
   'Decision',
-  'Cause',
   'Action',
-  'Initiative',
-  'Program',
-  'Campaign',
-  'MissionTemplate',
-  'MissionPlan',
-  'MissionReport',
-  'Module',
   'Policy',
   'Preference',
   'Discussion',
-  'DiscussionSpace',
-  'DiscussionForum',
-  'DiscussionThread',
-  'DiscussionPost',
-  'DiscussionReply',
-  'Minutes',
-  'Artifact',
   'Bundle',
 ] as const;
 
-export const ELEMENT_KINDS = [
+export const ELEMENT_SUBTYPES = [
   'assembly',
   'team',
   'node',
@@ -124,11 +108,6 @@ export const PERSON_CLAIM_STATUSES = [
 
 export const PERSON_KEY_STATUSES = ['active', 'revoked'] as const;
 
-export const MISSION_PARTICIPATION_MODES = [
-  'integrated',
-  'independent',
-  'hybrid',
-] as const;
 
 export const DISCUSSION_ACTOR_CLASSES = [
   'anonymous_guest',
@@ -154,7 +133,7 @@ export const DISCUSSION_REPLY_SORTS = [
   'old',
 ] as const;
 
-export const DISCUSSION_KINDS = [
+export const DISCUSSION_SUBTYPES = [
   'space',
   'forum',
   'topic',
@@ -268,19 +247,18 @@ export const MERGE_STRATEGIES = [
 export const DEFAULT_PROTOCOL_VERSION = '0.1.0';
 export const DEFAULT_SCHEMA_VERSION = '1.0.0';
 
-export const PacketFamilySchema = z.enum(PACKET_FAMILIES);
-export const ElementKindSchema = z.enum(ELEMENT_KINDS);
+export const PacketTypeSchema = z.enum(PACKET_TYPES);
+export const ElementSubtypeSchema = z.enum(ELEMENT_SUBTYPES);
 export const CanonicalRelationSubtypeSchema = z.enum(RELATION_SUBTYPES);
 export const CanonicalLocationSubtypeSchema = z.enum(LOCATION_SUBTYPES);
 export const CanonicalClaimSubtypeSchema = z.enum(CLAIM_SUBTYPES);
 export const CanonicalAttestationSubtypeSchema = z.enum(ATTESTATION_SUBTYPES);
 export const PersonClaimStatusSchema = z.enum(PERSON_CLAIM_STATUSES);
 export const PersonKeyStatusSchema = z.enum(PERSON_KEY_STATUSES);
-export const MissionParticipationModeSchema = z.enum(MISSION_PARTICIPATION_MODES);
 export const DiscussionActorClassSchema = z.enum(DISCUSSION_ACTOR_CLASSES);
 export const DiscussionSortSchema = z.enum(DISCUSSION_SORTS);
 export const DiscussionReplySortSchema = z.enum(DISCUSSION_REPLY_SORTS);
-export const DiscussionKindSchema = z.enum(DISCUSSION_KINDS);
+export const DiscussionSubtypeSchema = z.enum(DISCUSSION_SUBTYPES);
 export const AttestationStatusSchema = z.enum(ATTESTATION_STATUSES);
 export const AttestationKindSchema = z.enum(ATTESTATION_KINDS);
 export const PacketRevisionStateSchema = z.enum(REVISION_STATES);
@@ -298,8 +276,8 @@ export const RelationSubjectMatchModeSchema = z.enum(
   RELATION_SUBJECT_MATCH_MODES
 );
 
-export type PacketFamily = z.infer<typeof PacketFamilySchema>;
-export type ElementKind = z.infer<typeof ElementKindSchema>;
+export type PacketType = z.infer<typeof PacketTypeSchema>;
+export type ElementSubtype = z.infer<typeof ElementSubtypeSchema>;
 export type CanonicalRelationSubtype = z.infer<
   typeof CanonicalRelationSubtypeSchema
 >;
@@ -317,7 +295,7 @@ export type PacketMergeStrategy = z.infer<typeof PacketMergeStrategySchema>;
 export type DiscussionActorClass = z.infer<typeof DiscussionActorClassSchema>;
 export type DiscussionSort = z.infer<typeof DiscussionSortSchema>;
 export type DiscussionReplySort = z.infer<typeof DiscussionReplySortSchema>;
-export type DiscussionKind = z.infer<typeof DiscussionKindSchema>;
+export type DiscussionSubtype = z.infer<typeof DiscussionSubtypeSchema>;
 export type AttestationValue = z.infer<typeof AttestationValueSchema>;
 export type AttestationStatus = z.infer<typeof AttestationStatusSchema>;
 export type AttestationKind = z.infer<typeof AttestationKindSchema>;
@@ -351,8 +329,8 @@ export type PacketVoteValue = AttestationValue;
 export type PacketVoteStatus = AttestationStatus;
 export type PacketVoteKind = AttestationKind;
 
-function isElementKindValue(value: string): value is ElementKind {
-  return (ELEMENT_KINDS as readonly string[]).includes(value);
+function isElementSubtypeValue(value: string): value is ElementSubtype {
+  return (ELEMENT_SUBTYPES as readonly string[]).includes(value);
 }
 
 function normalizeSubtypeText(value: string | null | undefined): string | null {
@@ -361,24 +339,19 @@ function normalizeSubtypeText(value: string | null | undefined): string | null {
 }
 
 export function getCanonicalElementSubtype(input: {
-  kind?: ElementKind | null;
   subtype?: string | null;
 }): string | null {
   const normalizedSubtype = normalizeSubtypeText(input.subtype);
 
   if (!normalizedSubtype) {
-    return input.kind ?? null;
+    return null;
   }
 
   if (normalizedSubtype.includes('.')) {
     return normalizedSubtype;
   }
 
-  if (!input.kind || normalizedSubtype === input.kind) {
-    return normalizedSubtype;
-  }
-
-  return `${input.kind}.${normalizedSubtype}`;
+  return normalizedSubtype;
 }
 
 export function getElementSubtypeLeaf(
@@ -394,24 +367,24 @@ export function getElementSubtypeLeaf(
   return segments.at(-1) ?? normalizedSubtype;
 }
 
-export function getElementKindFromSubtype(input: {
+export function getElementSubtypeRoot(input: {
   subtype?: string | null;
-  fallbackKind?: ElementKind | null;
-}): ElementKind | null {
+  fallbackSubtype?: ElementSubtype | null;
+}): ElementSubtype | null {
   const normalizedSubtype = normalizeSubtypeText(input.subtype);
 
   if (!normalizedSubtype) {
-    return input.fallbackKind ?? null;
+    return input.fallbackSubtype ?? null;
   }
 
   const firstSegment =
     normalizedSubtype.split('.').filter(Boolean)[0] ?? normalizedSubtype;
 
-  if (isElementKindValue(firstSegment)) {
+  if (isElementSubtypeValue(firstSegment)) {
     return firstSegment;
   }
 
-  return input.fallbackKind ?? null;
+  return input.fallbackSubtype ?? null;
 }
 
 function isCanonicalSubtypeValue<TSubtype extends string>(
@@ -455,7 +428,7 @@ export const LOCALITY_LEVELS = ['nation', 'region', 'city', 'district'] as const
 export const LocalityLevelSchema = z.enum(LOCALITY_LEVELS);
 export type LocalityLevel = z.infer<typeof LocalityLevelSchema>;
 
-export const PACKET_FAMILY_REVISION_MODES = {
+export const PACKET_TYPE_REVISION_MODES = {
   Definition: 'replaceable',
   Element: 'replaceable',
   Location: 'replaceable',
@@ -463,29 +436,13 @@ export const PACKET_FAMILY_REVISION_MODES = {
   Claim: 'replaceable',
   Relation: 'replaceable',
   Report: 'replaceable',
-  Signal: 'append_only',
   Proposal: 'replaceable',
   Vote: 'append_only',
   Attestation: 'append_only',
   Decision: 'append_only',
-  Cause: 'replaceable',
   Action: 'replaceable',
-  Initiative: 'replaceable',
-  Program: 'replaceable',
-  Campaign: 'replaceable',
-  MissionTemplate: 'replaceable',
-  MissionPlan: 'replaceable',
-  MissionReport: 'replaceable',
-  Module: 'replaceable',
   Policy: 'replaceable',
   Preference: 'replaceable',
   Discussion: 'replaceable',
-  DiscussionSpace: 'replaceable',
-  DiscussionForum: 'replaceable',
-  DiscussionThread: 'replaceable',
-  DiscussionPost: 'append_only',
-  DiscussionReply: 'append_only',
-  Minutes: 'append_only',
-  Artifact: 'append_only',
   Bundle: 'replaceable',
-} satisfies Record<PacketFamily, PacketRevisionMode>;
+} satisfies Record<PacketType, PacketRevisionMode>;

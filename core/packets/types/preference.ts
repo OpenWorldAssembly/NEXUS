@@ -1,12 +1,12 @@
 /**
- * File: families/preference.ts
- * Description: Family-owned build rules for canonical Preference packets.
+ * File: types/preference.ts
+ * Description: Type-owned build rules for canonical Preference packets.
  */
 
-import type { PacketFamilyBuildDefinition } from '@core/packets/packet-build-pipeline';
+import type { PacketTypeBuildDefinition } from '@core/packets/packet-build-pipeline';
 import type { PacketBodyByType } from '@core/schema/packet-schema';
 
-export const preferenceBuildDefinition: PacketFamilyBuildDefinition<
+export const preferenceBuildDefinition: PacketTypeBuildDefinition<
   'Preference',
   PacketBodyByType['Preference']
 > = {

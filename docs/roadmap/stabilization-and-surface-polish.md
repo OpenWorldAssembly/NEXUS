@@ -32,7 +32,7 @@ The next planning focus is still catch-up and semantic stabilization.
 - diff views and revision compare
 - richer link grouping and filtering
 - eventual action execution through the fortress corridor rather than route-local writes
-- first-class `Bundle` packets after verification and locality UX hardening, with legacy bundle JSON remaining a runtime transport format rather than becoming a schema-compatibility family
+- first-class `Bundle` packets after verification and locality UX hardening, with legacy bundle JSON remaining a runtime transport format rather than becoming a schema-compatibility type
 
 ## Working order
 
@@ -42,11 +42,11 @@ The next planning focus is still catch-up and semantic stabilization.
 4. tighten trust, role, and relationship modeling
 5. only then widen into deeper policy-heavy and governance-heavy workflows
 
-The dedicated validation workflow screen remains intentionally deferred. The next major implementation chapter after the current verification tidy work is still locality UX, not first-class Bundle implementation.
+The dedicated validation workflow screen remains intentionally unsupported. The next major implementation chapter after the current verification tidy work is still locality UX, not first-class Bundle implementation.
 
 ## Bundle direction already locked in
 
-- `Bundle` should become a first-class packet family later rather than staying permanently as a runtime-only JSON wrapper.
+- `Bundle` should become a first-class packet type later rather than staying permanently as a runtime-only JSON wrapper.
 - Rebundling or forwarding someone else’s bundle should create a new bundle packet, not a revision of the original bundle packet.
 - Bundle history should therefore behave as a lineage graph of related bundle packets rather than one shared revision chain.
 - Runtime `import_report`, `export_report`, and `verification_report` packets should remain the portable record surface around bundle movement and validation.

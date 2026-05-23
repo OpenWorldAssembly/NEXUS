@@ -316,8 +316,8 @@ export default function NexusPacketExplorer() {
     activeTab.kind === 'home'
       ? 'Explorer Home'
       : activePayload?.packet_summary.title ?? activeTab.title_snapshot;
-  const activePacketFamily =
-    activePayload?.packet_summary.family ?? activeTab.seed_summary?.family ?? null;
+  const activePacketType =
+    activePayload?.packet_summary.type ?? activeTab.seed_summary?.type ?? null;
 
   const handleRetryActivePacket = () => {
     if (!activePacketId) {
@@ -350,12 +350,12 @@ export default function NexusPacketExplorer() {
     }
   };
 
-  const handleOpenPacketInLibrary = (packetId: string, family?: string | null) => {
+  const handleOpenPacketInLibrary = (packetId: string, type?: string | null) => {
     router.push({
       pathname: '/nexus/library',
       params: {
         packet_id: packetId,
-        ...(family ? { family } : {}),
+        ...(type ? { type } : {}),
       },
     });
     closeExplorer();
@@ -366,7 +366,7 @@ export default function NexusPacketExplorer() {
     preferredRevisionId?: string | null;
     titleSnapshot?: string | null;
     seedSummary?: {
-      family: string | null;
+      type: string | null;
       summary: string | null;
       label: string | null;
     } | null;
@@ -623,7 +623,7 @@ export default function NexusPacketExplorer() {
                   <NexusPacketExplorerToolbar
                     activeTab={activeTab}
                     activePacketId={activePacketId}
-                    activePacketFamily={activePacketFamily}
+                    activePacketType={activePacketType}
                     activeHomeSubtab={
                       activeTab.kind === 'home' ? activeTab.active_home_subtab : undefined
                     }

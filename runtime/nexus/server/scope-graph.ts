@@ -202,10 +202,8 @@ function isScopeElementPacket(
   const subtypeLeaf = getElementSubtypeLeaf(subtype);
 
   return (
-    packet.body.kind === 'assembly' ||
+    packet.body.subtype === 'assembly' ||
     subtype?.startsWith('assembly.') === true ||
-    packet.body.scope_kind === 'assembly' ||
-    packet.body.scope_kind === 'locality' ||
     subtypeLeaf === 'locality'
   );
 }
@@ -325,7 +323,10 @@ async function resolveCanonicalHomeLocality(input: {
   }
 
   const policyPackets = await getOwaRelationPolicyPackets(input.packetStore);
-  const rankedRelations = activeHomeRelations
+  type RankedHomeLocalityProjection = EffectiveHomeLocalityProjection & {
+    depth: number;
+  };
+  const rankedRelationCandidates: Array<RankedHomeLocalityProjection | null> = activeHomeRelations
     .map((relationPacket) => {
       const scopeRouteId = Array.from(input.scopeMap.values()).find(
         (scopeNode) =>
@@ -370,16 +371,14 @@ async function resolveCanonicalHomeLocality(input: {
         ],
         policyEvaluationState: evaluation.evaluation_state,
         depth: ancestorRouteIds.length,
-      };
-    })
-    .filter(
-      (
-        value
-      ): value is EffectiveHomeLocalityProjection & {
-        depth: number;
-      } => value !== null
-    )
-    .sort((leftRelation, rightRelation) => rightRelation.depth - leftRelation.depth);
+      } satisfies RankedHomeLocalityProjection;
+    });
+  const rankedRelations = rankedRelationCandidates.filter(
+    (value): value is RankedHomeLocalityProjection => value !== null
+  );
+  rankedRelations.sort(
+    (leftRelation, rightRelation) => rightRelation.depth - leftRelation.depth
+  );
 
   if (rankedRelations.length === 0) {
     return null;
@@ -397,10 +396,10 @@ export async function buildNexusScopeGraphProjection(input: {
   followedScopeIds: string[];
 }): Promise<ScopeGraphProjection> {
   const [elementPackets, relationPackets, claimPackets, locationPackets] = await Promise.all([
-    input.packetStore.listPreferredPacketsByFamily('Element'),
+    input.packetStore.listPreferredPacketsByType('Element'),
     listRelationPackets(input.packetStore),
     listClaimPackets(input.packetStore),
-    input.packetStore.listPreferredPacketsByFamily('Location'),
+    input.packetStore.listPreferredPacketsByType('Location'),
   ]);
   const scopeElementPackets = (elementPackets as PacketEnvelopeByType['Element'][]).filter(
     isScopeElementPacket

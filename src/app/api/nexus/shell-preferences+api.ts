@@ -6,7 +6,7 @@
 import type { RequestHandler } from 'expo-router/server';
 import { z } from 'zod';
 
-import { ShellChromePreferenceValueSchema } from '@core/packets/packet-definition-manifest';
+import { ShellChromePreferenceValueSchema } from '@core/packets/definitions/preference.ts';
 import type { NexusScopeDisplayPreferencesPayload } from '@runtime/nexus/nexus-api-types';
 import {
   writeScopeDisplayPreferencesCompatibility,
@@ -89,3 +89,4 @@ export const POST: RequestHandler = async (request) => {
     );
   }
 };
+

@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { createActionPacket, createCausePacket, createPolicyPacket } from '@core/packets/builders';
+import { createActionPacket, createPolicyPacket } from '@core/packets/builders';
 import {
   auditPacketDependencySemanticAuthority,
   auditPacketPolicySemanticAuthority,
-  getExperimentalPacketTypeDefinition,
-  listExperimentalPacketTypeDefinitions,
+  getDefinedPacketTypeDefinition,
+  listDefinedPacketTypeDefinitions,
   listPacketDependencySemanticDescriptors,
   listPacketWorkflowPlanDescriptors,
   resolveInitiativePolicyAnchorRefs,
@@ -23,7 +23,7 @@ test('policy packets resolve default inheritance and governance semantics withou
     packet_id: 'nexus:policy/owa-defaults',
     created_at: '2026-05-19T00:00:00.000Z',
     title: 'OWA defaults',
-    policy_kind: 'default_inheritance',
+    subtype: 'default_inheritance',
     body_markdown: 'Packet-backed defaults.',
     status: 'active',
     default_policy: {
@@ -69,7 +69,7 @@ test('policy semantic audit rejects runtime-only default policy sections', () =>
     packet_id: 'nexus:policy/runtime-only-defaults',
     created_at: '2026-05-19T00:10:00.000Z',
     title: 'Runtime-only defaults',
-    policy_kind: 'default_inheritance',
+    subtype: 'default_inheritance',
     body_markdown: 'Invalid because it names no packet refs.',
     status: 'active',
     default_policy: {
@@ -91,7 +91,7 @@ test('policy semantic audit rejects runtime-only default policy sections', () =>
 });
 
 test('dependency semantic authority covers workflows and Definition dependency parts', () => {
-  const definitions = listExperimentalPacketTypeDefinitions();
+  const definitions = listDefinedPacketTypeDefinitions();
   const audit = auditPacketDependencySemanticAuthority();
   const descriptors = listPacketDependencySemanticDescriptors();
   const dependencyIds = new Set(descriptors.map((descriptor) => descriptor.dependency_id));
@@ -115,7 +115,7 @@ test('dependency semantic authority covers workflows and Definition dependency p
 
   assert.equal(audit.status, 'pass', JSON.stringify(audit.findings, null, 2));
   assert.ok(
-    getExperimentalPacketTypeDefinition('Policy')?.packet_definition_parts?.some(
+    getDefinedPacketTypeDefinition('Policy')?.packet_definition_parts?.some(
       (part) =>
         part.part_subtype === 'packet_dependency' &&
         part.references?.includes('generic.operation.policy')
@@ -123,9 +123,8 @@ test('dependency semantic authority covers workflows and Definition dependency p
   );
 });
 
-test('initiative policy anchors prefer Action initiative refs while preserving Cause compatibility refs', () => {
+test('initiative policy anchors resolve through the Action initiative anchor', () => {
   const actionPolicyRef = { packet_id: 'nexus:policy/action-defaults' };
-  const causePolicyRef = { packet_id: 'nexus:policy/cause-compatibility' };
   const action = createActionPacket({
     packet_id: 'nexus:action/owa',
     created_at: '2026-05-19T00:20:00.000Z',
@@ -134,41 +133,28 @@ test('initiative policy anchors prefer Action initiative refs while preserving C
     status: 'active',
     policy_refs: [actionPolicyRef],
   });
-  const cause = createCausePacket({
-    packet_id: 'nexus:cause/owa',
-    created_at: '2026-05-19T00:21:00.000Z',
-    subtype: 'initiative',
-    title: 'OWA',
-    status: 'active',
-    policy_refs: [causePolicyRef],
-  });
   const defaultPolicy = createPolicyPacket({
     packet_id: 'nexus:policy/default-stack',
     created_at: '2026-05-19T00:22:00.000Z',
     title: 'Default stack',
-    policy_kind: 'default_inheritance',
+    subtype: 'default_inheritance',
     body_markdown: 'Policy-backed default refs.',
     status: 'active',
     default_policy: {
-      policy_refs: [causePolicyRef],
+      policy_refs: [actionPolicyRef],
       template_refs: [],
       default_packet_set_refs: [],
       preference_refs: [],
     },
   });
 
-  assert.deepEqual(resolveInitiativePolicyAnchorRefs({ actionPacket: action, causePacket: cause }), [
-    actionPolicyRef,
-  ]);
-  assert.deepEqual(resolveInitiativePolicyAnchorRefs({ causePacket: cause }), [
-    causePolicyRef,
-  ]);
+  assert.deepEqual(resolveInitiativePolicyAnchorRefs({ actionPacket: action }), [actionPolicyRef]);
   assert.deepEqual(
-    resolvePacketDefaultPolicyRefs({
+    [...new Set(resolvePacketDefaultPolicyRefs({
       actionPacket: action,
       policyPackets: [defaultPolicy],
-    }).map((ref) => ref.packet_id),
-    [actionPolicyRef.packet_id, causePolicyRef.packet_id]
+    }).map((ref) => ref.packet_id))],
+    [actionPolicyRef.packet_id]
   );
 });
 

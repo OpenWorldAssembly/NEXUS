@@ -150,16 +150,16 @@ function normalizeWorkspaceView(
 
 function isDiscussionPostRouteTarget(input: {
   packetId: string | null;
-  packetFamily: string | null;
+  packetType: string | null;
 }): boolean {
   if (!input.packetId) {
     return false;
   }
 
-  if (input.packetFamily) {
+  if (input.packetType) {
     return (
-      input.packetFamily === 'DiscussionPost' ||
-      input.packetFamily === 'DiscussionReply'
+      input.packetType === 'Discussion' ||
+      input.packetType === 'Discussion'
     );
   }
 
@@ -172,12 +172,12 @@ function isDiscussionPostRouteTarget(input: {
 function resolvePreviewDiscussionPostTargetId(input: {
   packetId: string | null;
   focusPacketId: string | null;
-  packetFamily: string | null;
+  packetType: string | null;
 }): string | null {
   if (
     isDiscussionPostRouteTarget({
       packetId: input.focusPacketId,
-      packetFamily: input.packetFamily,
+      packetType: input.packetType,
     })
   ) {
     return input.focusPacketId;
@@ -186,7 +186,7 @@ function resolvePreviewDiscussionPostTargetId(input: {
   if (
     isDiscussionPostRouteTarget({
       packetId: input.packetId,
-      packetFamily: input.packetFamily,
+      packetType: input.packetType,
     })
   ) {
     return input.packetId;
@@ -758,7 +758,7 @@ export default function NexusDiscussionsPage() {
   const previewDiscussionPostTargetId = resolvePreviewDiscussionPostTargetId({
     packetId: previewTargetParams.packetId,
     focusPacketId: previewTargetParams.focusPacketId,
-    packetFamily: previewTargetParams.packetFamily,
+    packetType: previewTargetParams.packetType,
   });
   const requestedNavigationTargetPacketId =
     normalizeQueryValue(localParams.target_packet_id) ?? previewTargetParams.packetId;

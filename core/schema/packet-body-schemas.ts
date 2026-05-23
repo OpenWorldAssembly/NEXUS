@@ -6,22 +6,20 @@
 import { z } from 'zod';
 
 import { WRITE_PROOF_LEVELS } from '@core/auth/proof-types';
-import type { PacketFamily } from '@core/schema/packet-ontology';
+import type { PacketType } from '@core/schema/packet-ontology';
 import { DefinitionBodySchema } from '@core/packets/definitions/definition.ts';
 import {
   AttestationStatusSchema,
   AttestationValueSchema,
-  ClaimKindSchema,
   ClaimStatusSchema,
   DEFAULT_PROTOCOL_VERSION,
   DEFAULT_SCHEMA_VERSION,
   DiscussionActorClassSchema,
-  DiscussionKindSchema,
+  DiscussionSubtypeSchema,
   DiscussionSortSchema,
-  ElementKindSchema,
+  ElementSubtypeSchema,
   LocalityLevelSchema,
-  MissionParticipationModeSchema,
-  PacketFamilySchema,
+  PacketTypeSchema,
   PacketMergeStrategySchema,
   RelationClaimTargetModeSchema,
   RelationStatusSchema,
@@ -114,11 +112,11 @@ export const PacketMetadataSchema = z
     summary: z.string().min(1).nullable().default(null),
     compatibility: z
       .object({
-        family_history: z
+        type_history: z
           .array(
             z
               .object({
-                family: z.string().min(1),
+                type: z.string().min(1),
                 schema_version: z.string().min(1),
                 adapter_profile: z.string().min(1),
               })
@@ -129,7 +127,7 @@ export const PacketMetadataSchema = z
           .array(
             z
               .object({
-                family: z.string().min(1),
+                type: z.string().min(1),
                 schema_version: z.string().min(1),
                 mode: z.enum(['exact', 'lossy', 'blocked']),
                 required_features: z.array(z.string().min(1)).default([]),
@@ -141,13 +139,13 @@ export const PacketMetadataSchema = z
         migration_policy: z
           .object({
             allow_virtual_downcast: z.boolean().default(true),
-            allow_guarded_shadow_write: z.boolean().default(false),
+            allow_guarded_definition_write: z.boolean().default(false),
             requires_loss_acknowledgement: z.boolean().default(false),
           })
           .strict()
           .default({
             allow_virtual_downcast: true,
-            allow_guarded_shadow_write: false,
+            allow_guarded_definition_write: false,
             requires_loss_acknowledgement: false,
           }),
       })
@@ -161,7 +159,7 @@ export const PacketHeaderSchema = z
   .object({
     packet_id: z.string().min(1),
     revision_id: z.string().min(1),
-    family: PacketFamilySchema,
+    type: PacketTypeSchema,
     schema_version: z.string().min(1).default(DEFAULT_SCHEMA_VERSION),
     protocol_version: z.string().min(1).default(DEFAULT_PROTOCOL_VERSION),
     created_at: z.string().min(1),
@@ -195,34 +193,11 @@ export const PacketHeaderSchema = z
   })
   .strict();
 
-export const TemplateFieldSchema = z
-  .object({
-    key: z.string().min(1),
-    label: z.string().min(1),
-    field_type: z.enum([
-      'string',
-      'markdown',
-      'date',
-      'datetime',
-      'boolean',
-      'number',
-      'string_list',
-      'select',
-    ]),
-    required: z.boolean().default(false),
-    help_text: z.string().min(1).nullable().optional(),
-    options: z.array(z.string().min(1)).default([]),
-  })
-  .strict();
-
 export const ElementBodySchema = z
   .object({
-    type: z.literal('element').default('element'),
-    kind: ElementKindSchema,
+    subtype: ElementSubtypeSchema,
     name: z.string().min(1),
-    subtype: z.string().min(1).nullable().optional(),
     summary: z.string().min(1).nullable().optional(),
-    scope_kind: z.string().min(1).nullable().default(null),
     scope_system: z.string().min(1).nullable().default(null),
     status: z.string().min(1).nullable().default(null),
     aliases: z.array(z.string().min(1)).default([]),
@@ -280,7 +255,6 @@ export const ElementBodySchema = z
 
 export const LocationBodySchema = z
   .object({
-    type: z.literal('location').default('location'),
     subtype: z.string().min(1),
     title: z.string().min(1),
     summary: z.string().min(1).nullable().optional(),
@@ -295,7 +269,7 @@ export const RoleBodySchema = z
   .object({
     title: z.string().min(1),
     summary: z.string().min(1).nullable().optional(),
-    role_kind: z.string().min(1),
+    subtype: z.string().min(1).default('role'),
     status: z.string().min(1),
     responsibility_markdown: z.string().min(1).nullable().default(null),
   })
@@ -303,7 +277,6 @@ export const RoleBodySchema = z
 
 export const ClaimBodySchema = z
   .object({
-    type: z.literal('claim').default('claim'),
     subtype: z.string().min(1).default('relation_assertion'),
     target_ref: PacketRefSchema,
     subject_ref: PacketRefSchema.nullable().default(null),
@@ -321,14 +294,12 @@ export const ClaimBodySchema = z
       .strict()
       .nullable()
       .default(null),
-    claim_kind: ClaimKindSchema.nullable().optional(),
     note: z.string().min(1).nullable().default(null),
   })
   .strict();
 
 export const RelationBodySchema = z
   .object({
-    type: z.literal('relation').default('relation'),
     subtype: z.string().min(1),
     subject_ref: PacketRefSchema,
     target_ref: PacketRefSchema,
@@ -343,21 +314,11 @@ export const RelationBodySchema = z
   })
   .strict();
 
-export const SignalBodySchema = z
-  .object({
-    title: z.string().min(1),
-    summary: z.string().min(1).nullable().optional(),
-    signal_kind: z.string().min(1),
-    status: z.string().min(1),
-    problem_statement: z.string().min(1).nullable().optional(),
-  })
-  .strict();
-
 export const ProposalBodySchema = z
   .object({
     title: z.string().min(1),
     summary: z.string().min(1).nullable().optional(),
-    proposal_kind: z.string().min(1),
+    subtype: z.string().min(1).default('proposal'),
     status: z.string().min(1),
     decision_scope_refs: z.array(PacketRefSchema).default([]),
     related_policy_refs: z.array(PacketRefSchema).default([]),
@@ -366,6 +327,7 @@ export const ProposalBodySchema = z
 
 export const VoteBodySchema = z
   .object({
+    subtype: z.string().min(1).default('vote'),
     title: z.string().min(1),
     proposal_ref: PacketRefSchema,
     vote_method: z.string().min(1),
@@ -377,27 +339,10 @@ export const VoteBodySchema = z
 
 export const AttestationBodySchema = z
   .object({
-    type: z.literal('attestation').default('attestation'),
     subtype: z.string().min(1).default('packet_signal'),
     target_ref: PacketRefSchema,
     value: AttestationValueSchema,
     status: AttestationStatusSchema.default('active'),
-    attestation_kind: z
-      .enum([
-        'packet_signal',
-        'proposal_support',
-        'proposal_oppose',
-        'attendance_vouch',
-        'identity_attest',
-        'assembly_association_claim',
-        'role_support',
-        'role_dispute',
-        'claim_support',
-        'claim_dispute',
-        'packet_confirm',
-        'packet_dispute',
-      ])
-      .default('packet_signal'),
     context_ref: PacketRefSchema.nullable().default(null),
     supporting_refs: z.array(PacketRefSchema).default([]),
     note: z.string().min(1).nullable().default(null),
@@ -407,6 +352,7 @@ export const AttestationBodySchema = z
 
 export const DecisionBodySchema = z
   .object({
+    subtype: z.string().min(1).default('decision'),
     title: z.string().min(1),
     summary: z.string().min(1).nullable().optional(),
     outcome: z.string().min(1),
@@ -415,29 +361,13 @@ export const DecisionBodySchema = z
   })
   .strict();
 
-export const CauseBodySchema = z
-  .object({
-    type: z.literal('cause').default('cause'),
-    subtype: z.string().min(1),
-    title: z.string().min(1),
-    summary: z.string().min(1).nullable().optional(),
-    status: z.string().min(1),
-    purpose_markdown: z.string().min(1).nullable().default(null),
-    policy_refs: z.array(PacketRefSchema).default([]),
-    template_refs: z.array(PacketRefSchema).default([]),
-    module_refs: z.array(PacketRefSchema).default([]),
-  })
-  .strict();
-
 export const ActionBodySchema = z
   .object({
-    type: z.literal('action').default('action'),
     subtype: z.string().min(1),
     title: z.string().min(1),
     summary: z.string().min(1).nullable().optional(),
     status: z.string().min(1),
     objective_markdown: z.string().min(1).nullable().default(null),
-    cause_refs: z.array(PacketRefSchema).default([]),
     location_refs: z.array(PacketRefSchema).default([]),
     action_refs: z.array(PacketRefSchema).default([]),
     parent_action_ref: PacketRefSchema.nullable().default(null),
@@ -448,111 +378,8 @@ export const ActionBodySchema = z
   })
   .strict();
 
-export const InitiativeBodySchema = z
-  .object({
-    title: z.string().min(1),
-    summary: z.string().min(1).nullable().optional(),
-    status: z.string().min(1),
-  })
-  .strict();
-
-export const ProgramBodySchema = z
-  .object({
-    title: z.string().min(1),
-    summary: z.string().min(1).nullable().optional(),
-    initiative_ref: PacketRefSchema.nullable().optional(),
-    status: z.string().min(1),
-  })
-  .strict();
-
-export const CampaignBodySchema = z
-  .object({
-    title: z.string().min(1),
-    summary: z.string().min(1).nullable().optional(),
-    initiative_ref: PacketRefSchema.nullable().optional(),
-    program_ref: PacketRefSchema.nullable().optional(),
-    status: z.string().min(1),
-  })
-  .strict();
-
-export const MissionTemplateBodySchema = z
-  .object({
-    title: z.string().min(1),
-    summary: z.string().min(1).nullable().optional(),
-    initiative_ref: PacketRefSchema.nullable().optional(),
-    field_schema: z.array(TemplateFieldSchema).default([]),
-    default_values: z.record(z.string(), z.unknown()).default({}),
-    render_hints: z.record(z.string(), z.unknown()).default({}),
-    module_refs: z.array(PacketRefSchema).default([]),
-    policy_refs: z.array(PacketRefSchema).default([]),
-  })
-  .strict();
-
-export const MissionPlanBodySchema = z
-  .object({
-    title: z.string().min(1),
-    summary: z.string().min(1).nullable().optional(),
-    initiative_ref: PacketRefSchema.nullable().optional(),
-    template_ref: PacketRefSchema.nullable().optional(),
-    status: z.string().min(1),
-    alignment_mode: z.string().min(1),
-    participation_mode: MissionParticipationModeSchema,
-    objectives: z.array(z.string().min(1)).default([]),
-    coordinator_refs: z.array(PacketRefSchema).default([]),
-    schedule: z
-      .object({
-        location_name: z.string().min(1),
-        start_local: z.string().min(1),
-        timezone: z.string().min(1).nullable().optional(),
-        duration_minutes: z.number().int().nonnegative().nullable().optional(),
-      })
-      .strict(),
-    modules: z
-      .object({
-        module_refs: z.array(PacketRefSchema).default([]),
-        safety_items: z.array(z.string().min(1)).default([]),
-        comms_channel: z.string().min(1).nullable().optional(),
-        supply_items: z.array(z.string().min(1)).default([]),
-      })
-      .strict(),
-  })
-  .strict();
-
-export const MissionReportBodySchema = z
-  .object({
-    title: z.string().min(1),
-    mission_plan_ref: PacketRefSchema,
-    template_ref: PacketRefSchema.nullable().optional(),
-    report_type: z.enum([
-      'coordinator_aar',
-      'participant_report',
-      'external_element_report',
-    ]),
-    completion_checklist: z
-      .array(
-        z
-          .object({
-            objective: z.string().min(1),
-            status: z.enum([
-              'complete',
-              'incomplete',
-              'partial',
-              'not_applicable',
-            ]),
-            notes: z.string().min(1).nullable().optional(),
-          })
-          .strict()
-      )
-      .default([]),
-    notes: z.string().min(1),
-    improvements: z.array(z.string().min(1)).default([]),
-    artifact_refs: z.array(PacketRefSchema).default([]),
-  })
-  .strict();
-
 export const ReportBodySchema = z
   .object({
-    type: z.literal('report').default('report'),
     subtype: z.enum(['verification_report', 'import_report', 'decision_report']),
     status: z.enum(['active', 'superseded']).default('active'),
     target_ref: PacketRefSchema.nullable().default(null),
@@ -565,20 +392,11 @@ export const ReportBodySchema = z
   })
   .strict();
 
-export const ModuleBodySchema = z
-  .object({
-    title: z.string().min(1),
-    summary: z.string().min(1).nullable().optional(),
-    module_kind: z.string().min(1),
-    status: z.string().min(1),
-  })
-  .strict();
-
 export const PolicyBodySchema = z
   .object({
     title: z.string().min(1),
     summary: z.string().min(1).nullable().optional(),
-    policy_kind: z.string().min(1),
+    subtype: z.string().min(1),
     body_markdown: z.string().min(1),
     status: z.string().min(1),
     trust_policy: z
@@ -611,7 +429,7 @@ export const PolicyBodySchema = z
       .default(null),
     alignment_policy: z
       .object({
-        required_cause_refs: z.array(PacketRefSchema).default([]),
+        required_action_refs: z.array(PacketRefSchema).default([]),
         accepted_relation_subtypes: z.array(z.string().min(1)).default([]),
       })
       .strict()
@@ -761,13 +579,15 @@ export const ElementInterfacePreferenceValueSchema = z
 
 export const ElementPreferenceValueSchema = z
   .object({
-    interface: ElementInterfacePreferenceValueSchema.default({}),
+    interface: ElementInterfacePreferenceValueSchema.default({
+      scope_display: DEFAULT_SCOPE_DISPLAY_PREFERENCE_VALUE,
+      shell_chrome: DEFAULT_SHELL_CHROME_PREFERENCE_VALUE,
+    }),
   })
   .strict();
 
 const PreferenceBaseBodySchema = z
   .object({
-    type: z.literal('preference').default('preference'),
     owner_ref: PacketRefSchema,
     status: z.enum(['active', 'superseded', 'withdrawn']).default('active'),
     privacy: PreferencePrivacyModeSchema.default('private_sync'),
@@ -790,31 +610,6 @@ export const ElementPreferenceBodySchema = PreferenceBaseBodySchema.extend({
 
 export const PreferenceBodySchema = ElementPreferenceBodySchema;
 
-export const DiscussionThreadBodySchema = z
-  .object({
-    title: z.string().min(1),
-    summary: z.string().min(1).nullable().optional(),
-    forum_ref: PacketRefSchema,
-    thread_kind: z.string().min(1),
-    status: z.string().min(1),
-    related_refs: z.array(PacketRefSchema).default([]),
-    participation_rules: z
-      .object({
-        top_level_actor_classes: z.array(DiscussionActorClassSchema).default([]),
-        reply_actor_classes: z.array(DiscussionActorClassSchema).default([]),
-        reaction_actor_classes: z.array(DiscussionActorClassSchema).default([]),
-        top_level_post_cost: z.number().int().nonnegative().default(0),
-      })
-      .default({
-        top_level_actor_classes: [],
-        reply_actor_classes: [],
-        reaction_actor_classes: [],
-        top_level_post_cost: 0,
-      }),
-    default_sort: DiscussionSortSchema.default('new'),
-  })
-  .strict();
-
 const DiscussionParticipationRulesSchema = z
   .object({
     top_level_actor_classes: z.array(DiscussionActorClassSchema).default([]),
@@ -831,7 +626,7 @@ const DiscussionParticipationRulesSchema = z
 
 const DiscussionBaseBodySchema = z
   .object({
-    kind: DiscussionKindSchema,
+    subtype: DiscussionSubtypeSchema,
     role: z.string().min(1),
     title: z.string().min(1),
     summary: z.string().min(1).nullable().optional(),
@@ -839,26 +634,26 @@ const DiscussionBaseBodySchema = z
   })
   .strict();
 
-export const DiscussionBodySchema = z.discriminatedUnion('kind', [
+export const DiscussionBodySchema = z.discriminatedUnion('subtype', [
   DiscussionBaseBodySchema.extend({
-    kind: z.literal('space'),
+    subtype: z.literal('space'),
     scope_ref: PacketRefSchema,
   }).strict(),
   DiscussionBaseBodySchema.extend({
-    kind: z.literal('forum'),
+    subtype: z.literal('forum'),
     parent_ref: PacketRefSchema,
     participation_rules: DiscussionParticipationRulesSchema,
     default_sort: DiscussionSortSchema.default('new'),
   }).strict(),
   DiscussionBaseBodySchema.extend({
-    kind: z.literal('topic'),
+    subtype: z.literal('topic'),
     parent_ref: PacketRefSchema,
     related_refs: z.array(PacketRefSchema).default([]),
     participation_rules: DiscussionParticipationRulesSchema,
     default_sort: DiscussionSortSchema.default('new'),
   }).strict(),
   DiscussionBaseBodySchema.extend({
-    kind: z.literal('post'),
+    subtype: z.literal('post'),
     parent_ref: PacketRefSchema,
     related_refs: z.array(PacketRefSchema).default([]),
     participation_rules: DiscussionParticipationRulesSchema,
@@ -867,87 +662,13 @@ export const DiscussionBodySchema = z.discriminatedUnion('kind', [
     attachment_refs: z.array(PacketRefSchema).default([]),
   }).strict(),
   DiscussionBaseBodySchema.extend({
-    kind: z.literal('message'),
+    subtype: z.literal('message'),
     parent_ref: PacketRefSchema,
     topic_ref: PacketRefSchema,
     root_message_ref: PacketRefSchema.nullable().default(null),
     content_markdown: z.string().min(1),
   }).strict(),
 ]);
-
-export const DiscussionSpaceBodySchema = z
-  .object({
-    title: z.string().min(1),
-    summary: z.string().min(1).nullable().optional(),
-    scope_ref: PacketRefSchema,
-    status: z.string().min(1),
-  })
-  .strict();
-
-export const DiscussionForumBodySchema = z
-  .object({
-    title: z.string().min(1),
-    summary: z.string().min(1).nullable().optional(),
-    discussion_space_ref: PacketRefSchema,
-    forum_kind: z.string().min(1),
-    status: z.string().min(1),
-    participation_rules: z
-      .object({
-        top_level_actor_classes: z.array(DiscussionActorClassSchema).default([]),
-        reply_actor_classes: z.array(DiscussionActorClassSchema).default([]),
-        reaction_actor_classes: z.array(DiscussionActorClassSchema).default([]),
-        top_level_post_cost: z.number().int().nonnegative().default(0),
-      })
-      .default({
-        top_level_actor_classes: [],
-        reply_actor_classes: [],
-        reaction_actor_classes: [],
-        top_level_post_cost: 0,
-      }),
-    default_sort: DiscussionSortSchema.default('new'),
-  })
-  .strict();
-
-export const DiscussionPostBodySchema = z
-  .object({
-    title: z.string().min(1),
-    thread_ref: PacketRefSchema,
-    post_kind: z.string().min(1),
-    content_markdown: z.string().min(1),
-    reply_to_ref: PacketRefSchema.nullable().optional(),
-  })
-  .strict();
-
-export const DiscussionReplyBodySchema = z
-  .object({
-    title: z.string().min(1),
-    thread_ref: PacketRefSchema,
-    root_post_ref: PacketRefSchema,
-    reply_to_ref: PacketRefSchema,
-    content_markdown: z.string().min(1),
-  })
-  .strict();
-
-export const MinutesBodySchema = z
-  .object({
-    title: z.string().min(1),
-    summary: z.string().min(1),
-    meeting_at: z.string().min(1).nullable().optional(),
-    decision_refs: z.array(PacketRefSchema).default([]),
-    artifact_refs: z.array(PacketRefSchema).default([]),
-  })
-  .strict();
-
-export const ArtifactBodySchema = z
-  .object({
-    title: z.string().min(1),
-    summary: z.string().min(1).nullable().optional(),
-    artifact_kind: z.string().min(1),
-    media_type: z.string().min(1).nullable().optional(),
-    sha256: z.string().min(1).nullable().optional(),
-    byte_length: z.number().int().nonnegative().nullable().optional(),
-  })
-  .strict();
 
 export const BUNDLE_PACKET_SUBTYPES = ['packet_set', 'export', 'sync', 'archive'] as const;
 
@@ -967,7 +688,6 @@ export const BundleItemSchema = z
 
 export const BundleBodySchema = z
   .object({
-    type: z.literal('bundle').default('bundle'),
     subtype: z.enum(BUNDLE_PACKET_SUBTYPES),
     title: z.string().min(1),
     summary: z.string().min(1).nullable().default(null),
@@ -989,52 +709,36 @@ export const PACKET_BODY_SCHEMAS = {
   Claim: ClaimBodySchema,
   Relation: RelationBodySchema,
   Report: ReportBodySchema,
-  Signal: SignalBodySchema,
   Proposal: ProposalBodySchema,
   Vote: VoteBodySchema,
   Attestation: AttestationBodySchema,
   Decision: DecisionBodySchema,
-  Cause: CauseBodySchema,
   Action: ActionBodySchema,
-  Initiative: InitiativeBodySchema,
-  Program: ProgramBodySchema,
-  Campaign: CampaignBodySchema,
-  MissionTemplate: MissionTemplateBodySchema,
-  MissionPlan: MissionPlanBodySchema,
-  MissionReport: MissionReportBodySchema,
-  Module: ModuleBodySchema,
   Policy: PolicyBodySchema,
   Preference: PreferenceBodySchema,
   Discussion: DiscussionBodySchema,
-  DiscussionSpace: DiscussionSpaceBodySchema,
-  DiscussionForum: DiscussionForumBodySchema,
-  DiscussionThread: DiscussionThreadBodySchema,
-  DiscussionPost: DiscussionPostBodySchema,
-  DiscussionReply: DiscussionReplyBodySchema,
-  Minutes: MinutesBodySchema,
-  Artifact: ArtifactBodySchema,
   Bundle: BundleBodySchema,
-} satisfies Record<PacketFamily, z.ZodTypeAny>;
+} satisfies Record<PacketType, z.ZodTypeAny>;
 
 export type PacketRef = z.infer<typeof PacketRefSchema>;
 export type PacketRevisionRef = z.infer<typeof PacketRevisionRefSchema>;
 export type PacketEdge = z.infer<typeof PacketEdgeSchema>;
 export type PacketHeader = z.infer<typeof PacketHeaderSchema>;
 export type PacketBodyByType = {
-  [TFamily in PacketFamily]: z.infer<(typeof PACKET_BODY_SCHEMAS)[TFamily]>;
+  [TType in PacketType]: z.infer<(typeof PACKET_BODY_SCHEMAS)[TType]>;
 };
 
 export type PacketEnvelopeByType = {
-  [TFamily in PacketFamily]: {
-    header: PacketHeader & { family: TFamily };
-    body: PacketBodyByType[TFamily];
+  [TType in PacketType]: {
+    header: PacketHeader & { type: TType };
+    body: PacketBodyByType[TType];
   };
 };
 
-export type PacketEnvelope = PacketEnvelopeByType[PacketFamily];
+export type PacketEnvelope = PacketEnvelopeByType[PacketType];
 
-export function getPacketBodySchema<TFamily extends PacketFamily>(
-  family: TFamily
-): (typeof PACKET_BODY_SCHEMAS)[TFamily] {
-  return PACKET_BODY_SCHEMAS[family];
+export function getPacketBodySchema<TType extends PacketType>(
+  type: TType
+): (typeof PACKET_BODY_SCHEMAS)[TType] {
+  return PACKET_BODY_SCHEMAS[type];
 }

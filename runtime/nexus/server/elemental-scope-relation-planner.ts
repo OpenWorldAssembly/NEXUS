@@ -56,7 +56,7 @@ export async function requireElementPacketFromStoreOrPrepared(input: {
     packet_id: input.packetId,
   });
 
-  if (!existingPacket || existingPacket.header.family !== 'Element') {
+  if (!existingPacket || existingPacket.header.type !== 'Element') {
     throw new Error(`Unknown Element packet: ${input.packetId}`);
   }
 
@@ -96,11 +96,11 @@ export async function planAssemblyAssociationRelationPackets(input: {
     input.packetStore.fetchByPacket({ packet_id: claimPacketId }),
   ]);
   const existingRelationPacket =
-    existingPreferredRelationPacket?.header.family === 'Relation'
+    existingPreferredRelationPacket?.header.type === 'Relation'
       ? (existingPreferredRelationPacket as PacketEnvelopeByType['Relation'])
       : null;
   const existingClaimPacket =
-    existingPreferredClaimPacket?.header.family === 'Claim'
+    existingPreferredClaimPacket?.header.type === 'Claim'
       ? (existingPreferredClaimPacket as PacketEnvelopeByType['Claim'])
       : null;
   const isSetMode = input.mode === 'set';
@@ -191,7 +191,7 @@ export async function planFollowRelationPackets(input: {
       input.packetStore.fetchByPacket({ packet_id: relationPacketId }),
     ]);
   const existingRelationPacket =
-    existingPreferredRelationPacket?.header.family === 'Relation'
+    existingPreferredRelationPacket?.header.type === 'Relation'
       ? (existingPreferredRelationPacket as PacketEnvelopeByType['Relation'])
       : null;
   const isSetMode = input.mode === 'set';
@@ -275,7 +275,7 @@ export async function planHomeLocalityRelationPackets(input: {
         packet_id: activeHomeRelation.body.target_ref.packet_id,
       });
       fallbackGoverningScopePacket =
-        targetPacket?.header.family === 'Element'
+        targetPacket?.header.type === 'Element'
           ? (targetPacket as PacketEnvelopeByType['Element'])
           : null;
     }
@@ -323,7 +323,7 @@ export async function planHomeLocalityRelationPackets(input: {
         packet_id: activeHomeClaimTargetPacketId,
       });
       fallbackGoverningScopePacket =
-        targetPacket?.header.family === 'Element'
+        targetPacket?.header.type === 'Element'
           ? (targetPacket as PacketEnvelopeByType['Element'])
           : null;
     }
@@ -334,7 +334,10 @@ export async function planHomeLocalityRelationPackets(input: {
         subjectPacketId: input.actorPacket.header.packet_id,
         relationPacketId: activeHomeClaim.body.target_ref.packet_id,
         assertedTargetPacketId: activeHomeClaimTargetPacketId,
-        scopePacketId: activeHomeClaim.body.scope_ref.packet_id,
+        scopePacketId:
+          activeHomeClaim.body.scope_ref?.packet_id ??
+          activeHomeClaim.header.authority_scope_ref?.packet_id ??
+          input.actorPacket.header.packet_id,
         applicableScopeRefs: activeHomeClaim.header.applicable_scope_refs,
         createdByPacketId: input.actorPacket.header.packet_id,
         note: activeHomeClaim.body.claim_markdown ?? activeHomeClaim.body.note ?? null,
@@ -382,11 +385,11 @@ export async function planHomeLocalityRelationPackets(input: {
     input.packetStore.fetchByPacket({ packet_id: homeClaimPacketId }),
   ]);
   const existingRelationPacket =
-    existingPreferredRelationPacket?.header.family === 'Relation'
+    existingPreferredRelationPacket?.header.type === 'Relation'
       ? (existingPreferredRelationPacket as PacketEnvelopeByType['Relation'])
       : null;
   const existingClaimPacket =
-    existingPreferredClaimPacket?.header.family === 'Claim'
+    existingPreferredClaimPacket?.header.type === 'Claim'
       ? (existingPreferredClaimPacket as PacketEnvelopeByType['Claim'])
       : null;
 

@@ -48,7 +48,7 @@ export const PreferenceElementSetIntentPayloadSchema = z
     kind: z.literal('preference.element.set').optional(),
     scope_display: ScopeDisplayPreferencePatchSchema.optional(),
     shell_chrome: ShellChromePreferencePatchSchema.optional(),
-    note: z.string().trim().min(1).max(240).optional(),
+    note: z.string().trim().min(1).max(240).optional().nullable(),
     created_at: z.string().min(1).optional().nullable(),
     mutation_nonce: z.string().min(1).optional().nullable(),
   })

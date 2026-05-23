@@ -1,11 +1,11 @@
 /**
  * File: compatibility-standard.ts
- * Description: Shared shadow-definition compatibility descriptor helpers and audits.
+ * Description: Shared definition-definition compatibility descriptor helpers and audits.
  */
 
 import type {
   PacketCompatibilityEntry,
-  PacketFamily,
+  PacketType,
 } from '@core/schema/packet-schema';
 
 import type {
@@ -38,15 +38,15 @@ export function createCurrentIdentityCompatibilityAdapter(
     to_schema_version: input.currentSchemaVersion,
     direction: 'bidirectional_neighbor',
     loss_awareness: 'none',
-    availability: 'shadow_only',
+    availability: 'runtime_ready',
     notes: `Identity adapter descriptor for current ${input.packetType} schema compatibility.`,
   };
 }
 
-export function createRegistryCompatibilityAdapterDescriptors<TFamily extends PacketFamily>(
+export function createRegistryCompatibilityAdapterDescriptors<TType extends PacketType>(
   input: CompatibilityDescriptorInput & {
-    family: TFamily;
-    entry: PacketCompatibilityEntry<TFamily>;
+    type: TType;
+    entry: PacketCompatibilityEntry<TType>;
   }
 ): PacketCompatibilityAdapterDescriptor[] {
   const adapters = [createCurrentIdentityCompatibilityAdapter(input)];
@@ -67,9 +67,9 @@ export function createRegistryCompatibilityAdapterDescriptors<TFamily extends Pa
             ? 'upcast_to_current'
             : 'upcast_to_next',
         loss_awareness: 'loss_annotated',
-        availability: 'shadow_only',
+        availability: 'runtime_ready',
         notes:
-          'Shadow descriptor for an existing compatibility-registry upcast edge; adapter output records default fills, conversions, and losses at execution time.',
+          'Definition descriptor for an existing compatibility-registry upcast edge; adapter output records default fills, conversions, and losses at execution time.',
       });
     }
 
@@ -88,9 +88,9 @@ export function createRegistryCompatibilityAdapterDescriptors<TFamily extends Pa
             ? 'downcast_from_current'
             : 'downcast_to_previous',
         loss_awareness: 'loss_annotated',
-        availability: 'shadow_only',
+        availability: 'runtime_ready',
         notes:
-          'Shadow descriptor for an existing compatibility-registry downcast edge; adapter output records dropped, converted, or renamed data and write policy decides whether loss acknowledgement is required.',
+          'Definition descriptor for an existing compatibility-registry downcast edge; adapter output records dropped, converted, or renamed data and write policy decides whether loss acknowledgement is required.',
       });
     }
   }

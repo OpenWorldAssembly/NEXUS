@@ -9,7 +9,7 @@ PRAGMA foreign_keys = ON;
 
 CREATE TABLE IF NOT EXISTS packets (
   packet_id TEXT PRIMARY KEY,
-  family TEXT NOT NULL,
+  type TEXT NOT NULL,
   preferred_revision_id TEXT,
   head_revision_ids_json TEXT NOT NULL,
   revision_state TEXT NOT NULL,
@@ -20,13 +20,13 @@ CREATE TABLE IF NOT EXISTS packets (
   preferred_revision_json TEXT
 );
 
-CREATE INDEX IF NOT EXISTS idx_packets_family_updated
-  ON packets(family, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_packets_type_updated
+  ON packets(type, updated_at DESC);
 
 CREATE TABLE IF NOT EXISTS packet_revisions (
   revision_id TEXT PRIMARY KEY,
   packet_id TEXT NOT NULL,
-  family TEXT NOT NULL,
+  type TEXT NOT NULL,
   schema_version TEXT NOT NULL,
   protocol_version TEXT NOT NULL,
   parent_revision_refs_json TEXT NOT NULL,
@@ -50,8 +50,8 @@ CREATE TABLE IF NOT EXISTS packet_revisions (
 CREATE INDEX IF NOT EXISTS idx_packet_revisions_packet_created
   ON packet_revisions(packet_id, created_at DESC);
 
-CREATE INDEX IF NOT EXISTS idx_packet_revisions_family_created
-  ON packet_revisions(family, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_packet_revisions_type_created
+  ON packet_revisions(type, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_packet_revisions_authority_scope
   ON packet_revisions(authority_scope_packet_id)
@@ -60,7 +60,7 @@ CREATE INDEX IF NOT EXISTS idx_packet_revisions_authority_scope
 CREATE TABLE IF NOT EXISTS packet_edges (
   source_revision_id TEXT NOT NULL,
   source_packet_id TEXT NOT NULL,
-  source_family TEXT NOT NULL,
+  source_type TEXT NOT NULL,
   edge_type TEXT NOT NULL,
   target_packet_id TEXT NOT NULL,
   created_at TEXT NOT NULL,
@@ -77,7 +77,7 @@ CREATE INDEX IF NOT EXISTS idx_packet_edges_source_type
 CREATE TABLE IF NOT EXISTS packet_search_index (
   packet_id TEXT PRIMARY KEY,
   revision_id TEXT NOT NULL,
-  family TEXT NOT NULL,
+  type TEXT NOT NULL,
   label TEXT NOT NULL,
   title TEXT NOT NULL,
   summary TEXT,
@@ -88,8 +88,8 @@ CREATE TABLE IF NOT EXISTS packet_search_index (
   created_at TEXT NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_packet_search_family_title
-  ON packet_search_index(family, title);
+CREATE INDEX IF NOT EXISTS idx_packet_search_type_title
+  ON packet_search_index(type, title);
 
 CREATE INDEX IF NOT EXISTS idx_packet_search_authority_scope
   ON packet_search_index(authority_scope_packet_id)

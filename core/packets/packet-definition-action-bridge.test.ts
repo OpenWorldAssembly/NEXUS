@@ -2,12 +2,12 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
-  getExperimentalPacketTypeDefinition,
+  getDefinedPacketTypeDefinition,
   resolvePacketDefinitionMutationActionPlan,
 } from '@core/packets/packet-definition-manifest';
 
-test('resolves Preference.element set into a shadow-runtime action plan', () => {
-  const definition = getExperimentalPacketTypeDefinition('Preference');
+test('resolves Preference.element set into a runtime action plan', () => {
+  const definition = getDefinedPacketTypeDefinition('Preference');
   assert.ok(definition);
 
   const plan = resolvePacketDefinitionMutationActionPlan({
@@ -15,7 +15,7 @@ test('resolves Preference.element set into a shadow-runtime action plan', () => 
     mutation_intent: 'preference.element.set',
   });
 
-  assert.equal(plan.ready_for_shadow_runtime, true);
+  assert.equal(plan.ready_for_runtime, true);
   assert.equal(plan.packet_type, 'Preference');
   assert.equal(plan.planner?.planner_id, 'preference.element.latest_active_revision.v0');
   assert.deepEqual(plan.policy_action_ids, ['preference.element.write']);
@@ -25,7 +25,7 @@ test('resolves Preference.element set into a shadow-runtime action plan', () => 
 });
 
 test('reports missing mutation descriptors without throwing during resolution', () => {
-  const definition = getExperimentalPacketTypeDefinition('Preference');
+  const definition = getDefinedPacketTypeDefinition('Preference');
   assert.ok(definition);
 
   const plan = resolvePacketDefinitionMutationActionPlan({
@@ -33,6 +33,6 @@ test('reports missing mutation descriptors without throwing during resolution', 
     mutation_intent: 'preference.element.missing',
   });
 
-  assert.equal(plan.ready_for_shadow_runtime, false);
+  assert.equal(plan.ready_for_runtime, false);
   assert.deepEqual(plan.missing_descriptor_ids, ['preference.element.missing']);
 });

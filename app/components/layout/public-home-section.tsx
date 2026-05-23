@@ -123,9 +123,9 @@ export default function PublicHomeSection({
         : isDesktop
           ? 320
           : 220,
-    textShadowColor: 'rgba(0, 5, 12, 0.92)',
-    textShadowOffset: { width: 0, height: 3 },
-    textShadowRadius: 16,
+    textDefinitionColor: 'rgba(0, 5, 12, 0.92)',
+    textDefinitionOffset: { width: 0, height: 3 },
+    textDefinitionRadius: 16,
   };
 
   const subTextStyle = {
@@ -137,9 +137,9 @@ export default function PublicHomeSection({
     opacity: 0.84,
     position: 'relative' as const,
     zIndex: 2,
-    textShadowColor: 'rgba(0, 5, 12, 0.88)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 10,
+    textDefinitionColor: 'rgba(0, 5, 12, 0.88)',
+    textDefinitionOffset: { width: 0, height: 2 },
+    textDefinitionRadius: 10,
   };
 
   const textStackClassName = isRightAligned ? 'w-full items-end md:pr-4' : 'w-full items-start md:pl-1';
@@ -166,7 +166,7 @@ export default function PublicHomeSection({
   const frameBaseClassName = hasRichSectionImage ? 'overflow-hidden rounded-[28px]' : undefined;
   const frameClassName = hasRichSectionImage
     ? undefined
-    : `${isActive ? 'shadow-public' : ''} bg-public-surface/80`;
+    : `${isActive ? 'definition-public' : ''} bg-public-surface/80`;
 
   const actionNode = isHero && section.actions?.length ? (
     <View className={actionAlignmentClassName}>
@@ -252,13 +252,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   shell: {
-    shadowColor: PUBLIC_SURFACE_STYLE_VALUES.sectionShadowColor,
-    shadowOffset: {
+    definitionColor: PUBLIC_SURFACE_STYLE_VALUES.sectionDefinitionColor,
+    definitionOffset: {
       width: 0,
       height: 18,
     },
-    shadowOpacity: 0.22,
-    shadowRadius: 26,
+    definitionOpacity: 0.22,
+    definitionRadius: 26,
     width: '100%',
     borderRadius: 30,
     overflow: 'hidden',

@@ -7,7 +7,7 @@ import type {
   CanonicalRelationSubtype,
   PacketEnvelope,
   PacketEnvelopeByType,
-  PacketFamily,
+  PacketType,
   PacketRef,
 } from '@core/schema/packet-schema';
 import { getCanonicalElementSubtype } from '@core/schema/packet-schema';
@@ -15,6 +15,8 @@ import { getCanonicalElementSubtype } from '@core/schema/packet-schema';
 import { getPacketStatus, getPacketSummary, getPacketTitle } from './labels.ts';
 
 export type ForwardPacketType =
+  | 'definition'
+  | 'bundle'
   | 'element'
   | 'location'
   | 'role'
@@ -26,12 +28,10 @@ export type ForwardPacketType =
   | 'vote'
   | 'attestation'
   | 'decision'
-  | 'cause'
   | 'action'
-  | 'module'
   | 'discussion'
-  | 'minutes'
-  | 'artifact';
+  | 'policy'
+  | 'preference';
 
 export type ForwardPacketProjection = {
   type: ForwardPacketType;
@@ -39,7 +39,7 @@ export type ForwardPacketProjection = {
   title: string;
   summary: string | null;
   status: string | null;
-  source_family: PacketFamily;
+  source_type: PacketType;
   is_legacy_projection: boolean;
 };
 
@@ -54,8 +54,8 @@ export type ClaimRelationAssertionProjection = {
   source_claim_packet_id: string;
 };
 
-function toForwardType(family: PacketFamily): ForwardPacketType {
-  switch (family) {
+function toForwardType(type: PacketType): ForwardPacketType {
+  switch (type) {
     case 'Element':
       return 'element';
     case 'Location':
@@ -68,8 +68,6 @@ function toForwardType(family: PacketFamily): ForwardPacketType {
       return 'relation';
     case 'Report':
       return 'report';
-    case 'Signal':
-      return 'signal';
     case 'Proposal':
       return 'proposal';
     case 'Vote':
@@ -78,81 +76,47 @@ function toForwardType(family: PacketFamily): ForwardPacketType {
       return 'attestation';
     case 'Decision':
       return 'decision';
-    case 'Cause':
-      return 'cause';
     case 'Action':
-    case 'Initiative':
-    case 'Program':
-    case 'Campaign':
-    case 'MissionTemplate':
-    case 'MissionPlan':
-    case 'MissionReport':
       return 'action';
-    case 'Module':
-      return 'module';
     case 'Discussion':
-    case 'DiscussionSpace':
-    case 'DiscussionForum':
-    case 'DiscussionThread':
-    case 'DiscussionPost':
-    case 'DiscussionReply':
       return 'discussion';
-    case 'Minutes':
-      return 'minutes';
-    case 'Artifact':
-      return 'artifact';
+    case 'Policy':
+      return 'policy';
+    case 'Preference':
+      return 'preference';
+    case 'Definition':
+      return 'definition';
+    case 'Bundle':
+      return 'bundle';
   }
 }
 
 function toForwardSubtype(packet: PacketEnvelope): string | null {
-  switch (packet.header.family) {
+  switch (packet.header.type) {
     case 'Element':
       return getCanonicalElementSubtype({
-        kind: packet.body.kind ?? null,
         subtype: packet.body.subtype ?? null,
       });
     case 'Location':
-    case 'Cause':
     case 'Action':
     case 'Relation':
     case 'Report':
       return packet.body.subtype;
     case 'Claim':
-      return packet.body.subtype ?? packet.body.claim_kind ?? null;
-    case 'Policy':
-      return packet.body.policy_kind;
+      return packet.body.subtype;
     case 'Role':
-      return packet.body.role_kind;
-    case 'Signal':
-      return packet.body.signal_kind;
-    case 'Proposal':
-      return packet.body.proposal_kind;
+      return packet.body.subtype;
     case 'Attestation':
-      return packet.body.subtype ?? packet.body.attestation_kind;
-    case 'Artifact':
-      return packet.body.artifact_kind;
+      return packet.body.subtype;
     case 'Discussion':
-      return packet.body.kind;
-    case 'DiscussionForum':
-      return packet.body.forum_kind;
-    case 'DiscussionThread':
-      return packet.body.thread_kind;
-    case 'DiscussionPost':
-      return packet.body.post_kind;
-    case 'Initiative':
-      return 'initiative';
-    case 'Program':
-      return 'program';
-    case 'Campaign':
-      return 'campaign';
-    case 'MissionTemplate':
-      return 'mission_template';
-    case 'MissionPlan':
-      return 'mission_plan';
-    case 'MissionReport':
-      return 'mission_report';
-    default:
-      return null;
+    case 'Preference':
+    case 'Definition':
+    case 'Bundle':
+    case 'Policy':
+    case 'Proposal':
+    case 'Vote':
+    case 'Decision':
+      return packet.body.subtype;
   }
 }
 
@@ -160,20 +124,13 @@ export function projectPacketToForwardOntology(
   packet: PacketEnvelope
 ): ForwardPacketProjection {
   return {
-    type: toForwardType(packet.header.family),
+    type: toForwardType(packet.header.type),
     subtype: toForwardSubtype(packet),
     title: getPacketTitle(packet),
     summary: getPacketSummary(packet),
     status: getPacketStatus(packet),
-    source_family: packet.header.family,
-    is_legacy_projection: [
-      'Initiative',
-      'Program',
-      'Campaign',
-      'MissionTemplate',
-      'MissionPlan',
-      'MissionReport',
-    ].includes(packet.header.family),
+    source_type: packet.header.type,
+    is_legacy_projection: false,
   };
 }
 
@@ -182,11 +139,11 @@ export function projectClaimAsRelationAssertion(
 ): ClaimRelationAssertionProjection {
   const relationAssertion =
     claimPacket.body.relation_assertion ??
-    (claimPacket.body.claim_kind &&
+    (claimPacket.body.subtype &&
     claimPacket.body.subject_ref &&
     claimPacket.body.target_ref
       ? {
-          subtype: claimPacket.body.claim_kind,
+          subtype: claimPacket.body.subtype,
           subject_ref: claimPacket.body.subject_ref,
           target_ref: claimPacket.body.target_ref,
           scope_ref: claimPacket.body.scope_ref ?? null,

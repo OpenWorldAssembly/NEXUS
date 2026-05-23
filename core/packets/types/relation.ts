@@ -1,13 +1,13 @@
 /**
- * File: families/relation.ts
- * Description: Family-owned build rules for canonical Relation packets.
+ * File: types/relation.ts
+ * Description: Type-owned build rules for canonical Relation packets.
  */
 
 import type { RelationPacketInput } from '@core/packets/builders';
-import type { PacketFamilyBuildDefinition } from '@core/packets/packet-build-pipeline';
+import type { PacketTypeBuildDefinition } from '@core/packets/packet-build-pipeline';
 import { createPacketEdge } from '@core/packets/packet-build-helpers';
 
-export const relationBuildDefinition: PacketFamilyBuildDefinition<
+export const relationBuildDefinition: PacketTypeBuildDefinition<
   'Relation',
   RelationPacketInput
 > = {
@@ -55,7 +55,6 @@ export const relationBuildDefinition: PacketFamilyBuildDefinition<
     ),
   ],
   finalizeBody: (input) => ({
-    type: 'relation',
     subtype: input.subtype,
     subject_ref: input.subject_ref,
     target_ref: input.target_ref,

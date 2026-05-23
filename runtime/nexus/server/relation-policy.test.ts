@@ -4,14 +4,13 @@ import test from 'node:test';
 import {
   createActionPacket,
   createAttestationPacket,
-  createCausePacket,
   createClaimPacket,
   createPolicyPacket,
   createRelationPacket,
 } from '@core/packets/builders';
 
 import {
-  collectPoliciesForCauseAnchor,
+  collectPoliciesForActionAnchor,
   evaluateRelationPolicyRequirements,
   listAttestationsTargetingClaim,
 } from './relation-policy.ts';
@@ -21,7 +20,7 @@ test('relation policy evaluation recognizes a supporting home-locality claim fro
     packet_id: 'nexus:policy/owa-home-locality',
     created_at: '2026-05-07T00:00:00.000Z',
     title: 'OWA home locality policy',
-    policy_kind: 'charter',
+    subtype: 'charter',
     body_markdown: 'Require a relation assertion claim for home locality relations.',
     status: 'active',
     relation_requirements: {
@@ -36,8 +35,8 @@ test('relation policy evaluation recognizes a supporting home-locality claim fro
       ],
     },
   });
-  const owaCause = createCausePacket({
-    packet_id: 'nexus:cause/owa',
+  const owaAction = createActionPacket({
+    packet_id: 'nexus:action/initiative/owa',
     created_at: '2026-05-07T00:01:00.000Z',
     subtype: 'initiative',
     title: 'OWA',
@@ -65,12 +64,11 @@ test('relation policy evaluation recognizes a supporting home-locality claim fro
       target_ref: { packet_id: 'nexus:element/moreno-valley' },
       scope_ref: { packet_id: 'nexus:element/moreno-valley' },
     },
-    claim_kind: 'home_locality',
     claim_markdown: 'Alice asserts this home-locality relation.',
   });
 
-  const policies = collectPoliciesForCauseAnchor({
-    anchorPacket: owaCause,
+  const policies = collectPoliciesForActionAnchor({
+    anchorPacket: owaAction,
     policyPackets: [policy],
   });
   const evaluation = evaluateRelationPolicyRequirements({
@@ -94,7 +92,7 @@ test('relation policy collection supports the forward Action initiative anchor',
     packet_id: 'nexus:policy/owa-home-locality',
     created_at: '2026-05-07T00:05:00.000Z',
     title: 'OWA home locality policy',
-    policy_kind: 'charter',
+    subtype: 'charter',
     body_markdown: 'Require a relation assertion claim for home locality relations.',
     status: 'active',
   });
@@ -107,7 +105,7 @@ test('relation policy collection supports the forward Action initiative anchor',
     policy_refs: [{ packet_id: policy.header.packet_id }],
   });
 
-  const policies = collectPoliciesForCauseAnchor({
+  const policies = collectPoliciesForActionAnchor({
     anchorPacket: owaAction,
     policyPackets: [policy],
   });
@@ -123,7 +121,7 @@ test('relation policy evaluation fails when the supporting claim subject does no
     packet_id: 'nexus:policy/owa-home-locality',
     created_at: '2026-05-07T00:10:00.000Z',
     title: 'OWA home locality policy',
-    policy_kind: 'charter',
+    subtype: 'charter',
     body_markdown: 'Require a matching relation assertion claim.',
     status: 'active',
     relation_requirements: {
@@ -159,7 +157,6 @@ test('relation policy evaluation fails when the supporting claim subject does no
       target_ref: { packet_id: 'nexus:element/moreno-valley' },
       scope_ref: { packet_id: 'nexus:element/moreno-valley' },
     },
-    claim_kind: 'home_locality',
   });
 
   const evaluation = evaluateRelationPolicyRequirements({
@@ -179,7 +176,7 @@ test('relation policy evaluation distinguishes not-applicable relations from sat
     created_at: '2026-05-07T00:15:00.000Z',
     subtype: 'follows',
     subject_ref: { packet_id: 'nexus:element/person/alice' },
-    target_ref: { packet_id: 'nexus:cause/owa' },
+    target_ref: { packet_id: 'nexus:action/initiative/owa' },
   });
 
   const evaluation = evaluateRelationPolicyRequirements({
@@ -208,7 +205,6 @@ test('claim-targeting attestations can be discovered without changing the attest
       target_ref: { packet_id: 'nexus:element/moreno-valley' },
       scope_ref: { packet_id: 'nexus:element/moreno-valley' },
     },
-    claim_kind: 'home_locality',
   });
   const attestation = createAttestationPacket({
     packet_id: 'nexus:attestation/claim-support/alice',
@@ -216,7 +212,6 @@ test('claim-targeting attestations can be discovered without changing the attest
     subtype: 'claim_support',
     target_ref: { packet_id: claim.header.packet_id },
     value: 1,
-    attestation_kind: 'claim_support',
   });
 
   const matchingAttestations = listAttestationsTargetingClaim({

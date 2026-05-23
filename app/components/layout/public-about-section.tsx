@@ -63,7 +63,7 @@ export default function PublicAboutSection({
       <PublicCardFrame
         backgroundImageUri={section.backgroundImageUri}
         backgroundPreset="none"
-        className={isActive ? 'shadow-public' : ''}
+        className={isActive ? 'definition-public' : ''}
         focusLineRatio={PUBLIC_SECTION_FOCUS_LINE_RATIO}
         layoutOffsetY={sectionLayout?.y}
         scrollY={scrollY}
@@ -92,13 +92,13 @@ const styles = StyleSheet.create({
     marginTop: 30,
   },
   shell: {
-    shadowColor: PUBLIC_SURFACE_STYLE_VALUES.sectionShadowColor,
-    shadowOffset: {
+    definitionColor: PUBLIC_SURFACE_STYLE_VALUES.sectionDefinitionColor,
+    definitionOffset: {
       width: 0,
       height: 18,
     },
-    shadowOpacity: 0.22,
-    shadowRadius: 26,
+    definitionOpacity: 0.22,
+    definitionRadius: 26,
     width: '100%',
     borderRadius: 30,
     overflow: 'hidden',

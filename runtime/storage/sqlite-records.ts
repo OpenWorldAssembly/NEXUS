@@ -16,7 +16,7 @@ import type {
 
 export interface PacketRecord {
   packet_id: string;
-  family: string;
+  type: string;
   preferred_revision_id: string | null;
   head_revision_ids_json: string;
   revision_state: PacketRevisionState;
@@ -30,7 +30,7 @@ export interface PacketRecord {
 export interface PacketRevisionRecord {
   revision_id: string;
   packet_id: string;
-  family: string;
+  type: string;
   schema_version: string;
   protocol_version: string;
   parent_revision_refs_json: string;
@@ -59,7 +59,7 @@ export interface PacketRevisionRecordOptions {
 export interface PacketEdgeRecord {
   source_revision_id: string;
   source_packet_id: string;
-  source_family: string;
+  source_type: string;
   edge_type: string;
   target_packet_id: string;
   created_at: string;
@@ -69,7 +69,7 @@ export interface PacketEdgeRecord {
 export interface PacketSearchIndexRecord {
   packet_id: string;
   revision_id: string;
-  family: string;
+  type: string;
   label: string;
   title: string;
   summary: string | null;
@@ -149,7 +149,7 @@ export function projectPacketRecord(
 ): PacketRecord {
   return {
     packet_id: packet.header.packet_id,
-    family: packet.header.family,
+    type: packet.header.type,
     preferred_revision_id:
       options?.preferred_revision_id ?? packet.header.revision_id,
     head_revision_ids_json: stringify(
@@ -176,7 +176,7 @@ export function projectPacketRevisionRecord(
   return {
     revision_id: packet.header.revision_id,
     packet_id: packet.header.packet_id,
-    family: packet.header.family,
+    type: packet.header.type,
     schema_version: packet.header.schema_version,
     protocol_version: packet.header.protocol_version,
     parent_revision_refs_json: stringify(packet.header.parent_revision_refs),
@@ -207,7 +207,7 @@ export function projectPacketEdgeRecords(
   return packet.header.edges.map((edge) => ({
     source_revision_id: packet.header.revision_id,
     source_packet_id: packet.header.packet_id,
-    source_family: packet.header.family,
+    source_type: packet.header.type,
     edge_type: edge.edge_type,
     target_packet_id: edge.target.packet_id,
     created_at: packet.header.created_at,
@@ -217,7 +217,7 @@ export function projectPacketEdgeRecords(
 
 /**
  * Inputs: a canonical packet envelope.
- * Output: a flattened search/index row for scope and family queries.
+ * Output: a flattened search/index row for scope and type queries.
  */
 export function projectPacketSearchIndexRecord(
   packet: PacketEnvelope
@@ -225,7 +225,7 @@ export function projectPacketSearchIndexRecord(
   return {
     packet_id: packet.header.packet_id,
     revision_id: packet.header.revision_id,
-    family: packet.header.family,
+    type: packet.header.type,
     label: getPacketDisplayLabel(packet),
     title: getPacketTitle(packet),
     summary: getPacketSummary(packet),

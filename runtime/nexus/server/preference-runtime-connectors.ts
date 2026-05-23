@@ -89,7 +89,7 @@ export const preferenceElementInterfaceRuntimeConnector: PacketRuntimeConnector<
   packet_type: 'Preference',
   packet_subtype: 'element',
   mutation_intent: 'preference.element.set',
-  availability: 'shadow',
+  availability: 'definition',
   async run(input, context) {
     const parsedInput = PreferenceElementInterfacePatchSchema.parse(input);
     const writeResult = await writeElementPreferenceInterfacePacket({

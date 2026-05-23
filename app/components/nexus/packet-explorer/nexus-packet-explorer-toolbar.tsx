@@ -23,7 +23,7 @@ const PACKET_EXPLORER_HOME_TAB_NODES: NexusTabNode[] = [
 type NexusPacketExplorerToolbarProps = {
   activeTab: PacketExplorerTab;
   activePacketId: string | null;
-  activePacketFamily: string | null;
+  activePacketType: string | null;
   activeHomeSubtab?: PacketExplorerHomeSubtab;
   viewModes: PacketExplorerViewMode[];
   onExportPacket: (input: {
@@ -31,20 +31,20 @@ type NexusPacketExplorerToolbarProps = {
     preferredRevisionId?: string | null;
     titleSnapshot?: string | null;
     seedSummary?: {
-      family: string | null;
+      type: string | null;
       summary: string | null;
       label: string | null;
     } | null;
   }) => void;
   onSelectHomeSubtab?: (subtab: PacketExplorerHomeSubtab) => void;
   onSelectViewMode: (viewMode: PacketExplorerViewMode) => void;
-  onViewInLibrary: (packetId: string, family?: string | null) => void;
+  onViewInLibrary: (packetId: string, type?: string | null) => void;
 };
 
 export function NexusPacketExplorerToolbar({
   activeTab,
   activePacketId,
-  activePacketFamily,
+  activePacketType,
   activeHomeSubtab = 'search',
   viewModes,
   onExportPacket,
@@ -99,7 +99,7 @@ export function NexusPacketExplorerToolbar({
         disabled={!activePacketId}
         onPress={() =>
           activePacketId
-            ? onViewInLibrary(activePacketId, activePacketFamily)
+            ? onViewInLibrary(activePacketId, activePacketType)
             : undefined
         }
       />

@@ -83,7 +83,7 @@ Discussions are the most mature interactive Nexus surface today.
 - discussion feed, thread, and post workspaces are packet-backed
 - reply, vote, expand, and create actions are now runtime-projected instead of being only page-local heuristics
 - interactive writes use the shared fortress prepare/sign/finalize corridor
-- compatibility still keeps legacy discussion family shapes readable while canonical discussion packets drive current writes
+- compatibility still keeps legacy discussion type shapes readable while canonical discussion packets drive current writes
 
 ### Votes
 
@@ -191,7 +191,7 @@ The Nexus shell currently provides:
 - Nexus state is shared through local React context providers
 - shell and route projections load from packet-backed API routes
 - the runtime store is SQLite-backed
-- packet parsing runs through family compatibility and adaptation instead of route-local patches
+- packet parsing runs through type compatibility and adaptation instead of route-local patches
 - Packet Explorer session state is shell-level rather than route-level page state
 
 ### Packet and compatibility foundations in active use
@@ -202,15 +202,15 @@ Current packet behavior in code includes:
 - stable `packet_id`
 - immutable `revision_id`
 - multi-parent `parent_revision_refs`
-- family `schema_version`
-- family `revision_mode`
+- type `schema_version`
+- type `revision_mode`
 - raw stored packets preserved as historical fact
 - adapted runtime packets used as the normal read shape
-- target-version-aware compatibility reads for supported families
+- target-version-aware compatibility reads for supported types
 
 Forward ontology currently active in code includes:
 
-- `Cause`, `Action`, `Relation`, and `Location` as first-class packet families
+- `Cause`, `Action`, `Relation`, and `Location` as first-class packet types
 - `Element.subtype` as the forward classifier, with `kind` preserved as compatibility metadata
 - widened `Claim` packets for packet-targeted assertion content plus optional `relation_assertion`
 - widened `Attestation` packets with canonical `type/subtype` semantics and legacy `attestation_kind` compatibility
@@ -251,9 +251,9 @@ The current repo is no longer using the older `domain` or `storage` root names. 
 
 - identity/auth and discussions remain the two strongest end-to-end verticals
 - dashboard, votes, trust, roles, and Library are packet-backed, but are still comparatively provisional
-- role creation and editing remain deferred
-- packet-native follows remain deferred
-- broader moderation, trust weighting, and governance execution remain deferred
+- role creation and editing remain future
+- packet-native follows remain future
+- broader moderation, trust weighting, and governance execution remain future
 
 ### Location and relationship caveats
 

@@ -45,10 +45,10 @@ Status: canon candidate
 
 ### Current code truth
 
-- `Relation` is the structural family for adopted graph facts
-- `Claim` is its own live packet family for assertions, arguments, and disputable relation claims
-- `Attestation` is its own live packet family for evidence, certification, support/dispute, and packet-signal responses
-- current discussion voting uses packet-signal attestations rather than a separate reaction family
+- `Relation` is the structural type for adopted graph facts
+- `Claim` is its own live packet type for assertions, arguments, and disputable relation claims
+- `Attestation` is its own live packet type for evidence, certification, support/dispute, and packet-signal responses
+- current discussion voting uses packet-signal attestations rather than a separate reaction type
 - current claim support and dispute still run through the attestation service and attestation indexes
 
 ### Direction
@@ -70,7 +70,7 @@ Current implementation note:
 
 Current home-locality policy note:
 
-- OWA-sensitive home-locality legitimacy remains compatible with the previous `Cause(subtype: initiative)` anchor path, while the fresh-reseed direction now prefers `Action(subtype: initiative)` as the forward OWA policy/default anchor
+- OWA-sensitive home-locality legitimacy resolves through `Action(subtype: initiative)` as the forward OWA policy/default anchor
 - a canonical `Relation(subtype: home_locality)` can exist structurally without counting as the effective mounted home locality if its governing `Policy.relation_requirements` are unsatisfied
 - the expected support model in this phase is a supporting `Claim(subtype: relation_assertion)`, not a required attestation
 - legacy claim-only home-locality reads remain compatibility projections, not the forward legitimacy model
@@ -92,7 +92,7 @@ Direction:
 - a resolution or decision artifact should eventually read as a process-backed closure report rather than as unexplained authority
 - quorum, minimum trust, eligibility, approval thresholds, and voting gates should be policy-backed defaults that can be inherited from the applicable initiative Action or scope policy and overridden by explicit packet refs
 
-This framing is architectural direction, not a statement that all of those packet families or workflow surfaces already exist as live runtime behavior.
+This framing is architectural direction, not a statement that all of those packet types or workflow surfaces already exist as live runtime behavior.
 
 ## Verification truthfulness direction
 

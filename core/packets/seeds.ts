@@ -16,7 +16,6 @@ import {
 import {
   createActionPacket,
   createAssemblyPacket,
-  createCausePacket,
   createClaimPacket,
   createDiscussionForumPacket,
   createDiscussionPostPacket,
@@ -43,7 +42,6 @@ export const PERSONAL_TREE_PACKET_IDS = {
   moreno_valley: 'nexus:element/moreno-valley',
   sunnymead_ranch: 'nexus:element/sunnymead-ranch',
   aaron: 'nexus:element/aaron',
-  owa_cause: 'nexus:cause/owa',
   owa_action: 'nexus:action/owa',
   owa_home_locality_policy: 'nexus:policy/owa-home-locality',
   owa_default_inheritance_policy: 'nexus:policy/owa-default-inheritance',
@@ -65,7 +63,6 @@ export const PERSONAL_TREE_REFS = {
   moreno_valley: createPacketRef(PERSONAL_TREE_PACKET_IDS.moreno_valley),
   sunnymead_ranch: createPacketRef(PERSONAL_TREE_PACKET_IDS.sunnymead_ranch),
   aaron: createPacketRef(PERSONAL_TREE_PACKET_IDS.aaron),
-  owa_cause: createPacketRef(PERSONAL_TREE_PACKET_IDS.owa_cause),
   owa_action: createPacketRef(PERSONAL_TREE_PACKET_IDS.owa_action),
   owa_home_locality_policy: createPacketRef(
     PERSONAL_TREE_PACKET_IDS.owa_home_locality_policy
@@ -665,7 +662,7 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     title: 'OWA Home Locality Relation Policy',
     summary:
       'Requires a supporting relation assertion claim for home-locality relations that count for mounted ancestry.',
-    policy_kind: 'charter',
+    subtype: 'charter',
     body_markdown: [
       '# OWA Home Locality Relation Policy',
       '',
@@ -686,20 +683,6 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     },
   });
 
-  const owaCausePacket = createCausePacket({
-    packet_id: PERSONAL_TREE_PACKET_IDS.owa_cause,
-    created_at: SEED_CREATED_AT,
-    authority_scope_ref: PERSONAL_TREE_REFS.global_commons,
-    applicable_scope_refs: globalApplicableScopeRefs,
-    title: 'OWA',
-    summary:
-      'The default OWA initiative anchor for current policy and future lineage-aware Nexus consumer behavior.',
-    subtype: 'initiative',
-    status: 'active',
-    purpose_markdown:
-      'Provides the default initiative anchor for OWA policy and schema-aware scope behavior.',
-    policy_refs: [PERSONAL_TREE_REFS.owa_home_locality_policy],
-  });
 
   const owaActionPacket = createActionPacket({
     packet_id: PERSONAL_TREE_PACKET_IDS.owa_action,
@@ -713,7 +696,6 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     status: 'active',
     objective_markdown:
       'Provides the default initiative action for OWA policy, template defaults, and schema-aware scope behavior.',
-    cause_refs: [PERSONAL_TREE_REFS.owa_cause],
     policy_refs: [
       PERSONAL_TREE_REFS.owa_home_locality_policy,
       PERSONAL_TREE_REFS.trust_baseline_policy,
@@ -782,7 +764,7 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     title: 'Visitor Lobby Baseline Policy',
     summary:
       'Sets the default expectation for public guest posting in visitor lobby discussion spaces.',
-    policy_kind: 'guest_lobby',
+    subtype: 'guest_lobby',
     body_markdown: [
       '# Visitor Lobby Baseline',
       '',
@@ -801,7 +783,7 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     title: 'Global Trust Baseline Policy',
     summary:
       'Defines the initial legitimacy thresholds for association support, role claims, and trust-gated participation.',
-    policy_kind: 'trust_baseline',
+    subtype: 'trust_baseline',
     body_markdown: [
       '# Global Trust Baseline',
       '',
@@ -827,7 +809,7 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     title: 'OWA Default Inheritance Policy',
     summary:
       'Packet-backed default stack for OWA discussion surfaces, trust baseline, visitor lobby expectations, and future preference/template material.',
-    policy_kind: 'default_inheritance',
+    subtype: 'default_inheritance',
     body_markdown: [
       '# OWA Default Inheritance',
       '',
@@ -856,7 +838,7 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     title: 'OWA Governance Baseline Policy',
     summary:
       'Reseed-ready governance hooks for quorum, eligibility, vote method, and decision-report expectations without executing voting yet.',
-    policy_kind: 'governance_baseline',
+    subtype: 'governance_baseline',
     body_markdown: [
       '# OWA Governance Baseline',
       '',
@@ -893,7 +875,7 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     title: 'Facilitator',
     summary:
       'Supports discussion flow, meeting/process clarity, and procedural legibility.',
-    role_kind: 'facilitator',
+    subtype: 'facilitator',
     status: 'active',
     responsibility_markdown:
       'Helps deliberation stay navigable, inclusive, and procedurally coherent.',
@@ -907,7 +889,7 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     title: 'Coordinator',
     summary:
       'Coordinates execution, logistics, and follow-through for approved work.',
-    role_kind: 'coordinator',
+    subtype: 'coordinator',
     status: 'active',
     responsibility_markdown:
       'Translates decisions into structured timing, logistics, and follow-up.',
@@ -921,7 +903,7 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     title: 'Councilor',
     summary:
       'Carries elevated review responsibility for policy, decisions, and legitimacy-sensitive questions.',
-    role_kind: 'councilor',
+    subtype: 'councilor',
     status: 'active',
     responsibility_markdown:
       'Provides review, objection handling, and legitimacy-sensitive oversight.',
@@ -935,7 +917,7 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     title: 'Pilot Sunnymead Ranch guest onboarding flow',
     summary:
       'Creates a localized guest entry flow that points newcomers to the neighborhood assembly first.',
-    proposal_kind: 'onboarding_flow',
+    subtype: 'onboarding_flow',
     status: 'under_review',
     decision_scope_refs: [PERSONAL_TREE_REFS.sunnymead_ranch],
     related_policy_refs: [PERSONAL_TREE_REFS.visitor_lobby_policy],
@@ -959,7 +941,13 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     authority_scope_ref: PERSONAL_TREE_REFS.sunnymead_ranch,
     applicable_scope_refs: sunnymeadApplicableScopeRefs,
     created_by: PERSONAL_TREE_REFS.aaron,
-    claim_kind: 'assembly_association',
+    subtype: 'relation_assertion',
+    relation_assertion: {
+      subtype: 'assembly_association',
+      subject_ref: PERSONAL_TREE_REFS.aaron,
+      target_ref: PERSONAL_TREE_REFS.sunnymead_ranch,
+      scope_ref: PERSONAL_TREE_REFS.sunnymead_ranch,
+    },
     subject_ref: PERSONAL_TREE_REFS.aaron,
     target_ref: PERSONAL_TREE_REFS.sunnymead_ranch,
     scope_ref: PERSONAL_TREE_REFS.sunnymead_ranch,
@@ -975,7 +963,6 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     sunnymeadRanchPacket,
     aaronPacket,
     owaHomeLocalityPolicyPacket,
-    owaCausePacket,
     owaActionPacket,
     visitorLobbyPolicyPacket,
     trustBaselinePolicyPacket,

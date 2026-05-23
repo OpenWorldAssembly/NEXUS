@@ -35,12 +35,7 @@ export type RelationPolicyEvaluation = {
 type RelationPacket = PacketEnvelopeByType['Relation'];
 type PolicyPacket = PacketEnvelopeByType['Policy'];
 type AttestationPacket = PacketEnvelopeByType['Attestation'];
-type PolicyAnchorPacket =
-  | PacketEnvelopeByType['Cause']
-  | PacketEnvelopeByType['Action']
-  | PacketEnvelopeByType['Initiative']
-  | PacketEnvelopeByType['Program']
-  | PacketEnvelopeByType['Campaign'];
+type PolicyAnchorPacket = PacketEnvelopeByType['Action'];
 
 function matchesClaimTargetMode(input: {
   claimPacket: ClaimPacket;
@@ -96,7 +91,7 @@ export function listAttestationsTargetingClaim(input: {
     if (
       input.attestationSubtype &&
       attestationPacket.body.subtype !== input.attestationSubtype &&
-      attestationPacket.body.attestation_kind !== input.attestationSubtype
+      attestationPacket.body.subtype !== input.attestationSubtype
     ) {
       return false;
     }
@@ -106,18 +101,18 @@ export function listAttestationsTargetingClaim(input: {
 }
 
 export function getPolicyAnchorRefs(anchorPacket: PolicyAnchorPacket): PacketRef[] {
-  if (anchorPacket.header.family === 'Cause' || anchorPacket.header.family === 'Action') {
+  if (anchorPacket.header.type === 'Action') {
     return anchorPacket.body.policy_refs ?? [];
   }
 
   return [];
 }
 
-export function getCausePolicyRefs(anchorPacket: PolicyAnchorPacket): PacketRef[] {
+export function getActionPolicyRefs(anchorPacket: PolicyAnchorPacket): PacketRef[] {
   return getPolicyAnchorRefs(anchorPacket);
 }
 
-export function collectPoliciesForCauseAnchor(input: {
+export function collectPoliciesForActionAnchor(input: {
   anchorPacket: PolicyAnchorPacket;
   policyPackets: PolicyPacket[];
 }): PolicyPacket[] {
@@ -134,7 +129,7 @@ export function collectPoliciesForPolicyAnchor(input: {
   anchorPacket: PolicyAnchorPacket;
   policyPackets: PolicyPacket[];
 }): PolicyPacket[] {
-  return collectPoliciesForCauseAnchor(input);
+  return collectPoliciesForActionAnchor(input);
 }
 
 export function evaluateRelationPolicyRequirements(input: {

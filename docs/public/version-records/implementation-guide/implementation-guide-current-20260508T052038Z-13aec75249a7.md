@@ -126,10 +126,10 @@ Core packet rules:
 - `packet_id` is the stable logical packet identity
 - `revision_id` is the immutable exact revision identity
 - `parent_revision_refs` represent DAG ancestry
-- `schema_version` tracks family-shape compatibility
+- `schema_version` tracks type-shape compatibility
 - `edges` are the shared typed relationship collection
 - `authority_scope_ref` and `applicable_scope_refs` stay separate
-- `revision_mode` expresses family write semantics
+- `revision_mode` expresses type write semantics
 
 Raw stored packets remain the historical signed fact. Adapted packets are runtime read views, and interpreted or read-model outputs are additional projections on top of those reads.
 
@@ -147,7 +147,7 @@ The universal identity anchor.
 
 Current direction:
 
-- `Element` remains the durable actor, scope, and container family
+- `Element` remains the durable actor, scope, and container type
 - `Element.subtype` is now the forward classifier surface
 - `Element.kind` remains live only as compatibility metadata for historical packets and current runtime consumers that have not migrated yet
 - dotted subtype forms such as `person.claimed_identity` or `assembly.city` are now the forward model when the older shape previously depended on both `kind` and `subtype`
@@ -166,14 +166,14 @@ A generic Nexus concept for policy and template lineage in legacy/current compat
 
 #### Claim
 
-The assertion and argument family.
+The assertion and argument type.
 
 Current forward direction:
 
 - `Claim` can target packets generically
 - `Claim` may carry `claim_markdown` and supporting refs
 - `Claim(subtype: relation_assertion)` is the forward shape for claims specifically asserting a relation
-- legacy `claim_kind` packets such as:
+- legacy `subtype` packets such as:
 
 - `role_association`
 - `assembly_association`
@@ -183,7 +183,7 @@ remain readable and are projected into the widened claim shape through compatibi
 
 #### Attestation
 
-The evidence, certification, support, dispute, and packet-signal family.
+The evidence, certification, support, dispute, and packet-signal type.
 
 Current code truth:
 
@@ -193,11 +193,11 @@ Current code truth:
 
 #### Role
 
-A reusable role definition packet family. Exact-scope role assertions are currently represented through `Claim(subtype: "relation_assertion")` with `claim_kind: "role_association"` preserved for compatibility.
+A reusable role definition packet type. Exact-scope role assertions are currently represented through `Claim(subtype: "relation_assertion")` with `subtype: "role_association"` preserved for compatibility.
 
 #### Policy
 
-The configuration and legitimacy family for defaults, thresholds, and later execution rules.
+The configuration and legitimacy type for defaults, thresholds, and later execution rules.
 
 Current direction:
 
@@ -208,7 +208,7 @@ Current direction:
 
 #### Decision
 
-A governance artifact family that exists in infrastructure and read surfaces, but whose real workflow semantics are still developing.
+A governance artifact type that exists in infrastructure and read surfaces, but whose real workflow semantics are still developing.
 
 ### Schema evolution discipline
 
@@ -216,13 +216,13 @@ Before changing packet schemas, read this chapter first.
 
 Also read `docs/implementation-guide/trust-moderation-and-policy.md` before changing `Claim`, `Attestation`, `Relation`, or `Policy` semantics.
 
-For any packet family schema version change, the required checklist is:
+For any packet type schema version change, the required checklist is:
 
 - update the active schema or body shape
-- update the family compatibility registry entry
+- update the type compatibility registry entry
 - add or update upcast and downcast adapters where backward compatibility is intended
 - update current schema version metadata
-- update builders and family build definitions so new writes emit the canonical current shape
+- update builders and type build definitions so new writes emit the canonical current shape
 - update signature and write-preparation behavior if additive or defaulted fields affect compatibility or signing
 - add or update tests for parse and read compatibility, adapted read behavior, write preparation, and any supported upcast or downcast path
 - document the change in the relevant chapter and add a decision-log note when the change is architecture-significant
@@ -287,10 +287,10 @@ Status: canon candidate
 
 #### Current code truth
 
-- `Relation` is the structural family for adopted graph facts
-- `Claim` is its own live packet family for assertions, arguments, and disputable relation claims
-- `Attestation` is its own live packet family for evidence, certification, support/dispute, and packet-signal responses
-- current discussion voting uses packet-signal attestations rather than a separate reaction family
+- `Relation` is the structural type for adopted graph facts
+- `Claim` is its own live packet type for assertions, arguments, and disputable relation claims
+- `Attestation` is its own live packet type for evidence, certification, support/dispute, and packet-signal responses
+- current discussion voting uses packet-signal attestations rather than a separate reaction type
 - current claim support and dispute still run through the attestation service and attestation indexes
 
 #### Direction
@@ -363,7 +363,7 @@ Status: canon candidate
 
 - assemblies are elements with policy-governed civic semantics, not owned subsidiaries
 - custody, legitimacy, policy authority, and governance outcome should remain distinct concepts
-- association should remain a simple claim first; typed categories are deferred
+- association should remain a simple claim first; typed categories are future
 - multi-key assembly authority, custody transition, and protected-state mutation should remain explicit later design work
 
 #### Unresolved
@@ -412,7 +412,7 @@ This monthly log condenses the April 2026 decisions that remain most important f
 - Packet identity uses stable `packet_id` plus immutable `revision_id`.
 - Revision history is a DAG with `parent_revision_refs`, not a single chain.
 - Packet relationships normalize into one typed edge collection.
-- `Element` remains the identity-root family for people, assemblies, organizations, and services.
+- `Element` remains the identity-root type for people, assemblies, organizations, and services.
 - The dedicated Nexus shell lives under `/nexus/*`.
 - Function-first and scope-first remain one system rather than two route trees.
 
@@ -456,9 +456,9 @@ This monthly log condenses the April 2026 decisions that remain most important f
 ### 2026-04-25 to 2026-04-29 packet floor and verification
 
 - Packet compatibility coverage is now classified explicitly.
-- Legacy write seams were sealed before discussion-family cleanup.
+- Legacy write seams were sealed before discussion-type cleanup.
 - Raw packet signatures verify before adaptation.
-- Live and near-live packet families now share one generic builder floor.
+- Live and near-live packet types now share one generic builder floor.
 
 ### 2026-04-30 surface-level runtime contracts
 
@@ -529,7 +529,7 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - Import is intentionally a two-step flow: `Analyze` first, then `Commit`, so pasted or uploaded JSON does not mutate the local store until the runtime preview says the payload is structurally safe.
 - Phase 2 import stays generic and backward-tolerant by accepting raw packet envelopes, exported bundle envelopes with `packets`, legacy bundle envelopes with `revisions`, and raw arrays, all normalized onto the existing bundle-import substrate.
 - Web import now includes a browser `.json` file picker, but paste remains the universal fallback so the workflow still works outside the browser without adding a cross-platform file abstraction in this pass.
-- Import analysis is structural rather than trust-verifying: it reports invalid entries, duplicates, missing parent revisions, family conflicts, affected packets, and likely open targets, then blocks commit on unsafe inputs instead of offering partial-import toggles.
+- Import analysis is structural rather than trust-verifying: it reports invalid entries, duplicates, missing parent revisions, type conflicts, affected packets, and likely open targets, then blocks commit on unsafe inputs instead of offering partial-import toggles.
 - Post-import repair now preserves local preferred-head intent when divergence appears: if a newly imported branch creates multiple heads and the old preferred head still exists, Explorer restores that preferred revision instead of silently replacing it with the last imported head.
 
 ### 2026-05 Packet Explorer live search and export lookup

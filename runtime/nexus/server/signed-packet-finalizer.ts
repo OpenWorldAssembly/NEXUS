@@ -75,7 +75,7 @@ export class SignedPacketFinalizer {
       if (!signatureIsValid) {
         throw new Error(
           input.signatureFailureMessage ??
-            `Signed ${signedPacket.header.family} packet verification failed.`
+            `Signed ${signedPacket.header.type} packet verification failed.`
         );
       }
 
@@ -100,8 +100,8 @@ async function assertSignedPacketsMatchPreparedDigests(input: {
     const preparedPacket = input.preparedMutation.prepared_packets[index];
     const signedPacket = input.signedPackets[index];
 
-    if (!signedPacket || signedPacket.header.family !== preparedPacket.packet.header.family) {
-      throw new Error('Signed mutation packet bundle does not match the prepared packet families.');
+    if (!signedPacket || signedPacket.header.type !== preparedPacket.packet.header.type) {
+      throw new Error('Signed mutation packet bundle does not match the prepared packet types.');
     }
 
     const digestCandidates = await getPacketUnsignedDigestCandidates(signedPacket);

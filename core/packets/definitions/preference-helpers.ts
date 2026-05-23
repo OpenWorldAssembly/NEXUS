@@ -1,6 +1,6 @@
 /**
  * File: preference-helpers.ts
- * Description: Shadow-mode helpers for building, projecting, and adapting experimental Preference packet bodies.
+ * Description: Definition-mode helpers for building, projecting, and adapting canonical Preference packet bodies.
  */
 
 import type { PacketRef, PacketRevisionRef } from '@core/schema/packet-schema';
@@ -139,7 +139,6 @@ export function buildElementPreferenceBody(
   });
 
   return {
-    type: 'preference',
     subtype: 'element',
     owner_ref: parsedInput.owner_ref,
     status: 'active',

@@ -22,7 +22,7 @@ import type { NexusScopeDisplayPreferencesPayload } from '@runtime/nexus/nexus-a
 import {
   preferenceBodyToRuntimeScopeDisplayPreferences,
   runtimeScopeDisplayPreferencesToPreferenceBody,
-} from '@runtime/nexus/server/preference-packet-shadow';
+} from '@runtime/nexus/server/preference-packet-definition';
 import type { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store';
 
 type ElementPreferencePacket = PacketEnvelopeByType['Preference'];
@@ -69,7 +69,7 @@ function createElementPreferenceRevisionId(input: {
     .update(
       stableJson({
         packet_id: input.packetId,
-        family: 'Preference',
+        type: 'Preference',
         schema_version: '0.1.0',
         created_at: input.createdAt,
         parent_revision_ref: input.parentRevisionRef ?? null,
@@ -88,7 +88,7 @@ function isElementPreferencePacket(
   return (
     typeof packet === 'object' &&
     packet !== null &&
-    (packet as ElementPreferencePacket).header?.family === 'Preference' &&
+    (packet as ElementPreferencePacket).header?.type === 'Preference' &&
     (packet as ElementPreferencePacket).body?.subtype === 'element'
   );
 }
@@ -264,7 +264,7 @@ export async function createElementPreferenceInterfacePacketPlan(input: {
     context: body.context,
   });
   const packet = createPacket({
-    family: 'Preference',
+    type: 'Preference',
     packet_id: packetId,
     revision_id: createElementPreferenceRevisionId({
       packetId,

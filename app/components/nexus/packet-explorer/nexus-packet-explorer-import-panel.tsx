@@ -29,7 +29,7 @@ type NexusPacketExplorerImportPanelProps = {
     preferredRevisionId?: string | null;
     titleSnapshot?: string | null;
     seedSummary?: {
-      family: string | null;
+      type: string | null;
       summary: string | null;
       label: string | null;
     } | null;
@@ -248,11 +248,12 @@ function ImportResultCard(input: {
 }) {
   const appearance = useNexusAppearance();
   const [isAffectedPacketListOpen, setIsAffectedPacketListOpen] = useState(false);
+  const commitResult = 'committed' in input.result ? input.result : null;
   const openLabel =
-    'committed' in input.result && input.result.committed
-      ? input.result.root_packet_refs.length === 1
+    commitResult?.committed
+      ? commitResult.root_packet_refs.length === 1
         ? 'Open root packet'
-        : input.result.open_packet_id
+        : commitResult.open_packet_id
           ? 'Open imported packet'
           : null
       : null;
@@ -303,8 +304,8 @@ function ImportResultCard(input: {
           tone={input.result.missing_parent_count > 0 ? 'rose' : 'default'}
         />
         <NexusBadge
-          label={`${input.result.family_conflict_count} family conflicts`}
-          tone={input.result.family_conflict_count > 0 ? 'rose' : 'default'}
+          label={`${input.result.type_conflict_count} type conflicts`}
+          tone={input.result.type_conflict_count > 0 ? 'rose' : 'default'}
         />
         <NexusBadge
           label={`${input.result.validation_blocked_count} validation blocked`}
@@ -411,51 +412,51 @@ function ImportResultCard(input: {
         </View>
       ) : null}
 
-      {'committed' in input.result ? (
+      {commitResult ? (
         <View className="gap-3">
           <View className="flex-row flex-wrap gap-2">
             <NexusBadge
               label={
-                input.result.committed
-                  ? `${input.result.imported_revision_count} imported`
+                commitResult.committed
+                  ? `${commitResult.imported_revision_count} imported`
                   : 'Commit blocked'
               }
-              tone={input.result.committed ? 'mint' : 'rose'}
+              tone={commitResult.committed ? 'mint' : 'rose'}
             />
             <NexusBadge
-              label={`${input.result.skipped_duplicate_count} skipped duplicates`}
+              label={`${commitResult.skipped_duplicate_count} skipped duplicates`}
               tone="gold"
             />
             <NexusBadge
-              label={`${input.result.restored_preferred_packet_count} preferred restored`}
+              label={`${commitResult.restored_preferred_packet_count} preferred restored`}
               tone="sky"
             />
             <NexusBadge
-              label={`${input.result.diverged_packet_count} diverged`}
-              tone={input.result.diverged_packet_count > 0 ? 'gold' : 'default'}
+              label={`${commitResult.diverged_packet_count} diverged`}
+              tone={commitResult.diverged_packet_count > 0 ? 'gold' : 'default'}
             />
-            {input.result.import_report_packet_id ? (
+            {commitResult.import_report_packet_id ? (
               <NexusBadge label="Import report created" tone="sky" />
             ) : null}
           </View>
 
-          {input.result.import_report_packet_id ? (
+          {commitResult.import_report_packet_id ? (
             <View className="flex-row flex-wrap gap-3">
               <NexusActionButton
                 label="Open import report"
                 onPress={() =>
                   input.onOpenPacketInExplorer({
-                    packetId: input.result.import_report_packet_id!,
+                    packetId: commitResult.import_report_packet_id!,
                   })
                 }
               />
-              {input.result.created_verification_report_packet_ids[0] ? (
+              {commitResult.created_verification_report_packet_ids[0] ? (
                 <NexusActionButton
                   label="Open validation report"
                   variant="ghost"
                   onPress={() =>
                     input.onOpenPacketInExplorer({
-                      packetId: input.result.created_verification_report_packet_ids[0]!,
+                      packetId: commitResult.created_verification_report_packet_ids[0]!,
                     })
                   }
                 />
@@ -465,13 +466,13 @@ function ImportResultCard(input: {
         </View>
       ) : null}
 
-      {openLabel && input.result.open_packet_id ? (
+      {openLabel && commitResult?.open_packet_id ? (
         <NexusActionButton
           label={openLabel}
           variant="primary"
           onPress={() =>
             input.onOpenPacketInExplorer({
-              packetId: input.result.open_packet_id!,
+              packetId: commitResult.open_packet_id!,
             })
           }
         />

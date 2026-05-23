@@ -150,7 +150,8 @@ function completePathFromNode(
       children,
       preservedDescendants[descendantIndex],
     );
-    const preferredChild = preservedChild ?? getPreferredChildNode(cursor);
+    const preferredChild: NexusTabNode | null =
+      preservedChild ?? getPreferredChildNode(cursor);
 
     if (!preferredChild) {
       break;
@@ -180,7 +181,7 @@ export function resolveNexusTabPath(
   while (currentNodes.length > 0) {
     const requestedId = requestedPath[resolvedPath.length];
     const requestedNode = getEnabledNodeById(currentNodes, requestedId);
-    const selectedNode =
+    const selectedNode: NexusTabNode | null =
       requestedNode ??
       (parentNode
         ? getPreferredChildNode(parentNode)

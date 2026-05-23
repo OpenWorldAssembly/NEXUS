@@ -49,7 +49,7 @@ type ReportHistorySummary = {
   report_packet_id: string;
   report_revision_id: string;
   source: 'local' | 'external';
-  subtype: 'verification_report' | 'import_report';
+  subtype: 'verification_report' | 'import_report' | 'decision_report';
   status: string;
   title: string;
   summary: string | null;
@@ -214,7 +214,7 @@ function isVerificationReportPacket(
   packet: PacketEnvelope
 ): packet is PacketEnvelopeByType['Report'] {
   return (
-    packet.header.family === 'Report' &&
+    packet.header.type === 'Report' &&
     packet.body.subtype === 'verification_report'
   );
 }
@@ -296,7 +296,7 @@ export class NexusPacketVerificationService {
         packet_id: stored.validator_packet_id,
       });
 
-      if (validatorPacket && validatorPacket.header.family === 'Element') {
+      if (validatorPacket && validatorPacket.header.type === 'Element') {
         return {
           packet: validatorPacket as PacketEnvelopeByType['Element'],
           privateKey: await importPrivateKeyFromJwk(stored.private_jwk),
@@ -317,7 +317,6 @@ export class NexusPacketVerificationService {
       packet_id: packetId,
       revision_id: createInitialRevisionId(packetId),
       created_at: createdAt,
-      kind: 'service',
       name: 'Local Validator',
       subtype: 'local_validator',
       summary: 'Runtime-owned packet validation identity for this Nexus node.',
@@ -469,7 +468,7 @@ export class NexusPacketVerificationService {
   private async listVerificationReportsForTarget(packetId: string): Promise<
     PacketEnvelopeByType['Report'][]
   > {
-    const reports = await this.packetStore.listPreferredPacketsByFamily('Report');
+    const reports = await this.packetStore.listPreferredPacketsByType('Report');
 
     return reports.filter(
       (packet) =>
@@ -632,7 +631,7 @@ export class NexusPacketVerificationService {
       supersedes_ref: null,
       report_data: {
         previous_status:
-          existingReport?.header.family === 'Report'
+          existingReport?.header.type === 'Report'
             ? (existingReport.body as PacketEnvelopeByType['Report']['body']).report_data
                 ?.status ?? null
             : null,
@@ -813,13 +812,13 @@ export class NexusPacketVerificationService {
     limit?: number | null;
   } = {}): Promise<ImportReportHistorySummary[]> {
     const localValidator = await this.ensureLocalValidatorIdentity();
-    const reports = await this.packetStore.listPreferredPacketsByFamily('Report');
+    const reports = await this.packetStore.listPreferredPacketsByType('Report');
     const limit = input.limit ?? 8;
 
     return reports
       .filter(
         (packet): packet is PacketEnvelopeByType['Report'] =>
-          packet.header.family === 'Report' &&
+          packet.header.type === 'Report' &&
           packet.body.subtype === 'import_report'
       )
       .map((packet) =>

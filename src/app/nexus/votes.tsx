@@ -141,7 +141,7 @@ export default function NexusVotesPage() {
                   <View className="flex-row flex-wrap items-center gap-2">
                     <Text className={appearance.surfaceTitleClass}>{voteCard.title}</Text>
                     <NexusBadge
-                      label={voteCard.status ?? voteCard.family}
+                      label={voteCard.status ?? voteCard.type}
                       tone="gold"
                     />
                     {voteCard.packet.packet_id === highlightedPacketId ? (

@@ -20,14 +20,14 @@ test('runtime fortress handoff coverage includes every live mutation intent', ()
   assert.deepEqual(coveredIntents, liveIntents);
 });
 
-test('runtime fortress handoff audit passes while remaining shadow-only', () => {
+test('runtime fortress handoff audit passes while remaining runtime-ready', () => {
   const report = auditPacketRuntimeFortressHandoffs();
 
   assert.equal(report.status, 'pass');
   assert.deepEqual(report.findings, []);
 });
 
-test('generic-ready intents resolve to shadow-ready handoffs', () => {
+test('generic-ready intents resolve to definition-ready handoffs', () => {
   const genericReadyIntents = listFortressHandlerGenericizationEntries()
     .filter((entry) => entry.genericization_status === 'generic_ready')
     .map((entry) => entry.mutation_intent);
@@ -37,10 +37,10 @@ test('generic-ready intents resolve to shadow-ready handoffs', () => {
   for (const mutationIntent of genericReadyIntents) {
     const handoff = resolvePacketRuntimeFortressHandoff({ mutationIntent });
 
-    assert.equal(handoff.status, 'shadow_ready', mutationIntent);
-    assert.equal(handoff.live_fortress_ready, false);
+    assert.equal(handoff.status, 'definition_ready', mutationIntent);
+    assert.equal(handoff.external_definition_execution_enabled, false);
     assert.ok(handoff.reason_codes.includes('workflow_alignment_ready'));
-    assert.ok(handoff.reason_codes.includes('live_fortress_not_enrolled'));
+    assert.ok(handoff.reason_codes.includes('external_definition_execution_disabled'));
     assert.ok(handoff.workflow_plan_ids.length > 0, mutationIntent);
     assert.ok(handoff.operation_kinds.length > 0, mutationIntent);
     assert.ok(handoff.trusted_capability_ids.length > 0, mutationIntent);
@@ -51,7 +51,7 @@ test('generic-ready intents resolve to shadow-ready handoffs', () => {
   }
 });
 
-test('workflow-aligned planner extraction intents produce shadow handoffs but not live fortress readiness', () => {
+test('workflow-aligned planner extraction intents produce definition handoffs but not external definition execution readiness', () => {
   for (const mutationIntent of [
     'assembly_association.relation.set',
     'assembly_association.relation.clear',
@@ -60,8 +60,8 @@ test('workflow-aligned planner extraction intents produce shadow handoffs but no
   ] as const) {
     const handoff = resolvePacketRuntimeFortressHandoff({ mutationIntent });
 
-    assert.equal(handoff.status, 'shadow_ready', mutationIntent);
-    assert.equal(handoff.live_fortress_ready, false);
+    assert.equal(handoff.status, 'definition_ready', mutationIntent);
+    assert.equal(handoff.external_definition_execution_enabled, false);
     assert.ok(handoff.workflow_plan_ids.length > 0, mutationIntent);
     assert.ok(handoff.trusted_capability_ids.length > 0, mutationIntent);
   }
@@ -78,9 +78,9 @@ test('runtime-owned workflow intents produce explicit non-ready handoffs', () =>
     const handoff = resolvePacketRuntimeFortressHandoff({ mutationIntent });
 
     assert.equal(handoff.status, 'runtime_owned', mutationIntent);
-    assert.equal(handoff.live_fortress_ready, false);
+    assert.equal(handoff.external_definition_execution_enabled, false);
     assert.ok(handoff.reason_codes.includes('runtime_owned_workflow'));
-    assert.ok(handoff.reason_codes.includes('live_fortress_not_enrolled'));
+    assert.ok(handoff.reason_codes.includes('external_definition_execution_disabled'));
   }
 });
 
@@ -111,7 +111,7 @@ test('unknown mutation intents fail closed before fortress handoff', () => {
   });
 
   assert.equal(handoff.status, 'blocked');
-  assert.equal(handoff.live_fortress_ready, false);
+  assert.equal(handoff.external_definition_execution_enabled, false);
   assert.deepEqual(handoff.reason_codes, ['unknown_mutation_intent']);
   assert.equal(handoff.fortress_prepare_handler, null);
   assert.equal(handoff.fortress_finalize_handler, null);

@@ -54,7 +54,7 @@ test('finalize API preflight uses the stored ticket intent direction', () => {
 
   assert.equal(preflight.source_route, '/api/nexus/mutations/finalize');
   assert.equal(preflight.mutation_intent, 'follows.relation.set');
-  assert.equal(preflight.status, 'allowed_shadow');
+  assert.equal(preflight.status, 'allowed_definition');
 
   assert.throws(
     () =>

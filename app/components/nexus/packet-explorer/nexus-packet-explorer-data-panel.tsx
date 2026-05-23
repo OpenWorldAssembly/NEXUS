@@ -64,9 +64,9 @@ function renderAdaptationSummary(
       </View>
 
       <Text className={appearance.itemMetaClass}>
-        {payload.adaptation_summary.source_family} {payload.adaptation_summary.source_schema_version}
+        {payload.adaptation_summary.source_type} {payload.adaptation_summary.source_schema_version}
         {' -> '}
-        {payload.adaptation_summary.target_family} {payload.adaptation_summary.target_schema_version}
+        {payload.adaptation_summary.target_type} {payload.adaptation_summary.target_schema_version}
       </Text>
       <Text className={appearance.itemBodyClass}>
         Stages: {payload.adaptation_summary.stages.join(', ')}
@@ -105,7 +105,7 @@ export function NexusPacketExplorerDataPanel({
             <Text className={appearance.surfaceTitleClass}>
               {payload.packet_summary.title}
             </Text>
-            <NexusBadge label={payload.packet_summary.family} tone="sky" />
+            <NexusBadge label={payload.packet_summary.type} tone="sky" />
             {payload.packet_summary.kind ? (
               <NexusBadge label={payload.packet_summary.kind} tone="default" />
             ) : null}

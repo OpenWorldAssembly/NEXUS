@@ -3,7 +3,7 @@
  * Description: Defines reusable Nexus preview navigation targets for cards, rows, and panels.
  */
 import type { NexusPacketCardProjection } from '@core/contracts';
-import type { PacketFamily } from '@core/schema/packet-schema';
+import type { PacketType } from '@core/schema/packet-schema';
 
 export type NexusPreviewSurface =
   | 'dashboard'
@@ -35,18 +35,11 @@ const ROUTABLE_PREVIEW_SURFACES = new Set<NexusPreviewSurface>([
   'library',
 ]);
 
-const DISCUSSION_FAMILIES = new Set<PacketFamily>([
-  'Discussion',
-  'DiscussionSpace',
-  'DiscussionForum',
-  'DiscussionThread',
-  'DiscussionPost',
-  'DiscussionReply',
-]);
+const DISCUSSION_TYPES = new Set<string>(['Discussion']);
 
-const VOTE_FAMILIES = new Set<PacketFamily>(['Proposal', 'Vote', 'Decision']);
-const ROLE_FAMILIES = new Set<PacketFamily>(['Role']);
-const TRUST_FAMILIES = new Set<PacketFamily>([
+const VOTE_FAMILIES = new Set<PacketType>(['Proposal', 'Vote', 'Decision']);
+const ROLE_FAMILIES = new Set<PacketType>(['Role']);
+const TRUST_FAMILIES = new Set<PacketType>([
   'Claim',
   'Relation',
   'Attestation',
@@ -73,11 +66,11 @@ function encodeQuery(input: Record<string, string | null | undefined>): string {
     .join('&');
 }
 
-function getTargetPacketFamily(target: NexusPreviewTarget): PacketFamily | null {
-  const rawFamily = target.params?.packet_family;
+function getTargetPacketType(target: NexusPreviewTarget): PacketType | null {
+  const rawType = target.params?.packet_type;
 
-  return typeof rawFamily === 'string' && rawFamily.length > 0
-    ? (rawFamily as PacketFamily)
+  return typeof rawType === 'string' && rawType.length > 0
+    ? (rawType as PacketType)
     : null;
 }
 
@@ -86,15 +79,11 @@ function packetIdIncludesAny(packetId: string, fragments: string[]): boolean {
 }
 
 function isThreadAddressableDiscussionTarget(target: NexusPreviewTarget): boolean {
-  const packetFamily = getTargetPacketFamily(target);
+  const packetType = getTargetPacketType(target);
   const packetIds = [target.packetId, target.focusPacketId, target.highlightPacketId]
     .filter((packetId): packetId is string => Boolean(packetId));
 
-  if (
-    packetFamily === 'DiscussionThread' ||
-    packetFamily === 'DiscussionPost' ||
-    packetFamily === 'DiscussionReply'
-  ) {
+  if (packetType && DISCUSSION_TYPES.has(packetType)) {
     return true;
   }
 
@@ -113,11 +102,11 @@ function isThreadAddressableDiscussionTarget(target: NexusPreviewTarget): boolea
 }
 
 function isEntryDiscussionTarget(target: NexusPreviewTarget): boolean {
-  const packetFamily = getTargetPacketFamily(target);
+  const packetType = getTargetPacketType(target);
   const packetIds = [target.focusPacketId, target.packetId]
     .filter((packetId): packetId is string => Boolean(packetId));
 
-  if (packetFamily === 'DiscussionPost' || packetFamily === 'DiscussionReply') {
+  if (packetType && DISCUSSION_TYPES.has(packetType)) {
     return true;
   }
 
@@ -155,29 +144,29 @@ export function getNexusPreviewSurfaceLabel(
 }
 
 /**
- * Inputs: a packet family.
- * Output: the most specific Nexus surface that can contextualize that packet family.
+ * Inputs: a packet type.
+ * Output: the most specific Nexus surface that can contextualize that packet type.
  */
-export function getNexusPreviewSurfaceForPacketFamily(
-  family: PacketFamily | null,
+export function getNexusPreviewSurfaceForPacketType(
+  type: PacketType | null,
 ): NexusPreviewSurface {
-  if (!family) {
+  if (!type) {
     return 'library';
   }
 
-  if (DISCUSSION_FAMILIES.has(family)) {
+  if (DISCUSSION_TYPES.has(type)) {
     return 'discussions';
   }
 
-  if (VOTE_FAMILIES.has(family)) {
+  if (VOTE_FAMILIES.has(type)) {
     return 'votes';
   }
 
-  if (ROLE_FAMILIES.has(family)) {
+  if (ROLE_FAMILIES.has(type)) {
     return 'roles';
   }
 
-  if (TRUST_FAMILIES.has(family)) {
+  if (TRUST_FAMILIES.has(type)) {
     return 'trust';
   }
 
@@ -195,14 +184,14 @@ export function getNexusPreviewTargetForPacketProjection(
   const packetId = packet.packet.packet_id;
 
   return {
-    surface: input?.surface ?? getNexusPreviewSurfaceForPacketFamily(packet.family),
+    surface: input?.surface ?? getNexusPreviewSurfaceForPacketType(packet.type),
     packetId,
     revisionId: packet.revision.revision_id,
     focusPacketId: packetId,
     highlightPacketId: packetId,
     intent: input?.intent,
     params: {
-      packet_family: packet.family,
+      packet_type: packet.type,
     },
   };
 }

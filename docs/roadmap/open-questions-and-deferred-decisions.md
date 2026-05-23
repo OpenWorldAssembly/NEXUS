@@ -17,13 +17,13 @@
 - What exact authority model should govern multi-key assemblies and custody transition?
 - What exact event turns a decision from a signal into an effect-bearing authority artifact?
 - Which built-in action handlers, if any, should Nexus eventually support for automatic execution?
-- How broad should the new `Report` family become beyond `verification_report` and `import_report`?
+- How broad should the new `Report` type become beyond `verification_report` and `import_report`?
 - How should recorded verification or import reports, local verification caches, and later live read-model verification results relate over time?
 - Should future node-to-node trust let one node weigh validation reports signed by another node, and if so through what policy seam?
 - When, if ever, should packet-based compatibility manifests complement the current code-based adapter registry?
 - How much default flattening should future rebundling do when one bundle carries packets that already arrived through an older bundle lineage?
 
-## Explicitly deferred
+## Explicitly unsupported
 
 - another broad architecture rewrite
 - Discord adapter revival
@@ -40,7 +40,7 @@
 
 ## Bundle direction now decided
 
-- `Bundle` should become a first-class packet family later.
+- `Bundle` should become a first-class packet type later.
 - Rebundling or forwarding another node’s bundle should create a new bundle packet rather than revising the older bundle packet.
 - Bundle history should be modeled as a lineage graph, not one shared revision chain.
-- Legacy bundle JSON artifacts should remain runtime import/export adapters until that packet family exists.
+- Legacy bundle JSON artifacts should remain runtime import/export adapters until that packet type exists.

@@ -8,7 +8,7 @@ import type {
   PreparedMutation,
 } from '@core/auth/mutation-corridor';
 import type { MutationActionId } from '@core/auth/write-policy';
-import type { PacketEnvelope } from '@core/schema/packet-schema';
+import type { PacketEnvelope, PacketEnvelopeByType } from '@core/schema/packet-schema';
 import { createIdentityKeyBinding } from '@runtime/nexus/identity-crypto';
 import {
   planAssemblyAssociationRelationPackets,
@@ -87,13 +87,13 @@ function createFakeStore(input: {
 
       return null;
     },
-    async listPreferredPacketsByFamily(family: string) {
+    async listPreferredPacketsByType(type: string) {
       return [
         input.existingRelationPacket,
         ...(input.extraPackets ?? []),
       ].filter(
         (packet): packet is PacketEnvelope =>
-          !!packet && packet.header.family === family
+          !!packet && packet.header.type === type
       );
     },
   };
@@ -113,7 +113,7 @@ function createPolicyGate() {
         governing_scope_packet_id: input.governingScopePacket?.header.packet_id ?? null,
       };
     },
-  } as MutationPolicyGate;
+  } as unknown as MutationPolicyGate;
 }
 
 function normalizeGeneratedTimestamps(packet: PacketEnvelope) {
@@ -285,10 +285,9 @@ test('trusted follow clear planner matches withdrawn relation oracle', async () 
     trustedPlan.relation_plan.packets.map(normalizeGeneratedTimestamps),
     oraclePlan.packets.map(normalizeGeneratedTimestamps)
   );
-  assert.equal(
-    trustedPlan.relation_plan.packets[0]?.body.status,
-    'withdrawn'
-  );
+  const withdrawnRelationPacket = trustedPlan.relation_plan
+    .packets[0] as PacketEnvelopeByType['Relation'] | undefined;
+  assert.equal(withdrawnRelationPacket?.body.status, 'withdrawn');
 });
 
 test('trusted workflow mutation returns existing fortress prepare shape', async () => {
@@ -313,7 +312,7 @@ test('trusted workflow mutation returns existing fortress prepare shape', async 
   );
   assert.equal(preparedMutation.prepared_packets.length, 1);
   assert.equal(
-    preparedMutation.prepared_packets[0].packet.header.family,
+    preparedMutation.prepared_packets[0].packet.header.type,
     'Relation'
   );
   assert.ok(preparedMutation.prepared_packets[0].unsigned_digest);
@@ -329,7 +328,7 @@ test('trusted role claim planner creates assert and withdraw operations from pac
     applicable_scope_refs: [{ packet_id: targetScopePacket.header.packet_id }],
     created_by: { packet_id: actorPacket.header.packet_id },
     title: 'Facilitator',
-    role_kind: 'facilitator',
+    subtype: 'facilitator',
     status: 'active',
   });
   const packetStore = createFakeStore({
@@ -344,6 +343,7 @@ test('trusted role claim planner creates assert and withdraw operations from pac
     intent: {
       kind: 'role_association.claim.set',
       role_packet_id: rolePacket.header.packet_id,
+      scope_id: 'target-scope',
       claimed: true,
     },
   });
@@ -354,6 +354,7 @@ test('trusted role claim planner creates assert and withdraw operations from pac
     intent: {
       kind: 'role_association.claim.set',
       role_packet_id: rolePacket.header.packet_id,
+      scope_id: 'target-scope',
       claimed: false,
     },
   });

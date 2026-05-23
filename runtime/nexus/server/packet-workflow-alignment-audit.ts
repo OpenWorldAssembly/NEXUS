@@ -1,11 +1,11 @@
 /**
  * File: packet-workflow-alignment-audit.ts
- * Description: Runtime-side audit map from live fortress intents to shadow workflow plans and trusted planner capabilities.
+ * Description: Runtime-side audit map from live fortress intents to definition workflow plans and trusted planner capabilities.
  */
 
 import type { MutationIntent } from '@core/auth/mutation-corridor';
 import {
-  getExperimentalPacketTypeDefinition,
+  getDefinedPacketTypeDefinition,
   listPacketWorkflowPlanDescriptors,
   listTrustedPacketPlannerCapabilities,
   resolvePacketWorkflowDryRunPlan,
@@ -27,7 +27,7 @@ import {
 
 export type PacketWorkflowAlignmentStatus =
   | 'workflow_aligned'
-  | 'planned_gap'
+  | 'missing_coverage'
   | 'runtime_owned'
   | 'legacy_bridge';
 
@@ -37,7 +37,7 @@ export type PacketWorkflowAlignmentGap = {
     | 'trusted_capability'
     | 'runtime_orchestration'
     | 'legacy_bridge';
-  status: 'planned_gap';
+  status: 'missing_coverage';
   reason: string;
 };
 
@@ -57,7 +57,7 @@ export type PacketWorkflowAlignmentCoverage = {
   trusted_capability_ids: string[];
   policy_action_ids: string[];
   remaining_packet_specific_assumptions: string[];
-  planned_gaps: PacketWorkflowAlignmentGap[];
+  missing_coverage_items: PacketWorkflowAlignmentGap[];
 };
 
 export type PacketWorkflowAlignmentAuditFinding = {
@@ -83,7 +83,7 @@ function plannedGap(
 ): PacketWorkflowAlignmentGap {
   return {
     area,
-    status: 'planned_gap',
+    status: 'missing_coverage',
     reason,
   };
 }
@@ -107,11 +107,11 @@ function resolveDryRuns(
   plans: readonly PacketWorkflowPlanDescriptor[]
 ): PacketWorkflowDryRunPlan[] {
   return plans.map((plan) => {
-    const definition = getExperimentalPacketTypeDefinition(plan.packet_type);
+    const definition = getDefinedPacketTypeDefinition(plan.packet_type);
 
     if (!definition) {
       return {
-        dry_run_kind: 'packet.workflow_plan.shadow_dry_run',
+        dry_run_kind: 'packet.workflow_plan.runtime_dry_run',
         packet_type: plan.packet_type,
         workflow_plan_id: plan.workflow_plan_id,
         mutation_intents: [...plan.mutation_intents],
@@ -121,7 +121,7 @@ function resolveDryRuns(
         policy_action_ids: [],
         dependency_ids: [],
         resolver_ids: [],
-        ready_for_shadow_interpretation: false,
+        ready_for_interpretation: false,
         findings: [
           {
             severity: 'error',
@@ -183,7 +183,7 @@ function resolveAlignmentStatus(input: {
     return 'runtime_owned';
   }
 
-  return input.hasWorkflowPlans ? 'workflow_aligned' : 'planned_gap';
+  return input.hasWorkflowPlans ? 'workflow_aligned' : 'missing_coverage';
 }
 
 export function listPacketWorkflowAlignmentCoverage(): PacketWorkflowAlignmentCoverage[] {
@@ -204,22 +204,22 @@ export function listPacketWorkflowAlignmentCoverage(): PacketWorkflowAlignmentCo
         (capability) => capability.capability_id
       )
     );
-    const planned_gaps: PacketWorkflowAlignmentGap[] = [];
+    const missing_coverage_items: PacketWorkflowAlignmentGap[] = [];
 
     if (entry.genericization_status === 'planner_extraction_needed' && workflowPlans.length === 0) {
-      planned_gaps.push(
+      missing_coverage_items.push(
         plannedGap('workflow_plan', entry.next_step)
       );
     }
 
     if (entry.genericization_status === 'workflow_specific') {
-      planned_gaps.push(
+      missing_coverage_items.push(
         plannedGap('runtime_orchestration', entry.next_step)
       );
     }
 
     if (entry.genericization_status === 'legacy_bridge') {
-      planned_gaps.push(
+      missing_coverage_items.push(
         plannedGap(
           'legacy_bridge',
           entry.next_step
@@ -228,10 +228,10 @@ export function listPacketWorkflowAlignmentCoverage(): PacketWorkflowAlignmentCo
     }
 
     if (workflowPlans.length > 0 && capabilityIds.length === 0) {
-      planned_gaps.push(
+      missing_coverage_items.push(
         plannedGap(
           'trusted_capability',
-          'Workflow has a shadow plan but no matching trusted local planner capability descriptor.'
+          'Workflow has a definition plan but no matching trusted local planner capability descriptor.'
         )
       );
     }
@@ -253,7 +253,7 @@ export function listPacketWorkflowAlignmentCoverage(): PacketWorkflowAlignmentCo
       composition_adapter_ids: compositionAdapterIds,
       dry_run_ready:
         workflowPlans.length > 0 &&
-        dryRuns.every((dryRun) => dryRun.ready_for_shadow_interpretation),
+        dryRuns.every((dryRun) => dryRun.ready_for_interpretation),
       resolver_ids: resolverIds,
       dependency_ids: dependencyIds,
       trusted_capability_ids: capabilityIds,
@@ -265,7 +265,7 @@ export function listPacketWorkflowAlignmentCoverage(): PacketWorkflowAlignmentCo
         entry.notes,
         entry.next_step,
       ],
-      planned_gaps,
+      missing_coverage_items,
     };
   });
 }
@@ -319,19 +319,19 @@ export function auditPacketWorkflowAlignmentCoverage(): PacketWorkflowAlignmentA
     if (
       coverage.genericization_status === 'planner_extraction_needed' &&
       coverage.workflow_plan_ids.length === 0 &&
-      coverage.planned_gaps.length === 0
+      coverage.missing_coverage_items.length === 0
     ) {
       findings.push({
         severity: 'error',
         code: 'planner_extraction_missing_gap',
         mutation_intent: descriptor.kind,
-        message: `${descriptor.kind} needs either a shadow workflow plan or an explicit planner extraction gap.`,
+        message: `${descriptor.kind} needs either a definition workflow plan or an explicit planner extraction gap.`,
       });
     }
 
     if (
       coverage.genericization_status === 'workflow_specific' &&
-      !coverage.planned_gaps.some((gap) => gap.area === 'runtime_orchestration')
+      !coverage.missing_coverage_items.some((gap) => gap.area === 'runtime_orchestration')
     ) {
       findings.push({
         severity: 'error',

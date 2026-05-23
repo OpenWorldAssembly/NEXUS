@@ -145,7 +145,7 @@ export class MutationPolicyGate {
     );
     const existingWritePolicyPacket =
       existingPolicyPackets.find(
-        (policyPacket) => policyPacket.body.policy_kind === 'write_lock'
+        (policyPacket) => policyPacket.body.subtype === 'write_lock'
       ) ?? null;
     const currentPolicyDecision = existingWritePolicyPacket
       ? resolveSecurityModePolicyDecision({
@@ -177,7 +177,7 @@ export class MutationPolicyGate {
     const promise = this.packetStore
       .fetchByPacket({ packet_id: packetId })
       .then((packet) =>
-        packet?.header.family === 'Policy'
+        packet?.header.type === 'Policy'
           ? (packet as PacketEnvelopeByType['Policy'])
           : null
       );

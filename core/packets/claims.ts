@@ -93,7 +93,7 @@ export function createAssociationClaimPacket(input: {
       packetId,
       input.parentRevisionRefs?.[0]?.revision_id ?? null
     ),
-    family: 'Claim' as const,
+    type: 'Claim' as const,
     schema_version: getPacketCurrentSchemaVersion('Claim'),
     protocol_version: '1.0.0',
     created_at: createdAt,
@@ -139,7 +139,6 @@ export function createAssociationClaimPacket(input: {
   return createPacketEnvelope<'Claim'>({
     header,
     body: {
-      type: 'claim',
       subtype: 'relation_assertion',
       target_ref: {
         packet_id: input.targetPacketId,
@@ -164,7 +163,6 @@ export function createAssociationClaimPacket(input: {
           packet_id: input.scopePacketId,
         },
       },
-      claim_kind: input.claimKind,
       status: input.status ?? 'active',
       note: input.note ?? null,
     },
@@ -240,12 +238,6 @@ export function createRelationAssertionClaimPacket(input: {
         packet_id: input.scopePacketId,
       },
     },
-    claim_kind:
-      input.claimKind === 'assembly_association' ||
-      input.claimKind === 'home_locality' ||
-      input.claimKind === 'role_association'
-        ? input.claimKind
-        : null,
     status: input.status ?? 'active',
     note: input.note ?? null,
   });

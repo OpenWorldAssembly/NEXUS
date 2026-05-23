@@ -5,8 +5,8 @@
 - identity/auth and discussions remain the two strongest end-to-end verticals
 - votes, trust, roles, and Library are packet-backed, but are still comparatively provisional
 - dashboard is live and packet-backed, but deeper verification, trust, and governance meaning on its preview surfaces remains provisional
-- role creation and editing remain deferred
-- broader moderation, trust weighting, and governance execution remain deferred
+- role creation and editing remain unsupported
+- broader moderation, trust weighting, and governance execution remain unsupported
 
 ## Location and relationship caveats
 
@@ -28,12 +28,12 @@
 - Packet Explorer is read-only for packet mutation
 - Packet Explorer Search, Import, and Export are live
 - Packet Explorer verification is now live for local validation, imported report reading, and truthful layered status display
-- Packet Explorer verification is now revision-aware and stale-aware for the currently preferred revision, but richer revalidation workflows remain deferred
+- Packet Explorer verification is now revision-aware and stale-aware for the currently preferred revision, but richer revalidation workflows remain unsupported
 - Packet Explorer Import now keeps recent import-report history visible inside the Import workspace, but that history currently reflects the latest local report per imported artifact identity rather than a full event-by-event ledger; richer filtering, artifact lineage browsing, and bundle-native history are still later work
 - fork or adapt execution, diff, and compare are not live yet
 - validation now distinguishes `validate first`, `validate after`, and `don't validate`, but local trust still remains node-local rather than peer-weighted
 - packet verification reports and import reports now exist, but richer provenance surfacing, peer-trust weighting, and broader report semantics remain next seams
-- a dedicated validation workflow screen is intentionally deferred
+- a dedicated validation workflow screen is intentionally unsupported
 - official versus unofficial initiative filtering is not active product behavior
 - initiative-version subscription behavior is not active product behavior
 - the generic scope graph is now decoupled from OWA-specific initiative-anchor policy lookup, but broader initiative and locality projection cleanup is still incomplete
@@ -55,5 +55,5 @@ The following areas should still be treated as provisional:
 - vote execution, delegation, and propagation semantics
 - long-term initiative filtering and visibility modes
 - packet actions that currently appear as disabled placeholders
-- hardening the remaining Preference runtime connector corridor before applying the same procedure to other packet families
+- hardening the remaining Preference runtime connector corridor before applying the same procedure to other packet types
 - any architecture or theory in the implementation guide that is not already represented in executable code

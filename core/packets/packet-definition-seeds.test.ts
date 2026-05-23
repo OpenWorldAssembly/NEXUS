@@ -12,14 +12,14 @@ import {
   buildDefinitionBundleSeedEnvelope,
   buildDefinitionPacketSeedCandidates,
   buildDefinitionPacketSeedEnvelopes,
-  listExperimentalPacketTypeDefinitions,
+  listDefinedPacketTypeDefinitions,
   listPacketDefinitionParts,
   resolveSeededPacketDefinitionProfile,
 } from '@core/packets/packet-definition-manifest';
 import { CANONICAL_SEED_PACKETS } from '@core/packets/seeds';
 
 test('every active manifest definition part produces a Definition seed candidate', () => {
-  const definitions = listExperimentalPacketTypeDefinitions();
+  const definitions = listDefinedPacketTypeDefinitions();
   const expectedParts = definitions.flatMap((definition) =>
     listPacketDefinitionParts(definition)
   );
@@ -34,10 +34,10 @@ test('every active manifest definition part produces a Definition seed candidate
   for (const candidate of candidates) {
     assert.equal(candidate.seed_kind, 'packet_definition.seed_candidate');
     assert.equal(candidate.body_candidate.packet_type, 'Definition');
-    assert.equal(candidate.packet.header.family, 'Definition');
+    assert.equal(candidate.packet.header.type, 'Definition');
     assert.equal(candidate.packet.header.packet_id, candidate.packet_ref.packet_id);
-    assert.equal(candidate.body_candidate.body.type, 'definition');
-    assert.equal(candidate.packet.body.type, 'definition');
+    assert.equal(candidate.body_candidate.body.subtype, candidate.body_candidate.packet_subtype);
+    assert.equal(candidate.packet.body.subtype, candidate.body_candidate.packet_subtype);
     assert.equal(
       candidate.body_candidate.body.defines_packet_type,
       candidate.defines_packet_type
@@ -55,7 +55,7 @@ test('definition bundle includes every Definition seed candidate exactly once', 
 
   assert.equal(bundle.body_candidate.packet_type, 'Bundle');
   assert.equal(bundle.body_candidate.packet_subtype, 'packet_set');
-  assert.equal(bundle.packet.header.family, 'Bundle');
+  assert.equal(bundle.packet.header.type, 'Bundle');
   assert.equal(bundle.packet.body.subtype, 'packet_set');
   assert.equal(bundle.body_candidate.body.items.length, definitionPackets.length);
   assert.equal(new Set(bundledRevisionIds).size, definitionPackets.length);
@@ -77,10 +77,10 @@ test('definition seed helpers expose canonical packet envelopes in bootstrap see
 
   assert.ok(definitionEnvelopes.length > 0);
   assert.equal(
-    definitionEnvelopes.every((packet) => packet.header.family === 'Definition'),
+    definitionEnvelopes.every((packet) => packet.header.type === 'Definition'),
     true
   );
-  assert.equal(bundleEnvelope.header.family, 'Bundle');
+  assert.equal(bundleEnvelope.header.type, 'Bundle');
   assert.equal(bundleEnvelope.body.items.length, definitionEnvelopes.length);
   assert.equal(
     definitionEnvelopes.every((packet) => seedPacketIds.has(packet.header.packet_id)),

@@ -9,7 +9,7 @@ import {
   getPacketOperationDefinition,
   type PacketOperationKind,
 } from '@core/packets/packet-operation-ontology';
-import type { PacketFamily } from '@core/schema/packet-schema';
+import type { PacketType } from '@core/schema/packet-schema';
 import type {
   FortressHandlerDomain,
 } from '@runtime/nexus/server/fortress-handler-contracts';
@@ -36,7 +36,7 @@ export type FortressHandlerGenericizationEntry = {
   domain: FortressHandlerDomain;
   prepare_handler: MutationPrepareHandlerKey;
   finalize_handler: MutationFinalizeHandlerKey;
-  packet_families_touched: readonly PacketFamily[];
+  packet_types_touched: readonly PacketType[];
   policy_action_ids: readonly MutationActionId[];
   operation_kinds: readonly PacketOperationKind[];
   operation_mapping_status: FortressOperationMappingStatus;
@@ -52,7 +52,7 @@ export const FORTRESS_HANDLER_GENERICIZATION_ENTRIES = [
     domain: 'locality',
     prepare_handler: 'prepareLocalityPathCreate',
     finalize_handler: 'finalizeLocalityPathCreate',
-    packet_families_touched: ['Element', 'Location', 'Relation'],
+    packet_types_touched: ['Element', 'Location', 'Relation'],
     policy_action_ids: ['locality.element.create'],
     operation_kinds: ['workflow.compose'],
     operation_mapping_status: 'planner_extraction_gap',
@@ -67,7 +67,7 @@ export const FORTRESS_HANDLER_GENERICIZATION_ENTRIES = [
     domain: 'locality',
     prepare_handler: 'prepareLocalityGraphApply',
     finalize_handler: 'finalizeLocalityGraphApply',
-    packet_families_touched: ['Element', 'Location', 'Relation', 'Claim'],
+    packet_types_touched: ['Element', 'Location', 'Relation', 'Claim'],
     policy_action_ids: [
       'locality.element.create',
       'home_locality.relation.set',
@@ -90,7 +90,7 @@ export const FORTRESS_HANDLER_GENERICIZATION_ENTRIES = [
     domain: 'discussion',
     prepare_handler: 'prepareDiscussionThreadPost',
     finalize_handler: 'finalizeDiscussionThreadPost',
-    packet_families_touched: ['Discussion', 'DiscussionThread', 'DiscussionPost'],
+    packet_types_touched: ['Discussion', 'Discussion', 'Discussion'],
     policy_action_ids: ['discussion.thread.create', 'discussion.post.create'],
     operation_kinds: ['workflow.compose'],
     operation_mapping_status: 'planner_extraction_gap',
@@ -98,14 +98,14 @@ export const FORTRESS_HANDLER_GENERICIZATION_ENTRIES = [
     next_step:
       'Extract discussion mirror/compatibility planning before replacing thread/post preparation with generic Discussion planners.',
     notes:
-      'Still bridges legacy split discussion families and canonical Discussion packets.',
+      'Still bridges legacy split discussion types and canonical Discussion packets.',
   },
   {
     mutation_intent: 'discussion.reply.create',
     domain: 'discussion',
     prepare_handler: 'prepareDiscussionReply',
     finalize_handler: 'finalizeDiscussionReply',
-    packet_families_touched: ['Discussion', 'DiscussionPost', 'DiscussionReply'],
+    packet_types_touched: ['Discussion', 'Discussion', 'Discussion'],
     policy_action_ids: ['discussion.reply.create'],
     operation_kinds: ['single_packet.create'],
     operation_mapping_status: 'planner_extraction_gap',
@@ -120,7 +120,7 @@ export const FORTRESS_HANDLER_GENERICIZATION_ENTRIES = [
     domain: 'discussion',
     prepare_handler: 'prepareDiscussionSurfacesEnsure',
     finalize_handler: 'finalizeDiscussionSurfacesEnsure',
-    packet_families_touched: ['Discussion'],
+    packet_types_touched: ['Discussion'],
     policy_action_ids: ['discussion.surfaces.ensure'],
     operation_kinds: ['workflow.compose'],
     operation_mapping_status: 'runtime_workflow_gap',
@@ -135,7 +135,7 @@ export const FORTRESS_HANDLER_GENERICIZATION_ENTRIES = [
     domain: 'attestation',
     prepare_handler: 'preparePacketSignal',
     finalize_handler: 'finalizePacketSignal',
-    packet_families_touched: ['Attestation', 'Discussion'],
+    packet_types_touched: ['Attestation', 'Discussion'],
     policy_action_ids: [
       'attestation.packet_signal.set',
       'attestation.packet_signal.clear',
@@ -153,7 +153,7 @@ export const FORTRESS_HANDLER_GENERICIZATION_ENTRIES = [
     domain: 'assembly',
     prepare_handler: 'prepareAssemblyElementCreate',
     finalize_handler: 'finalizeAssemblyElementCreate',
-    packet_families_touched: ['Element', 'Relation', 'Claim', 'Discussion'],
+    packet_types_touched: ['Element', 'Relation', 'Claim', 'Discussion'],
     policy_action_ids: ['assembly.element.create', 'discussion.surfaces.ensure'],
     operation_kinds: ['workflow.compose'],
     operation_mapping_status: 'runtime_workflow_gap',
@@ -168,7 +168,7 @@ export const FORTRESS_HANDLER_GENERICIZATION_ENTRIES = [
     domain: 'relation',
     prepare_handler: 'prepareAssemblyAssociationRelation',
     finalize_handler: 'finalizeAssociationRelationUpdate',
-    packet_families_touched: ['Relation', 'Claim'],
+    packet_types_touched: ['Relation', 'Claim'],
     policy_action_ids: ['assembly_association.relation.set'],
     operation_kinds: ['relation.set'],
     operation_mapping_status: 'planner_extraction_gap',
@@ -183,7 +183,7 @@ export const FORTRESS_HANDLER_GENERICIZATION_ENTRIES = [
     domain: 'relation',
     prepare_handler: 'prepareAssemblyAssociationRelation',
     finalize_handler: 'finalizeAssociationRelationUpdate',
-    packet_families_touched: ['Relation', 'Claim'],
+    packet_types_touched: ['Relation', 'Claim'],
     policy_action_ids: ['assembly_association.relation.clear'],
     operation_kinds: ['relation.clear'],
     operation_mapping_status: 'planner_extraction_gap',
@@ -198,7 +198,7 @@ export const FORTRESS_HANDLER_GENERICIZATION_ENTRIES = [
     domain: 'relation',
     prepare_handler: 'prepareHomeLocalityRelation',
     finalize_handler: 'finalizeHomeLocalityRelation',
-    packet_families_touched: ['Relation', 'Claim'],
+    packet_types_touched: ['Relation', 'Claim'],
     policy_action_ids: ['home_locality.relation.set', 'home_locality.relation.clear'],
     operation_kinds: ['relation.set', 'relation.clear'],
     operation_mapping_status: 'planner_extraction_gap',
@@ -213,7 +213,7 @@ export const FORTRESS_HANDLER_GENERICIZATION_ENTRIES = [
     domain: 'relation',
     prepare_handler: 'prepareFollowRelation',
     finalize_handler: 'finalizeFollowRelationUpdate',
-    packet_families_touched: ['Relation'],
+    packet_types_touched: ['Relation'],
     policy_action_ids: ['follows.relation.set'],
     operation_kinds: ['relation.set'],
     operation_mapping_status: 'directly_mapped',
@@ -227,7 +227,7 @@ export const FORTRESS_HANDLER_GENERICIZATION_ENTRIES = [
     domain: 'relation',
     prepare_handler: 'prepareFollowRelation',
     finalize_handler: 'finalizeFollowRelationUpdate',
-    packet_families_touched: ['Relation'],
+    packet_types_touched: ['Relation'],
     policy_action_ids: ['follows.relation.clear'],
     operation_kinds: ['relation.clear'],
     operation_mapping_status: 'directly_mapped',
@@ -241,7 +241,7 @@ export const FORTRESS_HANDLER_GENERICIZATION_ENTRIES = [
     domain: 'role',
     prepare_handler: 'prepareRoleAssociationClaim',
     finalize_handler: 'finalizeClaimUpdate',
-    packet_families_touched: ['Role', 'Claim'],
+    packet_types_touched: ['Role', 'Claim'],
     policy_action_ids: [
       'role_association.claim.set',
       'role_association.claim.withdraw',
@@ -258,7 +258,7 @@ export const FORTRESS_HANDLER_GENERICIZATION_ENTRIES = [
     domain: 'role',
     prepare_handler: 'prepareRoleAssociationAttestation',
     finalize_handler: 'finalizeRoleAssociationAttestation',
-    packet_families_touched: ['Claim', 'Attestation'],
+    packet_types_touched: ['Claim', 'Attestation'],
     policy_action_ids: [
       'role_association.attestation.support',
       'role_association.attestation.dispute',
@@ -277,7 +277,7 @@ export const FORTRESS_HANDLER_GENERICIZATION_ENTRIES = [
     domain: 'actor_policy',
     prepare_handler: 'prepareActorWritePolicyUpdate',
     finalize_handler: 'finalizeActorWritePolicyUpdate',
-    packet_families_touched: ['Policy', 'Element'],
+    packet_types_touched: ['Policy', 'Element'],
     policy_action_ids: ['actor.write_policy.update'],
     operation_kinds: ['workflow.compose'],
     operation_mapping_status: 'runtime_workflow_gap',
@@ -292,7 +292,7 @@ export const FORTRESS_HANDLER_GENERICIZATION_ENTRIES = [
     domain: 'preference',
     prepare_handler: 'preparePreferenceElementSet',
     finalize_handler: 'finalizePreferenceElementSet',
-    packet_families_touched: ['Preference'],
+    packet_types_touched: ['Preference'],
     policy_action_ids: ['preference.element.write'],
     operation_kinds: ['single_packet.revise'],
     operation_mapping_status: 'directly_mapped',

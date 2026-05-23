@@ -6,9 +6,7 @@
 import type { MutationIntent } from '@core/auth/mutation-corridor';
 import type { MutationActionId } from '@core/auth/write-policy';
 import {
-  listPacketFamilyModernizationCoverage,
   listPacketTypeModernizationCoverage,
-  type PacketFamilyModernizationCoverage,
   type PacketTypeModernizationCoverage,
   type PacketModernizationPlannedGap,
 } from '@core/packets/packet-modernization-coverage';
@@ -20,23 +18,17 @@ import {
 
 export type RuntimeConnectorStatus =
   | 'master_handler_enrolled'
-  | 'planned_gap';
-
-export interface PacketFamilyRuntimeModernizationCoverage
-  extends PacketFamilyModernizationCoverage {
-  runtime_connector_status: RuntimeConnectorStatus;
-  runtime_connector_ids: string[];
-}
+  | 'missing_coverage';
 
 export interface PacketTypeRuntimeModernizationCoverage
-  extends PacketTypeModernizationCoverage {
+  extends Omit<PacketTypeModernizationCoverage, 'runtime_connector_status'> {
   runtime_connector_status: RuntimeConnectorStatus;
   runtime_connector_ids: string[];
 }
 
 export interface MutationRuntimeModernizationGap {
   area: 'master_handler_connector';
-  status: 'planned_gap';
+  status: 'missing_coverage';
   reason: string;
 }
 
@@ -49,7 +41,7 @@ export interface MutationRuntimeModernizationCoverage {
   signed_corridor_status: 'enrolled';
   master_handler_connector_status: RuntimeConnectorStatus;
   connector_ids: string[];
-  planned_gaps: MutationRuntimeModernizationGap[];
+  missing_coverage_items: MutationRuntimeModernizationGap[];
 }
 
 const MUTATION_POLICY_ACTION_IDS = {
@@ -98,58 +90,39 @@ const MUTATION_POLICY_ACTION_IDS = {
 function connectorIdsForPacketType(packetType: string): string[] {
   return PACKET_RUNTIME_CONNECTORS.filter(
     (connector) =>
-      connector.packet_type === packetType && connector.availability !== 'shadow'
+      connector.packet_type === packetType && connector.availability !== 'definition'
   ).map((connector) => connector.connector_id);
 }
 
 function plannedRuntimeConnectorGap(): PacketModernizationPlannedGap {
   return {
     area: 'runtime_connector',
-    status: 'planned_gap',
+    status: 'missing_coverage',
     reason:
       'Runtime connector enrollment is intentionally staged behind canonical packet-type builder coverage and master-handler integration.',
   };
 }
 
-export function listPacketFamilyRuntimeModernizationCoverage(): PacketFamilyRuntimeModernizationCoverage[] {
-  return listPacketFamilyModernizationCoverage().map((coverage) => {
-    const runtime_connector_ids = connectorIdsForPacketType(coverage.family);
-    const runtime_connector_status =
-      runtime_connector_ids.length > 0
-        ? 'master_handler_enrolled'
-        : 'planned_gap';
-
-    return {
-      ...coverage,
-      runtime_connector_status,
-      runtime_connector_ids,
-      planned_gaps:
-        runtime_connector_status === 'planned_gap'
-          ? [...coverage.planned_gaps, plannedRuntimeConnectorGap()]
-          : coverage.planned_gaps,
-    };
-  });
-}
-
 export function listPacketTypeRuntimeModernizationCoverage(): PacketTypeRuntimeModernizationCoverage[] {
   return listPacketTypeModernizationCoverage().map((coverage) => {
-    const runtime_connector_ids = connectorIdsForPacketType(coverage.packet_type);
+    const runtime_connector_ids = connectorIdsForPacketType(coverage.type);
     const runtime_connector_status =
       runtime_connector_ids.length > 0
         ? 'master_handler_enrolled'
-        : 'planned_gap';
+        : 'missing_coverage';
 
     return {
       ...coverage,
       runtime_connector_status,
       runtime_connector_ids,
-      planned_gaps:
-        runtime_connector_status === 'planned_gap'
-          ? [...coverage.planned_gaps, plannedRuntimeConnectorGap()]
-          : coverage.planned_gaps,
+      missing_coverage_items:
+        runtime_connector_status === 'missing_coverage'
+          ? [...coverage.missing_coverage_items, plannedRuntimeConnectorGap()]
+          : coverage.missing_coverage_items,
     };
   });
 }
+
 
 export function listMutationRuntimeModernizationCoverage(): MutationRuntimeModernizationCoverage[] {
   return listMutationIntentDescriptors().map((descriptor) => ({
@@ -159,15 +132,15 @@ export function listMutationRuntimeModernizationCoverage(): MutationRuntimeModer
     finalize_handler: descriptor.finalize,
     policy_action_ids: [...MUTATION_POLICY_ACTION_IDS[descriptor.kind]],
     signed_corridor_status: 'enrolled',
-    master_handler_connector_status: 'planned_gap',
+    master_handler_connector_status: 'missing_coverage',
     connector_ids: [],
-    planned_gaps: [
+    missing_coverage_items: [
       {
         area: 'master_handler_connector',
-        status: 'planned_gap',
+        status: 'missing_coverage',
         reason:
           descriptor.kind === 'preference.element.set'
-            ? 'Preference.element is now fortress-enrolled; the old connector remains shadow-only for compatibility tests and local comparison.'
+            ? 'Preference.element is now fortress-enrolled; the old connector remains runtime-ready for compatibility tests and local comparison.'
             : 'This live mutation intent still runs through the signed fortress corridor and is scheduled for connector enrollment in the modernization chapter.',
       },
     ],

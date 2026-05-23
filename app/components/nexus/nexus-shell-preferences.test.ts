@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { persistNexusElementPreference } from './nexus-shell-preferences.ts';
+import {
+  persistNexusElementPreference,
+  type PersistNexusElementPreferenceInput,
+} from './nexus-shell-preferences.ts';
 
 const guestPreferences = {
   main_visible_scope_packet_ids: [],
@@ -21,7 +24,9 @@ test('claimed shell preference writes use the signed Preference.element mutation
       navigation_mode: 'scope',
     },
     note: 'Element interface preferences.',
-    runFortressMutation: async (input) => {
+    runFortressMutation: async <TResult,>(
+      input: Parameters<PersistNexusElementPreferenceInput['runFortressMutation']>[0]
+    ) => {
       fortressCalls.push(input);
       return {
         result: {
@@ -35,7 +40,7 @@ test('claimed shell preference writes use the signed Preference.element mutation
             ui_density: 'small',
           },
           wrote_revision: true,
-        },
+        } as TResult,
       };
     },
     updateCompatibilityPreferences: async (requestBody) => {
@@ -61,7 +66,7 @@ test('claimed shell preference writes use the signed Preference.element mutation
     },
   ]);
   assert.deepEqual(compatibilityCalls, []);
-  assert.equal(result.shell_chrome.navigation_mode, 'scope');
+  assert.equal(result.shell_chrome?.navigation_mode, 'scope');
 });
 
 test('guest shell preference writes use the compatibility shell-preferences route payload', async () => {
@@ -77,7 +82,9 @@ test('guest shell preference writes use the compatibility shell-preferences rout
       ui_density: 'large',
     },
     note: 'Element scope-display preferences.',
-    runFortressMutation: async (input) => {
+    runFortressMutation: async <TResult,>(
+      input: Parameters<PersistNexusElementPreferenceInput['runFortressMutation']>[0]
+    ) => {
       fortressCalls.push(input);
       return {
         result: {
@@ -88,7 +95,7 @@ test('guest shell preference writes use the compatibility shell-preferences rout
             ui_density: 'small',
           },
           wrote_revision: false,
-        },
+        } as TResult,
       };
     },
     updateCompatibilityPreferences: async (requestBody) => {

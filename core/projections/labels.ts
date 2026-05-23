@@ -1,6 +1,6 @@
 /**
  * File: labels.ts
- * Description: Derives browser and nexus display labels from canonical packet families and subtypes.
+ * Description: Derives browser and nexus display labels from canonical packet types and subtypes.
  */
 
 import type {
@@ -12,37 +12,23 @@ import {
   getElementSubtypeLeaf,
 } from '@core/schema/packet-schema';
 
-const FAMILY_LABELS: Record<PacketEnvelope['header']['family'], string> = {
+const TYPE_LABELS: Record<PacketEnvelope['header']['type'], string> = {
+  Definition: 'definition packet',
   Element: 'element packet',
   Location: 'location packet',
   Role: 'role packet',
   Claim: 'claim packet',
   Relation: 'relation packet',
   Report: 'report packet',
-  Signal: 'signal packet',
   Proposal: 'proposal packet',
   Vote: 'vote packet',
   Attestation: 'attestation',
   Decision: 'decision packet',
-  Cause: 'cause packet',
   Action: 'action packet',
-  Initiative: 'initiative packet',
-  Program: 'program packet',
-  Campaign: 'campaign packet',
-  MissionTemplate: 'mission template',
-  MissionPlan: 'mission plan',
-  MissionReport: 'mission report',
-  Module: 'module packet',
   Policy: 'policy packet',
   Preference: 'preference packet',
   Discussion: 'discussion packet',
-  DiscussionSpace: 'discussion space',
-  DiscussionForum: 'discussion forum',
-  DiscussionThread: 'discussion thread',
-  DiscussionPost: 'discussion post',
-  DiscussionReply: 'discussion reply',
-  Minutes: 'minutes packet',
-  Artifact: 'artifact packet',
+  Bundle: 'bundle packet',
 };
 
 function titleCase(value: string): string {
@@ -62,11 +48,11 @@ function safeDecodePacketId(packetId: string): string {
 }
 
 function getClaimDisplaySubtype(body: PacketBodyByType['Claim']): string {
-  if (body.subtype === 'relation_assertion' && body.claim_kind) {
-    return body.claim_kind;
+  if (body.subtype === 'relation_assertion' && body.subtype) {
+    return body.subtype;
   }
 
-  return body.subtype ?? body.claim_kind ?? 'claim';
+  return body.subtype ?? body.subtype ?? 'claim';
 }
 
 /**
@@ -78,17 +64,17 @@ export function getPacketTitleFallbackFromPacketId(packetId: string): string {
   const normalizedPath = decodedPacketId.startsWith('nexus:')
     ? decodedPacketId.slice('nexus:'.length)
     : decodedPacketId;
-  const [familySegment = '', subtypeSegment = ''] = normalizedPath.split('/');
+  const [typeSegment = '', subtypeSegment = ''] = normalizedPath.split('/');
 
-  if (familySegment === 'claim' && subtypeSegment) {
+  if (typeSegment === 'claim' && subtypeSegment) {
     return `${titleCase(subtypeSegment)} claim`;
   }
 
-  if (familySegment === 'attestation' && subtypeSegment) {
+  if (typeSegment === 'attestation' && subtypeSegment) {
     return `${titleCase(subtypeSegment)} attestation`;
   }
 
-  if (familySegment === 'role' && subtypeSegment) {
+  if (typeSegment === 'role' && subtypeSegment) {
     return `${titleCase(subtypeSegment)} role`;
   }
 
@@ -98,19 +84,14 @@ export function getPacketTitleFallbackFromPacketId(packetId: string): string {
 }
 
 export function getPacketDisplayLabel(packet: PacketEnvelope): string {
-  switch (packet.header.family) {
+  switch (packet.header.type) {
     case 'Element': {
       const body = packet.body as PacketBodyByType['Element'];
       return `${getElementSubtypeLeaf(
         getCanonicalElementSubtype({
-          kind: body.kind,
           subtype: body.subtype ?? null,
         })
-      ) ?? body.kind} packet`;
-    }
-    case 'Cause': {
-      const body = packet.body as PacketBodyByType['Cause'];
-      return `${titleCase(body.subtype)} cause`;
+      ) ?? body.subtype} packet`;
     }
     case 'Action': {
       const body = packet.body as PacketBodyByType['Action'];
@@ -130,10 +111,10 @@ export function getPacketDisplayLabel(packet: PacketEnvelope): string {
     }
     case 'Policy': {
       const body = packet.body as PacketBodyByType['Policy'];
-      if (body.policy_kind === 'charter') {
+      if (body.subtype === 'charter') {
         return 'charter';
       }
-      return FAMILY_LABELS.Policy;
+      return TYPE_LABELS.Policy;
     }
     case 'Preference': {
       const body = packet.body as PacketBodyByType['Preference'];
@@ -141,58 +122,34 @@ export function getPacketDisplayLabel(packet: PacketEnvelope): string {
     }
     case 'Role': {
       const body = packet.body as PacketBodyByType['Role'];
-      return `${titleCase(body.role_kind)} role`;
+      return `${titleCase(body.subtype)} role`;
     }
     case 'Claim': {
       const body = packet.body as PacketBodyByType['Claim'];
       return `${titleCase(getClaimDisplaySubtype(body))} claim`;
     }
-    case 'DiscussionForum': {
-      const body = packet.body as PacketBodyByType['DiscussionForum'];
-      if (body.forum_kind === 'visitor_lobby') {
-        return 'visitor lobby';
-      }
-      return FAMILY_LABELS.DiscussionForum;
-    }
     case 'Discussion': {
       const body = packet.body as PacketBodyByType['Discussion'];
-      if (body.kind === 'topic') {
+      if (body.subtype === 'topic') {
         return 'discussion topic';
       }
-      if (body.kind === 'message') {
+      if (body.subtype === 'message') {
         return body.role === 'reply' ? 'discussion reply' : 'discussion message';
       }
-      return `${body.kind} discussion`;
+      return `${body.subtype} discussion`;
     }
-    case 'DiscussionPost': {
-      const body = packet.body as PacketBodyByType['DiscussionPost'];
-      if (body.post_kind === 'forum_post') {
-        return 'thread root post';
-      }
-      return FAMILY_LABELS.DiscussionPost;
-    }
-    case 'DiscussionReply':
-      return FAMILY_LABELS.DiscussionReply;
     case 'Attestation':
-      return FAMILY_LABELS.Attestation;
-    case 'Artifact': {
-      const body = packet.body as PacketBodyByType['Artifact'];
-      return `${titleCase(body.artifact_kind)} artifact`;
-    }
+      return TYPE_LABELS.Attestation;
     default:
-      return FAMILY_LABELS[packet.header.family];
+      return TYPE_LABELS[packet.header.type];
   }
 }
 
 export function getPacketTitle(packet: PacketEnvelope): string {
-  switch (packet.header.family) {
+  switch (packet.header.type) {
     case 'Element': {
       const body = packet.body as PacketBodyByType['Element'];
       return body.name;
-    }
-    case 'Cause': {
-      const body = packet.body as PacketBodyByType['Cause'];
-      return body.title;
     }
     case 'Action': {
       const body = packet.body as PacketBodyByType['Action'];
@@ -220,7 +177,7 @@ export function getPacketTitle(packet: PacketEnvelope): string {
     }
     case 'Attestation': {
       const body = packet.body as PacketBodyByType['Attestation'];
-      return `${titleCase(body.subtype ?? body.attestation_kind)} attestation`;
+      return `${titleCase(body.subtype ?? body.subtype)} attestation`;
     }
     case 'Preference': {
       const body = packet.body as PacketBodyByType['Preference'];
@@ -228,10 +185,8 @@ export function getPacketTitle(packet: PacketEnvelope): string {
     }
     case 'Discussion': {
       const body = packet.body as PacketBodyByType['Discussion'];
-      return body.kind === 'message' && body.role === 'reply' ? 'Reply' : body.title;
+      return body.subtype === 'message' && body.role === 'reply' ? 'Reply' : body.title;
     }
-    case 'DiscussionReply':
-      return 'Reply';
     default: {
       const body = packet.body as { title?: string; name?: string };
 
@@ -249,14 +204,10 @@ export function getPacketTitle(packet: PacketEnvelope): string {
 }
 
 export function getPacketSummary(packet: PacketEnvelope): string | null {
-  switch (packet.header.family) {
+  switch (packet.header.type) {
     case 'Element': {
       const body = packet.body as PacketBodyByType['Element'];
       return body.summary ?? null;
-    }
-    case 'Cause': {
-      const body = packet.body as PacketBodyByType['Cause'];
-      return body.summary ?? body.purpose_markdown ?? null;
     }
     case 'Action': {
       const body = packet.body as PacketBodyByType['Action'];
@@ -269,10 +220,6 @@ export function getPacketSummary(packet: PacketEnvelope): string | null {
     case 'Vote':
     case 'Attestation':
       return null;
-    case 'MissionReport': {
-      const body = packet.body as PacketBodyByType['MissionReport'];
-      return body.notes;
-    }
     case 'Report': {
       const body = packet.body as PacketBodyByType['Report'];
       return body.summary_markdown ?? body.report_markdown ?? null;
@@ -293,19 +240,11 @@ export function getPacketSummary(packet: PacketEnvelope): string | null {
       const body = packet.body as PacketBodyByType['Claim'];
       return body.claim_markdown ?? body.note ?? null;
     }
-    case 'DiscussionForum': {
-      const body = packet.body as PacketBodyByType['DiscussionForum'];
-      return body.summary ?? null;
-    }
     case 'Discussion': {
       const body = packet.body as PacketBodyByType['Discussion'];
-      return body.kind === 'message'
+      return body.subtype === 'message'
         ? body.content_markdown
         : body.summary ?? null;
-    }
-    case 'DiscussionSpace': {
-      const body = packet.body as PacketBodyByType['DiscussionSpace'];
-      return body.summary ?? null;
     }
     default:
       return (packet.body as { summary?: string | null }).summary ?? null;
@@ -313,7 +252,7 @@ export function getPacketSummary(packet: PacketEnvelope): string | null {
 }
 
 export function getPacketStatus(packet: PacketEnvelope): string | null {
-  switch (packet.header.family) {
+  switch (packet.header.type) {
     case 'Element':
       return (packet.body as PacketBodyByType['Element']).status ?? null;
     case 'Location': {
@@ -336,17 +275,10 @@ export function getPacketStatus(packet: PacketEnvelope): string | null {
       const body = packet.body as PacketBodyByType['Claim'];
       return body.status;
     }
-    case 'DiscussionPost':
-    case 'DiscussionReply':
-      return null;
     case 'Attestation':
       return (packet.body as PacketBodyByType['Attestation']).status;
     case 'Preference':
       return (packet.body as PacketBodyByType['Preference']).status;
-    case 'Minutes':
-      return null;
-    case 'Artifact':
-      return null;
     default:
       return (packet.body as { status?: string | null }).status ?? null;
   }

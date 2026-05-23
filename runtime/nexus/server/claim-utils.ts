@@ -15,7 +15,7 @@ export type ClaimPacket = PacketEnvelopeByType['Claim'];
 export async function listClaimPackets(
   packetStore: NodeSQLitePacketStore
 ): Promise<ClaimPacket[]> {
-  return (await packetStore.listPreferredPacketsByFamily('Claim')) as ClaimPacket[];
+  return (await packetStore.listPreferredPacketsByType('Claim')) as ClaimPacket[];
 }
 
 export function isActiveClaimPacket(claimPacket: ClaimPacket): boolean {
@@ -25,7 +25,7 @@ export function isActiveClaimPacket(claimPacket: ClaimPacket): boolean {
 function getClaimRelationSubtype(claimPacket: ClaimPacket): string | null {
   return (
     claimPacket.body.relation_assertion?.subtype ??
-    claimPacket.body.claim_kind ??
+    claimPacket.body.subtype ??
     null
   );
 }

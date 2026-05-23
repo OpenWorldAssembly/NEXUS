@@ -34,7 +34,7 @@ test('scoped relation packets keep the relation scope as the authority scope', (
     note: 'Canonical home locality relation.',
   });
 
-  assert.equal(packet.header.family, 'Relation');
+  assert.equal(packet.header.type, 'Relation');
   assert.equal(
     packet.header.authority_scope_ref?.packet_id,
     'nexus:element/moreno-valley'

@@ -20,29 +20,29 @@ A policy and template lineage. OWA is intended to be modeled as an initiative in
 
 ## Claim
 
-The current packet family for scoped social assertions such as `role_association`, `assembly_association`, and `home_locality`.
+The current packet type for scoped social assertions such as `role_association`, `assembly_association`, and `home_locality`.
 
 Status: current code truth.
 
 ## Attestation
 
-The current packet family for support, dispute, and other evidence-oriented signals.
+The current packet type for support, dispute, and other evidence-oriented signals.
 
 Status: current code truth.
 
 ## Reaction
 
-A lighter-weight sentiment or signal concept that remains a live modeling question. It is not yet a distinct canonical family in the current docs or code.
+A lighter-weight sentiment or signal concept that remains a live modeling question. It is not yet a distinct canonical type in the current docs or code.
 
 Status: open modeling question.
 
 ## Policy
 
-A packet family used for configuration, thresholds, legitimacy references, and later execution rules.
+A packet type used for configuration, thresholds, legitimacy references, and later execution rules.
 
 ## Decision
 
-A governance artifact family. In current theory, decisions begin as legitimacy records and may later become effect-bearing through explicit policy.
+A governance artifact type. In current theory, decisions begin as legitimacy records and may later become effect-bearing through explicit policy.
 
 Status: canon-candidate direction.
 

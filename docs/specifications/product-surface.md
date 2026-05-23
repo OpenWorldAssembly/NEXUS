@@ -62,7 +62,7 @@ Packet Explorer is the inspect-and-traverse surface.
 - `Search` is now a manual grouped packet finder over the current preferred packet index, with `All`, `Direct`, `Name`, and `Text` result groupings, capped preview slices inside `All`, and paged category views for deeper result review
 - `Import` now supports two-step packet and bundle ingest through `Analyze` then `Commit`, with paste-first JSON input plus web-only `.json` file upload
 - `Import` now also supports three explicit validation modes: `Validate first`, `Validate after`, and `Don't validate`
-- `Import` now exposes recent import-report history and direct `Open report` follow-up actions using the existing `import_report` packet family, with the current history view intentionally reflecting the latest local report per imported artifact identity rather than a full append-only event ledger
+- `Import` now exposes recent import-report history and direct `Open report` follow-up actions using the existing `import_report` packet type, with the current history view intentionally reflecting the latest local report per imported artifact identity rather than a full append-only event ledger
 - `Export` now supports raw preferred-revision packet export, bounded bundle export, full local-store bundle export, a compact direct packet lookup when no export target is preloaded, and an explicit cancel/reset path when a packet export target was preloaded earlier
 - it now uses shared packet display-title normalization instead of exposing raw encoded packet ids as loaded titles where a human title can be derived
 - it supports `View as` inspection lenses for `Summary`, `Raw`, `Adapted`, and `Read Model`
@@ -83,7 +83,7 @@ Discussions are the most mature interactive Nexus surface today.
 - discussion feed, thread, and post workspaces are packet-backed
 - reply, vote, expand, and create actions are now runtime-projected instead of being only page-local heuristics
 - interactive writes use the shared fortress prepare/sign/finalize corridor
-- compatibility still keeps legacy discussion family shapes readable while canonical discussion packets drive current writes
+- compatibility still keeps legacy discussion type shapes readable while canonical discussion packets drive current writes
 
 ### Dashboard
 

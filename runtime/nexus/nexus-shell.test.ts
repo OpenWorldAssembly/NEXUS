@@ -27,6 +27,7 @@ const GLOBAL_SCOPE: NexusScopeSummary = {
   level: 'global',
   scopeSubtype: 'assembly.global',
   scopeSystem: 'geographic',
+  structuralState: 'canonical',
   description: 'Global scope.',
   localityLabel: 'Global',
   badge: 'Root',
@@ -62,6 +63,7 @@ const LOCAL_SCOPE: NexusScopeSummary = {
   level: 'city',
   scopeSubtype: 'assembly.city',
   scopeSystem: 'geographic',
+  structuralState: 'canonical',
   description: 'Local scope.',
   localityLabel: 'Moreno Valley',
   badge: 'Assembly',
@@ -98,6 +100,7 @@ const PERSONAL_SCOPE: NexusScopeSummary = {
   level: 'personal',
   scopeSubtype: null,
   scopeSystem: null,
+  structuralState: 'canonical',
   description: 'Personal scope.',
   localityLabel: 'Current actor',
   badge: 'Claimed actor',
@@ -393,3 +396,4 @@ test('return destinations only accept in-app nexus paths', () => {
     '/nexus/account'
   );
 });
+

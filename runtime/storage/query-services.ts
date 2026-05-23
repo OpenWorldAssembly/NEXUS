@@ -16,7 +16,7 @@ import type {
 } from '@core/contracts';
 import {
   type PacketEnvelope,
-  type PacketFamily,
+  type PacketType,
   type PacketRef,
   type PacketRevisionRef,
 } from '@core/schema/packet-schema';
@@ -51,7 +51,7 @@ function toBrowserProjection(
       packet_id: packet.header.packet_id,
     },
     revision,
-    family: packet.header.family,
+    type: packet.header.type,
     label: getPacketDisplayLabel(packet),
     title: getPacketTitle(packet),
     summary: getPacketSummary(packet),
@@ -88,7 +88,7 @@ function toNexusCardProjection(
       packet_id: row.packet_id,
       revision_id: row.revision_id,
     },
-    family: row.family as PacketFamily,
+    type: row.type as PacketType,
     label: row.label,
     title: row.title,
     summary: row.summary,
@@ -311,16 +311,16 @@ export class PacketStoreNexusQueryService implements NexusQueryService {
     );
   }
 
-  private async listCardsByFamilies(
+  private async listCardsByTypes(
     lens: NexusScopeLens,
-    families: PacketFamily[]
+    types: PacketType[]
   ): Promise<NexusPacketCardProjection[]> {
-    const familySet = new Set(families);
+    const typeSet = new Set(types);
     const rows = await this.searchReader.listSearchRows();
     const verificationByPacketId = await this.getVerificationSummaryByPacketId();
 
     return rows
-      .filter((row) => familySet.has(row.family as PacketFamily))
+      .filter((row) => typeSet.has(row.type as PacketType))
       .filter((row) => matchesScopeLens(row, lens))
       .sort((left, right) => right.created_at.localeCompare(left.created_at))
       .map((row) =>
@@ -350,24 +350,18 @@ export class PacketStoreNexusQueryService implements NexusQueryService {
   }
 
   async listVotes(lens: NexusScopeLens): Promise<NexusPacketCardProjection[]> {
-    return this.listCardsByFamilies(lens, ['Proposal', 'Vote', 'Decision']);
+    return this.listCardsByTypes(lens, ['Proposal', 'Vote', 'Decision']);
   }
 
   async listDiscussions(
     lens: NexusScopeLens
   ): Promise<NexusPacketCardProjection[]> {
-    return this.listCardsByFamilies(lens, [
-      'Discussion',
-      'DiscussionForum',
-      'DiscussionThread',
-      'DiscussionPost',
-      'DiscussionReply',
-    ]);
+    return this.listCardsByTypes(lens, ['Discussion']);
   }
 
   async listLibraryPackets(
     lens: NexusScopeLens,
-    family?: PacketFamily,
+    type?: PacketType,
     options?: NexusLibraryQueryOptions
   ): Promise<NexusPacketCardProjection[]> {
     const rows = await this.searchReader.listSearchRows();
@@ -375,7 +369,7 @@ export class PacketStoreNexusQueryService implements NexusQueryService {
     const verificationByPacketId = await this.getVerificationSummaryByPacketId();
 
     return rows
-      .filter((row) => (family ? row.family === family : true))
+      .filter((row) => (type ? row.type === type : true))
       .filter((row) =>
         scopeMode === 'local'
           ? matchesLocalAuthorityScope(row, lens)

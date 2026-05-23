@@ -23,7 +23,7 @@ import {
   type PacketEdge,
   type PacketEnvelope,
   type PacketEnvelopeByType,
-  type PacketFamily,
+  type PacketType,
   type PacketReadMode,
   type PacketMergeStrategy,
   type PacketRef,
@@ -42,7 +42,7 @@ import { NODE_PACKET_STORE_DATABASE_PATH } from '@runtime/storage/node-runtime-p
 
 interface PacketRow {
   packet_id: string;
-  family: string;
+  type: string;
   preferred_revision_id: string | null;
   head_revision_ids_json: string;
   revision_state: PacketHeadStatus['revision_state'];
@@ -363,9 +363,9 @@ export class NodeSQLitePacketStore implements PacketStore {
       (parentRef) => parentRef.revision_id
     );
 
-    if (packetRecordInsert && packetRecordInsert.family !== packet.header.family) {
+    if (packetRecordInsert && packetRecordInsert.type !== packet.header.type) {
       throw new Error(
-        `Packet family mismatch for ${packet.header.packet_id}: expected ${packetRecordInsert.family}, received ${packet.header.family}.`
+        `Packet type mismatch for ${packet.header.packet_id}: expected ${packetRecordInsert.type}, received ${packet.header.type}.`
       );
     }
 
@@ -430,7 +430,7 @@ export class NodeSQLitePacketStore implements PacketStore {
             `
               INSERT INTO packets (
                 packet_id,
-                family,
+                type,
                 preferred_revision_id,
                 head_revision_ids_json,
                 revision_state,
@@ -441,7 +441,7 @@ export class NodeSQLitePacketStore implements PacketStore {
                 preferred_revision_json
               ) VALUES (
                 @packet_id,
-                @family,
+                @type,
                 @preferred_revision_id,
                 @head_revision_ids_json,
                 @revision_state,
@@ -467,7 +467,7 @@ export class NodeSQLitePacketStore implements PacketStore {
             INSERT INTO packet_revisions (
               revision_id,
               packet_id,
-              family,
+              type,
               schema_version,
               protocol_version,
               parent_revision_refs_json,
@@ -488,7 +488,7 @@ export class NodeSQLitePacketStore implements PacketStore {
             ) VALUES (
               @revision_id,
               @packet_id,
-              @family,
+              @type,
               @schema_version,
               @protocol_version,
               @parent_revision_refs_json,
@@ -520,7 +520,7 @@ export class NodeSQLitePacketStore implements PacketStore {
               INSERT INTO packet_edges (
                 source_revision_id,
                 source_packet_id,
-                source_family,
+                source_type,
                 edge_type,
                 target_packet_id,
                 created_at,
@@ -528,7 +528,7 @@ export class NodeSQLitePacketStore implements PacketStore {
               ) VALUES (
                 @source_revision_id,
                 @source_packet_id,
-                @source_family,
+                @source_type,
                 @edge_type,
                 @target_packet_id,
                 @created_at,
@@ -565,7 +565,7 @@ export class NodeSQLitePacketStore implements PacketStore {
       });
       const packetUpdateRecord = {
         packet_id: packetRecord.packet_id,
-        family: packetRecord.family,
+        type: packetRecord.type,
         preferred_revision_id: packetRecord.preferred_revision_id,
         head_revision_ids_json: packetRecord.head_revision_ids_json,
         revision_state: packetRecord.revision_state,
@@ -579,7 +579,7 @@ export class NodeSQLitePacketStore implements PacketStore {
         .prepare(
           `
             UPDATE packets
-            SET family = @family,
+            SET type = @type,
                 preferred_revision_id = @preferred_revision_id,
                 head_revision_ids_json = @head_revision_ids_json,
                 revision_state = @revision_state,
@@ -605,7 +605,7 @@ export class NodeSQLitePacketStore implements PacketStore {
             INSERT INTO packet_search_index (
               packet_id,
               revision_id,
-              family,
+              type,
               label,
               title,
               summary,
@@ -617,7 +617,7 @@ export class NodeSQLitePacketStore implements PacketStore {
             ) VALUES (
               @packet_id,
               @revision_id,
-              @family,
+              @type,
               @label,
               @title,
               @summary,
@@ -715,7 +715,7 @@ export class NodeSQLitePacketStore implements PacketStore {
             INSERT INTO packet_search_index (
               packet_id,
               revision_id,
-              family,
+              type,
               label,
               title,
               summary,
@@ -727,7 +727,7 @@ export class NodeSQLitePacketStore implements PacketStore {
             ) VALUES (
               @packet_id,
               @revision_id,
-              @family,
+              @type,
               @label,
               @title,
               @summary,
@@ -1357,7 +1357,7 @@ export class NodeSQLitePacketStore implements PacketStore {
           SELECT
             packet_id,
             revision_id,
-            family,
+            type,
             label,
             title,
             summary,
@@ -1374,35 +1374,35 @@ export class NodeSQLitePacketStore implements PacketStore {
   }
 
   /**
-   * Inputs: a packet family filter.
-   * Output: preferred packet revisions for that family, newest first.
+   * Inputs: a packet type filter.
+   * Output: preferred packet revisions for that type, newest first.
    */
-  async listPreferredPacketsByFamily<TFamily extends PacketFamily>(
-    family: TFamily
-  ): Promise<PacketEnvelopeByType[TFamily][]> {
+  async listPreferredPacketsByType<TType extends PacketType>(
+    type: TType
+  ): Promise<PacketEnvelopeByType[TType][]> {
     const rows = this.database
       .prepare(
         `
           SELECT preferred_revision_json
           FROM packets
-          WHERE family = ?
+          WHERE type = ?
           ORDER BY updated_at DESC
         `
       )
-      .all(family) as { preferred_revision_json: string | null }[];
+      .all(type) as { preferred_revision_json: string | null }[];
 
     return rows
       .map((row) => row.preferred_revision_json)
       .filter((value): value is string => typeof value === 'string')
       .map(
         (value) =>
-          this.readStoredPacketJson(value, 'adapted') as PacketEnvelopeByType[TFamily]
+          this.readStoredPacketJson(value, 'adapted') as PacketEnvelopeByType[TType]
       );
   }
 
   /**
    * Inputs: none.
-   * Output: preferred packet revisions for all families, newest first.
+   * Output: preferred packet revisions for all types, newest first.
    */
   async listPreferredPackets(): Promise<PacketEnvelope[]> {
     const rows = this.database
@@ -1711,7 +1711,7 @@ export class NodeSQLitePacketStore implements PacketStore {
         `
           SELECT
             packet_id,
-            family,
+            type,
             preferred_revision_id,
             head_revision_ids_json,
             revision_state,

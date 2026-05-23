@@ -11,32 +11,32 @@ import {
   DefinitionBodySchema,
   PACKET_DEFINITION_MANIFEST,
   PACKET_MANIFEST_TEMPLATE_VERSION,
-  PreferenceBodySchema,
   derivePacketDefinitionActionKinds,
-  getExperimentalPacketTypeDefinition,
+  getDefinedPacketTypeDefinition,
   getPacketDefinitionSectionStatus,
-  listExperimentalPacketActions,
-  listExperimentalPacketBuilders,
-  listExperimentalPacketMutations,
-  listExperimentalPacketPlanners,
-  listExperimentalPacketTypeDefinitions,
+  listPacketDefinitionActions,
+  listPacketDefinitionBuilders,
+  listPacketDefinitionMutations,
+  listPacketDefinitionPlanners,
+  listDefinedPacketTypeDefinitions,
   listPacketDefinitionParts,
   listPacketManifestTemplateSections,
   validatePacketDefinitionTemplateCompliance,
 } from '@core/packets/packet-definition-manifest';
-import { GENERIC_PACKET_BUILD_FAMILIES } from '@core/packets/packet-build-pipeline';
+import { PreferenceBodySchema } from '@core/packets/definitions/preference.ts';
+import { GENERIC_PACKET_BUILD_TYPES } from '@core/packets/packet-build-pipeline';
 import { listDefinitionBootstrapParts } from '@core/packets/definitions/index.ts';
 import {
   PACKET_COMPATIBILITY_REGISTRY,
-  PACKET_FAMILIES,
+  PACKET_TYPES,
 } from '@core/schema/packet-schema';
 
 const EXPECTED_MANIFEST_PACKET_TYPES = [
-  ...GENERIC_PACKET_BUILD_FAMILIES,
+  ...GENERIC_PACKET_BUILD_TYPES,
 ].sort();
 
 test('active manifest exposes core generic packet definitions', () => {
-  const packetTypes = listExperimentalPacketTypeDefinitions().map(
+  const packetTypes = listDefinedPacketTypeDefinitions().map(
     (definition) => definition.packet_type
   );
 
@@ -49,15 +49,15 @@ test('active manifest exposes core generic packet definitions', () => {
   );
 });
 
-test('Definition, Bundle, and Preference are canonical packet families', () => {
-  assert.equal(PACKET_FAMILIES.includes('Preference'), true);
-  assert.equal(PACKET_FAMILIES.includes('Definition'), true);
-  assert.equal(PACKET_FAMILIES.includes('Bundle'), true);
+test('Definition, Bundle, and Preference are canonical packet types', () => {
+  assert.equal(PACKET_TYPES.includes('Preference'), true);
+  assert.equal(PACKET_TYPES.includes('Definition'), true);
+  assert.equal(PACKET_TYPES.includes('Bundle'), true);
 });
 
 test('Definition and Bundle expose canonical builder descriptors', () => {
-  const definition = getExperimentalPacketTypeDefinition('Definition');
-  const bundle = getExperimentalPacketTypeDefinition('Bundle');
+  const definition = getDefinedPacketTypeDefinition('Definition');
+  const bundle = getDefinedPacketTypeDefinition('Bundle');
   assert.ok(definition);
   assert.ok(bundle);
 
@@ -78,20 +78,28 @@ test('Definition and Bundle expose canonical builder descriptors', () => {
   );
 });
 
-test('active Definition, Bundle, and Preference descriptors are no longer shadow-only', () => {
+test('active Definition, Bundle, and Preference descriptors are canonical and runtime-ready', () => {
   for (const packetType of ['Definition', 'Bundle', 'Preference']) {
-    const definition = getExperimentalPacketTypeDefinition(packetType);
+    const definition = getDefinedPacketTypeDefinition(packetType);
     assert.ok(definition);
     const serializedDefinition = JSON.stringify(definition);
 
     assert.equal(definition.definition_status, 'canonical');
-    assert.equal(serializedDefinition.includes('experimental_shadow'), false);
-    assert.equal(serializedDefinition.includes('shadow_only'), false);
+    assert.equal(serializedDefinition.includes('experimental'), false);
+    assert.equal(serializedDefinition.includes('shadow'), false);
+    assert.equal(serializedDefinition.includes('definition_only'), false);
+    assert.ok(
+      definition.actions.every(
+        (descriptor) =>
+          descriptor.availability === 'runtime_ready' ||
+          descriptor.availability === 'canonical'
+      )
+    );
   }
 });
 
 test('every manifest definition exposes required compatibility parts and current identity', () => {
-  for (const definition of listExperimentalPacketTypeDefinitions()) {
+  for (const definition of listDefinedPacketTypeDefinitions()) {
     assert.ok(
       listPacketDefinitionParts(definition).some(
         (part) => part.required && part.part_subtype === 'packet_compatibility'
@@ -120,7 +128,7 @@ test('Definition packet can represent a packet_schema definition part', () => {
     supported_subtypes: ['element'],
   });
 
-  assert.equal(parsed.type, 'definition');
+  assert.equal(parsed.subtype, 'packet_schema');
   assert.equal(parsed.subtype, 'packet_schema');
   assert.deepEqual(parsed.supported_subtypes, ['element']);
 });
@@ -140,7 +148,7 @@ test('Preference.element can represent current shell scope display preferences',
     },
   });
 
-  assert.equal(parsed.type, 'preference');
+  assert.equal(parsed.subtype, 'element');
   assert.equal(parsed.privacy, 'private_sync');
   assert.deepEqual(parsed.value.interface.scope_display.main_visible_scope_packet_ids, [
     'nexus:element/locality/city/example',
@@ -167,27 +175,27 @@ test('Bundle packet stays a generic carrier inventory', () => {
     ],
   });
 
-  assert.equal(parsed.type, 'bundle');
+  assert.equal(parsed.subtype, 'packet_set');
   assert.equal(parsed.items[0].item_role, 'definition_part');
 });
 
-test('manifest lookup returns definitions for generic families and null for deferred families', () => {
-  assert.equal(getExperimentalPacketTypeDefinition('Relation')?.packet_type, 'Relation');
-  assert.equal(getExperimentalPacketTypeDefinition('Preference')?.packet_type, 'Preference');
-  assert.equal(getExperimentalPacketTypeDefinition('Signal'), null);
+test('manifest lookup returns definitions for generic types and null for removed types', () => {
+  assert.equal(getDefinedPacketTypeDefinition('Relation')?.packet_type, 'Relation');
+  assert.equal(getDefinedPacketTypeDefinition('Preference')?.packet_type, 'Preference');
+  assert.equal(getDefinedPacketTypeDefinition('Signal'), null);
 });
 
 test('manifest exposes action, builder, planner, and mutation descriptors', () => {
-  const preferenceActions = listExperimentalPacketActions('Preference').map(
+  const preferenceActions = listPacketDefinitionActions('Preference').map(
     (action) => action.action_id
   );
-  const preferenceBuilders = listExperimentalPacketBuilders('Preference').map(
+  const preferenceBuilders = listPacketDefinitionBuilders('Preference').map(
     (builder) => builder.builder_id
   );
-  const preferencePlanners = listExperimentalPacketPlanners('Preference').map(
+  const preferencePlanners = listPacketDefinitionPlanners('Preference').map(
     (planner) => planner.planner_id
   );
-  const preferenceMutations = listExperimentalPacketMutations('Preference').map(
+  const preferenceMutations = listPacketDefinitionMutations('Preference').map(
     (mutation) => mutation.mutation_intent
   );
 
@@ -200,7 +208,7 @@ test('manifest exposes action, builder, planner, and mutation descriptors', () =
 });
 
 test('Preference definition exposes required Definition parts', () => {
-  const preferenceDefinition = getExperimentalPacketTypeDefinition('Preference');
+  const preferenceDefinition = getDefinedPacketTypeDefinition('Preference');
   assert.ok(preferenceDefinition);
 
   const partSubtypes = listPacketDefinitionParts(preferenceDefinition).map(
@@ -213,28 +221,28 @@ test('Preference definition exposes required Definition parts', () => {
   assert.ok(partSubtypes.includes('packet_dependency'));
 });
 
-test('generic family definitions expose required Definition parts', () => {
-  for (const family of GENERIC_PACKET_BUILD_FAMILIES) {
-    const definition = getExperimentalPacketTypeDefinition(family);
-    assert.ok(definition, `${family} should have a staged definition`);
+test('generic type definitions expose required Definition parts', () => {
+  for (const type of GENERIC_PACKET_BUILD_TYPES) {
+    const definition = getDefinedPacketTypeDefinition(type);
+    assert.ok(definition, `${type} should have a staged definition`);
 
     const partSubtypes = listPacketDefinitionParts(definition).map(
       (part) => part.part_subtype
     );
 
-    assert.ok(partSubtypes.includes('packet_definition'), `${family} root part`);
-    assert.ok(partSubtypes.includes('packet_schema'), `${family} schema part`);
-    assert.ok(partSubtypes.includes('packet_action_registry'), `${family} action part`);
-    assert.ok(partSubtypes.includes('packet_builder_descriptor'), `${family} builder part`);
-    assert.ok(partSubtypes.includes('packet_planner_descriptor'), `${family} planner part`);
-    assert.ok(partSubtypes.includes('packet_projection_descriptor'), `${family} projection part`);
-    assert.ok(partSubtypes.includes('packet_compatibility'), `${family} compatibility part`);
-    assert.ok(partSubtypes.includes('packet_dependency'), `${family} dependency part`);
+    assert.ok(partSubtypes.includes('packet_definition'), `${type} root part`);
+    assert.ok(partSubtypes.includes('packet_schema'), `${type} schema part`);
+    assert.ok(partSubtypes.includes('packet_action_registry'), `${type} action part`);
+    assert.ok(partSubtypes.includes('packet_builder_descriptor'), `${type} builder part`);
+    assert.ok(partSubtypes.includes('packet_planner_descriptor'), `${type} planner part`);
+    assert.ok(partSubtypes.includes('packet_projection_descriptor'), `${type} projection part`);
+    assert.ok(partSubtypes.includes('packet_compatibility'), `${type} compatibility part`);
+    assert.ok(partSubtypes.includes('packet_dependency'), `${type} dependency part`);
   }
 });
 
 test('definitions barrel exposes bootstrap parts through prefixed aliases', () => {
-  const preferenceDefinition = getExperimentalPacketTypeDefinition('Preference');
+  const preferenceDefinition = getDefinedPacketTypeDefinition('Preference');
   assert.ok(preferenceDefinition);
 
   const partIds = listDefinitionBootstrapParts(preferenceDefinition).map(
@@ -258,7 +266,7 @@ test('packet manifest template exposes the expected section contract', () => {
 });
 
 test('packet actions are the source of derived affordances', () => {
-  const preferenceDefinition = getExperimentalPacketTypeDefinition('Preference');
+  const preferenceDefinition = getDefinedPacketTypeDefinition('Preference');
   assert.ok(preferenceDefinition);
 
   const actionKinds = derivePacketDefinitionActionKinds(preferenceDefinition);
@@ -268,8 +276,8 @@ test('packet actions are the source of derived affordances', () => {
   assert.equal('affordances' in preferenceDefinition, false);
 });
 
-test('section helpers report template compliance for shadow packet definitions', () => {
-  for (const definition of listExperimentalPacketTypeDefinitions()) {
+test('section helpers report template compliance for definition packet definitions', () => {
+  for (const definition of listDefinedPacketTypeDefinitions()) {
     const compliance = validatePacketDefinitionTemplateCompliance(
       definition,
       PACKET_MANIFEST_TEMPLATE_VERSION
@@ -283,7 +291,7 @@ test('section helpers report template compliance for shadow packet definitions',
 });
 
 test('Preference definition declares concrete compatibility adapters', () => {
-  const preferenceDefinition = getExperimentalPacketTypeDefinition('Preference');
+  const preferenceDefinition = getDefinedPacketTypeDefinition('Preference');
   assert.ok(preferenceDefinition);
 
   const adapterIds = preferenceDefinition.compatibility_adapters.map(
@@ -295,12 +303,12 @@ test('Preference definition declares concrete compatibility adapters', () => {
   assert.ok(adapterIds.includes('preference.element.0_1_current_neighbor'));
 });
 
-test('generic legacy families expose registry-derived compatibility ladders', () => {
-  for (const family of ['Element', 'Claim', 'Attestation', 'Policy'] as const) {
-    const definition = getExperimentalPacketTypeDefinition(family);
+test('generic legacy types expose registry-derived compatibility ladders', () => {
+  for (const type of ['Element', 'Claim', 'Attestation', 'Policy'] as const) {
+    const definition = getDefinedPacketTypeDefinition(type);
     assert.ok(definition);
 
-    const registryEntry = PACKET_COMPATIBILITY_REGISTRY[family];
+    const registryEntry = PACKET_COMPATIBILITY_REGISTRY[type];
     const edges = new Set(
       definition.compatibility_adapters.map(
         (adapter) => `${adapter.from_schema_version}->${adapter.to_schema_version}`
@@ -311,7 +319,7 @@ test('generic legacy families expose registry-derived compatibility ladders', ()
       edges.has(
         `${registryEntry.current_schema_version}->${registryEntry.current_schema_version}`
       ),
-      `${family} identity edge`
+      `${type} identity edge`
     );
 
     for (const [schemaVersion, versionDefinition] of Object.entries(
@@ -320,7 +328,7 @@ test('generic legacy families expose registry-derived compatibility ladders', ()
       if (versionDefinition.next_schema_version && versionDefinition.adaptToNext) {
         assert.ok(
           edges.has(`${schemaVersion}->${versionDefinition.next_schema_version}`),
-          `${family} upcast edge ${schemaVersion}`
+          `${type} upcast edge ${schemaVersion}`
         );
       }
 
@@ -330,7 +338,7 @@ test('generic legacy families expose registry-derived compatibility ladders', ()
       ) {
         assert.ok(
           edges.has(`${schemaVersion}->${versionDefinition.previous_schema_version}`),
-          `${family} downcast edge ${schemaVersion}`
+          `${type} downcast edge ${schemaVersion}`
         );
       }
     }

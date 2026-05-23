@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { POST } from './shell-preferences+api.ts';
+import { POST } from '@/src/app/api/nexus/shell-preferences+api.ts';
 
 async function postShellPreferences(body: Record<string, unknown>) {
   const response = await POST(
@@ -11,7 +11,8 @@ async function postShellPreferences(body: Record<string, unknown>) {
         'content-type': 'application/json',
       },
       body: JSON.stringify(body),
-    })
+    }),
+    {}
   );
 
   return {

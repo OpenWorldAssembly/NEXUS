@@ -237,10 +237,10 @@ export function NexusTabFrame({
     ? 'border-nexus-sky bg-nexus-panel'
     : 'border-sky-400 bg-white';
   const frameClassName = joinClasses(
-    'relative shrink-0 overflow-hidden rounded-t-nexus rounded-b-none border shadow-sm',
+    'relative shrink-0 overflow-hidden rounded-t-nexus rounded-b-none border definition-sm',
     baseSizeClass,
     active
-      ? joinClasses(activeSurfaceClass, 'z-10 -mb-px border-b-transparent shadow-md')
+      ? joinClasses(activeSurfaceClass, 'z-10 -mb-px border-b-transparent definition-md')
       : joinClasses(inactiveSurfaceClass, 'opacity-90'),
     className,
   );

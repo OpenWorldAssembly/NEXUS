@@ -1,16 +1,17 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { GENERIC_PACKET_BUILD_FAMILIES } from '@core/packets/packet-build-pipeline';
+import { GENERIC_PACKET_BUILD_TYPES } from '@core/packets/packet-build-pipeline';
 import {
   auditPacketDefinitionOperations,
-  getExperimentalPacketTypeDefinition,
+  getDefinedPacketTypeDefinition,
   getPacketOperationDefinition,
-  listExperimentalPacketTypeDefinitions,
+  listDefinedPacketTypeDefinitions,
   listPacketOperationDefinitions,
   listPacketOperationModernizationCoverage,
   listTrustedPacketOperationCapabilities,
 } from '@core/packets/packet-definition-manifest';
+import type { PacketOperationKind } from '@core/packets/packet-operation-ontology.ts';
 
 test('packet operation ontology exposes unique stable operation kinds', () => {
   const operations = listPacketOperationDefinitions();
@@ -26,7 +27,7 @@ test('packet operation ontology exposes unique stable operation kinds', () => {
     assert.ok(operation.description.length > 0, operation.operation_kind);
     assert.ok(operation.trusted_runtime_engine.length > 0, operation.operation_kind);
     assert.ok(operation.safety_notes.length > 0, operation.operation_kind);
-    assert.ok(operation.result_families.length > 0, operation.operation_kind);
+    assert.ok(operation.result_types.length > 0, operation.operation_kind);
   }
 });
 
@@ -45,7 +46,7 @@ test('operation ontology is backed by trusted local capability records', () => {
 });
 
 test('every manifest mutation maps to known packet operations', () => {
-  for (const definition of listExperimentalPacketTypeDefinitions()) {
+  for (const definition of listDefinedPacketTypeDefinitions()) {
     const report = auditPacketDefinitionOperations(definition);
 
     assert.equal(report.status, 'pass', definition.packet_type);
@@ -58,20 +59,20 @@ test('every manifest mutation maps to known packet operations', () => {
   }
 });
 
-test('generic family writes map to single-packet create and revise operations', () => {
-  for (const family of GENERIC_PACKET_BUILD_FAMILIES) {
-    if (['Definition', 'Bundle', 'Preference'].includes(family)) {
+test('generic type writes map to single-packet create and revise operations', () => {
+  for (const type of GENERIC_PACKET_BUILD_TYPES) {
+    if (['Definition', 'Bundle', 'Preference'].includes(type)) {
       continue;
     }
 
-    const definition = getExperimentalPacketTypeDefinition(family);
+    const definition = getDefinedPacketTypeDefinition(type);
     assert.ok(definition);
 
     const report = auditPacketDefinitionOperations(definition);
     const genericWrite = report.checked_mutations.find((mutation) =>
       mutation.mutation_intent.endsWith('.generic.write')
     );
-    assert.ok(genericWrite, family);
+    assert.ok(genericWrite, type);
     assert.deepEqual([...genericWrite.operation_kinds].sort(), [
       'single_packet.create',
       'single_packet.revise',
@@ -92,17 +93,17 @@ test('canonical Definition, Bundle, and Preference map to operation descriptors'
     );
     assert.ok(coverage.length > 0, packetType);
 
-    const actualOperations = new Set(
+    const actualOperations = new Set<string>(
       coverage.flatMap((entry) => entry.operation_kinds)
     );
-    for (const operationKind of operationKinds) {
+    for (const operationKind of operationKinds as PacketOperationKind[]) {
       assert.ok(actualOperations.has(operationKind), `${packetType} ${operationKind}`);
     }
   }
 });
 
 test('unknown manifest operation references fail closed', () => {
-  const definition = getExperimentalPacketTypeDefinition('Preference');
+  const definition = getDefinedPacketTypeDefinition('Preference');
   assert.ok(definition);
 
   const brokenDefinition = {

@@ -123,8 +123,8 @@ export type TrustedAttestationOperationPlan = {
   dependency_ids: string[];
   trusted_capability_ids: string[];
   target_packet:
-    | PacketEnvelopeByType['DiscussionPost']
-    | PacketEnvelopeByType['DiscussionReply']
+    | PacketEnvelopeByType['Discussion']
+    | PacketEnvelopeByType['Discussion']
     | PacketEnvelopeByType['Discussion'];
   governing_scope_packet: PacketEnvelopeByType['Element'] | null;
   attestation_packet: PacketEnvelopeByType['Attestation'];
@@ -197,7 +197,7 @@ async function requireElementPacket(input: {
     packet_id: input.packetId,
   });
 
-  if (!packet || packet.header.family !== 'Element') {
+  if (!packet || packet.header.type !== 'Element') {
     throw new Error(`Unknown Element packet: ${input.packetId}`);
   }
 
@@ -212,7 +212,7 @@ async function requireRolePacket(input: {
     packet_id: input.packetId,
   });
 
-  if (!packet || packet.header.family !== 'Role') {
+  if (!packet || packet.header.type !== 'Role') {
     throw new Error(`Unknown Role packet: ${input.packetId}`);
   }
 
@@ -222,28 +222,16 @@ async function requireRolePacket(input: {
 async function requireDiscussionTargetPacket(input: {
   packetStore: NodeSQLitePacketStore;
   packetId: string;
-}): Promise<
-  | PacketEnvelopeByType['DiscussionPost']
-  | PacketEnvelopeByType['DiscussionReply']
-  | PacketEnvelopeByType['Discussion']
-> {
+}): Promise<PacketEnvelopeByType['Discussion']> {
   const packet = await input.packetStore.fetchByPacket({
     packet_id: input.packetId,
   });
 
-  if (
-    !packet ||
-    (packet.header.family !== 'DiscussionPost' &&
-      packet.header.family !== 'DiscussionReply' &&
-      packet.header.family !== 'Discussion')
-  ) {
+  if (!packet || packet.header.type !== 'Discussion') {
     throw new Error(`Unknown packet vote target: ${input.packetId}`);
   }
 
-  return packet as
-    | PacketEnvelopeByType['DiscussionPost']
-    | PacketEnvelopeByType['DiscussionReply']
-    | PacketEnvelopeByType['Discussion'];
+  return packet as PacketEnvelopeByType['Discussion'];
 }
 
 function relationEnrollmentConfig(
@@ -321,7 +309,7 @@ function createEnrollment(
     !alignment.dry_run_ready
   ) {
     throw new Error(
-      `Live generic workflow enrollment is not shadow-aligned: ${mutationIntent}`
+      `Live generic workflow enrollment is not definition-aligned: ${mutationIntent}`
     );
   }
 
@@ -418,7 +406,7 @@ export function auditLiveGenericWorkflowEnrollments(): LiveGenericWorkflowEnroll
         severity: 'error',
         code: 'workflow_not_ready',
         enrollment_id: enrollment.enrollment_id,
-        message: `${enrollment.mutation_intent} is live generic-enrolled before its shadow workflow dry-run is ready.`,
+        message: `${enrollment.mutation_intent} is live generic-enrolled before its definition workflow dry-run is ready.`,
       });
     }
 

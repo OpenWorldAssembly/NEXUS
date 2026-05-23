@@ -1,6 +1,6 @@
 /**
  * File: compatibility/registry.ts
- * Description: Declares family compatibility registries, legacy body schemas, and schema-version metadata helpers.
+ * Description: Declares type compatibility registries, legacy body schemas, and schema-version metadata helpers.
  */
 
 import { z } from 'zod';
@@ -17,14 +17,14 @@ import { PacketCompatibilityError } from '@core/schema/compatibility/types';
 import type {
   PacketAdaptationChangeKind,
   PacketAdaptationLossKind,
-  PacketFamily,
+  PacketType,
   PacketRevisionMode,
 } from '@core/schema/packet-ontology';
 import {
-  CLAIM_KINDS,
+  CHANGE_KINDS,
   DEFAULT_SCHEMA_VERSION,
-  PACKET_FAMILIES,
-  PACKET_FAMILY_REVISION_MODES,
+  PACKET_TYPES,
+  PACKET_TYPE_REVISION_MODES,
   TrustStageSchema,
 } from '@core/schema/packet-ontology';
 import {
@@ -46,7 +46,7 @@ import type { PacketEnvelopeByType } from '@core/schema/packet-body-schemas';
 const RESERVED_BODY_KEYS = new Set([
   'packet_id',
   'revision_id',
-  'family',
+  'type',
   'schema_version',
   'protocol_version',
   'created_at',
@@ -64,8 +64,6 @@ const RESERVED_BODY_KEYS = new Set([
 ]);
 
 const ElementBodySchemaV1_0 = ElementBodySchema.omit({
-  type: true,
-  scope_kind: true,
   scope_system: true,
   status: true,
   aliases: true,
@@ -144,7 +142,6 @@ const LegacyPolicyBodySchema = PolicyBodySchemaV1_0.omit({
 });
 
 const LegacyClaimBodySchema = ClaimBodySchema.omit({
-  type: true,
   subtype: true,
   claim_markdown: true,
   supporting_refs: true,
@@ -155,7 +152,6 @@ const LegacyClaimBodySchema = ClaimBodySchema.omit({
 });
 
 const ClaimBodySchemaV1_0 = ClaimBodySchema.omit({
-  type: true,
   subtype: true,
   claim_markdown: true,
   supporting_refs: true,
@@ -163,7 +159,6 @@ const ClaimBodySchemaV1_0 = ClaimBodySchema.omit({
 });
 
 const AttestationBodySchemaV1_0 = AttestationBodySchema.omit({
-  type: true,
   subtype: true,
 });
 
@@ -180,26 +175,26 @@ const ReportBodySchemaV1_0 = ReportBodySchema.extend({
 });
 
 const DiscussionBodySchemaV1_0 = DiscussionBodySchema.refine(
-  (body) => body.kind !== 'post',
+  (body) => body.subtype !== 'post',
   {
     message:
       'Discussion schema 1.0.0 does not support canonical post nodes.',
   }
 );
 
-function createDefaultCompatibilityEntry<TFamily extends PacketFamily>(
-  family: TFamily
-): PacketCompatibilityEntry<TFamily> {
+function createDefaultCompatibilityEntry<TType extends PacketType>(
+  type: TType
+): PacketCompatibilityEntry<TType> {
   return {
     current_schema_version: DEFAULT_SCHEMA_VERSION,
-    revision_mode: PACKET_FAMILY_REVISION_MODES[family],
+    revision_mode: PACKET_TYPE_REVISION_MODES[type],
     support_level: 'current_only',
     write_target_policy: 'current_only',
     versions: {
       [DEFAULT_SCHEMA_VERSION]: {
         parseBody: (body) => {
-          rejectHeaderBodyCollisions(body, family);
-          return getPacketBodySchema(family).parse(body);
+          rejectHeaderBodyCollisions(body, type);
+          return getPacketBodySchema(type).parse(body);
         },
       },
     },
@@ -261,14 +256,6 @@ function stripElementV1_1CompatibilityFields(
     changed = true;
   }
 
-  if (
-    Object.prototype.hasOwnProperty.call(nextBody, 'scope_kind') &&
-    nextBody.scope_kind === null
-  ) {
-    const { scope_kind: _scopeKind, ...withoutScopeKind } = nextBody;
-    nextBody = withoutScopeKind;
-    changed = true;
-  }
 
   if (
     Object.prototype.hasOwnProperty.call(nextBody, 'scope_system') &&
@@ -398,10 +385,10 @@ function stripCurrentClaimCompatibilityFields(
   }
 
   if (
-    Object.prototype.hasOwnProperty.call(nextBody, 'claim_kind') &&
-    nextBody.claim_kind === null
+    Object.prototype.hasOwnProperty.call(nextBody, 'subtype') &&
+    nextBody.subtype === null
   ) {
-    const { claim_kind: _claimKind, ...withoutClaimKind } = nextBody;
+    const { subtype: _claimKind, ...withoutClaimKind } = nextBody;
     nextBody = withoutClaimKind;
     changed = true;
   }
@@ -435,7 +422,7 @@ function stripCurrentAttestationCompatibilityFields(
 
   if (
     Object.prototype.hasOwnProperty.call(nextBody, 'subtype') &&
-    nextBody.subtype === nextBody.attestation_kind
+    nextBody.subtype === nextBody.subtype
   ) {
     const { subtype: _subtype, ...withoutSubtype } = nextBody;
     nextBody = withoutSubtype;
@@ -608,7 +595,7 @@ function stripActionV1_1CompatibilityFields(
 export const PACKET_COMPATIBILITY_REGISTRY = {
   Definition: {
     current_schema_version: '0.1.0',
-    revision_mode: PACKET_FAMILY_REVISION_MODES.Definition,
+    revision_mode: PACKET_TYPE_REVISION_MODES.Definition,
     support_level: 'current_only',
     write_target_policy: 'current_only',
     versions: {
@@ -622,7 +609,7 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
   },
   Element: {
     current_schema_version: '1.1.0',
-    revision_mode: PACKET_FAMILY_REVISION_MODES.Element,
+    revision_mode: PACKET_TYPE_REVISION_MODES.Element,
     support_level: 'legacy_supported',
     write_target_policy: 'supported_versions',
     versions: {
@@ -681,9 +668,7 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
         matchesDeclaredCurrentBodyShape: (body) =>
           bodyHasOwnProperty(body, 'claimed_role_refs') &&
           bodyHasOwnProperty(body, 'locality') &&
-          (!bodyHasOwnProperty(body, 'type') ||
-            !bodyHasOwnProperty(body, 'scope_kind') ||
-            !bodyHasOwnProperty(body, 'scope_system') ||
+          (!bodyHasOwnProperty(body, 'scope_system') ||
             !bodyHasOwnProperty(body, 'status') ||
             !bodyHasOwnProperty(body, 'aliases') ||
             !bodyHasOwnProperty(body, 'display_aliases') ||
@@ -732,9 +717,7 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
 
           return {
             body: {
-              type: 'element',
               ...currentBody,
-              scope_kind: null,
               scope_system: null,
               status: null,
               aliases: [],
@@ -744,19 +727,11 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
             changes: [
               createAdaptationChange({
                 kind: 'added_default_field',
-                path: 'body.type',
+                path: 'body.subtype',
                 fromSchemaVersion: '1.0.0',
                 toSchemaVersion: '1.1.0',
                 message:
-                  'Added canonical element type field for forward ontology compatibility.',
-              }),
-              createAdaptationChange({
-                kind: 'normalized_null_default',
-                path: 'body.scope_kind',
-                fromSchemaVersion: '1.0.0',
-                toSchemaVersion: '1.1.0',
-                message:
-                  'Added scope_kind field with null default for forward scope compatibility.',
+                  'Confirmed canonical element subtype field for forward ontology compatibility.',
               }),
               createAdaptationChange({
                 kind: 'normalized_null_default',
@@ -854,7 +829,7 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
   Location: createDefaultCompatibilityEntry('Location'),
   Claim: {
     current_schema_version: '1.1.0',
-    revision_mode: PACKET_FAMILY_REVISION_MODES.Claim,
+    revision_mode: PACKET_TYPE_REVISION_MODES.Claim,
     support_level: 'legacy_supported',
     write_target_policy: 'supported_versions',
     versions: {
@@ -913,7 +888,6 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
 
           return {
             body: {
-              type: 'claim',
               subtype: 'relation_assertion',
               target_ref: currentBody.target_ref,
               subject_ref: currentBody.subject_ref,
@@ -922,22 +896,21 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
               claim_markdown: currentBody.note ?? null,
               supporting_refs: [],
               relation_assertion: {
-                subtype: currentBody.claim_kind,
+                subtype: 'relation_assertion',
                 subject_ref: currentBody.subject_ref,
                 target_ref: currentBody.target_ref,
                 scope_ref: currentBody.scope_ref,
               },
-              claim_kind: currentBody.claim_kind,
               note: currentBody.note ?? null,
             },
             changes: [
               createAdaptationChange({
                 kind: 'added_default_field',
-                path: 'body.type',
+                path: 'body.subtype',
                 fromSchemaVersion: '1.0.0',
                 toSchemaVersion: '1.1.0',
                 message:
-                  'Added canonical claim type field for forward ontology compatibility.',
+                  'Confirmed canonical claim subtype field for forward ontology compatibility.',
               }),
               createAdaptationChange({
                 kind: 'added_default_field',
@@ -1001,7 +974,7 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
 
           if (
             currentBody.subtype !== 'relation_assertion' &&
-            currentBody.claim_kind === null
+            currentBody.subtype === null
           ) {
             losses.push(
               createAdaptationLoss({
@@ -1017,9 +990,9 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
 
           const relationAssertion =
             currentBody.relation_assertion ??
-            (currentBody.claim_kind && currentBody.subject_ref && currentBody.scope_ref
+            (currentBody.subtype && currentBody.subject_ref && currentBody.scope_ref
               ? {
-                  subtype: currentBody.claim_kind,
+                  subtype: currentBody.subtype,
                   subject_ref: currentBody.subject_ref,
                   target_ref: currentBody.target_ref,
                   scope_ref: currentBody.scope_ref,
@@ -1027,8 +1000,8 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
               : null);
 
           const previousBody = {
-            claim_kind:
-              currentBody.claim_kind ?? relationAssertion?.subtype ?? CLAIM_KINDS[0],
+            subtype:
+              currentBody.subtype ?? relationAssertion?.subtype ?? subtypeS[0],
             subject_ref: currentBody.subject_ref ??
               relationAssertion?.subject_ref ?? {
                 packet_id: currentBody.target_ref.packet_id,
@@ -1071,7 +1044,7 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
   Relation: createDefaultCompatibilityEntry('Relation'),
   Report: {
     current_schema_version: '1.1.0',
-    revision_mode: PACKET_FAMILY_REVISION_MODES.Report,
+    revision_mode: PACKET_TYPE_REVISION_MODES.Report,
     support_level: 'legacy_supported',
     write_target_policy: 'supported_versions',
     versions: {
@@ -1146,12 +1119,11 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
       },
     },
   },
-  Signal: createDefaultCompatibilityEntry('Signal'),
   Proposal: createDefaultCompatibilityEntry('Proposal'),
   Vote: createDefaultCompatibilityEntry('Vote'),
   Attestation: {
     current_schema_version: '1.1.0',
-    revision_mode: PACKET_FAMILY_REVISION_MODES.Attestation,
+    revision_mode: PACKET_TYPE_REVISION_MODES.Attestation,
     support_level: 'legacy_supported',
     write_target_policy: 'supported_versions',
     versions: {
@@ -1161,25 +1133,24 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
           return AttestationBodySchemaV1_0.parse(body);
         },
         matchesDeclaredCurrentBodyShape: (body) =>
-          !bodyHasOwnProperty(body, 'type') || !bodyHasOwnProperty(body, 'subtype'),
+          !bodyHasOwnProperty(body, 'subtype'),
         next_schema_version: '1.1.0',
         adaptToNext: (body) => {
           const currentBody = AttestationBodySchemaV1_0.parse(body);
 
           return {
             body: {
-              type: 'attestation',
-              subtype: currentBody.attestation_kind,
+              subtype: 'packet_signal',
               ...currentBody,
             },
             changes: [
               createAdaptationChange({
                 kind: 'added_default_field',
-                path: 'body.type',
+                path: 'body.subtype',
                 fromSchemaVersion: '1.0.0',
                 toSchemaVersion: '1.1.0',
                 message:
-                  'Added canonical attestation type field for forward ontology compatibility.',
+                  'Confirmed canonical attestation subtype field for forward ontology compatibility.',
               }),
               createAdaptationChange({
                 kind: 'added_default_field',
@@ -1187,7 +1158,7 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
                 fromSchemaVersion: '1.0.0',
                 toSchemaVersion: '1.1.0',
                 message:
-                  'Added canonical attestation subtype field mirroring attestation_kind.',
+                  'Added canonical attestation subtype field mirroring subtype.',
               }),
             ],
           };
@@ -1229,10 +1200,9 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
     },
   },
   Decision: createDefaultCompatibilityEntry('Decision'),
-  Cause: createDefaultCompatibilityEntry('Cause'),
   Action: {
     current_schema_version: '1.1.0',
-    revision_mode: PACKET_FAMILY_REVISION_MODES.Action,
+    revision_mode: PACKET_TYPE_REVISION_MODES.Action,
     support_level: 'legacy_supported',
     write_target_policy: 'supported_versions',
     versions: {
@@ -1334,16 +1304,9 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
       },
     },
   },
-  Initiative: createDefaultCompatibilityEntry('Initiative'),
-  Program: createDefaultCompatibilityEntry('Program'),
-  Campaign: createDefaultCompatibilityEntry('Campaign'),
-  MissionTemplate: createDefaultCompatibilityEntry('MissionTemplate'),
-  MissionPlan: createDefaultCompatibilityEntry('MissionPlan'),
-  MissionReport: createDefaultCompatibilityEntry('MissionReport'),
-  Module: createDefaultCompatibilityEntry('Module'),
   Preference: {
     current_schema_version: '0.1.0',
-    revision_mode: PACKET_FAMILY_REVISION_MODES.Preference,
+    revision_mode: PACKET_TYPE_REVISION_MODES.Preference,
     support_level: 'current_only',
     write_target_policy: 'current_only',
     versions: {
@@ -1357,7 +1320,7 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
   },
   Policy: {
     current_schema_version: '1.3.0',
-    revision_mode: PACKET_FAMILY_REVISION_MODES.Policy,
+    revision_mode: PACKET_TYPE_REVISION_MODES.Policy,
     support_level: 'legacy_supported',
     write_target_policy: 'supported_versions',
     versions: {
@@ -1630,7 +1593,7 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
   },
   Discussion: {
     current_schema_version: '1.1.0',
-    revision_mode: PACKET_FAMILY_REVISION_MODES.Discussion,
+    revision_mode: PACKET_TYPE_REVISION_MODES.Discussion,
     support_level: 'legacy_supported',
     write_target_policy: 'supported_versions',
     versions: {
@@ -1645,7 +1608,7 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
           changes: [
             createAdaptationChange({
               kind: 'schema_version_bump',
-              path: 'body.kind',
+              path: 'body.subtype',
               fromSchemaVersion: '1.0.0',
               toSchemaVersion: '1.1.0',
               message:
@@ -1663,7 +1626,7 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
         adaptToPrevious: (body) => {
           const currentBody = DiscussionBodySchema.parse(body);
 
-          if (currentBody.kind !== 'post') {
+          if (currentBody.subtype !== 'post') {
             return {
               body: currentBody,
               changes: [],
@@ -1689,7 +1652,7 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
             changes: [
               createAdaptationChange({
                 kind: 'renamed_field',
-                path: 'body.kind',
+                path: 'body.subtype',
                 fromSchemaVersion: '1.1.0',
                 toSchemaVersion: '1.0.0',
                 message:
@@ -1699,7 +1662,7 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
             losses: [
               createAdaptationLoss({
                 kind: 'unsupported_target_feature_omission',
-                path: 'body.kind',
+                path: 'body.subtype',
                 fromSchemaVersion: '1.1.0',
                 toSchemaVersion: '1.0.0',
                 message:
@@ -1723,16 +1686,9 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
       },
     },
   },
-  DiscussionSpace: createDefaultCompatibilityEntry('DiscussionSpace'),
-  DiscussionForum: createDefaultCompatibilityEntry('DiscussionForum'),
-  DiscussionThread: createDefaultCompatibilityEntry('DiscussionThread'),
-  DiscussionPost: createDefaultCompatibilityEntry('DiscussionPost'),
-  DiscussionReply: createDefaultCompatibilityEntry('DiscussionReply'),
-  Minutes: createDefaultCompatibilityEntry('Minutes'),
-  Artifact: createDefaultCompatibilityEntry('Artifact'),
   Bundle: {
     current_schema_version: '0.1.0',
-    revision_mode: PACKET_FAMILY_REVISION_MODES.Bundle,
+    revision_mode: PACKET_TYPE_REVISION_MODES.Bundle,
     support_level: 'current_only',
     write_target_policy: 'current_only',
     versions: {
@@ -1745,12 +1701,12 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
     },
   },
 } satisfies {
-  [TFamily in PacketFamily]: PacketCompatibilityEntry<TFamily>;
+  [TType in PacketType]: PacketCompatibilityEntry<TType>;
 };
 
 export function rejectHeaderBodyCollisions(
   body: unknown,
-  family: PacketFamily
+  type: PacketType
 ): void {
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     return;
@@ -1762,57 +1718,57 @@ export function rejectHeaderBodyCollisions(
         {
           code: 'custom',
           path: ['body', key],
-          message: `Body field collides with reserved header field for ${family}.`,
+          message: `Body field collides with reserved header field for ${type}.`,
         },
       ]);
     }
   });
 }
 
-export function getPacketVersionDefinition<TFamily extends PacketFamily>(
-  family: TFamily,
+export function getPacketVersionDefinition<TType extends PacketType>(
+  type: TType,
   schemaVersion: string
-): PacketSchemaVersionDefinition<TFamily> {
-  const versions = PACKET_COMPATIBILITY_REGISTRY[family]
-    .versions as Record<string, PacketSchemaVersionDefinition<TFamily>>;
+): PacketSchemaVersionDefinition<TType> {
+  const versions = PACKET_COMPATIBILITY_REGISTRY[type]
+    .versions as Record<string, PacketSchemaVersionDefinition<TType>>;
   const versionDefinition = versions[schemaVersion];
 
   if (!versionDefinition) {
     throw new PacketCompatibilityError({
       code: 'unsupported_schema_version',
-      family,
+      type,
       sourceSchemaVersion: schemaVersion,
       targetSchemaVersion: schemaVersion,
-      message: `Unsupported schema version ${schemaVersion} for packet family ${family}.`,
+      message: `Unsupported schema version ${schemaVersion} for packet type ${type}.`,
     });
   }
 
   return versionDefinition;
 }
 
-export function getPacketFamilyRevisionMode(
-  family: PacketFamily
+export function getPacketTypeRevisionMode(
+  type: PacketType
 ): PacketRevisionMode {
-  return PACKET_COMPATIBILITY_REGISTRY[family].revision_mode;
+  return PACKET_COMPATIBILITY_REGISTRY[type].revision_mode;
 }
 
 export function getPacketCompatibilityAuditSummary(
-  family: PacketFamily
+  type: PacketType
 ): PacketCompatibilityAuditSummary {
-  const familyEntry = PACKET_COMPATIBILITY_REGISTRY[family];
-  const supportedSchemaVersions = Object.keys(familyEntry.versions).sort();
+  const typeEntry = PACKET_COMPATIBILITY_REGISTRY[type];
+  const supportedSchemaVersions = Object.keys(typeEntry.versions).sort();
 
   return {
-    family,
-    current_schema_version: familyEntry.current_schema_version,
-    revision_mode: familyEntry.revision_mode,
-    support_level: familyEntry.support_level,
-    write_target_policy: familyEntry.write_target_policy,
+    type,
+    current_schema_version: typeEntry.current_schema_version,
+    revision_mode: typeEntry.revision_mode,
+    support_level: typeEntry.support_level,
+    write_target_policy: typeEntry.write_target_policy,
     supported_schema_versions: supportedSchemaVersions,
     has_legacy_versions: supportedSchemaVersions.some(
-      (schemaVersion) => schemaVersion !== familyEntry.current_schema_version
+      (schemaVersion) => schemaVersion !== typeEntry.current_schema_version
     ),
-    has_write_preparation: Object.values(familyEntry.versions).some(
+    has_write_preparation: Object.values(typeEntry.versions).some(
       (versionDefinition) =>
         typeof versionDefinition.createUnsignedPacketCandidate === 'function'
     ),
@@ -1820,9 +1776,10 @@ export function getPacketCompatibilityAuditSummary(
 }
 
 export function listPacketCompatibilityAuditSummaries(): PacketCompatibilityAuditSummary[] {
-  return PACKET_FAMILIES.map((family) => getPacketCompatibilityAuditSummary(family));
+  return PACKET_TYPES.map((type) => getPacketCompatibilityAuditSummary(type));
 }
 
-export function getPacketCurrentSchemaVersion(family: PacketFamily): string {
-  return PACKET_COMPATIBILITY_REGISTRY[family].current_schema_version;
+export function getPacketCurrentSchemaVersion(type: PacketType): string {
+  return PACKET_COMPATIBILITY_REGISTRY[type].current_schema_version;
 }
+

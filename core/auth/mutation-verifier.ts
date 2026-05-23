@@ -221,9 +221,9 @@ export function assertSignedPacketsMatchCandidate(input: {
   input.candidatePackets.forEach((candidatePacket, index) => {
     const signedPacket = input.signedPackets[index];
 
-    if (!signedPacket || signedPacket.header.family !== candidatePacket.header.family) {
+    if (!signedPacket || signedPacket.header.type !== candidatePacket.header.type) {
       throw new Error(
-        'Signed mutation packet bundle does not match the canonical packet families.'
+        'Signed mutation packet bundle does not match the canonical packet types.'
       );
     }
 
@@ -258,7 +258,7 @@ export function createDiscussionThreadPostCandidate(input: {
     (packetId) =>
       createPacketEdge('references', packetId, {
         source_field: 'legacy_context_packet_ids',
-        adapter_profile: 'discussion-family-unification',
+        adapter_profile: 'discussion-type-unification',
       })
   );
   const threadKind =
@@ -295,7 +295,7 @@ export function createDiscussionThreadPostCandidate(input: {
     metadata_tags: ['discussion', 'topic', input.intent.forum_kind],
     metadata_summary: createTextExcerpt(postBody),
     edges: legacyContextEdges,
-    kind: 'topic',
+    subtype: 'topic',
     role: threadKind,
     title: threadTitle,
     summary: createTextExcerpt(postBody, 160),
@@ -327,7 +327,7 @@ export function createDiscussionThreadPostCandidate(input: {
     metadata_tags: ['discussion', 'message', input.intent.forum_kind, 'topic-root'],
     metadata_summary: createTextExcerpt(postBody),
     edges: legacyContextEdges,
-    kind: 'message',
+    subtype: 'message',
     role: 'forum_post',
     title: topicPacket.body.title,
     created_by: {
@@ -362,7 +362,7 @@ export function createDiscussionReplyCandidate(input: {
     (packetId) =>
       createPacketEdge('references', packetId, {
         source_field: 'legacy_context_packet_ids',
-        adapter_profile: 'discussion-family-unification',
+        adapter_profile: 'discussion-type-unification',
       })
   );
   const authorityScopePacketId =
@@ -394,7 +394,7 @@ export function createDiscussionReplyCandidate(input: {
     metadata_tags: ['discussion', 'message', 'reply', input.intent.forum_kind],
     metadata_summary: createTextExcerpt(replyBody),
     edges: legacyContextEdges,
-    kind: 'message',
+    subtype: 'message',
     role: 'reply',
     title: createFallbackDiscussionTitle(
       input.actorPacket.body.name,

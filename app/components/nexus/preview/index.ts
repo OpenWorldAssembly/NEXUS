@@ -5,7 +5,7 @@
 export { NexusPreviewPanel, type NexusPreviewPanelProps } from './nexus-preview-panel';
 export { NexusStatCard, type NexusStatCardProps } from './nexus-stat-card';
 export {
-  getNexusPreviewSurfaceForPacketFamily,
+  getNexusPreviewSurfaceForPacketType,
   getNexusPreviewSurfaceLabel,
   getNexusPreviewTargetFocusActionLabel,
   getNexusPreviewTargetForPacketProjection,

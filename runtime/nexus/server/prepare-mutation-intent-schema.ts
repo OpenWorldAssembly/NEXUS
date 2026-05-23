@@ -5,7 +5,7 @@
 
 import { z } from 'zod';
 
-import { ShellChromePreferenceValueSchema } from '@core/packets/packet-definition-manifest';
+import { ShellChromePreferenceValueSchema } from '@core/packets/definitions/preference.ts';
 
 export const ActorAssertionSchema = z
   .object({
@@ -300,3 +300,4 @@ export const PrepareMutationRequestSchema = z
     intent: MutationIntentSchema,
   })
   .strict();
+

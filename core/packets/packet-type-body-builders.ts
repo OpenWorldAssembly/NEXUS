@@ -24,7 +24,7 @@ import {
 } from '@core/packets/definitions/preference-helpers.ts';
 import type { ElementPreferenceBuilderInput } from '@core/packets/definitions/preference.ts';
 import {
-  getExperimentalPacketTypeDefinition,
+  getDefinedPacketTypeDefinition,
   type PacketTypeDefinition as PublicPacketTypeDefinition,
 } from '@core/packets/packet-definition-manifest';
 import type { PacketRef } from '@core/schema/packet-schema';
@@ -108,7 +108,7 @@ const PACKET_TYPE_BODY_BUILDERS = [
 ] as const satisfies readonly PacketTypeBodyBuilderDescriptor[];
 
 function requireDefinition(packetType: string): PublicPacketTypeDefinition {
-  const definition = getExperimentalPacketTypeDefinition(packetType);
+  const definition = getDefinedPacketTypeDefinition(packetType);
 
   if (!definition) {
     throw new Error(`Unknown packet type body builder packet_type: ${packetType}`);
@@ -146,7 +146,6 @@ function buildDefinitionPartBody(
 ): PacketTypeBodyCandidate<DefinitionBody> {
   const { definition, part } = input;
   const base = {
-    type: 'definition' as const,
     subtype: part.part_subtype,
     status: input.status ?? 'active',
     definition_version: part.schema_version,
@@ -243,7 +242,6 @@ function buildBundlePacketSetBody(
   input: BundlePacketSetBodyBuilderInput
 ): PacketTypeBodyCandidate<BundleBody> {
   const body = BundleBodySchema.parse({
-    type: 'bundle',
     subtype: input.packet_subtype,
     title: input.title,
     summary: input.summary ?? null,

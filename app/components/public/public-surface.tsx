@@ -120,7 +120,7 @@ export const PUBLIC_SURFACE_CLASSES = {
 export const DEFAULT_PUBLIC_SURFACE_CLASS_NAME = PUBLIC_SURFACE_CLASSES.defaultBaseClassName;
 
 export const PUBLIC_SURFACE_STYLE_VALUES = {
-  sectionShadowColor: '#07121d',
+  sectionDefinitionColor: '#07121d',
 } as const;
 
 const styles = StyleSheet.create({

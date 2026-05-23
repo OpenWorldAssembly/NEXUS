@@ -27,7 +27,7 @@ test('runtime scope display preferences round-trip through Preference.element bo
     preferences: runtimePreferences,
   });
 
-  assert.equal(body.type, 'preference');
+  assert.equal(body.subtype, 'element');
   assert.equal(body.subtype, 'element');
   assert.equal(body.owner_ref.packet_id, 'nexus:element/person/alice');
   assert.equal(body.privacy, 'private_sync');

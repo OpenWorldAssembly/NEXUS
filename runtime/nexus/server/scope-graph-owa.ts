@@ -1,58 +1,47 @@
 /**
  * File: scope-graph-owa.ts
- * Description: Keeps OWA-specific cause-anchor policy lookup separate from the generic scope graph projection.
+ * Description: Keeps OWA-specific Action initiative policy lookup separate from the generic scope graph projection.
  */
 
 import type { PacketEnvelopeByType } from '@core/schema/packet-schema';
-import { collectPoliciesForCauseAnchor } from '@runtime/nexus/server/relation-policy';
+import { collectPoliciesForActionAnchor } from '@runtime/nexus/server/relation-policy';
 import type { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store';
 
-type CauseLikePacket =
-  | PacketEnvelopeByType['Cause']
-  | PacketEnvelopeByType['Initiative']
-  | PacketEnvelopeByType['Program']
-  | PacketEnvelopeByType['Campaign'];
-
-async function resolveOwaCauseAnchor(
+async function resolveOwaActionAnchor(
   packetStore: NodeSQLitePacketStore
-): Promise<CauseLikePacket | null> {
-  const directCause = await packetStore.fetchByPacket({ packet_id: 'nexus:cause/owa' });
+): Promise<PacketEnvelopeByType['Action'] | null> {
+  const directAction = await packetStore.fetchByPacket({
+    packet_id: 'nexus:action/initiative/owa',
+  });
 
-  if (directCause?.header.family === 'Cause' && directCause.body.subtype === 'initiative') {
-    return directCause as PacketEnvelopeByType['Cause'];
+  if (directAction?.header.type === 'Action' && directAction.body.subtype === 'initiative') {
+    return directAction as PacketEnvelopeByType['Action'];
   }
 
-  for (const family of ['Initiative', 'Program', 'Campaign'] as const) {
-    const packets = await packetStore.listPreferredPacketsByFamily(family);
-    const anchor =
-      packets.find((packet) => packet.header.packet_id.toLowerCase().includes('owa')) ??
-      packets.find((packet) => {
-        const title = 'title' in packet.body ? packet.body.title : null;
-
-        return typeof title === 'string' && title.trim().toLowerCase() === 'owa';
-      });
-
-    if (anchor) {
-      return anchor as CauseLikePacket;
-    }
-  }
-
-  return null;
+  const actionPackets = await packetStore.listPreferredPacketsByType('Action');
+  return (
+    (actionPackets.find(
+      (packet) =>
+        packet.body.subtype === 'initiative' &&
+        (packet.header.packet_id.toLowerCase().includes('owa') ||
+          packet.body.title.trim().toLowerCase() === 'owa')
+    ) as PacketEnvelopeByType['Action'] | undefined) ?? null
+  );
 }
 
 export async function getOwaRelationPolicyPackets(
   packetStore: NodeSQLitePacketStore
 ): Promise<PacketEnvelopeByType['Policy'][]> {
   const [anchorPacket, policyPackets] = await Promise.all([
-    resolveOwaCauseAnchor(packetStore),
-    packetStore.listPreferredPacketsByFamily('Policy'),
+    resolveOwaActionAnchor(packetStore),
+    packetStore.listPreferredPacketsByType('Policy'),
   ]);
 
   if (!anchorPacket) {
     return [];
   }
 
-  return collectPoliciesForCauseAnchor({
+  return collectPoliciesForActionAnchor({
     anchorPacket,
     policyPackets: policyPackets as PacketEnvelopeByType['Policy'][],
   });

@@ -35,7 +35,7 @@ test('element packet status is exposed through the shared label projection helpe
   const packet = createElementPacket({
     packet_id: 'nexus:element/test-operator',
     created_at: '2026-05-07T00:00:00.000Z',
-    kind: 'operator',
+    subtype: 'operator',
     name: 'Test Operator',
     status: 'active',
   });

@@ -34,7 +34,7 @@ test('exact packet-id search returns the packet in the direct group', async () =
   const packet = createElementPacket({
     packet_id: 'nexus:element/search-root',
     revision_id: 'nexus:element/search-root@r1',
-    kind: 'service',
+    subtype: 'service',
     name: 'Search Root',
     summary: 'Alpha packet summary.',
     tags: ['mesh-signal'],
@@ -88,13 +88,13 @@ test('exact historical revision-id search resolves the owning packet while prese
   const packetV1 = createElementPacket({
     packet_id: 'nexus:element/search-history',
     revision_id: 'nexus:element/search-history@r1',
-    kind: 'organization',
+    subtype: 'organization',
     name: 'Search History',
   });
   const packetV2 = createElementPacket({
     packet_id: packetV1.header.packet_id,
     revision_id: 'nexus:element/search-history@r2',
-    kind: 'organization',
+    subtype: 'organization',
     name: 'Search History Updated',
     parent_revision_refs: [
       {
@@ -147,7 +147,7 @@ test('search groups name and text matches from the preferred packet index', asyn
   const textPacket = createElementPacket({
     packet_id: 'nexus:element/search-signal',
     revision_id: 'nexus:element/search-signal@r1',
-    kind: 'service',
+    subtype: 'service',
     name: 'Signal Node',
     summary: 'Community pulse and archival traffic.',
     tags: ['mesh-signal'],
@@ -208,7 +208,7 @@ test('all-category previews stay capped while focused categories support paging'
         createElementPacket({
           packet_id: `nexus:element/search-page-${index}`,
           revision_id: `nexus:element/search-page-${index}@r1`,
-          kind: 'service',
+          subtype: 'service',
           name: `Beacon Result ${index}`,
           summary: `Beacon page result ${index}.`,
         })

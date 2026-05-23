@@ -27,13 +27,13 @@ export type ScopeLens = {
 };
 
 export type DiscussionEntryPacket =
-  | PacketEnvelopeByType['DiscussionPost']
-  | PacketEnvelopeByType['DiscussionReply'];
+  | PacketEnvelopeByType['Discussion']
+  | PacketEnvelopeByType['Discussion'];
 
 export type VisibleForumEntry = {
   forumId: string;
-  discussionSpacePacket: PacketEnvelopeByType['DiscussionSpace'];
-  forumPacket: PacketEnvelopeByType['DiscussionForum'];
+  discussionSpacePacket: PacketEnvelopeByType['Discussion'];
+  forumPacket: PacketEnvelopeByType['Discussion'];
   displayTitle: string;
 };
 
@@ -87,9 +87,9 @@ export function buildScopeLens(
 
 export function matchesScopeLens(
   packet:
-    | PacketEnvelopeByType['DiscussionSpace']
-    | PacketEnvelopeByType['DiscussionForum']
-    | PacketEnvelopeByType['DiscussionThread']
+    | PacketEnvelopeByType['Discussion']
+    | PacketEnvelopeByType['Discussion']
+    | PacketEnvelopeByType['Discussion']
     | DiscussionEntryPacket,
   lens: ScopeLens
 ): boolean {
@@ -118,9 +118,9 @@ export function matchesScopeLens(
 
 export function matchesAuthorityScope(
   packet:
-    | PacketEnvelopeByType['DiscussionSpace']
-    | PacketEnvelopeByType['DiscussionForum']
-    | PacketEnvelopeByType['DiscussionThread']
+    | PacketEnvelopeByType['Discussion']
+    | PacketEnvelopeByType['Discussion']
+    | PacketEnvelopeByType['Discussion']
     | DiscussionEntryPacket,
   lens: ScopeLens
 ): boolean {
@@ -134,8 +134,8 @@ export function matchesAuthorityScope(
 
 export function getPacketScopeRank(
   packet:
-    | PacketEnvelopeByType['DiscussionSpace']
-    | PacketEnvelopeByType['DiscussionForum'],
+    | PacketEnvelopeByType['Discussion']
+    | PacketEnvelopeByType['Discussion'],
   lens: ScopeLens
 ): number {
   const authorityPacketId = packet.header.authority_scope_ref?.packet_id ?? null;

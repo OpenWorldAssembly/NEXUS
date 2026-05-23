@@ -50,7 +50,7 @@ type PublicBackgroundVariantSettings = {
 };
 
 type HeroPalette = PublicBackgroundPalette;
-type AboutPalette = PublicBackgroundPalette;
+type AboutPalette = Partial<PublicBackgroundPalette>;
 
 const DEFAULT_PUBLIC_BACKGROUND_PALETTE: PublicBackgroundPalette = {
   base: '#09131f',

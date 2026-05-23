@@ -1,13 +1,13 @@
 /**
- * File: families/element.ts
- * Description: Family-owned build rules for canonical Element packets.
+ * File: types/element.ts
+ * Description: Type-owned build rules for canonical Element packets.
  */
 
 import type { ElementPacketInput } from '@core/packets/builders';
-import type { PacketFamilyBuildDefinition } from '@core/packets/packet-build-pipeline';
+import type { PacketTypeBuildDefinition } from '@core/packets/packet-build-pipeline';
 import {
   getCanonicalElementSubtype,
-  getElementKindFromSubtype,
+  type ElementSubtype,
 } from '@core/schema/packet-schema';
 
 function normalizeIdentity(input: ElementPacketInput) {
@@ -19,35 +19,38 @@ function normalizeIdentity(input: ElementPacketInput) {
     alias: input.identity.alias,
     claim_status: input.identity.claim_status,
     location_disclosure: input.identity.location_disclosure ?? null,
-    public_key_bindings: input.identity.public_key_bindings ?? [],
+    public_key_bindings: (input.identity.public_key_bindings ?? []).map(
+      (binding) => ({
+        kid: binding.kid,
+        alg: binding.alg,
+        kty: binding.kty,
+        crv: binding.crv ?? null,
+        public_jwk: binding.public_jwk,
+        status: binding.status ?? 'active',
+        added_at: binding.added_at,
+        revoked_at: binding.revoked_at ?? null,
+      })
+    ),
   };
 }
 
-export const elementBuildDefinition: PacketFamilyBuildDefinition<
+export const elementBuildDefinition: PacketTypeBuildDefinition<
   'Element',
   ElementPacketInput
 > = {
   finalizeBody: (input) => {
     const canonicalSubtype = getCanonicalElementSubtype({
-      kind: input.kind ?? null,
       subtype: input.subtype ?? null,
     });
-    const compatibilityKind = getElementKindFromSubtype({
-      subtype: canonicalSubtype,
-      fallbackKind: input.kind ?? null,
-    });
 
-    if (!compatibilityKind) {
-      throw new Error('Element packets require a recognizable kind or canonical subtype.');
+    if (!canonicalSubtype) {
+      throw new Error('Element packets require a canonical subtype.');
     }
 
     return {
-      type: 'element',
-      kind: compatibilityKind,
+      subtype: canonicalSubtype as ElementSubtype,
       name: input.name,
-      subtype: canonicalSubtype,
       summary: input.summary ?? null,
-      scope_kind: input.scope_kind ?? null,
       scope_system: input.scope_system ?? null,
       status: input.status ?? null,
       aliases: input.aliases ?? [],

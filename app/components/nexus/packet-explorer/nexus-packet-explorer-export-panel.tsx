@@ -30,7 +30,7 @@ type NexusPacketExplorerExportPanelProps = {
     preferredRevisionId?: string | null;
     titleSnapshot?: string | null;
     seedSummary?: {
-      family: string | null;
+      type: string | null;
       summary: string | null;
       label: string | null;
     } | null;
@@ -363,7 +363,7 @@ export function NexusPacketExplorerExportPanel({
       preferredRevisionId: result.revision_id,
       titleSnapshot: result.title,
       seedSummary: {
-        family: result.family,
+        type: result.type,
         summary: result.summary,
         label: result.label,
       },

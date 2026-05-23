@@ -8,7 +8,7 @@ import type {
   NexusActionMap,
   NexusPacketVerificationSummary,
 } from '@core/contracts';
-import type { PacketFamily } from '@core/schema/packet-schema';
+import type { PacketType } from '@core/schema/packet-schema';
 export type NexusPacketActionSurface =
   | 'dashboard'
   | 'discussions'
@@ -21,7 +21,7 @@ export type NexusPacketActionSurface =
 export interface NexusPacketActionTargetInput {
   packet_id: string;
   revision_id?: string | null;
-  family?: PacketFamily | null;
+  type?: PacketType | null;
   label?: string | null;
   title?: string | null;
   summary?: string | null;
@@ -38,7 +38,7 @@ export interface NexusPacketActionsBatchRequest {
 export interface NexusPacketActionProjection {
   packet_id: string;
   revision_id: string | null;
-  family: PacketFamily | null;
+  type: PacketType | null;
   label: string | null;
   title: string | null;
   summary: string | null;

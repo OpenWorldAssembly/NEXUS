@@ -1,6 +1,6 @@
 /**
  * File: packet-build-helpers.ts
- * Description: Shared packet-builder helper utilities used by generic family build modules.
+ * Description: Shared packet-builder helper utilities used by generic type build modules.
  */
 
 import type {

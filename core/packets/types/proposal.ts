@@ -1,13 +1,13 @@
 /**
- * File: families/proposal.ts
- * Description: Family-owned build rules for canonical Proposal packets.
+ * File: types/proposal.ts
+ * Description: Type-owned build rules for canonical Proposal packets.
  */
 
 import type { ProposalPacketInput } from '@core/packets/builders';
-import type { PacketFamilyBuildDefinition } from '@core/packets/packet-build-pipeline';
+import type { PacketTypeBuildDefinition } from '@core/packets/packet-build-pipeline';
 import { createPacketEdge } from '@core/packets/packet-build-helpers';
 
-export const proposalBuildDefinition: PacketFamilyBuildDefinition<
+export const proposalBuildDefinition: PacketTypeBuildDefinition<
   'Proposal',
   ProposalPacketInput
 > = {
@@ -23,9 +23,9 @@ export const proposalBuildDefinition: PacketFamilyBuildDefinition<
       })
     ),
   finalizeBody: (input) => ({
+    subtype: input.subtype,
     title: input.title,
     summary: input.summary ?? null,
-    proposal_kind: input.proposal_kind,
     status: input.status,
     decision_scope_refs: input.decision_scope_refs ?? [],
     related_policy_refs: input.related_policy_refs ?? [],

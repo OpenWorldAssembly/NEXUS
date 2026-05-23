@@ -12,7 +12,15 @@ import {
   type ReactNode,
 } from 'react';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Dimensions, Modal, Platform, Pressable, Text, View } from 'react-native';
+import {
+  Dimensions,
+  Modal,
+  Platform,
+  Pressable,
+  Text,
+  View,
+  type ViewStyle,
+} from 'react-native';
 
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import type { NexusCardBadge, NexusCardBadgeIcon, NexusCardBadgeTone } from './nexus-card-types';
@@ -21,7 +29,7 @@ function joinClasses(...classes: (string | undefined)[]): string {
   return classes.filter(Boolean).join(' ');
 }
 
-const BADGE_MODAL_PANEL_STYLE = { elevation: 90 } as never;
+const BADGE_MODAL_PANEL_STYLE: ViewStyle = { elevation: 90 };
 const BADGE_TOOLTIP_MARGIN = 12;
 const BADGE_TOOLTIP_MAX_WIDTH = 220;
 const BADGE_TOOLTIP_OFFSET = 8;
@@ -79,7 +87,7 @@ function getBadgeToneClasses(
   return darkToneClasses[tone];
 }
 
-function getTooltipPanelStyle(anchor: BadgeAnchor | null) {
+function getTooltipPanelStyle(anchor: BadgeAnchor | null): ViewStyle {
   const windowWidth = Dimensions.get('window').width;
   const panelLeft = anchor
     ? Math.min(
@@ -95,7 +103,7 @@ function getTooltipPanelStyle(anchor: BadgeAnchor | null) {
     maxWidth: BADGE_TOOLTIP_MAX_WIDTH,
     position: 'absolute',
     top: panelTop,
-  } as never;
+  };
 }
 
 function supportsFineHover(): boolean {
@@ -358,7 +366,7 @@ export function NexusCardBadgeStrip({
   }
 
   const modalPanelClassName = joinClasses(
-    'min-w-[120px] max-w-[220px] rounded-xl border px-3 py-2 shadow-lg',
+    'min-w-[120px] max-w-[220px] rounded-xl border px-3 py-2 definition-lg',
     themeMode === 'dark'
       ? 'border-nexus-line bg-nexus-panel'
       : 'border-slate-300 bg-white',

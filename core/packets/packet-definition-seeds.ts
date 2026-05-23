@@ -21,7 +21,7 @@ import type {
   PacketTypeDefinition,
 } from '@core/packets/definitions/packet-definition-types.ts';
 import {
-  listExperimentalPacketTypeDefinitions,
+  listDefinedPacketTypeDefinitions,
   PACKET_DEFINITION_MANIFEST,
 } from '@core/packets/packet-definition-manifest.ts';
 import type {
@@ -162,7 +162,7 @@ function buildDefinitionCandidate(input: {
 export function buildDefinitionPacketSeedCandidates(input?: {
   definitions?: readonly PacketTypeDefinition[];
 }): SeededDefinitionPacketCandidate[] {
-  return (input?.definitions ?? listExperimentalPacketTypeDefinitions()).flatMap(
+  return (input?.definitions ?? listDefinedPacketTypeDefinitions()).flatMap(
     (definition) =>
       listPacketDefinitionParts(definition).map((part) =>
         buildDefinitionCandidate({ definition, part })
@@ -279,7 +279,7 @@ export function auditSeededPacketDefinitionProfile(input?: {
   definitions?: readonly PacketTypeDefinition[];
   profile?: SeededPacketDefinitionProfile;
 }): SeededPacketDefinitionAuditReport {
-  const definitions = input?.definitions ?? listExperimentalPacketTypeDefinitions();
+  const definitions = input?.definitions ?? listDefinedPacketTypeDefinitions();
   const profile =
     input?.profile ?? resolveSeededPacketDefinitionProfile({ definitions });
   const expectedParts = definitions.flatMap((definition) =>
@@ -318,7 +318,7 @@ export function auditSeededPacketDefinitionProfile(input?: {
       findings.push(`${candidate.part_id} body digest does not match its body.`);
     }
 
-    if (candidate.packet.header.family !== 'Definition') {
+    if (candidate.packet.header.type !== 'Definition') {
       findings.push(`${candidate.part_id} did not produce a Definition packet envelope.`);
     }
 
@@ -344,7 +344,7 @@ export function auditSeededPacketDefinitionProfile(input?: {
     findings.push('Definition bundle manifest digest does not match profile digest.');
   }
 
-  if (profile.bundle_packet.packet.header.family !== 'Bundle') {
+  if (profile.bundle_packet.packet.header.type !== 'Bundle') {
     findings.push('Definition profile bundle did not produce a Bundle packet envelope.');
   }
 

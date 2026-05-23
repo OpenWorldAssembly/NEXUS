@@ -1,13 +1,13 @@
 /**
- * File: families/policy.ts
- * Description: Family-owned build rules for canonical Policy packets.
+ * File: types/policy.ts
+ * Description: Type-owned build rules for canonical Policy packets.
  */
 
 import type { PolicyPacketInput } from '@core/packets/builders';
-import type { PacketFamilyBuildDefinition } from '@core/packets/packet-build-pipeline';
+import type { PacketTypeBuildDefinition } from '@core/packets/packet-build-pipeline';
 import { createTextExcerpt } from '@core/packets/packet-build-helpers';
 
-export const policyBuildDefinition: PacketFamilyBuildDefinition<
+export const policyBuildDefinition: PacketTypeBuildDefinition<
   'Policy',
   PolicyPacketInput
 > = {
@@ -17,9 +17,9 @@ export const policyBuildDefinition: PacketFamilyBuildDefinition<
     }
   },
   finalizeBody: (input) => ({
+    subtype: input.subtype,
     title: input.title,
     summary: input.summary ?? null,
-    policy_kind: input.policy_kind,
     body_markdown: input.body_markdown,
     status: input.status,
     trust_policy: input.trust_policy
@@ -48,7 +48,7 @@ export const policyBuildDefinition: PacketFamilyBuildDefinition<
       : null,
     alignment_policy: input.alignment_policy
       ? {
-          required_cause_refs: input.alignment_policy.required_cause_refs ?? [],
+          required_action_refs: input.alignment_policy.required_action_refs ?? [],
           accepted_relation_subtypes:
             input.alignment_policy.accepted_relation_subtypes ?? [],
         }

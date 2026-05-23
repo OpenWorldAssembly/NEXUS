@@ -32,7 +32,7 @@ test('locality graph apply resolves through the composite batch adapter', () => 
     adapterId: adapter.adapter_id,
   });
 
-  assert.equal(dryRun.ready_for_shadow_interpretation, true);
+  assert.equal(dryRun.ready_for_interpretation, true);
   assert.deepEqual(dryRun.findings, []);
   assert.deepEqual(dryRun.phase_order, adapter.phase_order);
   assert.ok(dryRun.operation_kinds.includes('single_packet.create'));
@@ -110,7 +110,7 @@ test('unknown composite adapter requests fail closed', () => {
     adapterId: 'composite.teleport.v0',
   });
 
-  assert.equal(dryRun.ready_for_shadow_interpretation, false);
+  assert.equal(dryRun.ready_for_interpretation, false);
   assert.equal(dryRun.findings[0]?.code, 'unknown_adapter');
 });
 

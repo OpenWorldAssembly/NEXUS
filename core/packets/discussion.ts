@@ -205,7 +205,7 @@ export function buildDiscussionThreadPacket(input: {
   title: string;
   body: string;
   createdAt?: string;
-}): PacketEnvelopeByType['DiscussionThread'] {
+}): PacketEnvelopeByType['Discussion'] {
   const createdAt = input.createdAt ?? new Date().toISOString();
   const scopePacketId = resolveDiscussionScopePacketId(input.scopeId);
   const normalizedTitle = input.title.trim();
@@ -255,10 +255,10 @@ export function buildDiscussionRootPostPacket(input: {
   scopeId: string;
   forum: Pick<DiscussionForumProjection, 'forum_kind'>;
   actorPacket: PacketEnvelopeByType['Element'];
-  threadPacket: PacketEnvelopeByType['DiscussionThread'];
+  threadPacket: PacketEnvelopeByType['Discussion'];
   body: string;
   createdAt?: string;
-}): PacketEnvelopeByType['DiscussionPost'] {
+}): PacketEnvelopeByType['Discussion'] {
   const createdAt = input.createdAt ?? input.threadPacket.header.created_at;
   const scopePacketId = resolveDiscussionScopePacketId(input.scopeId);
   const packetId = createDiscussionRootPostPacketId({
@@ -301,7 +301,7 @@ export function buildDiscussionReplyPacket(input: {
   rootPostPacketId: string;
   body: string;
   createdAt?: string;
-}): PacketEnvelopeByType['DiscussionReply'] {
+}): PacketEnvelopeByType['Discussion'] {
   const createdAt = input.createdAt ?? new Date().toISOString();
   const scopePacketId = resolveDiscussionScopePacketId(input.scopeId);
   const packetId = createDiscussionReplyPacketId({
@@ -391,7 +391,7 @@ export function buildPacketSignalAttestationPacket(input: {
     target_ref: input.targetPost.packet,
     value: persistedValue === -1 ? -1 : 1,
     status: input.value === 0 ? 'cleared' : 'active',
-    attestation_kind: 'packet_signal',
+    subtype: 'packet_signal',
     supersedes_ref:
       currentValue === 0
         ? null

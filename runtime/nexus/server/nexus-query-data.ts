@@ -10,13 +10,13 @@ import type {
 } from '@core/contracts';
 import { normalizeShellChromePreferenceValue } from '@core/packets/packet-definition-manifest';
 import {
-  PACKET_FAMILIES,
+  PACKET_TYPES,
   getElementSubtypeLeaf,
   type DiscussionReplySort,
   type DiscussionSort,
   type PacketEnvelope,
   type PacketEnvelopeByType,
-  type PacketFamily,
+  type PacketType,
   type PacketRef,
 } from '@core/schema/packet-schema';
 import {
@@ -169,42 +169,22 @@ function classifyDashboardDiscussionCard(input: {
   card: NexusPacketCardProjection;
   packet: PacketEnvelope | null;
 }): DashboardDiscussionCardKind {
-  if (input.card.family === 'DiscussionSpace') {
-    return 'space';
-  }
-
-  if (input.card.family === 'DiscussionForum') {
-    return 'forum';
-  }
-
-  if (input.card.family === 'DiscussionThread') {
-    return 'thread';
-  }
-
-  if (input.card.family === 'DiscussionPost') {
-    return 'root_post';
-  }
-
-  if (input.card.family === 'DiscussionReply') {
-    return 'reply';
-  }
-
-  if (input.packet?.header.family === 'Discussion') {
+  if (input.packet?.header.type === 'Discussion') {
     const body = (input.packet as PacketEnvelopeByType['Discussion']).body;
 
-    if (body.kind === 'space') {
+    if (body.subtype === 'space') {
       return 'space';
     }
 
-    if (body.kind === 'forum') {
+    if (body.subtype === 'forum') {
       return 'forum';
     }
 
-    if (body.kind === 'topic') {
+    if (body.subtype === 'topic') {
       return 'thread';
     }
 
-    if (body.kind === 'message') {
+    if (body.subtype === 'message') {
       return body.root_message_ref ? 'reply' : 'root_post';
     }
   }
@@ -260,13 +240,13 @@ async function countResidentsInScopeTree(input: {
     input.scopeResolution.scopeSummaries
   );
   const [elementPackets, relationPackets, claimPackets] = await Promise.all([
-    input.packetStore.listPreferredPacketsByFamily('Element'),
+    input.packetStore.listPreferredPacketsByType('Element'),
     listRelationPackets(input.packetStore),
     listClaimPackets(input.packetStore),
   ]);
   const personPacketIds = new Set(
     (elementPackets as PacketEnvelopeByType['Element'][])
-      .filter((elementPacket) => elementPacket.body.kind === 'person')
+      .filter((elementPacket) => elementPacket.body.subtype === 'person')
       .map((elementPacket) => elementPacket.header.packet_id)
   );
   const residentPacketIds = new Set<string>();
@@ -288,7 +268,7 @@ async function countResidentsInScopeTree(input: {
     }
 
     if (
-      claimPacket.body.claim_kind !== 'home_locality' &&
+      claimPacket.body.subtype !== 'home_locality' &&
       claimPacket.body.relation_assertion?.subtype !== 'home_locality'
     ) {
       continue;
@@ -299,6 +279,7 @@ async function countResidentsInScopeTree(input: {
 
     if (
       subjectPacketId &&
+      targetPacketId &&
       personPacketIds.has(subjectPacketId) &&
       scopeTreePacketIds.has(targetPacketId)
     ) {
@@ -528,7 +509,7 @@ async function getActorElementPacket(
     packet_id: actorPacketId,
   });
 
-  if (!actorPacket || actorPacket.header.family !== 'Element') {
+  if (!actorPacket || actorPacket.header.type !== 'Element') {
     return null;
   }
 
@@ -623,7 +604,7 @@ async function resolveScopeResolution(input: {
 function parseTrustPolicyFromPacket(
   packet: PacketEnvelopeByType['Policy']
 ): NexusTrustPolicySnapshot | null {
-  if (packet.body.policy_kind !== 'trust_baseline' || !packet.body.trust_policy) {
+  if (packet.body.subtype !== 'trust_baseline' || !packet.body.trust_policy) {
     return null;
   }
 
@@ -641,7 +622,7 @@ async function getTrustPolicyForScope(
   scopeLens: NexusScopeLens
 ): Promise<NexusTrustPolicySnapshot> {
   const services = await getNexusPacketServices();
-  const policyPackets = await services.packetStore.listPreferredPacketsByFamily('Policy');
+  const policyPackets = await services.packetStore.listPreferredPacketsByType('Policy');
   const applicableScopeIds = new Set(
     [
       scopeLens.authority_scope_ref?.packet_id ?? null,
@@ -684,7 +665,7 @@ function isClaimInExactScope(input: {
     return false;
   }
 
-  return input.claimPacket.body.scope_ref.packet_id === input.scopePacketId;
+  return input.claimPacket.body.scope_ref?.packet_id === input.scopePacketId;
 }
 
 function getRoleClaimTrustStage(input: {
@@ -769,13 +750,13 @@ export async function getNexusShellPayload(
     const [voteCards, discussionCards, missionCards] = await Promise.all([
       services.nexusQueryService.listVotes(scopeLens),
       services.nexusQueryService.listDiscussions(scopeLens),
-      services.nexusQueryService.listLibraryPackets(scopeLens, 'MissionPlan'),
+      services.nexusQueryService.listLibraryPackets(scopeLens, 'Action'),
     ]);
     const memberPackets =
-      await services.packetStore.listPreferredPacketsByFamily('Element');
+      await services.packetStore.listPreferredPacketsByType('Element');
     const membersInScope = memberPackets.filter(
       (memberPacket) =>
-        memberPacket.body.kind === 'person' &&
+        memberPacket.body.subtype === 'person' &&
         memberPacket.header.edges.some(
           (edge) =>
             edge.edge_type === 'member_of' &&
@@ -787,7 +768,7 @@ export async function getNexusShellPayload(
       .map((childNode) => childNode.routeId);
     const hasVisitorLobbyForum = discussionCards.some(
       (discussionCard) =>
-        discussionCard.family === 'DiscussionForum' &&
+        discussionCard.type === 'Discussion' &&
         discussionCard.title.toLowerCase().includes('visitor lobby')
     );
 
@@ -928,17 +909,12 @@ export async function getNexusDashboardPayload(
   ]);
   const voteCards = localLibraryCards.filter(
     (libraryCard) =>
-      libraryCard.family === 'Proposal' ||
-      libraryCard.family === 'Vote' ||
-      libraryCard.family === 'Decision'
+      libraryCard.type === 'Proposal' ||
+      libraryCard.type === 'Vote' ||
+      libraryCard.type === 'Decision'
   );
   const discussionCards = localLibraryCards.filter(
-    (libraryCard) =>
-      libraryCard.family === 'Discussion' ||
-      libraryCard.family === 'DiscussionForum' ||
-      libraryCard.family === 'DiscussionThread' ||
-      libraryCard.family === 'DiscussionPost' ||
-      libraryCard.family === 'DiscussionReply'
+    (libraryCard) => libraryCard.type === 'Discussion'
   );
   const discussionPackets = await Promise.all(
     discussionCards.map((discussionCard) =>
@@ -972,31 +948,31 @@ export async function getNexusDashboardPayload(
       discussionCardKinds.get(discussionCard.packet.packet_id) === 'root_post'
   );
   const proposalCount = voteCards.filter(
-    (voteCard) => voteCard.family === 'Proposal'
+    (voteCard) => voteCard.type === 'Proposal'
   ).length;
   const decisionCount = voteCards.filter(
-    (voteCard) => voteCard.family === 'Decision'
+    (voteCard) => voteCard.type === 'Decision'
   ).length;
   const petitionCount = voteCards.filter(
     (voteCard) => toStatusCategory(voteCard.status ?? voteCard.label) === 'petitioning'
   ).length;
   const associationCount = localLibraryCards.filter(
     (libraryCard) =>
-      (libraryCard.family === 'Claim' || libraryCard.family === 'Relation') &&
+      (libraryCard.type === 'Claim' || libraryCard.type === 'Relation') &&
       isAssociationCardText(libraryCard)
   ).length;
-  const trustReviewFamilies = new Set<PacketFamily>([
+  const trustReviewTypes = new Set<PacketType>([
     'Claim',
     'Relation',
     'Attestation',
     'Policy',
   ]);
-  const rolePreviewFamilies = new Set<PacketFamily>(['Role', 'Claim', 'Attestation']);
+  const rolePreviewTypes = new Set<PacketType>(['Role', 'Claim', 'Attestation']);
   const trustReviewCards = localLibraryCards.filter((libraryCard) =>
-    trustReviewFamilies.has(libraryCard.family)
+    trustReviewTypes.has(libraryCard.type)
   );
   const rolePreviewCards = localLibraryCards.filter((libraryCard) =>
-    rolePreviewFamilies.has(libraryCard.family)
+    rolePreviewTypes.has(libraryCard.type)
   );
   return {
     lens: scopeLens,
@@ -1309,12 +1285,12 @@ export async function getNexusVotesPayload(
 }
 
 /**
- * Inputs: scope id and optional family filter.
+ * Inputs: scope id and optional type filter.
  * Output: packet library cards for the scope lens.
  */
 export async function getNexusLibraryPayload(input: {
   scopeId: string;
-  familyFilter: PacketFamily | null;
+  typeFilter: PacketType | null;
   actorPacketId?: string | null;
 }): Promise<NexusLibraryPayload> {
   const services = await getNexusPacketServices();
@@ -1325,7 +1301,7 @@ export async function getNexusLibraryPayload(input: {
   const scopeLens = scopeResolution.lens;
   const packets = await services.nexusQueryService.listLibraryPackets(
     scopeLens,
-    input.familyFilter ?? undefined,
+    input.typeFilter ?? undefined,
     {
       scope_mode: 'local',
     }
@@ -1333,22 +1309,22 @@ export async function getNexusLibraryPayload(input: {
 
   return {
     lens: scopeLens,
-    family_filter: input.familyFilter,
+    type_filter: input.typeFilter,
     packets,
   };
 }
 
 /**
- * Inputs: unknown family query value.
- * Output: a validated packet family filter or null.
+ * Inputs: unknown type query value.
+ * Output: a validated packet type filter or null.
  */
-export function parseFamilyFilter(value: unknown): PacketFamily | null {
+export function parseTypeFilter(value: unknown): PacketType | null {
   if (typeof value !== 'string' || value.trim().length === 0) {
     return null;
   }
 
-  return (PACKET_FAMILIES as readonly string[]).includes(value)
-    ? (value as PacketFamily)
+  return (PACKET_TYPES as readonly string[]).includes(value)
+    ? (value as PacketType)
     : null;
 }
 
@@ -1401,7 +1377,7 @@ export async function getNexusTrustPayload(input: {
     actorPacketId: input.actorPacketId,
   });
   const scopeLens = scopeResolution.lens;
-  const rolePackets = await services.packetStore.listPreferredPacketsByFamily('Role');
+  const rolePackets = await services.packetStore.listPreferredPacketsByType('Role');
   const trustPolicy = await getTrustPolicyForScope(scopeLens);
   const assemblyPacketId = getClaimAuthorityScopeId({
     scopeSummary: scopeResolution.summary,
@@ -1487,10 +1463,10 @@ export async function getNexusTrustPayload(input: {
     roleCards.push({
       claim_packet_id: scopedClaim?.header.packet_id ?? null,
       claim_status: scopedClaim?.body.status ?? null,
-      claimed_scope_packet_id: scopedClaim?.body.scope_ref.packet_id ?? null,
+      claimed_scope_packet_id: scopedClaim?.body.scope_ref?.packet_id ?? null,
       role_packet_id: typedRolePacket.header.packet_id,
       title: typedRolePacket.body.title,
-      role_kind: typedRolePacket.body.role_kind,
+      role_kind: typedRolePacket.body.subtype,
       summary: typedRolePacket.body.summary ?? null,
       responsibility_markdown: typedRolePacket.body.responsibility_markdown,
       is_claimed: scopedClaim !== null,
@@ -1580,15 +1556,15 @@ export async function getNexusRolesPayload(input: {
     shellPayload,
   });
   const rolePackets = (
-    await services.packetStore.listPreferredPacketsByFamily('Role')
+    await services.packetStore.listPreferredPacketsByType('Role')
   ) as PacketEnvelopeByType['Role'][];
   const elementPackets = (
-    await services.packetStore.listPreferredPacketsByFamily('Element')
+    await services.packetStore.listPreferredPacketsByType('Element')
   ) as PacketEnvelopeByType['Element'][];
   const claimPackets = await listClaimPackets(services.packetStore);
   const currentActorPacketId = actorPacket?.header.packet_id ?? null;
   const eligibleClaimants = elementPackets.filter((packet) =>
-    ['person', 'assembly', 'team'].includes(packet.body.kind)
+    ['person', 'assembly', 'team'].includes(packet.body.subtype)
   );
   const assemblyClaimsByActor = new Map<
     string,
@@ -1596,7 +1572,7 @@ export async function getNexusRolesPayload(input: {
   >();
 
   for (const claimantPacket of eligibleClaimants) {
-    if (claimantPacket.body.kind !== 'person') {
+    if (claimantPacket.body.subtype !== 'person') {
       continue;
     }
 
@@ -1709,7 +1685,7 @@ export async function getNexusRolesPayload(input: {
         claim_status: claimPacket.body.status,
         actor_packet_id: claimantPacket.header.packet_id,
         actor_label: claimantPacket.body.name,
-        actor_kind: claimantPacket.body.kind,
+        actor_kind: claimantPacket.body.subtype,
         is_current_actor: claimantPacket.header.packet_id === currentActorPacketId,
         trust_stage: roleTrustStage,
         scope_trust_stage: scopeTrustStage,
@@ -1742,7 +1718,7 @@ export async function getNexusRolesPayload(input: {
     roleCards.push({
       role_packet_id: rolePacket.header.packet_id,
       title: rolePacket.body.title,
-      role_kind: rolePacket.body.role_kind,
+      role_kind: rolePacket.body.subtype,
       summary: rolePacket.body.summary ?? null,
       responsibility_markdown: rolePacket.body.responsibility_markdown ?? null,
       is_claimed_by_current_actor:

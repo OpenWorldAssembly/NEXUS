@@ -13,7 +13,7 @@
 - Nexus state is shared through local React context providers
 - shell and route projections load from packet-backed API routes
 - the runtime store is SQLite-backed
-- packet parsing runs through family compatibility and adaptation instead of route-local patches
+- packet parsing runs through type compatibility and adaptation instead of route-local patches
 - Packet Explorer session state is shell-level rather than route-level page state
 
 ## Packet and compatibility foundations in active use
@@ -24,19 +24,19 @@ Current packet behavior in code includes:
 - stable `packet_id`
 - immutable `revision_id`
 - multi-parent `parent_revision_refs`
-- family `schema_version`
-- family `revision_mode`
+- type `schema_version`
+- type `revision_mode`
 - raw stored packets preserved as historical fact
 - adapted runtime packets used as the normal read shape
-- target-version-aware compatibility reads for supported families
+- target-version-aware compatibility reads for supported types
 
 Forward ontology currently active in code includes:
 
-- `Cause`, `Action`, `Relation`, and `Location` as first-class packet families
-- `Report` as a first-class packet family for verification and import reporting
+- `Action`, `Relation`, and `Location` as first-class packet types, with `Action(subtype: initiative)` carrying the forward initiative/default anchor
+- `Report` as a first-class packet type for verification and import reporting
 - `Element.subtype` as the forward classifier, with `kind` preserved as compatibility metadata
 - widened `Claim` packets for packet-targeted assertion content plus optional `relation_assertion`
-- widened `Attestation` packets with canonical `type/subtype` semantics and legacy `attestation_kind` compatibility
+- widened `Attestation` packets with canonical `subtype` semantics
 - `Policy.relation_requirements` as the packet-backed seam for relation support rules
 
 Current scope consumer direction in code includes:

@@ -134,7 +134,7 @@ function NexusFeatureStatusOverlay({
       >
         <View
           className={joinClasses(
-            'gap-3 rounded-[28px] border p-5 shadow-nexus',
+            'gap-3 rounded-[28px] border p-5 definition-nexus',
             cardClass
           )}
         >

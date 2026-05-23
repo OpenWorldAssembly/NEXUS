@@ -64,7 +64,6 @@ const DEFAULT_SHELL_CHROME_PREFERENCE_VALUE = {
 
 const PreferenceBaseBodySchema = z
   .object({
-    type: z.literal('preference').default('preference'),
     owner_ref: PacketRefSchema,
     status: z.enum(['active', 'superseded', 'withdrawn']).default('active'),
     privacy: PreferencePrivacyModeSchema.default('private_sync'),
@@ -93,7 +92,10 @@ export const ElementInterfacePreferenceValueSchema = z
 
 export const ElementPreferenceValueSchema = z
   .object({
-    interface: ElementInterfacePreferenceValueSchema.default({}),
+    interface: ElementInterfacePreferenceValueSchema.default({
+      scope_display: DEFAULT_SCOPE_DISPLAY_PREFERENCE_VALUE,
+      shell_chrome: DEFAULT_SHELL_CHROME_PREFERENCE_VALUE,
+    }),
   })
   .strict();
 
@@ -177,7 +179,7 @@ export const preferencePacketDefinition = {
       policy_action_id: 'preference.element.write',
       availability: 'canonical',
       notes:
-        'Shadow action for creating an actor-owned element preference packet from runtime preference state.',
+        'Definition action for creating an actor-owned element preference packet from runtime preference state.',
     },
     {
       action_id: 'preference.element.revise',
@@ -230,7 +232,7 @@ export const preferencePacketDefinition = {
       output_schema_key: 'ElementPreferenceBodySchema',
       availability: 'canonical',
       notes:
-        'Experimental body builder descriptor only; claimed Preference.element writes now enter the fortress-enrolled preference workflow, while this descriptor remains manifest metadata rather than executable imported code.',
+        'Canonical body builder descriptor metadata; claimed Preference.element writes now enter the fortress-enrolled preference workflow, while this descriptor remains manifest metadata rather than executable imported code.',
     },
   ],
   planners: [
@@ -264,7 +266,7 @@ export const preferencePacketDefinition = {
       mutation_intent: 'preference.element.set',
       action_ids: ['preference.element.create', 'preference.element.revise'],
       planner_id: 'preference.element.latest_active_revision.v0',
-      result_family: 'packet_write',
+      result_type: 'packet_write',
       availability: 'canonical',
       notes:
         'Manifest mutation intent for creating or revising element preferences through the signed corridor.',
@@ -273,7 +275,7 @@ export const preferencePacketDefinition = {
       mutation_intent: 'preference.element.withdraw',
       action_ids: ['preference.element.withdraw'],
       planner_id: 'preference.element.latest_active_revision.v0',
-      result_family: 'packet_write',
+      result_type: 'packet_write',
       availability: 'canonical',
       notes: 'Manifest mutation intent for withdrawing element preferences.',
     },
@@ -325,7 +327,7 @@ export const preferencePacketDefinition = {
           output_key: 'preference_revision',
           on_failure: 'abort_workflow',
           notes:
-            'Shadow workflow for claimed actor interface preference revisions through the fortress corridor.',
+            'Definition workflow for claimed actor interface preference revisions through the fortress corridor.',
         },
       ],
       availability: 'canonical',

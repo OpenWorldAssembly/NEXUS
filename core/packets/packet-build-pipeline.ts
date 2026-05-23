@@ -1,12 +1,11 @@
 /**
  * File: packet-build-pipeline.ts
- * Description: Generic packet builder pipeline for family-owned body rules and shared envelope construction.
+ * Description: Generic packet builder pipeline for type-owned body rules and shared envelope construction.
  */
 
 import type {
   ActionPacketInput,
   AttestationPacketInput,
-  CausePacketInput,
   ClaimPacketInput,
   DecisionPacketInput,
   DiscussionPacketInput,
@@ -20,23 +19,22 @@ import type {
   RolePacketInput,
   VotePacketInput,
 } from '@core/packets/builders';
-import { actionBuildDefinition } from '@core/packets/families/action';
-import { attestationBuildDefinition } from '@core/packets/families/attestation';
-import { bundleBuildDefinition } from '@core/packets/families/bundle';
-import { causeBuildDefinition } from '@core/packets/families/cause';
-import { claimBuildDefinition } from '@core/packets/families/claim';
-import { definitionBuildDefinition } from '@core/packets/families/definition';
-import { decisionBuildDefinition } from '@core/packets/families/decision';
-import { discussionBuildDefinition } from '@core/packets/families/discussion';
-import { elementBuildDefinition } from '@core/packets/families/element';
-import { locationBuildDefinition } from '@core/packets/families/location';
-import { policyBuildDefinition } from '@core/packets/families/policy';
-import { preferenceBuildDefinition } from '@core/packets/families/preference';
-import { proposalBuildDefinition } from '@core/packets/families/proposal';
-import { reportBuildDefinition } from '@core/packets/families/report';
-import { relationBuildDefinition } from '@core/packets/families/relation';
-import { roleBuildDefinition } from '@core/packets/families/role';
-import { voteBuildDefinition } from '@core/packets/families/vote';
+import { actionBuildDefinition } from '@core/packets/types/action';
+import { attestationBuildDefinition } from '@core/packets/types/attestation';
+import { bundleBuildDefinition } from '@core/packets/types/bundle';
+import { claimBuildDefinition } from '@core/packets/types/claim';
+import { definitionBuildDefinition } from '@core/packets/types/definition';
+import { decisionBuildDefinition } from '@core/packets/types/decision';
+import { discussionBuildDefinition } from '@core/packets/types/discussion';
+import { elementBuildDefinition } from '@core/packets/types/element';
+import { locationBuildDefinition } from '@core/packets/types/location';
+import { policyBuildDefinition } from '@core/packets/types/policy';
+import { preferenceBuildDefinition } from '@core/packets/types/preference';
+import { proposalBuildDefinition } from '@core/packets/types/proposal';
+import { reportBuildDefinition } from '@core/packets/types/report';
+import { relationBuildDefinition } from '@core/packets/types/relation';
+import { roleBuildDefinition } from '@core/packets/types/role';
+import { voteBuildDefinition } from '@core/packets/types/vote';
 import { createInitialRevisionId } from '@core/packets/packet-build-helpers';
 import {
   createPacketEnvelope,
@@ -45,7 +43,7 @@ import {
   type PacketRef,
   type PacketEdge,
   type PacketEnvelopeByType,
-  type PacketFamily,
+  type PacketType,
   type PacketHeader,
 } from '@core/schema/packet-schema';
 
@@ -59,18 +57,18 @@ type PacketCompatibilityMetadata = PacketHeader['metadata']['compatibility'];
 type PacketExternalRef = PacketHeader['external_refs'][number];
 
 export interface PacketBuildRequest<
-  TFamily extends PacketFamily,
+  TType extends PacketType,
   TBodyInput,
   TContext = undefined,
 > {
-  family: TFamily;
+  type: TType;
   body: TBodyInput;
   header: PacketBuilderBaseInput;
   context?: TContext;
 }
 
-export interface PacketFamilyBuildDefinition<
-  TFamily extends PacketFamily,
+export interface PacketTypeBuildDefinition<
+  TType extends PacketType,
   TBodyInput,
   TContext = undefined,
   TNormalizedBody = TBodyInput,
@@ -93,7 +91,7 @@ export interface PacketFamilyBuildDefinition<
   finalizeBody: (
     body: TNormalizedBody,
     context: TContext | undefined
-  ) => PacketEnvelopeByType[TFamily]['body'];
+  ) => PacketEnvelopeByType[TType]['body'];
   prepareEdges?: (
     body: TNormalizedBody,
     relationships:
@@ -141,7 +139,7 @@ type PacketBuildHeaderInput = {
   metadata_compatibility?: PacketCompatibilityMetadata | null;
 };
 
-export const GENERIC_PACKET_BUILD_FAMILIES = [
+export const GENERIC_PACKET_BUILD_TYPES = [
   'Definition',
   'Element',
   'Location',
@@ -153,7 +151,6 @@ export const GENERIC_PACKET_BUILD_FAMILIES = [
   'Vote',
   'Attestation',
   'Decision',
-  'Cause',
   'Action',
   'Discussion',
   'Policy',
@@ -176,11 +173,11 @@ function dedupeEdges(edges: PacketEdge[]): PacketEdge[] {
   });
 }
 
-function finalizeBuiltPacket<TFamily extends PacketFamily>(input: {
-  family: TFamily;
+function finalizeBuiltPacket<TType extends PacketType>(input: {
+  type: TType;
   header: PacketBuildHeaderInput;
-  body: PacketEnvelopeByType[TFamily]['body'];
-}): PacketEnvelopeByType[TFamily] {
+  body: PacketEnvelopeByType[TType]['body'];
+}): PacketEnvelopeByType[TType] {
   const createdAt = input.header.created_at ?? DEFAULT_CREATED_AT;
   const adapter = input.header.adapter ?? DEFAULT_ADAPTER;
 
@@ -189,9 +186,9 @@ function finalizeBuiltPacket<TFamily extends PacketFamily>(input: {
       packet_id: input.header.packet_id,
       revision_id:
         input.header.revision_id ?? createInitialRevisionId(input.header.packet_id),
-      family: input.family,
+      type: input.type,
       schema_version:
-        input.header.schema_version ?? getPacketCurrentSchemaVersion(input.family),
+        input.header.schema_version ?? getPacketCurrentSchemaVersion(input.type),
       protocol_version: input.header.protocol_version,
       created_at: createdAt,
       parent_revision_refs: input.header.parent_revision_refs ?? [],
@@ -229,19 +226,19 @@ function finalizeBuiltPacket<TFamily extends PacketFamily>(input: {
 }
 
 function buildPacketWithDefinition<
-  TFamily extends PacketFamily,
+  TType extends PacketType,
   TBodyInput,
   TContext = undefined,
   TNormalizedBody = TBodyInput,
 >(
-  request: PacketBuildRequest<TFamily, TBodyInput, TContext>,
-  definition: PacketFamilyBuildDefinition<
-    TFamily,
+  request: PacketBuildRequest<TType, TBodyInput, TContext>,
+  definition: PacketTypeBuildDefinition<
+    TType,
     TBodyInput,
     TContext,
     TNormalizedBody
   >
-): PacketEnvelopeByType[TFamily] {
+): PacketEnvelopeByType[TType] {
   const normalizedBody = definition.normalizeBody
     ? definition.normalizeBody(request.body, request.context)
     : (request.body as unknown as TNormalizedBody);
@@ -260,7 +257,7 @@ function buildPacketWithDefinition<
     definition.prepareMetadataSummary?.(normalizedBody, request.context) ?? null;
 
   return finalizeBuiltPacket({
-    family: request.family,
+    type: request.type,
     header: {
       ...request.header,
       edges: [...(request.header.edges ?? []), ...preparedEdges],
@@ -307,9 +304,6 @@ export function buildPacket(
   request: PacketBuildRequest<'Decision', DecisionPacketInput>
 ): PacketEnvelopeByType['Decision'];
 export function buildPacket(
-  request: PacketBuildRequest<'Cause', CausePacketInput>
-): PacketEnvelopeByType['Cause'];
-export function buildPacket(
   request: PacketBuildRequest<'Action', ActionPacketInput>
 ): PacketEnvelopeByType['Action'];
 export function buildPacket(
@@ -325,9 +319,9 @@ export function buildPacket(
   request: PacketBuildRequest<'Bundle', PacketBodyByType['Bundle']>
 ): PacketEnvelopeByType['Bundle'];
 export function buildPacket(
-  request: PacketBuildRequest<PacketFamily, unknown>
-): PacketEnvelopeByType[PacketFamily] {
-  switch (request.family) {
+  request: PacketBuildRequest<PacketType, unknown>
+): PacketEnvelopeByType[PacketType] {
+  switch (request.type) {
     case 'Definition':
       return buildPacketWithDefinition(
         request as PacketBuildRequest<'Definition', PacketBodyByType['Definition']>,
@@ -383,11 +377,6 @@ export function buildPacket(
         request as PacketBuildRequest<'Decision', DecisionPacketInput>,
         decisionBuildDefinition
       );
-    case 'Cause':
-      return buildPacketWithDefinition(
-        request as PacketBuildRequest<'Cause', CausePacketInput>,
-        causeBuildDefinition
-      );
     case 'Action':
       return buildPacketWithDefinition(
         request as PacketBuildRequest<'Action', ActionPacketInput>,
@@ -415,15 +404,15 @@ export function buildPacket(
       );
     default:
       throw new Error(
-        `Generic packet builder pipeline is not yet enabled for family ${request.family}.`
+        `Generic packet builder pipeline is not yet enabled for type ${request.type}.`
       );
   }
 }
 
 export function hasGenericPacketBuilderPipeline(
-  family: PacketFamily
-): family is (typeof GENERIC_PACKET_BUILD_FAMILIES)[number] {
-  return GENERIC_PACKET_BUILD_FAMILIES.includes(
-    family as (typeof GENERIC_PACKET_BUILD_FAMILIES)[number]
+  type: PacketType
+): type is (typeof GENERIC_PACKET_BUILD_TYPES)[number] {
+  return GENERIC_PACKET_BUILD_TYPES.includes(
+    type as (typeof GENERIC_PACKET_BUILD_TYPES)[number]
   );
 }

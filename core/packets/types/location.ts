@@ -1,12 +1,12 @@
 /**
- * File: families/location.ts
- * Description: Family-owned build rules for canonical Location packets.
+ * File: types/location.ts
+ * Description: Type-owned build rules for canonical Location packets.
  */
 
 import type { LocationPacketInput } from '@core/packets/builders';
-import type { PacketFamilyBuildDefinition } from '@core/packets/packet-build-pipeline';
+import type { PacketTypeBuildDefinition } from '@core/packets/packet-build-pipeline';
 
-export const locationBuildDefinition: PacketFamilyBuildDefinition<
+export const locationBuildDefinition: PacketTypeBuildDefinition<
   'Location',
   LocationPacketInput
 > = {
@@ -16,7 +16,6 @@ export const locationBuildDefinition: PacketFamilyBuildDefinition<
     }
   },
   finalizeBody: (input) => ({
-    type: 'location',
     subtype: input.subtype,
     title: input.title,
     summary: input.summary ?? null,

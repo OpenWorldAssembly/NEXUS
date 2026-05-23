@@ -105,7 +105,7 @@ async function validateHardSelectedScopeTargets(input: {
       packet_id: scopePacketId,
     });
 
-    if (!existingPacket || existingPacket.header.family !== 'Element') {
+    if (!existingPacket || existingPacket.header.type !== 'Element') {
       throw new Error(`Unknown scope selection target: ${scopePacketId}`);
     }
   }
@@ -130,7 +130,7 @@ export async function planLocalityGraphApplyPackets(input: {
     plannedResult.created_packets
       .filter(
         (packet): packet is PacketEnvelopeByType['Element'] =>
-          packet.header.family === 'Element'
+          packet.header.type === 'Element'
       )
       .map((packet) => [packet.header.packet_id, packet])
   );
@@ -226,7 +226,7 @@ export async function planLocalityGraphApplyPackets(input: {
     ...(followPackets.length > 0 ? ['follows.relation.set' as const] : []),
   ];
   const firstCreatedScopePacket = plannedResult.created_packets.find(
-    (packet): packet is PacketEnvelopeByType['Element'] => packet.header.family === 'Element'
+    (packet): packet is PacketEnvelopeByType['Element'] => packet.header.type === 'Element'
   );
   const localityGoverningScopePacket = firstCreatedScopePacket
     ? await requireElementPacketFromStoreOrPrepared({

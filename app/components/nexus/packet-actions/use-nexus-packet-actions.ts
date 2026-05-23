@@ -33,7 +33,7 @@ function createRequestKey(request: NexusPacketActionsBatchRequest): string {
     targets: request.targets.map((target) => ({
       packet_id: target.packet_id,
       revision_id: target.revision_id ?? null,
-      family: target.family ?? null,
+      type: target.type ?? null,
       preferred_surface: target.preferred_surface ?? null,
     })),
   });

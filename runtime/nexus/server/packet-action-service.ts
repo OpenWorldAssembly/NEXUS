@@ -7,7 +7,7 @@ import type {
   NexusActionMap,
   BrowserQueryService,
 } from '@core/contracts';
-import type { PacketFamily } from '@core/schema/packet-schema';
+import type { PacketType } from '@core/schema/packet-schema';
 import { PACKET_ACTION_DESCRIPTORS } from '@runtime/nexus/packet-action-contract';
 import type {
   NexusPacketActionProjection,
@@ -28,17 +28,17 @@ const PACKET_ACTION_SURFACES: NexusPacketActionSurface[] = [
   'explorer',
 ];
 
-const DISCUSSION_FAMILIES = new Set<PacketFamily>([
+const DISCUSSION_FAMILIES = new Set<PacketType>([
   'Discussion',
-  'DiscussionSpace',
-  'DiscussionForum',
-  'DiscussionThread',
-  'DiscussionPost',
-  'DiscussionReply',
+  'Discussion',
+  'Discussion',
+  'Discussion',
+  'Discussion',
+  'Discussion',
 ]);
-const VOTE_FAMILIES = new Set<PacketFamily>(['Proposal', 'Vote', 'Decision']);
-const ROLE_FAMILIES = new Set<PacketFamily>(['Role']);
-const TRUST_FAMILIES = new Set<PacketFamily>([
+const VOTE_FAMILIES = new Set<PacketType>(['Proposal', 'Vote', 'Decision']);
+const ROLE_FAMILIES = new Set<PacketType>(['Role']);
+const TRUST_FAMILIES = new Set<PacketType>([
   'Claim',
   'Relation',
   'Attestation',
@@ -55,26 +55,26 @@ function normalizeSurface(
     : fallback;
 }
 
-function getBestSurfaceForFamily(
-  family: PacketFamily | null
+function getBestSurfaceForType(
+  type: PacketType | null
 ): NexusPacketActionSurface {
-  if (!family) {
+  if (!type) {
     return 'library';
   }
 
-  if (DISCUSSION_FAMILIES.has(family)) {
+  if (DISCUSSION_FAMILIES.has(type)) {
     return 'discussions';
   }
 
-  if (VOTE_FAMILIES.has(family)) {
+  if (VOTE_FAMILIES.has(type)) {
     return 'votes';
   }
 
-  if (ROLE_FAMILIES.has(family)) {
+  if (ROLE_FAMILIES.has(type)) {
     return 'roles';
   }
 
-  if (TRUST_FAMILIES.has(family)) {
+  if (TRUST_FAMILIES.has(type)) {
     return 'trust';
   }
 
@@ -84,7 +84,7 @@ function getBestSurfaceForFamily(
 function createBaseActionMap(input: {
   packetId: string;
   revisionId: string | null;
-  family: PacketFamily | null;
+  type: PacketType | null;
   currentSurface: NexusPacketActionSurface;
   preferredSurface: NexusPacketActionSurface;
   verificationSummaryAvailable: boolean;
@@ -93,7 +93,7 @@ function createBaseActionMap(input: {
   const target = {
     target_packet_id: input.packetId,
     target_revision_id: input.revisionId,
-    target_family: input.family,
+    target_type: input.type,
   };
 
   return {
@@ -204,13 +204,13 @@ export class NexusPacketActionService {
     const packetId = input.target.packet_id;
     const fallbackSurface = normalizeSurface(input.currentSurface, 'library');
     const packetProjection =
-      input.target.family && input.target.title && input.target.label
+      input.target.type && input.target.title && input.target.label
         ? null
         : await this.browserQueryService.getPacket({ packet_id: packetId });
-    const family = input.target.family ?? packetProjection?.family ?? null;
+    const type = input.target.type ?? packetProjection?.type ?? null;
     const preferredSurface = normalizeSurface(
       input.target.preferred_surface,
-      getBestSurfaceForFamily(family)
+      getBestSurfaceForType(type)
     );
     const revisionId =
       input.target.revision_id ?? packetProjection?.revision.revision_id ?? null;
@@ -220,7 +220,7 @@ export class NexusPacketActionService {
     return {
       packet_id: packetId,
       revision_id: revisionId,
-      family,
+      type,
       label: input.target.label ?? packetProjection?.label ?? null,
       title: input.target.title ?? packetProjection?.title ?? null,
       summary: input.target.summary ?? packetProjection?.summary ?? null,
@@ -229,7 +229,7 @@ export class NexusPacketActionService {
       actions: createBaseActionMap({
         packetId,
         revisionId,
-        family,
+        type,
         currentSurface: fallbackSurface,
         preferredSurface,
         verificationSummaryAvailable: verificationOverview.hasAnyReport,

@@ -8,12 +8,14 @@ import type {
   PacketAdaptationDirection,
   PacketAdaptationLossKind,
   PacketCompatibilitySupportLevel,
-  PacketFamily,
+  PacketType,
   PacketRevisionMode,
   PacketWriteTargetPolicy,
   PacketWriteTargetSupport,
 } from '@core/schema/packet-ontology';
 import type { PacketEnvelope, PacketEnvelopeByType } from '@core/schema/packet-body-schemas';
+
+export type { PacketAdaptationDirection } from '@core/schema/packet-ontology';
 
 export interface PacketAdaptationChange {
   kind: PacketAdaptationChangeKind;
@@ -32,7 +34,7 @@ export interface PacketAdaptationLoss {
 }
 
 export interface PacketCompatibilityStatus {
-  family: PacketFamily;
+  type: PacketType;
   declared_schema_version: string;
   effective_source_schema_version: string;
   interpreted_as_legacy_profile: boolean;
@@ -78,7 +80,7 @@ export interface PacketVersionedWritePreparation {
 export type PacketAdaptedWritePreparation = PacketVersionedWritePreparation;
 
 export interface PacketCompatibilityAuditSummary {
-  family: PacketFamily;
+  type: PacketType;
   current_schema_version: string;
   revision_mode: PacketRevisionMode;
   support_level: PacketCompatibilitySupportLevel;
@@ -91,7 +93,7 @@ export interface PacketCompatibilityAuditSummary {
 export type PacketSignatureCandidateSource =
   | 'exact'
   | 'header_compatibility'
-  | 'family_compatibility'
+  | 'type_compatibility'
   | 'combined_compatibility';
 
 export interface PacketSignatureCanonicalCandidate<TPacket> {
@@ -105,7 +107,7 @@ export type PacketCompatibilityAdapterOutput = {
   losses?: PacketAdaptationLoss[];
 };
 
-export type PacketSchemaVersionDefinition<TFamily extends PacketFamily> = {
+export type PacketSchemaVersionDefinition<TType extends PacketType> = {
   parseBody: (body: unknown) => unknown;
   next_schema_version?: string;
   adaptToNext?: (body: unknown) => PacketCompatibilityAdapterOutput;
@@ -113,20 +115,20 @@ export type PacketSchemaVersionDefinition<TFamily extends PacketFamily> = {
   adaptToPrevious?: (body: unknown) => PacketCompatibilityAdapterOutput;
   matchesDeclaredCurrentBodyShape?: (body: unknown) => boolean;
   createUnsignedPacketCandidate?: (
-    packet: PacketEnvelopeByType[TFamily]
-  ) => PacketEnvelopeByType[TFamily] | null;
+    packet: PacketEnvelopeByType[TType]
+  ) => PacketEnvelopeByType[TType] | null;
 };
 
-export type PacketCompatibilityEntry<TFamily extends PacketFamily> = {
+export type PacketCompatibilityEntry<TType extends PacketType> = {
   current_schema_version: string;
   revision_mode: PacketRevisionMode;
   support_level: PacketCompatibilitySupportLevel;
   write_target_policy: PacketWriteTargetPolicy;
-  versions: Record<string, PacketSchemaVersionDefinition<TFamily>>;
+  versions: Record<string, PacketSchemaVersionDefinition<TType>>;
 };
 
 export class PacketCompatibilityError extends Error {
-  readonly family: PacketFamily;
+  readonly type: PacketType;
   readonly source_schema_version: string;
   readonly target_schema_version: string;
   readonly code:
@@ -136,14 +138,14 @@ export class PacketCompatibilityError extends Error {
 
   constructor(input: {
     code: PacketCompatibilityError['code'];
-    family: PacketFamily;
+    type: PacketType;
     sourceSchemaVersion: string;
     targetSchemaVersion: string;
     message: string;
   }) {
     super(input.message);
     this.name = 'PacketCompatibilityError';
-    this.family = input.family;
+    this.type = input.type;
     this.source_schema_version = input.sourceSchemaVersion;
     this.target_schema_version = input.targetSchemaVersion;
     this.code = input.code;

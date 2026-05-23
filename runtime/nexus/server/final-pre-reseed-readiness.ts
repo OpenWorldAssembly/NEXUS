@@ -9,7 +9,7 @@ import {
   auditPacketPolicyDependencyCoverage,
   auditPacketPolicySemanticAuthority,
   auditSeededPacketDefinitionProfile,
-  listExperimentalPacketTypeDefinitions,
+  listDefinedPacketTypeDefinitions,
   PACKET_DEFINITION_MANIFEST,
   resolveSeededPacketDefinitionProfile,
 } from '@core/packets/packet-definition-manifest';
@@ -20,7 +20,7 @@ import {
   PERSONAL_TREE_REFS,
   PERSONAL_SEED_PACKETS,
 } from '@core/packets/seeds';
-import type { PacketEnvelopeByType, PacketFamily } from '@core/schema/packet-schema';
+import type { PacketEnvelopeByType } from '@core/schema/packet-schema';
 import {
   createPreReseedModernizationClosureReport,
   type PreReseedClosureLedgerEntry,
@@ -47,7 +47,7 @@ export type FinalPreReseedReadinessReport = {
   seeded_definition_packet_count: number;
   seeded_definition_bundle_packet_id: string;
   canonical_definition_seed_packet_ids: string[];
-  out_of_scope_packet_families: PacketFamily[];
+  pruned_packet_types: string[];
   findings: string[];
 };
 
@@ -62,31 +62,33 @@ function isOpenInScopeEntry(entry: PreReseedClosureLedgerEntry): boolean {
 function listDiscussionSeedPacketIds(): string[] {
   return uniqueSorted(
     PERSONAL_SEED_PACKETS.filter((packet) =>
-      packet.header.family === 'Discussion' ||
-      packet.header.family === 'DiscussionSpace' ||
-      packet.header.family === 'DiscussionForum' ||
-      packet.header.family === 'DiscussionThread' ||
-      packet.header.family === 'DiscussionPost' ||
-      packet.header.family === 'DiscussionReply'
+      packet.header.type === 'Discussion'
     ).map((packet) => packet.header.packet_id)
   );
 }
 
-function listOutOfScopePacketFamilies(
-  entries: readonly PreReseedClosureLedgerEntry[]
-): PacketFamily[] {
-  return entries
-    .filter(
-      (entry): entry is PreReseedClosureLedgerEntry & { subject_id: PacketFamily } =>
-        entry.subject_kind === 'packet_family' &&
-        entry.status === 'out_of_chapter_scope'
-    )
-    .map((entry) => entry.subject_id);
-}
+const PRUNED_PACKET_TYPES = [
+  'Cause',
+  'Signal',
+  'Initiative',
+  'Program',
+  'Campaign',
+  'MissionTemplate',
+  'MissionPlan',
+  'MissionReport',
+  'Module',
+  'DiscussionSpace',
+  'DiscussionForum',
+  'DiscussionThread',
+  'DiscussionPost',
+  'DiscussionReply',
+  'Minutes',
+  'Artifact',
+] as const;
 
 export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessReport {
   const closureReport = createPreReseedModernizationClosureReport();
-  const definitions = listExperimentalPacketTypeDefinitions();
+  const definitions = listDefinedPacketTypeDefinitions();
   const seededDefinitionProfile = resolveSeededPacketDefinitionProfile({ definitions });
   const seededDefinitionAudit = auditSeededPacketDefinitionProfile({
     definitions,
@@ -95,14 +97,14 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
   const manifestAudit = auditPacketDefinitionManifest({
     manifest: PACKET_DEFINITION_MANIFEST,
     definitions,
-    requireShadowRuntimeReady: false,
+    requireDefinitionRuntimeReady: false,
   });
   const policyDependencyAudit = auditPacketPolicyDependencyCoverage();
   const dependencySemanticAudit = auditPacketDependencySemanticAuthority();
   const policySemanticAudit = auditPacketPolicySemanticAuthority({
     policyPackets: PERSONAL_SEED_PACKETS.filter(
       (packet): packet is PacketEnvelopeByType['Policy'] =>
-        packet.header.family === 'Policy'
+        packet.header.type === 'Policy'
     ),
   });
   const clientIngressAudit = auditPacketClientIntentEnrollments();
@@ -119,7 +121,7 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
     ...closureReport.client_ingress_enrollments,
     ...closureReport.fortress_handoffs,
     ...closureReport.composite_workflow_adapters,
-    ...closureReport.packet_families,
+    ...closureReport.packet_types,
   ];
   const openEntries = closureEntries.filter(isOpenInScopeEntry);
   const canonicalWriteIntents = listMutationIntentDescriptors().map(
@@ -127,7 +129,6 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
   );
   const seedDefaultAnchorPacketIds = [
     PERSONAL_TREE_PACKET_IDS.owa_action,
-    PERSONAL_TREE_PACKET_IDS.owa_cause,
   ];
   const requiredDefaultPolicyPacketIds = [
     PERSONAL_TREE_PACKET_IDS.owa_home_locality_policy,
@@ -186,10 +187,8 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
     compatibility_only_legacy_surfaces: [
       'assembly_association.claim.set',
       'home_locality.claim.set',
-      'Claim(home_locality)',
-      'legacy parent_scope ancestry',
-      'DiscussionThread/DiscussionPost/DiscussionReply projections',
-      'Cause(subtype: initiative)',
+      'archived alpha packet types only',
+      'legacy parent_scope ancestry archive records',
     ],
     seed_default_anchor_packet_ids: seedDefaultAnchorPacketIds,
     required_default_policy_packet_ids: requiredDefaultPolicyPacketIds,
@@ -205,9 +204,7 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
     seeded_definition_bundle_packet_id:
       seededDefinitionProfile.bundle_packet.packet_ref.packet_id,
     canonical_definition_seed_packet_ids: uniqueSorted(definitionSeedPacketIds),
-    out_of_scope_packet_families: listOutOfScopePacketFamilies(
-      closureReport.packet_families
-    ),
+    pruned_packet_types: [...PRUNED_PACKET_TYPES],
     findings,
   };
 }

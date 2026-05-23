@@ -1,6 +1,6 @@
 /**
  * File: definition-bootstrap.ts
- * Description: Native shadow bootstrap helpers for resolving Definition packet parts into local packet definitions.
+ * Description: Native definition bootstrap helpers for resolving Definition packet parts into local packet definitions.
  */
 
 import type {
@@ -79,8 +79,10 @@ export function resolveDefinitionBootstrapProfile(
     supported_subtypes_from_schema_parts: getSupportedSubtypesFromSchemaParts(definition),
     runtime_ready:
       missingRequired.length === 0 &&
-      parts.every((part) => part.availability !== 'shadow_only') &&
-      definition.definition_status !== 'experimental_shadow',
+      parts.every((part) =>
+        part.availability === 'runtime_ready' || part.availability === 'canonical'
+      ) &&
+      definition.definition_status === 'canonical',
   };
 }
 

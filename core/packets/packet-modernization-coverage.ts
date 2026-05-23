@@ -1,25 +1,25 @@
 /**
  * File: packet-modernization-coverage.ts
- * Description: Audits packet-family modernization coverage for the manifest/runtime chapter.
+ * Description: Audits packet-type modernization coverage for the manifest/runtime chapter.
  */
 
 import {
   auditPacketCompatibilityStandard,
-  getExperimentalPacketTypeDefinition,
-  listExperimentalPacketTypeDefinitions,
+  getDefinedPacketTypeDefinition,
+  listDefinedPacketTypeDefinitions,
   listPacketDefinitionParts,
   resolvePacketDefinitionMutationActionPlan,
 } from '@core/packets/packet-definition-manifest';
 import {
-  GENERIC_PACKET_BUILD_FAMILIES,
+  GENERIC_PACKET_BUILD_TYPES,
   hasGenericPacketBuilderPipeline,
 } from '@core/packets/packet-build-pipeline';
 import { listPacketTypeBodyBuilders } from '@core/packets/packet-type-body-builders';
 import {
   PACKET_BODY_SCHEMAS,
   PACKET_COMPATIBILITY_REGISTRY,
-  PACKET_FAMILIES,
-  type PacketFamily,
+  PACKET_TYPES,
+  type PacketType,
 } from '@core/schema/packet-schema';
 
 export type PacketModernizationCoverageArea =
@@ -36,72 +36,62 @@ export type PacketModernizationStatus =
   | 'supported'
   | 'defined'
   | 'complete'
-  | 'planned_gap';
+  | 'missing_coverage';
 
 export interface PacketModernizationPlannedGap {
   area: PacketModernizationCoverageArea;
-  status: 'planned_gap';
-  reason: string;
-}
-
-export interface PacketFamilyModernizationCoverage {
-  family: PacketFamily;
-  ontology_enrolled: true;
-  body_schema_status: Extract<PacketModernizationStatus, 'present' | 'planned_gap'>;
-  compatibility_registry_status: Extract<
-    PacketModernizationStatus,
-    'present' | 'planned_gap'
-  >;
-  build_pipeline_status: Extract<
-    PacketModernizationStatus,
-    'supported' | 'planned_gap'
-  >;
-  manifest_definition_status: Extract<
-    PacketModernizationStatus,
-    'defined' | 'planned_gap'
-  >;
-  definition_parts_status: Extract<
-    PacketModernizationStatus,
-    'complete' | 'planned_gap'
-  >;
-  definition_part_count: number;
-  planned_gaps: PacketModernizationPlannedGap[];
-}
-
-export interface PacketNextPhaseLiveEnrollmentTarget {
-  packet_type: 'Definition' | 'Bundle';
-  target_status: 'canonical_family';
-  currently_in_packet_families: true;
-  manifest_definition_status: 'defined';
+  status: 'missing_coverage';
   reason: string;
 }
 
 export interface PacketTypeModernizationCoverage {
-  packet_type: string;
-  manifest_definition_status: 'defined';
+  type: PacketType;
+  packet_type: PacketType;
+  ontology_enrolled: true;
+  body_schema_status: Extract<PacketModernizationStatus, 'present' | 'missing_coverage'>;
+  compatibility_registry_status: Extract<
+    PacketModernizationStatus,
+    'present' | 'missing_coverage'
+  >;
+  build_pipeline_status: Extract<
+    PacketModernizationStatus,
+    'supported' | 'missing_coverage'
+  >;
+  manifest_definition_status: Extract<
+    PacketModernizationStatus,
+    'defined' | 'missing_coverage'
+  >;
   definition_parts_status: Extract<
     PacketModernizationStatus,
-    'complete' | 'planned_gap'
+    'complete' | 'missing_coverage'
   >;
-  definition_part_count: number;
   descriptor_builder_status: Extract<
     PacketModernizationStatus,
-    'defined' | 'planned_gap'
+    'defined' | 'missing_coverage'
   >;
   body_builder_status: Extract<
     PacketModernizationStatus,
-    'supported' | 'planned_gap'
+    'supported' | 'missing_coverage'
   >;
-  shadow_mutation_plan_status: Extract<
+  definition_mutation_plan_status: Extract<
     PacketModernizationStatus,
-    'supported' | 'planned_gap'
+    'supported' | 'missing_coverage'
   >;
   compatibility_standard_status: Extract<
     PacketModernizationStatus,
-    'supported' | 'planned_gap'
+    'supported' | 'missing_coverage'
   >;
   runtime_connector_status: 'not_checked_in_core';
-  planned_gaps: PacketModernizationPlannedGap[];
+  definition_part_count: number;
+  missing_coverage_items: PacketModernizationPlannedGap[];
+}
+
+export interface PacketNextPhaseLiveEnrollmentTarget {
+  packet_type: 'Definition' | 'Bundle';
+  target_status: 'canonical_type';
+  currently_in_packet_types: true;
+  manifest_definition_status: 'defined';
+  reason: string;
 }
 
 function hasOwnKey<TObject extends object>(
@@ -117,132 +107,96 @@ function plannedGap(
 ): PacketModernizationPlannedGap {
   return {
     area,
-    status: 'planned_gap',
+    status: 'missing_coverage',
     reason,
   };
 }
 
-export function getPacketFamilyModernizationCoverage(
-  family: PacketFamily
-): PacketFamilyModernizationCoverage {
-  const definition = getExperimentalPacketTypeDefinition(family);
+export function getPacketTypeModernizationCoverage(
+  type: PacketType
+): PacketTypeModernizationCoverage {
+  const definition = getDefinedPacketTypeDefinition(type);
   const definitionParts = definition ? listPacketDefinitionParts(definition) : [];
-  const planned_gaps: PacketModernizationPlannedGap[] = [];
+  const missing_coverage_items: PacketModernizationPlannedGap[] = [];
+  const bodyBuilderPacketTypes = new Set<string>(
+    listPacketTypeBodyBuilders().map((builder) => builder.packet_type)
+  );
+  const mutationPlans = definition
+    ? definition.mutations.map((mutation) =>
+        resolvePacketDefinitionMutationActionPlan({
+          definition,
+          mutation_intent: mutation.mutation_intent,
+        })
+      )
+    : [];
+  const compatibilityIssues = definition
+    ? auditPacketCompatibilityStandard(definition)
+    : [];
 
-  const body_schema_status = hasOwnKey(PACKET_BODY_SCHEMAS, family)
+  const body_schema_status = hasOwnKey(PACKET_BODY_SCHEMAS, type)
     ? 'present'
-    : 'planned_gap';
-  if (body_schema_status === 'planned_gap') {
-    planned_gaps.push(
+    : 'missing_coverage';
+  if (body_schema_status === 'missing_coverage') {
+    missing_coverage_items.push(
       plannedGap(
         'body_schema',
-        'Canonical packet ontology families must keep a body schema before modernization can promote them.'
+        'Canonical packet ontology types must keep a body schema before modernization can promote them.'
       )
     );
   }
 
   const compatibility_registry_status = hasOwnKey(
     PACKET_COMPATIBILITY_REGISTRY,
-    family
+    type
   )
     ? 'present'
-    : 'planned_gap';
-  if (compatibility_registry_status === 'planned_gap') {
-    planned_gaps.push(
+    : 'missing_coverage';
+  if (compatibility_registry_status === 'missing_coverage') {
+    missing_coverage_items.push(
       plannedGap(
         'compatibility_registry',
-        'Canonical packet ontology families must keep compatibility metadata before modernization can promote them.'
+        'Canonical packet ontology types must keep compatibility metadata before modernization can promote them.'
       )
     );
   }
 
-  const build_pipeline_status = hasGenericPacketBuilderPipeline(family)
+  const build_pipeline_status = hasGenericPacketBuilderPipeline(type)
     ? 'supported'
-    : 'planned_gap';
-  if (build_pipeline_status === 'planned_gap') {
-    planned_gaps.push(
+    : 'missing_coverage';
+  if (build_pipeline_status === 'missing_coverage') {
+    missing_coverage_items.push(
       plannedGap(
         'build_pipeline',
-        `Generic packet builders currently cover ${GENERIC_PACKET_BUILD_FAMILIES.length} families; this family is scheduled for a later builder pass.`
+        `Generic packet builders currently cover ${GENERIC_PACKET_BUILD_TYPES.length} types; this type is not covered by the active builder registry.`
       )
     );
   }
 
-  const manifest_definition_status = definition ? 'defined' : 'planned_gap';
-  if (manifest_definition_status === 'planned_gap') {
-    planned_gaps.push(
+  const manifest_definition_status = definition ? 'defined' : 'missing_coverage';
+  if (manifest_definition_status === 'missing_coverage') {
+    missing_coverage_items.push(
       plannedGap(
         'manifest_definition',
-        'Preference is the only live ontology family with a manifest definition in the current chapter baseline.'
+        'Preference is the only live ontology type with a manifest definition in the current chapter baseline.'
       )
     );
   }
 
   const definition_parts_status =
-    definitionParts.length > 0 ? 'complete' : 'planned_gap';
-  if (definition_parts_status === 'planned_gap') {
-    planned_gaps.push(
+    definitionParts.length > 0 ? 'complete' : 'missing_coverage';
+  if (definition_parts_status === 'missing_coverage') {
+    missing_coverage_items.push(
       plannedGap(
         'definition_parts',
-        'Definition parts will be filled when this family receives its manifest definition.'
-      )
-    );
-  }
-
-  return {
-    family,
-    ontology_enrolled: true,
-    body_schema_status,
-    compatibility_registry_status,
-    build_pipeline_status,
-    manifest_definition_status,
-    definition_parts_status,
-    definition_part_count: definitionParts.length,
-    planned_gaps,
-  };
-}
-
-export function listPacketFamilyModernizationCoverage(): PacketFamilyModernizationCoverage[] {
-  return PACKET_FAMILIES.map((family) => getPacketFamilyModernizationCoverage(family));
-}
-
-export function getPacketTypeModernizationCoverage(
-  packetType: string
-): PacketTypeModernizationCoverage {
-  const definition = getExperimentalPacketTypeDefinition(packetType);
-
-  if (!definition) {
-    throw new Error(`Unknown manifest packet type: ${packetType}`);
-  }
-
-  const parts = listPacketDefinitionParts(definition);
-  const planned_gaps: PacketModernizationPlannedGap[] = [];
-  const bodyBuilderPacketTypes = new Set(
-    listPacketTypeBodyBuilders().map((builder) => builder.packet_type)
-  );
-  const mutationPlans = definition.mutations.map((mutation) =>
-    resolvePacketDefinitionMutationActionPlan({
-      definition,
-      mutation_intent: mutation.mutation_intent,
-    })
-  );
-  const compatibilityIssues = auditPacketCompatibilityStandard(definition);
-
-  const definition_parts_status =
-    parts.length > 0 ? 'complete' : 'planned_gap';
-  if (definition_parts_status === 'planned_gap') {
-    planned_gaps.push(
-      plannedGap(
-        'definition_parts',
-        'Packet types should expose Definition parts before runtime enrollment.'
+        'Definition parts will be filled when this type receives its manifest definition.'
       )
     );
   }
 
   const descriptor_builder_status =
-    definition.builders.length > 0 ? 'defined' : 'planned_gap';
-  if (descriptor_builder_status === 'planned_gap') {
-    planned_gaps.push(
+    definition && definition.builders.length > 0 ? 'defined' : 'missing_coverage';
+  if (descriptor_builder_status === 'missing_coverage') {
+    missing_coverage_items.push(
       plannedGap(
         'build_pipeline',
         'Packet definition has no builder descriptor for packet-type body candidates.'
@@ -251,12 +205,12 @@ export function getPacketTypeModernizationCoverage(
   }
 
   const body_builder_status =
-    bodyBuilderPacketTypes.has(definition.packet_type) ||
-    (GENERIC_PACKET_BUILD_FAMILIES as readonly string[]).includes(definition.packet_type)
-    ? 'supported'
-    : 'planned_gap';
-  if (body_builder_status === 'planned_gap') {
-    planned_gaps.push(
+    bodyBuilderPacketTypes.has(type) ||
+    (GENERIC_PACKET_BUILD_TYPES as readonly string[]).includes(type)
+      ? 'supported'
+      : 'missing_coverage';
+  if (body_builder_status === 'missing_coverage') {
+    missing_coverage_items.push(
       plannedGap(
         'build_pipeline',
         'No executable packet-type body builder is registered for this manifest packet type.'
@@ -264,26 +218,26 @@ export function getPacketTypeModernizationCoverage(
     );
   }
 
-  const shadow_mutation_plan_status =
+  const definition_mutation_plan_status =
     mutationPlans.length > 0 &&
-    mutationPlans.every((plan) => plan.ready_for_shadow_runtime)
+    mutationPlans.every((plan) => plan.ready_for_runtime)
       ? 'supported'
-      : 'planned_gap';
-  if (shadow_mutation_plan_status === 'planned_gap') {
-    planned_gaps.push(
+      : 'missing_coverage';
+  if (definition_mutation_plan_status === 'missing_coverage') {
+    missing_coverage_items.push(
       plannedGap(
         'manifest_definition',
-        'Packet mutation descriptors are missing or not shadow-runtime ready.'
+        'Packet mutation descriptors are missing or not runtime ready.'
       )
     );
   }
 
   const compatibility_standard_status =
     compatibilityIssues.some((issue) => issue.severity === 'error')
-      ? 'planned_gap'
+      ? 'missing_coverage'
       : 'supported';
-  if (compatibility_standard_status === 'planned_gap') {
-    planned_gaps.push(
+  if (compatibility_standard_status === 'missing_coverage') {
+    missing_coverage_items.push(
       plannedGap(
         'compatibility_definition',
         'Manifest compatibility descriptors do not yet meet the current adapter graph standard.'
@@ -292,42 +246,45 @@ export function getPacketTypeModernizationCoverage(
   }
 
   return {
-    packet_type: definition.packet_type,
-    manifest_definition_status: 'defined',
+    type,
+    packet_type: type,
+    ontology_enrolled: true,
+    body_schema_status,
+    compatibility_registry_status,
+    build_pipeline_status,
+    manifest_definition_status,
     definition_parts_status,
-    definition_part_count: parts.length,
     descriptor_builder_status,
     body_builder_status,
-    shadow_mutation_plan_status,
+    definition_mutation_plan_status,
     compatibility_standard_status,
     runtime_connector_status: 'not_checked_in_core',
-    planned_gaps,
+    definition_part_count: definitionParts.length,
+    missing_coverage_items,
   };
 }
 
 export function listPacketTypeModernizationCoverage(): PacketTypeModernizationCoverage[] {
-  return listExperimentalPacketTypeDefinitions().map((definition) =>
-    getPacketTypeModernizationCoverage(definition.packet_type)
-  );
+  return PACKET_TYPES.map((type) => getPacketTypeModernizationCoverage(type));
 }
 
 export function listPacketNextPhaseLiveEnrollmentTargets(): PacketNextPhaseLiveEnrollmentTarget[] {
   return (['Definition', 'Bundle'] as const).map((packet_type) => {
-    const definition = getExperimentalPacketTypeDefinition(packet_type);
+    const definition = getDefinedPacketTypeDefinition(packet_type);
 
     if (!definition) {
       throw new Error(
-        `Expected ${packet_type} to remain available in the experimental packet definition manifest.`
+        `Expected ${packet_type} to remain available in the canonical packet definition manifest.`
       );
     }
 
     return {
       packet_type,
-      target_status: 'canonical_family',
-      currently_in_packet_families: true,
+      target_status: 'canonical_type',
+      currently_in_packet_types: true,
       manifest_definition_status: 'defined',
       reason:
-        'Definition and Bundle are now canonical packet families with packetized definition-profile seed material.',
+        'Definition and Bundle are now canonical packet types with packetized definition-profile seed material.',
     };
   });
 }

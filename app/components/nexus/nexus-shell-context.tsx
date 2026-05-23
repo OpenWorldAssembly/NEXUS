@@ -116,7 +116,7 @@ type NexusShellContextValue = NexusShellState & {
     preferredRevisionId?: string | null;
     titleSnapshot?: string | null;
     seedSummary?: {
-      family: string | null;
+      type: string | null;
       summary: string | null;
       label: string | null;
     } | null;
@@ -126,7 +126,7 @@ type NexusShellContextValue = NexusShellState & {
     preferredRevisionId?: string | null;
     titleSnapshot?: string | null;
     seedSummary?: {
-      family: string | null;
+      type: string | null;
       summary: string | null;
       label: string | null;
     } | null;
@@ -142,7 +142,7 @@ type NexusShellContextValue = NexusShellState & {
     preferredRevisionId?: string | null;
     titleSnapshot?: string | null;
     seedSummary?: {
-      family: string | null;
+      type: string | null;
       summary: string | null;
       label: string | null;
     } | null;
@@ -185,6 +185,7 @@ const FALLBACK_SCOPE_SUMMARY: NexusScopeSummary = {
   isFollowed: false,
   isAssociated: false,
   isHomeAncestor: false,
+  structuralState: 'canonical',
   associationKind: null,
   mountReasons: ['global_default'],
   justificationPacketIds: [],
@@ -670,7 +671,7 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
     preferredRevisionId?: string | null;
     titleSnapshot?: string | null;
     seedSummary?: {
-      family: string | null;
+      type: string | null;
       summary: string | null;
       label: string | null;
     } | null;
@@ -685,7 +686,7 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
     preferredRevisionId?: string | null;
     titleSnapshot?: string | null;
     seedSummary?: {
-      family: string | null;
+      type: string | null;
       summary: string | null;
       label: string | null;
     } | null;
@@ -753,7 +754,7 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
     preferredRevisionId?: string | null;
     titleSnapshot?: string | null;
     seedSummary?: {
-      family: string | null;
+      type: string | null;
       summary: string | null;
       label: string | null;
     } | null;

@@ -1,6 +1,6 @@
 /**
  * File: packet-client-intent-enrollment.ts
- * Description: Interface-neutral client/API ingress allowlist and shadow crossing-guard preflight.
+ * Description: Interface-neutral client/API ingress allowlist and definition crossing-guard preflight.
  */
 
 import {
@@ -13,6 +13,7 @@ import {
   listMutationIntentDescriptors,
   type MutationIntentDescriptor,
 } from '@runtime/nexus/server/mutation-intent-registry';
+import type { MutationIntent } from '@core/auth/mutation-corridor';
 import {
   listPacketRuntimeFortressHandoffCoverage,
   resolvePacketRuntimeFortressHandoff,
@@ -23,13 +24,13 @@ import {
 export type PacketClientIntentEnrollmentMode =
   | 'signed_fortress_prepare'
   | 'live_connector'
-  | 'shadow_only';
+  | 'runtime_ready';
 
 export type PacketClientIntentEnrollment = {
   enrollment_id: string;
   source_route: string;
   client_intent_id: string;
-  mutation_intent: string;
+  mutation_intent: MutationIntent['kind'];
   connector_id: string | null;
   packet_type: string | null;
   packet_subtype: string | null;
@@ -44,7 +45,7 @@ export type PacketClientIntentEnrollment = {
 
 export type PacketClientIntentPreflight = {
   preflight_kind: 'packet.client_intent.preflight';
-  status: 'allowed_shadow' | 'allowed_live_connector' | 'blocked';
+  status: 'allowed_definition' | 'allowed_live_connector' | 'blocked';
   enrollment: PacketClientIntentEnrollment | null;
   handoff: PacketRuntimeFortressHandoff | null;
   policy_requirement_ids: string[];
@@ -240,7 +241,7 @@ export function resolvePacketClientIntentPreflight(input: {
     status:
       enrollment.live_mode === 'live_connector'
         ? 'allowed_live_connector'
-        : 'allowed_shadow',
+        : 'allowed_definition',
     enrollment,
     handoff,
     policy_requirement_ids: policyRequirements.map(

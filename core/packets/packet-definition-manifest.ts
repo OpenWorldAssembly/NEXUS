@@ -7,7 +7,6 @@ import {
   actionPacketDefinition,
   attestationPacketDefinition,
   bundlePacketDefinition,
-  causePacketDefinition,
   claimPacketDefinition,
   definitionPacketDefinition,
   decisionPacketDefinition,
@@ -41,7 +40,7 @@ import {
 } from '@core/packets/packet-policy-semantics.ts';
 import { PACKET_MANIFEST_TEMPLATE_VERSION } from '@core/packets/packet-definition-template.ts';
 
-export const EXPERIMENTAL_PACKET_TYPE_DEFINITIONS = {
+export const PACKET_TYPE_DEFINITIONS = {
   Definition: definitionPacketDefinition,
   Element: elementPacketDefinition,
   Location: locationPacketDefinition,
@@ -53,7 +52,6 @@ export const EXPERIMENTAL_PACKET_TYPE_DEFINITIONS = {
   Vote: votePacketDefinition,
   Attestation: attestationPacketDefinition,
   Decision: decisionPacketDefinition,
-  Cause: causePacketDefinition,
   Action: actionPacketDefinition,
   Discussion: discussionPacketDefinition,
   Policy: policyPacketDefinition,
@@ -61,15 +59,15 @@ export const EXPERIMENTAL_PACKET_TYPE_DEFINITIONS = {
   Bundle: bundlePacketDefinition,
 } as const satisfies Record<string, PacketTypeDefinition>;
 
-export type ExperimentalPacketType =
-  keyof typeof EXPERIMENTAL_PACKET_TYPE_DEFINITIONS;
+export type DefinedPacketType =
+  keyof typeof PACKET_TYPE_DEFINITIONS;
 
 export const PACKET_DEFINITION_MANIFEST = {
   manifest_type: 'packet_definition_manifest',
   manifest_version: '0.1.0',
   status: 'active',
   template_version: PACKET_MANIFEST_TEMPLATE_VERSION,
-  items: Object.values(EXPERIMENTAL_PACKET_TYPE_DEFINITIONS).map(
+  items: Object.values(PACKET_TYPE_DEFINITIONS).map(
     (definition) => ({
       packet_type: definition.packet_type,
       schema_version: definition.current_schema_version,
@@ -89,38 +87,38 @@ export const PACKET_DEFINITION_MANIFEST = {
   ),
   dependencies: [],
   compatibility_notes: [
-    'Definition, Bundle, and Preference are canonical packet families; generic family descriptors remain staged where their live runtime enrollment is still shadowed.',
+    'All active packet type descriptors are canonical definition material; executable behavior remains mapped to trusted local runtime capabilities.',
     'Definition.packet_compatibility parts carry current identity and adjacent version-ladder adapter metadata.',
     'Bundle packets remain carrier inventories and are not the semantic home for packet definitions.',
     'Stored Definition and Bundle packets describe packet semantics, but executable behavior remains trusted-local.',
   ],
 } as const satisfies PacketDefinitionManifest;
 
-export function listExperimentalPacketTypeDefinitions(): PacketTypeDefinition[] {
-  return Object.values(EXPERIMENTAL_PACKET_TYPE_DEFINITIONS);
+export function listDefinedPacketTypeDefinitions(): PacketTypeDefinition[] {
+  return Object.values(PACKET_TYPE_DEFINITIONS);
 }
 
-export function getExperimentalPacketTypeDefinition(
+export function getDefinedPacketTypeDefinition(
   packetType: string
 ): PacketTypeDefinition | null {
-  return EXPERIMENTAL_PACKET_TYPE_DEFINITIONS[
-    packetType as ExperimentalPacketType
+  return PACKET_TYPE_DEFINITIONS[
+    packetType as DefinedPacketType
   ] ?? null;
 }
 
-export function isExperimentalPacketType(
+export function isDefinedPacketType(
   packetType: string
-): packetType is ExperimentalPacketType {
-  return packetType in EXPERIMENTAL_PACKET_TYPE_DEFINITIONS;
+): packetType is DefinedPacketType {
+  return packetType in PACKET_TYPE_DEFINITIONS;
 }
 
 
-export function listExperimentalPacketActions(packetType?: string) {
+export function listPacketDefinitionActions(packetType?: string) {
   const definitions = packetType
-    ? [getExperimentalPacketTypeDefinition(packetType)].filter(
+    ? [getDefinedPacketTypeDefinition(packetType)].filter(
         (definition): definition is PacketTypeDefinition => definition !== null
       )
-    : listExperimentalPacketTypeDefinitions();
+    : listDefinedPacketTypeDefinitions();
 
   return definitions.flatMap((definition) =>
     definition.actions.map((action) => ({
@@ -130,12 +128,12 @@ export function listExperimentalPacketActions(packetType?: string) {
   );
 }
 
-export function listExperimentalPacketBuilders(packetType?: string) {
+export function listPacketDefinitionBuilders(packetType?: string) {
   const definitions = packetType
-    ? [getExperimentalPacketTypeDefinition(packetType)].filter(
+    ? [getDefinedPacketTypeDefinition(packetType)].filter(
         (definition): definition is PacketTypeDefinition => definition !== null
       )
-    : listExperimentalPacketTypeDefinitions();
+    : listDefinedPacketTypeDefinitions();
 
   return definitions.flatMap((definition) =>
     definition.builders.map((builder) => ({
@@ -145,12 +143,12 @@ export function listExperimentalPacketBuilders(packetType?: string) {
   );
 }
 
-export function listExperimentalPacketPlanners(packetType?: string) {
+export function listPacketDefinitionPlanners(packetType?: string) {
   const definitions = packetType
-    ? [getExperimentalPacketTypeDefinition(packetType)].filter(
+    ? [getDefinedPacketTypeDefinition(packetType)].filter(
         (definition): definition is PacketTypeDefinition => definition !== null
       )
-    : listExperimentalPacketTypeDefinitions();
+    : listDefinedPacketTypeDefinitions();
 
   return definitions.flatMap((definition) =>
     definition.planners.map((planner) => ({
@@ -160,12 +158,12 @@ export function listExperimentalPacketPlanners(packetType?: string) {
   );
 }
 
-export function listExperimentalPacketMutations(packetType?: string) {
+export function listPacketDefinitionMutations(packetType?: string) {
   const definitions = packetType
-    ? [getExperimentalPacketTypeDefinition(packetType)].filter(
+    ? [getDefinedPacketTypeDefinition(packetType)].filter(
         (definition): definition is PacketTypeDefinition => definition !== null
       )
-    : listExperimentalPacketTypeDefinitions();
+    : listDefinedPacketTypeDefinitions();
 
   return definitions.flatMap((definition) =>
     definition.mutations.map((mutation) => ({
@@ -177,13 +175,13 @@ export function listExperimentalPacketMutations(packetType?: string) {
 
 export function listPacketOperationModernizationCoverage() {
   return createPacketOperationModernizationCoverage(
-    listExperimentalPacketTypeDefinitions()
+    listDefinedPacketTypeDefinitions()
   );
 }
 
 export function listPacketWorkflowPlanDescriptors(packetType?: string) {
   return listPacketWorkflowPlanDescriptorsFromDefinitions({
-    definitions: listExperimentalPacketTypeDefinitions(),
+    definitions: listDefinedPacketTypeDefinitions(),
     packetType,
   });
 }
@@ -193,7 +191,7 @@ export function getPacketWorkflowPlanDescriptor(
   workflowPlanId: string
 ) {
   return getPacketWorkflowPlanDescriptorFromDefinitions({
-    definitions: listExperimentalPacketTypeDefinitions(),
+    definitions: listDefinedPacketTypeDefinitions(),
     packetType,
     workflowPlanId,
   });
@@ -201,31 +199,31 @@ export function getPacketWorkflowPlanDescriptor(
 
 export function listPacketPolicyRequirementDescriptors() {
   return listPacketPolicyRequirementDescriptorsFromDefinitions({
-    definitions: listExperimentalPacketTypeDefinitions(),
+    definitions: listDefinedPacketTypeDefinitions(),
   });
 }
 
 export function listPacketDependencyRequirementDescriptors() {
   return listPacketDependencyRequirementDescriptorsFromDefinitions({
-    definitions: listExperimentalPacketTypeDefinitions(),
+    definitions: listDefinedPacketTypeDefinitions(),
   });
 }
 
 export function auditPacketPolicyDependencyCoverage() {
   return auditPacketPolicyDependencyCoverageFromDefinitions({
-    definitions: listExperimentalPacketTypeDefinitions(),
+    definitions: listDefinedPacketTypeDefinitions(),
   });
 }
 
 export function listPacketDependencySemanticDescriptors() {
   return listPacketDependencySemanticDescriptorsFromDefinitions({
-    definitions: listExperimentalPacketTypeDefinitions(),
+    definitions: listDefinedPacketTypeDefinitions(),
   });
 }
 
 export function auditPacketDependencySemanticAuthority() {
   return auditPacketDependencySemanticAuthorityFromDefinitions({
-    definitions: listExperimentalPacketTypeDefinitions(),
+    definitions: listDefinedPacketTypeDefinitions(),
   });
 }
 

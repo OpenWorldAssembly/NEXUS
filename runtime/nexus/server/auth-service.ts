@@ -288,10 +288,10 @@ export class NexusAuthService {
       );
       const availablePolicyPackets = policyPackets.filter(
         (packet): packet is PacketEnvelopeByType['Policy'] =>
-          packet?.header.family === 'Policy'
+          packet?.header.type === 'Policy'
       );
       const writeLockPolicyPacket = availablePolicyPackets.find(
-        (packet) => packet.body.policy_kind === 'write_lock'
+        (packet) => packet.body.subtype === 'write_lock'
       );
 
       if (writeLockPolicyPacket?.body.write_policy) {
@@ -609,7 +609,7 @@ export class NexusAuthService {
         ? (packet.body as Record<string, unknown>)
         : null;
 
-    if (packet.header.family !== 'Element' || body?.kind !== 'person') {
+    if (packet.header.type !== 'Element' || body?.kind !== 'person') {
       throw new Error('Actor packet must be a person element.');
     }
 

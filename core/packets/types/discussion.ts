@@ -1,10 +1,10 @@
 /**
- * File: families/discussion.ts
- * Description: Family-owned build rules for canonical Discussion packets.
+ * File: types/discussion.ts
+ * Description: Type-owned build rules for canonical Discussion packets.
  */
 
 import type { DiscussionPacketInput } from '@core/packets/builders';
-import type { PacketFamilyBuildDefinition } from '@core/packets/packet-build-pipeline';
+import type { PacketTypeBuildDefinition } from '@core/packets/packet-build-pipeline';
 import {
   createPacketEdge,
   createTextExcerpt,
@@ -22,12 +22,12 @@ function createParticipationRules(input: DiscussionPacketInput) {
   };
 }
 
-export const discussionBuildDefinition: PacketFamilyBuildDefinition<
+export const discussionBuildDefinition: PacketTypeBuildDefinition<
   'Discussion',
   DiscussionPacketInput
 > = {
   validateBody: (input) => {
-    if (input.kind === 'space') {
+    if (input.subtype === 'space') {
       if (!input.scope_ref) {
         throw new Error('Discussion space packets require scope_ref.');
       }
@@ -35,27 +35,27 @@ export const discussionBuildDefinition: PacketFamilyBuildDefinition<
     }
 
     if (!input.parent_ref) {
-      throw new Error(`Discussion ${input.kind} packets require parent_ref.`);
+      throw new Error(`Discussion ${input.subtype} packets require parent_ref.`);
     }
 
-    if (input.kind === 'message' && !input.topic_ref) {
+    if (input.subtype === 'message' && !input.topic_ref) {
       throw new Error('Discussion message packets require topic_ref.');
     }
   },
   extractRelationships: (input) => {
-    if (input.kind === 'space') {
+    if (input.subtype === 'space') {
       return {
         dependencies: [input.scope_ref as PacketRef],
       };
     }
 
-    if (input.kind === 'forum') {
+    if (input.subtype === 'forum') {
       return {
         dependencies: [input.parent_ref as PacketRef],
       };
     }
 
-    if (input.kind === 'topic' || input.kind === 'post') {
+    if (input.subtype === 'topic' || input.subtype === 'post') {
       return {
         dependencies: [input.parent_ref as PacketRef],
         references: input.related_refs ?? [],
@@ -73,7 +73,7 @@ export const discussionBuildDefinition: PacketFamilyBuildDefinition<
   prepareEdges: (input, relationships) => {
     const edges = [];
 
-    if (input.kind === 'space') {
+    if (input.subtype === 'space') {
       edges.push(
         createPacketEdge('belongs_to', input.scope_ref as PacketRef, {
           source_field: 'scope_ref',
@@ -89,7 +89,7 @@ export const discussionBuildDefinition: PacketFamilyBuildDefinition<
       })
     );
 
-    if (input.kind === 'topic' || input.kind === 'post') {
+    if (input.subtype === 'topic') {
       for (const relatedRef of relationships?.references ?? []) {
         edges.push(
           createPacketEdge('references', relatedRef, {
@@ -101,7 +101,15 @@ export const discussionBuildDefinition: PacketFamilyBuildDefinition<
       return edges;
     }
 
-    if (input.kind === 'post') {
+    if (input.subtype === 'post') {
+      for (const relatedRef of relationships?.references ?? []) {
+        edges.push(
+          createPacketEdge('references', relatedRef, {
+            source_field: 'related_refs',
+          })
+        );
+      }
+
       for (const attachmentRef of input.attachment_refs ?? []) {
         edges.push(
           createPacketEdge('references', attachmentRef, {
@@ -113,7 +121,7 @@ export const discussionBuildDefinition: PacketFamilyBuildDefinition<
       return edges;
     }
 
-    if (input.kind !== 'message') {
+    if (input.subtype !== 'message') {
       return edges;
     }
 
@@ -143,9 +151,9 @@ export const discussionBuildDefinition: PacketFamilyBuildDefinition<
     return edges;
   },
   finalizeBody: (input) => {
-    if (input.kind === 'space') {
+    if (input.subtype === 'space') {
       return {
-        kind: 'space',
+        subtype: 'space',
         role: input.role,
         title: input.title,
         summary: input.summary ?? null,
@@ -154,9 +162,9 @@ export const discussionBuildDefinition: PacketFamilyBuildDefinition<
       };
     }
 
-    if (input.kind === 'forum') {
+    if (input.subtype === 'forum') {
       return {
-        kind: 'forum',
+        subtype: 'forum',
         role: input.role,
         title: input.title,
         summary: input.summary ?? null,
@@ -167,9 +175,9 @@ export const discussionBuildDefinition: PacketFamilyBuildDefinition<
       };
     }
 
-    if (input.kind === 'topic') {
+    if (input.subtype === 'topic') {
       return {
-        kind: 'topic',
+        subtype: 'topic',
         role: input.role,
         title: input.title,
         summary: input.summary ?? null,
@@ -181,9 +189,9 @@ export const discussionBuildDefinition: PacketFamilyBuildDefinition<
       };
     }
 
-    if (input.kind === 'post') {
+    if (input.subtype === 'post') {
       return {
-        kind: 'post',
+        subtype: 'post',
         role: input.role,
         title: input.title,
         summary: input.summary ?? null,
@@ -198,7 +206,7 @@ export const discussionBuildDefinition: PacketFamilyBuildDefinition<
     }
 
     return {
-      kind: 'message',
+      subtype: 'message',
       role: input.role,
       title: input.title,
       summary: input.summary ?? null,

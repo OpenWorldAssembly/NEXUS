@@ -109,7 +109,9 @@ export function NexusActionMenuControllerProvider({ children }: PropsWithChildre
       {children}
       {openActionMenu ? (
         <View
-          {...({ dataSet: { nexusActionMenuRoot: 'true' } } as never)}
+          {...({ dataSet: { nexusActionMenuRoot: 'true' } } as {
+            dataSet: { nexusActionMenuRoot: string };
+          })}
           className="z-[10000]"
           style={getFloatingMenuStyle(openActionMenu)}
         >

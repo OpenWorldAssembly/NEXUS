@@ -37,7 +37,7 @@ type PacketExplorerRoutePacketInput = {
   preferredRevisionId?: string | null;
   titleSnapshot?: string | null;
   seedSummary?: {
-    family: string | null;
+    type: string | null;
     summary: string | null;
     label: string | null;
   } | null;
@@ -68,7 +68,7 @@ type NexusPacketExplorerContentProps = {
   onOpenPacketInCurrentTab: (input: PacketExplorerRoutePacketInput) => void;
   onRoutePacketToExport: (input: PacketExplorerRoutePacketInput) => void;
   onClearExportTarget: () => void;
-  onViewInLibrary: (packetId: string, family?: string | null) => void;
+  onViewInLibrary: (packetId: string, type?: string | null) => void;
   onRunVerificationForActivePacket: (packetId: string) => Promise<void>;
 };
 
@@ -207,8 +207,8 @@ function NexusPacketExplorerSeededSummary({
           <Text className={appearance.surfaceTitleClass}>
             {activeTab.title_snapshot}
           </Text>
-          {activeTab.seed_summary?.family ? (
-            <NexusBadge label={activeTab.seed_summary.family} tone="sky" />
+          {activeTab.seed_summary?.type ? (
+            <NexusBadge label={activeTab.seed_summary.type} tone="sky" />
           ) : null}
           <NexusBadge label="Seeded from current surface" tone="gold" />
         </View>

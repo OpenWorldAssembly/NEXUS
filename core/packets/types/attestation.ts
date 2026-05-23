@@ -1,13 +1,13 @@
 /**
- * File: families/attestation.ts
- * Description: Family-owned build rules for canonical Attestation packets.
+ * File: types/attestation.ts
+ * Description: Type-owned build rules for canonical Attestation packets.
  */
 
 import type { AttestationPacketInput } from '@core/packets/builders';
-import type { PacketFamilyBuildDefinition } from '@core/packets/packet-build-pipeline';
+import type { PacketTypeBuildDefinition } from '@core/packets/packet-build-pipeline';
 import { createPacketEdge } from '@core/packets/packet-build-helpers';
 
-export const attestationBuildDefinition: PacketFamilyBuildDefinition<
+export const attestationBuildDefinition: PacketTypeBuildDefinition<
   'Attestation',
   AttestationPacketInput
 > = {
@@ -38,12 +38,10 @@ export const attestationBuildDefinition: PacketFamilyBuildDefinition<
     ];
   },
   finalizeBody: (input) => ({
-    type: 'attestation',
-    subtype: input.subtype ?? input.attestation_kind ?? 'packet_signal',
+    subtype: input.subtype ?? 'packet_signal',
     target_ref: input.target_ref,
     value: input.value,
     status: input.status ?? 'active',
-    attestation_kind: input.attestation_kind ?? 'packet_signal',
     context_ref: input.context_ref ?? null,
     supporting_refs: input.supporting_refs ?? [],
     note: input.note ?? null,

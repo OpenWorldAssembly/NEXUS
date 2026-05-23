@@ -1,14 +1,9 @@
 /**
  * File: packet-target-resolver.ts
- * Description: Read-only packet target resolution and side-effect-free migration planning for family-aware packet graphs.
+ * Description: Read-only packet target resolution and side-effect-free migration planning for type-aware packet graphs.
  */
 
 import type { PacketHeadStatus } from '@core/contracts';
-import {
-  isDiscussionSourcePacket,
-  planDiscussionPacketTargetMigration,
-  resolveDiscussionPacketTarget,
-} from '@core/packets/discussion-compat';
 import type {
   PacketEnvelope,
   PacketRevisionRef,
@@ -91,10 +86,6 @@ export async function resolvePacketTarget(
     return createMissingResolution(input.packet_id);
   }
 
-  if (isDiscussionSourcePacket(sourcePacket)) {
-    return resolveDiscussionPacketTarget(input);
-  }
-
   const headStatus = input.fetchRevisionHeads
     ? await input.fetchRevisionHeads(sourcePacket.header.packet_id)
     : null;
@@ -142,13 +133,6 @@ export async function planPacketTargetMigration(
   input: PacketTargetMigrationRequest
 ): Promise<PacketTargetMigrationPlan> {
   const resolution = input.resolution ?? (await resolvePacketTarget(input));
-
-  if (resolution.source_packet && isDiscussionSourcePacket(resolution.source_packet)) {
-    return planDiscussionPacketTargetMigration({
-      ...input,
-      resolution,
-    });
-  }
 
   return {
     requested_packet_id: input.packet_id,

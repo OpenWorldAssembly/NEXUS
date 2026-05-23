@@ -1,6 +1,6 @@
 /**
  * File: packet-definition-action-bridge.ts
- * Description: Shadow-mode resolver that turns packet manifest action descriptors into generic runtime action plans.
+ * Description: Definition-mode resolver that turns packet manifest action descriptors into generic runtime action plans.
  */
 
 import type {
@@ -23,7 +23,7 @@ export type PacketDefinitionRuntimeCapabilities = {
   planner_kinds: readonly PacketPlannerDescriptor['planner_kind'][];
 };
 
-export const GENERIC_SHADOW_PACKET_RUNTIME_CAPABILITIES = {
+export const GENERIC_PACKET_RUNTIME_CAPABILITIES = {
   action_kinds: [
     'create',
     'revise',
@@ -60,10 +60,10 @@ export type PacketDefinitionMutationActionPlan = {
   actions: PacketActionDescriptor[];
   builders: PacketBuilderDescriptor[];
   policy_action_ids: string[];
-  availability: 'shadow_only' | 'runtime_ready' | 'canonical' | 'unavailable';
+  availability: 'runtime_ready' | 'canonical' | 'unavailable';
   missing_descriptor_ids: string[];
   unsupported_capabilities: string[];
-  ready_for_shadow_runtime: boolean;
+  ready_for_runtime: boolean;
 };
 
 function uniqueSorted(values: readonly string[]): string[] {
@@ -131,7 +131,7 @@ function resolveAvailability(input: {
     return 'runtime_ready';
   }
 
-  return 'shadow_only';
+  return 'runtime_ready';
 }
 
 export function resolvePacketDefinitionMutationActionPlan(input: {
@@ -139,7 +139,7 @@ export function resolvePacketDefinitionMutationActionPlan(input: {
   mutation_intent: string;
   capabilities?: PacketDefinitionRuntimeCapabilities;
 }): PacketDefinitionMutationActionPlan {
-  const capabilities = input.capabilities ?? GENERIC_SHADOW_PACKET_RUNTIME_CAPABILITIES;
+  const capabilities = input.capabilities ?? GENERIC_PACKET_RUNTIME_CAPABILITIES;
   const mutation =
     input.definition.mutations.find(
       (descriptor) => descriptor.mutation_intent === input.mutation_intent
@@ -203,7 +203,7 @@ export function resolvePacketDefinitionMutationActionPlan(input: {
     availability: resolveAvailability({ mutation, planner, actions, builders }),
     missing_descriptor_ids: uniqueSorted(missingDescriptorIds),
     unsupported_capabilities: unsupportedCapabilities,
-    ready_for_shadow_runtime:
+    ready_for_runtime:
       mutation !== null &&
       planner !== null &&
       missingDescriptorIds.length === 0 &&
@@ -214,7 +214,7 @@ export function resolvePacketDefinitionMutationActionPlan(input: {
 export function assertPacketDefinitionMutationActionPlanReady(
   plan: PacketDefinitionMutationActionPlan
 ): void {
-  if (plan.ready_for_shadow_runtime) {
+  if (plan.ready_for_runtime) {
     return;
   }
 
@@ -224,7 +224,7 @@ export function assertPacketDefinitionMutationActionPlanReady(
   ];
 
   throw new Error(
-    `Packet mutation ${plan.mutation_intent} for ${plan.packet_type} is not shadow-runtime ready: ${
+    `Packet mutation ${plan.mutation_intent} for ${plan.packet_type} is not runtime ready: ${
       problems.length > 0 ? problems.join('; ') : 'unknown descriptor problem'
     }`
   );

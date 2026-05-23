@@ -30,15 +30,6 @@ import {
   createPolicyPacket,
 } from '@core/packets/builders';
 import {
-  createCanonicalDiscussionPacketId,
-  isDiscussionMessagePacket,
-  projectDiscussionPacketToLegacy,
-} from '@core/packets/discussion-compat';
-import {
-  planPacketTargetMigration,
-  resolvePacketTarget,
-} from '@core/packets/packet-target-resolver';
-import {
   createRelationPacketId,
   createScopedRelationPacket,
 } from '@core/packets/relations';
@@ -265,34 +256,34 @@ function createAttestationPacketId(input: {
   ].join('/');
 }
 
-async function requirePacket<TFamily extends PacketEnvelope['header']['family']>(
+async function requirePacket<TType extends PacketEnvelope['header']['type']>(
   input: {
     packetStore: NodeSQLitePacketStore;
     packetId: string;
-    family: TFamily;
+    type: TType;
   }
-): Promise<Extract<PacketEnvelope, { header: { family: TFamily } }>> {
+): Promise<Extract<PacketEnvelope, { header: { type: TType } }>> {
   const packet = await input.packetStore.fetchByPacket({
     packet_id: input.packetId,
   });
 
-  if (!packet || packet.header.family !== input.family) {
-    throw new Error(`Unknown ${input.family} packet: ${input.packetId}`);
+  if (!packet || packet.header.type !== input.type) {
+    throw new Error(`Unknown ${input.type} packet: ${input.packetId}`);
   }
 
-  return packet as Extract<PacketEnvelope, { header: { family: TFamily } }>;
+  return packet as Extract<PacketEnvelope, { header: { type: TType } }>;
 }
 
 async function listAssemblyScopeNodes(
   packetStore: NodeSQLitePacketStore
 ): Promise<AssemblyScopeNode[]> {
   const [elementPackets, relationPackets] = await Promise.all([
-    packetStore.listPreferredPacketsByFamily('Element'),
+    packetStore.listPreferredPacketsByType('Element'),
     listRelationPackets(packetStore),
   ]);
   const typedElementPackets = elementPackets as PacketEnvelopeByType['Element'][];
   const scopePackets = typedElementPackets.filter(
-    (packet) => packet.body.kind === 'assembly'
+    (packet) => packet.body.subtype === 'assembly'
   );
   const parentResolutionsByPacketId = resolveScopeParentResolutions({
     scopePackets,
@@ -301,7 +292,7 @@ async function listAssemblyScopeNodes(
   });
 
   return typedElementPackets
-    .filter((packet) => packet.body.kind === 'assembly')
+    .filter((packet) => packet.body.subtype === 'assembly')
     .map((packet) => ({
       packet,
       packetId: packet.header.packet_id,
@@ -331,38 +322,86 @@ function buildApplicableScopeRefsFromNodes(input: {
   });
 }
 
-async function planCanonicalDiscussionMirrors(input: {
-  packetStore: NodeSQLitePacketStore;
-  packet: PacketEnvelope;
-}): Promise<{
-  canonical_packet_id: string;
-  packets: PacketEnvelopeByType['Discussion'][];
-}> {
-  const resolution = await resolvePacketTarget({
-    packet_id: input.packet.header.packet_id,
-    fetchPacket: async (packetId) =>
-      input.packetStore.fetchByPacket({ packet_id: packetId }),
-    fetchRevisionHeads: async (packetId) =>
-      input.packetStore.fetchRevisionHeads({ packet_id: packetId }),
-  });
-  const migrationPlan = await planPacketTargetMigration({
-    packet_id: input.packet.header.packet_id,
-    resolution,
-    fetchPacket: async (packetId) =>
-      input.packetStore.fetchByPacket({ packet_id: packetId }),
-    fetchRevisionHeads: async (packetId) =>
-      input.packetStore.fetchRevisionHeads({ packet_id: packetId }),
-  });
-
-  if (migrationPlan.blocked_reason) {
-    throw new Error(migrationPlan.blocked_reason);
+function requireCanonicalDiscussionPacket(input: {
+  packet: PacketEnvelope | null;
+  packetId: string;
+  expectedSubtype?: PacketEnvelopeByType['Discussion']['body']['subtype'];
+  label: string;
+}): PacketEnvelopeByType['Discussion'] {
+  if (input.packet?.header.type !== 'Discussion') {
+    throw new Error(`Unknown discussion ${input.label}: ${input.packetId}`);
   }
 
-  return {
-    canonical_packet_id:
-      resolution.canonical_packet_id ?? input.packet.header.packet_id,
-    packets: migrationPlan.packets as PacketEnvelopeByType['Discussion'][],
-  };
+  const packet = input.packet as PacketEnvelopeByType['Discussion'];
+
+  if (
+    input.expectedSubtype &&
+    packet.body.subtype !== input.expectedSubtype
+  ) {
+    throw new Error(
+      `Discussion ${input.label} ${input.packetId} is not a ${input.expectedSubtype}.`
+    );
+  }
+
+  return packet;
+}
+
+type DiscussionPacketWithSubtype<
+  TSubtype extends PacketEnvelopeByType['Discussion']['body']['subtype'],
+> = PacketEnvelopeByType['Discussion'] & {
+  body: Extract<PacketEnvelopeByType['Discussion']['body'], { subtype: TSubtype }>;
+};
+
+function requireDiscussionSubtype<
+  TSubtype extends PacketEnvelopeByType['Discussion']['body']['subtype'],
+>(
+  packet: PacketEnvelopeByType['Discussion'],
+  subtype: TSubtype,
+  label: string
+): DiscussionPacketWithSubtype<TSubtype> {
+  if (packet.body.subtype !== subtype) {
+    throw new Error(
+      `Discussion ${label} ${packet.header.packet_id} is not a ${subtype}.`
+    );
+  }
+
+  return packet as DiscussionPacketWithSubtype<TSubtype>;
+}
+
+function requireDiscussionPostOrMessage(
+  packet: PacketEnvelopeByType['Discussion']
+): DiscussionPacketWithSubtype<'post'> | DiscussionPacketWithSubtype<'message'> {
+  if (packet.body.subtype !== 'post' && packet.body.subtype !== 'message') {
+    throw new Error(`Unknown discussion post: ${packet.header.packet_id}`);
+  }
+
+  return packet as
+    | DiscussionPacketWithSubtype<'post'>
+    | DiscussionPacketWithSubtype<'message'>;
+}
+
+function getDiscussionTopicPacketId(
+  packet: PacketEnvelopeByType['Discussion']
+): string {
+  if (packet.body.subtype === 'message') {
+    return packet.body.topic_ref.packet_id;
+  }
+
+  if (packet.body.subtype === 'post') {
+    return packet.body.parent_ref.packet_id;
+  }
+
+  return packet.header.packet_id;
+}
+
+function getDiscussionRootMessagePacketId(
+  packet: PacketEnvelopeByType['Discussion']
+): string {
+  if (packet.body.subtype === 'message' && packet.body.root_message_ref) {
+    return packet.body.root_message_ref.packet_id;
+  }
+
+  return packet.header.packet_id;
 }
 
 async function withPreparedDigests(packets: PacketEnvelope[]) {
@@ -459,37 +498,22 @@ export async function resolveTrustedDiscussionCompositePlan(
     const rawForumPacket = await input.packetStore.fetchByPacket({
       packet_id: input.intent.forum_packet_id,
     });
-
-    if (!rawForumPacket) {
-      throw new Error(`Unknown discussion forum: ${input.intent.forum_packet_id}`);
-    }
-
-    const forumPacket =
-      rawForumPacket.header.family === 'Discussion'
-        ? (projectDiscussionPacketToLegacy(
-            rawForumPacket as PacketEnvelopeByType['Discussion'],
-            'DiscussionForum'
-          ) as PacketEnvelopeByType['DiscussionForum'] | null)
-        : rawForumPacket.header.family === 'DiscussionForum'
-          ? (rawForumPacket as PacketEnvelopeByType['DiscussionForum'])
-          : null;
-
-    if (!forumPacket) {
-      throw new Error(`Unknown discussion forum: ${input.intent.forum_packet_id}`);
-    }
-
-    const mirrorPlan =
-      rawForumPacket.header.family === 'Discussion'
-        ? { canonical_packet_id: rawForumPacket.header.packet_id, packets: [] }
-        : await planCanonicalDiscussionMirrors({
-            packetStore: input.packetStore,
-            packet: rawForumPacket,
-          });
+    const forumPacket = requireCanonicalDiscussionPacket({
+      packet: rawForumPacket,
+      packetId: input.intent.forum_packet_id,
+      expectedSubtype: 'forum',
+      label: 'forum',
+    });
+    const forumDiscussionPacket = requireDiscussionSubtype(
+      forumPacket,
+      'forum',
+      'forum'
+    );
     const governingScopePacket = forumPacket.header.authority_scope_ref
       ? await requirePacket({
           packetStore: input.packetStore,
           packetId: forumPacket.header.authority_scope_ref.packet_id,
-          family: 'Element',
+          type: 'Element',
         })
       : null;
     const mergedPolicyDecision =
@@ -506,28 +530,24 @@ export async function resolveTrustedDiscussionCompositePlan(
           mutation_nonce:
             input.intent.mutation_nonce?.trim() || randomUUID().slice(0, 8),
           created_at: input.intent.created_at ?? new Date().toISOString(),
-          forum_packet_id: mirrorPlan.canonical_packet_id,
-          forum_kind: forumPacket.body.forum_kind,
+          forum_packet_id: forumDiscussionPacket.header.packet_id,
+          forum_kind: forumDiscussionPacket.body.role,
           authority_scope_packet_id:
-            forumPacket.header.authority_scope_ref?.packet_id ?? null,
-          applicable_scope_packet_ids: forumPacket.header.applicable_scope_refs.map(
+            forumDiscussionPacket.header.authority_scope_ref?.packet_id ?? null,
+          applicable_scope_packet_ids: forumDiscussionPacket.header.applicable_scope_refs.map(
             (scopeRef) => scopeRef.packet_id
           ),
-          default_sort: forumPacket.body.default_sort,
+          default_sort: forumDiscussionPacket.body.default_sort,
           thread_title: input.intent.thread_title,
           post_markdown: input.intent.post_markdown,
-          thread_kind: forumPacket.body.forum_kind,
+          thread_kind: forumDiscussionPacket.body.role,
           related_packet_ids: input.intent.related_packet_ids ?? [],
-          legacy_context_packet_ids:
-            rawForumPacket.header.family === 'Discussion'
-              ? []
-              : [rawForumPacket.header.packet_id],
+          legacy_context_packet_ids: [],
         },
         actorPacket: input.actorPacket,
       }),
       ...mergedPolicyDecision,
     } satisfies MutationDecision;
-    decision.packets.unshift(...mirrorPlan.packets);
 
     return {
       plan_kind: 'trusted_composite_workflow_plan',
@@ -556,87 +576,37 @@ export async function resolveTrustedDiscussionCompositePlan(
     packet_id: input.intent.parent_post_packet_id,
   });
 
-  if (!parentPacket) {
-    throw new Error(`Unknown discussion post: ${input.intent.parent_post_packet_id}`);
-  }
+  const discussionParentPacket = requireDiscussionPostOrMessage(requireCanonicalDiscussionPacket({
+    packet: parentPacket,
+    packetId: input.intent.parent_post_packet_id,
+    label: 'post',
+  }));
 
-  const discussionParentPacket =
-    isDiscussionMessagePacket(parentPacket)
-      ? (() => {
-          const discussionPacket = parentPacket as PacketEnvelopeByType['Discussion'];
-
-          return projectDiscussionPacketToLegacy(
-            discussionPacket,
-            discussionPacket.body.kind === 'message' &&
-              discussionPacket.body.root_message_ref
-              ? 'DiscussionReply'
-              : 'DiscussionPost'
-          ) as
-            | PacketEnvelopeByType['DiscussionPost']
-            | PacketEnvelopeByType['DiscussionReply']
-            | null;
-        })()
-      : parentPacket.header.family === 'DiscussionPost' ||
-          parentPacket.header.family === 'DiscussionReply'
-        ? (parentPacket as
-            | PacketEnvelopeByType['DiscussionPost']
-            | PacketEnvelopeByType['DiscussionReply'])
-        : null;
-
-  if (!discussionParentPacket) {
-    throw new Error(`Unknown discussion post: ${input.intent.parent_post_packet_id}`);
-  }
-
-  const mirrorPlan =
-    parentPacket.header.family === 'Discussion'
-      ? { canonical_packet_id: parentPacket.header.packet_id, packets: [] }
-      : await planCanonicalDiscussionMirrors({
-          packetStore: input.packetStore,
-          packet: parentPacket,
-        });
   const rawThreadPacket = await input.packetStore.fetchByPacket({
-    packet_id: discussionParentPacket.body.thread_ref.packet_id,
+    packet_id: getDiscussionTopicPacketId(discussionParentPacket),
   });
-  const threadPacket =
-    rawThreadPacket?.header.family === 'Discussion'
-      ? (projectDiscussionPacketToLegacy(
-          rawThreadPacket as PacketEnvelopeByType['Discussion'],
-          'DiscussionThread'
-        ) as PacketEnvelopeByType['DiscussionThread'] | null)
-      : rawThreadPacket?.header.family === 'DiscussionThread'
-        ? (rawThreadPacket as PacketEnvelopeByType['DiscussionThread'])
-        : null;
-
-  if (!threadPacket) {
-    throw new Error(
-      `Missing discussion thread for post ${input.intent.parent_post_packet_id}.`
-    );
-  }
+  const threadPacket = requireDiscussionSubtype(requireCanonicalDiscussionPacket({
+    packet: rawThreadPacket,
+    packetId: getDiscussionTopicPacketId(discussionParentPacket),
+    expectedSubtype: 'topic',
+    label: 'thread',
+  }), 'topic', 'thread');
 
   const rawForumPacket = await input.packetStore.fetchByPacket({
-    packet_id: threadPacket.body.forum_ref.packet_id,
+    packet_id: threadPacket.body.parent_ref.packet_id,
   });
-  const forumPacket =
-    rawForumPacket?.header.family === 'Discussion'
-      ? (projectDiscussionPacketToLegacy(
-          rawForumPacket as PacketEnvelopeByType['Discussion'],
-          'DiscussionForum'
-        ) as PacketEnvelopeByType['DiscussionForum'] | null)
-      : rawForumPacket?.header.family === 'DiscussionForum'
-        ? (rawForumPacket as PacketEnvelopeByType['DiscussionForum'])
-        : null;
-
-  if (!forumPacket) {
-    throw new Error(
-      `Missing discussion forum for thread ${threadPacket.header.packet_id}.`
-    );
-  }
+  const forumPacket = requireDiscussionSubtype(requireCanonicalDiscussionPacket({
+    packet: rawForumPacket,
+    packetId: threadPacket.body.parent_ref.packet_id,
+    expectedSubtype: 'forum',
+    label: 'forum',
+  }), 'forum', 'forum');
 
   const governingScopePacket = forumPacket.header.authority_scope_ref
     ? await requirePacket({
         packetStore: input.packetStore,
         packetId: forumPacket.header.authority_scope_ref.packet_id,
-        family: 'Element',
+        type: 'Element',
       })
     : null;
   const mergedPolicyDecision = await input.policyGate.resolveScopePolicyDecision({
@@ -652,35 +622,24 @@ export async function resolveTrustedDiscussionCompositePlan(
         mutation_nonce:
           input.intent.mutation_nonce?.trim() || randomUUID().slice(0, 8),
         created_at: input.intent.created_at ?? new Date().toISOString(),
-        forum_kind: forumPacket.body.forum_kind,
+        forum_kind: forumPacket.body.role,
         authority_scope_packet_id:
-          parentPacket.header.authority_scope_ref?.packet_id ?? null,
-        applicable_scope_packet_ids: parentPacket.header.applicable_scope_refs.map(
+          discussionParentPacket.header.authority_scope_ref?.packet_id ?? null,
+        applicable_scope_packet_ids: discussionParentPacket.header.applicable_scope_refs.map(
           (scopeRef) => scopeRef.packet_id
         ),
-        thread_packet_id:
-          rawThreadPacket?.header.family === 'Discussion'
-            ? rawThreadPacket.header.packet_id
-            : createCanonicalDiscussionPacketId(threadPacket.header.packet_id),
-        root_post_packet_id:
-          discussionParentPacket.header.family === 'DiscussionPost'
-            ? createCanonicalDiscussionPacketId(discussionParentPacket.header.packet_id)
-            : createCanonicalDiscussionPacketId(
-                (discussionParentPacket as PacketEnvelopeByType['DiscussionReply'])
-                  .body.root_post_ref.packet_id
-              ),
-        parent_post_packet_id: mirrorPlan.canonical_packet_id,
+        thread_packet_id: threadPacket.header.packet_id,
+        root_post_packet_id: getDiscussionRootMessagePacketId(
+          discussionParentPacket
+        ),
+        parent_post_packet_id: discussionParentPacket.header.packet_id,
         reply_markdown: input.intent.reply_markdown,
-        legacy_context_packet_ids:
-          parentPacket.header.family === 'Discussion'
-            ? []
-            : [parentPacket.header.packet_id],
+        legacy_context_packet_ids: [],
       },
       actorPacket: input.actorPacket,
     }),
     ...mergedPolicyDecision,
   } satisfies MutationDecision;
-  decision.packets.unshift(...mirrorPlan.packets);
 
   return {
     plan_kind: 'trusted_composite_workflow_plan',
@@ -757,7 +716,7 @@ export async function resolveTrustedActorPolicyCompositePlan(
     metadata_tags: ['policy', 'write-lock', 'actor-security'],
     title: 'Write approval policy',
     summary: 'Actor-scoped write approval policy.',
-    policy_kind: 'write_lock',
+    subtype: 'write_lock',
     body_markdown: buildWritePolicyBodyMarkdown(input.intent.security_mode),
     status: 'active',
     write_policy: nextWritePolicy,
@@ -768,7 +727,7 @@ export async function resolveTrustedActorPolicyCompositePlan(
         !existingPolicyPackets.some(
           (existingPolicyPacket) =>
             existingPolicyPacket.header.packet_id === policyRef.packet_id &&
-            existingPolicyPacket.body.policy_kind === 'write_lock'
+            existingPolicyPacket.body.subtype === 'write_lock'
         )
     ),
     { packet_id: writePolicyPacketId },
@@ -812,7 +771,7 @@ export async function resolveTrustedAssemblyElementCompositePlan(
   const parentScopePacket = await requirePacket({
     packetStore: input.packetStore,
     packetId: input.intent.parent_scope_packet_id,
-    family: 'Element',
+    type: 'Element',
   });
   const scopeNodes = await listAssemblyScopeNodes(input.packetStore);
   const parentByPacketId = new Map(
@@ -922,12 +881,16 @@ export async function resolveTrustedRoleAttestationCompositePlan(
       `Unsupported role attestation composite workflow intent: ${input.intent.kind}`
     );
   }
+  const intent = input.intent as Extract<
+    MutationIntent,
+    { kind: 'role_association.attestation.set' }
+  >;
 
   const claimPackets = await listClaimPackets(input.packetStore);
   const claimPacket = filterClaimPackets({
     claims: claimPackets,
     claimKind: 'role_association',
-  }).find((candidate) => candidate.header.packet_id === input.intent.claim_packet_id);
+  }).find((candidate) => candidate.header.packet_id === intent.claim_packet_id);
 
   if (!claimPacket) {
     throw new Error('Unknown role claim packet.');
@@ -941,16 +904,21 @@ export async function resolveTrustedRoleAttestationCompositePlan(
     throw new Error('Use claim or unclaim for your own role associations.');
   }
 
-  const trimmedNote = input.intent.note?.trim() ?? null;
+  const trimmedNote = intent.note?.trim() ?? null;
 
-  if (input.intent.mode === 'dispute' && !trimmedNote) {
+  if (intent.mode === 'dispute' && !trimmedNote) {
     throw new Error('A dispute attestation requires a comment.');
+  }
+
+  const claimScopePacketId = claimPacket.body.scope_ref?.packet_id;
+  if (!claimScopePacketId) {
+    throw new Error('Role claim packet is missing a governing scope.');
   }
 
   const governingScopePacket = await requirePacket({
     packetStore: input.packetStore,
-    packetId: claimPacket.body.scope_ref.packet_id,
-    family: 'Element',
+    packetId: claimScopePacketId,
+    type: 'Element',
   });
   const packets: PacketEnvelope[] = [];
   const actorPacketId = input.actorPacket.header.packet_id;
@@ -980,7 +948,7 @@ export async function resolveTrustedRoleAttestationCompositePlan(
         ? null
         : await input.packetStore.fetchByRevision(existingPreferredRevision);
     const currentAttestationPacket =
-      existingPacket?.header.family === 'Attestation'
+      existingPacket?.header.type === 'Attestation'
         ? (existingPacket as PacketEnvelopeByType['Attestation'])
         : null;
 
@@ -999,7 +967,7 @@ export async function resolveTrustedRoleAttestationCompositePlan(
         packetId,
         existingPreferredRevision?.revision_id ?? null
       ),
-      created_at: input.intent.created_at ?? new Date().toISOString(),
+      created_at: intent.created_at ?? new Date().toISOString(),
       parent_revision_refs: existingPreferredRevision
         ? [existingPreferredRevision]
         : [],
@@ -1011,7 +979,7 @@ export async function resolveTrustedRoleAttestationCompositePlan(
       target_ref: { packet_id: claimPacket.header.packet_id },
       value: nextValue,
       status: desiredValue === 0 ? 'cleared' : 'active',
-      attestation_kind: attestationKind,
+      subtype: attestationKind,
       context_ref: null,
       supporting_refs: [],
       note,
@@ -1021,7 +989,7 @@ export async function resolveTrustedRoleAttestationCompositePlan(
     });
   };
 
-  if (input.intent.mode === 'clear') {
+  if (intent.mode === 'clear') {
     const supportClear = await createRoleAttestationRevision(
       'claim_support',
       0,
@@ -1042,10 +1010,10 @@ export async function resolveTrustedRoleAttestationCompositePlan(
     }
   } else {
     const nextKind =
-      input.intent.mode === 'support' ? 'claim_support' : 'claim_dispute';
+      intent.mode === 'support' ? 'claim_support' : 'claim_dispute';
     const oppositeKind =
-      input.intent.mode === 'support' ? 'claim_dispute' : 'claim_support';
-    const nextValue = input.intent.mode === 'support' ? 1 : -1;
+      intent.mode === 'support' ? 'claim_dispute' : 'claim_support';
+    const nextValue = intent.mode === 'support' ? 1 : -1;
     const oppositeClear = await createRoleAttestationRevision(
       oppositeKind,
       0,
@@ -1068,9 +1036,9 @@ export async function resolveTrustedRoleAttestationCompositePlan(
   }
 
   const actionId: MutationActionId =
-    input.intent.mode === 'support'
+    intent.mode === 'support'
       ? 'role_association.attestation.support'
-      : input.intent.mode === 'dispute'
+      : intent.mode === 'dispute'
         ? 'role_association.attestation.dispute'
         : 'role_association.attestation.clear';
   const mergedPolicyDecision = await input.policyGate.resolveScopePolicyDecision({
@@ -1109,7 +1077,7 @@ export async function resolveTrustedLocalityPathCompositePlan(
   const createdPackets = plannedResult.created_packets;
   const firstCreatedScopePacket = createdPackets.find(
     (packet): packet is PacketEnvelopeByType['Element'] =>
-      packet.header.family === 'Element'
+      packet.header.type === 'Element'
   );
   const governingScopePacket = firstCreatedScopePacket
     ? await requirePacket({
@@ -1117,7 +1085,7 @@ export async function resolveTrustedLocalityPathCompositePlan(
         packetId:
           getParentPacketId(firstCreatedScopePacket) ??
           firstCreatedScopePacket.header.packet_id,
-        family: 'Element',
+        type: 'Element',
       })
     : null;
   const mergedPolicyDecision = await input.policyGate.resolveScopePolicyDecision({
@@ -1186,10 +1154,14 @@ export async function resolveTrustedDiscussionSurfacesCompositePlan(
       `Unsupported discussion surfaces composite workflow intent: ${input.intent.kind}`
     );
   }
+  const intent = input.intent as Extract<
+    MutationIntent,
+    { kind: 'discussion.surfaces.ensure' }
+  >;
 
   const scopeNodes = await listAssemblyScopeNodes(input.packetStore);
   const scopeNode =
-    scopeNodes.find((candidate) => candidate.routeId === input.intent.scope_id) ??
+    scopeNodes.find((candidate) => candidate.routeId === intent.scope_id) ??
     null;
 
   if (!scopeNode) {

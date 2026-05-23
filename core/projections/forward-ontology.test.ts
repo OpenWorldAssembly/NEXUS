@@ -3,7 +3,6 @@ import test from 'node:test';
 
 import {
   createActionPacket,
-  createCausePacket,
   createClaimPacket,
   createElementPacket,
   createLocationPacket,
@@ -14,74 +13,7 @@ import {
   projectPacketToForwardOntology,
 } from './forward-ontology.ts';
 
-test('legacy initiative-family packets project into the forward action ontology', () => {
-  const packet = {
-    header: {
-      packet_id: 'nexus:initiative/owa',
-      revision_id: 'nexus:initiative/owa@r1',
-      family: 'Initiative' as const,
-      schema_version: '1.0.0',
-      protocol_version: '0.1.0',
-      created_at: '2026-05-07T00:00:00.000Z',
-      parent_revision_refs: [],
-      merge_strategy: null,
-      authority_scope_ref: null,
-      applicable_scope_refs: [],
-      edges: [],
-      provenance: {
-        created_by: null,
-        submitted_by: null,
-        adapter: 'test',
-        recorded_at: '2026-05-07T00:00:00.000Z',
-        imported_from_revision: null,
-      },
-      integrity: {
-        canonicalization: 'RFC8785',
-        hash_alg: 'sha-256',
-        digest: null,
-        embedded_signatures: [],
-        signature_refs: [],
-      },
-      moderation: {
-        visibility: 'public',
-        moderation_state: 'open',
-        policy_refs: [],
-        content_warning_ids: [],
-      },
-      external_refs: [],
-      metadata: {
-        tags: [],
-        language: null,
-        summary: null,
-        compatibility: null,
-      },
-      producer: {
-        adapter: 'test',
-        app_version: null,
-      },
-    },
-    body: {
-      title: 'OWA',
-      summary: 'Open World Assembly',
-      status: 'active',
-    },
-  };
-
-  const projection = projectPacketToForwardOntology(packet);
-
-  assert.equal(projection.type, 'action');
-  assert.equal(projection.subtype, 'initiative');
-  assert.equal(projection.is_legacy_projection, true);
-});
-
 test('forward packets project with their canonical type and subtype', () => {
-  const cause = createCausePacket({
-    packet_id: 'nexus:cause/owa',
-    created_at: '2026-05-07T00:00:00.000Z',
-    subtype: 'initiative',
-    title: 'OWA',
-    status: 'active',
-  });
   const location = createLocationPacket({
     packet_id: 'nexus:location/service-area',
     created_at: '2026-05-07T00:01:00.000Z',
@@ -97,13 +29,9 @@ test('forward packets project with their canonical type and subtype', () => {
     status: 'active',
   });
 
-  const causeProjection = projectPacketToForwardOntology(cause);
   const locationProjection = projectPacketToForwardOntology(location);
   const actionProjection = projectPacketToForwardOntology(action);
 
-  assert.equal(causeProjection.type, 'cause');
-  assert.equal(causeProjection.subtype, 'initiative');
-  assert.equal(causeProjection.is_legacy_projection, false);
   assert.equal(actionProjection.type, 'action');
   assert.equal(actionProjection.subtype, 'initiative');
   assert.equal(actionProjection.is_legacy_projection, false);
@@ -111,26 +39,25 @@ test('forward packets project with their canonical type and subtype', () => {
   assert.equal(locationProjection.subtype, 'service_area');
 });
 
-test('element packets project to canonical dotted subtypes even when kind remains as compatibility metadata', () => {
+test('element packets project to canonical subtypes', () => {
   const element = createElementPacket({
     packet_id: 'nexus:element/person/alice',
     created_at: '2026-05-07T00:01:30.000Z',
-    kind: 'person',
-    subtype: 'claimed_identity',
+    subtype: 'person',
     name: 'Alice',
   });
 
   const projection = projectPacketToForwardOntology(element);
 
   assert.equal(projection.type, 'element');
-  assert.equal(projection.subtype, 'person.claimed_identity');
+  assert.equal(projection.subtype, 'person');
 });
 
 test('claim packets project as relation assertions without losing claim semantics', () => {
   const claim = createClaimPacket({
     packet_id: 'nexus:claim/home-locality/alice',
     created_at: '2026-05-07T00:02:00.000Z',
-    claim_kind: 'home_locality',
+    subtype: 'home_locality',
     subject_ref: { packet_id: 'nexus:element/alice' },
     target_ref: { packet_id: 'nexus:element/moreno-valley' },
     scope_ref: { packet_id: 'nexus:element/moreno-valley' },

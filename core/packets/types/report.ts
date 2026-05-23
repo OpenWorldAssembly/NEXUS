@@ -1,13 +1,13 @@
 /**
- * File: families/report.ts
- * Description: Family-owned build rules for canonical Report packets.
+ * File: types/report.ts
+ * Description: Type-owned build rules for canonical Report packets.
  */
 
 import type { ReportPacketInput } from '@core/packets/builders';
-import type { PacketFamilyBuildDefinition } from '@core/packets/packet-build-pipeline';
+import type { PacketTypeBuildDefinition } from '@core/packets/packet-build-pipeline';
 import { createPacketEdge } from '@core/packets/packet-build-helpers';
 
-export const reportBuildDefinition: PacketFamilyBuildDefinition<
+export const reportBuildDefinition: PacketTypeBuildDefinition<
   'Report',
   ReportPacketInput
 > = {
@@ -40,7 +40,6 @@ export const reportBuildDefinition: PacketFamilyBuildDefinition<
       : []),
   ],
   finalizeBody: (input) => ({
-    type: 'report',
     subtype: input.subtype,
     status: input.status ?? 'active',
     target_ref: input.target_ref ?? null,

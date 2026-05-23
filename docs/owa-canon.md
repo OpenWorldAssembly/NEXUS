@@ -10,7 +10,7 @@ OWA is oriented toward universal applicability and inclusion: it is meant to sca
 
 ## Substrate, not sovereignty
 
-OWA is not a sovereign authority, a centralized government, a “shadow government,” or a command hierarchy. It does not seize authority, does not require permission from existing institutions to exist, and does not depend on state sponsorship to operate.
+OWA is not a sovereign authority, a centralized government, a “definition government,” or a command hierarchy. It does not seize authority, does not require permission from existing institutions to exist, and does not depend on state sponsorship to operate.
 
 OWA is designed as a civic substrate rather than a replacement superstructure: a non-coercive layer that stabilizes, informs, and enables reform by making collective human alignment legible and actionable, without requiring immediate replacement of existing institutions. It is explicitly framed as strengthening what works, exposing misalignment, and supporting reform through clarity rather than confrontation.
 

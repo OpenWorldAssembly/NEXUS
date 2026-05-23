@@ -35,7 +35,7 @@ test('association claim packets keep the claim scope as the authority scope', ()
     note: 'Lives here.',
   });
 
-  assert.equal(packet.header.family, 'Claim');
+  assert.equal(packet.header.type, 'Claim');
   assert.equal(
     packet.header.authority_scope_ref?.packet_id,
     'nexus:element/scope-a'
@@ -97,12 +97,12 @@ test('relation assertion claim packets can target a relation packet while preser
     note: 'I live here.',
   });
 
-  assert.equal(packet.header.family, 'Claim');
+  assert.equal(packet.header.type, 'Claim');
   assert.equal(
     packet.body.target_ref.packet_id,
     'nexus:relation/home_locality/person-a--scope-a--scope-a'
   );
   assert.equal(packet.body.relation_assertion?.target_ref.packet_id, 'nexus:element/scope-a');
-  assert.equal(packet.body.claim_kind, 'home_locality');
+  assert.equal(packet.body.relation_assertion?.subtype, 'home_locality');
   assert.equal(packet.body.claim_markdown, 'I live here.');
 });

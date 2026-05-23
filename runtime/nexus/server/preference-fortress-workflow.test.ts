@@ -75,7 +75,7 @@ function createPolicyGate(): MutationPolicyGate {
 
   return {
     resolveScopePolicyDecision: async () => decision,
-  } as MutationPolicyGate;
+  } as unknown as MutationPolicyGate;
 }
 
 test('Preference.element fortress prepare emits signable packet-shaped preferences', async () => {
@@ -134,7 +134,7 @@ test('Preference.element fortress prepare emits signable packet-shaped preferenc
     });
 
     assert.equal(finalized.result.wrote_revision, true);
-    assert.equal(stored?.header.family, 'Preference');
+    assert.equal(stored?.header.type, 'Preference');
     assert.deepEqual(finalized.result.preferences, {
       main_visible_scope_packet_ids: ['nexus:element/city'],
       show_associated_parent_chains: false,

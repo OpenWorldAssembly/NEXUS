@@ -22,7 +22,7 @@ import type {
 } from '@runtime/nexus/packet-explorer-session';
 
 type PacketExplorerSeedSummary = {
-  family: string | null;
+  type: string | null;
   summary: string | null;
   label: string | null;
 };
@@ -112,7 +112,7 @@ function getSeedSummary(input: {
   projection: NexusPacketActionProjection;
 }): PacketExplorerSeedSummary {
   return {
-    family: input.projection.family ?? input.packet.family,
+    type: input.projection.type ?? input.packet.type,
     label: input.projection.label ?? input.packet.label,
     summary: input.projection.summary ?? input.packet.summary,
   };
@@ -260,7 +260,7 @@ export function createNexusPacketActionMenuItems(input: {
           highlightPacketId: action.target_packet_id ?? packetId,
           intent: asPreviewIntent(action.target_intent),
           params: {
-            packet_family: projection.family ?? input.packet.family,
+            packet_type: projection.type ?? input.packet.type,
           },
         });
 

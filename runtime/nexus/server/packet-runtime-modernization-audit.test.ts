@@ -8,7 +8,6 @@ import test from 'node:test';
 
 import {
   listMutationRuntimeModernizationCoverage,
-  listPacketFamilyRuntimeModernizationCoverage,
   listPacketTypeRuntimeModernizationCoverage,
 } from '@runtime/nexus/server/packet-runtime-modernization-audit';
 import { listMutationIntentDescriptors } from '@runtime/nexus/server/mutation-intent-registry';
@@ -35,23 +34,23 @@ test('runtime mutation modernization coverage maps handlers, policy actions, and
       `${entry.mutation_intent} should report policy action ids`
     );
     assert.equal(entry.signed_corridor_status, 'enrolled');
-    assert.equal(entry.master_handler_connector_status, 'planned_gap');
+    assert.equal(entry.master_handler_connector_status, 'missing_coverage');
     assert.equal(entry.connector_ids.length, 0);
-    assert.equal(entry.planned_gaps.length, 1);
-    assert.equal(entry.planned_gaps[0].area, 'master_handler_connector');
-    assert.ok(entry.planned_gaps[0].reason.length > 0);
+    assert.equal(entry.missing_coverage_items.length, 1);
+    assert.equal(entry.missing_coverage_items[0].area, 'master_handler_connector');
+    assert.ok(entry.missing_coverage_items[0].reason.length > 0);
   }
 });
 
 test('Preference.element direct master-handler connector is no longer live-enrolled', () => {
-  const preferenceCoverage = listPacketFamilyRuntimeModernizationCoverage().find(
-    (entry) => entry.family === 'Preference'
+  const preferenceCoverage = listPacketTypeRuntimeModernizationCoverage().find(
+    (entry) => entry.type === 'Preference'
   );
 
   assert.ok(preferenceCoverage);
   assert.equal(
     preferenceCoverage.runtime_connector_status,
-    'planned_gap'
+    'missing_coverage'
   );
   assert.deepEqual(preferenceCoverage.runtime_connector_ids, []);
 });
@@ -64,22 +63,22 @@ test('packet-type runtime coverage treats Definition and Bundle as canonical pac
     ])
   );
 
-  for (const packetType of ['Definition', 'Bundle']) {
+  for (const packetType of ['Definition', 'Bundle'] as const) {
     const entry = coverageByPacketType.get(packetType);
     assert.ok(entry);
     assert.equal(entry.body_builder_status, 'supported');
-    assert.equal(entry.shadow_mutation_plan_status, 'supported');
-    assert.equal(entry.runtime_connector_status, 'planned_gap');
+    assert.equal(entry.definition_mutation_plan_status, 'supported');
+    assert.equal(entry.runtime_connector_status, 'missing_coverage');
   }
 
   const preferenceEntry = coverageByPacketType.get('Preference');
   assert.ok(preferenceEntry);
-  assert.equal(preferenceEntry.runtime_connector_status, 'planned_gap');
+  assert.equal(preferenceEntry.runtime_connector_status, 'missing_coverage');
   assert.deepEqual(preferenceEntry.runtime_connector_ids, []);
 });
 
-test('non-enrolled runtime families explain connector modernization gaps', () => {
-  const coverage = listPacketFamilyRuntimeModernizationCoverage();
+test('non-enrolled runtime types explain connector modernization gaps', () => {
+  const coverage = listPacketTypeRuntimeModernizationCoverage();
 
   for (const entry of coverage) {
     if (entry.runtime_connector_status === 'master_handler_enrolled') {
@@ -87,8 +86,8 @@ test('non-enrolled runtime families explain connector modernization gaps', () =>
     }
 
     assert.ok(
-      entry.planned_gaps.some((gap) => gap.area === 'runtime_connector'),
-      `${entry.family} should classify runtime connector enrollment as planned work`
+      entry.missing_coverage_items.some((gap) => gap.area === 'runtime_connector'),
+      `${entry.type} should classify runtime connector enrollment as planned work`
     );
   }
 });

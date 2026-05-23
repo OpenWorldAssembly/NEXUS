@@ -9,10 +9,10 @@ Core packet rules:
 - `packet_id` is the stable logical packet identity
 - `revision_id` is the immutable exact revision identity
 - `parent_revision_refs` represent DAG ancestry
-- `schema_version` tracks family-shape compatibility
+- `schema_version` tracks type-shape compatibility
 - `edges` are the shared typed relationship collection
 - `authority_scope_ref` and `applicable_scope_refs` stay separate
-- `revision_mode` expresses family write semantics
+- `revision_mode` expresses type write semantics
 
 Raw stored packets remain the historical signed fact. Adapted packets are runtime read views, and interpreted or read-model outputs are additional projections on top of those reads.
 
@@ -30,10 +30,10 @@ The universal identity anchor.
 
 Current direction:
 
-- `Element` remains the durable actor, scope, and container family
-- `Element.subtype` is now the forward classifier surface
-- `Element.kind` remains live only as compatibility metadata for historical packets and current runtime consumers that have not migrated yet
-- dotted subtype forms such as `person.claimed_identity` or `assembly.city` are now the forward model when the older shape previously depended on both `kind` and `subtype`
+- `Element` remains the durable actor, scope, and container type
+- `Element.subtype` is the canonical classifier surface
+- fresh Element packets reject the old top-level `kind` classifier
+- dotted subtype forms such as `person.claimed_identity` or `assembly.city` are the forward model when the older shape previously depended on multiple classifier fields
 
 ### Scope
 
@@ -45,24 +45,18 @@ A policy-governed civic or geographic element subtype, not a separate storage pr
 
 ### Initiative
 
-A generic Nexus concept for policy, template lineage, defaults, and work hierarchy. Previous chapter work modeled this as `Cause(subtype: initiative)`; the pre-reseed forward model now treats `Action(subtype: initiative)` as the canonical top-level initiative anchor above campaign, program, mission, and task semantics. Existing `Cause(subtype: initiative)` material remains readable compatibility input rather than the fresh-reseed target.
+A generic Nexus concept for policy, template lineage, defaults, and work hierarchy. The pre-reseed reset treats `Action(subtype: initiative)` as the canonical top-level initiative anchor above campaign, program, mission, and task semantics. `Cause` is no longer an active fresh packet type.
 
 ### Claim
 
-The assertion and argument family.
+The assertion and argument type.
 
 Current forward direction:
 
 - `Claim` can target packets generically
 - `Claim` may carry `claim_markdown` and supporting refs
 - `Claim(subtype: relation_assertion)` is the forward shape for claims specifically asserting a relation
-- legacy `claim_kind` packets such as:
-
-- `role_association`
-- `assembly_association`
-- `home_locality`
-
-remain readable and are projected into the widened claim shape through compatibility.
+- relation-specific claim semantics live under `Claim(subtype: relation_assertion).relation_assertion.subtype`
 
 Current home-locality direction:
 
@@ -73,21 +67,21 @@ Current home-locality direction:
 
 ### Attestation
 
-The evidence, certification, support, dispute, and packet-signal family.
+The evidence, certification, support, dispute, and packet-signal type.
 
 Current code truth:
 
 - claim support and dispute currently stay on `Attestation`
 - `Attestation` and `Claim` are still distinct in code
-- `Attestation` now also carries forward `type/subtype` semantics while preserving `attestation_kind` compatibility
+- `Attestation.subtype` is the canonical attestation classifier
 
 ### Role
 
-A reusable role definition packet family. Exact-scope role assertions are currently represented through `Claim(subtype: "relation_assertion")` with `claim_kind: "role_association"` preserved for compatibility.
+A reusable role definition packet type. Exact-scope role assertions are currently represented through `Claim(subtype: "relation_assertion")` with `relation_assertion.subtype: "role_association"`.
 
 ### Policy
 
-The configuration and legitimacy family for defaults, thresholds, and later execution rules.
+The configuration and legitimacy type for defaults, thresholds, and later execution rules.
 
 Current direction:
 
@@ -100,7 +94,7 @@ Current direction:
 
 ### Decision
 
-A governance artifact family that exists in infrastructure and read surfaces, but whose real workflow semantics are still developing.
+A governance artifact type that exists in infrastructure and read surfaces, but whose real workflow semantics are still developing.
 
 ## Converging civic grammar
 
@@ -114,15 +108,15 @@ The long-term Nexus direction is converging on a smaller reusable civic grammar:
 - `Action`
 - `Policy`
 
-Current code already implements most of that grammar directly. `Action` now carries the forward initiative/work hierarchy and packet-backed default override refs, while `Report` has landed as a real packet family but its live use is still intentionally narrow.
+Current code already implements most of that grammar directly. `Action` now carries the forward initiative/work hierarchy and packet-backed default override refs, while `Report` has landed as a real packet type but its live use is still intentionally narrow.
 
-Current code now ships the first concrete `Report` family use:
+Current code now ships the first concrete `Report` type use:
 
 - `Report(subtype: verification_report)`
 - `Report(subtype: import_report)`
 - `Report(subtype: decision_report)` as reserved governance closure-report shape
 
-This first live usage should still be understood narrowly. The family now exists as real packet infrastructure, but broader audit, incident, decision, or resolution report semantics remain later architectural work rather than implicit current product truth.
+This first live usage should still be understood narrowly. The type now exists as real packet infrastructure, but broader audit, incident, decision, or resolution report semantics remain later architectural work rather than implicit current product truth.
 
 ## Packet-backed defaults
 
@@ -136,7 +130,7 @@ Defaults should remain packet-native rather than becoming `Element` fields or ru
 
 OWA-specific behavior should be represented by the default OWA `Action(subtype: initiative)` packet and its linked policies, templates, bundles, and preferences, not by special cases in generic packet schemas.
 
-The default OWA seed now links its forward `Action(subtype: initiative)` anchor to default-inheritance and governance-baseline `Policy` packets. The compatibility `Cause(subtype: initiative)` anchor remains readable, but new default/policy resolution should prefer the Action anchor when both are available.
+The default OWA seed now links its forward `Action(subtype: initiative)` anchor to default-inheritance and governance-baseline `Policy` packets. New default/policy resolution should use the Action anchor.
 
 ## Schema evolution discipline
 
@@ -144,13 +138,13 @@ Before changing packet schemas, read this chapter first.
 
 Also read `docs/implementation-guide/trust-moderation-and-policy.md` before changing `Claim`, `Attestation`, `Relation`, or `Policy` semantics.
 
-For any packet family schema version change, the required checklist is:
+For any packet type schema version change, the required checklist is:
 
 - update the active schema or body shape
-- update the family compatibility registry entry
+- update the type compatibility registry entry
 - add or update upcast and downcast adapters where backward compatibility is intended
 - update current schema version metadata
-- update builders and family build definitions so new writes emit the canonical current shape
+- update builders and type build definitions so new writes emit the canonical current shape
 - update signature and write-preparation behavior if additive or defaulted fields affect compatibility or signing
 - add or update tests for parse and read compatibility, adapted read behavior, write preparation, and any supported upcast or downcast path
 - document the change in the relevant chapter and add a decision-log note when the change is architecture-significant

@@ -23,7 +23,7 @@ export type PacketPolicySemanticKind =
 
 export type PacketPolicySemanticDescriptor = {
   semantic_kind: PacketPolicySemanticKind;
-  policy_kind: string;
+  policy_subtype: string;
   packet_type: 'Policy';
   section_key:
     | 'write_policy'
@@ -33,19 +33,19 @@ export type PacketPolicySemanticDescriptor = {
     | 'alignment_policy'
     | 'default_policy'
     | 'governance_policy';
-  live_enforcement: 'active' | 'shadow_audit';
+  live_enforcement: 'active' | 'definition_audit';
   notes: string;
 };
 
 export type ResolvedPolicyPacketSemantics = {
   policy_packet_id: string;
-  policy_kind: string;
+  policy_subtype: string;
   semantic_kinds: PacketPolicySemanticKind[];
   write_policy_action_ids: string[];
   trust_gate_ids: string[];
   relation_requirement_subtypes: string[];
   dependency_ref_ids: string[];
-  alignment_cause_ref_ids: string[];
+  alignment_action_ref_ids: string[];
   default_ref_ids: string[];
   governance_hooks: string[];
 };
@@ -90,7 +90,7 @@ export type PacketDependencyAuthorityAuditReport = {
 const POLICY_SEMANTIC_DESCRIPTORS: PacketPolicySemanticDescriptor[] = [
   {
     semantic_kind: 'write_lock',
-    policy_kind: 'write_lock',
+    policy_subtype: 'write_lock',
     packet_type: 'Policy',
     section_key: 'write_policy',
     live_enforcement: 'active',
@@ -99,16 +99,16 @@ const POLICY_SEMANTIC_DESCRIPTORS: PacketPolicySemanticDescriptor[] = [
   },
   {
     semantic_kind: 'trust_baseline',
-    policy_kind: 'trust_baseline',
+    policy_subtype: 'trust_baseline',
     packet_type: 'Policy',
     section_key: 'trust_policy',
-    live_enforcement: 'shadow_audit',
+    live_enforcement: 'definition_audit',
     notes:
       'Trust baseline thresholds drive current read projections and future governance gates.',
   },
   {
     semantic_kind: 'relation_requirements',
-    policy_kind: 'relation_requirements',
+    policy_subtype: 'relation_requirements',
     packet_type: 'Policy',
     section_key: 'relation_requirements',
     live_enforcement: 'active',
@@ -117,37 +117,37 @@ const POLICY_SEMANTIC_DESCRIPTORS: PacketPolicySemanticDescriptor[] = [
   },
   {
     semantic_kind: 'dependency_policy',
-    policy_kind: 'dependency_policy',
+    policy_subtype: 'dependency_policy',
     packet_type: 'Policy',
     section_key: 'dependency_policy',
-    live_enforcement: 'shadow_audit',
+    live_enforcement: 'definition_audit',
     notes:
       'Dependency policies describe required packet refs and relation subtypes for reseed readiness.',
   },
   {
     semantic_kind: 'alignment_policy',
-    policy_kind: 'alignment_policy',
+    policy_subtype: 'alignment_policy',
     packet_type: 'Policy',
     section_key: 'alignment_policy',
-    live_enforcement: 'shadow_audit',
+    live_enforcement: 'definition_audit',
     notes:
-      'Alignment policies describe accepted cause/initiative lineage requirements.',
+      'Alignment policies describe accepted action/initiative lineage requirements.',
   },
   {
     semantic_kind: 'default_inheritance',
-    policy_kind: 'default_inheritance',
+    policy_subtype: 'default_inheritance',
     packet_type: 'Policy',
     section_key: 'default_policy',
-    live_enforcement: 'shadow_audit',
+    live_enforcement: 'definition_audit',
     notes:
       'Default inheritance policies carry packet refs for policies, templates, bundles, and preference defaults.',
   },
   {
     semantic_kind: 'governance',
-    policy_kind: 'governance',
+    policy_subtype: 'governance',
     packet_type: 'Policy',
     section_key: 'governance_policy',
-    live_enforcement: 'shadow_audit',
+    live_enforcement: 'definition_audit',
     notes:
       'Governance policies reserve quorum, eligibility, threshold, vote method, and decision-report hooks.',
   },
@@ -190,7 +190,7 @@ const WORKFLOW_RESOLVER_DEPENDENCY_IDS = new Set([
   'generic.resolver.projection',
 ]);
 
-const POLICY_SEMANTIC_DEPENDENCY_IDS = new Set(['runtime.policy_gate']);
+const POLICY_SEMANTIC_DEPENDENCY_IDS = new Set<string>(['runtime.policy_gate']);
 
 const TRUSTED_RUNTIME_DEPENDENCY_IDS = new Set([
   'runtime.packet_store.read',
@@ -227,7 +227,7 @@ export function resolvePolicyPacketSemantics(
 
   return {
     policy_packet_id: policyPacket.header.packet_id,
-    policy_kind: body.policy_kind,
+    policy_subtype: body.subtype,
     semantic_kinds: uniqueSorted(semanticKinds) as PacketPolicySemanticKind[],
     write_policy_action_ids: body.write_policy
       ? uniqueSorted([
@@ -251,9 +251,9 @@ export function resolvePolicyPacketSemantics(
           ...body.dependency_policy.required_relation_subtypes,
         ])
       : [],
-    alignment_cause_ref_ids: body.alignment_policy
+    alignment_action_ref_ids: body.alignment_policy
       ? uniqueSorted([
-          ...refIds(body.alignment_policy.required_cause_refs),
+          ...refIds(body.alignment_policy.required_action_refs),
           ...body.alignment_policy.accepted_relation_subtypes,
         ])
       : [],
@@ -373,7 +373,7 @@ export function listPacketDependencySemanticDescriptors(input?: {
     const trustedCapabilityIds = TRUSTED_PACKET_PLANNER_CAPABILITIES.filter(
       (capability) =>
         capability.capability_id === dependencyId ||
-        capability.dependency_ids.includes(dependencyId)
+        (capability.dependency_ids as readonly string[]).includes(dependencyId)
     ).map((capability) => capability.capability_id);
 
     if (POLICY_SEMANTIC_DEPENDENCY_IDS.has(dependencyId)) {
@@ -532,7 +532,6 @@ export function resolvePacketDefaultPolicyRefs(input: {
 
 export function resolveInitiativePolicyAnchorRefs(input: {
   actionPacket?: PacketEnvelopeByType['Action'] | null;
-  causePacket?: PacketEnvelopeByType['Cause'] | null;
 }): PacketRef[] {
   if (
     input.actionPacket?.body.subtype === 'initiative' &&
@@ -541,5 +540,5 @@ export function resolveInitiativePolicyAnchorRefs(input: {
     return input.actionPacket.body.policy_refs;
   }
 
-  return input.causePacket?.body.policy_refs ?? [];
+  return [];
 }

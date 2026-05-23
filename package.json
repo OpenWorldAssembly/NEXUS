@@ -15,7 +15,11 @@
     "railway:build": "npm run export:web",
     "railway:start": "node ./server.cjs",
     "docs:validate": "node scripts/validate-public-docs.mjs",
-    "docs:build": "node scripts/build-public-docs.mjs"
+    "docs:build": "node scripts/build-public-docs.mjs",
+    "prestart": "node ./scripts/assert-no-app-tests.mjs",
+    "preweb": "node ./scripts/assert-no-app-tests.mjs",
+    "preexport:web": "node ./scripts/assert-no-app-tests.mjs",
+    "check:app-boundaries": "node ./scripts/assert-no-app-tests.mjs"
   },
   "engines": {
     "node": "24.x"

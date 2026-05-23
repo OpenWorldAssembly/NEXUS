@@ -7,40 +7,39 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-  listPacketFamilyModernizationCoverage,
-  listPacketNextPhaseLiveEnrollmentTargets,
   listPacketTypeModernizationCoverage,
+  listPacketNextPhaseLiveEnrollmentTargets,
 } from '@core/packets/packet-modernization-coverage';
-import { listExperimentalPacketTypeDefinitions } from '@core/packets/packet-definition-manifest';
-import { GENERIC_PACKET_BUILD_FAMILIES } from '@core/packets/packet-build-pipeline';
-import { PACKET_FAMILIES } from '@core/schema/packet-schema';
+import { listDefinedPacketTypeDefinitions } from '@core/packets/packet-definition-manifest';
+import { GENERIC_PACKET_BUILD_TYPES } from '@core/packets/packet-build-pipeline';
+import { PACKET_TYPES } from '@core/schema/packet-schema';
 
-test('packet modernization coverage includes every live packet family', () => {
-  const coverage = listPacketFamilyModernizationCoverage();
-  const coveredFamilies = coverage.map((entry) => entry.family).sort();
+test('packet modernization coverage includes every live packet type', () => {
+  const coverage = listPacketTypeModernizationCoverage();
+  const coveredTypes = coverage.map((entry) => entry.type).sort();
 
-  assert.deepEqual(coveredFamilies, [...PACKET_FAMILIES].sort());
+  assert.deepEqual(coveredTypes, [...PACKET_TYPES].sort());
 });
 
-test('live packet families keep body schema and compatibility registry coverage', () => {
-  const coverage = listPacketFamilyModernizationCoverage();
+test('live packet types keep body schema and compatibility registry coverage', () => {
+  const coverage = listPacketTypeModernizationCoverage();
 
   for (const entry of coverage) {
     assert.equal(
       entry.body_schema_status,
       'present',
-      `${entry.family} must keep a body schema`
+      `${entry.type} must keep a body schema`
     );
     assert.equal(
       entry.compatibility_registry_status,
       'present',
-      `${entry.family} must keep a compatibility registry entry`
+      `${entry.type} must keep a compatibility registry entry`
     );
   }
 });
 
-test('packet modernization gaps are explicitly classified as planned work', () => {
-  const coverage = listPacketFamilyModernizationCoverage();
+test('packet modernization missing coverage is explicitly classified', () => {
+  const coverage = listPacketTypeModernizationCoverage();
 
   for (const entry of coverage) {
     const statusValues = [
@@ -51,25 +50,25 @@ test('packet modernization gaps are explicitly classified as planned work', () =
       entry.definition_parts_status,
     ];
     const plannedGapCount = statusValues.filter(
-      (status) => status === 'planned_gap'
+      (status) => status === 'missing_coverage'
     ).length;
 
     assert.equal(
-      entry.planned_gaps.length,
+      entry.missing_coverage_items.length,
       plannedGapCount,
-      `${entry.family} should explain each packet modernization gap`
+      `${entry.type} should explain each packet modernization gap`
     );
 
-    for (const gap of entry.planned_gaps) {
-      assert.equal(gap.status, 'planned_gap');
-      assert.ok(gap.reason.length > 0, `${entry.family} gap needs a reason`);
+    for (const gap of entry.missing_coverage_items) {
+      assert.equal(gap.status, 'missing_coverage');
+      assert.ok(gap.reason.length > 0, `${entry.type} gap needs a reason`);
     }
   }
 });
 
 test('preference remains manifest-defined with complete definition parts', () => {
-  const preferenceCoverage = listPacketFamilyModernizationCoverage().find(
-    (entry) => entry.family === 'Preference'
+  const preferenceCoverage = listPacketTypeModernizationCoverage().find(
+    (entry) => entry.type === 'Preference'
   );
 
   assert.ok(preferenceCoverage);
@@ -78,41 +77,41 @@ test('preference remains manifest-defined with complete definition parts', () =>
   assert.ok(preferenceCoverage.definition_part_count > 0);
 });
 
-test('generic builder families now have manifest definitions and definition parts', () => {
-  const coverageByFamily = new Map(
-    listPacketFamilyModernizationCoverage().map((entry) => [entry.family, entry])
+test('generic builder types now have manifest definitions and definition parts', () => {
+  const coverageByType = new Map(
+    listPacketTypeModernizationCoverage().map((entry) => [entry.type, entry])
   );
 
-  for (const family of GENERIC_PACKET_BUILD_FAMILIES) {
-    const entry = coverageByFamily.get(family);
+  for (const type of GENERIC_PACKET_BUILD_TYPES) {
+    const entry = coverageByType.get(type);
     assert.ok(entry);
-    assert.equal(entry.build_pipeline_status, 'supported', family);
-    assert.equal(entry.manifest_definition_status, 'defined', family);
-    assert.equal(entry.definition_parts_status, 'complete', family);
-    assert.ok(entry.definition_part_count > 0, family);
+    assert.equal(entry.build_pipeline_status, 'supported', type);
+    assert.equal(entry.manifest_definition_status, 'defined', type);
+    assert.equal(entry.definition_parts_status, 'complete', type);
+    assert.ok(entry.definition_part_count > 0, type);
   }
 });
 
-test('families without generic builders remain explicit planned gaps', () => {
-  const coverage = listPacketFamilyModernizationCoverage();
-  const genericFamilies = new Set<string>(GENERIC_PACKET_BUILD_FAMILIES);
+test('types without generic builders report explicit missing coverage', () => {
+  const coverage = listPacketTypeModernizationCoverage();
+  const genericTypes = new Set<string>(GENERIC_PACKET_BUILD_TYPES);
 
   for (const entry of coverage) {
-    if (genericFamilies.has(entry.family)) {
+    if (genericTypes.has(entry.type)) {
       continue;
     }
 
-    assert.equal(entry.build_pipeline_status, 'planned_gap', entry.family);
+    assert.equal(entry.build_pipeline_status, 'missing_coverage', entry.type);
     assert.ok(
-      entry.planned_gaps.some((gap) => gap.area === 'build_pipeline'),
-      `${entry.family} should keep the builder planned gap`
+      entry.missing_coverage_items.some((gap) => gap.area === 'build_pipeline'),
+      `${entry.type} should keep the builder missing coverage item`
     );
   }
 });
 
 test('Preference is manifest-defined with canonical builder support', () => {
-  const preferenceCoverage = listPacketFamilyModernizationCoverage().find(
-    (entry) => entry.family === 'Preference'
+  const preferenceCoverage = listPacketTypeModernizationCoverage().find(
+    (entry) => entry.type === 'Preference'
   );
 
   assert.ok(preferenceCoverage);
@@ -120,12 +119,12 @@ test('Preference is manifest-defined with canonical builder support', () => {
   assert.equal(preferenceCoverage.definition_parts_status, 'complete');
   assert.equal(preferenceCoverage.build_pipeline_status, 'supported');
   assert.equal(
-    preferenceCoverage.planned_gaps.some((gap) => gap.area === 'build_pipeline'),
+    preferenceCoverage.missing_coverage_items.some((gap) => gap.area === 'build_pipeline'),
     false
   );
 });
 
-test('Definition and Bundle are recorded as canonical packet families', () => {
+test('Definition and Bundle are recorded as canonical packet types', () => {
   const targets = listPacketNextPhaseLiveEnrollmentTargets();
 
   assert.deepEqual(
@@ -134,18 +133,18 @@ test('Definition and Bundle are recorded as canonical packet families', () => {
   );
 
   for (const target of targets) {
-    assert.equal(target.target_status, 'canonical_family');
-    assert.equal(target.currently_in_packet_families, true);
+    assert.equal(target.target_status, 'canonical_type');
+    assert.equal(target.currently_in_packet_types, true);
     assert.equal(target.manifest_definition_status, 'defined');
-    assert.ok(target.reason.includes('canonical packet families'));
+    assert.ok(target.reason.includes('canonical packet types'));
   }
 });
 
-test('packet-type modernization coverage includes every experimental manifest definition', () => {
+test('packet-type modernization coverage includes every canonical manifest definition', () => {
   const coveredPacketTypes = listPacketTypeModernizationCoverage()
     .map((entry) => entry.packet_type)
     .sort();
-  const manifestPacketTypes = listExperimentalPacketTypeDefinitions()
+  const manifestPacketTypes = listDefinedPacketTypeDefinitions()
     .map((definition) => definition.packet_type)
     .sort();
 
@@ -160,14 +159,14 @@ test('canonical packet types have executable body-builder coverage', () => {
     ])
   );
 
-  for (const packetType of ['Definition', 'Bundle', 'Preference']) {
+  for (const packetType of ['Definition', 'Bundle', 'Preference'] as const) {
     const entry = coverageByPacketType.get(packetType);
     assert.ok(entry);
     assert.equal(entry.manifest_definition_status, 'defined');
     assert.equal(entry.definition_parts_status, 'complete');
     assert.equal(entry.descriptor_builder_status, 'defined');
     assert.equal(entry.body_builder_status, 'supported');
-    assert.equal(entry.shadow_mutation_plan_status, 'supported');
+    assert.equal(entry.definition_mutation_plan_status, 'supported');
     assert.equal(entry.compatibility_standard_status, 'supported');
   }
 });
@@ -176,7 +175,7 @@ test('packet-type modernization coverage reports compatibility standard coverage
   for (const entry of listPacketTypeModernizationCoverage()) {
     assert.equal(entry.compatibility_standard_status, 'supported', entry.packet_type);
     assert.equal(
-      entry.planned_gaps.some((gap) => gap.area === 'compatibility_definition'),
+      entry.missing_coverage_items.some((gap) => gap.area === 'compatibility_definition'),
       false,
       entry.packet_type
     );

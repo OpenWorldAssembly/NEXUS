@@ -13,7 +13,7 @@ Status: canon candidate
 
 - `Action(subtype: initiative)` is the forward top-level initiative packet for policy, template lineage, default packet sets, and later work hierarchy
 - `OWA` should be modeled as an initiative Action inside Nexus, not as a hardcoded exception
-- `Cause(subtype: initiative)` remains readable previous-chapter compatibility input, not the fresh-reseed target
+- `Cause` is no longer an active fresh packet type
 - lower work hierarchy levels should be represented through Action subtypes such as `campaign`, `program`, `mission`, and provisional `task`
 - "official OWA" should mean conforming to recognized OWA dependencies, templates, and policies
 - assemblies remain valid Nexus objects even when they fork or diverge from canonical OWA lineage
@@ -57,7 +57,7 @@ Status: canon candidate
 
 - assemblies are elements with policy-governed civic semantics, not owned subsidiaries
 - custody, legitimacy, policy authority, and governance outcome should remain distinct concepts
-- association should remain a simple claim first; typed categories are deferred
+- association should remain a simple claim first; typed categories are unsupported
 - multi-key assembly authority, custody transition, and protected-state mutation should remain explicit later design work
 
 ### Unresolved

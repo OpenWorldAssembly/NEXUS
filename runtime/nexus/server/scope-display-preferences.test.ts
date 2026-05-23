@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 import {
-  GENERIC_SHADOW_PACKET_RUNTIME_CAPABILITIES,
+  GENERIC_PACKET_RUNTIME_CAPABILITIES,
   type ShellChromePreferenceValue,
 } from '@core/packets/packet-definition-manifest';
 import type { NexusScopeDisplayPreferencesPayload } from '@runtime/nexus/nexus-api-types';
@@ -97,7 +97,7 @@ test('claimed scope display preferences are stored as Preference.element packets
         show_followed_parent_chains: true,
       },
     });
-    const packets = await packetStore.listPreferredPacketsByFamily('Preference');
+    const packets = await packetStore.listPreferredPacketsByType('Preference');
     const readBack = await readScopeDisplayPreferences({
       packetStore,
       actorPacketId: 'nexus:element/test-actor',
@@ -544,7 +544,7 @@ test('packet runtime master handler resolves Preference.element by mutation inte
         },
         mutationIntent: 'preference.element.set',
         capabilities: {
-          ...GENERIC_SHADOW_PACKET_RUNTIME_CAPABILITIES,
+          ...GENERIC_PACKET_RUNTIME_CAPABILITIES,
           builder_kinds: [],
         },
         input: {

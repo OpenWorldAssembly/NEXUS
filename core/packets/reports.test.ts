@@ -2,7 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { createReportPacket } from './builders.ts';
-import { parsePacketEnvelope } from '@core/schema/packet-schema';
+import {
+  parsePacketEnvelope,
+  type PacketEnvelopeByType,
+} from '@core/schema/packet-schema';
 
 test('report packets round-trip with verification and import reporting fields intact', () => {
   const verificationReport = createReportPacket({
@@ -25,10 +28,12 @@ test('report packets round-trip with verification and import reporting fields in
       signature_status: 'valid',
     },
   });
-  const parsedVerificationReport = parsePacketEnvelope(verificationReport);
+  const parsedVerificationReport = parsePacketEnvelope(
+    verificationReport
+  ) as PacketEnvelopeByType['Report'];
 
-  assert.equal(parsedVerificationReport.header.family, 'Report');
-  assert.equal(parsedVerificationReport.body.type, 'report');
+  assert.equal(parsedVerificationReport.header.type, 'Report');
+  assert.equal(parsedVerificationReport.body.subtype, 'verification_report');
   assert.equal(parsedVerificationReport.body.subtype, 'verification_report');
   assert.equal(
     parsedVerificationReport.body.target_ref?.packet_id,
@@ -64,9 +69,11 @@ test('report packets round-trip with verification and import reporting fields in
       validation_mode: 'validate_before_commit',
     },
   });
-  const parsedImportReport = parsePacketEnvelope(importReport);
+  const parsedImportReport = parsePacketEnvelope(
+    importReport
+  ) as PacketEnvelopeByType['Report'];
 
-  assert.equal(parsedImportReport.header.family, 'Report');
+  assert.equal(parsedImportReport.header.type, 'Report');
   assert.equal(parsedImportReport.body.subtype, 'import_report');
   assert.equal(parsedImportReport.body.target_ref, null);
   assert.equal(
@@ -94,9 +101,11 @@ test('report packets round-trip with verification and import reporting fields in
       outcome: 'passed',
     },
   });
-  const parsedDecisionReport = parsePacketEnvelope(decisionReport);
+  const parsedDecisionReport = parsePacketEnvelope(
+    decisionReport
+  ) as PacketEnvelopeByType['Report'];
 
-  assert.equal(parsedDecisionReport.header.family, 'Report');
+  assert.equal(parsedDecisionReport.header.type, 'Report');
   assert.equal(parsedDecisionReport.body.subtype, 'decision_report');
   assert.equal(
     parsedDecisionReport.body.target_ref?.packet_id,

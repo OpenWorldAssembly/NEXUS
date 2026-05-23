@@ -8,7 +8,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { createAttestationPacket } from '@core/packets/builders';
 import {
   isDiscussionMessagePacket,
-  type DiscussionLegacyFamily,
+  type DiscussionLegacyType,
 } from '@core/packets/discussion-compat';
 import { interpretPacket } from '@core/packets/packet-interpreter';
 import { resolvePacketTarget } from '@core/packets/packet-target-resolver';
@@ -116,13 +116,13 @@ function toAttestationEdgeProjection(
     source_actor_key: getActorKeyFromPacket(attestationPacket) ?? '',
     source_actor_packet_id: sourceActorPacketId,
     source_actor_label:
-      sourceActorPacket?.header.family === 'Element'
+      sourceActorPacket?.header.type === 'Element'
         ? (sourceActorPacket as PacketEnvelopeByType['Element']).body.name
         : null,
     authority_scope_packet_id:
       attestationPacket.header.authority_scope_ref?.packet_id ?? null,
     target_ref: attestationPacket.body.target_ref,
-    attestation_kind: attestationPacket.body.attestation_kind,
+    attestation_kind: attestationPacket.body.subtype,
     value: attestationPacket.body.value,
     status: attestationPacket.body.status,
     context_ref: attestationPacket.body.context_ref,
@@ -133,25 +133,20 @@ function toAttestationEdgeProjection(
   };
 }
 
-function projectDiscussionLegacyView<TFamily extends DiscussionLegacyFamily>(
+function projectDiscussionLegacyView<TType extends DiscussionLegacyType>(
   packet: PacketEnvelope,
-  targetFamily: TFamily
-): PacketEnvelopeByType[TFamily] | null {
-  const interpretation = interpretPacket({
-    packet,
-    target: {
-      family: targetFamily,
-      mode: 'legacy',
-    },
-  });
-
-  return (interpretation.interpreted as PacketEnvelopeByType[TFamily] | null) ?? null;
+  targetType: TType
+): PacketEnvelopeByType[TType] | null {
+  void targetType;
+  return packet.header.type === 'Discussion'
+    ? (packet as unknown as PacketEnvelopeByType[TType])
+    : null;
 }
 
 async function getDiscussionForumById(
   packetStore: NodeSQLitePacketStore,
   forumPacketId: string
-): Promise<PacketEnvelopeByType['DiscussionForum'] | null> {
+): Promise<PacketEnvelopeByType['Discussion'] | null> {
   const resolution = await resolvePacketTarget({
     packet_id: forumPacketId,
     fetchPacket: async (packetId) =>
@@ -165,17 +160,17 @@ async function getDiscussionForumById(
     return null;
   }
 
-  if (packet.header.family !== 'DiscussionForum') {
-    return projectDiscussionLegacyView(packet, 'DiscussionForum');
+  if (packet.header.type !== 'Discussion') {
+    return projectDiscussionLegacyView(packet, 'Discussion');
   }
 
-  return packet as PacketEnvelopeByType['DiscussionForum'];
+  return packet as PacketEnvelopeByType['Discussion'];
 }
 
 async function getDiscussionThreadById(
   packetStore: NodeSQLitePacketStore,
   threadPacketId: string
-): Promise<PacketEnvelopeByType['DiscussionThread'] | null> {
+): Promise<PacketEnvelopeByType['Discussion'] | null> {
   const resolution = await resolvePacketTarget({
     packet_id: threadPacketId,
     fetchPacket: async (packetId) =>
@@ -189,45 +184,50 @@ async function getDiscussionThreadById(
     return null;
   }
 
-  if (packet.header.family !== 'DiscussionThread') {
-    return projectDiscussionLegacyView(packet, 'DiscussionThread');
+  if (packet.header.type !== 'Discussion') {
+    return projectDiscussionLegacyView(packet, 'Discussion');
   }
 
-  return packet as PacketEnvelopeByType['DiscussionThread'];
+  return packet as PacketEnvelopeByType['Discussion'];
 }
 
 function getEntryThreadPacketId(
   entryPacket:
-    | PacketEnvelopeByType['DiscussionPost']
-    | PacketEnvelopeByType['DiscussionReply']
+    | PacketEnvelopeByType['Discussion']
+    | PacketEnvelopeByType['Discussion']
 ): string {
-  return entryPacket.body.thread_ref.packet_id;
+  const body = entryPacket.body as {
+    topic_ref?: { packet_id: string };
+    parent_ref?: { packet_id: string };
+  };
+
+  return body.topic_ref?.packet_id ?? body.parent_ref?.packet_id ?? entryPacket.header.packet_id;
 }
 
 function toLegacyDiscussionEntry(
   packet: PacketEnvelope
 ):
-  | PacketEnvelopeByType['DiscussionPost']
-  | PacketEnvelopeByType['DiscussionReply']
+  | PacketEnvelopeByType['Discussion']
+  | PacketEnvelopeByType['Discussion']
   | null {
   if (isDiscussionMessagePacket(packet)) {
     return (
-      (projectDiscussionLegacyView(packet, 'DiscussionReply') as
-        | PacketEnvelopeByType['DiscussionReply']
+      (projectDiscussionLegacyView(packet, 'Discussion') as
+        | PacketEnvelopeByType['Discussion']
         | null) ??
-      (projectDiscussionLegacyView(packet, 'DiscussionPost') as
-        | PacketEnvelopeByType['DiscussionPost']
+      (projectDiscussionLegacyView(packet, 'Discussion') as
+        | PacketEnvelopeByType['Discussion']
         | null)
     );
   }
 
   if (
-    packet.header.family === 'DiscussionPost' ||
-    packet.header.family === 'DiscussionReply'
+    packet.header.type === 'Discussion' ||
+    packet.header.type === 'Discussion'
   ) {
     return packet as
-      | PacketEnvelopeByType['DiscussionPost']
-      | PacketEnvelopeByType['DiscussionReply'];
+      | PacketEnvelopeByType['Discussion']
+      | PacketEnvelopeByType['Discussion'];
   }
 
   return null;
@@ -243,7 +243,7 @@ export class SQLiteAttestationService implements AttestationService {
 
   async syncDerivedState(): Promise<void> {
     const [attestationPackets, allPackets] = await Promise.all([
-      this.packetStore.listPreferredPacketsByFamily('Attestation'),
+      this.packetStore.listPreferredPacketsByType('Attestation'),
       this.packetStore.listPreferredPackets(),
     ]);
 
@@ -265,7 +265,7 @@ export class SQLiteAttestationService implements AttestationService {
         attestation_packet_id: attestationPacket.header.packet_id,
         target_packet_id: attestationPacket.body.target_ref.packet_id,
         actor_key: actorKey,
-        attestation_kind: attestationPacket.body.attestation_kind,
+        attestation_kind: attestationPacket.body.subtype,
         value: attestationPacket.body.value,
         status: attestationPacket.body.status,
         context_packet_id: attestationPacket.body.context_ref?.packet_id ?? null,
@@ -276,7 +276,7 @@ export class SQLiteAttestationService implements AttestationService {
 
       if (
         attestationPacket.body.status !== 'active' ||
-        attestationPacket.body.attestation_kind !== 'packet_signal'
+        attestationPacket.body.subtype !== 'packet_signal'
       ) {
         continue;
       }
@@ -395,7 +395,7 @@ export class SQLiteAttestationService implements AttestationService {
 
       const forumPacket = await getDiscussionForumById(
         this.packetStore,
-        threadPacket.body.forum_ref.packet_id
+        (threadPacket.body as { parent_ref: { packet_id: string } }).parent_ref.packet_id
       );
 
       if (!forumPacket) {
@@ -404,7 +404,7 @@ export class SQLiteAttestationService implements AttestationService {
         );
       }
 
-      if (forumPacket.body.forum_kind !== 'visitor_lobby') {
+      if (forumPacket.body.role !== 'visitor_lobby') {
         const actorPacketId = input.actor_key.startsWith('element:')
           ? input.actor_key.slice('element:'.length)
           : null;
@@ -441,7 +441,7 @@ export class SQLiteAttestationService implements AttestationService {
         ? null
         : await this.packetStore.fetchByRevision(existingPreferredRevision);
     const currentAttestationPacket =
-      existingPacket?.header.family === 'Attestation'
+      existingPacket?.header.type === 'Attestation'
         ? (existingPacket as PacketEnvelopeByType['Attestation'])
         : null;
     const nextValue =
@@ -486,7 +486,7 @@ export class SQLiteAttestationService implements AttestationService {
       target_ref: { packet_id: input.target_packet_id },
       value: nextValue,
       status: input.value === 0 ? 'cleared' : 'active',
-      attestation_kind: attestationKind,
+      subtype: attestationKind,
       context_ref: input.context_packet_id
         ? {
             packet_id: input.context_packet_id,
@@ -532,7 +532,7 @@ export class SQLiteAttestationService implements AttestationService {
     const expectedPacketId = createAttestationPacketId({
       targetPacketId: attestationPacket.body.target_ref.packet_id,
       actorPacketId: actorPacket.header.packet_id,
-      attestationKind: attestationPacket.body.attestation_kind,
+      attestationKind: attestationPacket.body.subtype,
       contextPacketId: attestationPacket.body.context_ref?.packet_id ?? null,
     });
 
@@ -589,7 +589,7 @@ export class SQLiteAttestationService implements AttestationService {
 
       const forumPacket = await getDiscussionForumById(
         this.packetStore,
-        threadPacket.body.forum_ref.packet_id
+        (threadPacket.body as { parent_ref: { packet_id: string } }).parent_ref.packet_id
       );
 
       if (!forumPacket) {
@@ -598,7 +598,7 @@ export class SQLiteAttestationService implements AttestationService {
         );
       }
 
-      if (forumPacket.body.forum_kind !== 'visitor_lobby') {
+      if (forumPacket.body.role !== 'visitor_lobby') {
         const assemblyPacketId = forumPacket.header.authority_scope_ref?.packet_id ?? null;
 
         if (!assemblyPacketId) {
@@ -683,7 +683,7 @@ export class SQLiteAttestationService implements AttestationService {
       )
       .filter((attestationPacket) =>
         input.attestation_kind
-          ? attestationPacket.body.attestation_kind === input.attestation_kind
+          ? attestationPacket.body.subtype === input.attestation_kind
           : true
       )
       .filter((attestationPacket) =>
@@ -719,7 +719,7 @@ export class SQLiteAttestationService implements AttestationService {
       )
       .filter((attestationPacket) =>
         input.attestation_kind
-          ? attestationPacket.body.attestation_kind === input.attestation_kind
+          ? attestationPacket.body.subtype === input.attestation_kind
           : true
       )
       .filter((attestationPacket) =>
@@ -765,7 +765,7 @@ export class SQLiteAttestationService implements AttestationService {
         return {
           assembly_packet_id: claimPacket.body.target_ref.packet_id,
           assembly_name:
-            assemblyPacket?.header.family === 'Element'
+            assemblyPacket?.header.type === 'Element'
               ? (assemblyPacket as PacketEnvelopeByType['Element']).body.name
               : claimPacket.body.target_ref.packet_id,
           claim_packet_id: claimPacket.header.packet_id,

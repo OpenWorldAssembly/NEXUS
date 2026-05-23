@@ -15,11 +15,11 @@ import {
   useNexusAppearance,
   NexusSectionHeader,
 } from '@app/components/nexus/nexus-ui';
-import { PACKET_FAMILIES, type PacketFamily } from '@core/schema/packet-schema';
+import { PACKET_TYPES, type PacketType } from '@core/schema/packet-schema';
 import type { NexusLibraryPayload } from '@runtime/nexus/nexus-api-types';
 import { fetchNexusLibraryPayload } from '@runtime/nexus/nexus-query-api';
 
-type PacketFilter = 'all' | PacketFamily;
+type PacketFilter = 'all' | PacketType;
 
 
 /**
@@ -33,13 +33,13 @@ export default function NexusLibraryPage() {
   const router = useRouter();
   const scrollViewRef = useRef<ScrollView | null>(null);
   const localParams = useLocalSearchParams<{
-    family?: string | string[];
+    type?: string | string[];
   }>();
   const previewTargetParams = useNexusPreviewTargetParams();
-  const requestedFamilyFilter =
-    typeof localParams.family === 'string' &&
-    PACKET_FAMILIES.includes(localParams.family as PacketFamily)
-      ? (localParams.family as PacketFamily)
+  const requestedTypeFilter =
+    typeof localParams.type === 'string' &&
+    PACKET_TYPES.includes(localParams.type as PacketType)
+      ? (localParams.type as PacketType)
       : null;
   const highlightedPacketId =
     previewTargetParams.highlightPacketId ??
@@ -54,10 +54,10 @@ export default function NexusLibraryPage() {
   const [cardOffsets, setCardOffsets] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    if (requestedFamilyFilter) {
-      setPacketFilter(requestedFamilyFilter);
+    if (requestedTypeFilter) {
+      setPacketFilter(requestedTypeFilter);
     }
-  }, [requestedFamilyFilter]);
+  }, [requestedTypeFilter]);
 
   useEffect(() => {
     setCardOffsets({});
@@ -73,7 +73,7 @@ export default function NexusLibraryPage() {
       try {
         const nextLibraryPayload = await fetchNexusLibraryPayload({
           scopeId: activeScope.id,
-          familyFilter: null,
+          typeFilter: null,
           actorPacketId: currentActorPacketId,
         });
 
@@ -108,20 +108,20 @@ export default function NexusLibraryPage() {
 
   const allPackets = libraryPayload?.packets ?? [];
   const availablePacketFilters = useMemo<PacketFilter[]>(() => {
-    const availableFamilies = Array.from(
-      new Set(allPackets.map((packet) => packet.family))
+    const availableTypes = Array.from(
+      new Set(allPackets.map((packet) => packet.type))
     )
-      .filter((family): family is PacketFamily =>
-        PACKET_FAMILIES.includes(family as PacketFamily)
+      .filter((type): type is PacketType =>
+        PACKET_TYPES.includes(type as PacketType)
       )
-      .sort((leftFamily, rightFamily) => leftFamily.localeCompare(rightFamily));
+      .sort((leftType, rightType) => leftType.localeCompare(rightType));
 
-    return ['all', ...availableFamilies];
+    return ['all', ...availableTypes];
   }, [allPackets]);
   const visiblePackets =
     packetFilter === 'all'
       ? allPackets
-      : allPackets.filter((packet) => packet.family === packetFilter);
+      : allPackets.filter((packet) => packet.type === packetFilter);
   const highlightedPacketIsVisible =
     highlightedPacketId !== null &&
     visiblePackets.some((packet) => packet.packet.packet_id === highlightedPacketId);
@@ -261,7 +261,7 @@ export default function NexusLibraryPage() {
                       <Text className={appearance.surfaceTitleClass}>
                         {packet.title}
                       </Text>
-                      <NexusBadge label={packet.family} tone="sky" />
+                      <NexusBadge label={packet.type} tone="sky" />
                       {packet.packet.packet_id === highlightedPacketId ? (
                         <NexusBadge label="Focused packet" tone="gold" />
                       ) : null}
@@ -280,14 +280,14 @@ export default function NexusLibraryPage() {
                       onPress={() => {
                         router.setParams({
                           packet_id: packet.packet.packet_id,
-                          family: packet.family,
+                          type: packet.type,
                         });
                         openPacketInExplorer({
                           packetId: packet.packet.packet_id,
                           preferredRevisionId: packet.revision.revision_id,
                           titleSnapshot: packet.title,
                           seedSummary: {
-                            family: packet.family,
+                            type: packet.type,
                             summary: packet.summary,
                             label: packet.label,
                           },

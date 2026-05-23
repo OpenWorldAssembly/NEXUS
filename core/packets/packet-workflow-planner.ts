@@ -1,6 +1,6 @@
 /**
  * File: packet-workflow-planner.ts
- * Description: Shadow-mode declarative workflow planner contract for packet-definition driven generic operations.
+ * Description: Definition-mode declarative workflow planner contract for packet-definition driven generic operations.
  */
 
 import {
@@ -10,7 +10,7 @@ import {
 import type { PacketTypeDefinition } from '@core/packets/definitions/packet-definition-types.ts';
 
 export type PacketWorkflowAvailability =
-  | 'shadow_only'
+  | 'runtime_ready'
   | 'runtime_ready'
   | 'canonical';
 
@@ -146,7 +146,7 @@ export type PacketWorkflowDryRunStep = {
 };
 
 export type PacketWorkflowDryRunPlan = {
-  dry_run_kind: 'packet.workflow_plan.shadow_dry_run';
+  dry_run_kind: 'packet.workflow_plan.runtime_dry_run';
   packet_type: string;
   workflow_plan_id: string;
   mutation_intents: string[];
@@ -156,7 +156,7 @@ export type PacketWorkflowDryRunPlan = {
   policy_action_ids: string[];
   dependency_ids: string[];
   resolver_ids: string[];
-  ready_for_shadow_interpretation: boolean;
+  ready_for_interpretation: boolean;
   findings: PacketWorkflowAuditFinding[];
 };
 
@@ -164,61 +164,61 @@ export const PACKET_WORKFLOW_PLANNER_CAPABILITIES = [
   {
     resolver_id: 'actor.ref',
     resolver_kind: 'actor_ref',
-    availability: 'shadow_only',
+    availability: 'runtime_ready',
     notes: 'Binds the claimed runtime actor packet ref into a workflow input.',
   },
   {
     resolver_id: 'input.packet_ref',
     resolver_kind: 'packet_ref_lookup',
-    availability: 'shadow_only',
+    availability: 'runtime_ready',
     notes: 'Validates and binds packet refs supplied by a runtime request.',
   },
   {
     resolver_id: 'input.value',
     resolver_kind: 'input_value',
-    availability: 'shadow_only',
+    availability: 'runtime_ready',
     notes: 'Binds scalar or object values supplied by a runtime request.',
   },
   {
     resolver_id: 'static.value',
     resolver_kind: 'static_value',
-    availability: 'shadow_only',
+    availability: 'runtime_ready',
     notes: 'Binds definition-declared constants into a workflow input.',
   },
   {
     resolver_id: 'relation.active_lookup',
     resolver_kind: 'existing_active_relation_lookup',
-    availability: 'shadow_only',
+    availability: 'runtime_ready',
     notes: 'Looks up an existing active relation before set/clear planning.',
   },
   {
     resolver_id: 'attestation.target_summary',
     resolver_kind: 'target_summary_lookup',
-    availability: 'shadow_only',
+    availability: 'runtime_ready',
     notes: 'Loads a target summary needed by attestation planners.',
   },
   {
     resolver_id: 'projection.current',
     resolver_kind: 'current_projection_lookup',
-    availability: 'shadow_only',
+    availability: 'runtime_ready',
     notes: 'Reads current projection state for no-op and supersedes planning.',
   },
   {
     resolver_id: 'discussion.parent_thread',
     resolver_kind: 'discussion_parent_thread_lookup',
-    availability: 'shadow_only',
+    availability: 'runtime_ready',
     notes: 'Resolves discussion reply parent, thread, forum, and scope context.',
   },
   {
     resolver_id: 'role.scope',
     resolver_kind: 'role_scope_lookup',
-    availability: 'shadow_only',
+    availability: 'runtime_ready',
     notes: 'Resolves the governing scope for role association claim planning.',
   },
   {
     resolver_id: 'compatibility.projection',
     resolver_kind: 'compatibility_projection_lookup',
-    availability: 'shadow_only',
+    availability: 'runtime_ready',
     notes: 'Describes compatibility projection support while legacy surfaces remain present.',
   },
 ] as const satisfies readonly PacketWorkflowResolverDescriptor[];
@@ -352,7 +352,7 @@ export const PACKET_WORKFLOW_POLICY_ACTION_IDS = [
   'bundle.packet_set.export',
 ] as const;
 
-const RESOLVER_IDS = new Set(
+const RESOLVER_IDS = new Set<string>(
   PACKET_WORKFLOW_PLANNER_CAPABILITIES.map((capability) => capability.resolver_id)
 );
 const DEPENDENCY_IDS = new Set<string>(PACKET_WORKFLOW_DEPENDENCY_IDS);
@@ -775,7 +775,7 @@ export function resolvePacketWorkflowDryRunPlan(input: {
 
   if (!workflowPlan) {
     return {
-      dry_run_kind: 'packet.workflow_plan.shadow_dry_run',
+      dry_run_kind: 'packet.workflow_plan.runtime_dry_run',
       packet_type: input.definition.packet_type,
       workflow_plan_id: input.workflowPlanId,
       mutation_intents: [],
@@ -785,7 +785,7 @@ export function resolvePacketWorkflowDryRunPlan(input: {
       policy_action_ids: [],
       dependency_ids: [],
       resolver_ids: [],
-      ready_for_shadow_interpretation: false,
+      ready_for_interpretation: false,
       findings: [
         {
           severity: 'error',
@@ -803,7 +803,7 @@ export function resolvePacketWorkflowDryRunPlan(input: {
   const steps = flattenSteps(workflowPlan.steps);
 
   return {
-    dry_run_kind: 'packet.workflow_plan.shadow_dry_run',
+    dry_run_kind: 'packet.workflow_plan.runtime_dry_run',
     packet_type: input.definition.packet_type,
     workflow_plan_id: workflowPlan.workflow_plan_id,
     mutation_intents: [...workflowPlan.mutation_intents],
@@ -822,7 +822,7 @@ export function resolvePacketWorkflowDryRunPlan(input: {
       ...workflowPlan.resolver_ids,
       ...steps.flatMap((step) => step.resolver_ids),
     ]),
-    ready_for_shadow_interpretation: audit.status === 'pass',
+    ready_for_interpretation: audit.status === 'pass',
     findings: audit.findings,
   };
 }

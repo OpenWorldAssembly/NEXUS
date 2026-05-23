@@ -55,14 +55,14 @@ async function main(): Promise<void> {
       | Record<string, unknown>
       | undefined;
     const claimStatus =
-      preferredAdaptedPacket?.header.family === 'Element' &&
+      preferredAdaptedPacket?.header.type === 'Element' &&
       preferredAdaptedBody?.kind === 'person'
         ? (
             preferredAdaptedPacket as PacketEnvelopeByType['Element']
           ).body.identity?.claim_status ?? null
         : null;
     const preferredActorPacket =
-      preferredAdaptedPacket?.header.family === 'Element' &&
+      preferredAdaptedPacket?.header.type === 'Element' &&
       preferredAdaptedBody?.kind === 'person'
         ? (preferredAdaptedPacket as PacketEnvelopeByType['Element'])
         : null;

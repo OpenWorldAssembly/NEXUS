@@ -8,16 +8,17 @@ import test from 'node:test';
 
 import {
   buildElementPreferenceBody,
-  getExperimentalPacketTypeDefinition,
+  getDefinedPacketTypeDefinition,
   listPacketDefinitionParts,
 } from '@core/packets/packet-definition-manifest';
 import {
   buildPacketTypeBodyCandidate,
   listPacketTypeBodyBuilders,
 } from '@core/packets/packet-type-body-builders';
+import type { PacketBodyByType } from '@core/schema/packet-schema';
 
 test('Definition builder creates valid bodies for required definition part subtypes', () => {
-  const definition = getExperimentalPacketTypeDefinition('Preference');
+  const definition = getDefinedPacketTypeDefinition('Preference');
   assert.ok(definition);
 
   const requiredParts = listPacketDefinitionParts(definition).filter(
@@ -35,8 +36,9 @@ test('Definition builder creates valid bodies for required definition part subty
 
     assert.equal(candidate.packet_type, 'Definition');
     assert.equal(candidate.packet_subtype, part.part_subtype);
-    assert.equal(candidate.body.subtype, part.part_subtype);
-    assert.equal(candidate.body.defines_packet_type, part.defines_packet_type);
+    const body = candidate.body as PacketBodyByType['Definition'];
+    assert.equal(body.subtype, part.part_subtype);
+    assert.equal(body.defines_packet_type, part.defines_packet_type);
   }
 });
 
@@ -63,8 +65,9 @@ test('Bundle.packet_set builder creates a valid inventory body candidate', () =>
 
   assert.equal(candidate.packet_type, 'Bundle');
   assert.equal(candidate.packet_subtype, 'packet_set');
-  assert.equal(candidate.body.type, 'bundle');
-  assert.equal(candidate.body.items[0].packet_type, 'Definition');
+  const body = candidate.body as PacketBodyByType['Bundle'];
+  assert.equal(body.subtype, 'packet_set');
+  assert.equal(body.items[0]?.packet_type, 'Definition');
 });
 
 test('Preference.element builder candidate matches the existing helper output', () => {

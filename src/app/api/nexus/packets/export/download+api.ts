@@ -28,7 +28,7 @@ export const POST: RequestHandler = async (request) => {
       requestBody
     );
 
-    return new Response(downloadPayload.bytes, {
+    return new Response(downloadPayload.bytes as unknown as BodyInit, {
       status: 200,
       headers: {
         'content-type': 'application/json',

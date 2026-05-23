@@ -1,10 +1,10 @@
 /**
- * File: families/claim.ts
- * Description: Family-owned build rules for canonical Claim packets.
+ * File: types/claim.ts
+ * Description: Type-owned build rules for canonical Claim packets.
  */
 
 import type { ClaimPacketInput } from '@core/packets/builders';
-import type { PacketFamilyBuildDefinition } from '@core/packets/packet-build-pipeline';
+import type { PacketTypeBuildDefinition } from '@core/packets/packet-build-pipeline';
 import { createPacketEdge } from '@core/packets/packet-build-helpers';
 
 function resolveRelationAssertion(input: ClaimPacketInput) {
@@ -17,23 +17,10 @@ function resolveRelationAssertion(input: ClaimPacketInput) {
     };
   }
 
-  if (
-    input.claim_kind &&
-    input.subject_ref?.packet_id &&
-    input.target_ref?.packet_id
-  ) {
-    return {
-      subtype: input.claim_kind,
-      subject_ref: input.subject_ref,
-      target_ref: input.target_ref,
-      scope_ref: input.scope_ref ?? null,
-    };
-  }
-
   return null;
 }
 
-export const claimBuildDefinition: PacketFamilyBuildDefinition<
+export const claimBuildDefinition: PacketTypeBuildDefinition<
   'Claim',
   ClaimPacketInput
 > = {
@@ -46,7 +33,6 @@ export const claimBuildDefinition: PacketFamilyBuildDefinition<
 
     if (
       input.subtype === 'relation_assertion' ||
-      input.claim_kind ||
       input.relation_assertion
     ) {
       if (!relationAssertion?.subject_ref?.packet_id) {
@@ -111,7 +97,6 @@ export const claimBuildDefinition: PacketFamilyBuildDefinition<
       'analysis';
 
     return {
-      type: 'claim',
       subtype: resolvedSubtype,
       target_ref: input.target_ref,
       subject_ref: input.subject_ref ?? relationAssertion?.subject_ref ?? null,
@@ -120,7 +105,6 @@ export const claimBuildDefinition: PacketFamilyBuildDefinition<
       claim_markdown: input.claim_markdown ?? input.note ?? null,
       supporting_refs: input.supporting_refs ?? [],
       relation_assertion: relationAssertion,
-      claim_kind: input.claim_kind ?? relationAssertion?.subtype ?? null,
       note: input.note ?? null,
     };
   },

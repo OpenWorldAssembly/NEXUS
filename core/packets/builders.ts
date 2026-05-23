@@ -21,15 +21,14 @@ import {
   type PacketBodyByType,
   type ClaimKind,
   type DiscussionActorClass,
-  type DiscussionKind,
+  type DiscussionSubtype,
   type DiscussionSort,
-  type ElementKind,
+  type ElementSubtype,
   type RelationStatus,
   type PersonClaimStatus,
-  type AttestationKind,
-  type PacketEdge,
+    type PacketEdge,
   type PacketEnvelopeByType,
-  type PacketFamily,
+  type PacketType,
   type PacketHeader,
   type PacketMergeStrategy,
   type TrustStage,
@@ -80,18 +79,16 @@ export interface PacketBuilderBaseInput {
   metadata_compatibility?: PacketCompatibilityMetadata;
 }
 
-export interface PacketBuilderInput<TFamily extends PacketFamily>
+export interface PacketBuilderInput<TType extends PacketType>
   extends PacketBuilderBaseInput {
-  family: TFamily;
-  body: z.input<(typeof PACKET_BODY_SCHEMAS)[TFamily]>;
+  type: TType;
+  body: z.input<(typeof PACKET_BODY_SCHEMAS)[TType]>;
 }
 
 export interface ElementPacketInput extends PacketBuilderBaseInput {
-  kind?: ElementKind | null;
+  subtype: ElementSubtype | string;
   name: string;
-  subtype?: string | null;
   summary?: string | null;
-  scope_kind?: string | null;
   scope_system?: string | null;
   status?: string | null;
   aliases?: string[];
@@ -143,7 +140,7 @@ export interface LocationPacketInput extends PacketBuilderBaseInput {
 export interface RolePacketInput extends PacketBuilderBaseInput {
   title: string;
   summary?: string | null;
-  role_kind: string;
+  subtype: string;
   status: string;
   responsibility_markdown?: string | null;
 }
@@ -162,7 +159,6 @@ export interface ClaimPacketInput extends PacketBuilderBaseInput {
     target_ref: PacketRef;
     scope_ref?: PacketRef | null;
   } | null;
-  claim_kind?: ClaimKind | null;
   note?: string | null;
 }
 
@@ -248,7 +244,7 @@ export interface DiscussionReplyPacketInput extends PacketBuilderBaseInput {
 }
 
 export interface DiscussionPacketInput extends PacketBuilderBaseInput {
-  kind: DiscussionKind;
+  subtype: DiscussionSubtype;
   role: string;
   title: string;
   summary?: string | null;
@@ -272,7 +268,7 @@ export interface DiscussionPacketInput extends PacketBuilderBaseInput {
 export interface ProposalPacketInput extends PacketBuilderBaseInput {
   title: string;
   summary?: string | null;
-  proposal_kind: string;
+  subtype: string;
   status: string;
   decision_scope_refs?: PacketRef[];
   related_policy_refs?: PacketRef[];
@@ -281,7 +277,7 @@ export interface ProposalPacketInput extends PacketBuilderBaseInput {
 export interface PolicyPacketInput extends PacketBuilderBaseInput {
   title: string;
   summary?: string | null;
-  policy_kind: string;
+  subtype: string;
   body_markdown: string;
   status: string;
   trust_policy?: {
@@ -320,24 +316,12 @@ export interface DecisionPacketInput extends PacketBuilderBaseInput {
   vote_ref?: PacketRef | null;
 }
 
-export interface CausePacketInput extends PacketBuilderBaseInput {
-  subtype: string;
-  title: string;
-  summary?: string | null;
-  status: string;
-  purpose_markdown?: string | null;
-  policy_refs?: PacketRef[];
-  template_refs?: PacketRef[];
-  module_refs?: PacketRef[];
-}
-
 export interface ActionPacketInput extends PacketBuilderBaseInput {
   subtype: string;
   title: string;
   summary?: string | null;
   status: string;
   objective_markdown?: string | null;
-  cause_refs?: PacketRef[];
   location_refs?: PacketRef[];
   action_refs?: PacketRef[];
   parent_action_ref?: PacketRef | null;
@@ -352,7 +336,6 @@ export interface AttestationPacketInput extends PacketBuilderBaseInput {
   target_ref: PacketRef;
   value: AttestationValue;
   status?: 'active' | 'cleared';
-  attestation_kind?: AttestationKind;
   context_ref?: PacketRef | null;
   supporting_refs?: PacketRef[];
   note?: string | null;
@@ -386,12 +369,12 @@ function dedupeEdges(edges: PacketEdge[]): PacketEdge[] {
 }
 
 /**
- * Inputs: generic builder input for any supported packet family.
+ * Inputs: generic builder input for any supported packet type.
  * Output: a validated canonical packet envelope with shared header defaults applied.
  */
-export function createPacket<TFamily extends PacketFamily>(
-  input: PacketBuilderInput<TFamily>
-): PacketEnvelopeByType[TFamily] {
+export function createPacket<TType extends PacketType>(
+  input: PacketBuilderInput<TType>
+): PacketEnvelopeByType[TType] {
   const createdAt = input.created_at ?? DEFAULT_CREATED_AT;
   const adapter = input.adapter ?? DEFAULT_ADAPTER;
 
@@ -400,9 +383,9 @@ export function createPacket<TFamily extends PacketFamily>(
       packet_id: input.packet_id,
       revision_id:
         input.revision_id ?? createInitialRevisionId(input.packet_id),
-      family: input.family,
+      type: input.type,
       schema_version:
-        input.schema_version ?? getPacketCurrentSchemaVersion(input.family),
+        input.schema_version ?? getPacketCurrentSchemaVersion(input.type),
       protocol_version: input.protocol_version,
       created_at: createdAt,
       parent_revision_refs: input.parent_revision_refs ?? [],
@@ -447,7 +430,7 @@ export function createElementPacket(
   input: ElementPacketInput
 ): PacketEnvelopeByType['Element'] {
   return buildPacket({
-    family: 'Element',
+    type: 'Element',
     body: input,
     header: {
       ...input,
@@ -461,8 +444,8 @@ export function createDefinitionPacket(
   input: DefinitionPacketInput
 ): PacketEnvelopeByType['Definition'] {
   return buildPacket({
-    family: 'Definition',
-    body: input.body,
+    type: 'Definition',
+    body: input.body as PacketBodyByType['Definition'],
     header: {
       ...input,
       metadata_summary: input.metadata_summary ?? input.body.summary,
@@ -478,7 +461,7 @@ export function createLocationPacket(
   input: LocationPacketInput
 ): PacketEnvelopeByType['Location'] {
   return buildPacket({
-    family: 'Location',
+    type: 'Location',
     body: input,
     header: {
       ...input,
@@ -495,7 +478,7 @@ export function createRolePacket(
   input: RolePacketInput
 ): PacketEnvelopeByType['Role'] {
   return buildPacket({
-    family: 'Role',
+    type: 'Role',
     body: input,
     header: {
       ...input,
@@ -512,7 +495,7 @@ export function createClaimPacket(
   input: ClaimPacketInput
 ): PacketEnvelopeByType['Claim'] {
   return buildPacket({
-    family: 'Claim',
+    type: 'Claim',
     body: input,
     header: {
       ...input,
@@ -530,7 +513,7 @@ export function createRelationPacket(
   input: RelationPacketInput
 ): PacketEnvelopeByType['Relation'] {
   return buildPacket({
-    family: 'Relation',
+    type: 'Relation',
     body: input,
     header: {
       ...input,
@@ -547,7 +530,7 @@ export function createReportPacket(
   input: ReportPacketInput
 ): PacketEnvelopeByType['Report'] {
   return buildPacket({
-    family: 'Report',
+    type: 'Report',
     body: input,
     header: {
       ...input,
@@ -562,11 +545,11 @@ export function createReportPacket(
  * Output: an element packet whose kind is locked to assembly.
  */
 export function createAssemblyPacket(
-  input: Omit<ElementPacketInput, 'kind'>
+  input: Omit<ElementPacketInput, 'subtype'> & { subtype?: ElementSubtype | string }
 ): PacketEnvelopeByType['Element'] {
   return createElementPacket({
     ...input,
-    kind: 'assembly',
+    subtype: 'assembly',
   });
 }
 
@@ -575,23 +558,23 @@ export function createAssemblyPacket(
  * Output: an element packet whose kind is locked to person.
  */
 export function createPersonPacket(
-  input: Omit<ElementPacketInput, 'kind'>
+  input: Omit<ElementPacketInput, 'subtype'> & { subtype?: ElementSubtype | string }
 ): PacketEnvelopeByType['Element'] {
   return createElementPacket({
     ...input,
-    kind: 'person',
+    subtype: 'person',
   });
 }
 
 /**
  * Inputs: common packet header fields plus a canonical discussion node body.
- * Output: a single-family Discussion packet with relationship edges mirrored from node refs.
+ * Output: a single-type Discussion packet with relationship edges mirrored from node refs.
  */
 export function createDiscussionPacket(
   input: DiscussionPacketInput
 ): PacketEnvelopeByType['Discussion'] {
   return buildPacket({
-    family: 'Discussion',
+    type: 'Discussion',
     body: input,
     header: input,
   });
@@ -603,7 +586,7 @@ export function createDiscussionPacket(
  */
 export function createDiscussionThreadPacket(
   input: DiscussionThreadPacketInput
-): PacketEnvelopeByType['DiscussionThread'] {
+): PacketEnvelopeByType['Discussion'] {
   const relatedRefs = input.related_refs ?? [];
   const relatedEdges = relatedRefs.map((relatedRef) =>
     createPacketEdge('references', relatedRef, {
@@ -611,9 +594,10 @@ export function createDiscussionThreadPacket(
     })
   );
 
-  return createPacket({
+  return createDiscussionPacket({
     ...input,
-    family: 'DiscussionThread',
+    subtype: 'topic',
+    role: input.thread_kind,
     edges: [
       ...(input.edges ?? []),
       createPacketEdge('belongs_to', input.forum_ref, {
@@ -622,24 +606,8 @@ export function createDiscussionThreadPacket(
       ...relatedEdges,
     ],
     metadata_summary: input.metadata_summary ?? input.summary ?? null,
-    body: {
-      title: input.title,
-      summary: input.summary ?? null,
-      forum_ref: input.forum_ref,
-      thread_kind: input.thread_kind,
-      status: input.status ?? 'open',
-      related_refs: relatedRefs,
-      participation_rules: {
-        top_level_actor_classes:
-          input.participation_rules?.top_level_actor_classes ?? [],
-        reply_actor_classes: input.participation_rules?.reply_actor_classes ?? [],
-        reaction_actor_classes:
-          input.participation_rules?.reaction_actor_classes ?? [],
-        top_level_post_cost:
-          input.participation_rules?.top_level_post_cost ?? 0,
-      },
-      default_sort: input.default_sort ?? 'new',
-    },
+    parent_ref: input.forum_ref,
+    related_refs: relatedRefs,
   });
 }
 
@@ -649,10 +617,11 @@ export function createDiscussionThreadPacket(
  */
 export function createDiscussionSpacePacket(
   input: DiscussionSpacePacketInput
-): PacketEnvelopeByType['DiscussionSpace'] {
-  return createPacket({
+): PacketEnvelopeByType['Discussion'] {
+  return createDiscussionPacket({
     ...input,
-    family: 'DiscussionSpace',
+    subtype: 'space',
+    role: 'space',
     edges: [
       ...(input.edges ?? []),
       createPacketEdge('belongs_to', input.scope_ref, {
@@ -660,12 +629,6 @@ export function createDiscussionSpacePacket(
       }),
     ],
     metadata_summary: input.metadata_summary ?? input.summary ?? null,
-    body: {
-      title: input.title,
-      summary: input.summary ?? null,
-      scope_ref: input.scope_ref,
-      status: input.status ?? 'open',
-    },
   });
 }
 
@@ -675,10 +638,11 @@ export function createDiscussionSpacePacket(
  */
 export function createDiscussionForumPacket(
   input: DiscussionForumPacketInput
-): PacketEnvelopeByType['DiscussionForum'] {
-  return createPacket({
+): PacketEnvelopeByType['Discussion'] {
+  return createDiscussionPacket({
     ...input,
-    family: 'DiscussionForum',
+    subtype: 'forum',
+    role: input.forum_kind,
     edges: [
       ...(input.edges ?? []),
       createPacketEdge('belongs_to', input.discussion_space_ref, {
@@ -686,23 +650,9 @@ export function createDiscussionForumPacket(
       }),
     ],
     metadata_summary: input.metadata_summary ?? input.summary ?? null,
-    body: {
-      title: input.title,
-      summary: input.summary ?? null,
-      discussion_space_ref: input.discussion_space_ref,
-      forum_kind: input.forum_kind,
-      status: input.status ?? 'open',
-      participation_rules: {
-        top_level_actor_classes:
-          input.participation_rules?.top_level_actor_classes ?? [],
-        reply_actor_classes: input.participation_rules?.reply_actor_classes ?? [],
-        reaction_actor_classes:
-          input.participation_rules?.reaction_actor_classes ?? [],
-        top_level_post_cost:
-          input.participation_rules?.top_level_post_cost ?? 0,
-      },
-      default_sort: input.default_sort ?? 'new',
-    },
+    parent_ref: input.discussion_space_ref,
+    participation_rules: input.participation_rules,
+    default_sort: input.default_sort,
   });
 }
 
@@ -712,7 +662,7 @@ export function createDiscussionForumPacket(
  */
 export function createDiscussionPostPacket(
   input: DiscussionPostPacketInput
-): PacketEnvelopeByType['DiscussionPost'] {
+): PacketEnvelopeByType['Discussion'] {
   const referenceRefs = input.reference_refs ?? [];
   const replyEdges =
     input.reply_to_ref === undefined || input.reply_to_ref === null
@@ -733,19 +683,16 @@ export function createDiscussionPostPacket(
     ),
   ];
 
-  return createPacket({
+  return createDiscussionPacket({
     ...input,
-    family: 'DiscussionPost',
+    subtype: input.reply_to_ref ? 'message' : 'post',
+    role: input.post_kind ?? 'forum_post',
     edges: [...(input.edges ?? []), ...replyEdges, ...referenceEdges],
     metadata_summary:
       input.metadata_summary ?? createTextExcerpt(input.content_markdown),
-    body: {
-      title: input.title,
-      thread_ref: input.thread_ref,
-      post_kind: input.post_kind ?? 'forum_post',
-      content_markdown: input.content_markdown,
-      reply_to_ref: input.reply_to_ref ?? null,
-    },
+    parent_ref: input.reply_to_ref ?? input.thread_ref,
+    topic_ref: input.thread_ref,
+    content_markdown: input.content_markdown,
   });
 }
 
@@ -755,10 +702,11 @@ export function createDiscussionPostPacket(
  */
 export function createDiscussionReplyPacket(
   input: DiscussionReplyPacketInput
-): PacketEnvelopeByType['DiscussionReply'] {
-  return createPacket({
+): PacketEnvelopeByType['Discussion'] {
+  return createDiscussionPacket({
     ...input,
-    family: 'DiscussionReply',
+    subtype: 'message',
+    role: 'reply',
     edges: [
       ...(input.edges ?? []),
       createPacketEdge('references', input.thread_ref, {
@@ -773,13 +721,10 @@ export function createDiscussionReplyPacket(
     ],
     metadata_summary:
       input.metadata_summary ?? createTextExcerpt(input.content_markdown),
-    body: {
-      title: input.title,
-      thread_ref: input.thread_ref,
-      root_post_ref: input.root_post_ref,
-      reply_to_ref: input.reply_to_ref,
-      content_markdown: input.content_markdown,
-    },
+    parent_ref: input.reply_to_ref,
+    topic_ref: input.thread_ref,
+    root_message_ref: input.root_post_ref,
+    content_markdown: input.content_markdown,
   });
 }
 
@@ -791,7 +736,7 @@ export function createProposalPacket(
   input: ProposalPacketInput
 ): PacketEnvelopeByType['Proposal'] {
   return buildPacket({
-    family: 'Proposal',
+    type: 'Proposal',
     body: input,
     header: {
       ...input,
@@ -808,7 +753,7 @@ export function createPolicyPacket(
   input: PolicyPacketInput
 ): PacketEnvelopeByType['Policy'] {
   return buildPacket({
-    family: 'Policy',
+    type: 'Policy',
     body: input,
     header: input,
   });
@@ -818,8 +763,8 @@ export function createPreferencePacket(
   input: PreferencePacketInput
 ): PacketEnvelopeByType['Preference'] {
   return buildPacket({
-    family: 'Preference',
-    body: input.body,
+    type: 'Preference',
+    body: input.body as PacketBodyByType['Preference'],
     header: {
       ...input,
       metadata_summary:
@@ -837,7 +782,7 @@ export function createVotePacket(
   input: VotePacketInput
 ): PacketEnvelopeByType['Vote'] {
   return buildPacket({
-    family: 'Vote',
+    type: 'Vote',
     body: input,
     header: input,
   });
@@ -851,29 +796,11 @@ export function createDecisionPacket(
   input: DecisionPacketInput
 ): PacketEnvelopeByType['Decision'] {
   return buildPacket({
-    family: 'Decision',
+    type: 'Decision',
     body: input,
     header: {
       ...input,
       metadata_summary: input.metadata_summary ?? input.summary ?? null,
-    },
-  });
-}
-
-/**
- * Inputs: common packet header fields plus the cause body data.
- * Output: a validated cause packet.
- */
-export function createCausePacket(
-  input: CausePacketInput
-): PacketEnvelopeByType['Cause'] {
-  return buildPacket({
-    family: 'Cause',
-    body: input,
-    header: {
-      ...input,
-      metadata_summary:
-        input.metadata_summary ?? input.summary ?? input.purpose_markdown ?? null,
     },
   });
 }
@@ -886,7 +813,7 @@ export function createActionPacket(
   input: ActionPacketInput
 ): PacketEnvelopeByType['Action'] {
   return buildPacket({
-    family: 'Action',
+    type: 'Action',
     body: input,
     header: {
       ...input,
@@ -904,7 +831,7 @@ export function createAttestationPacket(
   input: AttestationPacketInput
 ): PacketEnvelopeByType['Attestation'] {
   return buildPacket({
-    family: 'Attestation',
+    type: 'Attestation',
     body: input,
     header: {
       ...input,
@@ -917,8 +844,8 @@ export function createBundlePacket(
   input: BundlePacketInput
 ): PacketEnvelopeByType['Bundle'] {
   return buildPacket({
-    family: 'Bundle',
-    body: input.body,
+    type: 'Bundle',
+    body: input.body as PacketBodyByType['Bundle'],
     header: {
       ...input,
       metadata_summary:

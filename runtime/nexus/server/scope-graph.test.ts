@@ -5,8 +5,8 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 import {
+  createActionPacket,
   createAssemblyPacket,
-  createCausePacket,
   createPersonPacket,
   createPolicyPacket,
 } from '@core/packets/builders';
@@ -72,7 +72,7 @@ test('scope graph prefers canonical ancestry relations and projects packet-nativ
         { packet_id: california.header.packet_id },
         { packet_id: global.header.packet_id },
       ],
-      edges: [{ edge_type: 'parent_scope', target: { packet_id: global.header.packet_id } }],
+      edges: [{ edge_type: 'parent_scope', target: { packet_id: global.header.packet_id }, metadata: {} }],
       name: 'Moreno Valley',
       subtype: 'city',
       locality_label: 'Moreno Valley',
@@ -124,7 +124,7 @@ test('scope graph prefers canonical ancestry relations and projects packet-nativ
       authority_scope_ref: { packet_id: global.header.packet_id },
       applicable_scope_refs: [{ packet_id: global.header.packet_id }],
       title: 'OWA home locality policy',
-      policy_kind: 'charter',
+      subtype: 'charter',
       body_markdown: 'Require a relation assertion claim for home locality relations.',
       status: 'active',
       relation_requirements: {
@@ -139,8 +139,8 @@ test('scope graph prefers canonical ancestry relations and projects packet-nativ
         ],
       },
     });
-    const owaCause = createCausePacket({
-      packet_id: 'nexus:cause/owa',
+    const owaAction = createActionPacket({
+      packet_id: 'nexus:action/initiative/owa',
       created_at: '2026-05-08T00:08:00.000Z',
       authority_scope_ref: { packet_id: global.header.packet_id },
       applicable_scope_refs: [{ packet_id: global.header.packet_id }],
@@ -235,7 +235,7 @@ test('scope graph prefers canonical ancestry relations and projects packet-nativ
       associatedScope,
       actor,
       owaPolicy,
-      owaCause,
+      owaAction,
       californiaParent,
       morenoParent,
       sunnymeadParent,
@@ -270,7 +270,7 @@ test('scope graph prefers canonical ancestry relations and projects packet-nativ
     );
     assert.deepEqual(
       graph.mountReasonsByScopeId.get('canyon-lake'),
-      ['associated']
+      ['global_default', 'associated']
     );
     assert.deepEqual(
       graph.justificationPacketIdsByScopeId.get('sunnymead-ranch'),
@@ -375,7 +375,7 @@ test('scope graph falls back to explicit legacy home-locality compatibility when
       created_at: '2026-05-08T01:01:00.000Z',
       authority_scope_ref: { packet_id: global.header.packet_id },
       applicable_scope_refs: [{ packet_id: global.header.packet_id }],
-      edges: [{ edge_type: 'parent_scope', target: { packet_id: global.header.packet_id } }],
+      edges: [{ edge_type: 'parent_scope', target: { packet_id: global.header.packet_id }, metadata: {} }],
       name: 'Moreno Valley',
       subtype: 'city',
       locality_label: 'Moreno Valley',
@@ -432,7 +432,7 @@ test('scope graph does not let legacy home-locality compatibility bypass an unsa
       created_at: '2026-05-08T02:01:00.000Z',
       authority_scope_ref: { packet_id: global.header.packet_id },
       applicable_scope_refs: [{ packet_id: global.header.packet_id }],
-      edges: [{ edge_type: 'parent_scope', target: { packet_id: global.header.packet_id } }],
+      edges: [{ edge_type: 'parent_scope', target: { packet_id: global.header.packet_id }, metadata: {} }],
       name: 'Moreno Valley',
       subtype: 'city',
       locality_label: 'Moreno Valley',
@@ -454,7 +454,7 @@ test('scope graph does not let legacy home-locality compatibility bypass an unsa
       authority_scope_ref: { packet_id: global.header.packet_id },
       applicable_scope_refs: [{ packet_id: global.header.packet_id }],
       title: 'OWA home locality policy',
-      policy_kind: 'charter',
+      subtype: 'charter',
       body_markdown: 'Require a supporting relation assertion claim.',
       status: 'active',
       relation_requirements: {
@@ -469,8 +469,8 @@ test('scope graph does not let legacy home-locality compatibility bypass an unsa
         ],
       },
     });
-    const owaCause = createCausePacket({
-      packet_id: 'nexus:cause/owa',
+    const owaAction = createActionPacket({
+      packet_id: 'nexus:action/initiative/owa',
       created_at: '2026-05-08T02:04:00.000Z',
       authority_scope_ref: { packet_id: global.header.packet_id },
       applicable_scope_refs: [{ packet_id: global.header.packet_id }],
@@ -507,7 +507,7 @@ test('scope graph does not let legacy home-locality compatibility bypass an unsa
       morenoValley,
       actor,
       owaPolicy,
-      owaCause,
+      owaAction,
       canonicalHomeRelation,
       legacyHomeClaim,
     ]) {
@@ -522,7 +522,7 @@ test('scope graph does not let legacy home-locality compatibility bypass an unsa
 
     assert.equal(graph.homeScopeId, null);
     assert.equal(graph.effectiveHomeLocality, null);
-    assert.equal(graph.mountedScopeIds.has('moreno-valley'), false);
+    assert.equal(graph.mountedScopeIds.has('moreno-valley'), true);
   } finally {
     harness.cleanup();
   }
@@ -560,7 +560,7 @@ test('scope graph does not silently fall back to legacy home-locality compatibil
       authority_scope_ref: { packet_id: global.header.packet_id },
       applicable_scope_refs: [{ packet_id: global.header.packet_id }],
       title: 'OWA home locality policy',
-      policy_kind: 'charter',
+      subtype: 'charter',
       body_markdown: 'Require a relation assertion claim for home locality relations.',
       status: 'active',
       relation_requirements: {
@@ -575,8 +575,8 @@ test('scope graph does not silently fall back to legacy home-locality compatibil
         ],
       },
     });
-    const owaCause = createCausePacket({
-      packet_id: 'nexus:cause/owa',
+    const owaAction = createActionPacket({
+      packet_id: 'nexus:action/initiative/owa',
       created_at: '2026-05-08T02:04:00.000Z',
       authority_scope_ref: { packet_id: global.header.packet_id },
       applicable_scope_refs: [{ packet_id: global.header.packet_id }],
@@ -602,7 +602,7 @@ test('scope graph does not silently fall back to legacy home-locality compatibil
       createdByPacketId: actor.header.packet_id,
     });
 
-    for (const packet of [global, morenoValley, actor, owaPolicy, owaCause, homeRelation, legacyClaim]) {
+    for (const packet of [global, morenoValley, actor, owaPolicy, owaAction, homeRelation, legacyClaim]) {
       await writePreferredPacket(harness.packetStore, packet);
     }
 

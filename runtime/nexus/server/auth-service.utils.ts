@@ -136,13 +136,13 @@ export function toPasskeySummary(
 export function isPersonElementPacket(
   packet: PacketEnvelope | null | undefined
 ): packet is PacketEnvelopeByType['Element'] {
-  if (!packet || packet.header.family !== 'Element') {
+  if (!packet || packet.header.type !== 'Element') {
     return false;
   }
 
   const elementPacket = packet as PacketEnvelopeByType['Element'];
 
-  return elementPacket.body.kind === 'person';
+  return elementPacket.body.subtype === 'person';
 }
 
 /**

@@ -3,8 +3,8 @@
  * Description: Builds grouped Packet Explorer search results over the shared packet search index.
  */
 
+import type { NexusPacketVerificationSummary } from '@core/contracts';
 import type {
-  NexusPacketVerificationSummary,
   NexusPacketExplorerSearchActiveGroup,
   NexusPacketExplorerSearchGroup,
   NexusPacketExplorerSearchGroupKey,
@@ -15,6 +15,7 @@ import type {
 } from '@runtime/nexus/nexus-api-types';
 import type { NexusPacketServices } from '@runtime/nexus/server/nexus-packet-services.types';
 import type { PacketSearchIndexRecord } from '@runtime/storage/sqlite-records';
+import type { PacketType } from '@core/schema/packet-schema';
 
 type PacketSearchServices = Pick<NexusPacketServices, 'packetStore'>;
 
@@ -119,7 +120,7 @@ function createSearchRow(input: {
   return {
     packet_id: input.row.packet_id,
     revision_id: input.row.revision_id,
-    family: input.row.family,
+    type: input.row.type as PacketType,
     title: input.row.title,
     label: input.row.label,
     summary: input.row.summary,
@@ -169,7 +170,7 @@ function findBestSearchCandidate(input: {
   const title = normalizeText(input.row.title);
   const label = normalizeText(input.row.label);
   const summary = normalizeText(input.row.summary);
-  const family = normalizeText(input.row.family);
+  const type = normalizeText(input.row.type);
   const tags = parseJsonStringArray(input.row.tags_json).map((tag) =>
     tag.toLowerCase()
   );
@@ -276,12 +277,12 @@ function findBestSearchCandidate(input: {
     });
   }
 
-  if (family.includes(input.normalizedQuery)) {
+  if (type.includes(input.normalizedQuery)) {
     return createSearchRow({
       row: input.row,
       matchGroup: 'text',
-      matchType: 'family_contains',
-      matchReason: 'Matched family',
+      matchType: 'type_contains',
+      matchReason: 'Matched type',
       score: 500,
     });
   }

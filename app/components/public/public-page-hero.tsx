@@ -32,7 +32,7 @@ export default function PublicPageHero({
   calloutEyebrowClassName,
 }: PublicPageHeroProps) {
   return (
-    <PublicPanelShell className="px-6 py-10 shadow-public md:px-10">
+    <PublicPanelShell className="px-6 py-10 definition-public md:px-10">
       <Text className={["text-sm font-bold uppercase tracking-[0.35em]", eyebrowClassName].join(' ')}>
         {eyebrow}
       </Text>

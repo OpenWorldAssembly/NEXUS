@@ -1,6 +1,6 @@
 /**
  * File: definition.ts
- * Description: Experimental Definition packet type and bootstrap definition parts for packet-definition R&D.
+ * Description: Canonical Definition packet type and bootstrap definition parts for packet-definition.
  */
 
 import { z } from 'zod';
@@ -29,7 +29,6 @@ export const DefinitionPartRefSchema = z
 
 const DefinitionBaseBodySchema = z
   .object({
-    type: z.literal('definition').default('definition'),
     subtype: z.enum(DEFINITION_PACKET_SUBTYPES),
     status: z.enum(['active', 'superseded', 'withdrawn']).default('active'),
     definition_version: z.string().min(1).default('0.1.0'),
@@ -221,7 +220,7 @@ export const definitionPacketDefinition = {
       mutation_intent: 'definition.part.write',
       action_ids: ['definition.part.create', 'definition.part.revise'],
       planner_id: 'definition.part.write.v0',
-      result_family: 'packet_write',
+      result_type: 'packet_write',
       availability: 'canonical',
       notes:
         'Manifest mutation for creating or revising Definition packet bodies through trusted local code.',

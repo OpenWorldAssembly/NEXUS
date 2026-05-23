@@ -4,7 +4,6 @@
  */
 
 import type { MutationIntent } from '@core/auth/mutation-corridor';
-import { projectDiscussionPacketToLegacy } from '@core/packets/discussion-compat';
 import type { MutationProofBundle } from '@core/auth/proof-types';
 import type {
   DiscussionActorClass,
@@ -60,40 +59,25 @@ export class MutationFinalizeHandlers {
     actorContext: MutationFinalizeActorContext;
     signedPackets: PacketEnvelope[];
   }) {
-    const mirrorPackets = input.signedPackets.slice(0, -2);
     const [threadPacket, postPacket] = input.signedPackets.slice(-2);
 
     if (!threadPacket || !postPacket) {
       throw new Error('Signed discussion thread/post packet bundle is incomplete.');
     }
-    const threadProjection =
-      threadPacket.header.family === 'Discussion'
-        ? (projectDiscussionPacketToLegacy(
-            threadPacket as PacketEnvelopeByType['Discussion'],
-            'DiscussionThread'
-          ) as PacketEnvelopeByType['DiscussionThread'] | null)
-        : threadPacket.header.family === 'DiscussionThread'
-          ? (threadPacket as PacketEnvelopeByType['DiscussionThread'])
-          : null;
-    const postProjection =
-      postPacket.header.family === 'Discussion'
-        ? (projectDiscussionPacketToLegacy(
-            postPacket as PacketEnvelopeByType['Discussion'],
-            'DiscussionPost'
-          ) as PacketEnvelopeByType['DiscussionPost'] | null)
-        : postPacket.header.family === 'DiscussionPost'
-          ? (postPacket as PacketEnvelopeByType['DiscussionPost'])
-          : null;
-
-    if (!threadProjection || !postProjection) {
-      throw new Error('Signed discussion thread/post packets are not projectable.');
+    if (
+      threadPacket.header.type !== 'Discussion' ||
+      postPacket.header.type !== 'Discussion'
+    ) {
+      throw new Error('Signed discussion thread/post packets are not canonical Discussion packets.');
     }
+    const threadProjection = threadPacket as PacketEnvelopeByType['Discussion'];
+    const postProjection = postPacket as PacketEnvelopeByType['Discussion'];
 
-    if (mirrorPackets.length > 0) {
-      await this.signedPacketFinalizer.persistSignedPacketsForActor({
-        actorPacket: input.actorContext.actorPacket,
-        signedPackets: mirrorPackets,
-      });
+    if (
+      threadProjection.body.subtype !== 'topic' ||
+      postProjection.body.subtype !== 'post'
+    ) {
+      throw new Error('Signed discussion thread/post packet subtypes are invalid.');
     }
 
     const result = await this.discussionService.createPost({
@@ -116,11 +100,8 @@ export class MutationFinalizeHandlers {
             ? input.storedTicket.intent.mutation_nonce?.trim() || 'prepared00'
             : 'prepared00',
         created_at: threadProjection.header.created_at,
-        forum_packet_id: threadProjection.body.forum_ref.packet_id,
-        forum_kind:
-          typeof threadProjection.header.metadata.tags[2] === 'string'
-            ? threadProjection.header.metadata.tags[2]
-            : threadProjection.body.thread_kind,
+        forum_packet_id: threadProjection.body.parent_ref.packet_id,
+        forum_kind: threadProjection.body.role,
         authority_scope_packet_id:
           threadProjection.header.authority_scope_ref?.packet_id ?? null,
         applicable_scope_packet_ids: threadProjection.header.applicable_scope_refs.map(
@@ -128,10 +109,10 @@ export class MutationFinalizeHandlers {
         ),
         default_sort: threadProjection.body.default_sort,
         thread_title: threadProjection.body.title,
-        post_markdown: postProjection.body.content_markdown,
-        thread_kind: threadProjection.body.thread_kind,
+        post_markdown: postProjection.body.content_markdown ?? '',
+        thread_kind: threadProjection.body.role,
         related_packet_ids: threadProjection.body.related_refs.map(
-          (relatedRef) => relatedRef.packet_id
+          (relatedRef: { packet_id: string }) => relatedRef.packet_id
         ),
       },
       signed_thread_packet: threadPacket,
@@ -149,31 +130,17 @@ export class MutationFinalizeHandlers {
     actorContext: MutationFinalizeActorContext;
     signedPackets: PacketEnvelope[];
   }) {
-    const mirrorPackets = input.signedPackets.slice(0, -1);
     const [replyPacket] = input.signedPackets.slice(-1);
 
     if (!replyPacket) {
       throw new Error('Signed discussion reply packet bundle is incomplete.');
     }
-    const replyProjection =
-      replyPacket.header.family === 'Discussion'
-        ? (projectDiscussionPacketToLegacy(
-            replyPacket as PacketEnvelopeByType['Discussion'],
-            'DiscussionReply'
-          ) as PacketEnvelopeByType['DiscussionReply'] | null)
-        : replyPacket.header.family === 'DiscussionReply'
-          ? (replyPacket as PacketEnvelopeByType['DiscussionReply'])
-          : null;
-
-    if (!replyProjection) {
-      throw new Error('Signed discussion reply packet is not projectable.');
+    if (replyPacket.header.type !== 'Discussion') {
+      throw new Error('Signed discussion reply packet is not a canonical Discussion packet.');
     }
-
-    if (mirrorPackets.length > 0) {
-      await this.signedPacketFinalizer.persistSignedPacketsForActor({
-        actorPacket: input.actorContext.actorPacket,
-        signedPackets: mirrorPackets,
-      });
+    const replyProjection = replyPacket as PacketEnvelopeByType['Discussion'];
+    if (replyProjection.body.subtype !== 'message') {
+      throw new Error('Signed discussion reply packet subtype is invalid.');
     }
 
     const result = await this.discussionService.createReply({
@@ -205,9 +172,11 @@ export class MutationFinalizeHandlers {
         applicable_scope_packet_ids: replyProjection.header.applicable_scope_refs.map(
           (scopeRef) => scopeRef.packet_id
         ),
-        thread_packet_id: replyProjection.body.thread_ref.packet_id,
-        root_post_packet_id: replyProjection.body.root_post_ref.packet_id,
-        parent_post_packet_id: replyProjection.body.reply_to_ref.packet_id,
+        thread_packet_id: replyProjection.body.topic_ref.packet_id,
+        root_post_packet_id:
+          replyProjection.body.root_message_ref?.packet_id ??
+          replyProjection.body.parent_ref.packet_id,
+        parent_post_packet_id: replyProjection.body.parent_ref.packet_id,
         reply_markdown: replyProjection.body.content_markdown,
       },
       signed_reply_packet: replyPacket,
@@ -259,7 +228,7 @@ export class MutationFinalizeHandlers {
         (
           packet
         ): packet is PacketEnvelopeByType['Element'] =>
-          packet.header.family === 'Element' &&
+          packet.header.type === 'Element' &&
           packet.header.packet_id === input.actorContext.actorPacket.header.packet_id
       );
 
@@ -294,7 +263,7 @@ export class MutationFinalizeHandlers {
     await this.attestationService.syncDerivedState();
     const assemblyPacket = input.signedPackets.find(
       (packet): packet is PacketEnvelopeByType['Element'] =>
-        packet.header.family === 'Element'
+        packet.header.type === 'Element'
     );
 
     return {
@@ -320,12 +289,12 @@ export class MutationFinalizeHandlers {
     await this.attestationService.syncDerivedState();
     const activeRelationPacket = [...input.signedPackets].reverse().find(
       (packet): packet is PacketEnvelopeByType['Relation'] =>
-        packet.header.family === 'Relation' &&
+        packet.header.type === 'Relation' &&
         (packet as PacketEnvelopeByType['Relation']).body.status === 'active'
     );
     const activeClaimPacket = [...input.signedPackets].reverse().find(
       (packet): packet is PacketEnvelopeByType['Claim'] =>
-        packet.header.family === 'Claim' &&
+        packet.header.type === 'Claim' &&
         (packet as PacketEnvelopeByType['Claim']).body.status === 'active'
     );
     const wasClearIntent =
@@ -360,7 +329,7 @@ export class MutationFinalizeHandlers {
     });
     const activeRelationPacket = [...input.signedPackets].reverse().find(
       (packet): packet is PacketEnvelopeByType['Relation'] =>
-        packet.header.family === 'Relation' &&
+        packet.header.type === 'Relation' &&
         (packet as PacketEnvelopeByType['Relation']).body.status === 'active'
     );
 
@@ -395,7 +364,7 @@ export class MutationFinalizeHandlers {
     await this.attestationService.syncDerivedState();
     const claimPacket = [...input.signedPackets].reverse().find(
       (packet): packet is PacketEnvelopeByType['Claim'] =>
-        packet.header.family === 'Claim'
+        packet.header.type === 'Claim'
     );
 
     return {
@@ -423,17 +392,21 @@ export class MutationFinalizeHandlers {
     });
     const activeRelationPacket = [...input.signedPackets].reverse().find(
       (packet): packet is PacketEnvelopeByType['Relation'] =>
-        packet.header.family === 'Relation' &&
+        packet.header.type === 'Relation' &&
         (packet as PacketEnvelopeByType['Relation']).body.status === 'active'
     );
     const activeClaimPacket = [...input.signedPackets].reverse().find(
       (packet): packet is PacketEnvelopeByType['Claim'] =>
-        packet.header.family === 'Claim' &&
+        packet.header.type === 'Claim' &&
         (packet as PacketEnvelopeByType['Claim']).body.status === 'active'
     );
-    const clearedHomeScopePacketId = isHomeLocalityMutationKind(input.storedTicket.intent.kind)
-      ? input.storedTicket.intent.home_scope_packet_id
+    const homeIntent = isHomeLocalityMutationKind(input.storedTicket.intent.kind)
+      ? (input.storedTicket.intent as Extract<
+          MutationIntent,
+          { kind: 'home_locality.relation.set' }
+        >)
       : null;
+    const clearedHomeScopePacketId = homeIntent?.home_scope_packet_id ?? null;
 
     return {
       persist_effects: toMutationPersistEffects(input.signedPackets),
@@ -442,17 +415,14 @@ export class MutationFinalizeHandlers {
         claim_packet_id: activeClaimPacket?.header.packet_id ?? null,
         claim_status:
           activeClaimPacket?.body.status ??
-          (isHomeLocalityMutationKind(input.storedTicket.intent.kind) &&
-          clearedHomeScopePacketId === null
+          (homeIntent && clearedHomeScopePacketId === null
             ? 'withdrawn'
             : null),
         home_scope_packet_id:
           activeRelationPacket?.body.target_ref.packet_id ??
           activeClaimPacket?.body.relation_assertion?.target_ref.packet_id ??
           activeClaimPacket?.body.target_ref.packet_id ??
-          (isHomeLocalityMutationKind(input.storedTicket.intent.kind)
-            ? clearedHomeScopePacketId
-            : null),
+          (homeIntent ? clearedHomeScopePacketId : null),
       },
     };
   }
@@ -624,7 +594,7 @@ export class MutationFinalizeHandlers {
     }
 
     const relationPacketCount = input.signedPackets.filter(
-      (packet) => packet.header.family === 'Relation' || packet.header.family === 'Claim'
+      (packet) => packet.header.type === 'Relation' || packet.header.type === 'Claim'
     ).length;
 
     return {

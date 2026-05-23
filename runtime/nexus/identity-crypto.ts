@@ -160,9 +160,9 @@ function isIdentityElementPacketForVerification(
   const publicKeyBindings = identity?.public_key_bindings;
 
   return (
-    packet.header.family === 'Element' &&
-    typeof body.kind === 'string' &&
-    VERIFIED_SIGNER_ELEMENT_KINDS.has(body.kind) &&
+    packet.header.type === 'Element' &&
+    typeof body.subtype === 'string' &&
+    VERIFIED_SIGNER_ELEMENT_KINDS.has(body.subtype) &&
     Array.isArray(publicKeyBindings)
   );
 }

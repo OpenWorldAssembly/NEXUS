@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { PACKET_FAMILIES } from '@core/schema/packet-schema';
+import { PACKET_TYPES } from '@core/schema/packet-schema';
 import {
   createPreReseedModernizationClosureReport,
   type PreReseedClosureLedgerEntry,
@@ -20,7 +20,7 @@ function allEntries(): PreReseedClosureLedgerEntry[] {
     ...report.client_ingress_enrollments,
     ...report.fortress_handoffs,
     ...report.composite_workflow_adapters,
-    ...report.packet_families,
+    ...report.packet_types,
     ...report.follow_on_pass_queue,
   ];
 }
@@ -30,7 +30,7 @@ test('pre-reseed closure report passes without vague gap language', () => {
 
   assert.equal(report.status, 'pass');
   assert.deepEqual(report.findings, []);
-  assert.equal(JSON.stringify(report).includes('planned_gap'), false);
+  assert.equal(JSON.stringify(report).includes('missing_coverage'), false);
 });
 
 test('every live mutation intent has a strict pre-reseed closure status', () => {
@@ -127,7 +127,7 @@ test('composite workflow mutation intents are closed as live generic-composite w
   }
 });
 
-test('composite workflow adapters are tracked as closed shadow extraction work', () => {
+test('composite workflow adapters are tracked as closed definition extraction work', () => {
   const report = createPreReseedModernizationClosureReport();
   const adapterStatus = new Map(
     report.composite_workflow_adapters.map((entry) => [
@@ -170,17 +170,18 @@ test('composite workflow adapters are tracked as closed shadow extraction work',
   );
 });
 
-test('unused never-live packet families are explicit out of chapter scope', () => {
+test('active packet types are the only packet type closure subjects', () => {
   const report = createPreReseedModernizationClosureReport();
-  const familyStatus = new Map(
-    report.packet_families.map((entry) => [entry.subject_id, entry.status])
+  const typeStatus = new Map(
+    report.packet_types.map((entry) => [entry.subject_id, entry.status])
   );
 
-  for (const family of PACKET_FAMILIES) {
-    assert.ok(familyStatus.has(family), family);
+  for (const type of PACKET_TYPES) {
+    assert.ok(typeStatus.has(type), type);
   }
 
-  for (const family of [
+  for (const type of [
+    'Cause',
     'Signal',
     'Initiative',
     'Program',
@@ -197,7 +198,7 @@ test('unused never-live packet families are explicit out of chapter scope', () =
     'Minutes',
     'Artifact',
   ]) {
-    assert.equal(familyStatus.get(family), 'out_of_chapter_scope', family);
+    assert.equal(typeStatus.has(type), false, type);
   }
 });
 

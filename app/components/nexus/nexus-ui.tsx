@@ -278,7 +278,7 @@ export function getNexusChromeClasses(
       ? 'border-nexus-line/70 bg-white/5'
       : 'border-slate-300 bg-slate-100',
     badgeFrameClass: joinClasses('rounded-nexus border', compactControlSizeClass),
-    cardFrameClass: 'relative overflow-hidden rounded-nexus border shadow-none',
+    cardFrameClass: 'relative overflow-hidden rounded-nexus border definition-none',
     cardInsetClass: darkSurface
       ? 'rounded-nexus border border-nexus-line/60 bg-white/5'
       : 'rounded-nexus border border-slate-300 bg-slate-100',
@@ -1192,7 +1192,7 @@ export function NexusInlineSelect({
           />
           <View
             className={joinClasses(
-              'absolute overflow-hidden rounded-nexus border p-2 shadow-none',
+              'absolute overflow-hidden rounded-nexus border p-2 definition-none',
               menuClass,
               menuLayerClassName
             )}

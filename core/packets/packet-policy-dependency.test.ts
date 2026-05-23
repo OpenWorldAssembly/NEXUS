@@ -17,7 +17,7 @@ test('packet policy and dependency coverage audits cleanly', () => {
   assert.ok(report.checked_workflow_plan_ids.length > 0);
 });
 
-test('shadow workflow plans have packet-backed policy and dependency references', () => {
+test('definition workflow plans have packet-backed policy and dependency references', () => {
   const policyIds = new Set(
     listPacketPolicyRequirementDescriptors().map(
       (descriptor) => descriptor.policy_action_id

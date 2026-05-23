@@ -138,7 +138,7 @@ export const bundlePacketDefinition = {
       mutation_intent: 'bundle.packet_set.create',
       action_ids: ['bundle.packet_set.create', 'bundle.inventory.revise'],
       planner_id: 'bundle.packet_set.export.v0',
-      result_family: 'bundle_update',
+      result_type: 'bundle_update',
       availability: 'canonical',
       notes: 'Manifest mutation descriptor for creating canonical bundle inventory packets.',
     },
@@ -146,7 +146,7 @@ export const bundlePacketDefinition = {
       mutation_intent: 'bundle.packet_set.import',
       action_ids: ['bundle.packet_set.import'],
       planner_id: 'bundle.packet_set.import.v0',
-      result_family: 'bundle_update',
+      result_type: 'bundle_update',
       availability: 'canonical',
       notes:
         'Manifest mutation descriptor for reviewing and hydrating bundle inventory imports.',

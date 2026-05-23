@@ -1,13 +1,13 @@
 /**
- * File: families/bundle.ts
- * Description: Family-owned build rules for canonical Bundle packets.
+ * File: types/bundle.ts
+ * Description: Type-owned build rules for canonical Bundle packets.
  */
 
-import type { PacketFamilyBuildDefinition } from '@core/packets/packet-build-pipeline';
+import type { PacketTypeBuildDefinition } from '@core/packets/packet-build-pipeline';
 import { createPacketEdge } from '@core/packets/packet-build-helpers';
 import type { PacketBodyByType } from '@core/schema/packet-schema';
 
-export const bundleBuildDefinition: PacketFamilyBuildDefinition<
+export const bundleBuildDefinition: PacketTypeBuildDefinition<
   'Bundle',
   PacketBodyByType['Bundle']
 > = {
@@ -21,12 +21,12 @@ export const bundleBuildDefinition: PacketFamilyBuildDefinition<
     }
   },
   prepareEdges: (input) => [
-    ...input.root_refs.map((rootRef) =>
+    ...(input.root_refs ?? []).map((rootRef) =>
       createPacketEdge('references', rootRef, {
         source_field: 'root_refs',
       })
     ),
-    ...input.items
+    ...(input.items ?? [])
       .map((item) => item.packet_ref)
       .filter((packetRef): packetRef is NonNullable<typeof packetRef> => packetRef !== null)
       .map((packetRef) =>

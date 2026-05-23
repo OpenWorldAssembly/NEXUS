@@ -45,7 +45,7 @@ export type PacketExplorerHomeSubtab =
   (typeof PACKET_EXPLORER_HOME_SUBTABS)[number];
 
 export type PacketExplorerSeedSummary = {
-  family: string | null;
+  type: string | null;
   summary: string | null;
   label: string | null;
 };
@@ -195,11 +195,11 @@ function sanitizeExplorerTab(value: unknown): PacketExplorerTab | null {
       typeof candidate.seed_summary === 'object' &&
       !Array.isArray(candidate.seed_summary)
         ? {
-            family:
-              typeof (candidate.seed_summary as Record<string, unknown>).family ===
+            type:
+              typeof (candidate.seed_summary as Record<string, unknown>).type ===
               'string'
                 ? ((candidate.seed_summary as Record<string, unknown>)
-                    .family as string)
+                    .type as string)
                 : null,
             summary:
               typeof (candidate.seed_summary as Record<string, unknown>).summary ===

@@ -1,6 +1,6 @@
 /**
  * File: packet-policy-dependency.ts
- * Description: Packet-backed policy and dependency audit descriptors for shadow workflow plans.
+ * Description: Packet-backed policy and dependency audit descriptors for definition workflow plans.
  */
 
 import { MUTATION_ACTION_IDS } from '@core/auth/write-policy.ts';
@@ -24,7 +24,7 @@ export type PacketPolicyRequirementDescriptor = {
   semantic_anchor:
     | 'policy_packet.write_lock'
     | 'packet_definition.action_registry'
-    | 'manifest_shadow_action';
+    | 'manifest_runtime_action';
   packet_type: string | null;
   workflow_plan_ids: string[];
   live_write_policy_action: boolean;
@@ -174,13 +174,13 @@ export function listPacketPolicyRequirementDescriptorsFromDefinitions(input: {
         ? 'policy_packet.write_lock'
         : packetType
           ? 'packet_definition.action_registry'
-          : 'manifest_shadow_action',
+          : 'manifest_runtime_action',
       packet_type: packetType,
       workflow_plan_ids: uniqueSorted(planIdsByPolicyAction.get(policyActionId) ?? []),
       live_write_policy_action: liveWritePolicyAction,
       notes: liveWritePolicyAction
         ? 'Live fortress policy enforcement is resolved from Policy.write_lock packets by MutationPolicyGate.'
-        : 'Shadow policy action is packet-definition metadata until live write-policy enrollment is scoped.',
+        : 'Definition policy action is packet-definition metadata until live write-policy enrollment is scoped.',
     };
   });
 }
@@ -307,13 +307,13 @@ export function auditPacketPolicyDependencyCoverageFromDefinitions(input: {
       workflowPlanId: workflowPlan.workflow_plan_id,
     });
 
-    if (dryRun.ready_for_shadow_interpretation) {
+    if (dryRun.ready_for_interpretation) {
       if (dryRun.policy_action_ids.length === 0) {
         findings.push({
           severity: 'error',
           code: 'workflow_missing_policy_requirements',
           subject_id: workflowPlan.workflow_plan_id,
-          message: `${workflowPlan.workflow_plan_id} is shadow-ready but has no packet policy requirements.`,
+          message: `${workflowPlan.workflow_plan_id} is definition-ready but has no packet policy requirements.`,
         });
       }
 
@@ -322,7 +322,7 @@ export function auditPacketPolicyDependencyCoverageFromDefinitions(input: {
           severity: 'error',
           code: 'workflow_missing_dependency_requirements',
           subject_id: workflowPlan.workflow_plan_id,
-          message: `${workflowPlan.workflow_plan_id} is shadow-ready but has no packet dependency requirements.`,
+          message: `${workflowPlan.workflow_plan_id} is definition-ready but has no packet dependency requirements.`,
         });
       }
     }

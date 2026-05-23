@@ -1,9 +1,9 @@
 /**
  * File: pipeline-inventory.ts
- * Description: Explicit packet-family inventory for staged builder, adapter, and read-model rollout tracking.
+ * Description: Active packet-type inventory for canonical builder, definition, and read-model tracking.
  */
 
-import { PACKET_FAMILIES, type PacketFamily } from '@core/schema/packet-schema';
+import { PACKET_TYPES, type PacketType } from '@core/schema/packet-schema';
 
 export type PacketPipelineCompatibilityStance =
   | 'current_only'
@@ -19,7 +19,7 @@ export type PipelineStatus =
   | 'production';
 
 export interface PacketPipelineInventoryEntry {
-  family: PacketFamily;
+  type: PacketType;
   canonical_structure: string;
   builder_path: string;
   compatibility_stance: PacketPipelineCompatibilityStance;
@@ -28,477 +28,213 @@ export interface PacketPipelineInventoryEntry {
   write_paths: string[];
   known_manual_assumptions: string[];
   builder_pipeline_status: PipelineStatus;
-  same_family_adapter_status: PipelineStatus;
-  family_evolution_status: PipelineStatus;
+  same_type_adapter_status: PipelineStatus;
+  type_evolution_status: PipelineStatus;
   read_model_status: PipelineStatus;
   next_migration_step: string;
 }
 
 function createEntry(
-  family: PacketFamily,
-  input: Omit<PacketPipelineInventoryEntry, 'family'>
+  type: PacketType,
+  input: Omit<PacketPipelineInventoryEntry, 'type'>
 ): PacketPipelineInventoryEntry {
   return {
-    family,
+    type,
     ...input,
   };
 }
 
-function createReservedEntry(
-  family: PacketFamily,
-  assumption: string
+function canonicalEntry(
+  type: PacketType,
+  input: {
+    canonicalStructure: string;
+    builderPath: string;
+    readProjectionPath: string;
+    uiConsumers?: string[];
+    writePaths?: string[];
+    assumptions?: string[];
+    compatibilityStance?: PacketPipelineCompatibilityStance;
+    readModelStatus?: PipelineStatus;
+    nextStep?: string;
+  }
 ): PacketPipelineInventoryEntry {
-  return createEntry(family, {
-    canonical_structure: family,
-    builder_path: 'none',
-    compatibility_stance: 'current_only',
-    read_projection_path: 'none',
-    ui_consumers: [],
-    write_paths: [],
-    known_manual_assumptions: [assumption],
-    builder_pipeline_status: 'none',
-    same_family_adapter_status: 'declared',
-    family_evolution_status: 'none',
-    read_model_status: 'none',
-    next_migration_step: 'No active migration planned until the family becomes a live Nexus surface.',
+  return createEntry(type, {
+    canonical_structure: input.canonicalStructure,
+    builder_path: input.builderPath,
+    compatibility_stance: input.compatibilityStance ?? 'current_only',
+    read_projection_path: input.readProjectionPath,
+    ui_consumers: input.uiConsumers ?? [],
+    write_paths: input.writePaths ?? [],
+    known_manual_assumptions: input.assumptions ?? [],
+    builder_pipeline_status: 'production',
+    same_type_adapter_status: 'tested',
+    type_evolution_status: 'none',
+    read_model_status: input.readModelStatus ?? 'declared',
+    next_migration_step:
+      input.nextStep ??
+      'Keep canonical subtype writes aligned with the active definition profile before reseed.',
   });
 }
 
 export const PACKET_PIPELINE_INVENTORY: Record<
-  PacketFamily,
+  PacketType,
   PacketPipelineInventoryEntry
 > = {
-  Definition: createEntry('Definition', {
-    canonical_structure: 'Definition(subtype, defines_packet_type, definition parts)',
-    builder_path:
-      'core/packets/packet-build-pipeline.ts + core/packets/families/definition.ts',
-    compatibility_stance: 'current_only',
-    read_projection_path:
+  Definition: canonicalEntry('Definition', {
+    canonicalStructure: 'Definition(subtype, defines_packet_type, definition parts)',
+    builderPath:
+      'core/packets/packet-build-pipeline.ts + core/packets/types/definition.ts',
+    readProjectionPath:
       'core/packets/packet-definition-seeds.ts canonical definition profile audit',
-    ui_consumers: [],
-    write_paths: ['Bootstrap definition profile seed material'],
-    known_manual_assumptions: [
+    writePaths: ['Bootstrap definition profile seed material'],
+    assumptions: [
       'Definition packets describe packet semantics; trusted local code remains the only executable authority.',
     ],
-    builder_pipeline_status: 'production',
-    same_family_adapter_status: 'tested',
-    family_evolution_status: 'none',
-    read_model_status: 'tested',
-    next_migration_step:
+    readModelStatus: 'tested',
+    nextStep:
       'Keep Definition bootstrap validation small while reseed starts from the active definition profile bundle.',
   }),
-  Element: createEntry('Element', {
-    canonical_structure: 'Element(type, subtype, legacy kind)',
-    builder_path:
-      'core/packets/packet-build-pipeline.ts + core/packets/families/element.ts',
-    compatibility_stance: 'bidirectional_supported',
-    read_projection_path:
-      'core/schema/packet-schema.ts same-family adapters + runtime identity/query services',
-    ui_consumers: ['Shell', 'Trust', 'Roles', 'Library', 'Dashboard'],
-    write_paths: ['Identity bootstrap', 'Locality creation', 'Mutation corridor'],
-    known_manual_assumptions: [
-      'Identity/locality semantics still depend on family-specific revision helpers layered on top of the generic builder.',
-    ],
-    builder_pipeline_status: 'production',
-    same_family_adapter_status: 'production',
-    family_evolution_status: 'none',
-    read_model_status: 'declared',
-    next_migration_step: 'Keep Element as the identity proof family while later runtime read models converge.',
+  Element: canonicalEntry('Element', {
+    canonicalStructure: 'Element(subtype)',
+    builderPath:
+      'core/packets/packet-build-pipeline.ts + core/packets/types/element.ts',
+    readProjectionPath: 'runtime identity/query services',
+    uiConsumers: ['Shell', 'Trust', 'Roles', 'Library', 'Dashboard'],
+    writePaths: ['Identity bootstrap', 'Locality creation', 'Mutation corridor'],
+    compatibilityStance: 'current_only',
   }),
-  Location: createEntry('Location', {
-    canonical_structure: 'Location(type, subtype)',
-    builder_path:
-      'core/packets/packet-build-pipeline.ts + core/packets/families/location.ts',
-    compatibility_stance: 'current_only',
-    read_projection_path:
-      'core/projections/forward-ontology.ts + future runtime scope/location read helpers',
-    ui_consumers: [],
-    write_paths: ['Forward packet builders only'],
-    known_manual_assumptions: [
-      'Location is a new forward family and is not yet surfaced directly in Nexus UI.',
-    ],
-    builder_pipeline_status: 'production',
-    same_family_adapter_status: 'tested',
-    family_evolution_status: 'none',
-    read_model_status: 'declared',
-    next_migration_step: 'Use Location as the portable spatial definition family before broader locality/runtime consumer migration.',
+  Location: canonicalEntry('Location', {
+    canonicalStructure: 'Location(subtype)',
+    builderPath:
+      'core/packets/packet-build-pipeline.ts + core/packets/types/location.ts',
+    readProjectionPath:
+      'core/projections/forward-ontology.ts + runtime scope/location read helpers',
   }),
-  Role: createEntry('Role', {
-    canonical_structure: 'Role',
-    builder_path:
-      'core/packets/packet-build-pipeline.ts + core/packets/families/role.ts',
-    compatibility_stance: 'current_only',
-    read_projection_path: 'runtime role projections',
-    ui_consumers: ['Roles'],
-    write_paths: ['Bootstrap and role query projections only'],
-    known_manual_assumptions: ['Role surfaces still assume one current schema.'],
-    builder_pipeline_status: 'production',
-    same_family_adapter_status: 'tested',
-    family_evolution_status: 'none',
-    read_model_status: 'none',
-    next_migration_step: 'Keep current-only compatibility unless older signed role packets become a live migration concern.',
+  Role: canonicalEntry('Role', {
+    canonicalStructure: 'Role(subtype)',
+    builderPath:
+      'core/packets/packet-build-pipeline.ts + core/packets/types/role.ts',
+    readProjectionPath: 'runtime role projections',
+    uiConsumers: ['Roles'],
+    writePaths: ['Bootstrap and role query projections'],
   }),
-  Claim: createEntry('Claim', {
-    canonical_structure: 'Claim(claim_kind, relation assertion)',
-    builder_path:
-      'core/packets/packet-build-pipeline.ts + core/packets/families/claim.ts',
-    compatibility_stance: 'bidirectional_supported',
-    read_projection_path:
-      'core/schema/packet-schema.ts same-family adapters + trust/claim helpers',
-    ui_consumers: ['Trust', 'Roles', 'Locality'],
-    write_paths: ['Mutation corridor', 'Trust surface helpers'],
-    known_manual_assumptions: [
-      'Claim-kind semantics still resolve through family-specific helpers in core/runtime.',
-    ],
-    builder_pipeline_status: 'production',
-    same_family_adapter_status: 'production',
-    family_evolution_status: 'none',
-    read_model_status: 'declared',
-    next_migration_step: 'Keep Claim as the scoped-association proof family while downstream runtime surfaces mature.',
+  Claim: canonicalEntry('Claim', {
+    canonicalStructure: 'Claim(subtype, relation_assertion)',
+    builderPath:
+      'core/packets/packet-build-pipeline.ts + core/packets/types/claim.ts',
+    readProjectionPath: 'trust/claim helpers',
+    uiConsumers: ['Trust', 'Roles', 'Locality'],
+    writePaths: ['Mutation corridor', 'Trust surface helpers'],
   }),
-  Relation: createEntry('Relation', {
-    canonical_structure: 'Relation(type, subtype)',
-    builder_path:
-      'core/packets/packet-build-pipeline.ts + core/packets/families/relation.ts',
-    compatibility_stance: 'current_only',
-    read_projection_path:
+  Relation: canonicalEntry('Relation', {
+    canonicalStructure: 'Relation(subtype)',
+    builderPath:
+      'core/packets/packet-build-pipeline.ts + core/packets/types/relation.ts',
+    readProjectionPath:
       'core/projections/forward-ontology.ts + runtime/nexus/server/claim-utils.ts',
-    ui_consumers: [],
-    write_paths: ['Forward packet builders only'],
-    known_manual_assumptions: [
-      'Relation is the forward connective family, while Claim remains the current assertional layer.',
-    ],
-    builder_pipeline_status: 'production',
-    same_family_adapter_status: 'tested',
-    family_evolution_status: 'none',
-    read_model_status: 'declared',
-    next_migration_step: 'Route new relation-aware read models through Relation while keeping Claim interoperable during migration.',
+    writePaths: ['Mutation corridor', 'Forward packet builders'],
   }),
-  Report: createEntry('Report', {
-    canonical_structure: 'Report(type, subtype)',
-    builder_path:
-      'core/packets/packet-build-pipeline.ts + core/packets/families/report.ts',
-    compatibility_stance: 'current_only',
-    read_projection_path:
+  Report: canonicalEntry('Report', {
+    canonicalStructure: 'Report(subtype)',
+    builderPath:
+      'core/packets/packet-build-pipeline.ts + core/packets/types/report.ts',
+    readProjectionPath:
       'runtime verification/import reporting projections + Explorer verification surfaces',
-    ui_consumers: ['Explorer', 'Dashboard', 'Packet action menus'],
-    write_paths: ['Runtime verification service', 'Runtime import reporting'],
-    known_manual_assumptions: [
-      'Report is the forward verification/import reporting family while MissionReport remains a legacy mission-specific family.',
-    ],
-    builder_pipeline_status: 'production',
-    same_family_adapter_status: 'tested',
-    family_evolution_status: 'none',
-    read_model_status: 'declared',
-    next_migration_step: 'Use Report for verification and import reporting before broader decision/resolution reporting semantics land.',
+    uiConsumers: ['Explorer', 'Dashboard', 'Packet action menus'],
+    writePaths: ['Runtime verification service', 'Runtime import reporting'],
   }),
-  Signal: createReservedEntry('Signal', 'Family reserved but not actively surfaced.'),
-  Proposal: createEntry('Proposal', {
-    canonical_structure: 'Proposal',
-    builder_path:
-      'core/packets/packet-build-pipeline.ts + core/packets/families/proposal.ts',
-    compatibility_stance: 'current_only',
-    read_projection_path: 'runtime vote/dashboard projections',
-    ui_consumers: ['Dashboard', 'Votes'],
-    write_paths: ['Bootstrap/seed'],
-    known_manual_assumptions: ['Proposal lifecycle remains provisional.'],
-    builder_pipeline_status: 'production',
-    same_family_adapter_status: 'tested',
-    family_evolution_status: 'none',
-    read_model_status: 'none',
-    next_migration_step: 'Keep current-only compatibility until proposal versioning becomes a live migration concern.',
+  Proposal: canonicalEntry('Proposal', {
+    canonicalStructure: 'Proposal(subtype)',
+    builderPath:
+      'core/packets/packet-build-pipeline.ts + core/packets/types/proposal.ts',
+    readProjectionPath: 'runtime vote/dashboard projections',
+    uiConsumers: ['Dashboard', 'Votes'],
+    writePaths: ['Bootstrap/seed'],
   }),
-  Vote: createEntry('Vote', {
-    canonical_structure: 'Vote',
-    builder_path:
-      'core/packets/packet-build-pipeline.ts + core/packets/families/vote.ts',
-    compatibility_stance: 'current_only',
-    read_projection_path: 'runtime vote projections',
-    ui_consumers: ['Votes'],
-    write_paths: ['Bootstrap/seed'],
-    known_manual_assumptions: [
-      'Formal Vote packets are not the main discussion attestation path yet.',
-    ],
-    builder_pipeline_status: 'production',
-    same_family_adapter_status: 'tested',
-    family_evolution_status: 'none',
-    read_model_status: 'none',
-    next_migration_step: 'Keep current-only compatibility until formal vote versioning becomes a live migration concern.',
+  Vote: canonicalEntry('Vote', {
+    canonicalStructure: 'Vote(subtype)',
+    builderPath:
+      'core/packets/packet-build-pipeline.ts + core/packets/types/vote.ts',
+    readProjectionPath: 'runtime vote projections',
+    uiConsumers: ['Votes'],
+    writePaths: ['Bootstrap/seed'],
   }),
-  Attestation: createEntry('Attestation', {
-    canonical_structure: 'Attestation(kind)',
-    builder_path:
-      'core/packets/packet-build-pipeline.ts + core/packets/families/attestation.ts',
-    compatibility_stance: 'current_only',
-    read_projection_path: 'attestation service + query services',
-    ui_consumers: ['Trust', 'Roles', 'Discussions'],
-    write_paths: ['Mutation corridor', 'Attestation service helper'],
-    known_manual_assumptions: [
-      'Attestation mutation planning still uses family-specific helpers and runtime projections.',
-    ],
-    builder_pipeline_status: 'production',
-    same_family_adapter_status: 'tested',
-    family_evolution_status: 'none',
-    read_model_status: 'declared',
-    next_migration_step: 'Keep Attestation stable as the shared packet-signal family while vote surfaces expand.',
+  Attestation: canonicalEntry('Attestation', {
+    canonicalStructure: 'Attestation(subtype)',
+    builderPath:
+      'core/packets/packet-build-pipeline.ts + core/packets/types/attestation.ts',
+    readProjectionPath: 'attestation service + query services',
+    uiConsumers: ['Trust', 'Roles', 'Discussions'],
+    writePaths: ['Mutation corridor', 'Attestation service helper'],
   }),
-  Decision: createEntry('Decision', {
-    canonical_structure: 'Decision',
-    builder_path:
-      'core/packets/packet-build-pipeline.ts + core/packets/families/decision.ts',
-    compatibility_stance: 'current_only',
-    read_projection_path: 'runtime vote/dashboard projections',
-    ui_consumers: ['Dashboard', 'Votes'],
-    write_paths: ['Bootstrap/seed'],
-    known_manual_assumptions: [
-      'Decision packets are schema-shaped infrastructure only until governance workflows become interactive.',
-    ],
-    builder_pipeline_status: 'production',
-    same_family_adapter_status: 'tested',
-    family_evolution_status: 'none',
-    read_model_status: 'none',
-    next_migration_step: 'Keep current-only compatibility until formal governance workflows require versioned Decision packets.',
+  Decision: canonicalEntry('Decision', {
+    canonicalStructure: 'Decision(subtype)',
+    builderPath:
+      'core/packets/packet-build-pipeline.ts + core/packets/types/decision.ts',
+    readProjectionPath: 'runtime vote/dashboard projections',
+    uiConsumers: ['Dashboard', 'Votes'],
+    writePaths: ['Bootstrap/seed'],
   }),
-  Cause: createEntry('Cause', {
-    canonical_structure: 'Cause(type, subtype)',
-    builder_path:
-      'core/packets/packet-build-pipeline.ts + core/packets/families/cause.ts',
-    compatibility_stance: 'current_only',
-    read_projection_path: 'core/projections/forward-ontology.ts',
-    ui_consumers: [],
-    write_paths: ['Forward packet builders only'],
-    known_manual_assumptions: [
-      'Cause remains readable compatibility input for purpose/alignment anchors while Action becomes the forward initiative/work hierarchy.',
-    ],
-    builder_pipeline_status: 'production',
-    same_family_adapter_status: 'tested',
-    family_evolution_status: 'none',
-    read_model_status: 'declared',
-    next_migration_step: 'Project previous Cause initiative anchors toward Action(subtype: initiative) defaults before reseed.',
+  Action: canonicalEntry('Action', {
+    canonicalStructure: 'Action(subtype, hierarchy/default refs)',
+    builderPath:
+      'core/packets/packet-build-pipeline.ts + core/packets/types/action.ts',
+    readProjectionPath: 'core/projections/forward-ontology.ts',
+    writePaths: ['Forward packet builders', 'OWA initiative/default seed anchor'],
+    nextStep:
+      'Use Action(subtype: initiative) as the OWA default anchor for reseed policy/template/default packet sets.',
   }),
-  Action: createEntry('Action', {
-    canonical_structure: 'Action(type, subtype, hierarchy/default refs)',
-    builder_path:
-      'core/packets/packet-build-pipeline.ts + core/packets/families/action.ts',
-    compatibility_stance: 'current_only',
-    read_projection_path: 'core/projections/forward-ontology.ts',
-    ui_consumers: [],
-    write_paths: ['Forward packet builders only'],
-    known_manual_assumptions: [
-      'Action is the forward initiative/work hierarchy for initiative, campaign, program, mission, and task semantics.',
-    ],
-    builder_pipeline_status: 'production',
-    same_family_adapter_status: 'tested',
-    family_evolution_status: 'none',
-    read_model_status: 'declared',
-    next_migration_step: 'Use Action(subtype: initiative) as the OWA default anchor for reseed policy/template/default packet sets.',
+  Policy: canonicalEntry('Policy', {
+    canonicalStructure: 'Policy(subtype, requirement domains)',
+    builderPath:
+      'core/packets/packet-build-pipeline.ts + core/packets/types/policy.ts',
+    readProjectionPath: 'auth/write-policy helpers',
+    uiConsumers: ['Identity security', 'Trust policy resolution'],
+    writePaths: ['Mutation corridor', 'Seed defaults'],
+    compatibilityStance: 'current_only',
   }),
-  Initiative: createEntry('Initiative', {
-    canonical_structure: 'Legacy initiative packet',
-    builder_path: 'none',
-    compatibility_stance: 'forward_only',
-    read_projection_path: 'core/projections/forward-ontology.ts cause projection bridge',
-    ui_consumers: [],
-    write_paths: ['Legacy read compatibility only'],
-    known_manual_assumptions: ['Legacy family retained as migration input while Cause becomes the forward vocabulary.'],
-    builder_pipeline_status: 'none',
-    same_family_adapter_status: 'declared',
-    family_evolution_status: 'declared',
-    read_model_status: 'declared',
-    next_migration_step: 'Project legacy Initiative packets into Action(subtype: initiative) reads and avoid new forward writes here.',
-  }),
-  Program: createEntry('Program', {
-    canonical_structure: 'Legacy program packet',
-    builder_path: 'none',
-    compatibility_stance: 'forward_only',
-    read_projection_path: 'core/projections/forward-ontology.ts cause projection bridge',
-    ui_consumers: [],
-    write_paths: ['Legacy read compatibility only'],
-    known_manual_assumptions: ['Legacy family retained as migration input while Cause becomes the forward vocabulary.'],
-    builder_pipeline_status: 'none',
-    same_family_adapter_status: 'declared',
-    family_evolution_status: 'declared',
-    read_model_status: 'declared',
-    next_migration_step: 'Project legacy Program packets into Action(subtype: program) reads and avoid new forward writes here.',
-  }),
-  Campaign: createEntry('Campaign', {
-    canonical_structure: 'Legacy campaign packet',
-    builder_path: 'none',
-    compatibility_stance: 'forward_only',
-    read_projection_path: 'core/projections/forward-ontology.ts cause projection bridge',
-    ui_consumers: [],
-    write_paths: ['Legacy read compatibility only'],
-    known_manual_assumptions: ['Legacy family retained as migration input while Cause becomes the forward vocabulary.'],
-    builder_pipeline_status: 'none',
-    same_family_adapter_status: 'declared',
-    family_evolution_status: 'declared',
-    read_model_status: 'declared',
-    next_migration_step: 'Project legacy Campaign packets into Action(subtype: campaign) reads and avoid new forward writes here.',
-  }),
-  MissionTemplate: createReservedEntry(
-    'MissionTemplate',
-    'Legacy mission-family packet retained as migration input while Action becomes the forward vocabulary.'
-  ),
-  MissionPlan: createReservedEntry(
-    'MissionPlan',
-    'Legacy mission-family packet retained as migration input while Action becomes the forward vocabulary.'
-  ),
-  MissionReport: createReservedEntry(
-    'MissionReport',
-    'Legacy mission-family packet retained as migration input while Action becomes the forward vocabulary.'
-  ),
-  Module: createReservedEntry('Module', 'Family reserved but not actively surfaced.'),
-  Policy: createEntry('Policy', {
-    canonical_structure: 'Policy(kind, requirement domains)',
-    builder_path:
-      'core/packets/packet-build-pipeline.ts + core/packets/families/policy.ts',
-    compatibility_stance: 'bidirectional_supported',
-    read_projection_path:
-      'core/schema/packet-schema.ts same-family adapters + auth/write-policy helpers',
-    ui_consumers: ['Identity security', 'Trust policy resolution'],
-    write_paths: ['Mutation corridor'],
-    known_manual_assumptions: [
-      'Policy semantics still resolve through specialized write-policy helpers.',
-    ],
-    builder_pipeline_status: 'production',
-    same_family_adapter_status: 'production',
-    family_evolution_status: 'none',
-    read_model_status: 'partial',
-    next_migration_step: 'Keep as the small proof family for the generic builder while read models mature.',
-  }),
-  Preference: createEntry('Preference', {
-    canonical_structure: 'Preference(subtype: element)',
-    builder_path:
+  Preference: canonicalEntry('Preference', {
+    canonicalStructure: 'Preference(subtype: element)',
+    builderPath:
       'core/packets/packet-build-pipeline.ts + core/packets/definitions/preference-helpers.ts',
-    compatibility_stance: 'current_only',
-    read_projection_path:
-      'runtime/nexus/server/element-preference-packets.ts + legacy compatibility cache fallback',
-    ui_consumers: ['Shell preferences', 'Scope display preferences'],
-    write_paths: ['Signed Preference.element mutation corridor'],
-    known_manual_assumptions: [
-      'Guest compatibility writes remain outside canonical claimed Preference packet enrollment.',
-    ],
-    builder_pipeline_status: 'production',
-    same_family_adapter_status: 'tested',
-    family_evolution_status: 'none',
-    read_model_status: 'production',
-    next_migration_step:
+    readProjectionPath:
+      'runtime/nexus/server/element-preference-packets.ts + guest compatibility cache fallback',
+    uiConsumers: ['Shell preferences', 'Scope display preferences'],
+    writePaths: ['Signed Preference.element mutation corridor'],
+    readModelStatus: 'production',
+    nextStep:
       'Keep Preference.element as the canonical claimed interface preference exemplar for reseed.',
   }),
-  Discussion: createEntry('Discussion', {
-    canonical_structure: 'Discussion(kind, role)',
-    builder_path:
-      'core/packets/packet-build-pipeline.ts + core/packets/families/discussion.ts',
-    compatibility_stance: 'bidirectional_supported',
-    read_projection_path:
-      'core/packets/packet-interpreter.ts + core/packets/discussion-compat.ts',
-    ui_consumers: ['Discussions', 'Library labels', 'Attestation packet targets'],
-    write_paths: ['Mutation corridor', 'Default discussion surface bootstrap'],
-    known_manual_assumptions: [
-      'Legacy discussion projections still bridge current API/UI payloads during migration.',
-    ],
-    builder_pipeline_status: 'production',
-    same_family_adapter_status: 'production',
-    family_evolution_status: 'production',
-    read_model_status: 'tested',
-    next_migration_step: 'Finish migrating runtime discussion projections onto the generic read-model contract.',
+  Discussion: canonicalEntry('Discussion', {
+    canonicalStructure: 'Discussion(subtype: space/forum/post/message/topic)',
+    builderPath:
+      'core/packets/packet-build-pipeline.ts + core/packets/types/discussion.ts',
+    readProjectionPath: 'runtime discussion projections',
+    uiConsumers: ['Discussions', 'Library labels', 'Attestation packet targets'],
+    writePaths: ['Mutation corridor', 'Default discussion surface bootstrap'],
+    readModelStatus: 'tested',
+    nextStep:
+      'Keep top-level posts and reply messages canonical while UI projection names remain adapter-facing.',
   }),
-  DiscussionSpace: createEntry('DiscussionSpace', {
-    canonical_structure: 'Legacy discussion space',
-    builder_path: 'core/packets/builders.ts#createDiscussionSpacePacket',
-    compatibility_stance: 'legacy_supported',
-    read_projection_path: 'discussion compatibility family-evolution bridge',
-    ui_consumers: ['Discussions via legacy projection bridge'],
-    write_paths: ['Legacy read compatibility', 'Seed fixtures'],
-    known_manual_assumptions: ['Legacy family retained for back-compat only.'],
-    builder_pipeline_status: 'none',
-    same_family_adapter_status: 'tested',
-    family_evolution_status: 'production',
-    read_model_status: 'tested',
-    next_migration_step: 'Keep readable while canonical Discussion becomes the only normal write target.',
-  }),
-  DiscussionForum: createEntry('DiscussionForum', {
-    canonical_structure: 'Legacy discussion forum',
-    builder_path: 'core/packets/builders.ts#createDiscussionForumPacket',
-    compatibility_stance: 'legacy_supported',
-    read_projection_path: 'discussion compatibility family-evolution bridge',
-    ui_consumers: ['Discussions via legacy projection bridge'],
-    write_paths: ['Legacy read compatibility', 'Seed fixtures'],
-    known_manual_assumptions: ['Legacy family retained for back-compat only.'],
-    builder_pipeline_status: 'none',
-    same_family_adapter_status: 'tested',
-    family_evolution_status: 'production',
-    read_model_status: 'tested',
-    next_migration_step: 'Keep readable while canonical Discussion becomes the only normal write target.',
-  }),
-  DiscussionThread: createEntry('DiscussionThread', {
-    canonical_structure: 'Legacy discussion thread',
-    builder_path: 'core/packets/builders.ts#createDiscussionThreadPacket',
-    compatibility_stance: 'legacy_supported',
-    read_projection_path: 'discussion compatibility family-evolution bridge',
-    ui_consumers: ['Discussions via legacy projection bridge'],
-    write_paths: ['Legacy read compatibility', 'Seed fixtures'],
-    known_manual_assumptions: ['Legacy family retained for back-compat only.'],
-    builder_pipeline_status: 'none',
-    same_family_adapter_status: 'tested',
-    family_evolution_status: 'production',
-    read_model_status: 'tested',
-    next_migration_step: 'Keep readable while canonical Discussion becomes the only normal write target.',
-  }),
-  DiscussionPost: createEntry('DiscussionPost', {
-    canonical_structure: 'Legacy discussion post',
-    builder_path: 'core/packets/builders.ts#createDiscussionPostPacket',
-    compatibility_stance: 'legacy_supported',
-    read_projection_path: 'discussion compatibility family-evolution bridge',
-    ui_consumers: ['Discussions via legacy projection bridge'],
-    write_paths: ['Legacy read compatibility', 'Seed fixtures'],
-    known_manual_assumptions: ['Legacy family retained for back-compat only.'],
-    builder_pipeline_status: 'none',
-    same_family_adapter_status: 'tested',
-    family_evolution_status: 'production',
-    read_model_status: 'tested',
-    next_migration_step: 'Keep readable while canonical Discussion becomes the only normal write target.',
-  }),
-  DiscussionReply: createEntry('DiscussionReply', {
-    canonical_structure: 'Legacy discussion reply',
-    builder_path: 'core/packets/builders.ts#createDiscussionReplyPacket',
-    compatibility_stance: 'legacy_supported',
-    read_projection_path: 'discussion compatibility family-evolution bridge',
-    ui_consumers: ['Discussions via legacy projection bridge'],
-    write_paths: ['Legacy read compatibility', 'Seed fixtures'],
-    known_manual_assumptions: ['Legacy family retained for back-compat only.'],
-    builder_pipeline_status: 'none',
-    same_family_adapter_status: 'tested',
-    family_evolution_status: 'production',
-    read_model_status: 'tested',
-    next_migration_step: 'Keep readable while canonical Discussion becomes the only normal write target.',
-  }),
-  Minutes: createReservedEntry('Minutes', 'Family reserved but not actively surfaced.'),
-  Artifact: createReservedEntry('Artifact', 'Family reserved but not actively surfaced.'),
-  Bundle: createEntry('Bundle', {
-    canonical_structure: 'Bundle(packet_set inventory)',
-    builder_path:
-      'core/packets/packet-build-pipeline.ts + core/packets/families/bundle.ts',
-    compatibility_stance: 'current_only',
-    read_projection_path:
+  Bundle: canonicalEntry('Bundle', {
+    canonicalStructure: 'Bundle(subtype: packet_set inventory)',
+    builderPath:
+      'core/packets/packet-build-pipeline.ts + core/packets/types/bundle.ts',
+    readProjectionPath:
       'core/packets/packet-definition-seeds.ts canonical bundle/profile audit',
-    ui_consumers: [],
-    write_paths: [
+    writePaths: [
       'Bootstrap definition profile seed material',
       'Import/export bundle validation',
     ],
-    known_manual_assumptions: [
+    assumptions: [
       'Bundle packets carry packet inventories and do not move packet semantics away from the packets they reference.',
     ],
-    builder_pipeline_status: 'production',
-    same_family_adapter_status: 'tested',
-    family_evolution_status: 'none',
-    read_model_status: 'tested',
-    next_migration_step:
+    readModelStatus: 'tested',
+    nextStep:
       'Use Bundle.packet_set as the active definition-profile carrier for reseed verification.',
   }),
 };
 
 export function listPacketPipelineInventory(): PacketPipelineInventoryEntry[] {
-  return PACKET_FAMILIES.map((family) => PACKET_PIPELINE_INVENTORY[family]);
+  return PACKET_TYPES.map((type) => PACKET_PIPELINE_INVENTORY[type]);
 }

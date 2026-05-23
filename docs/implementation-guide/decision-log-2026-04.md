@@ -7,7 +7,7 @@ This monthly log condenses the April 2026 decisions that remain most important f
 - Packet identity uses stable `packet_id` plus immutable `revision_id`.
 - Revision history is a DAG with `parent_revision_refs`, not a single chain.
 - Packet relationships normalize into one typed edge collection.
-- `Element` remains the identity-root family for people, assemblies, organizations, and services.
+- `Element` remains the identity-root type for people, assemblies, organizations, and services.
 - The dedicated Nexus shell lives under `/nexus/*`.
 - Function-first and scope-first remain one system rather than two route trees.
 
@@ -51,9 +51,9 @@ This monthly log condenses the April 2026 decisions that remain most important f
 ## 2026-04-25 to 2026-04-29 packet floor and verification
 
 - Packet compatibility coverage is now classified explicitly.
-- Legacy write seams were sealed before discussion-family cleanup.
+- Legacy write seams were sealed before discussion-type cleanup.
 - Raw packet signatures verify before adaptation.
-- Live and near-live packet families now share one generic builder floor.
+- Live and near-live packet types now share one generic builder floor.
 
 ## 2026-04-30 surface-level runtime contracts
 

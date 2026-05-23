@@ -37,4 +37,4 @@ For roadmap planning, the chapter files under `docs/roadmap/*` are the canonical
 - [Initiatives, Locality, And Subscriptions](roadmap/initiatives-locality-and-subscriptions.md)
 - [Trust, Policy, And Moderation](roadmap/trust-policy-and-moderation.md)
 - [Governance And Execution](roadmap/governance-and-execution.md)
-- [Open Questions And Deferred Decisions](roadmap/open-questions-and-deferred-decisions.md)
+- [Open Questions And Deferred Decisions](roadmap/open-questions-and-unsupported-decisions.md)

@@ -122,7 +122,7 @@ async function createSignedIdentityPacket(input: {
   };
 }
 
-test('explorer payload returns raw, adapted, read-model, and link data for packet families with graph edges', async () => {
+test('explorer payload returns raw, adapted, read-model, and link data for packet types with graph edges', async () => {
   const harness = await createExplorerHarness();
 
   try {
@@ -146,7 +146,7 @@ test('explorer payload returns raw, adapted, read-model, and link data for packe
       authority_scope_ref: { packet_id: SCOPE_PACKET_ID },
       applicable_scope_refs: [{ packet_id: SCOPE_PACKET_ID }],
       created_by: { packet_id: actorPacket.header.packet_id },
-      claim_kind: 'home_locality',
+      subtype: 'home_locality',
       subject_ref: { packet_id: actorPacket.header.packet_id },
       target_ref: { packet_id: SCOPE_PACKET_ID },
       scope_ref: { packet_id: SCOPE_PACKET_ID },
@@ -160,7 +160,7 @@ test('explorer payload returns raw, adapted, read-model, and link data for packe
       created_by: { packet_id: actorPacket.header.packet_id },
       target_ref: { packet_id: claimPacket.header.packet_id },
       value: 1,
-      attestation_kind: 'claim_support',
+      subtype: 'claim_support',
     });
 
     await writePreferredPacket(harness.packetStore, assemblyPacket);
@@ -216,7 +216,7 @@ test('explorer verification payload marks stale local validation when preferred 
       packet_id: 'nexus:element/explorer-freshness-target',
       revision_id: 'nexus:element/explorer-freshness-target@r1',
       created_at: createdAt,
-      kind: 'organization',
+      subtype: 'organization',
       name: 'Explorer Freshness Target',
     });
     const signedRevisionOne = await signPacketWithIdentity({
@@ -243,7 +243,7 @@ test('explorer verification payload marks stale local validation when preferred 
           revision_id: signedRevisionOne.header.revision_id,
         },
       ],
-      kind: 'organization',
+      subtype: 'organization',
       name: 'Explorer Freshness Target Revised',
     });
     const signedRevisionTwo = await signPacketWithIdentity({
@@ -382,3 +382,4 @@ test('explorer payload throws an unknown packet error for missing packets', asyn
     harness.cleanup();
   }
 });
+

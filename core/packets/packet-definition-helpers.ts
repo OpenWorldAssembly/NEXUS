@@ -1,6 +1,6 @@
 /**
  * File: packet-definition-helpers.ts
- * Description: Generic shadow-mode helpers for reading packet definition manifest sections.
+ * Description: Generic definition-mode helpers for reading packet definition manifest sections.
  */
 
 import type {
@@ -206,21 +206,21 @@ export function getPacketDefinitionSectionStatus(
     case 'policy':
       return listPacketDefinitionPolicyActionIds(definition).length > 0
         ? 'supported'
-        : 'deferred';
+        : 'unsupported';
     case 'projection':
-      return definition.projections.length > 0 ? 'supported' : 'deferred';
+      return definition.projections.length > 0 ? 'supported' : 'unsupported';
     case 'indexing':
-      return definition.indexes.length > 0 ? 'supported' : 'deferred';
+      return definition.indexes.length > 0 ? 'supported' : 'unsupported';
     case 'compatibility':
-      return definition.compatibility_adapters.length > 0 ? 'supported' : 'deferred';
+      return definition.compatibility_adapters.length > 0 ? 'supported' : 'unsupported';
     case 'bundling':
       return listPacketDefinitionBundleActionIds(definition).length > 0
         ? 'supported'
-        : 'deferred';
+        : 'unsupported';
     case 'fixtures':
       return definition.fixtures && definition.fixtures.length > 0
         ? 'supported'
-        : 'deferred';
+        : 'unsupported';
     default:
       return 'supported';
   }

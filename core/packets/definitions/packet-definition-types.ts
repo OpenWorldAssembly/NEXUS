@@ -7,7 +7,6 @@ import type { z } from 'zod';
 import type { PacketWorkflowPlanDescriptor } from '@core/packets/packet-workflow-planner.ts';
 
 export type PacketDefinitionStatus =
-  | 'experimental_shadow'
   | 'active'
   | 'canonical'
   | 'deprecated'
@@ -61,14 +60,14 @@ export type PacketManifestSectionKey =
 export type PacketManifestSectionStatus =
   | 'supported'
   | 'unsupported'
-  | 'deferred'
+  | 'unsupported'
   | 'custom';
 
 export type PacketManifestSectionDescriptor = {
   section_key: PacketManifestSectionKey;
   status: PacketManifestSectionStatus;
   summary: string;
-  required_for_shadow_definition: boolean;
+  required_for_definition: boolean;
 };
 
 export type PacketCompatibilityPosture = {
@@ -107,7 +106,7 @@ export type PacketActionDescriptor = {
   packet_subtype: string | null;
   label: string;
   policy_action_id: string | null;
-  availability: 'shadow_only' | 'runtime_ready' | 'canonical';
+  availability: 'runtime_ready' | 'canonical';
   notes: string;
 };
 
@@ -122,7 +121,7 @@ export type PacketBuilderDescriptor = {
   action_ids: readonly string[];
   input_schema_key: string;
   output_schema_key: string;
-  availability: 'shadow_only' | 'runtime_ready' | 'canonical';
+  availability: 'runtime_ready' | 'canonical';
   notes: string;
 };
 
@@ -138,7 +137,7 @@ export type PacketPlannerDescriptor = {
   builder_ids: readonly string[];
   policy_action_ids: readonly string[];
   workflow_plan_ids?: readonly string[];
-  availability: 'shadow_only' | 'runtime_ready' | 'canonical';
+  availability: 'runtime_ready' | 'canonical';
   notes: string;
 };
 
@@ -147,8 +146,8 @@ export type PacketMutationDescriptor = {
   action_ids: readonly string[];
   planner_id: string;
   workflow_plan_ids?: readonly string[];
-  result_family: 'packet_write' | 'projection_update' | 'compatibility_update' | 'bundle_update';
-  availability: 'shadow_only' | 'runtime_ready' | 'canonical';
+  result_type: 'packet_write' | 'projection_update' | 'compatibility_update' | 'bundle_update';
+  availability: 'runtime_ready' | 'canonical';
   notes: string;
 };
 
@@ -164,7 +163,7 @@ export type PacketCompatibilityAdapterDescriptor = {
     | 'downcast_to_previous'
     | 'bidirectional_neighbor';
   loss_awareness: 'none' | 'loss_annotated' | 'loss_ack_required';
-  availability: 'shadow_only' | 'runtime_ready' | 'canonical';
+  availability: 'runtime_ready' | 'canonical';
   notes: string;
 };
 
@@ -185,7 +184,7 @@ export type PacketDefinitionPartDescriptor = {
   defines_packet_type: string;
   defines_packet_subtype: string | null;
   schema_version: string;
-  availability: 'shadow_only' | 'runtime_ready' | 'canonical';
+  availability: 'runtime_ready' | 'canonical';
   required: boolean;
   references?: readonly string[];
   covers_subtypes?: readonly string[];

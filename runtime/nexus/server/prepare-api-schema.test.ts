@@ -52,7 +52,7 @@ test('prepare route accepts Preference.element set intents and resolves prefligh
     const preflight = resolvePrepareMutationApiPreflight(parsed);
 
     assert.equal(parsed.kind, 'preference.element.set');
-    assert.equal(preflight.status, 'allowed_shadow');
+    assert.equal(preflight.status, 'allowed_definition');
     assert.equal(preflight.client_intent_id, 'preference.interface.set');
   }
 });

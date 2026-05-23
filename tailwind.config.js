@@ -16,7 +16,7 @@ module.exports = {
         nexus: '3px',
         'nexus-sm': '2px',
       },
-      boxShadow: {
+      boxDefinition: {
         public: '0 24px 80px rgba(5, 10, 18, 0.32)',
         nexus: '0 18px 60px rgba(3, 8, 13, 0.35)',
         'nexus-panel': '0 10px 28px rgba(3, 8, 13, 0.28)',

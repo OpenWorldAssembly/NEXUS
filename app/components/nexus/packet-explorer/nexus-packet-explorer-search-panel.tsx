@@ -73,7 +73,7 @@ type PacketExplorerRoutePacketInput = {
   preferredRevisionId?: string | null;
   titleSnapshot?: string | null;
   seedSummary?: {
-    family: string | null;
+    type: string | null;
     summary: string | null;
     label: string | null;
   } | null;
@@ -124,7 +124,7 @@ function SearchResultCard(input: {
     <NexusCard className="gap-3">
       <View className="flex-row flex-wrap items-center gap-2">
         <Text className={appearance.itemTitleClass}>{input.result.title}</Text>
-        <NexusBadge label={input.result.family} tone="sky" />
+        <NexusBadge label={input.result.type} tone="sky" />
         <NexusBadge label={input.result.match_reason} tone="gold" />
         {verificationBadge ? (
           <NexusBadge
@@ -162,7 +162,7 @@ function SearchResultCard(input: {
               preferredRevisionId: input.result.revision_id,
               titleSnapshot: input.result.title,
               seedSummary: {
-                family: input.result.family,
+                type: input.result.type,
                 summary: input.result.summary,
                 label: input.result.label,
               },
@@ -177,7 +177,7 @@ function SearchResultCard(input: {
               preferredRevisionId: input.result.revision_id,
               titleSnapshot: input.result.title,
               seedSummary: {
-                family: input.result.family,
+                type: input.result.type,
                 summary: input.result.summary,
                 label: input.result.label,
               },
@@ -300,7 +300,7 @@ export function NexusPacketExplorerSearchPanel({
           </Text>
           <Text className={appearance.sectionBodyClass}>
             Search the current preferred packet index by ID, title, label,
-            summary, tag, or family, then open or export what you find.
+            summary, tag, or type, then open or export what you find.
           </Text>
         </View>
 

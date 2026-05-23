@@ -13,7 +13,7 @@ import type {
 import type {
   PacketAdaptationChange,
   PacketAdaptationLoss,
-  PacketFamily,
+  PacketType,
   PacketRef,
   PacketRevisionRef,
 } from '@core/schema/packet-schema';
@@ -53,7 +53,7 @@ export type NexusPacketExplorerSearchMatchType =
   | 'label_contains'
   | 'summary_contains'
   | 'tag_contains'
-  | 'family_contains';
+  | 'type_contains';
 
 export type NexusPacketExplorerImportStatus =
   | 'ready'
@@ -132,7 +132,7 @@ export interface NexusPacketExplorerImportPreviewPayload {
   affected_packet_ids: string[];
   missing_parent_count: number;
   invalid_entry_count: number;
-  family_conflict_count: number;
+  type_conflict_count: number;
   status: NexusPacketExplorerImportStatus;
   blocking_errors: string[];
   warnings: string[];
@@ -195,7 +195,7 @@ export interface NexusPacketExplorerVerificationReportSummary {
 export interface NexusPacketExplorerSearchResultRow {
   packet_id: string;
   revision_id: string | null;
-  family: PacketFamily;
+  type: PacketType;
   title: string;
   label: string;
   summary: string | null;
@@ -250,7 +250,7 @@ export interface NexusPacketExplorerLinkRow {
   edge_type: string;
   packet_id: string;
   revision_id: string | null;
-  family: PacketFamily | null;
+  type: PacketType | null;
   label: string | null;
   title: string | null;
   metadata: Record<string, unknown>;
@@ -259,7 +259,7 @@ export interface NexusPacketExplorerLinkRow {
 export interface NexusPacketExplorerLinkGroup {
   direction: 'incoming' | 'outgoing';
   packet_id: string;
-  family: PacketFamily | null;
+  type: PacketType | null;
   label: string | null;
   title: string | null;
   total_count: number;
@@ -272,8 +272,8 @@ export interface NexusPacketExplorerLinkGroup {
 
 export interface NexusPacketExplorerAdaptationSummary {
   compatibility_mode: 'native' | 'adapted' | 'downcast' | 'lossy' | 'blocked';
-  source_family: PacketFamily;
-  target_family: PacketFamily;
+  source_type: PacketType;
+  target_type: PacketType;
   source_schema_version: string;
   target_schema_version: string;
   stages: string[];
@@ -287,7 +287,7 @@ export interface NexusPacketExplorerAdaptationSummary {
 export interface NexusPacketExplorerSummary {
   packet: PacketRef;
   revision: PacketRevisionRef;
-  family: PacketFamily;
+  type: PacketType;
   label: string;
   title: string;
   summary: string | null;

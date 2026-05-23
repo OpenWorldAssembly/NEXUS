@@ -738,7 +738,7 @@ function NexusScopeActionMenu({
       {isOpen ? (
         <View
           className={joinClasses(
-            'absolute right-0 z-50 min-w-[180px] gap-1 overflow-hidden rounded-2xl border p-2 shadow-lg',
+            'absolute right-0 z-50 min-w-[180px] gap-1 overflow-hidden rounded-2xl border p-2 definition-lg',
             align === 'bottom' ? 'bottom-full mb-2' : 'top-full mt-2',
             chrome.inlineSelectMenuClass
           )}
@@ -1398,7 +1398,7 @@ export default function NexusSidebar({
       packetId: scope.packetId,
       titleSnapshot: scope.name,
       seedSummary: {
-        family: 'Element',
+        type: 'Element',
         summary: scope.description,
         label: scope.shortLabel,
       },

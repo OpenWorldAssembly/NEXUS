@@ -135,7 +135,7 @@ test('verifyPacketSignature accepts legacy non-identity packets without additive
     created_at: createdAt,
     title: 'Legacy Policy',
     summary: null,
-    policy_kind: 'trust_baseline',
+    subtype: 'trust_baseline',
     body_markdown: '# Legacy',
     status: 'active',
     metadata_tags: [],

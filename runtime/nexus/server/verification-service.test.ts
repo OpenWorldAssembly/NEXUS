@@ -50,68 +50,6 @@ async function createSignedIdentityPacket(input: {
   };
 }
 
-function createLegacyElementPacket(input: {
-  packetId: string;
-  revisionId: string;
-  createdAt: string;
-  name: string;
-}) {
-  return {
-    header: {
-      packet_id: input.packetId,
-      revision_id: input.revisionId,
-      family: 'Element' as const,
-      schema_version: '0.9.0',
-      protocol_version: '0.1.0',
-      created_at: input.createdAt,
-      parent_revision_refs: [],
-      merge_strategy: null,
-      authority_scope_ref: null,
-      applicable_scope_refs: [],
-      edges: [],
-      provenance: {
-        created_by: null,
-        submitted_by: null,
-        adapter: 'test',
-        recorded_at: input.createdAt,
-        imported_from_revision: null,
-      },
-      integrity: {
-        canonicalization: 'RFC8785',
-        hash_alg: 'sha-256',
-        digest: null,
-        embedded_signatures: [],
-        signature_refs: [],
-      },
-      moderation: {
-        visibility: 'public',
-        moderation_state: 'open',
-        policy_refs: [],
-        content_warning_ids: [],
-      },
-      external_refs: [],
-      metadata: {
-        tags: [],
-        language: null,
-        summary: null,
-      },
-      producer: {
-        adapter: 'test',
-        app_version: null,
-      },
-    },
-    body: {
-      kind: 'organization',
-      name: input.name,
-      subtype: 'assembly',
-      summary: null,
-      locality_label: null,
-      identity: null,
-      tags: ['legacy'],
-    },
-  };
-}
-
 test('verification service writes one logical report and revalidation revises it', async () => {
   const directory = mkdtempSync(join(tmpdir(), 'owa-verification-'));
   const queryServices = await createNodeSQLiteQueryServicesAsync({
@@ -133,7 +71,7 @@ test('verification service writes one logical report and revalidation revises it
     const unsignedTarget = createElementPacket({
       packet_id: 'nexus:element/verified-target',
       revision_id: 'nexus:element/verified-target@r1',
-      kind: 'organization',
+      subtype: 'organization',
       name: 'Verified Target',
       created_at: createdAt,
     });
@@ -210,7 +148,7 @@ test('local validator service identity signs reports that verify under the norma
       packet_id: 'nexus:element/local-validator-target',
       revision_id: 'nexus:element/local-validator-target@r1',
       created_at: createdAt,
-      kind: 'organization',
+      subtype: 'organization',
       name: 'Local Validator Target',
     });
     const signedTarget = await signPacketWithIdentity({
@@ -250,8 +188,8 @@ test('local validator service identity signs reports that verify under the norma
       signerPacket: validatorPacket,
     });
 
-    assert.equal(validatorPacket?.header.family, 'Element');
-    assert.equal((validatorPacket?.body as { kind?: string }).kind, 'service');
+    assert.equal(validatorPacket?.header.type, 'Element');
+    assert.equal((validatorPacket?.body as { subtype?: string }).subtype, 'local_validator');
     assert.equal(verification.isValid, true);
   } finally {
     queryServices.packetStore.close();
@@ -281,7 +219,7 @@ test('unknown signer assessments stay unverifiable instead of claiming a valid s
       packet_id: 'nexus:element/unverifiable-target',
       revision_id: 'nexus:element/unverifiable-target@r1',
       created_at: createdAt,
-      kind: 'organization',
+      subtype: 'organization',
       name: 'Unverifiable Target',
     });
     const signedTarget = await signPacketWithIdentity({
@@ -309,90 +247,6 @@ test('unknown signer assessments stay unverifiable instead of claiming a valid s
   }
 });
 
-test('verification keeps raw signature validity separate from adapted compatibility reads', async () => {
-  const directory = mkdtempSync(join(tmpdir(), 'owa-verification-adapted-'));
-  const queryServices = await createNodeSQLiteQueryServicesAsync({
-    packetStore: new NodeSQLitePacketStore({
-      databasePath: join(directory, 'verification-adapted.db'),
-    }),
-  });
-  const verificationService = new NexusPacketVerificationService(
-    queryServices.packetStore
-  );
-
-  try {
-    const createdAt = '2026-05-12T00:00:00.000Z';
-    const signer = await createSignedIdentityPacket({
-      packetId: 'nexus:element/legacy-verification-signer',
-      alias: 'Legacy Verification Signer',
-      createdAt,
-    });
-    const legacyUnsignedPacket = createLegacyElementPacket({
-      packetId: 'nexus:element/legacy-verification-target',
-      revisionId: 'nexus:element/legacy-verification-target@r1',
-      createdAt,
-      name: 'Legacy Verification Target',
-    });
-    const signedLegacyPacket = await signPacketWithIdentity({
-      packet: legacyUnsignedPacket as never,
-      signerPacketId: signer.packet.header.packet_id,
-      kid: signer.keyBinding.kid,
-      privateKey: signer.keyPair.privateKey,
-      signedAt: createdAt,
-    });
-
-    await queryServices.packetStore.importBundle(
-      JSON.stringify({
-        bundle_version: 1,
-        exported_at: createdAt,
-        packets: [signer.packet, signedLegacyPacket],
-      })
-    );
-
-    const rawRead = await queryServices.packetStore.readByRevision(
-      {
-        packet_id: signedLegacyPacket.header.packet_id,
-        revision_id: signedLegacyPacket.header.revision_id,
-      },
-      { mode: 'raw' }
-    );
-    const adaptedRead = await queryServices.packetStore.readByRevision(
-      {
-        packet_id: signedLegacyPacket.header.packet_id,
-        revision_id: signedLegacyPacket.header.revision_id,
-      },
-      { mode: 'raw_plus_adaptation' }
-    );
-    const validation = await verificationService.validatePacket(
-      signedLegacyPacket.header.packet_id
-    );
-    const storedSummary =
-      await queryServices.packetStore.getPacketVerificationSummary({
-        packet_id: signedLegacyPacket.header.packet_id,
-      });
-
-    assert.ok(rawRead);
-    assert.ok(adaptedRead);
-    assert.ok(storedSummary);
-    assert.equal(
-      (rawRead as { header: { schema_version: string } }).header.schema_version,
-      '0.9.0'
-    );
-    assert.equal(adaptedRead.raw_packet.header.schema_version, '0.9.0');
-    assert.equal(adaptedRead.adapted_packet.header.schema_version, '1.1.0');
-    assert.equal(validation.status, 'trusted_signer');
-    assert.equal(storedSummary.signature_status, 'valid');
-    assert.equal(storedSummary.compatibility_status, 'adapted');
-    assert.equal(
-      storedSummary.target_revision_id,
-      signedLegacyPacket.header.revision_id
-    );
-  } finally {
-    queryServices.packetStore.close();
-    rmSync(directory, { recursive: true, force: true });
-  }
-});
-
 test('packet action projection flips from validate to revalidate after local verification', async () => {
   const directory = mkdtempSync(join(tmpdir(), 'owa-verification-actions-'));
   const queryServices = await createNodeSQLiteQueryServicesAsync({
@@ -413,7 +267,7 @@ test('packet action projection flips from validate to revalidate after local ver
       packet_id: 'nexus:element/unsigned-target',
       revision_id: 'nexus:element/unsigned-target@r1',
       created_at: '2026-05-12T00:00:00.000Z',
-      kind: 'organization',
+      subtype: 'organization',
       name: 'Unsigned Target',
     });
 

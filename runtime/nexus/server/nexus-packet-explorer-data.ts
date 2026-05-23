@@ -11,7 +11,7 @@ import type {
 import type {
   PacketCompatibilityReadResult,
   PacketEnvelope,
-  PacketFamily,
+  PacketType,
 } from '@core/schema/packet-schema';
 import type {
   NexusPacketExplorerAdaptationSummary,
@@ -35,13 +35,13 @@ type PacketExplorerDataServices = Pick<
 >;
 
 const EXPLORER_DEBUG_ENABLED = process.env.NODE_ENV !== 'production';
-const DISCUSSION_FAMILIES = new Set<PacketFamily>([
+const DISCUSSION_FAMILIES = new Set<PacketType>([
   'Discussion',
-  'DiscussionSpace',
-  'DiscussionForum',
-  'DiscussionThread',
-  'DiscussionPost',
-  'DiscussionReply',
+  'Discussion',
+  'Discussion',
+  'Discussion',
+  'Discussion',
+  'Discussion',
 ]);
 
 function logExplorerStage(
@@ -94,48 +94,16 @@ async function runExplorerStage<TValue>(input: {
 function getPacketKind(packet: PacketEnvelope): string | null {
   const body = packet.body as Record<string, unknown>;
 
-  if (typeof body.kind === 'string') {
-    return body.kind;
+  if (typeof body.subtype === 'string') {
+    return body.subtype;
   }
 
   if (typeof body.role === 'string') {
     return body.role;
   }
 
-  if (typeof body.claim_kind === 'string') {
-    return body.claim_kind;
-  }
-
-  if (typeof body.attestation_kind === 'string') {
-    return body.attestation_kind;
-  }
-
-  if (typeof body.subtype === 'string') {
-    return body.subtype;
-  }
-
-  if (typeof body.role_kind === 'string') {
-    return body.role_kind;
-  }
-
-  if (typeof body.proposal_kind === 'string') {
-    return body.proposal_kind;
-  }
-
   if (typeof body.vote_method === 'string') {
     return body.vote_method;
-  }
-
-  if (typeof body.forum_kind === 'string') {
-    return body.forum_kind;
-  }
-
-  if (typeof body.thread_kind === 'string') {
-    return body.thread_kind;
-  }
-
-  if (typeof body.post_kind === 'string') {
-    return body.post_kind;
   }
 
   return null;
@@ -163,8 +131,8 @@ function toAdaptationSummary(
   if (readModelInterpretation) {
     return {
       compatibility_mode: readModelInterpretation.compatibility_mode,
-      source_family: readModelInterpretation.source_family,
-      target_family: readModelInterpretation.target_family,
+      source_type: readModelInterpretation.source_type,
+      target_type: readModelInterpretation.target_type,
       source_schema_version: readModelInterpretation.source_schema_version,
       target_schema_version: readModelInterpretation.target_schema_version,
       stages: [...readModelInterpretation.stages],
@@ -186,11 +154,11 @@ function toAdaptationSummary(
         : compatibilityRead.status.is_exact
           ? 'native'
           : 'adapted',
-    source_family: compatibilityRead.adapted_packet.header.family,
-    target_family: compatibilityRead.adapted_packet.header.family,
+    source_type: compatibilityRead.adapted_packet.header.type,
+    target_type: compatibilityRead.adapted_packet.header.type,
     source_schema_version: compatibilityRead.status.source_schema_version,
     target_schema_version: compatibilityRead.status.target_schema_version,
-    stages: ['raw_packet_read', 'same_family_adaptation'],
+    stages: ['raw_packet_read', 'same_type_adaptation'],
     changes: compatibilityRead.status.changes,
     losses: compatibilityRead.status.losses,
     warnings: readModelWarnings,
@@ -256,7 +224,7 @@ async function resolveExplorerLinks(input: {
         input.direction === 'incoming'
           ? sourceRevisionId
           : relatedProjection?.revision.revision_id ?? null,
-      family: relatedProjection?.family ?? null,
+      type: relatedProjection?.type ?? null,
       label: relatedProjection?.label ?? null,
       title: relatedProjection?.title ?? null,
       metadata,
@@ -276,7 +244,7 @@ function groupExplorerLinks(
       groups.set(link.packet_id, {
         direction: link.direction,
         packet_id: link.packet_id,
-        family: link.family,
+        type: link.type,
         label: link.label,
         title: link.title,
         total_count: 1,
@@ -335,12 +303,12 @@ async function resolveExplorerActions(input: {
     currentSurface: 'explorer',
     target: {
       packet_id: input.packetId,
-      family: input.adaptedPacket.header.family,
+      type: input.adaptedPacket.header.type,
       preferred_surface: undefined,
     },
   });
 
-  if (!DISCUSSION_FAMILIES.has(input.adaptedPacket.header.family)) {
+  if (!DISCUSSION_FAMILIES.has(input.adaptedPacket.header.type)) {
     return {
       actions: baseActionProjection.actions,
       actionDescriptors: [...baseActionProjection.action_descriptors],
@@ -506,7 +474,7 @@ export async function buildNexusPacketExplorerPayload(input: {
       packet_id: adaptedPacket.header.packet_id,
     },
     revision: preferredRevision,
-    family: adaptedPacket.header.family,
+    type: adaptedPacket.header.type,
     label: packetProjection.label,
     title: packetProjection.title,
     summary: packetProjection.summary,

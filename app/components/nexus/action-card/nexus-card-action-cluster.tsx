@@ -107,7 +107,9 @@ export function NexusCardActionCluster({
 
   return (
     <View
-      {...({ dataSet: { nexusActionMenuRoot: 'true' } } as never)}
+      {...({ dataSet: { nexusActionMenuRoot: 'true' } } as {
+        dataSet: { nexusActionMenuRoot: string };
+      })}
       className={joinClasses(
         layout === 'absolute'
           ? isMenuOpen

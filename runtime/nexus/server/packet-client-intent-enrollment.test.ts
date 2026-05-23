@@ -43,7 +43,7 @@ test('enrolled prepare intent preflight resolves handoff and packet-backed requi
     clientIntentId: 'scope.follow.set',
   });
 
-  assert.equal(preflight.status, 'allowed_shadow');
+  assert.equal(preflight.status, 'allowed_definition');
   assert.ok(preflight.enrollment);
   assert.ok(preflight.handoff);
   assert.ok(preflight.policy_requirement_ids.length > 0);
@@ -51,7 +51,7 @@ test('enrolled prepare intent preflight resolves handoff and packet-backed requi
   assert.ok(preflight.reason_codes.includes('registered_signed_fortress_prepare'));
 });
 
-test('Preference.element direct connector is shadow-only and claimed writes use prepare enrollment', () => {
+test('Preference.element direct connector is runtime-ready and claimed writes use prepare enrollment', () => {
   assert.deepEqual(
     PACKET_RUNTIME_CONNECTORS.map((connector) => ({
       connector_id: connector.connector_id,
@@ -60,7 +60,7 @@ test('Preference.element direct connector is shadow-only and claimed writes use 
     [
       {
         connector_id: 'preference.element.interface.set',
-        availability: 'shadow',
+        availability: 'definition',
       },
     ]
   );
@@ -77,7 +77,7 @@ test('Preference.element direct connector is shadow-only and claimed writes use 
     mutationIntent: 'preference.element.set',
   });
 
-  assert.equal(preflight.status, 'allowed_shadow');
+  assert.equal(preflight.status, 'allowed_definition');
   assert.equal(preflight.enrollment?.live_mode, 'signed_fortress_prepare');
 });
 

@@ -3,7 +3,7 @@
  * Description: No-deferral closure ledger for runtime modernization before reseed design.
  */
 
-import { PACKET_FAMILIES, type PacketFamily } from '@core/schema/packet-schema';
+import { PACKET_TYPES, type PacketType } from '@core/schema/packet-schema';
 import {
   auditPacketPolicyDependencyCoverage,
   auditPacketDependencySemanticAuthority,
@@ -37,7 +37,7 @@ export type PreReseedClosureStatus =
   | 'closing_now'
   | 'queued_pre_reseed'
   | 'blocked'
-  | 'out_of_chapter_scope';
+  | 'removed_from_active_scope';
 
 export type PreReseedClosureLedgerEntry = {
   subject_kind:
@@ -49,7 +49,7 @@ export type PreReseedClosureLedgerEntry = {
     | 'client_ingress_enrollment'
     | 'fortress_handoff'
     | 'composite_workflow_adapter'
-    | 'packet_family';
+    | 'packet_type';
   subject_id: string;
   status: PreReseedClosureStatus;
   queue:
@@ -58,7 +58,7 @@ export type PreReseedClosureLedgerEntry = {
     | 'discussion_locality_workflow_decomposition'
     | 'policy_dependency_semantic_authority'
     | 'final_reseed_readiness_audit'
-    | 'out_of_chapter_scope';
+    | 'removed_from_active_scope';
   reason: string;
   next_step: string;
 };
@@ -74,7 +74,7 @@ export type PreReseedModernizationClosureReport = {
   client_ingress_enrollments: PreReseedClosureLedgerEntry[];
   fortress_handoffs: PreReseedClosureLedgerEntry[];
   composite_workflow_adapters: PreReseedClosureLedgerEntry[];
-  packet_families: PreReseedClosureLedgerEntry[];
+  packet_types: PreReseedClosureLedgerEntry[];
   follow_on_pass_queue: PreReseedClosureLedgerEntry[];
   findings: string[];
 };
@@ -95,17 +95,7 @@ const CLOSED_RUNTIME_MUTATION_INTENTS = new Set<string>([
   'preference.element.set',
 ]);
 
-const LIVE_RUNTIME_PACKET_FAMILIES = new Set<PacketFamily>([
-  'Element',
-  'Location',
-  'Role',
-  'Claim',
-  'Relation',
-  'Attestation',
-  'Policy',
-  'Preference',
-  'Discussion',
-]);
+const LIVE_RUNTIME_PACKET_TYPES = new Set<PacketType>(PACKET_TYPES);
 
 function queueForEntry(
   entry: FortressHandlerGenericizationEntry
@@ -148,7 +138,7 @@ function createMutationEntries(): PreReseedClosureLedgerEntry[] {
       queue: queueForEntry(entry),
       reason: isClosed
         ? 'In-scope runtime intent now prepares through a trusted generic operation, composite workflow, or fortress-enrolled Preference workflow while the fortress remains the live authority.'
-        : 'In-scope live runtime work is sequenced into the pre-reseed queue.',
+        : 'In-scope runtime work is tracked for explicit pre-reseed closure.',
       next_step: isClosed
         ? 'Keep parity tests green while closing policy/dependency semantics and legacy bridge retirement.'
         : entry.next_step,
@@ -170,8 +160,8 @@ function createWorkflowPlanEntries(): PreReseedClosureLedgerEntry[] {
         ? 'first_generic_promotion'
         : 'relation_claim_attestation_generic_enrollment',
       reason: closesLiveIntent
-        ? 'This workflow plan is now exercised by a live trusted generic prepare path.'
-        : 'Workflow plan remains shadow/alignment coverage until its live runtime intent is enrolled.',
+        ? 'This workflow plan is exercised by a trusted generic prepare path.'
+        : 'Workflow plan remains definition/alignment coverage until its owning runtime intent is explicitly enrolled.',
       next_step: closesLiveIntent
         ? 'Keep parity tests green while promoting the next workflow.'
         : 'Promote the owning mutation intent in a pre-reseed enrollment pass.',
@@ -189,10 +179,10 @@ function createPolicyRequirementEntries(): PreReseedClosureLedgerEntry[] {
       : 'policy_dependency_semantic_authority',
     reason: descriptor.live_write_policy_action
       ? 'Live fortress write-policy action is anchored to Policy packet semantics through MutationPolicyGate.'
-      : 'Shadow policy action is now anchored to packet-based policy semantics for reseed readiness.',
+      : 'Definition policy action is now anchored to packet-based policy semantics for reseed readiness.',
     next_step: descriptor.live_write_policy_action
       ? 'Preserve current Policy packet enforcement while generic workflows are promoted.'
-      : 'Keep shadow policy action descriptors synchronized with Policy packets and Definition action registries.',
+      : 'Keep definition policy action descriptors synchronized with Policy packets and Definition action registries.',
   }));
 }
 
@@ -245,7 +235,7 @@ function createFortressHandoffEntries(): PreReseedClosureLedgerEntry[] {
       queue: isLiveGeneric ? 'first_generic_promotion' : 'final_reseed_readiness_audit',
       reason: isLiveGeneric
         ? 'Handoff metadata resolves and the existing fortress corridor now calls a trusted generic operation or composite planner.'
-        : 'Handoff metadata remains shadow coverage until the owning workflow is promoted.',
+        : 'Handoff metadata remains definition coverage until the owning workflow is promoted.',
       next_step: isLiveGeneric
         ? 'Preserve signed fortress authority while expanding generic execution.'
         : 'Close the owning pre-reseed workflow enrollment before final reseed readiness audit.',
@@ -253,21 +243,21 @@ function createFortressHandoffEntries(): PreReseedClosureLedgerEntry[] {
   });
 }
 
-function createPacketFamilyEntries(): PreReseedClosureLedgerEntry[] {
-  return PACKET_FAMILIES.map((family) => {
-    const inScope = LIVE_RUNTIME_PACKET_FAMILIES.has(family);
+function createPacketTypeEntries(): PreReseedClosureLedgerEntry[] {
+  return PACKET_TYPES.map((type) => {
+    const inScope = LIVE_RUNTIME_PACKET_TYPES.has(type);
 
     return {
-      subject_kind: 'packet_family',
-      subject_id: family,
-      status: inScope ? 'closed' : 'out_of_chapter_scope',
-      queue: inScope ? 'final_reseed_readiness_audit' : 'out_of_chapter_scope',
+      subject_kind: 'packet_type',
+      subject_id: type,
+      status: inScope ? 'closed' : 'removed_from_active_scope',
+      queue: inScope ? 'final_reseed_readiness_audit' : 'removed_from_active_scope',
       reason: inScope
-        ? 'Live runtime family is covered by manifest, runtime, policy/dependency, and seed-readiness closure for reseed planning.'
-        : 'Never-live or unused family is explicitly outside the current pre-reseed blocker set.',
+        ? 'Live runtime type is covered by manifest, runtime, policy/dependency, and seed-readiness closure for reseed planning.'
+        : 'Never-live or unused type is explicitly outside the current pre-reseed blocker set.',
       next_step: inScope
-        ? 'Carry this family into the final reseed readiness handoff inventory.'
-        : 'Add the family in a later chapter when the product flow needs it.',
+        ? 'Carry this type into the final reseed readiness handoff inventory.'
+        : 'Keep removed types out of active canon until they are deliberately reintroduced through the packet-definition process.',
     };
   });
 }
@@ -282,7 +272,7 @@ function createCompositeWorkflowAdapterEntries(): PreReseedClosureLedgerEntry[] 
     queue: 'discussion_locality_workflow_decomposition',
     reason:
       audit.status === 'pass'
-        ? 'Reusable trusted composite workflow adapter has shadow dry-run coverage and anchored policy/dependency metadata.'
+        ? 'Reusable trusted composite workflow adapter has definition dry-run coverage and anchored policy/dependency metadata.'
         : 'Composite workflow adapter audit has blockers.',
     next_step:
       audit.status === 'pass'
@@ -305,7 +295,7 @@ export function createPreReseedModernizationClosureReport(): PreReseedModernizat
   const client_ingress_enrollments = createClientIngressEntries();
   const fortress_handoffs = createFortressHandoffEntries();
   const composite_workflow_adapters = createCompositeWorkflowAdapterEntries();
-  const packet_families = createPacketFamilyEntries();
+  const packet_types = createPacketTypeEntries();
   const runtime_connector_paths: PreReseedClosureLedgerEntry[] = [
     {
       subject_kind: 'runtime_connector_path',
@@ -313,7 +303,7 @@ export function createPreReseedModernizationClosureReport(): PreReseedModernizat
       status: 'closed',
       queue: 'first_generic_promotion',
       reason:
-        'Preference.element keeps a shadow comparison connector only; authenticated writes are enrolled through the signed fortress corridor.',
+        'Preference.element keeps a definition comparison connector only; authenticated writes are enrolled through the signed fortress corridor.',
       next_step:
         'Keep guest compatibility writes outside canonical packet enrollment until reseed policy is designed.',
     },
@@ -372,7 +362,7 @@ export function createPreReseedModernizationClosureReport(): PreReseedModernizat
     client_ingress_enrollments,
     fortress_handoffs,
     composite_workflow_adapters,
-    packet_families,
+    packet_types,
     follow_on_pass_queue,
     findings,
   };

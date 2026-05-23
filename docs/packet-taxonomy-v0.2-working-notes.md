@@ -2,13 +2,13 @@
 
 Status: Working ontology draft  
 Layer: Core Nexus  
-Purpose: Establish a concise, durable semantic foundation for packet families/types before broader schema expansion.
+Purpose: Establish a concise, durable semantic foundation for packet types/types before broader schema expansion.
 
 ---
 
 # Core Design Principles
 
-## Packets Are Durable Semantic Families
+## Packets Are Durable Semantic Types
 
 A packet type should exist only when the object:
 

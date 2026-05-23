@@ -4,7 +4,7 @@
  */
 
 import type { NexusPacketCardProjection, NexusScopeLens } from '@core/contracts';
-import type { PacketFamily } from '@core/schema/packet-schema';
+import type { PacketType } from '@core/schema/packet-schema';
 
 export interface NexusVotesStage {
   id: string;
@@ -23,6 +23,6 @@ export interface NexusVotesPayload {
 
 export interface NexusLibraryPayload {
   lens: NexusScopeLens;
-  family_filter: PacketFamily | null;
+  type_filter: PacketType | null;
   packets: NexusPacketCardProjection[];
 }

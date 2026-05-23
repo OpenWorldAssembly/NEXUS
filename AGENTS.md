@@ -272,13 +272,13 @@ Also read:
 
 when changing `Claim`, `Attestation`, `Relation`, or `Policy` semantics.
 
-For any packet family schema version change, you must:
+For any packet type schema version change, you must:
 
 - update the active schema/body shape
-- update the family compatibility registry entry
+- update the type compatibility registry entry
 - add or update upcast/downcast adapters where backward compatibility is intended
 - update current schema version metadata
-- update builders/family build definitions so new writes emit the canonical current shape
+- update builders/type build definitions so new writes emit the canonical current shape
 - update signature/write-preparation behavior if additive/defaulted fields affect compatibility or signing
 - add or update tests for parse/read compatibility, adapted reads, write preparation, and any supported upcast/downcast path
 - document the change in the relevant chapter and, when meaningful, the decision log

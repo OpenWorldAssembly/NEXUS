@@ -34,7 +34,7 @@ test('opening the same packet twice focuses the existing tab instead of duplicat
       packetId: 'nexus:element/global-commons',
       titleSnapshot: 'Global Commons',
       seedSummary: {
-        family: 'Element',
+        type: 'Element',
         summary: 'Global scope packet.',
         label: 'Global Commons',
       },
@@ -45,7 +45,7 @@ test('opening the same packet twice focuses the existing tab instead of duplicat
     titleSnapshot: 'Global Commons',
     preferredRevisionId: 'nexus:element/global-commons@r2',
     seedSummary: {
-      family: 'Element',
+      type: 'Element',
       summary: 'Updated global scope packet.',
       label: 'Global Commons',
     },
@@ -270,7 +270,7 @@ test('retargeting the active packet tab preserves inspector state', () => {
     preferredRevisionId: 'nexus:discussion-thread/linked@r4',
     titleSnapshot: 'Linked',
     seedSummary: {
-      family: 'DiscussionThread',
+      type: 'Discussion',
       summary: 'Linked packet.',
       label: 'Linked',
     },
@@ -364,7 +364,7 @@ test('opening explorer home with explicit null packet fields clears export targe
     preferredRevisionId: 'nexus:discussion-thread/example@r2',
     titleSnapshot: 'Example',
     seedSummary: {
-      family: 'DiscussionThread',
+      type: 'Discussion',
       summary: 'Example packet.',
       label: 'Example',
     },

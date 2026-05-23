@@ -4,7 +4,7 @@
  */
 
 import {
-  getExperimentalPacketTypeDefinition,
+  getDefinedPacketTypeDefinition,
   resolvePacketDefinitionMutationActionPlan,
   type PacketDefinitionMutationActionPlan,
   type PacketDefinitionRuntimeCapabilities,
@@ -36,7 +36,7 @@ export type PacketRuntimeConnector<TResult = unknown> = {
   packet_type: string;
   packet_subtype: string;
   mutation_intent: string;
-  availability: 'shadow' | 'live_bridge' | 'fortress_enrolled';
+  availability: 'definition' | 'live_bridge' | 'fortress_enrolled';
   run: (input: unknown, context: PacketRuntimeConnectorContext) => Promise<TResult>;
 };
 
@@ -128,7 +128,7 @@ export async function runPacketRuntimeMutation<TResult = unknown>(
     connectorId: input.connectorId,
     mutationIntent: input.mutationIntent,
   });
-  const definition = getExperimentalPacketTypeDefinition(connector.packet_type);
+  const definition = getDefinedPacketTypeDefinition(connector.packet_type);
 
   if (!definition) {
     throw new Error(
@@ -148,7 +148,7 @@ export async function runPacketRuntimeMutation<TResult = unknown>(
     capabilities: input.capabilities,
   });
 
-  if (!actionPlan.ready_for_shadow_runtime) {
+  if (!actionPlan.ready_for_runtime) {
     throw new Error(
       [
         `Packet runtime connector ${connector.connector_id} could not resolve a ready action plan.`,
@@ -181,7 +181,7 @@ export async function runPacketRuntimeMutation<TResult = unknown>(
     mutation_intent: connector.mutation_intent,
     availability: connector.availability,
     definition_found: true,
-    action_plan_ready: actionPlan.ready_for_shadow_runtime,
+    action_plan_ready: actionPlan.ready_for_runtime,
     action_ids: actionPlan.actions.map((action) => action.action_id),
     policy_action_ids: actionPlan.policy_action_ids,
     missing_descriptor_ids: actionPlan.missing_descriptor_ids,

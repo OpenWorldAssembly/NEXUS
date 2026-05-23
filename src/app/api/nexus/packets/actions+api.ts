@@ -5,8 +5,8 @@
 
 import type { RequestHandler } from 'expo-router/server';
 
-import { PACKET_FAMILIES } from '@core/schema/packet-schema';
-import type { PacketFamily } from '@core/schema/packet-schema';
+import { PACKET_TYPES } from '@core/schema/packet-schema';
+import type { PacketType } from '@core/schema/packet-schema';
 import type {
   NexusPacketActionsBatchRequest,
   NexusPacketActionSurface,
@@ -39,10 +39,10 @@ function sanitizeString(value: unknown): string | null {
     : null;
 }
 
-function sanitizeFamily(value: unknown): PacketFamily | null {
+function sanitizeType(value: unknown): PacketType | null {
   return typeof value === 'string' &&
-    (PACKET_FAMILIES as readonly string[]).includes(value)
-    ? (value as PacketFamily)
+    (PACKET_TYPES as readonly string[]).includes(value)
+    ? (value as PacketType)
     : null;
 }
 
@@ -68,7 +68,7 @@ function parseTarget(value: unknown): NexusPacketActionTargetInput | null {
   return {
     packet_id: packetId,
     revision_id: sanitizeString(candidate.revision_id),
-    family: sanitizeFamily(candidate.family),
+    type: sanitizeType(candidate.type),
     label: sanitizeString(candidate.label),
     title: sanitizeString(candidate.title),
     summary: sanitizeString(candidate.summary),

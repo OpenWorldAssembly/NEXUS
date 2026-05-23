@@ -23,11 +23,11 @@ import {
 
 const DISCUSSION_RESET_FAMILIES = [
   'Discussion',
-  'DiscussionSpace',
-  'DiscussionForum',
-  'DiscussionThread',
-  'DiscussionPost',
-  'DiscussionReply',
+  'Discussion',
+  'Discussion',
+  'Discussion',
+  'Discussion',
+  'Discussion',
   'Attestation',
   'PacketVote',
 ] as const;
@@ -90,12 +90,12 @@ async function ensureLegacyClaimBackfill(
   services: NodeSQLiteQueryServices
 ): Promise<void> {
   const [elementPackets, attestationPackets, claimPackets] = await Promise.all([
-    services.packetStore.listPreferredPacketsByFamily('Element'),
-    services.packetStore.listPreferredPacketsByFamily('Attestation'),
-    services.packetStore.listPreferredPacketsByFamily('Claim'),
+    services.packetStore.listPreferredPacketsByType('Element'),
+    services.packetStore.listPreferredPacketsByType('Attestation'),
+    services.packetStore.listPreferredPacketsByType('Claim'),
   ]);
   const assemblyElements = elementPackets.filter(
-    (packet) => packet.body.kind === 'assembly'
+    (packet) => packet.body.subtype === 'assembly'
   ) as PacketEnvelopeByType['Element'][];
   const parentByPacketId = new Map(
     assemblyElements.map((packet) => [
@@ -109,7 +109,7 @@ async function ensureLegacyClaimBackfill(
   );
   const activeLegacyAssemblyClaims = attestationPackets.filter(
     (packet) =>
-      packet.body.attestation_kind === 'assembly_association_claim' &&
+      packet.body.subtype === 'assembly_association_claim' &&
       packet.body.status === 'active'
   ) as PacketEnvelopeByType['Attestation'][];
 
@@ -216,13 +216,13 @@ async function resetDiscussionPackets(
   try {
     database.exec('BEGIN IMMEDIATE');
 
-    const familyPlaceholders = DISCUSSION_RESET_FAMILIES.map(() => '?').join(', ');
+    const typePlaceholders = DISCUSSION_RESET_FAMILIES.map(() => '?').join(', ');
     const packetRows = database
       .prepare(
         `
           SELECT packet_id
           FROM packets
-          WHERE family IN (${familyPlaceholders})
+          WHERE type IN (${typePlaceholders})
         `
       )
       .all(...DISCUSSION_RESET_FAMILIES) as { packet_id: string }[];

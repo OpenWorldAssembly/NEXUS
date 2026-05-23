@@ -1,6 +1,6 @@
 /**
  * File: packet-definition-audit.ts
- * Description: Shadow-mode audit helpers for packet definition manifests, descriptor references, and local runtime capability support.
+ * Description: Definition-mode audit helpers for packet definition manifests, descriptor references, and local runtime capability support.
  */
 
 import type {
@@ -17,7 +17,7 @@ import type {
 import { auditPacketCompatibilityStandard } from '@core/packets/definitions/compatibility-standard.ts';
 import type { PacketDefinitionRuntimeCapabilities } from '@core/packets/packet-definition-action-bridge.ts';
 import {
-  GENERIC_SHADOW_PACKET_RUNTIME_CAPABILITIES,
+  GENERIC_PACKET_RUNTIME_CAPABILITIES,
   resolvePacketDefinitionMutationActionPlan,
 } from '@core/packets/packet-definition-action-bridge.ts';
 import {
@@ -376,7 +376,7 @@ function auditRuntimeCapabilitySupport(input: {
   findings: PacketDefinitionAuditFinding[];
   definition: PacketTypeDefinition;
   capabilities: PacketDefinitionRuntimeCapabilities;
-  requireShadowRuntimeReady: boolean;
+  requireDefinitionRuntimeReady: boolean;
 }): void {
   for (const mutation of input.definition.mutations) {
     const plan = resolvePacketDefinitionMutationActionPlan({
@@ -400,7 +400,7 @@ function auditRuntimeCapabilitySupport(input: {
     for (const unsupportedCapability of plan.unsupported_capabilities) {
       input.findings.push(
         makeFinding({
-          severity: input.requireShadowRuntimeReady ? 'error' : 'warning',
+          severity: input.requireDefinitionRuntimeReady ? 'error' : 'warning',
           packet_type: input.definition.packet_type,
           code: 'mutation_plan_unsupported_capability',
           path: `mutations.${mutation.mutation_intent}`,
@@ -409,14 +409,14 @@ function auditRuntimeCapabilitySupport(input: {
       );
     }
 
-    if (input.requireShadowRuntimeReady && !plan.ready_for_shadow_runtime) {
+    if (input.requireDefinitionRuntimeReady && !plan.ready_for_runtime) {
       input.findings.push(
         makeFinding({
           severity: 'error',
           packet_type: input.definition.packet_type,
-          code: 'mutation_plan_not_shadow_ready',
+          code: 'mutation_plan_not_definition_ready',
           path: `mutations.${mutation.mutation_intent}`,
-          message: `Mutation ${mutation.mutation_intent} is not ready for the declared shadow runtime capabilities.`,
+          message: `Mutation ${mutation.mutation_intent} is not ready for the declared runtime capabilities.`,
         })
       );
     }
@@ -530,13 +530,13 @@ function auditWorkflowPlanReferences(input: {
 export function auditPacketTypeDefinition(input: {
   definition: PacketTypeDefinition;
   capabilities?: PacketDefinitionRuntimeCapabilities;
-  requireShadowRuntimeReady?: boolean;
+  requireDefinitionRuntimeReady?: boolean;
   templateVersion?: string;
 }): PacketDefinitionAuditReport {
   const definition = input.definition;
   const findings: PacketDefinitionAuditFinding[] = [];
   const templateVersion = input.templateVersion ?? PACKET_MANIFEST_TEMPLATE_VERSION;
-  const capabilities = input.capabilities ?? GENERIC_SHADOW_PACKET_RUNTIME_CAPABILITIES;
+  const capabilities = input.capabilities ?? GENERIC_PACKET_RUNTIME_CAPABILITIES;
   const compliance = validatePacketDefinitionTemplateCompliance(definition, templateVersion);
 
   for (const sectionKey of compliance.missing_required_sections) {
@@ -701,7 +701,7 @@ export function auditPacketTypeDefinition(input: {
     findings,
     definition,
     capabilities,
-    requireShadowRuntimeReady: input.requireShadowRuntimeReady ?? false,
+    requireDefinitionRuntimeReady: input.requireDefinitionRuntimeReady ?? false,
   });
 
   for (const sectionKey of compliance.unsupported_sections) {
@@ -729,7 +729,7 @@ export function auditPacketDefinitionManifest(input: {
   manifest: PacketDefinitionManifest;
   definitions: readonly PacketTypeDefinition[];
   capabilities?: PacketDefinitionRuntimeCapabilities;
-  requireShadowRuntimeReady?: boolean;
+  requireDefinitionRuntimeReady?: boolean;
 }): PacketDefinitionAuditReport {
   const findings: PacketDefinitionAuditFinding[] = [];
   const packetTypes = input.definitions.map((definition) => definition.packet_type);
@@ -777,7 +777,7 @@ export function auditPacketDefinitionManifest(input: {
       ...auditPacketTypeDefinition({
         definition,
         capabilities: input.capabilities,
-        requireShadowRuntimeReady: input.requireShadowRuntimeReady,
+        requireDefinitionRuntimeReady: input.requireDefinitionRuntimeReady,
         templateVersion: input.manifest.template_version,
       }).findings
     );

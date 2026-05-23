@@ -14,7 +14,7 @@ function createLegacyElementPacket() {
     header: {
       packet_id: 'nexus:element/test-legacy-person',
       revision_id: 'nexus:element/test-legacy-person@r1',
-      family: 'Element',
+      type: 'Element',
       schema_version: '0.9.0',
       protocol_version: '0.1.0',
       created_at: '2026-04-18T00:00:00.000Z',
@@ -55,9 +55,8 @@ function createLegacyElementPacket() {
       },
     },
     body: {
-      kind: 'person',
       name: 'Legacy Person',
-      subtype: 'guest_identity',
+      subtype: 'person',
       summary: null,
       locality_label: null,
       identity: null,
@@ -71,7 +70,7 @@ function createCurrentElementPacket() {
     header: {
       packet_id: 'nexus:element/test-current-person',
       revision_id: 'nexus:element/test-current-person@r1',
-      family: 'Element',
+      type: 'Element',
       schema_version: '1.0.0',
       protocol_version: '0.1.0',
       created_at: '2026-04-18T00:00:00.000Z',
@@ -112,9 +111,8 @@ function createCurrentElementPacket() {
       },
     },
     body: {
-      kind: 'person',
       name: 'Current Person',
-      subtype: 'guest_identity',
+      subtype: 'person',
       summary: null,
       locality_label: null,
       locality: null,
@@ -206,8 +204,7 @@ test('packet store preserves legacy raw revisions while serving adapted packets 
       [
         'body.claimed_role_refs',
         'body.locality',
-        'body.type',
-        'body.scope_kind',
+        'body.subtype',
         'body.scope_system',
         'body.status',
         'body.aliases',

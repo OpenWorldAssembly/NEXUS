@@ -13,13 +13,12 @@ import {
   createPolicyPacket,
 } from '@core/packets/builders';
 import type { DiscussionViewerContext } from '@core/contracts';
-import type { PacketEnvelope } from '@core/schema/packet-schema';
+import type { PacketEnvelope, PacketEnvelopeByType } from '@core/schema/packet-schema';
 
 function createActorPacket(claimStatus: 'claimed' | 'ephemeral_guest') {
   return createElementPacket({
     packet_id: `nexus:element/${claimStatus}-actor`,
     created_at: '2026-04-23T00:00:00.000Z',
-    kind: 'person',
     name: claimStatus === 'claimed' ? 'Claimed Actor' : 'Guest Actor',
     subtype: 'person',
     summary: null,
@@ -116,7 +115,6 @@ test('write-lock policy can require reauth for discussion replies', () => {
   const governingScopePacket = createElementPacket({
     packet_id: 'nexus:element/test-scope',
     created_at: '2026-04-23T00:00:00.000Z',
-    kind: 'assembly',
     name: 'Test Scope',
     subtype: 'city',
     summary: null,
@@ -128,7 +126,7 @@ test('write-lock policy can require reauth for discussion replies', () => {
     created_at: '2026-04-23T00:00:00.000Z',
     title: 'Reply Writelock',
     summary: null,
-    policy_kind: 'write_lock',
+    subtype: 'write_lock',
     body_markdown: '# Reply lock',
     status: 'active',
     adapter: 'test',
@@ -185,6 +183,10 @@ test('write-lock policy can require reauth for discussion replies', () => {
 test('signed packet bundles must match the canonical discussion candidate', () => {
   const actorPacket = createActorPacket('claimed');
   const forumPacket = createForumPacket();
+  const forumBody = forumPacket.body as Extract<
+    PacketEnvelopeByType['Discussion']['body'],
+    { subtype: 'forum' }
+  >;
   const decision = evaluateDiscussionThreadPostMutation({
     intent: {
       kind: 'discussion.thread_post.create',
@@ -192,16 +194,16 @@ test('signed packet bundles must match the canonical discussion candidate', () =
       mutation_nonce: 'bundleok',
       created_at: '2026-04-23T03:00:00.000Z',
       forum_packet_id: forumPacket.header.packet_id,
-      forum_kind: forumPacket.body.forum_kind,
+      forum_kind: forumBody.role,
       authority_scope_packet_id:
         forumPacket.header.authority_scope_ref?.packet_id ?? null,
       applicable_scope_packet_ids: forumPacket.header.applicable_scope_refs.map(
         (scopeRef) => scopeRef.packet_id
       ),
-      default_sort: forumPacket.body.default_sort,
+      default_sort: forumBody.default_sort,
       thread_title: 'Hello',
       post_markdown: 'World',
-      thread_kind: forumPacket.body.forum_kind,
+      thread_kind: forumBody.role,
       related_packet_ids: [],
     },
     actorPacket,
@@ -217,7 +219,7 @@ test('signed packet bundles must match the canonical discussion candidate', () =
     })
   );
   assert.deepEqual(
-    decision.packets.map((packet) => packet.header.family),
+    decision.packets.map((packet) => packet.header.type),
     ['Discussion', 'Discussion']
   );
 

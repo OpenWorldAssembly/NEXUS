@@ -105,7 +105,7 @@ test('fortress operation mappings preserve next-step gap classification', () => 
   }
 });
 
-test('generic-ready fortress intents have matching shadow workflow plans', () => {
+test('generic-ready fortress intents have matching definition workflow plans', () => {
   const workflowMutationIntents = new Set(
     listPacketWorkflowPlanDescriptors().flatMap((plan) => plan.mutation_intents)
   );

@@ -37,7 +37,7 @@ test('Preference.element builder normalizes current runtime preference shape', (
     },
   });
 
-  assert.equal(body.type, 'preference');
+  assert.equal(body.subtype, 'element');
   assert.equal(body.subtype, 'element');
   assert.equal(body.status, 'active');
   assert.equal(body.privacy, 'private_sync');

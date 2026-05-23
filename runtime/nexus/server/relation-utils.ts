@@ -11,7 +11,7 @@ export type RelationPacket = PacketEnvelopeByType['Relation'];
 export async function listRelationPackets(
   packetStore: NodeSQLitePacketStore
 ): Promise<RelationPacket[]> {
-  return (await packetStore.listPreferredPacketsByFamily('Relation')) as RelationPacket[];
+  return (await packetStore.listPreferredPacketsByType('Relation')) as RelationPacket[];
 }
 
 export function isActiveRelationPacket(relationPacket: RelationPacket): boolean {

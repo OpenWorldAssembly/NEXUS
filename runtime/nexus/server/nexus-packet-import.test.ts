@@ -86,7 +86,7 @@ test('raw packet imports analyze and commit successfully', async () => {
   const packet = createElementPacket({
     packet_id: 'nexus:element/import-target',
     revision_id: 'nexus:element/import-target@r1',
-    kind: 'organization',
+    subtype: 'organization',
     name: 'Import Target',
   });
 
@@ -129,7 +129,7 @@ test('raw packet imports analyze and commit successfully', async () => {
     assert.equal(preferredRevision?.revision_id, packet.header.revision_id);
     assert.equal(verificationSummary?.status, 'unsigned');
     assert.equal(verificationSummary?.signature_status, 'missing');
-    assert.equal(importReport?.header.family, 'Report');
+    assert.equal(importReport?.header.type, 'Report');
     assert.equal(
       (importReport?.body as { report_data?: { artifact_type?: string } }).report_data
         ?.artifact_type,
@@ -150,7 +150,7 @@ test('import history lists recent import reports with artifact metadata', async 
   const packet = createElementPacket({
     packet_id: 'nexus:element/import-history-target',
     revision_id: 'nexus:element/import-history-target@r1',
-    kind: 'organization',
+    subtype: 'organization',
     name: 'Import History Target',
   });
 
@@ -194,7 +194,7 @@ test('dont_validate mode commits structurally safe imports without packet verifi
   const packet = createElementPacket({
     packet_id: 'nexus:element/dont-validate-target',
     revision_id: 'nexus:element/dont-validate-target@r1',
-    kind: 'organization',
+    subtype: 'organization',
     name: 'Dont Validate Target',
   });
 
@@ -250,7 +250,7 @@ test('validate_after_commit imports first and then writes verification reports',
   const packet = createElementPacket({
     packet_id: 'nexus:element/validate-after-target',
     revision_id: 'nexus:element/validate-after-target@r1',
-    kind: 'organization',
+    subtype: 'organization',
     name: 'Validate After Target',
   });
 
@@ -308,7 +308,7 @@ test('validate_before_commit blocks packets with canonicalization mismatches', a
       packet_id: 'nexus:element/import-validation-target',
       revision_id: 'nexus:element/import-validation-target@r1',
       created_at: createdAt,
-      kind: 'organization',
+      subtype: 'organization',
       name: 'Import Validation Target',
     });
     const signedPacket = await signPacketWithIdentity({
@@ -367,13 +367,13 @@ test('exported bundle imports analyze and commit successfully', async () => {
   const packetV1 = createElementPacket({
     packet_id: 'nexus:element/bundle-root',
     revision_id: 'nexus:element/bundle-root@r1',
-    kind: 'service',
+    subtype: 'service',
     name: 'Bundle Root',
   });
   const packetV2 = createElementPacket({
     packet_id: packetV1.header.packet_id,
     revision_id: 'nexus:element/bundle-root@r2',
-    kind: 'service',
+    subtype: 'service',
     name: 'Bundle Root v2',
     parent_revision_refs: [
       {
@@ -439,7 +439,7 @@ test('duplicate-only reimports stay non-destructive', async () => {
   const packet = createElementPacket({
     packet_id: 'nexus:element/duplicate-target',
     revision_id: 'nexus:element/duplicate-target@r1',
-    kind: 'organization',
+    subtype: 'organization',
     name: 'Duplicate Target',
   });
 
@@ -487,7 +487,7 @@ test('missing parent revisions block unsafe imports', async () => {
   const packet = createElementPacket({
     packet_id: 'nexus:element/missing-parent',
     revision_id: 'nexus:element/missing-parent@r2',
-    kind: 'service',
+    subtype: 'service',
     name: 'Missing Parent',
     parent_revision_refs: [
       {
@@ -523,23 +523,23 @@ test('missing parent revisions block unsafe imports', async () => {
   }
 });
 
-test('family conflicts are detected before commit', async () => {
+test('type conflicts are detected before commit', async () => {
   const directory = mkdtempSync(join(tmpdir(), 'owa-explorer-import-'));
   const { queryServices, services } = await createImportTestServices(
     directory,
-    'family-conflict.db'
+    'type-conflict.db'
   );
   const existingPacket = createElementPacket({
-    packet_id: 'nexus:element/family-conflict',
-    revision_id: 'nexus:element/family-conflict@r1',
-    kind: 'organization',
-    name: 'Family Conflict',
+    packet_id: 'nexus:element/type-conflict',
+    revision_id: 'nexus:element/type-conflict@r1',
+    subtype: 'organization',
+    name: 'Type Conflict',
   });
   const conflictingPacket = createRolePacket({
     packet_id: existingPacket.header.packet_id,
-    revision_id: 'nexus:element/family-conflict@r2',
+    revision_id: 'nexus:element/type-conflict@r2',
     title: 'Conflicting Role',
-    role_kind: 'office',
+    subtype: 'office',
     status: 'active',
   });
 
@@ -554,7 +554,7 @@ test('family conflicts are detected before commit', async () => {
     });
 
     assert.equal(preview.status, 'blocked');
-    assert.equal(preview.family_conflict_count, 1);
+    assert.equal(preview.type_conflict_count, 1);
   } finally {
     queryServices.packetStore.close();
     rmSync(directory, { recursive: true, force: true });
@@ -570,13 +570,13 @@ test('divergence preserves the existing preferred head when it remains valid', a
   const basePacket = createElementPacket({
     packet_id: 'nexus:element/divergent-packet',
     revision_id: 'nexus:element/divergent-packet@r1',
-    kind: 'service',
+    subtype: 'service',
     name: 'Divergent Packet',
   });
   const branchAPacket = createElementPacket({
     packet_id: basePacket.header.packet_id,
     revision_id: 'nexus:element/divergent-packet@r2a',
-    kind: 'service',
+    subtype: 'service',
     name: 'Branch A',
     parent_revision_refs: [
       {
@@ -588,7 +588,7 @@ test('divergence preserves the existing preferred head when it remains valid', a
   const branchBPacket = createElementPacket({
     packet_id: basePacket.header.packet_id,
     revision_id: 'nexus:element/divergent-packet@r2b',
-    kind: 'service',
+    subtype: 'service',
     name: 'Branch B',
     parent_revision_refs: [
       {
@@ -628,3 +628,4 @@ test('divergence preserves the existing preferred head when it remains valid', a
     rmSync(directory, { recursive: true, force: true });
   }
 });
+

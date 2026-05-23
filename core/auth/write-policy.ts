@@ -81,7 +81,7 @@ function resolvePolicyRequiredProofLevel(input: {
   actionIds: MutationActionId[];
 }): WriteProofLevel | null {
   if (
-    input.policyPacket.body.policy_kind !== WRITE_LOCK_POLICY_KIND ||
+    input.policyPacket.body.subtype !== WRITE_LOCK_POLICY_KIND ||
     !input.policyPacket.body.write_policy
   ) {
     return null;

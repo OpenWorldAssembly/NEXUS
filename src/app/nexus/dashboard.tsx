@@ -165,7 +165,7 @@ export default function NexusDashboardPage() {
         return {
           packet_id: packet.packet.packet_id,
           revision_id: packet.revision.revision_id,
-          family: packet.family,
+          type: packet.type,
           label: packet.label,
           title: packet.title,
           summary: packet.summary,
@@ -325,7 +325,7 @@ export default function NexusDashboardPage() {
       preferredRevisionId: packet.revision.revision_id,
       titleSnapshot: packet.title,
       seedSummary: {
-        family: packet.family,
+        type: packet.type,
         label: packet.label,
         summary: packet.summary,
       },
@@ -384,7 +384,7 @@ export default function NexusDashboardPage() {
                 preferredRevisionId: focusedPacket.revision.revision_id,
                 titleSnapshot: focusedPacket.title,
                 seedSummary: {
-                  family: focusedPacket.family,
+                  type: focusedPacket.type,
                   label: focusedPacket.label,
                   summary: focusedPacket.summary,
                 },
@@ -416,7 +416,7 @@ export default function NexusDashboardPage() {
             packetId: queue.id,
             titleSnapshot: queue.title,
             seedSummary: {
-              family: null,
+              type: null,
               label: queue.stat,
               summary: queue.detail,
             },

@@ -1,6 +1,6 @@
 /**
  * File: packet-operation-ontology.ts
- * Description: Shadow-mode packet operation ontology and trusted generic planner/builder capability registry.
+ * Description: Definition-mode packet operation ontology and trusted generic planner/builder capability registry.
  */
 
 import type {
@@ -53,14 +53,14 @@ export type PacketOperationDescriptor = {
   builder_kinds: readonly PacketBuilderDescriptor['builder_kind'][];
   action_kinds: readonly PacketActionKind[];
   policy_action_ids: readonly string[];
-  result_families: readonly PacketMutationDescriptor['result_family'][];
+  result_types: readonly PacketMutationDescriptor['result_type'][];
   generic_capability: PacketOperationGenericCapability;
   trusted_runtime_engine: string;
   safety_notes: string;
 };
 
 export type PacketOperationCapabilityStatus =
-  | 'shadow_available'
+  | 'definition_available'
   | 'planner_needed'
   | 'runtime_owned';
 
@@ -100,10 +100,10 @@ export type PacketOperationModernizationCoverage = {
   packet_type: string;
   mutation_intent: string;
   operation_kinds: readonly PacketOperationKind[];
-  operation_mapping_status: 'mapped' | 'planned_gap';
+  operation_mapping_status: 'mapped' | 'missing_coverage';
   generic_capability: PacketOperationGenericCapability;
   trusted_runtime_engines: readonly string[];
-  planned_gap_reason: string | null;
+  missing_coverage_reason: string | null;
 };
 
 export const PACKET_OPERATION_DEFINITIONS = [
@@ -116,7 +116,7 @@ export const PACKET_OPERATION_DEFINITIONS = [
     builder_kinds: ['single_packet_body', 'single_packet_envelope'],
     action_kinds: ['create'],
     policy_action_ids: [],
-    result_families: ['packet_write'],
+    result_types: ['packet_write'],
     generic_capability: 'direct',
     trusted_runtime_engine: 'generic.single_packet_planner',
     safety_notes:
@@ -131,7 +131,7 @@ export const PACKET_OPERATION_DEFINITIONS = [
     builder_kinds: ['single_packet_body', 'single_packet_envelope'],
     action_kinds: ['revise'],
     policy_action_ids: [],
-    result_families: ['packet_write'],
+    result_types: ['packet_write'],
     generic_capability: 'direct',
     trusted_runtime_engine: 'generic.single_packet_planner',
     safety_notes:
@@ -146,7 +146,7 @@ export const PACKET_OPERATION_DEFINITIONS = [
     builder_kinds: ['single_packet_body', 'single_packet_envelope'],
     action_kinds: ['withdraw'],
     policy_action_ids: [],
-    result_families: ['packet_write'],
+    result_types: ['packet_write'],
     generic_capability: 'direct',
     trusted_runtime_engine: 'generic.single_packet_planner',
     safety_notes:
@@ -161,7 +161,7 @@ export const PACKET_OPERATION_DEFINITIONS = [
     builder_kinds: ['single_packet_body', 'single_packet_envelope'],
     action_kinds: ['create', 'revise'],
     policy_action_ids: [],
-    result_families: ['packet_write'],
+    result_types: ['packet_write'],
     generic_capability: 'requires_planner',
     trusted_runtime_engine: 'generic.relation_planner',
     safety_notes:
@@ -176,7 +176,7 @@ export const PACKET_OPERATION_DEFINITIONS = [
     builder_kinds: ['single_packet_body', 'single_packet_envelope'],
     action_kinds: ['revise', 'withdraw'],
     policy_action_ids: [],
-    result_families: ['packet_write'],
+    result_types: ['packet_write'],
     generic_capability: 'requires_planner',
     trusted_runtime_engine: 'generic.relation_planner',
     safety_notes:
@@ -191,7 +191,7 @@ export const PACKET_OPERATION_DEFINITIONS = [
     builder_kinds: ['single_packet_body', 'single_packet_envelope'],
     action_kinds: ['create', 'revise'],
     policy_action_ids: [],
-    result_families: ['packet_write'],
+    result_types: ['packet_write'],
     generic_capability: 'requires_planner',
     trusted_runtime_engine: 'generic.claim_planner',
     safety_notes:
@@ -206,7 +206,7 @@ export const PACKET_OPERATION_DEFINITIONS = [
     builder_kinds: ['single_packet_body', 'single_packet_envelope'],
     action_kinds: ['withdraw'],
     policy_action_ids: [],
-    result_families: ['packet_write'],
+    result_types: ['packet_write'],
     generic_capability: 'requires_planner',
     trusted_runtime_engine: 'generic.claim_planner',
     safety_notes:
@@ -221,7 +221,7 @@ export const PACKET_OPERATION_DEFINITIONS = [
     builder_kinds: ['single_packet_body', 'single_packet_envelope'],
     action_kinds: ['attest', 'create', 'revise'],
     policy_action_ids: [],
-    result_families: ['packet_write'],
+    result_types: ['packet_write'],
     generic_capability: 'requires_planner',
     trusted_runtime_engine: 'generic.attestation_planner',
     safety_notes:
@@ -236,7 +236,7 @@ export const PACKET_OPERATION_DEFINITIONS = [
     builder_kinds: ['single_packet_body', 'single_packet_envelope'],
     action_kinds: ['withdraw', 'revise'],
     policy_action_ids: [],
-    result_families: ['packet_write'],
+    result_types: ['packet_write'],
     generic_capability: 'requires_planner',
     trusted_runtime_engine: 'generic.attestation_planner',
     safety_notes:
@@ -251,7 +251,7 @@ export const PACKET_OPERATION_DEFINITIONS = [
     builder_kinds: ['multi_packet_bundle'],
     action_kinds: ['import', 'verify'],
     policy_action_ids: [],
-    result_families: ['bundle_update'],
+    result_types: ['bundle_update'],
     generic_capability: 'workflow_composed',
     trusted_runtime_engine: 'generic.bundle_import_planner',
     safety_notes:
@@ -266,7 +266,7 @@ export const PACKET_OPERATION_DEFINITIONS = [
     builder_kinds: ['multi_packet_bundle'],
     action_kinds: ['create', 'revise', 'export', 'bundle'],
     policy_action_ids: [],
-    result_families: ['bundle_update'],
+    result_types: ['bundle_update'],
     generic_capability: 'workflow_composed',
     trusted_runtime_engine: 'generic.bundle_export_planner',
     safety_notes:
@@ -281,7 +281,7 @@ export const PACKET_OPERATION_DEFINITIONS = [
     builder_kinds: [],
     action_kinds: ['project', 'index'],
     policy_action_ids: [],
-    result_families: ['projection_update'],
+    result_types: ['projection_update'],
     generic_capability: 'direct',
     trusted_runtime_engine: 'generic.projection_refresher',
     safety_notes:
@@ -296,7 +296,7 @@ export const PACKET_OPERATION_DEFINITIONS = [
     builder_kinds: ['adapter_output'],
     action_kinds: ['adapt', 'verify'],
     policy_action_ids: [],
-    result_families: ['compatibility_update'],
+    result_types: ['compatibility_update'],
     generic_capability: 'direct',
     trusted_runtime_engine: 'generic.compatibility_adapter_chain',
     safety_notes:
@@ -311,7 +311,7 @@ export const PACKET_OPERATION_DEFINITIONS = [
     builder_kinds: ['single_packet_body', 'single_packet_envelope', 'multi_packet_bundle'],
     action_kinds: ['policy_action'],
     policy_action_ids: [],
-    result_families: ['packet_write', 'projection_update', 'bundle_update'],
+    result_types: ['packet_write', 'projection_update', 'bundle_update'],
     generic_capability: 'workflow_composed',
     trusted_runtime_engine: 'runtime.workflow_orchestrator',
     safety_notes:
@@ -322,7 +322,7 @@ export const PACKET_OPERATION_DEFINITIONS = [
 export const PACKET_OPERATION_CAPABILITY_REGISTRY = [
   {
     engine_id: 'generic.single_packet_planner',
-    status: 'shadow_available',
+    status: 'definition_available',
     operation_kinds: [
       'single_packet.create',
       'single_packet.revise',
@@ -330,7 +330,7 @@ export const PACKET_OPERATION_CAPABILITY_REGISTRY = [
     ],
     planner_kinds: ['single_packet_create', 'single_packet_revision'],
     builder_kinds: ['single_packet_body', 'single_packet_envelope'],
-    notes: 'Trusted shadow engine for manifest-described single-packet candidates.',
+    notes: 'Trusted definition engine for manifest-described single-packet candidates.',
   },
   {
     engine_id: 'generic.relation_planner',
@@ -338,7 +338,7 @@ export const PACKET_OPERATION_CAPABILITY_REGISTRY = [
     operation_kinds: ['relation.set', 'relation.clear'],
     planner_kinds: ['single_packet_revision'],
     builder_kinds: ['single_packet_body', 'single_packet_envelope'],
-    notes: 'Relation operation family awaiting extraction from current fortress handlers.',
+    notes: 'Relation operation type awaiting extraction from current fortress handlers.',
   },
   {
     engine_id: 'generic.claim_planner',
@@ -346,7 +346,7 @@ export const PACKET_OPERATION_CAPABILITY_REGISTRY = [
     operation_kinds: ['claim.assert', 'claim.withdraw'],
     planner_kinds: ['single_packet_revision'],
     builder_kinds: ['single_packet_body', 'single_packet_envelope'],
-    notes: 'Claim operation family awaiting semantic target planner extraction.',
+    notes: 'Claim operation type awaiting semantic target planner extraction.',
   },
   {
     engine_id: 'generic.attestation_planner',
@@ -354,7 +354,7 @@ export const PACKET_OPERATION_CAPABILITY_REGISTRY = [
     operation_kinds: ['attestation.set', 'attestation.clear'],
     planner_kinds: ['single_packet_revision'],
     builder_kinds: ['single_packet_body', 'single_packet_envelope'],
-    notes: 'Attestation operation family awaiting target summary and mutual-exclusion planner extraction.',
+    notes: 'Attestation operation type awaiting target summary and mutual-exclusion planner extraction.',
   },
   {
     engine_id: 'generic.bundle_import_planner',
@@ -374,7 +374,7 @@ export const PACKET_OPERATION_CAPABILITY_REGISTRY = [
   },
   {
     engine_id: 'generic.projection_refresher',
-    status: 'shadow_available',
+    status: 'definition_available',
     operation_kinds: ['projection.refresh'],
     planner_kinds: ['projection_only'],
     builder_kinds: [],
@@ -382,7 +382,7 @@ export const PACKET_OPERATION_CAPABILITY_REGISTRY = [
   },
   {
     engine_id: 'generic.compatibility_adapter_chain',
-    status: 'shadow_available',
+    status: 'definition_available',
     operation_kinds: ['compatibility.adapt'],
     planner_kinds: ['compatibility_adapter_chain'],
     builder_kinds: ['adapter_output'],
@@ -405,7 +405,7 @@ const OPERATION_DEFINITIONS_BY_KIND = new Map(
   ])
 );
 
-const CAPABILITIES_BY_ENGINE = new Map(
+const CAPABILITIES_BY_ENGINE = new Map<string, PacketOperationCapabilityDescriptor>(
   PACKET_OPERATION_CAPABILITY_REGISTRY.map((capability) => [
     capability.engine_id,
     capability,
@@ -457,18 +457,18 @@ export function inferPacketOperationKindsForMutation(input: {
   );
   const operationKinds = new Set<PacketOperationKind>();
 
-  if (input.mutation.result_family === 'compatibility_update') {
+  if (input.mutation.result_type === 'compatibility_update') {
     addOperationKind(operationKinds, 'compatibility.adapt');
   }
 
   if (
-    input.mutation.result_family === 'projection_update' ||
+    input.mutation.result_type === 'projection_update' ||
     planner?.planner_kind === 'projection_only'
   ) {
     addOperationKind(operationKinds, 'projection.refresh');
   }
 
-  if (input.mutation.result_family === 'bundle_update') {
+  if (input.mutation.result_type === 'bundle_update') {
     if (hasActionKind(actions, 'import')) {
       addOperationKind(operationKinds, 'bundle.import');
     }
@@ -483,7 +483,7 @@ export function inferPacketOperationKindsForMutation(input: {
     }
   }
 
-  if (input.mutation.result_family === 'packet_write') {
+  if (input.mutation.result_type === 'packet_write') {
     if (hasActionKind(actions, 'create')) {
       addOperationKind(operationKinds, 'single_packet.create');
     }
@@ -634,10 +634,10 @@ export function createPacketOperationModernizationCoverage(
         mutation_intent: mutation.mutation_intent,
         operation_kinds: operationKinds,
         operation_mapping_status:
-          operationKinds.length > 0 ? 'mapped' : 'planned_gap',
+          operationKinds.length > 0 ? 'mapped' : 'missing_coverage',
         generic_capability: getMostConstrainedCapability(operationKinds),
         trusted_runtime_engines: [...new Set(trustedRuntimeEngines)],
-        planned_gap_reason:
+        missing_coverage_reason:
           operationKinds.length > 0
             ? null
             : 'Manifest mutation does not yet infer a known packet operation kind.',

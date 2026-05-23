@@ -170,15 +170,15 @@ test('planCanonicalLocalityPath emits locality, ancestry, location, and location
 
       const elementPackets = planned.created_packets.filter(
         (packet): packet is PacketEnvelopeByType['Element'] =>
-          packet.header.family === 'Element'
+          packet.header.type === 'Element'
       );
       const relationPackets = planned.created_packets.filter(
         (packet): packet is PacketEnvelopeByType['Relation'] =>
-          packet.header.family === 'Relation'
+          packet.header.type === 'Relation'
       );
       const locationPackets = planned.created_packets.filter(
         (packet): packet is PacketEnvelopeByType['Location'] =>
-          packet.header.family === 'Location'
+          packet.header.type === 'Location'
       );
 
       assert.equal(elementPackets.length, 4);
@@ -205,11 +205,21 @@ test('planCanonicalLocalityPath emits locality, ancestry, location, and location
       );
       assert.equal(
         locationPackets.every(
-          (packet) =>
-            packet.body.spatial_payload.display_name === packet.body.location_label &&
-            packet.body.spatial_payload.source?.kind === 'manual' &&
-            packet.body.spatial_payload.scope_descriptor?.legacy_level ===
-              packet.body.spatial_payload.locality_level
+          (packet) => {
+            const spatialPayload = packet.body.spatial_payload as {
+              display_name?: string;
+              source?: { subtype?: string };
+              scope_descriptor?: { legacy_level?: string };
+              locality_level?: string;
+            };
+
+            return (
+              spatialPayload.display_name === packet.body.location_label &&
+              spatialPayload.source?.subtype === 'manual' &&
+              spatialPayload.scope_descriptor?.legacy_level ===
+                spatialPayload.locality_level
+            );
+          }
         ),
         true
       );
@@ -280,7 +290,7 @@ test('planCanonicalLocalityPath reuses existing path segments and alias collisio
       });
       const elementPackets = planned.created_packets.filter(
         (packet): packet is PacketEnvelopeByType['Element'] =>
-          packet.header.family === 'Element'
+          packet.header.type === 'Element'
       );
 
       assert.equal(elementPackets.length, 2);
@@ -394,7 +404,7 @@ test('planCanonicalLocalityPath surfaces fuzzy duplicate warnings and still cont
       });
       const elementPackets = planned.created_packets.filter(
         (packet): packet is PacketEnvelopeByType['Element'] =>
-          packet.header.family === 'Element'
+          packet.header.type === 'Element'
       );
 
       assert.equal(planned.duplicate_warnings.length > 0, true);
@@ -434,7 +444,7 @@ test('locality preview stays non-mutating and returns review entries plus sugges
       });
       const preview = buildLocalityPathPreviewResult(planned);
       const storedElements =
-        (await packetStore.listPreferredPacketsByFamily('Element')) as PacketEnvelopeByType['Element'][];
+        (await packetStore.listPreferredPacketsByType('Element')) as PacketEnvelopeByType['Element'][];
 
       assert.equal(storedElements.length, 1);
       assert.equal(preview.review_entries.length, 3);
@@ -493,11 +503,11 @@ test('planCanonicalLocalityPath supports sparse broad-to-narrow paths without re
       });
       const createdElements = planned.created_packets.filter(
         (packet): packet is PacketEnvelopeByType['Element'] =>
-          packet.header.family === 'Element'
+          packet.header.type === 'Element'
       );
       const ancestryRelations = planned.created_packets.filter(
         (packet): packet is PacketEnvelopeByType['Relation'] =>
-          packet.header.family === 'Relation' &&
+          packet.header.type === 'Relation' &&
           packet.body.subtype === 'default_ancestry_parent'
       );
       const vancouverPacket = createdElements.find(
@@ -605,11 +615,11 @@ test('planCanonicalLocalityPath stores descriptor metadata and Unicode-safe alia
       });
       const createdElement = planned.created_packets.find(
         (packet): packet is PacketEnvelopeByType['Element'] =>
-          packet.header.family === 'Element'
+          packet.header.type === 'Element'
       );
       const createdLocation = planned.created_packets.find(
         (packet): packet is PacketEnvelopeByType['Location'] =>
-          packet.header.family === 'Location'
+          packet.header.type === 'Location'
       );
 
       assert.ok(createdElement);
@@ -625,8 +635,12 @@ test('planCanonicalLocalityPath stores descriptor metadata and Unicode-safe alia
         local_type_key: 'city-town',
         legacy_level: 'city',
       });
-      assert.equal(createdLocation.body.spatial_payload.source?.kind, 'manual');
-      assert.ok(createdLocation.body.spatial_payload.alias_keys.includes('sao paulo'));
+      const spatialPayload = createdLocation.body.spatial_payload as {
+        source?: { subtype?: string };
+        alias_keys?: string[];
+      };
+      assert.equal(spatialPayload.source?.subtype, 'manual');
+      assert.ok(spatialPayload.alias_keys?.includes('sao paulo'));
     },
   });
 });

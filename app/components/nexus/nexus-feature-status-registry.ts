@@ -112,11 +112,11 @@ const NEXUS_FEATURE_STATUS_REGISTRY = {
     summary:
       'Links currently group by related packet. Alternate views like grouping by edge type are visible future seams, not live controls yet.',
   },
-  'explorer.links.by_family': {
+  'explorer.links.by_type': {
     kind: 'coming_soon',
-    title: 'Family grouping is not live yet',
+    title: 'Type grouping is not live yet',
     summary:
-      'Packet-family grouping for link relationships is planned, but the current Explorer pass only ships the related-packet view.',
+      'Packet-type grouping for link relationships is planned, but the current Explorer pass only ships the related-packet view.',
   },
   'explorer.lineage.compare_revisions': {
     kind: 'coming_soon',
@@ -128,7 +128,7 @@ const NEXUS_FEATURE_STATUS_REGISTRY = {
     kind: 'coming_soon',
     title: 'Diff is a future seam',
     summary:
-      'Diff will arrive when packet-family-aware comparison and schema-targeting are ready. This placeholder is visible now so the layout can stabilize early.',
+      'Diff will arrive when packet-type-aware comparison and schema-targeting are ready. This placeholder is visible now so the layout can stabilize early.',
   },
   'votes.support_petition': {
     kind: 'read_only',

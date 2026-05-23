@@ -75,9 +75,9 @@ export async function searchNexusIdentities(input: {
   const services = await getNexusPacketServices();
   const savedActorPacketIdSet = new Set(input.savedActorPacketIds ?? []);
   const personPackets = (
-    await services.packetStore.listPreferredPacketsByFamily('Element')
+    await services.packetStore.listPreferredPacketsByType('Element')
   ).filter(
-    (packet): packet is PacketEnvelopeByType['Element'] => packet.body.kind === 'person'
+    (packet): packet is PacketEnvelopeByType['Element'] => packet.body.subtype === 'person'
   );
 
   return personPackets

@@ -25,33 +25,33 @@ function createExportFixturePackets() {
   const nationPacket = createElementPacket({
     packet_id: 'nexus:element/united-states',
     revision_id: 'nexus:element/united-states@r1',
-    kind: 'assembly',
+    subtype: 'assembly',
     name: 'United States',
   });
   const regionPacket = createElementPacket({
     packet_id: 'nexus:element/california',
     revision_id: 'nexus:element/california@r1',
-    kind: 'assembly',
+    subtype: 'assembly',
     name: 'California',
     edges: [createPacketEdge('parent_scope', { packet_id: nationPacket.header.packet_id })],
   });
   const cityPacket = createElementPacket({
     packet_id: 'nexus:element/perris',
     revision_id: 'nexus:element/perris@r1',
-    kind: 'assembly',
+    subtype: 'assembly',
     name: 'Perris',
     edges: [createPacketEdge('parent_scope', { packet_id: regionPacket.header.packet_id })],
   });
   const referencedPacket = createElementPacket({
     packet_id: 'nexus:element/referenced-packet',
     revision_id: 'nexus:element/referenced-packet@r1',
-    kind: 'organization',
+    subtype: 'organization',
     name: 'Referenced Packet',
   });
   const rootPacketV1 = createElementPacket({
     packet_id: 'nexus:element/root-packet',
     revision_id: 'nexus:element/root-packet@r1',
-    kind: 'service',
+    subtype: 'service',
     name: 'Root Packet',
     authority_scope_ref: { packet_id: cityPacket.header.packet_id },
     applicable_scope_refs: [{ packet_id: cityPacket.header.packet_id }],
@@ -60,7 +60,7 @@ function createExportFixturePackets() {
   const rootPacketV2 = createElementPacket({
     packet_id: rootPacketV1.header.packet_id,
     revision_id: 'nexus:element/root-packet@r2',
-    kind: 'service',
+    subtype: 'service',
     name: 'Root Packet v2',
     authority_scope_ref: { packet_id: cityPacket.header.packet_id },
     applicable_scope_refs: [{ packet_id: cityPacket.header.packet_id }],
@@ -75,7 +75,7 @@ function createExportFixturePackets() {
   const referrerPacket = createElementPacket({
     packet_id: 'nexus:element/referrer-packet',
     revision_id: 'nexus:element/referrer-packet@r1',
-    kind: 'organization',
+    subtype: 'organization',
     name: 'Referrer Packet',
     edges: [createPacketEdge('references', { packet_id: rootPacketV1.header.packet_id })],
   });
@@ -128,7 +128,6 @@ async function createServiceSignerPacket(input: {
     packet_id: input.packetId,
     revision_id: `${input.packetId}@r1`,
     created_at: input.createdAt,
-    kind: 'service',
     name: 'Export Signer',
     subtype: 'local_validator',
     identity: {
@@ -273,7 +272,7 @@ test('bundle export closure includes signer identity packets for signed packets'
         packet_id: 'nexus:element/export-signed-target',
         revision_id: 'nexus:element/export-signed-target@r1',
         created_at: createdAt,
-        kind: 'organization',
+        subtype: 'organization',
         name: 'Export Signed Target',
       }),
       signerPacketId: signer.packet.header.packet_id,
@@ -307,3 +306,4 @@ test('bundle export closure includes signer identity packets for signed packets'
     rmSync(directory, { recursive: true, force: true });
   }
 });
+

@@ -3,7 +3,7 @@
  * Description: Client-side query helpers for the votes and library workspaces.
  */
 
-import type { PacketFamily } from '@core/schema/packet-schema';
+import type { PacketType } from '@core/schema/packet-schema';
 import type {
   NexusLibraryPayload,
   NexusVotesPayload,
@@ -29,13 +29,13 @@ export function fetchNexusVotesPayload(
 
 export function fetchNexusLibraryPayload(input: {
   scopeId: string;
-  familyFilter: PacketFamily | null;
+  typeFilter: PacketType | null;
   actorPacketId?: string | null;
 }): Promise<NexusLibraryPayload> {
   const searchParams = new URLSearchParams();
 
-  if (input.familyFilter) {
-    searchParams.set('family', input.familyFilter);
+  if (input.typeFilter) {
+    searchParams.set('type', input.typeFilter);
   }
 
   if (input.actorPacketId) {

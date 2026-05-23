@@ -1,6 +1,6 @@
 /**
  * File: packet-runtime-fortress-handoff.ts
- * Description: Shadow handoff contract between the runtime crossing guard and the signed fortress corridor.
+ * Description: Definition handoff contract between the runtime crossing guard and the signed fortress corridor.
  */
 
 import type { MutationIntent } from '@core/auth/mutation-corridor';
@@ -16,15 +16,15 @@ import {
 } from '@runtime/nexus/server/packet-workflow-alignment-audit';
 
 export type PacketRuntimeFortressHandoffStatus =
-  | 'shadow_ready'
-  | 'planned_gap'
+  | 'definition_ready'
+  | 'missing_coverage'
   | 'runtime_owned'
   | 'legacy_bridge'
   | 'blocked';
 
 export type PacketRuntimeFortressHandoffReasonCode =
   | 'workflow_alignment_ready'
-  | 'live_fortress_not_enrolled'
+  | 'external_definition_execution_disabled'
   | 'planner_extraction_gap'
   | 'runtime_owned_workflow'
   | 'legacy_bridge_to_canonical'
@@ -42,7 +42,7 @@ export type PacketRuntimeFortressReturnHint = {
 };
 
 export type PacketRuntimeFortressHandoff = {
-  handoff_kind: 'packet_runtime.fortress_handoff.shadow';
+  handoff_kind: 'packet_runtime.fortress_handoff.definition';
   mutation_intent: MutationIntent['kind'] | string;
   canonical_intent: MutationIntent['kind'] | null;
   status: PacketRuntimeFortressHandoffStatus;
@@ -56,7 +56,7 @@ export type PacketRuntimeFortressHandoff = {
   dependency_ids: string[];
   resolver_ids: string[];
   reason_codes: PacketRuntimeFortressHandoffReasonCode[];
-  live_fortress_ready: false;
+  external_definition_execution_enabled: false;
   normalized_prepare_intent_kind: MutationIntent['kind'] | null;
   fortress_prepare_handler: string | null;
   fortress_finalize_handler: string | null;
@@ -74,7 +74,7 @@ export type PacketRuntimeFortressHandoffCoverage = {
   trusted_capability_ids: string[];
   policy_action_ids: string[];
   dependency_ids: string[];
-  live_fortress_ready: false;
+  external_definition_execution_enabled: false;
 };
 
 export type PacketRuntimeFortressHandoffAuditFinding = {
@@ -128,7 +128,7 @@ function mapAlignmentToHandoffStatus(
   alignmentStatus: PacketWorkflowAlignmentStatus
 ): PacketRuntimeFortressHandoffStatus {
   if (alignmentStatus === 'workflow_aligned') {
-    return 'shadow_ready';
+    return 'definition_ready';
   }
 
   if (alignmentStatus === 'runtime_owned') {
@@ -139,7 +139,7 @@ function mapAlignmentToHandoffStatus(
     return 'legacy_bridge';
   }
 
-  return 'planned_gap';
+  return 'missing_coverage';
 }
 
 function reasonCodesForCoverage(
@@ -151,7 +151,7 @@ function reasonCodesForCoverage(
     reasonCodes.push('workflow_alignment_ready');
   }
 
-  if (coverage.workflow_alignment_status === 'planned_gap') {
+  if (coverage.workflow_alignment_status === 'missing_coverage') {
     reasonCodes.push('planner_extraction_gap');
   }
 
@@ -171,7 +171,7 @@ function reasonCodesForCoverage(
     reasonCodes.push('missing_trusted_capability');
   }
 
-  reasonCodes.push('live_fortress_not_enrolled');
+  reasonCodes.push('external_definition_execution_disabled');
 
   return uniqueSorted(reasonCodes) as PacketRuntimeFortressHandoffReasonCode[];
 }
@@ -189,7 +189,7 @@ export function resolvePacketRuntimeFortressHandoff(input: {
 }): PacketRuntimeFortressHandoff {
   if (!isKnownMutationIntent(input.mutationIntent)) {
     return {
-      handoff_kind: 'packet_runtime.fortress_handoff.shadow',
+      handoff_kind: 'packet_runtime.fortress_handoff.definition',
       mutation_intent: input.mutationIntent,
       canonical_intent: null,
       status: 'blocked',
@@ -203,7 +203,7 @@ export function resolvePacketRuntimeFortressHandoff(input: {
       dependency_ids: [],
       resolver_ids: [],
       reason_codes: ['unknown_mutation_intent'],
-      live_fortress_ready: false,
+      external_definition_execution_enabled: false,
       normalized_prepare_intent_kind: null,
       fortress_prepare_handler: null,
       fortress_finalize_handler: null,
@@ -227,7 +227,7 @@ export function resolvePacketRuntimeFortressHandoff(input: {
 
   if (!coverage) {
     return {
-      handoff_kind: 'packet_runtime.fortress_handoff.shadow',
+      handoff_kind: 'packet_runtime.fortress_handoff.definition',
       mutation_intent: input.mutationIntent,
       canonical_intent: null,
       status: 'blocked',
@@ -241,7 +241,7 @@ export function resolvePacketRuntimeFortressHandoff(input: {
       dependency_ids: [],
       resolver_ids: [],
       reason_codes: ['missing_workflow_alignment'],
-      live_fortress_ready: false,
+      external_definition_execution_enabled: false,
       normalized_prepare_intent_kind: input.mutationIntent,
       fortress_prepare_handler: descriptor.prepare,
       fortress_finalize_handler: descriptor.finalize,
@@ -263,7 +263,7 @@ export function resolvePacketRuntimeFortressHandoff(input: {
       : mapAlignmentToHandoffStatus(coverage.workflow_alignment_status);
 
   return {
-    handoff_kind: 'packet_runtime.fortress_handoff.shadow',
+    handoff_kind: 'packet_runtime.fortress_handoff.definition',
     mutation_intent: coverage.mutation_intent,
     canonical_intent: coverage.canonical_intent,
     status,
@@ -277,7 +277,7 @@ export function resolvePacketRuntimeFortressHandoff(input: {
     dependency_ids: coverage.dependency_ids,
     resolver_ids: coverage.resolver_ids,
     reason_codes: reasonCodes,
-    live_fortress_ready: false,
+    external_definition_execution_enabled: false,
     normalized_prepare_intent_kind: coverage.canonical_intent ?? coverage.mutation_intent,
     fortress_prepare_handler: descriptor.prepare,
     fortress_finalize_handler: descriptor.finalize,
@@ -287,7 +287,7 @@ export function resolvePacketRuntimeFortressHandoff(input: {
       workflowPlanPacketTypes: coverage.workflow_plan_packet_types,
     }),
     notes: [
-      'Shadow crossing-guard handoff only: runtime may inspect manifest/workflow metadata, but fortress remains the live authority for prepare/finalize/proof/persistence.',
+      'Definition crossing-guard handoff only: runtime may inspect manifest/workflow metadata, but fortress remains the live authority for prepare/finalize/proof/persistence.',
       ...coverage.remaining_packet_specific_assumptions,
     ],
   };
@@ -309,7 +309,7 @@ export function listPacketRuntimeFortressHandoffCoverage(): PacketRuntimeFortres
       trusted_capability_ids: handoff.trusted_capability_ids,
       policy_action_ids: handoff.policy_action_ids,
       dependency_ids: handoff.dependency_ids,
-      live_fortress_ready: false,
+      external_definition_execution_enabled: false,
     };
   });
 }
@@ -322,7 +322,7 @@ export function auditPacketRuntimeFortressHandoffs(): PacketRuntimeFortressHando
       mutationIntent: descriptor.kind,
     });
 
-    if (handoff.status === 'shadow_ready') {
+    if (handoff.status === 'definition_ready') {
       if (
         handoff.workflow_plan_ids.length === 0 ||
         handoff.operation_kinds.length === 0 ||
@@ -332,9 +332,9 @@ export function auditPacketRuntimeFortressHandoffs(): PacketRuntimeFortressHando
       ) {
         findings.push({
           severity: 'error',
-          code: 'shadow_ready_handoff_incomplete',
+          code: 'definition_ready_handoff_incomplete',
           mutation_intent: descriptor.kind,
-          message: `${descriptor.kind} is shadow-ready but missing workflow, operation, policy, dependency, or trusted capability metadata.`,
+          message: `${descriptor.kind} is definition-ready but missing workflow, operation, policy, dependency, or trusted capability metadata.`,
         });
       }
     }
@@ -364,12 +364,12 @@ export function auditPacketRuntimeFortressHandoffs(): PacketRuntimeFortressHando
       });
     }
 
-    if (handoff.live_fortress_ready !== false) {
+    if (handoff.external_definition_execution_enabled !== false) {
       findings.push({
         severity: 'error',
-        code: 'handoff_live_fortress_ready',
+        code: 'handoff_external_definition_execution_enabled',
         mutation_intent: descriptor.kind,
-        message: `${descriptor.kind} handoff must remain shadow-only in this pass.`,
+        message: `${descriptor.kind} handoff must remain runtime-ready in this pass.`,
       });
     }
   }

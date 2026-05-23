@@ -64,7 +64,7 @@ export function NexusActionMenu({
   return (
     <View
       className={joinClasses(
-        'min-w-[190px] gap-1 overflow-hidden rounded-2xl border p-2 shadow-lg',
+        'min-w-[190px] gap-1 overflow-hidden rounded-2xl border p-2 definition-lg',
         isFloating ? undefined : 'absolute right-0 z-50',
         isFloating ? undefined : align === 'bottom' ? 'bottom-full mb-2' : 'top-full mt-2',
         chrome.inlineSelectMenuClass,
