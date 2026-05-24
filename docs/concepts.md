@@ -20,7 +20,7 @@ A policy and template lineage. OWA is intended to be modeled as an initiative in
 
 ## Claim
 
-The current packet type for scoped social assertions such as `role_association`, `association`, and `home_locality`.
+A process packet for contest, challenge, correction, annotation, or role workflows. Relations such as `association` and `home_locality` are now written directly as Relation packets; Claims can target them later when scrutiny is needed.
 
 Status: current code truth.
 
@@ -48,11 +48,15 @@ Status: canon-candidate direction.
 
 ## Follow
 
-A lightweight navigation or subscription relationship, not the same thing as trust, home locality, or association.
+A lightweight read or visibility relation. It helps an actor find updates without adopting policies or joining an action.
+
+## Subscribe
+
+A sync and adoption relation. `Relation(subtype: subscribes_to)` may target an initiative, action, policy, module, template, or packet set. It replaces a separate `adopts_policy` relation: adopting a policy is modeled as subscribing to that Policy packet. Subscription options can inherit default policies and dependencies, or exclude them and surface partial alignment.
 
 ## Association
 
-A relationship claim between an element and another element or assembly. Current direction keeps it general first rather than forcing a rich rights taxonomy too early.
+A direct Relation between a subject and another packet, such as an element, initiative, action, or assembly. It records contextual standing without implying participation, residence, subscription, or a global permission rank.
 
 ## Official / Unofficial
 

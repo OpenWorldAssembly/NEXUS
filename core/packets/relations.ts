@@ -1,6 +1,6 @@
 /**
  * File: relations.ts
- * Description: Portable relation-packet helpers for deterministic relation ids and revisions.
+ * Description: Portable relation-packet helpers for deterministic relation ids, revisions, and semantic projections.
  */
 
 import type {
@@ -8,8 +8,55 @@ import type {
   PacketRevisionRef,
   PacketRef,
   RelationStatus,
+  RelationSubscriptionOptionsInput,
 } from '../schema/packet-schema.ts';
 import { createRelationPacket } from './builders.ts';
+
+export type RelationSemanticProfile = {
+  relationSubtype: string;
+  effectiveFollow: boolean;
+  effectiveSubscribe: boolean;
+  effectiveParticipate: boolean;
+  standingKind: 'none' | 'association' | 'residency' | 'role' | 'location' | 'containment';
+  notes: string[];
+};
+
+export type SubscriptionAlignmentState = 'aligned' | 'partially_aligned' | 'needs_review';
+
+export type SubscriptionAlignmentProjection = {
+  relationSubtype: string;
+  effectiveFollow: boolean;
+  effectiveSubscribe: boolean;
+  effectiveParticipate: boolean;
+  alignmentState: SubscriptionAlignmentState;
+  inheritedRefs: {
+    policy_refs: PacketRef[];
+    dependency_refs: PacketRef[];
+    module_refs: PacketRef[];
+    template_refs: PacketRef[];
+    default_packet_set_refs: PacketRef[];
+  };
+  excludedRefs: {
+    policy_refs: PacketRef[];
+    dependency_refs: PacketRef[];
+    module_refs: PacketRef[];
+    template_refs: PacketRef[];
+    default_packet_set_refs: PacketRef[];
+  };
+  warnings: string[];
+};
+
+type SubscriptionAlignmentInput = {
+  relationSubtype: string;
+  subscriptionOptions?: RelationSubscriptionOptionsInput | null;
+  requiredPolicyRefs?: PacketRef[];
+  requiredDependencyRefs?: PacketRef[];
+  defaultPolicyRefs?: PacketRef[];
+  defaultDependencyRefs?: PacketRef[];
+  defaultModuleRefs?: PacketRef[];
+  defaultTemplateRefs?: PacketRef[];
+  defaultPacketSetRefs?: PacketRef[];
+};
 
 function encodePacketId(packetId: string): string {
   return encodeURIComponent(packetId);
@@ -26,6 +73,255 @@ function dedupeScopeRefs(scopeRefs: PacketRef[]): PacketRef[] {
     seenPacketIds.add(scopeRef.packet_id);
     return true;
   });
+}
+
+function dedupeRefs(refs: PacketRef[]): PacketRef[] {
+  const seenPacketIds = new Set<string>();
+
+  return refs.filter((ref) => {
+    if (seenPacketIds.has(ref.packet_id)) {
+      return false;
+    }
+
+    seenPacketIds.add(ref.packet_id);
+    return true;
+  });
+}
+
+function filterExcludedRefs(refs: PacketRef[], excludedRefs: PacketRef[]): PacketRef[] {
+  const excludedPacketIds = new Set(excludedRefs.map((ref) => ref.packet_id));
+  return refs.filter((ref) => !excludedPacketIds.has(ref.packet_id));
+}
+
+function findMissingRefs(requiredRefs: PacketRef[], effectiveRefs: PacketRef[]): PacketRef[] {
+  const effectivePacketIds = new Set(effectiveRefs.map((ref) => ref.packet_id));
+  return requiredRefs.filter((requiredRef) => !effectivePacketIds.has(requiredRef.packet_id));
+}
+
+export function getRelationSemanticProfile(subtype: string): RelationSemanticProfile {
+  if (subtype === 'follows') {
+    return {
+      relationSubtype: subtype,
+      effectiveFollow: true,
+      effectiveSubscribe: false,
+      effectiveParticipate: false,
+      standingKind: 'none',
+      notes: ['Lightweight visibility/read relation.'],
+    };
+  }
+
+  if (subtype === 'subscribes_to') {
+    return {
+      relationSubtype: subtype,
+      effectiveFollow: true,
+      effectiveSubscribe: true,
+      effectiveParticipate: false,
+      standingKind: 'none',
+      notes: ['Sync/adoption relation; may inherit selected upstream defaults.'],
+    };
+  }
+
+  if (subtype === 'participates_in') {
+    return {
+      relationSubtype: subtype,
+      effectiveFollow: true,
+      effectiveSubscribe: true,
+      effectiveParticipate: true,
+      standingKind: 'none',
+      notes: ['Contribution relation; policies decide exact write rights.'],
+    };
+  }
+
+  if (subtype === 'association') {
+    return {
+      relationSubtype: subtype,
+      effectiveFollow: false,
+      effectiveSubscribe: false,
+      effectiveParticipate: false,
+      standingKind: 'association',
+      notes: ['Contextual standing relation; policies decide access.'],
+    };
+  }
+
+  if (subtype === 'home_locality') {
+    return {
+      relationSubtype: subtype,
+      effectiveFollow: false,
+      effectiveSubscribe: false,
+      effectiveParticipate: false,
+      standingKind: 'residency',
+      notes: ['Residency/locality standing relation; not a global permission rank.'],
+    };
+  }
+
+  if (subtype === 'role_association') {
+    return {
+      relationSubtype: subtype,
+      effectiveFollow: false,
+      effectiveSubscribe: false,
+      effectiveParticipate: false,
+      standingKind: 'role',
+      notes: ['Role association remains claim-workflow backed until the role model is redesigned.'],
+    };
+  }
+
+  if (subtype === 'defined_by_location') {
+    return {
+      relationSubtype: subtype,
+      effectiveFollow: false,
+      effectiveSubscribe: false,
+      effectiveParticipate: false,
+      standingKind: 'location',
+      notes: ['Location-definition relation used by locality projection.'],
+    };
+  }
+
+  if (
+    subtype === 'contains' ||
+    subtype === 'overlaps' ||
+    subtype === 'equivalent_to' ||
+    subtype === 'default_ancestry_parent'
+  ) {
+    return {
+      relationSubtype: subtype,
+      effectiveFollow: false,
+      effectiveSubscribe: false,
+      effectiveParticipate: false,
+      standingKind: 'containment',
+      notes: ['Graph/ancestry relation; policies decide any access behavior.'],
+    };
+  }
+
+  return {
+    relationSubtype: subtype,
+    effectiveFollow: false,
+    effectiveSubscribe: false,
+    effectiveParticipate: false,
+    standingKind: 'none',
+    notes: ['Unknown relation subtype; no effective capabilities are inferred.'],
+  };
+}
+
+export function resolveSubscriptionAlignment(
+  input: SubscriptionAlignmentInput
+): SubscriptionAlignmentProjection {
+  const profile = getRelationSemanticProfile(input.relationSubtype);
+  const options = input.subscriptionOptions ?? {};
+
+  if (input.relationSubtype !== 'subscribes_to') {
+    return {
+      relationSubtype: input.relationSubtype,
+      effectiveFollow: profile.effectiveFollow,
+      effectiveSubscribe: profile.effectiveSubscribe,
+      effectiveParticipate: profile.effectiveParticipate,
+      alignmentState: 'needs_review',
+      inheritedRefs: {
+        policy_refs: [],
+        dependency_refs: [],
+        module_refs: [],
+        template_refs: [],
+        default_packet_set_refs: [],
+      },
+      excludedRefs: {
+        policy_refs: [],
+        dependency_refs: [],
+        module_refs: [],
+        template_refs: [],
+        default_packet_set_refs: [],
+      },
+      warnings: ['Subscription alignment projection only resolves subscribes_to relations.'],
+    };
+  }
+
+  const excludedPolicyRefs = options.excluded_policy_refs ?? [];
+  const excludedDependencyRefs = options.excluded_dependency_refs ?? [];
+  const excludedModuleRefs = options.excluded_module_refs ?? [];
+  const excludedTemplateRefs = options.excluded_template_refs ?? [];
+  const excludedPacketSetRefs = options.excluded_default_packet_set_refs ?? [];
+
+  const inheritPolicies = options.inherit_default_policies ?? true;
+  const inheritDependencies = options.inherit_default_dependencies ?? true;
+  const inheritModules = options.inherit_default_modules ?? true;
+  const inheritTemplates = options.inherit_default_templates ?? true;
+  const inheritPacketSets = options.inherit_default_packet_sets ?? true;
+
+  const effectivePolicyRefs = filterExcludedRefs(
+    dedupeRefs([
+      ...(inheritPolicies ? input.defaultPolicyRefs ?? [] : []),
+      ...(inheritPolicies ? input.requiredPolicyRefs ?? [] : []),
+      ...(options.included_policy_refs ?? []),
+    ]),
+    excludedPolicyRefs
+  );
+  const effectiveDependencyRefs = filterExcludedRefs(
+    dedupeRefs([
+      ...(inheritDependencies ? input.defaultDependencyRefs ?? [] : []),
+      ...(inheritDependencies ? input.requiredDependencyRefs ?? [] : []),
+      ...(options.included_dependency_refs ?? []),
+    ]),
+    excludedDependencyRefs
+  );
+  const effectiveModuleRefs = filterExcludedRefs(
+    dedupeRefs([
+      ...(inheritModules ? input.defaultModuleRefs ?? [] : []),
+      ...(options.included_module_refs ?? []),
+    ]),
+    excludedModuleRefs
+  );
+  const effectiveTemplateRefs = filterExcludedRefs(
+    dedupeRefs([
+      ...(inheritTemplates ? input.defaultTemplateRefs ?? [] : []),
+      ...(options.included_template_refs ?? []),
+    ]),
+    excludedTemplateRefs
+  );
+  const effectivePacketSetRefs = filterExcludedRefs(
+    dedupeRefs([
+      ...(inheritPacketSets ? input.defaultPacketSetRefs ?? [] : []),
+      ...(options.included_default_packet_set_refs ?? []),
+    ]),
+    excludedPacketSetRefs
+  );
+
+  const missingRequiredPolicyRefs = findMissingRefs(
+    input.requiredPolicyRefs ?? [],
+    effectivePolicyRefs
+  );
+  const missingRequiredDependencyRefs = findMissingRefs(
+    input.requiredDependencyRefs ?? [],
+    effectiveDependencyRefs
+  );
+  const warnings = [
+    ...missingRequiredPolicyRefs.map(
+      (ref) => `Required policy is not included in subscription alignment: ${ref.packet_id}`
+    ),
+    ...missingRequiredDependencyRefs.map(
+      (ref) => `Required dependency is not included in subscription alignment: ${ref.packet_id}`
+    ),
+  ];
+
+  return {
+    relationSubtype: input.relationSubtype,
+    effectiveFollow: profile.effectiveFollow,
+    effectiveSubscribe: profile.effectiveSubscribe,
+    effectiveParticipate: profile.effectiveParticipate,
+    alignmentState: warnings.length > 0 ? 'partially_aligned' : 'aligned',
+    inheritedRefs: {
+      policy_refs: effectivePolicyRefs,
+      dependency_refs: effectiveDependencyRefs,
+      module_refs: effectiveModuleRefs,
+      template_refs: effectiveTemplateRefs,
+      default_packet_set_refs: effectivePacketSetRefs,
+    },
+    excludedRefs: {
+      policy_refs: excludedPolicyRefs,
+      dependency_refs: excludedDependencyRefs,
+      module_refs: excludedModuleRefs,
+      template_refs: excludedTemplateRefs,
+      default_packet_set_refs: excludedPacketSetRefs,
+    },
+    warnings,
+  };
 }
 
 export function createRelationPacketId(input: {
@@ -66,6 +362,7 @@ export function createScopedRelationPacket(input: {
   supportingRefs?: PacketRef[];
   policyRef?: PacketRef | null;
   termsRef?: PacketRef | null;
+  subscriptionOptions?: RelationSubscriptionOptionsInput | null;
 }): PacketEnvelopeByType['Relation'] {
   const packetId =
     input.packetId ??
@@ -120,5 +417,6 @@ export function createScopedRelationPacket(input: {
     policy_ref: input.policyRef ?? null,
     terms_ref: input.termsRef ?? null,
     note: input.note ?? null,
+    subscription_options: input.subscriptionOptions ?? null,
   });
 }

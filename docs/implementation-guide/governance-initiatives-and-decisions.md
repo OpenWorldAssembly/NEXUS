@@ -16,6 +16,8 @@ Status: canon candidate
 - `Cause` is no longer an active fresh packet type
 - lower work hierarchy levels should be represented through Action subtypes such as `campaign`, `program`, `mission`, and provisional `task`
 - "official OWA" should mean conforming to recognized OWA dependencies, templates, and policies
+- dependency requirements remain policy-layer semantics; `depends_on` is not a Relation subtype
+- policy adoption is modeled by `Relation(subtype: subscribes_to)` targeting a Policy, not by a separate `adopts_policy` relation subtype
 - assemblies remain valid Nexus objects even when they fork or diverge from canonical OWA lineage
 
 ### Unresolved
@@ -42,6 +44,7 @@ Subscriptions and default visibility should eventually support choices like:
 - all official versions
 - official plus unofficial
 - multiple initiatives together
+- inherited default policies/dependencies with explicit deselection and visible partial-alignment states
 
 ### Unresolved
 

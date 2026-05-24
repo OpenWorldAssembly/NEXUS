@@ -91,6 +91,7 @@ Current direction:
 - legitimacy-sensitive relation rules belong in `Policy.relation_requirements`
 - default inheritance belongs in `Policy.default_policy`, using packet refs for policies, templates, default packet sets, and preference material rather than runtime-only default names
 - governance readiness belongs in `Policy.governance_policy`, reserving voter eligibility, trust stage, quorum, approval, vote method, and decision-report hooks without executing voting yet
+- dependency requirements remain in `Policy.dependency_policy`; subscriptions record what a subject accepts or excludes, and projections compare the two
 
 ### Decision
 
@@ -168,6 +169,9 @@ Current scope-graph direction:
 - canonical home-locality projection prefers `Relation(subtype: home_locality)`; legitimacy evidence can attach through separate Claims and Attestations when policy or contestation requires it
 - canonical follows now use `Relation(subtype: follows)` and are actor-only; legacy shell follow preferences are compatibility-only read input
 - canonical association now uses `Relation(subtype: association)` without automatic claim wrapping, and associated scopes now count as mounted related scopes in shell projection
+- canonical policy adoption now uses `Relation(subtype: subscribes_to)` targeting a Policy packet rather than a separate `adopts_policy` relation subtype
+- dependency requirements remain policy-layer semantics, usually `Policy.dependency_policy`, while `depends_on` remains available only as a structural edge type rather than a Relation subtype
+- subscription relations can carry `subscription_options` for inherited/default policies, dependencies, modules, templates, and default packet sets; excluding a required default does not erase the subscription, but projection should report partial alignment or review needs
 - `Relation(subtype: defined_by_location)` is the live read seam for linked `Location` packets
 - `locality.path.create` now emits locality `Element` packets, `default_ancestry_parent` relations, provisional `Location(subtype: region)` packets, and `defined_by_location` relations together
 - locality rows can now carry dynamic descriptor metadata, which is currently stored in linked `Location.spatial_payload.scope_descriptor` rather than through a packet schema bump

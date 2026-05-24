@@ -45,8 +45,6 @@ export const RELATION_SUBTYPES = [
   'role_association',
   'follows',
   'subscribes_to',
-  'adopts_policy',
-  'depends_on',
   'defined_by_location',
   'contains',
   'overlaps',

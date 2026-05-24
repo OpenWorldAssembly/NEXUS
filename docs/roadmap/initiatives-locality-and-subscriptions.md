@@ -7,13 +7,14 @@ Initiatives should be treated as generic Nexus policy and template lineages rath
 Working direction:
 
 - OWA is one initiative inside Nexus
-- assemblies can follow recognized OWA dependencies and templates while remaining valid Nexus objects if they fork
+- assemblies can subscribe to recognized OWA policies, dependencies, templates, and packet sets while remaining valid Nexus objects if they fork
 - official versus unofficial initiative lineage should be inspectable, not mystical
 
 ## Initiative backlog
 
-- initiative versions and subscription or update behavior
+- initiative versions and subscription or update behavior, using `Relation(subtype: subscribes_to)` as the canonical adoption/sync edge
 - current official versus older official version support
+- subscription alignment projection that compares inherited policy/dependency requirements against deselected or locally overridden refs
 - official versus unofficial visibility modes
 - feed, search, Library, and Explorer filtering by initiative and version
 - actor-level or client-level preferences for what initiative visibility modes to show

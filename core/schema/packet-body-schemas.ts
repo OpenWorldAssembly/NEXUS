@@ -298,6 +298,61 @@ export const ClaimBodySchema = z
   })
   .strict();
 
+
+export const RelationSubscriptionUpdateModeSchema = z.enum([
+  'notify',
+  'sync_available',
+  'manual_review',
+  'auto_sync_minor',
+]);
+
+export const RelationSubscriptionOptionsSchema = z
+  .object({
+    update_mode: RelationSubscriptionUpdateModeSchema.default('manual_review'),
+    inherit_default_policies: z.boolean().default(true),
+    inherit_default_dependencies: z.boolean().default(true),
+    inherit_default_modules: z.boolean().default(true),
+    inherit_default_templates: z.boolean().default(true),
+    inherit_default_packet_sets: z.boolean().default(true),
+    included_policy_refs: z.array(PacketRefSchema).default([]),
+    excluded_policy_refs: z.array(PacketRefSchema).default([]),
+    included_dependency_refs: z.array(PacketRefSchema).default([]),
+    excluded_dependency_refs: z.array(PacketRefSchema).default([]),
+    included_module_refs: z.array(PacketRefSchema).default([]),
+    excluded_module_refs: z.array(PacketRefSchema).default([]),
+    included_template_refs: z.array(PacketRefSchema).default([]),
+    excluded_template_refs: z.array(PacketRefSchema).default([]),
+    included_default_packet_set_refs: z.array(PacketRefSchema).default([]),
+    excluded_default_packet_set_refs: z.array(PacketRefSchema).default([]),
+    tracks: z
+      .object({
+        changelogs: z.boolean().default(true),
+        compatibility: z.boolean().default(true),
+        upstream_decisions: z.boolean().default(true),
+        aar_lessons: z.boolean().default(false),
+      })
+      .strict()
+      .default({
+        changelogs: true,
+        compatibility: true,
+        upstream_decisions: true,
+        aar_lessons: false,
+      }),
+    local_behavior: z
+      .object({
+        require_local_ratification: z.boolean().default(false),
+        fork_on_breaking_change: z.boolean().default(false),
+        alert_on_alignment_break: z.boolean().default(true),
+      })
+      .strict()
+      .default({
+        require_local_ratification: false,
+        fork_on_breaking_change: false,
+        alert_on_alignment_break: true,
+      }),
+  })
+  .strict();
+
 export const RelationBodySchema = z
   .object({
     subtype: z.string().min(1),
@@ -311,6 +366,7 @@ export const RelationBodySchema = z
     note: z.string().min(1).nullable().default(null),
     effective_from: z.string().min(1).nullable().default(null),
     effective_until: z.string().min(1).nullable().default(null),
+    subscription_options: RelationSubscriptionOptionsSchema.nullable().default(null),
   })
   .strict();
 
@@ -719,6 +775,16 @@ export const PACKET_BODY_SCHEMAS = {
   Discussion: DiscussionBodySchema,
   Bundle: BundleBodySchema,
 } satisfies Record<PacketType, z.ZodTypeAny>;
+
+export type RelationSubscriptionUpdateMode = z.infer<
+  typeof RelationSubscriptionUpdateModeSchema
+>;
+export type RelationSubscriptionOptions = z.infer<
+  typeof RelationSubscriptionOptionsSchema
+>;
+export type RelationSubscriptionOptionsInput = z.input<
+  typeof RelationSubscriptionOptionsSchema
+>;
 
 export type PacketRef = z.infer<typeof PacketRefSchema>;
 export type PacketRevisionRef = z.infer<typeof PacketRevisionRefSchema>;

@@ -25,6 +25,7 @@ import {
   type DiscussionSort,
   type ElementSubtype,
   type RelationStatus,
+  type RelationSubscriptionOptionsInput,
   type PersonClaimStatus,
     type PacketEdge,
   type PacketEnvelopeByType,
@@ -174,6 +175,7 @@ export interface RelationPacketInput extends PacketBuilderBaseInput {
   note?: string | null;
   effective_from?: string | null;
   effective_until?: string | null;
+  subscription_options?: RelationSubscriptionOptionsInput | null;
 }
 
 export interface ReportPacketInput extends PacketBuilderBaseInput {

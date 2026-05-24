@@ -6,6 +6,29 @@
 import type { RelationPacketInput } from '@core/packets/builders';
 import type { PacketTypeBuildDefinition } from '@core/packets/packet-build-pipeline';
 import { createPacketEdge } from '@core/packets/packet-build-helpers';
+import { RelationSubscriptionOptionsSchema } from '@core/schema/packet-schema';
+
+
+function collectSubscriptionOptionRefs(
+  options: RelationPacketInput['subscription_options']
+) {
+  if (!options) {
+    return [];
+  }
+
+  return [
+    ...(options.included_policy_refs ?? []),
+    ...(options.excluded_policy_refs ?? []),
+    ...(options.included_dependency_refs ?? []),
+    ...(options.excluded_dependency_refs ?? []),
+    ...(options.included_module_refs ?? []),
+    ...(options.excluded_module_refs ?? []),
+    ...(options.included_template_refs ?? []),
+    ...(options.excluded_template_refs ?? []),
+    ...(options.included_default_packet_set_refs ?? []),
+    ...(options.excluded_default_packet_set_refs ?? []),
+  ];
+}
 
 export const relationBuildDefinition: PacketTypeBuildDefinition<
   'Relation',
@@ -53,6 +76,11 @@ export const relationBuildDefinition: PacketTypeBuildDefinition<
         source_field: 'supporting_refs',
       })
     ),
+    ...collectSubscriptionOptionRefs(input.subscription_options).map((subscriptionRef) =>
+      createPacketEdge('references', subscriptionRef, {
+        source_field: 'subscription_options',
+      })
+    ),
   ],
   finalizeBody: (input) => ({
     subtype: input.subtype,
@@ -66,6 +94,9 @@ export const relationBuildDefinition: PacketTypeBuildDefinition<
     note: input.note ?? null,
     effective_from: input.effective_from ?? null,
     effective_until: input.effective_until ?? null,
+    subscription_options: input.subscription_options
+      ? RelationSubscriptionOptionsSchema.parse(input.subscription_options)
+      : null,
   }),
   prepareMetadataSummary: (input) => input.note ?? null,
 };
