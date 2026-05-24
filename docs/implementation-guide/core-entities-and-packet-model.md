@@ -61,19 +61,19 @@ Current forward direction:
 Current home-locality direction:
 
 - canonical writes now use `relation.residence.add`
-- that write produces `Relation(subtype: residence)` only; claims and attestations can be added around the relation, but are not automatically minted
+- that write produces `Relation(subtype: residence)` only; claims and reactions can be added around the relation, but are not automatically minted
 - legacy `residence.claim.set` is retired from live fresh writes; historical `Claim(residence)` material remains readable through compatibility projections
 - revise and withdraw semantics remain packet-native: status changes are represented by newly signed packet material rather than in-place mutation
 
-### Attestation
+### Reaction
 
 The evidence, certification, support, dispute, and packet-signal type.
 
 Current code truth:
 
-- claim support and dispute currently stay on `Attestation`
-- `Attestation` and `Claim` are still distinct in code
-- `Attestation.subtype` is the canonical attestation classifier
+- claim support and dispute currently stay on `Reaction`
+- `Reaction` and `Claim` are still distinct in code
+- `Reaction.subtype` is the canonical reaction classifier
 
 ### Role
 
@@ -87,7 +87,7 @@ Current direction:
 
 - actual adopted or followed graph facts belong in `Relation`
 - asserted or disputable statements belong in `Claim`
-- evidence and support/dispute posture belong in `Attestation`
+- evidence and support/dispute posture belong in `Reaction`
 - legitimacy-sensitive relation rules belong in `Policy.relation_requirements`
 - default inheritance belongs in `Policy.default_policy`, using packet refs for policies, templates, default packet sets, and preference material rather than runtime-only default names
 - governance readiness belongs in `Policy.governance_policy`, reserving voter eligibility, trust stage, quorum, approval, vote method, and decision-report hooks without executing voting yet
@@ -104,7 +104,7 @@ The long-term Nexus direction is converging on a smaller reusable civic grammar:
 - `Element`
 - `Relation`
 - `Claim`
-- `Attestation`
+- `Reaction`
 - `Report`
 - `Action`
 - `Policy`
@@ -137,7 +137,7 @@ The default OWA seed now links its forward `Action(subtype: initiative)` anchor 
 
 Before changing packet schemas, read this chapter first.
 
-Also read `docs/implementation-guide/trust-moderation-and-policy.md` before changing `Claim`, `Attestation`, `Relation`, or `Policy` semantics.
+Also read `docs/implementation-guide/trust-moderation-and-policy.md` before changing `Claim`, `Reaction`, `Relation`, or `Policy` semantics.
 
 For any packet type schema version change, the required checklist is:
 
@@ -166,7 +166,7 @@ The graph should continue to express relationships through typed refs and edges 
 Current scope-graph direction:
 
 - canonical mounted ancestry prefers `Relation(subtype: default_ancestry_parent)`
-- canonical home-locality projection prefers `Relation(subtype: residence)`; legitimacy evidence can attach through separate Claims and Attestations when policy or contestation requires it
+- canonical home-locality projection prefers `Relation(subtype: residence)`; legitimacy evidence can attach through separate Claims and Reactions when policy or contestation requires it
 - canonical follow relations now use `Relation(subtype: follow)` and are actor-only; legacy shell follow preferences are compatibility-only read input
 - canonical association now uses `Relation(subtype: association)` without automatic claim wrapping, and associated scopes now count as mounted related scopes in shell projection
 - canonical policy adoption now uses `Relation(subtype: subscription)` targeting a Policy packet rather than a separate `adopts_policy` relation subtype
@@ -178,3 +178,15 @@ Current scope-graph direction:
 - legacy locality levels such as `nation | region | city | district` now function as compatibility buckets, while actual ancestry comes from the ordered path graph and not from a hardcoded four-slot ladder
 - locality depth remains projection-only and should not be stored as a universal packet truth
 - legacy `parent_scope` ancestry, shell follow preferences, and legacy `Claim(residence)` reads now belong in explicit compatibility projections or compatibility mirrors rather than inline main-path logic
+
+## Reaction
+
+`Reaction` is the current packet family for target-agnostic responses. It replaces the prior split between standalone vote packets and reaction packets.
+
+A reaction can carry independent channels for signal aggregation, support/dispute posture, and emotional response:
+
+- `vote_value`: basic up/down signal used for visibility and formal vote-like aggregation
+- `reaction_value`: support or dispute only
+- `emotion_ids`: small emoji/emotion set for how people feel about a target
+
+Relations, roles, proposals, discussion packets, and future action packets can all be reaction targets without the reaction needing packet-type-specific semantics.

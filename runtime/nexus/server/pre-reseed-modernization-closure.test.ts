@@ -83,7 +83,7 @@ test('remaining direct relation and attestation operation paths are closed', () 
     'relation.residence.add',
     'relation.participation.add',
     'relation.participation.clear',
-    'attestation.packet_signal.set',
+    'attestation.vote.set',
   ] as const) {
     const entry = closureByIntent.get(mutationIntent);
 

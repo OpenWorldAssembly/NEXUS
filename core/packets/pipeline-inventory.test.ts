@@ -36,19 +36,17 @@ test('inventory does not overstate next-target live types as production pipeline
   const inventory = listPacketPipelineInventory();
   const element = inventory.find((entry) => entry.type === 'Element');
   const claim = inventory.find((entry) => entry.type === 'Claim');
-  const attestation = inventory.find((entry) => entry.type === 'Attestation');
+  const reaction = inventory.find((entry) => entry.type === 'Reaction');
   const role = inventory.find((entry) => entry.type === 'Role');
   const proposal = inventory.find((entry) => entry.type === 'Proposal');
-  const vote = inventory.find((entry) => entry.type === 'Vote');
   const decision = inventory.find((entry) => entry.type === 'Decision');
   const discussion = inventory.find((entry) => entry.type === 'Discussion');
 
   assert.equal(element?.builder_pipeline_status, 'production');
   assert.equal(claim?.builder_pipeline_status, 'production');
-  assert.equal(attestation?.builder_pipeline_status, 'production');
+  assert.equal(reaction?.builder_pipeline_status, 'production');
   assert.equal(role?.builder_pipeline_status, 'production');
   assert.equal(proposal?.builder_pipeline_status, 'production');
-  assert.equal(vote?.builder_pipeline_status, 'production');
   assert.equal(decision?.builder_pipeline_status, 'production');
   assert.equal(discussion?.type_evolution_status, 'production');
 });

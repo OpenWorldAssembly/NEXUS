@@ -29,7 +29,7 @@ import {
 } from '@core/schema/packet-ontology';
 import {
   ActionBodySchema,
-  AttestationBodySchema,
+  ReactionBodySchema,
   BundleBodySchema,
   ClaimBodySchema,
   DefinitionBodySchema,
@@ -156,10 +156,6 @@ const ClaimBodySchemaV1_0 = ClaimBodySchema.omit({
   claim_markdown: true,
   supporting_refs: true,
   relation_assertion: true,
-});
-
-const AttestationBodySchemaV1_0 = AttestationBodySchema.omit({
-  subtype: true,
 });
 
 const ActionBodySchemaV1_0 = ActionBodySchema.omit({
@@ -405,32 +401,6 @@ function stripCurrentClaimCompatibilityFields(
   return changed ? nextBody : null;
 }
 
-function stripCurrentAttestationCompatibilityFields(
-  body: Record<string, unknown>
-): Record<string, unknown> | null {
-  let nextBody = body;
-  let changed = false;
-
-  if (
-    Object.prototype.hasOwnProperty.call(nextBody, 'type') &&
-    nextBody.type === 'attestation'
-  ) {
-    const { type: _type, ...withoutType } = nextBody;
-    nextBody = withoutType;
-    changed = true;
-  }
-
-  if (
-    Object.prototype.hasOwnProperty.call(nextBody, 'subtype') &&
-    nextBody.subtype === nextBody.subtype
-  ) {
-    const { subtype: _subtype, ...withoutSubtype } = nextBody;
-    nextBody = withoutSubtype;
-    changed = true;
-  }
-
-  return changed ? nextBody : null;
-}
 
 function stripPolicyV1_1CompatibilityFields(
   body: Record<string, unknown>
@@ -1120,85 +1090,7 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
     },
   },
   Proposal: createDefaultCompatibilityEntry('Proposal'),
-  Vote: createDefaultCompatibilityEntry('Vote'),
-  Attestation: {
-    current_schema_version: '1.1.0',
-    revision_mode: PACKET_TYPE_REVISION_MODES.Attestation,
-    support_level: 'legacy_supported',
-    write_target_policy: 'supported_versions',
-    versions: {
-      '1.0.0': {
-        parseBody: (body) => {
-          rejectHeaderBodyCollisions(body, 'Attestation');
-          return AttestationBodySchemaV1_0.parse(body);
-        },
-        matchesDeclaredCurrentBodyShape: (body) =>
-          !bodyHasOwnProperty(body, 'subtype'),
-        next_schema_version: '1.1.0',
-        adaptToNext: (body) => {
-          const currentBody = AttestationBodySchemaV1_0.parse(body);
-
-          return {
-            body: {
-              subtype: 'packet_signal',
-              ...currentBody,
-            },
-            changes: [
-              createAdaptationChange({
-                kind: 'added_default_field',
-                path: 'body.subtype',
-                fromSchemaVersion: '1.0.0',
-                toSchemaVersion: '1.1.0',
-                message:
-                  'Confirmed canonical attestation subtype field for forward ontology compatibility.',
-              }),
-              createAdaptationChange({
-                kind: 'added_default_field',
-                path: 'body.subtype',
-                fromSchemaVersion: '1.0.0',
-                toSchemaVersion: '1.1.0',
-                message:
-                  'Added canonical attestation subtype field mirroring subtype.',
-              }),
-            ],
-          };
-        },
-      },
-      '1.1.0': {
-        parseBody: (body) => {
-          rejectHeaderBodyCollisions(body, 'Attestation');
-          return AttestationBodySchema.parse(body);
-        },
-        previous_schema_version: '1.0.0',
-        adaptToPrevious: (body) => {
-          const currentBody = AttestationBodySchema.parse(body);
-          const nextBody = stripCurrentAttestationCompatibilityFields(
-            currentBody as Record<string, unknown>
-          );
-
-          return {
-            body: nextBody ?? currentBody,
-            changes: [],
-            losses: [],
-          };
-        },
-        createUnsignedPacketCandidate: (packet) => {
-          const nextBody = stripCurrentAttestationCompatibilityFields(
-            packet.body as Record<string, unknown>
-          );
-
-          if (!nextBody) {
-            return null;
-          }
-
-          return {
-            ...packet,
-            body: nextBody,
-          } as PacketEnvelopeByType['Attestation'];
-        },
-      },
-    },
-  },
+  Reaction: createDefaultCompatibilityEntry('Reaction'),
   Decision: createDefaultCompatibilityEntry('Decision'),
   Action: {
     current_schema_version: '1.1.0',

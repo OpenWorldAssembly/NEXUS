@@ -22,14 +22,14 @@ export const DISCUSSION_ACTION_DESCRIPTORS: NexusActionIntentDescriptor[] = [
   {
     id: 'discussion.vote_up',
     execution_kind: 'mutation',
-    mutation_kind: 'attestation.packet_signal.set',
+    mutation_kind: 'reaction.vote.set',
     requires_selection: true,
     target_kind: 'discussion_message',
   },
   {
     id: 'discussion.vote_down',
     execution_kind: 'mutation',
-    mutation_kind: 'attestation.packet_signal.set',
+    mutation_kind: 'reaction.vote.set',
     requires_selection: true,
     target_kind: 'discussion_message',
   },

@@ -10,13 +10,13 @@ export type MutationPrepareHandlerKey =
   | 'prepareLocalityGraphApply'
   | 'prepareDiscussionThreadPost'
   | 'prepareDiscussionReply'
-  | 'preparePacketSignal'
+  | 'preparePacketVoteReaction'
   | 'prepareAssemblyElementCreate'
   | 'prepareAssociationRelation'
   | 'prepareHomeLocalityRelation'
   | 'prepareFollowRelation'
   | 'prepareRoleParticipationRelation'
-  | 'prepareRoleParticipationAttestation'
+  | 'prepareRoleParticipationReaction'
   | 'prepareDiscussionSurfacesEnsure'
   | 'prepareActorWritePolicyUpdate'
   | 'preparePreferenceElementSet';
@@ -26,20 +26,20 @@ export type MutationFinalizeHandlerKey =
   | 'finalizeLocalityGraphApply'
   | 'finalizeDiscussionThreadPost'
   | 'finalizeDiscussionReply'
-  | 'finalizePacketSignal'
+  | 'finalizePacketVoteReaction'
   | 'finalizeAssemblyElementCreate'
   | 'finalizeAssociationRelationUpdate'
   | 'finalizeHomeLocalityRelation'
   | 'finalizeFollowRelationUpdate'
   | 'finalizeRoleParticipationRelationUpdate'
-  | 'finalizeRoleParticipationAttestation'
+  | 'finalizeRoleParticipationReaction'
   | 'finalizeDiscussionSurfacesEnsure'
   | 'finalizeActorWritePolicyUpdate'
   | 'finalizePreferenceElementSet';
 
 export type MutationIntentDescriptor = {
   kind: MutationIntent['kind'];
-  domain: 'locality' | 'discussion' | 'attestation' | 'assembly' | 'relation' | 'role' | 'actor_policy' | 'preference';
+  domain: 'locality' | 'discussion' | 'reaction' | 'assembly' | 'relation' | 'role' | 'actor_policy' | 'preference';
   prepare: MutationPrepareHandlerKey;
   finalize: MutationFinalizeHandlerKey;
 };
@@ -76,10 +76,10 @@ const MUTATION_INTENT_DESCRIPTORS = [
     finalize: 'finalizeDiscussionSurfacesEnsure',
   },
   {
-    kind: 'attestation.packet_signal.set',
-    domain: 'attestation',
-    prepare: 'preparePacketSignal',
-    finalize: 'finalizePacketSignal',
+    kind: 'reaction.vote.set',
+    domain: 'reaction',
+    prepare: 'preparePacketVoteReaction',
+    finalize: 'finalizePacketVoteReaction',
   },
   {
     kind: 'assembly.element.create',
@@ -130,10 +130,10 @@ const MUTATION_INTENT_DESCRIPTORS = [
     finalize: 'finalizeRoleParticipationRelationUpdate',
   },
   {
-    kind: 'relation.participation.attestation.set',
+    kind: 'relation.participation.reaction.set',
     domain: 'role',
-    prepare: 'prepareRoleParticipationAttestation',
-    finalize: 'finalizeRoleParticipationAttestation',
+    prepare: 'prepareRoleParticipationReaction',
+    finalize: 'finalizeRoleParticipationReaction',
   },
   {
     kind: 'actor.write_policy.update',

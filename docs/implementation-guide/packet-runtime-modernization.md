@@ -60,7 +60,7 @@ The audit modules are the working checklist for the next implementation passes. 
 
 ## Manifest Core Pass
 
-The first chunky implementation pass expanded the packet manifest from the Preference template to the active packet types with generic builder-pipeline support: Element, Location, Role, Claim, Relation, Report, Proposal, Vote, Attestation, Decision, Action, Discussion, and Policy.
+The first chunky implementation pass expanded the packet manifest from the Preference template to the active packet types with generic builder-pipeline support: Element, Location, Role, Claim, Relation, Report, Proposal, Reaction, Decision, Action, Discussion, and Policy.
 
 This pass remains runtime-ready. The new definitions describe existing body schemas, compatibility registry posture, generic builder support, action descriptors, planner descriptors, projection/index descriptors, and Definition parts. They do not change route payloads, packet schemas, runtime mutation behavior, or master-handler connector enrollment.
 
@@ -86,7 +86,7 @@ The manifest audit now fails when compatibility posture and descriptors disagree
 
 The signed fortress corridor remains the live authority for prepare, proof, finalize, and persistence decisions. The packet-runtime master handler remains the client/API-to-runtime connector bridge; it does not own signed fortress internals yet.
 
-The extraction pass introduces domain-composed fortress handler maps for locality, discussion, attestation, assembly, relation, role, and actor policy. `MutationPrepareHandlers` and `MutationFinalizeHandlers` remain compatibility facades for the current implementation, while the composed maps give the runtime a clearer stepping-stone toward generic packet planners.
+The extraction pass introduces domain-composed fortress handler maps for locality, discussion, reaction, assembly, relation, role, and actor policy. `MutationPrepareHandlers` and `MutationFinalizeHandlers` remain compatibility facades for the current implementation, while the composed maps give the runtime a clearer stepping-stone toward generic packet planners.
 
 Each live mutation intent now has a genericization classification:
 
@@ -99,7 +99,7 @@ This pass intentionally preserves behavior. It records which fortress code shoul
 
 ## Packet Operation Ontology Pass
 
-The operation ontology pass adds the missing contract between packet definitions and trusted runtime execution. Packet definitions may now describe allowed mutation semantics by mapping their manifest mutation descriptors to known operation kinds such as `single_packet.create`, `single_packet.revise`, `relation.set`, `claim.assert`, `attestation.set`, `bundle.import`, `projection.refresh`, `compatibility.adapt`, and `workflow.compose`.
+The operation ontology pass adds the missing contract between packet definitions and trusted runtime execution. Packet definitions may now describe allowed mutation semantics by mapping their manifest mutation descriptors to known operation kinds such as `single_packet.create`, `single_packet.revise`, `relation.set`, `claim.assert`, `reaction.set`, `bundle.import`, `projection.refresh`, `compatibility.adapt`, and `workflow.compose`.
 
 This ontology is an allowlist, not executable packet-defined code. Each operation records its expected planner kind, builder kind, result type, trusted local runtime engine, generic capability posture, and safety notes. Packet definitions can request known operation semantics, but only local trusted engines may execute builders, planners, adapters, workflows, or persistence.
 
@@ -118,14 +118,14 @@ This keeps the moat/drawbridge boundary intact. The runtime master handler can n
 
 The workflow planner contract pass adds the declarative layer above individual operation kinds. Packet definitions may now describe definition workflow plans as ordered steps over known generic operations, trusted resolver IDs, value bindings, simple conditions, policy action IDs, and runtime dependency IDs.
 
-Workflow plans are data, not code. Definitions can say "resolve actor and target, then run `relation.set`" or "if the input value is present run `attestation.set`, otherwise run `attestation.clear`." They cannot introduce arbitrary functions, dynamic imports, persistence behavior, route payloads, or proof rules. The runtime interpreter validates every operation, resolver, dependency, condition operator, policy action, and step reference against local allowlists before producing a dry-run plan.
+Workflow plans are data, not code. Definitions can say "resolve actor and target, then run `relation.set`" or "if the input value is present run `reaction.set`, otherwise run `reaction.clear`." They cannot introduce arbitrary functions, dynamic imports, persistence behavior, route payloads, or proof rules. The runtime interpreter validates every operation, resolver, dependency, condition operator, policy action, and step reference against local allowlists before producing a dry-run plan.
 
 The first definition workflow plans cover the generic-ready fortress candidates:
 
 - `relation.follow.add`
 - `relation.follow.clear`
 - `role_association.claim.set`
-- `attestation.packet_signal.set`
+- `reaction.vote.set`
 
 These plans do not enroll live execution. They prove the manifest can describe packet-specific variables and ordered generic work while preserving the signed fortress as the only live prepare/finalize/proof/persistence authority.
 
@@ -196,7 +196,7 @@ These intents now prepare through trusted generic workflow planning while `Nexus
 
 The remaining pre-reseed queue is explicit:
 
-- relation, claim, and attestation generic enrollment for association, home locality, role claim, packet signal, and role attestation paths
+- relation, claim, and reaction generic enrollment for association, home locality, role claim, packet signal, and role reaction paths
 - discussion and locality workflow decomposition for reply/thread planners, default surfaces, locality path/graph planning, and assembly creation
 - packet-based policy/dependency semantic authority so Policy packets and Definition dependency parts carry enough meaning for reseed
 - legacy bridge retirement for compatibility aliases that should not survive into the fresh reseed world, now closed by removing legacy bridge intents from the live prepare corridor
@@ -227,15 +227,15 @@ The second live generic promotion expands the trusted workflow seam beyond follo
 - `relation.association.clear`
 - `relation.residence.add`
 - `role_association.claim.set`
-- `attestation.packet_signal.set`
+- `reaction.vote.set`
 
-The live behavior contract is unchanged: API payloads, policy action IDs, ticketing, signatures, packet schemas, persistence, projections, and finalize handlers remain the current fortress authority. The prepare side now resolves these direct operations through trusted local generic planners for scoped Relation, role Claim, and packet-signal Attestation writes, using the current fortress planners/builders as the behavior oracle.
+The live behavior contract is unchanged: API payloads, policy action IDs, ticketing, signatures, packet schemas, persistence, projections, and finalize handlers remain the current fortress authority. The prepare side now resolves these direct operations through trusted local generic planners for scoped Relation, role Claim, and packet-signal Reaction writes, using the current fortress planners/builders as the behavior oracle.
 
 The remaining composed workflows now have named adapter shapes instead of open-ended gaps:
 
 - `composite.locality_path.create.v0` for reusable entity/path creation and directory projection refresh.
 - `composite.discussion_thread_post.create.v0` and `composite.discussion_reply.create.v0` for canonical `Discussion(subtype: post/message)` writes.
-- `composite.role_attestation.set.v0` for mutual-exclusion support/dispute/clear attestation composition.
+- `composite.role_reaction.set.v0` for mutual-exclusion support/dispute/clear reaction composition.
 - `composite.actor_write_policy.update.v0` for actor-owned Policy packet revision plus actor projection refresh.
 
 Discussion follow-up is closed for the fresh canon: new top-level discussion writes use `Discussion(subtype: post)` semantics, while replies use `Discussion(subtype: message)`. `DiscussionThread`, `DiscussionPost`, and `DiscussionReply` are not active fresh packet types.
@@ -252,7 +252,7 @@ The runtime genericization lane is now closed for in-scope live prepare handling
 - `composite.assembly_element.create.v0`
 - `composite.discussion_thread_post.create.v0`
 - `composite.discussion_reply.create.v0`
-- `composite.role_attestation.set.v0`
+- `composite.role_reaction.set.v0`
 - `composite.actor_write_policy.update.v0`
 
 These resolvers execute trusted local runtime code only. Adapter descriptors describe the reusable workflow shape and audit metadata; packet definitions still cannot inject executable behavior. `MutationPrepareHandlers` remains the compatibility facade, `NexusMutationService` remains the signed fortress authority, and finalize handlers remain unchanged.
@@ -279,9 +279,9 @@ The seeded OWA `Action(subtype: initiative)` now links to default-inheritance an
 
 ## Canonical Subtype Reset
 
-The pre-reseed reset prunes inactive and legacy packet types from active canon. Fresh canon now includes only Definition, Bundle, Element, Location, Role, Claim, Relation, Report, Proposal, Vote, Attestation, Decision, Action, Discussion, Policy, and Preference.
+The pre-reseed reset prunes inactive and legacy packet types from active canon. Fresh canon now includes only Definition, Bundle, Element, Location, Role, Claim, Relation, Report, Proposal, Reaction, Decision, Action, Discussion, Policy, and Preference.
 
-Every active packet body uses top-level `body.subtype` as its packet classifier. Fresh writes reject old top-level classifier names such as `kind`, `policy_kind`, `role_kind`, `proposal_kind`, `claim_kind`, and `attestation_kind`. Nested rule mechanics can still use precise names such as quorum or threshold kind when they are not packet classifiers.
+Every active packet body uses top-level `body.subtype` as its packet classifier. Fresh writes reject old top-level classifier names such as `kind`, `policy_kind`, `role_kind`, `proposal_kind`, `claim_kind`, and `reaction_value`. Nested rule mechanics can still use precise names such as quorum or threshold kind when they are not packet classifiers.
 
 `Cause`, `Signal`, separate initiative/work types, separate discussion thread/post/reply/forum/space types, `Minutes`, `Artifact`, and other pruned types are not valid fresh packet types. The alpha database is expected to be archived and wiped rather than adapted into fresh canon.
 
@@ -305,3 +305,15 @@ Active manifest definitions now have canonical packet material. `buildDefinition
 This is packetized seed truth, not imported-code execution. Stored Definition and Bundle packets may describe schemas, operations, policies, dependencies, planners, and builders; trusted local runtime registries remain the only executable authority.
 
 Claimed `Preference.element` writes now use the signed fortress prepare/finalize path as `preference.element.set`. The client prepares through `/api/nexus/mutations/prepare`, signs the prepared Preference packet candidate, finalizes through `/api/nexus/mutations/finalize`, and then receives the same projected Preference result shape from the mutation result. `/api/nexus/shell-preferences` is now guest compatibility state only. The old direct `preference.element.interface.set` connector is retained as a definition/internal comparison bridge rather than the live claimed-write path.
+
+## Reaction packet convergence pass
+
+Current pre-reseed canon collapses lightweight votes, packet signals, support/dispute posture, and emoji-style emotional responses into `Reaction` as the single packet family for target-agnostic responses.
+
+`Reaction` packets are replaceable per actor/target/context. A revision can carry any combination of:
+
+- `vote_value`: `1`, `-1`, or `null`
+- `reaction_value`: `support`, `dispute`, or `null`
+- `emotion_ids`: a bounded list of basic reaction/emotion ids
+
+`Reaction` does not encode target packet type or target-specific purpose. Proposal voting, discussion up/down signaling, role support/dispute posture, and later emoji/reaction UI should all route through the same packet type and projection layer. The old standalone `Vote` and `Attestation` packet families are removed from fresh canon for the clean pre-reseed path.

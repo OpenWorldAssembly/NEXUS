@@ -17,7 +17,7 @@ const GENERIC_READY_WORKFLOW_PLAN_IDS = [
   'relation.follow.add.workflow.v0',
   'relation.follow.clear.workflow.v0',
   'claim.role_association.set.workflow.v0',
-  'attestation.packet_signal.set.workflow.v0',
+  'reaction.vote.set.workflow.v0',
 ] as const;
 
 function getWorkflowFixture(packetType: string, workflowPlanId: string) {
@@ -38,7 +38,7 @@ test('workflow planner capabilities expose trusted resolver allowlist', () => {
   assert.ok(resolverIds.includes('actor.ref'));
   assert.ok(resolverIds.includes('input.packet_ref'));
   assert.ok(resolverIds.includes('relation.active_lookup'));
-  assert.ok(resolverIds.includes('attestation.target_summary'));
+  assert.ok(resolverIds.includes('reaction.target_summary'));
 });
 
 test('generic-ready workflow plans audit cleanly', () => {
@@ -60,27 +60,27 @@ test('generic-ready workflow plans audit cleanly', () => {
 
 test('workflow dry-run interpretation preserves order and metadata', () => {
   const { definition } = getWorkflowFixture(
-    'Attestation',
-    'attestation.packet_signal.set.workflow.v0'
+    'Reaction',
+    'reaction.vote.set.workflow.v0'
   );
 
   const dryRun = resolvePacketWorkflowDryRunPlan({
     definition,
-    workflowPlanId: 'attestation.packet_signal.set.workflow.v0',
+    workflowPlanId: 'reaction.vote.set.workflow.v0',
   });
 
   assert.equal(dryRun.ready_for_interpretation, true);
   assert.deepEqual(dryRun.step_order, [
-    'choose_packet_signal_mode',
-    'set_packet_signal_attestation',
-    'clear_packet_signal_attestation',
+    'choose_packet_vote_mode',
+    'set_packet_vote_reaction',
+    'clear_packet_vote_reaction',
   ]);
-  assert.ok(dryRun.operation_kinds.includes('attestation.set'));
-  assert.ok(dryRun.operation_kinds.includes('attestation.clear'));
-  assert.ok(dryRun.policy_action_ids.includes('attestation.packet_signal.set'));
-  assert.ok(dryRun.policy_action_ids.includes('attestation.packet_signal.clear'));
-  assert.ok(dryRun.dependency_ids.includes('generic.operation.attestation'));
-  assert.ok(dryRun.resolver_ids.includes('attestation.target_summary'));
+  assert.ok(dryRun.operation_kinds.includes('reaction.set'));
+  assert.ok(dryRun.operation_kinds.includes('reaction.clear'));
+  assert.ok(dryRun.policy_action_ids.includes('reaction.vote.set'));
+  assert.ok(dryRun.policy_action_ids.includes('reaction.vote.clear'));
+  assert.ok(dryRun.dependency_ids.includes('generic.operation.reaction'));
+  assert.ok(dryRun.resolver_ids.includes('reaction.target_summary'));
 });
 
 test('workflow audit fails closed for unknown operation kinds', () => {

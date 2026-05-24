@@ -15,7 +15,7 @@ export function createRolePrepareHandlers(
   handlers: MutationPrepareHandlers
 ): Pick<
   FortressPrepareHandlerMap,
-  'prepareRoleParticipationRelation' | 'prepareRoleParticipationAttestation'
+  'prepareRoleParticipationRelation' | 'prepareRoleParticipationReaction'
 > {
   return {
     prepareRoleParticipationRelation: async ({ intent, actorPacket }) =>
@@ -26,11 +26,11 @@ export function createRolePrepareHandlers(
         >,
         actorPacket,
       }),
-    prepareRoleParticipationAttestation: async ({ intent, actorPacket }) =>
-      handlers.prepareRoleParticipationAttestation({
+    prepareRoleParticipationReaction: async ({ intent, actorPacket }) =>
+      handlers.prepareRoleParticipationReaction({
         intent: intent as Extract<
           MutationIntent,
-          { kind: 'relation.participation.attestation.set' }
+          { kind: 'relation.participation.reaction.set' }
         >,
         actorPacket,
       }),
@@ -41,7 +41,7 @@ export function createRoleFinalizeHandlers(
   handlers: MutationFinalizeHandlers
 ): Pick<
   FortressFinalizeHandlerMap,
-  'finalizeRoleParticipationRelationUpdate' | 'finalizeRoleParticipationAttestation'
+  'finalizeRoleParticipationRelationUpdate' | 'finalizeRoleParticipationReaction'
 > {
   return {
     finalizeRoleParticipationRelationUpdate: async ({
@@ -54,12 +54,12 @@ export function createRoleFinalizeHandlers(
         signedPackets,
         storedTicket,
       }),
-    finalizeRoleParticipationAttestation: async ({
+    finalizeRoleParticipationReaction: async ({
       storedTicket,
       actorContext,
       signedPackets,
     }) =>
-      handlers.finalizeRoleParticipationAttestation({
+      handlers.finalizeRoleParticipationReaction({
         actorContext,
         signedPackets,
         storedTicket,

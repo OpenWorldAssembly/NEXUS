@@ -54,7 +54,7 @@ export type PreReseedClosureLedgerEntry = {
   status: PreReseedClosureStatus;
   queue:
     | 'first_generic_promotion'
-    | 'relation_claim_attestation_generic_enrollment'
+    | 'relation_claim_reaction_generic_enrollment'
     | 'discussion_locality_workflow_decomposition'
     | 'policy_dependency_semantic_authority'
     | 'final_reseed_readiness_audit'
@@ -112,7 +112,7 @@ function queueForEntry(
     return 'policy_dependency_semantic_authority';
   }
 
-  return 'relation_claim_attestation_generic_enrollment';
+  return 'relation_claim_reaction_generic_enrollment';
 }
 
 function mutationStatus(
@@ -158,7 +158,7 @@ function createWorkflowPlanEntries(): PreReseedClosureLedgerEntry[] {
       status: closesLiveIntent ? 'closed' : 'queued_pre_reseed',
       queue: closesLiveIntent
         ? 'first_generic_promotion'
-        : 'relation_claim_attestation_generic_enrollment',
+        : 'relation_claim_reaction_generic_enrollment',
       reason: closesLiveIntent
         ? 'This workflow plan is exercised by a trusted generic prepare path.'
         : 'Workflow plan remains definition/alignment coverage until its owning runtime intent is explicitly enrolled.',
@@ -313,9 +313,9 @@ export function createPreReseedModernizationClosureReport(): PreReseedModernizat
       status: 'closed' as const,
       queue: 'first_generic_promotion' as const,
       reason:
-        'Trusted generic workflow execution is enrolled behind NexusMutationService for direct relation, claim, and attestation operations.',
+        'Trusted generic workflow execution is enrolled behind NexusMutationService for direct relation, claim, and reaction operations.',
       next_step:
-        'Use this path while decomposing composed locality, discussion, role-attestation, and actor-policy workflows.',
+        'Use this path while decomposing composed locality, discussion, role-reaction, and actor-policy workflows.',
     })),
     ...listLiveCompositeWorkflowEnrollments().map((enrollment) => ({
       subject_kind: 'runtime_connector_path' as const,

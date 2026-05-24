@@ -19,9 +19,9 @@ Current direction:
 
 ## Packet-model questions to keep visible
 
-- whether reactions should remain lightweight attestation-like signals or become a distinct type
-- whether `vouch` and `flag` should become explicit attestation subtypes
-- whether `Claim` and `Attestation` should stay split forever or eventually converge
-- how recursive attestation graphs should be summarized safely in UI
+- whether reactions should remain lightweight reaction-like signals or become a distinct type
+- whether `vouch` and `flag` should become explicit reaction subtypes
+- whether `Claim` and `Reaction` should stay split forever or eventually converge
+- how recursive reaction graphs should be summarized safely in UI
 
 These are active modeling questions, not current implementation commitments.

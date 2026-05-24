@@ -304,7 +304,7 @@ test('Preference definition declares concrete compatibility adapters', () => {
 });
 
 test('generic legacy types expose registry-derived compatibility ladders', () => {
-  for (const type of ['Element', 'Claim', 'Attestation', 'Policy'] as const) {
+  for (const type of ['Element', 'Claim', 'Reaction', 'Policy'] as const) {
     const definition = getDefinedPacketTypeDefinition(type);
     assert.ok(definition);
 

@@ -36,7 +36,7 @@ Forward ontology currently active in code includes:
 - `Report` as a first-class packet type for verification and import reporting
 - `Element.subtype` as the forward classifier, with `kind` preserved as compatibility metadata
 - widened `Claim` packets for packet-targeted assertion content plus optional `relation_assertion`
-- widened `Attestation` packets with canonical `subtype` semantics
+- widened `Reaction` packets with canonical `subtype` semantics
 - `Policy.relation_requirements` as the packet-backed seam for relation support rules
 
 Current scope consumer direction in code includes:

@@ -166,7 +166,7 @@ test('unused removed packet types do not block workflow alignment', () => {
 });
 
 test('workflow-covered packet definitions audit cleanly', () => {
-  for (const packetType of ['Relation', 'Claim', 'Attestation', 'Discussion']) {
+  for (const packetType of ['Relation', 'Claim', 'Reaction', 'Discussion']) {
     const definition = getDefinedPacketTypeDefinition(packetType);
     assert.ok(definition, packetType);
     assert.ok((definition.workflow_plans ?? []).length > 0, packetType);

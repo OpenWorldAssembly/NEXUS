@@ -1,6 +1,6 @@
 /**
  * File: relation-policy.ts
- * Description: Narrow runtime helpers for evaluating policy-driven Claim/Attestation support around Relation packets.
+ * Description: Narrow runtime helpers for evaluating policy-driven Claim/Reaction support around Relation packets.
  */
 
 import type { PacketEnvelopeByType, PacketRef } from '@core/schema/packet-schema';
@@ -18,7 +18,7 @@ export type RelationRequirementRuleEvaluation = {
   rule: RelationPolicyRule;
   satisfied: boolean;
   supporting_claim_packet_ids: string[];
-  supporting_attestation_packet_ids: string[];
+  supporting_reaction_packet_ids: string[];
 };
 
 export type RelationPolicyEvaluation = {
@@ -34,7 +34,7 @@ export type RelationPolicyEvaluation = {
 
 type RelationPacket = PacketEnvelopeByType['Relation'];
 type PolicyPacket = PacketEnvelopeByType['Policy'];
-type AttestationPacket = PacketEnvelopeByType['Attestation'];
+type ReactionPacket = PacketEnvelopeByType['Reaction'];
 type PolicyAnchorPacket = PacketEnvelopeByType['Action'];
 
 function matchesClaimTargetMode(input: {
@@ -73,25 +73,24 @@ function matchesSubjectMode(input: {
   }
 }
 
-export function listAttestationsTargetingClaim(input: {
+export function listReactionsTargetingClaim(input: {
   claimPacket: ClaimPacket;
-  attestationPackets: AttestationPacket[];
-  attestationSubtype?: string | null;
+  reactionPackets: ReactionPacket[];
+  reactionValue?: 'support' | 'dispute' | null;
   activeOnly?: boolean;
-}): AttestationPacket[] {
-  return input.attestationPackets.filter((attestationPacket) => {
-    if (input.activeOnly !== false && attestationPacket.body.status !== 'active') {
+}): ReactionPacket[] {
+  return input.reactionPackets.filter((reactionPacket) => {
+    if (input.activeOnly !== false && reactionPacket.body.status !== 'active') {
       return false;
     }
 
-    if (attestationPacket.body.target_ref.packet_id !== input.claimPacket.header.packet_id) {
+    if (reactionPacket.body.target_ref.packet_id !== input.claimPacket.header.packet_id) {
       return false;
     }
 
     if (
-      input.attestationSubtype &&
-      attestationPacket.body.subtype !== input.attestationSubtype &&
-      attestationPacket.body.subtype !== input.attestationSubtype
+      input.reactionValue &&
+      reactionPacket.body.attestation_value !== input.reactionValue
     ) {
       return false;
     }
@@ -136,7 +135,7 @@ export function evaluateRelationPolicyRequirements(input: {
   relationPacket: RelationPacket;
   policyPackets: PolicyPacket[];
   claimPackets: ClaimPacket[];
-  attestationPackets?: AttestationPacket[];
+  reactionPackets?: ReactionPacket[];
 }): RelationPolicyEvaluation {
   const matchingRules = input.policyPackets.flatMap((policyPacket) =>
     (policyPacket.body.relation_requirements?.rules ?? []).filter(
@@ -189,15 +188,15 @@ export function evaluateRelationPolicyRequirements(input: {
       return true;
     });
 
-    const matchingAttestations =
-      rule.required_attestation_subtypes.length === 0
+    const matchingReactions =
+      rule.required_reaction_attestations.length === 0
         ? []
         : candidateClaims.flatMap((claimPacket) =>
-            rule.required_attestation_subtypes.flatMap((requiredSubtype) =>
-              listAttestationsTargetingClaim({
+            rule.required_reaction_attestations.flatMap((requiredSubtype) =>
+              listReactionsTargetingClaim({
                 claimPacket,
-                attestationPackets: input.attestationPackets ?? [],
-                attestationSubtype: requiredSubtype,
+                reactionPackets: input.reactionPackets ?? [],
+                reactionValue: requiredSubtype,
                 activeOnly: true,
               })
             )
@@ -205,8 +204,8 @@ export function evaluateRelationPolicyRequirements(input: {
 
     const satisfied =
       candidateClaims.length > 0 &&
-      (rule.required_attestation_subtypes.length === 0 ||
-        matchingAttestations.length > 0);
+      (rule.required_reaction_attestations.length === 0 ||
+        matchingReactions.length > 0);
 
     return {
       rule,
@@ -214,8 +213,8 @@ export function evaluateRelationPolicyRequirements(input: {
       supporting_claim_packet_ids: candidateClaims.map(
         (claimPacket) => claimPacket.header.packet_id
       ),
-      supporting_attestation_packet_ids: matchingAttestations.map(
-        (attestationPacket) => attestationPacket.header.packet_id
+      supporting_reaction_packet_ids: matchingReactions.map(
+        (reactionPacket) => reactionPacket.header.packet_id
       ),
     } satisfies RelationRequirementRuleEvaluation;
   });

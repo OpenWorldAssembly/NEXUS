@@ -156,7 +156,7 @@ const POLICY_SEMANTIC_DESCRIPTORS: PacketPolicySemanticDescriptor[] = [
 const OPERATION_DEPENDENCY_PACKET_TYPES: Record<string, string> = {
   'generic.operation.relation': 'Relation',
   'generic.operation.claim': 'Claim',
-  'generic.operation.attestation': 'Attestation',
+  'generic.operation.reaction': 'Reaction',
   'generic.operation.discussion': 'Discussion',
   'generic.operation.projection': 'Definition',
   'generic.operation.bundle': 'Bundle',

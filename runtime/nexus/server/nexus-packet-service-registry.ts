@@ -4,7 +4,7 @@
  */
 
 import { NexusAuthService } from '@runtime/nexus/server/auth-service';
-import { SQLiteAttestationService } from '@runtime/nexus/server/attestation-service';
+import { SQLiteReactionService } from '@runtime/nexus/server/reaction-service';
 import { SQLiteDiscussionService } from '@runtime/nexus/server/discussion-service';
 import { NexusMutationService } from '@runtime/nexus/server/mutation-service';
 import { NexusPacketActionService } from '@runtime/nexus/server/packet-action-service';
@@ -16,10 +16,10 @@ import type { NodeSQLiteQueryServices } from '@runtime/storage/node-sqlite-query
 export function createNexusPacketServiceRegistry(
   services: NodeSQLiteQueryServices
 ): NexusPacketServices {
-  const attestationService = new SQLiteAttestationService(services.packetStore);
+  const reactionService = new SQLiteReactionService(services.packetStore);
   const discussionService = new SQLiteDiscussionService(
     services.packetStore,
-    attestationService
+    reactionService
   );
   const authService = new NexusAuthService(services.packetStore);
   const verificationService = new NexusPacketVerificationService(
@@ -33,16 +33,16 @@ export function createNexusPacketServiceRegistry(
     services.packetStore,
     authService,
     discussionService,
-    attestationService,
+    reactionService,
     new MutationTicketStore()
   );
 
   return {
     ...services,
     authService,
-    attestationService,
+    reactionService,
     discussionService,
-    packetVoteService: attestationService,
+    packetVoteService: reactionService,
     mutationService,
     verificationService,
     packetActionService,

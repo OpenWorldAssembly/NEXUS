@@ -30,8 +30,8 @@ export type DiscussionReplyMutationIntent = {
   mutation_nonce?: string | null;
 };
 
-export type PacketSignalMutationIntent = {
-  kind: 'attestation.packet_signal.set';
+export type PacketVoteMutationIntent = {
+  kind: 'reaction.vote.set';
   scope_id: string;
   target_packet_id: string;
   value: -1 | 0 | 1;
@@ -102,8 +102,8 @@ export type RoleParticipationMutationIntent = {
   mutation_nonce?: string | null;
 };
 
-export type RoleParticipationAttestationMutationIntent = {
-  kind: 'relation.participation.attestation.set';
+export type RoleParticipationReactionMutationIntent = {
+  kind: 'relation.participation.reaction.set';
   scope_id: string;
   relation_packet_id: string;
   mode: 'support' | 'dispute' | 'clear';
@@ -191,7 +191,7 @@ export type PreferenceElementSetMutationIntent = {
 export type MutationIntent =
   | DiscussionThreadPostMutationIntent
   | DiscussionReplyMutationIntent
-  | PacketSignalMutationIntent
+  | PacketVoteMutationIntent
   | AssemblyElementCreateMutationIntent
   | AssociationRelationSetMutationIntent
   | AssociationRelationClearMutationIntent
@@ -199,7 +199,7 @@ export type MutationIntent =
   | FollowRelationSetMutationIntent
   | FollowRelationClearMutationIntent
   | RoleParticipationMutationIntent
-  | RoleParticipationAttestationMutationIntent
+  | RoleParticipationReactionMutationIntent
   | LocalityPathCreateMutationIntent
   | LocalityGraphApplyMutationIntent
   | DiscussionSurfacesEnsureMutationIntent

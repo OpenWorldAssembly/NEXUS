@@ -1,10 +1,10 @@
 /**
  * File: discussion.ts
- * Description: Canonical discussion and attestation packet helpers that stay portable across interfaces and runtimes.
+ * Description: Canonical discussion and reaction packet helpers that stay portable across interfaces and runtimes.
  */
 
 import {
-  createAttestationPacket,
+  createReactionPacket,
   createDiscussionPostPacket,
   createDiscussionReplyPacket,
   createDiscussionThreadPacket,
@@ -16,7 +16,7 @@ import type {
   DiscussionPostProjection,
 } from '@core/contracts';
 import type {
-  AttestationValue,
+  ReactionVoteValue,
   PacketEnvelopeByType,
   PacketRef,
 } from '@core/schema/packet-schema';
@@ -157,16 +157,14 @@ export function createDiscussionReplyPacketId(input: {
   )}-${compactTimestamp}-${createRandomSuffix()}`;
 }
 
-export function createAttestationPacketId(input: {
+export function createReactionPacketId(input: {
   targetPacketId: string;
   actorPacketId: string;
-  attestationKind: string;
   contextPacketId?: string | null;
 }): string {
   const digestSource = [
     input.targetPacketId,
     input.actorPacketId,
-    input.attestationKind,
     input.contextPacketId ?? '',
   ].join('|');
   let hashA = 2166136261;
@@ -185,7 +183,7 @@ export function createAttestationPacketId(input: {
     .toString(16)
     .padStart(8, '0')}`;
 
-  return `nexus:attestation/${createPacketSlug(
+  return `nexus:reaction/${createPacketSlug(
     input.targetPacketId,
     36
   )}-${digest.slice(0, 12)}`;
@@ -342,7 +340,7 @@ export function buildDiscussionReplyPacket(input: {
   });
 }
 
-export function buildPacketSignalAttestationPacket(input: {
+export function buildPacketVoteReactionPacket(input: {
   scopeId: string;
   actorPacket: PacketEnvelopeByType['Element'];
   targetPost: Pick<
@@ -352,9 +350,9 @@ export function buildPacketSignalAttestationPacket(input: {
     | 'applicable_scope_packet_ids'
     | 'vote_summary'
   >;
-  value: AttestationValue | 0;
+  value: ReactionVoteValue | 0;
   createdAt?: string;
-}): PacketEnvelopeByType['Attestation'] | null {
+}): PacketEnvelopeByType['Reaction'] | null {
   const createdAt = input.createdAt ?? new Date().toISOString();
   const scopePacketId = resolveDiscussionScopePacketId(input.scopeId);
   const currentValue = input.targetPost.vote_summary.viewer_value;
@@ -363,14 +361,13 @@ export function buildPacketSignalAttestationPacket(input: {
     return null;
   }
 
-  const packetId = createAttestationPacketId({
+  const packetId = createReactionPacketId({
     targetPacketId: input.targetPost.packet.packet_id,
     actorPacketId: input.actorPacket.header.packet_id,
-    attestationKind: 'packet_signal',
   });
   const persistedValue = input.value === 0 ? currentValue : input.value;
 
-  return createAttestationPacket({
+  return createReactionPacket({
     packet_id: packetId,
     revision_id: createDiscussionRevisionId(packetId, createdAt),
     created_at: createdAt,
@@ -387,11 +384,11 @@ export function buildPacketSignalAttestationPacket(input: {
     created_by: {
       packet_id: input.actorPacket.header.packet_id,
     },
-    metadata_tags: ['attestation', 'packet-signal'],
+    metadata_tags: ['reaction', 'vote'],
     target_ref: input.targetPost.packet,
-    value: persistedValue === -1 ? -1 : 1,
+    vote_value: persistedValue === -1 ? -1 : 1,
     status: input.value === 0 ? 'cleared' : 'active',
-    subtype: 'packet_signal',
+    subtype: 'reaction',
     supersedes_ref:
       currentValue === 0
         ? null

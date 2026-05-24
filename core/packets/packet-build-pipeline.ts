@@ -5,7 +5,6 @@
 
 import type {
   ActionPacketInput,
-  AttestationPacketInput,
   ClaimPacketInput,
   DecisionPacketInput,
   DiscussionPacketInput,
@@ -15,12 +14,12 @@ import type {
   PolicyPacketInput,
   ProposalPacketInput,
   ReportPacketInput,
+  ReactionPacketInput,
   RelationPacketInput,
   RolePacketInput,
-  VotePacketInput,
 } from '@core/packets/builders';
 import { actionBuildDefinition } from '@core/packets/types/action';
-import { attestationBuildDefinition } from '@core/packets/types/attestation';
+import { reactionBuildDefinition } from '@core/packets/types/reaction';
 import { bundleBuildDefinition } from '@core/packets/types/bundle';
 import { claimBuildDefinition } from '@core/packets/types/claim';
 import { definitionBuildDefinition } from '@core/packets/types/definition';
@@ -34,7 +33,6 @@ import { proposalBuildDefinition } from '@core/packets/types/proposal';
 import { reportBuildDefinition } from '@core/packets/types/report';
 import { relationBuildDefinition } from '@core/packets/types/relation';
 import { roleBuildDefinition } from '@core/packets/types/role';
-import { voteBuildDefinition } from '@core/packets/types/vote';
 import { createInitialRevisionId } from '@core/packets/packet-build-helpers';
 import {
   createPacketEnvelope,
@@ -148,8 +146,7 @@ export const GENERIC_PACKET_BUILD_TYPES = [
   'Relation',
   'Report',
   'Proposal',
-  'Vote',
-  'Attestation',
+  'Reaction',
   'Decision',
   'Action',
   'Discussion',
@@ -295,11 +292,8 @@ export function buildPacket(
   request: PacketBuildRequest<'Proposal', ProposalPacketInput>
 ): PacketEnvelopeByType['Proposal'];
 export function buildPacket(
-  request: PacketBuildRequest<'Vote', VotePacketInput>
-): PacketEnvelopeByType['Vote'];
-export function buildPacket(
-  request: PacketBuildRequest<'Attestation', AttestationPacketInput>
-): PacketEnvelopeByType['Attestation'];
+  request: PacketBuildRequest<'Reaction', ReactionPacketInput>
+): PacketEnvelopeByType['Reaction'];
 export function buildPacket(
   request: PacketBuildRequest<'Decision', DecisionPacketInput>
 ): PacketEnvelopeByType['Decision'];
@@ -362,15 +356,10 @@ export function buildPacket(
         request as PacketBuildRequest<'Proposal', ProposalPacketInput>,
         proposalBuildDefinition
       );
-    case 'Vote':
+    case 'Reaction':
       return buildPacketWithDefinition(
-        request as PacketBuildRequest<'Vote', VotePacketInput>,
-        voteBuildDefinition
-      );
-    case 'Attestation':
-      return buildPacketWithDefinition(
-        request as PacketBuildRequest<'Attestation', AttestationPacketInput>,
-        attestationBuildDefinition
+        request as PacketBuildRequest<'Reaction', ReactionPacketInput>,
+        reactionBuildDefinition
       );
     case 'Decision':
       return buildPacketWithDefinition(

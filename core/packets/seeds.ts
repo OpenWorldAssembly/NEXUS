@@ -28,7 +28,6 @@ import {
   createProposalPacket,
   createRelationPacket,
   createRolePacket,
-  createVotePacket,
 } from '@core/packets/builders';
 
 export const SEED_CREATED_AT = '2026-04-08T00:00:00.000Z';
@@ -52,7 +51,6 @@ export const PERSONAL_TREE_PACKET_IDS = {
   councilor_role: 'nexus:role/councilor',
   sunnymead_onboarding_proposal:
     'nexus:proposal/sunnymead-ranch-onboarding',
-  global_onboarding_vote: 'nexus:vote/sunnymead-ranch-onboarding',
 } as const;
 
 export const PERSONAL_TREE_REFS = {
@@ -83,9 +81,6 @@ export const PERSONAL_TREE_REFS = {
   councilor_role: createPacketRef(PERSONAL_TREE_PACKET_IDS.councilor_role),
   sunnymead_onboarding_proposal: createPacketRef(
     PERSONAL_TREE_PACKET_IDS.sunnymead_onboarding_proposal
-  ),
-  global_onboarding_vote: createPacketRef(
-    PERSONAL_TREE_PACKET_IDS.global_onboarding_vote
   ),
 } as const;
 
@@ -666,7 +661,7 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
       '# OWA Home Locality Relation Policy',
       '',
       '- Home-locality relations are structural graph facts.',
-      '- Claims and attestations may support, dispute, or contextualize a residency relation, but fresh relation writes do not auto-wrap themselves in claims.',
+      '- Claims and reactions may support, dispute, or contextualize a residency relation, but fresh relation writes do not auto-wrap themselves in claims.',
     ].join('\n'),
     status: 'active',
   });
@@ -911,18 +906,6 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     related_policy_refs: [PERSONAL_TREE_REFS.visitor_lobby_policy],
   });
 
-  const globalOnboardingVotePacket = createVotePacket({
-    packet_id: PERSONAL_TREE_PACKET_IDS.global_onboarding_vote,
-    created_at: SEED_CREATED_AT,
-    authority_scope_ref: PERSONAL_TREE_REFS.sunnymead_ranch,
-    applicable_scope_refs: sunnymeadApplicableScopeRefs,
-    proposal_ref: PERSONAL_TREE_REFS.sunnymead_onboarding_proposal,
-    title: 'Vote: Sunnymead Ranch onboarding pilot',
-    vote_method: 'simple-majority',
-    status: 'up_for_vote',
-    opened_at: SEED_CREATED_AT,
-    closes_at: '2026-04-12T00:00:00.000Z',
-  });
   const aaronSunnymeadAssociationRelation = createRelationPacket({
     packet_id: 'nexus:relation/association/aaron-sunnymead-ranch',
     created_at: SEED_CREATED_AT,
@@ -958,7 +941,6 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     coordinatorRolePacket,
     councilorRolePacket,
     sunnymeadOnboardingProposalPacket,
-    globalOnboardingVotePacket,
     aaronSunnymeadAssociationRelation,
     ...createScopeDiscussionPackets({
       packetRef: PERSONAL_TREE_REFS.global_commons,

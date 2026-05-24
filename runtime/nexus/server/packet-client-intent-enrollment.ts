@@ -73,7 +73,7 @@ const CLIENT_INTENT_BY_MUTATION_INTENT: Record<string, string> = {
   'discussion.thread_post.create': 'discussion.thread_post.create',
   'discussion.reply.create': 'discussion.reply.create',
   'discussion.surfaces.ensure': 'discussion.surfaces.ensure',
-  'attestation.packet_signal.set': 'attestation.packet_signal.set',
+  'reaction.vote.set': 'reaction.vote.set',
   'assembly.element.create': 'assembly.element.create',
   'relation.association.add': 'scope.association.set',
   'relation.association.clear': 'scope.association.clear',
@@ -82,7 +82,7 @@ const CLIENT_INTENT_BY_MUTATION_INTENT: Record<string, string> = {
   'relation.follow.clear': 'scope.follow.clear',
   'relation.participation.add': 'relation.participation.add',
   'relation.participation.clear': 'relation.participation.clear',
-  'relation.participation.attestation.set': 'relation.participation.attestation.set',
+  'relation.participation.reaction.set': 'relation.participation.reaction.set',
   'actor.write_policy.update': 'actor.write_policy.update',
   'preference.element.set': 'preference.interface.set',
 };

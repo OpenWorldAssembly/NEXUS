@@ -11,7 +11,7 @@ import type {
   PacketEnvelopeByType,
 } from '@core/schema/packet-schema';
 import type { NexusAuthService } from '@runtime/nexus/server/auth-service';
-import type { SQLiteAttestationService } from '@runtime/nexus/server/attestation-service';
+import type { SQLiteReactionService } from '@runtime/nexus/server/reaction-service';
 import type { SQLiteDiscussionService } from '@runtime/nexus/server/discussion-service';
 import type { StoredMutationTicket } from '@runtime/nexus/server/mutation-ticket-store';
 import {
@@ -50,7 +50,7 @@ export class MutationFinalizeHandlers {
     private readonly packetStore: NodeSQLitePacketStore,
     private readonly authService: NexusAuthService,
     private readonly discussionService: SQLiteDiscussionService,
-    private readonly attestationService: SQLiteAttestationService,
+    private readonly reactionService: SQLiteReactionService,
     private readonly signedPacketFinalizer: SignedPacketFinalizer
   ) {}
 
@@ -188,25 +188,25 @@ export class MutationFinalizeHandlers {
     };
   }
 
-  async finalizePacketSignal(input: {
+  async finalizePacketVoteReaction(input: {
     actorContext: MutationFinalizeActorContext;
-    signedPackets: [PacketEnvelopeByType['Attestation']];
+    signedPackets: [PacketEnvelopeByType['Reaction']];
   }) {
-    const [attestationPacket] = input.signedPackets;
-    const summary = await this.attestationService.persistSignedAttestation({
-      attestation_packet: attestationPacket,
+    const [reactionPacket] = input.signedPackets;
+    const summary = await this.reactionService.persistSignedReaction({
+      reaction_packet: reactionPacket,
       actor_packet: input.actorContext.actorPacket,
       actor_key: input.actorContext.actorKey,
       actor_class: input.actorContext.actorClass,
     });
 
     return {
-      persist_effects: toMutationPersistEffects([attestationPacket]),
+      persist_effects: toMutationPersistEffects([reactionPacket]),
       result: {
-        target_packet_id: attestationPacket.body.target_ref.packet_id,
-        value: (attestationPacket.body.status === 'cleared'
+        target_packet_id: reactionPacket.body.target_ref.packet_id,
+        value: (reactionPacket.body.status === 'cleared'
           ? 0
-          : attestationPacket.body.value) as -1 | 0 | 1,
+          : reactionPacket.body.vote_value) as -1 | 0 | 1,
         summary,
       },
     };
@@ -260,7 +260,7 @@ export class MutationFinalizeHandlers {
       signedPackets: input.signedPackets,
     });
     await this.discussionService.syncDerivedState();
-    await this.attestationService.syncDerivedState();
+    await this.reactionService.syncDerivedState();
     const assemblyPacket = input.signedPackets.find(
       (packet): packet is PacketEnvelopeByType['Element'] =>
         packet.header.type === 'Element'
@@ -270,7 +270,7 @@ export class MutationFinalizeHandlers {
       persist_effects: toMutationPersistEffects(input.signedPackets),
       result: {
         assembly_packet: assemblyPacket ?? null,
-        claims: await this.attestationService.listAssociationClaimsForActor(
+        claims: await this.reactionService.listAssociationClaimsForActor(
           input.actorContext.actorPacket.header.packet_id
         ),
       },
@@ -286,7 +286,7 @@ export class MutationFinalizeHandlers {
       actorPacket: input.actorContext.actorPacket,
       signedPackets: input.signedPackets,
     });
-    await this.attestationService.syncDerivedState();
+    await this.reactionService.syncDerivedState();
     const activeRelationPacket = [...input.signedPackets].reverse().find(
       (packet): packet is PacketEnvelopeByType['Relation'] =>
         packet.header.type === 'Relation' &&
@@ -354,7 +354,7 @@ export class MutationFinalizeHandlers {
       actorPacket: input.actorContext.actorPacket,
       signedPackets: input.signedPackets,
     });
-    await this.attestationService.syncDerivedState();
+    await this.reactionService.syncDerivedState();
     const activeRelationPacket = [...input.signedPackets].reverse().find(
       (packet): packet is PacketEnvelopeByType['Relation'] =>
         packet.header.type === 'Relation' &&
@@ -413,7 +413,7 @@ export class MutationFinalizeHandlers {
     };
   }
 
-  async finalizeRoleParticipationAttestation(input: {
+  async finalizeRoleParticipationReaction(input: {
     actorContext: MutationFinalizeActorContext;
     signedPackets: PacketEnvelope[];
     storedTicket: StoredMutationTicket;
@@ -422,51 +422,55 @@ export class MutationFinalizeHandlers {
       actorPacket: input.actorContext.actorPacket,
       signedPackets: input.signedPackets,
     });
-    await this.attestationService.syncDerivedState();
+    await this.reactionService.syncDerivedState();
 
-    if (input.storedTicket.intent.kind !== 'relation.participation.attestation.set') {
-      throw new Error('Unexpected role participation attestation mutation ticket.');
+    if (input.storedTicket.intent.kind !== 'relation.participation.reaction.set') {
+      throw new Error('Unexpected role participation reaction mutation ticket.');
     }
-    const roleAttestationIntent = input.storedTicket.intent;
+    const roleReactionIntent = input.storedTicket.intent;
 
     const supportCount = (
-      await this.attestationService.listTargetAttestations({
-        target_packet_id: roleAttestationIntent.relation_packet_id,
-        attestation_kind: 'support',
+      await this.reactionService.listTargetReactions({
+        target_packet_id: roleReactionIntent.relation_packet_id,
+        attestation_value: 'support',
         active_only: true,
       })
     ).length;
     const disputeCount = (
-      await this.attestationService.listTargetAttestations({
-        target_packet_id: roleAttestationIntent.relation_packet_id,
-        attestation_kind: 'dispute',
+      await this.reactionService.listTargetReactions({
+        target_packet_id: roleReactionIntent.relation_packet_id,
+        attestation_value: 'dispute',
         active_only: true,
       })
     ).length;
     const actorKey = input.actorContext.actorKey;
     const viewerSupport = (
-      await this.attestationService.listActorAttestations({
+      await this.reactionService.listActorReactions({
         actor_key: actorKey,
-        attestation_kind: 'support',
         active_only: true,
       })
-    ).some((edge) => edge.target_ref.packet_id === roleAttestationIntent.relation_packet_id);
+    ).some((edge) =>
+      edge.target_ref.packet_id === roleReactionIntent.relation_packet_id &&
+      edge.attestation_value === 'support'
+    );
     const viewerDispute = (
-      await this.attestationService.listActorAttestations({
+      await this.reactionService.listActorReactions({
         actor_key: actorKey,
-        attestation_kind: 'dispute',
         active_only: true,
       })
-    ).some((edge) => edge.target_ref.packet_id === roleAttestationIntent.relation_packet_id);
+    ).some((edge) =>
+      edge.target_ref.packet_id === roleReactionIntent.relation_packet_id &&
+      edge.attestation_value === 'dispute'
+    );
 
     return {
       persist_effects: toMutationPersistEffects(input.signedPackets),
       result: {
-        relation_packet_id: roleAttestationIntent.relation_packet_id,
-        mode: roleAttestationIntent.mode,
+        relation_packet_id: roleReactionIntent.relation_packet_id,
+        mode: roleReactionIntent.mode,
         support_count: supportCount,
         dispute_count: disputeCount,
-        viewer_attestation: viewerSupport
+        viewer_reaction: viewerSupport
           ? 'support'
           : viewerDispute
             ? 'dispute'

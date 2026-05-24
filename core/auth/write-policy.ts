@@ -20,13 +20,13 @@ export type MutationActionId =
   | 'discussion.thread.create'
   | 'discussion.post.create'
   | 'discussion.reply.create'
-  | 'attestation.packet_signal.set'
-  | 'attestation.packet_signal.clear'
+  | 'reaction.vote.set'
+  | 'reaction.vote.clear'
   | 'relation.participation.add'
   | 'relation.participation.clear'
-  | 'relation.participation.attestation.support'
-  | 'relation.participation.attestation.dispute'
-  | 'relation.participation.attestation.clear'
+  | 'relation.participation.reaction.support'
+  | 'relation.participation.reaction.dispute'
+  | 'relation.participation.reaction.clear'
   | 'relation.association.add'
   | 'relation.association.clear'
   | 'relation.residence.add'
@@ -45,13 +45,13 @@ export const MUTATION_ACTION_IDS = [
   'discussion.thread.create',
   'discussion.post.create',
   'discussion.reply.create',
-  'attestation.packet_signal.set',
-  'attestation.packet_signal.clear',
+  'reaction.vote.set',
+  'reaction.vote.clear',
   'relation.participation.add',
   'relation.participation.clear',
-  'relation.participation.attestation.support',
-  'relation.participation.attestation.dispute',
-  'relation.participation.attestation.clear',
+  'relation.participation.reaction.support',
+  'relation.participation.reaction.dispute',
+  'relation.participation.reaction.clear',
   'relation.association.add',
   'relation.association.clear',
   'relation.residence.add',

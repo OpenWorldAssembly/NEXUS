@@ -14,7 +14,7 @@ import { buildPacket } from '@core/packets/packet-build-pipeline';
 import {
   PACKET_BODY_SCHEMAS,
   createPacketEnvelope,
-  type CanonicalAttestationSubtype,
+  type CanonicalReactionSubtype,
   type CanonicalClaimSubtype,
   type CanonicalRelationSubtype,
   getPacketCurrentSchemaVersion,
@@ -35,7 +35,9 @@ import {
   type TrustStage,
   type PacketRef,
   type PacketRevisionRef,
-  type AttestationValue,
+  type ReactionAttestationValue,
+  type ReactionEmotionId,
+  type ReactionVoteValue,
   type LocalityLevel,
 } from '@core/schema/packet-schema';
 
@@ -312,15 +314,6 @@ export interface PreferencePacketInput extends PacketBuilderBaseInput {
   body: z.input<(typeof PACKET_BODY_SCHEMAS)['Preference']>;
 }
 
-export interface VotePacketInput extends PacketBuilderBaseInput {
-  title: string;
-  proposal_ref: PacketRef;
-  vote_method: string;
-  status: string;
-  opened_at?: string | null;
-  closes_at?: string | null;
-}
-
 export interface DecisionPacketInput extends PacketBuilderBaseInput {
   title: string;
   summary?: string | null;
@@ -344,11 +337,13 @@ export interface ActionPacketInput extends PacketBuilderBaseInput {
   default_packet_set_refs?: PacketRef[];
 }
 
-export interface AttestationPacketInput extends PacketBuilderBaseInput {
-  subtype?: CanonicalAttestationSubtype | string | null;
+export interface ReactionPacketInput extends PacketBuilderBaseInput {
+  subtype?: CanonicalReactionSubtype | string | null;
   target_ref: PacketRef;
-  value: AttestationValue;
   status?: 'active' | 'cleared';
+  vote_value?: ReactionVoteValue | null;
+  attestation_value?: ReactionAttestationValue | null;
+  emotion_ids?: ReactionEmotionId[];
   context_ref?: PacketRef | null;
   supporting_refs?: PacketRef[];
   note?: string | null;
@@ -788,20 +783,6 @@ export function createPreferencePacket(
 }
 
 /**
- * Inputs: common packet header fields plus the vote body data.
- * Output: a vote packet with an explicit edge back to the proposal it evaluates.
- */
-export function createVotePacket(
-  input: VotePacketInput
-): PacketEnvelopeByType['Vote'] {
-  return buildPacket({
-    type: 'Vote',
-    body: input,
-    header: input,
-  });
-}
-
-/**
  * Inputs: common packet header fields plus the decision body data.
  * Output: a decision packet with optional references to supporting proposal and vote packets.
  */
@@ -837,14 +818,14 @@ export function createActionPacket(
 }
 
 /**
- * Inputs: common packet header fields plus the universal attestation body data.
- * Output: an attestation tied to any packet target, with its target/context refs mirrored into graph links.
+ * Inputs: common packet header fields plus the universal reaction body data.
+ * Output: a reaction tied to any packet target, with vote, support/dispute, and emotion channels kept type-agnostic.
  */
-export function createAttestationPacket(
-  input: AttestationPacketInput
-): PacketEnvelopeByType['Attestation'] {
+export function createReactionPacket(
+  input: ReactionPacketInput
+): PacketEnvelopeByType['Reaction'] {
   return buildPacket({
-    type: 'Attestation',
+    type: 'Reaction',
     body: input,
     header: {
       ...input,
@@ -866,5 +847,3 @@ export function createBundlePacket(
     },
   });
 }
-
-export const createPacketVotePacket = createAttestationPacket;

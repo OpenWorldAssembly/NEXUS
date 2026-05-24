@@ -135,12 +135,13 @@ CREATE TABLE IF NOT EXISTS packet_verification_index (
 CREATE INDEX IF NOT EXISTS idx_packet_verification_status
   ON packet_verification_index(status, validated_at DESC);
 
-CREATE TABLE IF NOT EXISTS attestation_index (
-  attestation_packet_id TEXT PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS reaction_index (
+  reaction_packet_id TEXT PRIMARY KEY,
   target_packet_id TEXT NOT NULL,
   actor_key TEXT NOT NULL,
-  attestation_kind TEXT NOT NULL,
-  value INTEGER NOT NULL,
+  vote_value INTEGER,
+  attestation_value TEXT,
+  emotion_ids_json TEXT NOT NULL,
   status TEXT NOT NULL,
   context_packet_id TEXT,
   note TEXT,
@@ -148,10 +149,16 @@ CREATE TABLE IF NOT EXISTS attestation_index (
   updated_at TEXT NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_attestation_target_actor
-  ON attestation_index(target_packet_id, actor_key);
+CREATE INDEX IF NOT EXISTS idx_reaction_target_actor
+  ON reaction_index(target_packet_id, actor_key);
 
-CREATE TABLE IF NOT EXISTS attestation_tally_index (
+CREATE INDEX IF NOT EXISTS idx_reaction_target_vote
+  ON reaction_index(target_packet_id, vote_value);
+
+CREATE INDEX IF NOT EXISTS idx_reaction_target_attestation
+  ON reaction_index(target_packet_id, attestation_value);
+
+CREATE TABLE IF NOT EXISTS reaction_tally_index (
   target_packet_id TEXT PRIMARY KEY,
   upvote_count INTEGER NOT NULL,
   downvote_count INTEGER NOT NULL,
@@ -162,8 +169,8 @@ CREATE TABLE IF NOT EXISTS attestation_tally_index (
   deprioritized INTEGER NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_attestation_tally_net_score
-  ON attestation_tally_index(net_score DESC, total_votes DESC);
+CREATE INDEX IF NOT EXISTS idx_reaction_tally_net_score
+  ON reaction_tally_index(net_score DESC, total_votes DESC);
 
 CREATE TABLE IF NOT EXISTS discussion_post_index (
   post_packet_id TEXT PRIMARY KEY,

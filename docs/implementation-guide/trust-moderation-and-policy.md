@@ -8,7 +8,7 @@ Current code truth:
 
 - trust stages are currently explicit and threshold-based
 - support and dispute evidence are packet-backed
-- role posture is projected from scoped claims plus claim-targeted attestations
+- role posture is projected from scoped claims plus claim-targeted reactions
 
 Direction:
 
@@ -31,7 +31,7 @@ Status: canon candidate
 - automoderation should be a generic feature, not a route-local trick
 - default moderation baselines should come from the relevant element's policy
 - user-level moderation preferences should be available as adjustable policy or settings choices, similar in spirit to write protection preferences
-- moderation should primarily act as visibility projection over packet and attestation graphs before it becomes hard rejection logic
+- moderation should primarily act as visibility projection over packet and reaction graphs before it becomes hard rejection logic
 
 ### Unresolved
 
@@ -39,7 +39,7 @@ Status: canon candidate
 - which interactions should remain soft projection versus hard runtime enforcement
 - how much moderation preference state should be actor-level policy versus client-level shell preference
 
-## Attestations, reactions, and claims
+## Reactions, reactions, and claims
 
 Status: canon candidate
 
@@ -47,15 +47,15 @@ Status: canon candidate
 
 - `Relation` is the structural type for adopted graph facts
 - `Claim` is its own live packet type for assertions, arguments, and disputable relation claims
-- `Attestation` is its own live packet type for evidence, certification, support/dispute, and packet-signal responses
-- current discussion voting uses packet-signal attestations rather than a separate reaction type
-- current claim support and dispute still run through the attestation service and attestation indexes
+- `Reaction` is its own live packet type for evidence, certification, support/dispute, and packet-signal responses
+- current discussion voting uses packet-signal reactions rather than a separate reaction type
+- current claim support and dispute still run through the reaction service and reaction indexes
 
 ### Direction
 
-- keep `Claim` and `Attestation` distinct
+- keep `Claim` and `Reaction` distinct
 - treat `Claim` as the forward layer for relation assertions and other packet-targeted arguments
-- treat `Attestation` as the forward layer for supporting, disputing, certifying, or signaling around packets, including Claims and Relations
+- treat `Reaction` as the forward layer for supporting, disputing, certifying, or signaling around packets, including Claims and Relations
 - do not require Claim wrappers for every Relation
 - let policy require supporting Claims for legitimacy-sensitive Relations where needed
 
@@ -64,7 +64,7 @@ Current implementation note:
 - the new `Policy.relation_requirements` seam exists so stricter relation-support rules can be expressed generically instead of being hardcoded as route-only logic
 - `Policy.default_policy` now carries packet-backed default refs for policies, templates, `Definition(subtype: defaults_definition)` packets, default packet sets, and preference material, plus explicit override paths; it must not introduce runtime-only default labels
 - `Policy.governance_policy` now reserves packet-backed governance hooks for voter eligibility, minimum trust stage, quorum, approval threshold, vote method, and decision-report expectations
-- this chapter should be read before changing `Claim`, `Attestation`, `Relation`, or `Policy` semantics because it owns the intended separation between assertion, evidence, graph structure, and policy requirements
+- this chapter should be read before changing `Claim`, `Reaction`, `Relation`, or `Policy` semantics because it owns the intended separation between assertion, evidence, graph structure, and policy requirements
 - packet-native follow does not currently require a supporting claim in this phase
 - packet-native association no longer auto-mints a supporting self-issued `Claim(subtype: relation_assertion)` alongside the structural relation
 
@@ -72,7 +72,7 @@ Current home-locality policy note:
 
 - OWA-sensitive home-locality legitimacy resolves through `Action(subtype: initiative)` as the forward OWA policy/default anchor
 - a canonical `Relation(subtype: residence)` is enough for default mounted home-locality projection; stricter `Policy.relation_requirements` can still require extra evidence for specific scopes
-- the expected support model in this phase is separate Claims and Attestations attached around Relations only when evidence, dispute, or policy asks for them
+- the expected support model in this phase is separate Claims and Reactions attached around Relations only when evidence, dispute, or policy asks for them
 - legacy claim-only home-locality reads remain compatibility projections, not the forward legitimacy model
 
 Current dependency authority note:
@@ -86,8 +86,8 @@ Current dependency authority note:
 Direction:
 
 - `Claim` should be understood as an unresolved assertion or request that invites evaluation, scrutiny, or action
-- `Attestation` should be understood as a signed stance toward a target, such as support, dispute, certification, rejection, or abstention
-- a `Vote` should remain a governed attestation inside a recognized process with eligibility and policy rules
+- `Reaction` should be understood as a signed stance toward a target, such as support, dispute, certification, rejection, or abstention
+- formal voting should route through governed `Reaction` aggregation inside a recognized process with eligibility and policy rules
 - `Report` should be the long-term home for findings, outcomes, and context around a target
 - a resolution or decision artifact should eventually read as a process-backed closure report rather than as unexplained authority
 - quorum, minimum trust, eligibility, approval thresholds, and voting gates should be policy-backed defaults that can be inherited from the applicable initiative Action or scope policy and overridden by explicit packet refs

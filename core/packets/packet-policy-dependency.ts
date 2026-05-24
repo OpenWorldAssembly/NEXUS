@@ -64,7 +64,7 @@ export type PacketPolicyDependencyAuditReport = {
 const PACKET_TYPE_BY_OPERATION_DEPENDENCY: Record<string, string> = {
   'generic.operation.relation': 'Relation',
   'generic.operation.claim': 'Claim',
-  'generic.operation.attestation': 'Attestation',
+  'generic.operation.reaction': 'Reaction',
   'generic.operation.discussion': 'Discussion',
   'generic.operation.projection': 'Definition',
   'generic.compatibility_projection': 'Definition',

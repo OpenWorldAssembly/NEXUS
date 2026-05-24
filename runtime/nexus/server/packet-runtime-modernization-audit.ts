@@ -61,9 +61,9 @@ const MUTATION_POLICY_ACTION_IDS = {
   ],
   'discussion.reply.create': ['discussion.reply.create'],
   'discussion.surfaces.ensure': ['discussion.surfaces.ensure'],
-  'attestation.packet_signal.set': [
-    'attestation.packet_signal.set',
-    'attestation.packet_signal.clear',
+  'reaction.vote.set': [
+    'reaction.vote.set',
+    'reaction.vote.clear',
   ],
   'assembly.element.create': ['assembly.element.create'],
   'relation.association.add': ['relation.association.add'],
@@ -78,10 +78,10 @@ const MUTATION_POLICY_ACTION_IDS = {
     'relation.participation.add',
     'relation.participation.clear',
   ],
-  'relation.participation.attestation.set': [
-    'relation.participation.attestation.support',
-    'relation.participation.attestation.dispute',
-    'relation.participation.attestation.clear',
+  'relation.participation.reaction.set': [
+    'relation.participation.reaction.support',
+    'relation.participation.reaction.dispute',
+    'relation.participation.reaction.clear',
   ],
   'actor.write_policy.update': ['actor.write_policy.update'],
   'preference.element.set': ['preference.element.write'],

@@ -9,8 +9,8 @@ import type {
   PreparedMutation,
 } from '@core/auth/mutation-corridor';
 import type { MutationActionId } from '@core/auth/write-policy';
-import type { AttestationService } from '@core/contracts';
-import { buildPacketSignalAttestationPacket } from '@core/packets/discussion';
+import type { ReactionService } from '@core/contracts';
+import { buildPacketVoteReactionPacket } from '@core/packets/discussion';
 import type {
   PacketEnvelope,
   PacketEnvelopeByType,
@@ -37,20 +37,20 @@ export type LiveGenericWorkflowMutationIntent = Extract<
   | 'relation.follow.clear'
   | 'relation.participation.add'
   | 'relation.participation.clear'
-  | 'attestation.packet_signal.set'
+  | 'reaction.vote.set'
 >;
 
 export type LiveGenericWorkflowEnrollment = {
   enrollment_id: string;
   mutation_intent: LiveGenericWorkflowMutationIntent;
-  packet_type: 'Relation' | 'Claim' | 'Attestation';
+  packet_type: 'Relation' | 'Claim' | 'Reaction';
   packet_subtype: string;
   workflow_plan_id: string;
   operation_kind:
     | 'relation.set'
     | 'relation.clear'
-    | 'attestation.set'
-    | 'attestation.clear';
+    | 'reaction.set'
+    | 'reaction.clear';
   policy_action_ids: MutationActionId[];
   dependency_ids: string[];
   trusted_capability_ids: string[];
@@ -59,13 +59,13 @@ export type LiveGenericWorkflowEnrollment = {
     | 'prepareHomeLocalityRelation'
     | 'prepareFollowRelation'
     | 'prepareRoleParticipationRelation'
-    | 'preparePacketSignal';
+    | 'preparePacketVoteReaction';
   fortress_finalize_handler:
     | 'finalizeAssociationRelationUpdate'
     | 'finalizeHomeLocalityRelation'
     | 'finalizeFollowRelationUpdate'
     | 'finalizeRoleParticipationRelationUpdate'
-    | 'finalizePacketSignal';
+    | 'finalizePacketVoteReaction';
   live_mode: 'trusted_generic_workflow';
   notes: string;
 };
@@ -94,28 +94,25 @@ export type TrustedRelationOperationPlan = {
   relation_plan: ScopeRelationPacketPlan;
 };
 
-export type TrustedAttestationOperationPlan = {
-  plan_kind: 'trusted_attestation_operation_plan';
-  mutation_intent: 'attestation.packet_signal.set';
-  operation_kind: 'attestation.set' | 'attestation.clear';
+export type TrustedReactionOperationPlan = {
+  plan_kind: 'trusted_reaction_operation_plan';
+  mutation_intent: 'reaction.vote.set';
+  operation_kind: 'reaction.set' | 'reaction.clear';
   workflow_plan_id: string;
-  packet_type: 'Attestation';
-  packet_subtype: 'packet_signal';
+  packet_type: 'Reaction';
+  packet_subtype: 'reaction';
   policy_action_ids: MutationActionId[];
   dependency_ids: string[];
   trusted_capability_ids: string[];
-  target_packet:
-    | PacketEnvelopeByType['Discussion']
-    | PacketEnvelopeByType['Discussion']
-    | PacketEnvelopeByType['Discussion'];
+  target_packet: PacketEnvelopeByType['Discussion'];
   governing_scope_packet: PacketEnvelopeByType['Element'] | null;
-  attestation_packet: PacketEnvelopeByType['Attestation'];
+  reaction_packet: PacketEnvelopeByType['Reaction'];
 };
 
 export type TrustedPacketWorkflowMutationInput = {
   packetStore: NodeSQLitePacketStore;
   policyGate: MutationPolicyGate;
-  attestationService?: AttestationService;
+  reactionService?: ReactionService;
   actorKey?: string;
   actorPacket: PacketEnvelopeByType['Element'];
   intent:
@@ -126,7 +123,7 @@ export type TrustedPacketWorkflowMutationInput = {
     | Extract<MutationIntent, { kind: 'relation.follow.clear' }>
     | Extract<MutationIntent, { kind: 'relation.participation.add' }>
     | Extract<MutationIntent, { kind: 'relation.participation.clear' }>
-    | Extract<MutationIntent, { kind: 'attestation.packet_signal.set' }>;
+    | Extract<MutationIntent, { kind: 'reaction.vote.set' }>;
 };
 
 export type LiveGenericWorkflowEnrollmentAuditFinding = {
@@ -150,7 +147,7 @@ const LIVE_GENERIC_WORKFLOW_INTENTS = [
   'relation.follow.clear',
   'relation.participation.add',
   'relation.participation.clear',
-  'attestation.packet_signal.set',
+  'reaction.vote.set',
 ] as const satisfies readonly LiveGenericWorkflowMutationIntent[];
 
 function isClaimedActorPacket(actorPacket: PacketEnvelopeByType['Element']): boolean {
@@ -343,21 +340,21 @@ function createEnrollment(
   return {
     enrollment_id: `live.generic.workflow.${mutationIntent}`,
     mutation_intent: mutationIntent,
-    packet_type: 'Attestation',
-    packet_subtype: 'packet_signal',
-    workflow_plan_id: 'attestation.packet_signal.set.workflow.v0',
-    operation_kind: 'attestation.set',
+    packet_type: 'Reaction',
+    packet_subtype: 'reaction',
+    workflow_plan_id: 'reaction.vote.set.workflow.v0',
+    operation_kind: 'reaction.set',
     policy_action_ids: [
-      'attestation.packet_signal.set',
-      'attestation.packet_signal.clear',
+      'reaction.vote.set',
+      'reaction.vote.clear',
     ],
     dependency_ids: [...alignment.dependency_ids],
     trusted_capability_ids: [...alignment.trusted_capability_ids],
-    fortress_prepare_handler: 'preparePacketSignal',
-    fortress_finalize_handler: 'finalizePacketSignal',
+    fortress_prepare_handler: 'preparePacketVoteReaction',
+    fortress_finalize_handler: 'finalizePacketVoteReaction',
     live_mode: 'trusted_generic_workflow',
     notes:
-      'Trusted generic attestation workflow: local Attestation planner executes definition-declared packet signal metadata inside the existing fortress corridor.',
+      'Trusted generic reaction workflow: local Reaction planner executes definition-declared packet vote metadata inside the existing fortress corridor.',
   };
 }
 
@@ -623,17 +620,17 @@ export async function resolveTrustedRoleParticipationRelationOperationPlan(
   };
 }
 
-export async function resolveTrustedAttestationOperationPlan(
+export async function resolveTrustedReactionOperationPlan(
   input: TrustedPacketWorkflowMutationInput
-): Promise<TrustedAttestationOperationPlan> {
-  if (input.intent.kind !== 'attestation.packet_signal.set') {
+): Promise<TrustedReactionOperationPlan> {
+  if (input.intent.kind !== 'reaction.vote.set') {
     throw new Error(
-      `Unsupported attestation workflow mutation intent: ${input.intent.kind}`
+      `Unsupported reaction workflow mutation intent: ${input.intent.kind}`
     );
   }
 
-  if (!input.attestationService || !input.actorKey) {
-    throw new Error('Packet signal planning requires an attestation service and actor key.');
+  if (!input.reactionService || !input.actorKey) {
+    throw new Error('Packet vote planning requires a reaction service and actor key.');
   }
 
   const enrollment = requireLiveGenericEnrollment(input.intent.kind);
@@ -641,11 +638,11 @@ export async function resolveTrustedAttestationOperationPlan(
     packetStore: input.packetStore,
     packetId: input.intent.target_packet_id,
   });
-  const summary = await input.attestationService.getTargetSummary({
+  const summary = await input.reactionService.getTargetSummary({
     target_packet_id: input.intent.target_packet_id,
     viewer_actor_key: input.actorKey,
   });
-  const attestationPacket = buildPacketSignalAttestationPacket({
+  const reactionPacket = buildPacketVoteReactionPacket({
     scopeId: input.intent.scope_id,
     actorPacket: input.actorPacket,
     targetPost: {
@@ -661,7 +658,7 @@ export async function resolveTrustedAttestationOperationPlan(
     createdAt: input.intent.created_at ?? new Date().toISOString(),
   });
 
-  if (!attestationPacket) {
+  if (!reactionPacket) {
     throw new Error('The packet vote is already cleared.');
   }
 
@@ -673,23 +670,23 @@ export async function resolveTrustedAttestationOperationPlan(
     : null;
   const actionId: MutationActionId =
     input.intent.value === 0
-      ? 'attestation.packet_signal.clear'
-      : 'attestation.packet_signal.set';
+      ? 'reaction.vote.clear'
+      : 'reaction.vote.set';
 
   return {
-    plan_kind: 'trusted_attestation_operation_plan',
+    plan_kind: 'trusted_reaction_operation_plan',
     mutation_intent: input.intent.kind,
     operation_kind:
-      input.intent.value === 0 ? 'attestation.clear' : 'attestation.set',
+      input.intent.value === 0 ? 'reaction.clear' : 'reaction.set',
     workflow_plan_id: enrollment.workflow_plan_id,
-    packet_type: 'Attestation',
-    packet_subtype: 'packet_signal',
+    packet_type: 'Reaction',
+    packet_subtype: 'reaction',
     policy_action_ids: [actionId],
     dependency_ids: [...enrollment.dependency_ids],
     trusted_capability_ids: [...enrollment.trusted_capability_ids],
     target_packet: targetPacket,
     governing_scope_packet: governingScopePacket,
-    attestation_packet: attestationPacket,
+    reaction_packet: reactionPacket,
   };
 }
 
@@ -737,26 +734,26 @@ export async function runTrustedPacketWorkflowMutation(
   }
 
 
-  const operationPlan = await resolveTrustedAttestationOperationPlan(input);
+  const operationPlan = await resolveTrustedReactionOperationPlan(input);
   const policyDecision = await input.policyGate.resolveScopePolicyDecision({
     governingScopePacket: operationPlan.governing_scope_packet,
     actorPacket: input.actorPacket,
     actionIds: operationPlan.policy_action_ids,
   });
   const digests = await getPacketUnsignedDigestCandidates(
-    operationPlan.attestation_packet
+    operationPlan.reaction_packet
   );
 
   return {
     kind: input.intent.kind,
     ...policyDecision,
     governing_scope_packet_id:
-      operationPlan.attestation_packet.header.authority_scope_ref?.packet_id ??
+      operationPlan.reaction_packet.header.authority_scope_ref?.packet_id ??
       operationPlan.governing_scope_packet?.header.packet_id ??
       null,
     prepared_packets: [
       {
-        packet: operationPlan.attestation_packet,
+        packet: operationPlan.reaction_packet,
         unsigned_digest: digests[0]?.digest ?? '',
       },
     ],

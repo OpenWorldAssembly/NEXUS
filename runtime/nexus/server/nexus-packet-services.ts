@@ -40,7 +40,7 @@ export async function getNexusPacketServices(): Promise<NexusPacketServices> {
           dryRun: false,
         });
       }
-      await services.attestationService.syncDerivedState();
+      await services.reactionService.syncDerivedState();
       await services.discussionService.syncDerivedState();
 
       return services;

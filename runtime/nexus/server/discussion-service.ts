@@ -1,6 +1,6 @@
 /**
  * File: discussion-service.ts
- * Description: Projects packet-backed discussion forums, threads, root posts, replies, and attestation-backed reactions from the SQLite packet store.
+ * Description: Projects packet-backed discussion forums, threads, root posts, replies, and reaction-backed votes from the SQLite packet store.
  */
 
 import { DatabaseSync } from 'node:sqlite';
@@ -23,8 +23,8 @@ import {
 import { interpretPacket } from '@core/packets/packet-interpreter';
 import { resolvePacketTarget } from '@core/packets/packet-target-resolver';
 import type {
-  AttestationService,
-  AttestationSummary,
+  ReactionService,
+  ReactionVoteSummary,
   DiscussionForumProjection,
   DiscussionFocusModel,
   DiscussionNavigationTarget,
@@ -37,7 +37,7 @@ import type {
   NexusActionMap,
 } from '@core/contracts';
 import type {
-  AttestationValue,
+  ReactionVoteValue,
   DiscussionActorClass,
   DiscussionReplySort,
   DiscussionSort,
@@ -70,8 +70,8 @@ import {
 } from '@runtime/nexus/server/discussion-service.scope';
 import type {
   DiscussionPostIndexRecord,
-  AttestationIndexRecord,
-  AttestationTallyIndexRecord,
+  ReactionIndexRecord,
+  ReactionTallyIndexRecord,
 } from '@runtime/storage/sqlite-records';
 import { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store';
 import { DISCUSSION_ACTION_DESCRIPTORS } from '@runtime/nexus/discussion-action-contract';
@@ -114,11 +114,11 @@ type DiscussionState = {
   replyOperationalMap: Map<string, PacketEnvelopeByType['Discussion']>;
   entryMap: Map<string, DiscussionEntryPacket>;
   entryOperationalMap: Map<string, DiscussionEntryPacket>;
-  voteSummaryByTarget: Map<string, Omit<AttestationSummary, 'viewer_value'>>;
-  viewerVotesByActor: Map<string, Map<string, AttestationValue>>;
+  voteSummaryByTarget: Map<string, Omit<ReactionVoteSummary, 'viewer_value'>>;
+  viewerVotesByActor: Map<string, Map<string, ReactionVoteValue>>;
   postIndexByPacketId: Map<string, DiscussionPostIndexRecord>;
-  voteIndexRows: AttestationIndexRecord[];
-  voteTallyRows: AttestationTallyIndexRecord[];
+  voteIndexRows: ReactionIndexRecord[];
+  voteTallyRows: ReactionTallyIndexRecord[];
   discussionIndexRows: DiscussionPostIndexRecord[];
 };
 
@@ -273,9 +273,9 @@ function getHotScore(voteSummary: VoteAggregate, createdAt: string): number {
 }
 
 function createVoteSummary(
-  voteSummary: Omit<AttestationSummary, 'viewer_value'> | undefined,
-  viewerValue: AttestationValue | 0
-): AttestationSummary {
+  voteSummary: Omit<ReactionVoteSummary, 'viewer_value'> | undefined,
+  viewerValue: ReactionVoteValue | 0
+): ReactionVoteSummary {
   return {
     upvote_count: voteSummary?.upvote_count ?? 0,
     downvote_count: voteSummary?.downvote_count ?? 0,
@@ -636,10 +636,7 @@ async function getDiscussionEntryById(
     return projectDiscussionLegacyView(packet, 'Discussion') as DiscussionEntryPacket | null;
   }
 
-  if (
-    packet.header.type !== 'Discussion' &&
-    packet.header.type !== 'Discussion'
-  ) {
+  if (packet.header.type !== 'Discussion') {
     return null;
   }
 
@@ -682,18 +679,18 @@ export class SQLiteDiscussionService
 {
   private state: DiscussionState | null = null;
   private readonly packetStore: NodeSQLitePacketStore;
-  private readonly attestationService: AttestationService;
+  private readonly reactionService: ReactionService;
 
   constructor(
     packetStore: NodeSQLitePacketStore,
-    attestationService: AttestationService
+    reactionService: ReactionService
   ) {
     this.packetStore = packetStore;
-    this.attestationService = attestationService;
+    this.reactionService = reactionService;
   }
 
   async syncDerivedState(): Promise<void> {
-    await this.attestationService.syncDerivedState();
+    await this.reactionService.syncDerivedState();
 
     const [
       elementPackets,
@@ -778,20 +775,21 @@ export class SQLiteDiscussionService
       .prepare(
         `
           SELECT
-            attestation_packet_id,
+            reaction_packet_id,
             target_packet_id,
             actor_key,
-            attestation_kind,
-            value,
+            vote_value,
+            attestation_value,
+            emotion_ids_json,
             status,
             context_packet_id,
             note,
             created_at,
             updated_at
-          FROM attestation_index
+          FROM reaction_index
         `
       )
-      .all() as unknown as AttestationIndexRecord[];
+      .all() as unknown as ReactionIndexRecord[];
     const voteTallyRows = database
       .prepare(
         `
@@ -804,36 +802,36 @@ export class SQLiteDiscussionService
             negative_ratio,
             auto_hidden,
             deprioritized
-          FROM attestation_tally_index
+          FROM reaction_tally_index
         `
       )
-      .all() as unknown as AttestationTallyIndexRecord[];
+      .all() as unknown as ReactionTallyIndexRecord[];
     database.close();
 
-    const viewerVotesByActor = new Map<string, Map<string, AttestationValue>>();
+    const viewerVotesByActor = new Map<string, Map<string, ReactionVoteValue>>();
 
     for (const voteIndexRow of voteIndexRows) {
       if (
         voteIndexRow.status !== 'active' ||
-        voteIndexRow.attestation_kind !== 'packet_signal'
+        voteIndexRow.vote_value === null
       ) {
         continue;
       }
 
       const actorVotes =
         viewerVotesByActor.get(voteIndexRow.actor_key) ??
-        new Map<string, AttestationValue>();
+        new Map<string, ReactionVoteValue>();
 
       actorVotes.set(
         voteIndexRow.target_packet_id,
-        voteIndexRow.value as AttestationValue
+        voteIndexRow.vote_value as ReactionVoteValue
       );
       viewerVotesByActor.set(voteIndexRow.actor_key, actorVotes);
     }
 
     const voteSummaryByTarget = new Map<
       string,
-      Omit<AttestationSummary, 'viewer_value'>
+      Omit<ReactionVoteSummary, 'viewer_value'>
     >(
       voteTallyRows.map((voteTallyRow) => [
         voteTallyRow.target_packet_id,
@@ -2005,7 +2003,7 @@ export class SQLiteDiscussionService
   private getVoteSummaryForTarget(
     targetPacketId: string,
     viewerActorKey: string | null
-  ): AttestationSummary {
+  ): ReactionVoteSummary {
     const viewerVotes = viewerActorKey
       ? this.state?.viewerVotesByActor.get(viewerActorKey)
       : null;

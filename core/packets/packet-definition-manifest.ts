@@ -5,7 +5,6 @@
 
 import {
   actionPacketDefinition,
-  attestationPacketDefinition,
   bundlePacketDefinition,
   claimPacketDefinition,
   definitionPacketDefinition,
@@ -16,10 +15,10 @@ import {
   policyPacketDefinition,
   preferencePacketDefinition,
   proposalPacketDefinition,
+  reactionPacketDefinition,
   relationPacketDefinition,
   reportPacketDefinition,
   rolePacketDefinition,
-  votePacketDefinition,
   type PacketDefinitionManifest,
   type PacketTypeDefinition,
 } from '@core/packets/definitions/index.ts';
@@ -49,8 +48,7 @@ export const PACKET_TYPE_DEFINITIONS = {
   Relation: relationPacketDefinition,
   Report: reportPacketDefinition,
   Proposal: proposalPacketDefinition,
-  Vote: votePacketDefinition,
-  Attestation: attestationPacketDefinition,
+  Reaction: reactionPacketDefinition,
   Decision: decisionPacketDefinition,
   Action: actionPacketDefinition,
   Discussion: discussionPacketDefinition,

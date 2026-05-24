@@ -18,7 +18,7 @@ import type {
   PacketEnvelopeByType,
 } from '@core/schema/packet-schema';
 import type { NexusAuthService } from '@runtime/nexus/server/auth-service';
-import { SQLiteAttestationService } from '@runtime/nexus/server/attestation-service';
+import { SQLiteReactionService } from '@runtime/nexus/server/reaction-service';
 import { SQLiteDiscussionService } from '@runtime/nexus/server/discussion-service';
 import { MutationTicketStore } from '@runtime/nexus/server/mutation-ticket-store';
 import { MutationTicketService } from '@runtime/nexus/server/mutation-ticket-service';
@@ -72,7 +72,7 @@ export class NexusMutationService {
     private readonly packetStore: NodeSQLitePacketStore,
     private readonly authService: NexusAuthService,
     private readonly discussionService: SQLiteDiscussionService,
-    private readonly attestationService: SQLiteAttestationService,
+    private readonly reactionService: SQLiteReactionService,
     ticketStore: MutationTicketStore
   ) {
     this.ticketService = new MutationTicketService(ticketStore);
@@ -82,13 +82,13 @@ export class NexusMutationService {
       packetStore,
       this.policyGate,
       this.ticketService,
-      attestationService
+      reactionService
     );
     this.finalizeHandlers = new MutationFinalizeHandlers(
       packetStore,
       authService,
       discussionService,
-      attestationService,
+      reactionService,
       this.signedPacketFinalizer
     );
   }

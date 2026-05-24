@@ -914,7 +914,7 @@ export async function getNexusDashboardPayload(
   const voteCards = localLibraryCards.filter(
     (libraryCard) =>
       libraryCard.type === 'Proposal' ||
-      libraryCard.type === 'Vote' ||
+      libraryCard.type === 'Reaction' ||
       libraryCard.type === 'Decision'
   );
   const discussionCards = localLibraryCards.filter(
@@ -968,10 +968,10 @@ export async function getNexusDashboardPayload(
   const trustReviewTypes = new Set<PacketType>([
     'Claim',
     'Relation',
-    'Attestation',
+    'Reaction',
     'Policy',
   ]);
-  const rolePreviewTypes = new Set<PacketType>(['Role', 'Claim', 'Attestation']);
+  const rolePreviewTypes = new Set<PacketType>(['Role', 'Claim', 'Reaction']);
   const trustReviewCards = localLibraryCards.filter((libraryCard) =>
     trustReviewTypes.has(libraryCard.type)
   );
@@ -1406,7 +1406,7 @@ export async function getNexusTrustPayload(input: {
     .filter((scopeName): scopeName is string => scopeName !== null);
   const associationRelations =
     actorPacket?.header.packet_id
-      ? await services.attestationService.listAssociationRelationsForActor(
+      ? await services.reactionService.listAssociationRelationsForActor(
           actorPacket.header.packet_id
         )
       : [];
@@ -1435,17 +1435,17 @@ export async function getNexusTrustPayload(input: {
       ) ?? null;
     const supportEdges =
       scopedRelation
-        ? await services.attestationService.listTargetAttestations({
+        ? await services.reactionService.listTargetReactions({
             target_packet_id: scopedRelation.header.packet_id,
-            attestation_kind: 'support',
+            attestation_value: 'support',
             active_only: true,
           })
         : [];
     const disputeEdges =
       scopedRelation
-        ? await services.attestationService.listTargetAttestations({
+        ? await services.reactionService.listTargetReactions({
             target_packet_id: scopedRelation.header.packet_id,
-            attestation_kind: 'dispute',
+            attestation_value: 'dispute',
             active_only: true,
           })
         : [];
@@ -1580,7 +1580,7 @@ export async function getNexusRolesPayload(input: {
 
     associationRelationsByActor.set(
       participantPacket.header.packet_id,
-      await services.attestationService.listAssociationRelationsForActor(
+      await services.reactionService.listAssociationRelationsForActor(
         participantPacket.header.packet_id
       )
     );
@@ -1628,14 +1628,14 @@ export async function getNexusRolesPayload(input: {
       const associationSupportCount =
         activeAssociationRelation?.supported_by_other_count ?? 0;
 
-      const supportEdges = await services.attestationService.listTargetAttestations({
+      const supportEdges = await services.reactionService.listTargetReactions({
         target_packet_id: relationPacket.header.packet_id,
-        attestation_kind: 'support',
+        attestation_value: 'support',
         active_only: true,
       });
-      const disputeEdges = await services.attestationService.listTargetAttestations({
+      const disputeEdges = await services.reactionService.listTargetReactions({
         target_packet_id: relationPacket.header.packet_id,
-        attestation_kind: 'dispute',
+        attestation_value: 'dispute',
         active_only: true,
       });
       const scopedSupportEdges =
@@ -1650,7 +1650,7 @@ export async function getNexusRolesPayload(input: {
           : disputeEdges.filter(
               (edge) => edge.authority_scope_packet_id === assemblyPacketId
             );
-      const viewerAttestation =
+      const viewerReaction =
         scopedSupportEdges.some(
           (edge) => edge.source_actor_packet_id === currentActorPacketId
         )
@@ -1687,7 +1687,7 @@ export async function getNexusRolesPayload(input: {
         scope_association_support_count: associationSupportCount,
         support_count: scopedSupportEdges.length,
         dispute_count: scopedDisputeEdges.length,
-        viewer_attestation: viewerAttestation,
+        viewer_reaction: viewerReaction,
         support_edges: scopedSupportEdges,
         dispute_edges: scopedDisputeEdges,
       });

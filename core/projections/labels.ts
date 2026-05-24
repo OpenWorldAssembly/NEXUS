@@ -21,8 +21,7 @@ const TYPE_LABELS: Record<PacketEnvelope['header']['type'], string> = {
   Relation: 'relation packet',
   Report: 'report packet',
   Proposal: 'proposal packet',
-  Vote: 'vote packet',
-  Attestation: 'attestation',
+  Reaction: 'reaction',
   Decision: 'decision packet',
   Action: 'action packet',
   Policy: 'policy packet',
@@ -70,8 +69,8 @@ export function getPacketTitleFallbackFromPacketId(packetId: string): string {
     return `${titleCase(subtypeSegment)} claim`;
   }
 
-  if (typeSegment === 'attestation' && subtypeSegment) {
-    return `${titleCase(subtypeSegment)} attestation`;
+  if (typeSegment === 'reaction' && subtypeSegment) {
+    return `${titleCase(subtypeSegment)} reaction`;
   }
 
   if (typeSegment === 'role' && subtypeSegment) {
@@ -138,8 +137,8 @@ export function getPacketDisplayLabel(packet: PacketEnvelope): string {
       }
       return `${body.subtype} discussion`;
     }
-    case 'Attestation':
-      return TYPE_LABELS.Attestation;
+    case 'Reaction':
+      return TYPE_LABELS.Reaction;
     default:
       return TYPE_LABELS[packet.header.type];
   }
@@ -175,9 +174,9 @@ export function getPacketTitle(packet: PacketEnvelope): string {
       const body = packet.body as PacketBodyByType['Claim'];
       return `${titleCase(getClaimDisplaySubtype(body))} claim`;
     }
-    case 'Attestation': {
-      const body = packet.body as PacketBodyByType['Attestation'];
-      return `${titleCase(body.subtype ?? body.subtype)} attestation`;
+    case 'Reaction': {
+      const body = packet.body as PacketBodyByType['Reaction'];
+      return `${titleCase(body.subtype ?? body.subtype)} reaction`;
     }
     case 'Preference': {
       const body = packet.body as PacketBodyByType['Preference'];
@@ -217,8 +216,7 @@ export function getPacketSummary(packet: PacketEnvelope): string | null {
       const body = packet.body as PacketBodyByType['Location'];
       return body.summary ?? body.descriptor_markdown ?? null;
     }
-    case 'Vote':
-    case 'Attestation':
+    case 'Reaction':
       return null;
     case 'Report': {
       const body = packet.body as PacketBodyByType['Report'];
@@ -275,8 +273,8 @@ export function getPacketStatus(packet: PacketEnvelope): string | null {
       const body = packet.body as PacketBodyByType['Claim'];
       return body.status;
     }
-    case 'Attestation':
-      return (packet.body as PacketBodyByType['Attestation']).status;
+    case 'Reaction':
+      return (packet.body as PacketBodyByType['Reaction']).status;
     case 'Preference':
       return (packet.body as PacketBodyByType['Preference']).status;
     default:

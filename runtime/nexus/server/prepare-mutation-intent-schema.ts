@@ -44,7 +44,7 @@ const MutationIntentSchemaOptions = [
     .strict(),
   z
     .object({
-      kind: z.literal('attestation.packet_signal.set'),
+      kind: z.literal('reaction.vote.set'),
       scope_id: z.string().min(1),
       target_packet_id: z.string().min(1),
       value: z.union([z.literal(-1), z.literal(0), z.literal(1)]),
@@ -124,7 +124,7 @@ const MutationIntentSchemaOptions = [
     .strict(),
   z
     .object({
-      kind: z.literal('relation.participation.attestation.set'),
+      kind: z.literal('relation.participation.reaction.set'),
       scope_id: z.string().min(1),
       relation_packet_id: z.string().min(1),
       mode: z.enum(['support', 'dispute', 'clear']),

@@ -75,7 +75,7 @@ export type FortressFinalizeHandlerMap = Record<
 export type FortressHandlerDomain =
   | 'locality'
   | 'discussion'
-  | 'attestation'
+  | 'reaction'
   | 'assembly'
   | 'relation'
   | 'role'

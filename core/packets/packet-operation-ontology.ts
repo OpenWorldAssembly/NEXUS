@@ -20,8 +20,8 @@ export type PacketOperationKind =
   | 'relation.clear'
   | 'claim.assert'
   | 'claim.withdraw'
-  | 'attestation.set'
-  | 'attestation.clear'
+  | 'reaction.set'
+  | 'reaction.clear'
   | 'bundle.import'
   | 'bundle.export'
   | 'projection.refresh'
@@ -38,7 +38,7 @@ export type PacketOperationScope =
   | 'single_packet'
   | 'relation'
   | 'claim'
-  | 'attestation'
+  | 'reaction'
   | 'bundle'
   | 'projection'
   | 'compatibility'
@@ -213,34 +213,34 @@ export const PACKET_OPERATION_DEFINITIONS = [
       'Claim withdrawal must keep loss and projection notes visible to compatibility adapters.',
   },
   {
-    operation_kind: 'attestation.set',
-    label: 'Set attestation',
-    description: 'Create or revise an Attestation packet that records support, dispute, or signal state.',
-    packet_type_scope: 'attestation',
+    operation_kind: 'reaction.set',
+    label: 'Set reaction',
+    description: 'Create or revise an Reaction packet that records support, dispute, or signal state.',
+    packet_type_scope: 'reaction',
     planner_kinds: ['single_packet_revision'],
     builder_kinds: ['single_packet_body', 'single_packet_envelope'],
     action_kinds: ['attest', 'create', 'revise'],
     policy_action_ids: [],
     result_types: ['packet_write'],
     generic_capability: 'requires_planner',
-    trusted_runtime_engine: 'generic.attestation_planner',
+    trusted_runtime_engine: 'generic.reaction_planner',
     safety_notes:
-      'Attestations need target summary lookup and mutual-exclusion planning before direct promotion.',
+      'Reactions need target summary lookup and mutual-exclusion planning before direct promotion.',
   },
   {
-    operation_kind: 'attestation.clear',
-    label: 'Clear attestation',
-    description: 'Withdraw or neutralize an Attestation projection.',
-    packet_type_scope: 'attestation',
+    operation_kind: 'reaction.clear',
+    label: 'Clear reaction',
+    description: 'Withdraw or neutralize an Reaction projection.',
+    packet_type_scope: 'reaction',
     planner_kinds: ['single_packet_revision'],
     builder_kinds: ['single_packet_body', 'single_packet_envelope'],
     action_kinds: ['withdraw', 'revise'],
     policy_action_ids: [],
     result_types: ['packet_write'],
     generic_capability: 'requires_planner',
-    trusted_runtime_engine: 'generic.attestation_planner',
+    trusted_runtime_engine: 'generic.reaction_planner',
     safety_notes:
-      'Clear operations must preserve previous attestation evidence and projection counts.',
+      'Clear operations must preserve previous reaction evidence and projection counts.',
   },
   {
     operation_kind: 'bundle.import',
@@ -349,12 +349,12 @@ export const PACKET_OPERATION_CAPABILITY_REGISTRY = [
     notes: 'Claim operation type awaiting semantic target planner extraction.',
   },
   {
-    engine_id: 'generic.attestation_planner',
+    engine_id: 'generic.reaction_planner',
     status: 'planner_needed',
-    operation_kinds: ['attestation.set', 'attestation.clear'],
+    operation_kinds: ['reaction.set', 'reaction.clear'],
     planner_kinds: ['single_packet_revision'],
     builder_kinds: ['single_packet_body', 'single_packet_envelope'],
-    notes: 'Attestation operation type awaiting target summary and mutual-exclusion planner extraction.',
+    notes: 'Reaction operation type awaiting target summary and mutual-exclusion planner extraction.',
   },
   {
     engine_id: 'generic.bundle_import_planner',

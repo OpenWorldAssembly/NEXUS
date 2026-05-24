@@ -25,7 +25,7 @@ This monthly log condenses the April 2026 decisions that remain most important f
 - Claimed auth uses local keys plus server challenge sessions rather than server-owned identity truth.
 - Claimed auth now supports passkeys, rotating sessions, and explicit write-approval modes.
 - Identity ceremonies moved into the Nexus shell.
-- `Attestation` replaced packet votes as the reusable trust edge.
+- `Reaction` replaced packet votes as the reusable trust edge.
 
 ## 2026-04-17 architecture and trust pivot
 

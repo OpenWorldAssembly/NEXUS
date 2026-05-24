@@ -80,12 +80,13 @@ export interface PacketSearchIndexRecord {
   created_at: string;
 }
 
-export interface AttestationIndexRecord {
-  attestation_packet_id: string;
+export interface ReactionIndexRecord {
+  reaction_packet_id: string;
   target_packet_id: string;
   actor_key: string;
-  attestation_kind: string;
-  value: number;
+  vote_value: number | null;
+  attestation_value: string | null;
+  emotion_ids_json: string;
   status: string;
   context_packet_id: string | null;
   note: string | null;
@@ -93,7 +94,7 @@ export interface AttestationIndexRecord {
   updated_at: string;
 }
 
-export interface AttestationTallyIndexRecord {
+export interface ReactionTallyIndexRecord {
   target_packet_id: string;
   upvote_count: number;
   downvote_count: number;

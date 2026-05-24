@@ -18,7 +18,7 @@ import { createMutationPrepareHandlerMap } from '@runtime/nexus/server/fortress-
 import {
   preparePreferenceElementFortressMutation,
 } from '@runtime/nexus/server/preference-fortress-workflow';
-import type { SQLiteAttestationService } from '@runtime/nexus/server/attestation-service';
+import type { SQLiteReactionService } from '@runtime/nexus/server/reaction-service';
 import type { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store';
 
 type PreparedMutationResult = {
@@ -41,7 +41,7 @@ export class MutationPrepareHandlers {
     private readonly packetStore: NodeSQLitePacketStore,
     private readonly policyGate: MutationPolicyGate,
     private readonly ticketService: MutationTicketService,
-    private readonly attestationService: SQLiteAttestationService
+    private readonly reactionService: SQLiteReactionService
   ) {}
 
   async prepareDiscussionThreadPost(input: {
@@ -70,15 +70,15 @@ export class MutationPrepareHandlers {
     }) as Promise<PreparedMutation>;
   }
 
-  async preparePacketSignal(input: {
-    intent: Extract<MutationIntent, { kind: 'attestation.packet_signal.set' }>;
+  async preparePacketVoteReaction(input: {
+    intent: Extract<MutationIntent, { kind: 'reaction.vote.set' }>;
     actorPacket: PacketEnvelopeByType['Element'];
     actorKey: string;
   }): Promise<PreparedMutation> {
     return runTrustedPacketWorkflowMutation({
       packetStore: this.packetStore,
       policyGate: this.policyGate,
-      attestationService: this.attestationService,
+      reactionService: this.reactionService,
       actorKey: input.actorKey,
       actorPacket: input.actorPacket,
       intent: input.intent,
@@ -165,8 +165,8 @@ export class MutationPrepareHandlers {
     });
   }
 
-  async prepareRoleParticipationAttestation(input: {
-    intent: Extract<MutationIntent, { kind: 'relation.participation.attestation.set' }>;
+  async prepareRoleParticipationReaction(input: {
+    intent: Extract<MutationIntent, { kind: 'relation.participation.reaction.set' }>;
     actorPacket: PacketEnvelopeByType['Element'];
   }): Promise<PreparedMutation> {
     return runTrustedCompositeWorkflowMutation({

@@ -4,7 +4,7 @@
  */
 
 import {
-  ATTESTATION_SUBTYPES,
+  REACTION_SUBTYPES,
   CLAIM_SUBTYPES,
   DISCUSSION_SUBTYPES,
   ELEMENT_SUBTYPES,
@@ -40,8 +40,7 @@ type GenericBuilderType =
   | 'Relation'
   | 'Report'
   | 'Proposal'
-  | 'Vote'
-  | 'Attestation'
+  | 'Reaction'
   | 'Decision'
   | 'Action'
   | 'Discussion'
@@ -113,18 +112,16 @@ const GENERIC_TYPE_CONFIGS = [
     index_fields: ['body.subtype', 'body.title', 'body.status'],
   },
   {
-    type: 'Vote',
-    canonical_body_type: 'vote',
-    declared_subtypes: ['vote'],
-    default_subtype: 'vote',
-    index_fields: ['body.proposal_ref.packet_id', 'body.vote_method', 'body.status'],
-  },
-  {
-    type: 'Attestation',
-    canonical_body_type: 'attestation',
-    declared_subtypes: ATTESTATION_SUBTYPES,
-    default_subtype: 'packet_signal',
-    index_fields: ['body.subtype', 'body.target_ref.packet_id', 'body.status'],
+    type: 'Reaction',
+    canonical_body_type: 'reaction',
+    declared_subtypes: REACTION_SUBTYPES,
+    default_subtype: 'reaction',
+    index_fields: [
+      'body.target_ref.packet_id',
+      'body.vote_value',
+      'body.attestation_value',
+      'body.status',
+    ],
   },
   {
     type: 'Decision',
@@ -191,7 +188,7 @@ function createDependencyReferences(type: GenericBuilderType): string[] {
   if (type === 'Policy') references.add('generic.operation.policy');
   if (type === 'Relation') references.add('generic.operation.relation');
   if (type === 'Claim') references.add('generic.operation.claim');
-  if (type === 'Attestation') references.add('generic.operation.attestation');
+  if (type === 'Reaction') references.add('generic.operation.reaction');
   if (type === 'Discussion') references.add('generic.operation.discussion');
   if (type === 'Report') references.add('generic.operation.report');
 
@@ -842,24 +839,24 @@ function createGenericReadyWorkflowPlans(input: {
     return [];
   }
 
-  if (input.type === 'Attestation') {
+  if (input.type === 'Reaction') {
     return [
       {
-        workflow_plan_id: 'attestation.packet_signal.set.workflow.v0',
-        packet_type: 'Attestation',
-        packet_subtype: 'packet_signal',
+        workflow_plan_id: 'reaction.vote.set.workflow.v0',
+        packet_type: 'Reaction',
+        packet_subtype: 'reaction',
         planner_id: input.writePlannerId,
-        mutation_intents: ['attestation.packet_signal.set'],
-        operation_kinds: ['attestation.set', 'attestation.clear'],
-        resolver_ids: ['actor.ref', 'input.packet_ref', 'input.value', 'attestation.target_summary'],
+        mutation_intents: ['reaction.vote.set'],
+        operation_kinds: ['reaction.set', 'reaction.clear'],
+        resolver_ids: ['actor.ref', 'input.packet_ref', 'input.value', 'reaction.target_summary'],
         policy_action_ids: [
-          'attestation.packet_signal.set',
-          'attestation.packet_signal.clear',
+          'reaction.vote.set',
+          'reaction.vote.clear',
         ],
         dependency_ids: [
           'runtime.packet_store.read',
           'runtime.policy_gate',
-          'generic.operation.attestation',
+          'generic.operation.reaction',
           'generic.resolver.actor_ref',
           'generic.resolver.packet_ref',
           'generic.resolver.input_value',
@@ -867,7 +864,7 @@ function createGenericReadyWorkflowPlans(input: {
         ],
         steps: [
           {
-            step_id: 'choose_packet_signal_mode',
+            step_id: 'choose_packet_vote_mode',
             step_kind: 'condition',
             condition: {
               condition_kind: 'present',
@@ -875,109 +872,110 @@ function createGenericReadyWorkflowPlans(input: {
             },
             then_steps: [
               operationStep({
-                step_id: 'set_packet_signal_attestation',
-                operation_kind: 'attestation.set',
-                packet_type: 'Attestation',
-                packet_subtype: 'packet_signal',
-                resolver_ids: ['actor.ref', 'input.packet_ref', 'input.value', 'attestation.target_summary'],
-                policy_action_ids: ['attestation.packet_signal.set'],
+                step_id: 'set_packet_vote_reaction',
+                operation_kind: 'reaction.set',
+                packet_type: 'Reaction',
+                packet_subtype: 'reaction',
+                resolver_ids: ['actor.ref', 'input.packet_ref', 'input.value', 'reaction.target_summary'],
+                policy_action_ids: ['reaction.vote.set'],
                 dependency_ids: [
                   'runtime.packet_store.read',
                   'runtime.policy_gate',
-                  'generic.operation.attestation',
+                  'generic.operation.reaction',
                 ],
                 input_bindings: {
                   actor_ref: actorRef(),
                   target_ref: inputPath('target_ref'),
-                  signal: inputPath('signal'),
-                  subtype: staticValue('packet_signal'),
+                  vote_value: inputPath('signal'),
+                  subtype: staticValue('reaction'),
                 },
-                output_key: 'attestation_write',
-                notes: 'Canonical attestation.set workflow for packet signals.',
+                output_key: 'reaction_write',
+                notes: 'Canonical reaction.set workflow for packet votes.',
               }),
             ],
             else_steps: [
               operationStep({
-                step_id: 'clear_packet_signal_attestation',
-                operation_kind: 'attestation.clear',
-                packet_type: 'Attestation',
-                packet_subtype: 'packet_signal',
-                resolver_ids: ['actor.ref', 'input.packet_ref', 'attestation.target_summary'],
-                policy_action_ids: ['attestation.packet_signal.clear'],
+                step_id: 'clear_packet_vote_reaction',
+                operation_kind: 'reaction.clear',
+                packet_type: 'Reaction',
+                packet_subtype: 'reaction',
+                resolver_ids: ['actor.ref', 'input.packet_ref', 'reaction.target_summary'],
+                policy_action_ids: ['reaction.vote.clear'],
                 dependency_ids: [
                   'runtime.packet_store.read',
                   'runtime.policy_gate',
-                  'generic.operation.attestation',
+                  'generic.operation.reaction',
                 ],
                 input_bindings: {
                   actor_ref: actorRef(),
                   target_ref: inputPath('target_ref'),
-                  subtype: staticValue('packet_signal'),
+                  subtype: staticValue('reaction'),
                 },
-                output_key: 'attestation_write',
-                notes: 'Canonical attestation.clear workflow for packet signals.',
+                output_key: 'reaction_write',
+                notes: 'Canonical reaction.clear workflow for packet votes.',
               }),
             ],
             on_failure: 'abort_workflow',
             notes:
-              'Branches packet signal set/clear behavior from the presence of a signal value.',
+              'Branches packet vote set/clear behavior from the presence of a signal value.',
           },
         ],
         availability: 'runtime_ready',
         notes:
-          'Describes the generic-ready attestation.packet_signal.set fortress intent without enrolling live execution.',
+          'Describes the generic-ready reaction.vote.set fortress intent without enrolling live execution.',
       },
       {
-        workflow_plan_id: 'attestation.relation_participation.set.workflow.v0',
-        packet_type: 'Attestation',
-        packet_subtype: 'support',
+        workflow_plan_id: 'reaction.relation_participation.set.workflow.v0',
+        packet_type: 'Reaction',
+        packet_subtype: 'reaction',
         planner_id: input.writePlannerId,
-        mutation_intents: ['relation.participation.attestation.set'],
-        operation_kinds: ['attestation.set', 'attestation.clear'],
+        mutation_intents: ['relation.participation.reaction.set'],
+        operation_kinds: ['reaction.set', 'reaction.clear'],
         resolver_ids: ['actor.ref', 'input.packet_ref', 'input.value'],
         policy_action_ids: [
-          'relation.participation.attestation.support',
-          'relation.participation.attestation.dispute',
-          'relation.participation.attestation.clear',
+          'relation.participation.reaction.support',
+          'relation.participation.reaction.dispute',
+          'relation.participation.reaction.clear',
         ],
         dependency_ids: [
           'runtime.packet_store.read',
           'runtime.policy_gate',
-          'generic.operation.attestation',
+          'generic.operation.reaction',
           'generic.resolver.actor_ref',
           'generic.resolver.packet_ref',
           'generic.resolver.input_value',
         ],
         steps: [
           operationStep({
-            step_id: 'set_relation_participation_attestation',
-            operation_kind: 'attestation.set',
-            packet_type: 'Attestation',
-            packet_subtype: 'support',
+            step_id: 'set_relation_participation_reaction',
+            operation_kind: 'reaction.set',
+            packet_type: 'Reaction',
+            packet_subtype: 'reaction',
             resolver_ids: ['actor.ref', 'input.packet_ref', 'input.value'],
             policy_action_ids: [
-              'relation.participation.attestation.support',
-              'relation.participation.attestation.dispute',
-              'relation.participation.attestation.clear',
+              'relation.participation.reaction.support',
+              'relation.participation.reaction.dispute',
+              'relation.participation.reaction.clear',
             ],
             dependency_ids: [
               'runtime.packet_store.read',
               'runtime.policy_gate',
-              'generic.operation.attestation',
+              'generic.operation.reaction',
             ],
             input_bindings: {
               actor_ref: actorRef(),
               target_ref: inputPath('relation_packet_id'),
-              subtype: inputPath('mode'),
+              subtype: staticValue('reaction'),
+              attestation_value: inputPath('mode'),
             },
-            output_key: 'attestation_write',
+            output_key: 'reaction_write',
             notes:
-              'Canonical support/dispute/clear attestation workflow for participation relations.',
+              'Canonical support/dispute/clear reaction workflow for participation relations.',
           }),
         ],
         availability: 'runtime_ready',
         notes:
-          'Describes the generic-ready relation.participation.attestation.set fortress intent without enrolling live execution.',
+          'Describes the generic-ready relation.participation.reaction.set fortress intent without enrolling live execution.',
       },
     ];
   }
@@ -1236,8 +1234,7 @@ export const claimPacketDefinition = genericTypePacketDefinitions.Claim;
 export const relationPacketDefinition = genericTypePacketDefinitions.Relation;
 export const reportPacketDefinition = genericTypePacketDefinitions.Report;
 export const proposalPacketDefinition = genericTypePacketDefinitions.Proposal;
-export const votePacketDefinition = genericTypePacketDefinitions.Vote;
-export const attestationPacketDefinition = genericTypePacketDefinitions.Attestation;
+export const reactionPacketDefinition = genericTypePacketDefinitions.Reaction;
 export const decisionPacketDefinition = genericTypePacketDefinitions.Decision;
 export const actionPacketDefinition = genericTypePacketDefinitions.Action;
 export const discussionPacketDefinition = genericTypePacketDefinitions.Discussion;

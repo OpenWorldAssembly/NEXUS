@@ -14,8 +14,7 @@ export const PACKET_TYPES = [
   'Relation',
   'Report',
   'Proposal',
-  'Vote',
-  'Attestation',
+  'Reaction',
   'Decision',
   'Action',
   'Policy',
@@ -72,18 +71,7 @@ export const CLAIM_SUBTYPES = [
   'duplicate_notice',
 ] as const;
 
-export const ATTESTATION_SUBTYPES = [
-  'verification',
-  'vouch',
-  'flag',
-  'support',
-  'dispute',
-  'packet_signal',
-  'identity_attest',
-  'attendance_vouch',
-  'claim_support',
-  'claim_dispute',
-] as const;
+export const REACTION_SUBTYPES = ['reaction'] as const;
 
 export const RELATION_CLAIM_TARGET_MODES = [
   'relation_packet',
@@ -137,19 +125,22 @@ export const DISCUSSION_SUBTYPES = [
   'message',
 ] as const;
 
-export const ATTESTATION_VALUES = [1, -1] as const;
-export const ATTESTATION_STATUSES = ['active', 'cleared'] as const;
-export const ATTESTATION_KINDS = [
-  'packet_signal',
-  'proposal_support',
-  'proposal_oppose',
-  'attendance_vouch',
-  'identity_attest',
-  'association_claim',
-  'claim_support',
-  'claim_dispute',
-  'packet_confirm',
-  'packet_dispute',
+export const REACTION_VOTE_VALUES = [1, -1] as const;
+export const REACTION_ATTESTATION_VALUES = ['support', 'dispute'] as const;
+export const REACTION_STATUSES = ['active', 'cleared'] as const;
+export const REACTION_EMOTION_IDS = [
+  'heart',
+  'thanks',
+  'insightful',
+  'solidarity',
+  'joy',
+  'concern',
+  'anger',
+  'sadness',
+  'surprise',
+  'confusion',
+  'fire',
+  'eyes',
 ] as const;
 
 export const CLAIM_KINDS = [
@@ -246,18 +237,19 @@ export const ElementSubtypeSchema = z.enum(ELEMENT_SUBTYPES);
 export const CanonicalRelationSubtypeSchema = z.enum(RELATION_SUBTYPES);
 export const CanonicalLocationSubtypeSchema = z.enum(LOCATION_SUBTYPES);
 export const CanonicalClaimSubtypeSchema = z.enum(CLAIM_SUBTYPES);
-export const CanonicalAttestationSubtypeSchema = z.enum(ATTESTATION_SUBTYPES);
+export const CanonicalReactionSubtypeSchema = z.enum(REACTION_SUBTYPES);
 export const PersonClaimStatusSchema = z.enum(PERSON_CLAIM_STATUSES);
 export const PersonKeyStatusSchema = z.enum(PERSON_KEY_STATUSES);
 export const DiscussionActorClassSchema = z.enum(DISCUSSION_ACTOR_CLASSES);
 export const DiscussionSortSchema = z.enum(DISCUSSION_SORTS);
 export const DiscussionReplySortSchema = z.enum(DISCUSSION_REPLY_SORTS);
 export const DiscussionSubtypeSchema = z.enum(DISCUSSION_SUBTYPES);
-export const AttestationStatusSchema = z.enum(ATTESTATION_STATUSES);
-export const AttestationKindSchema = z.enum(ATTESTATION_KINDS);
+export const ReactionStatusSchema = z.enum(REACTION_STATUSES);
+export const ReactionVoteValueSchema = z.union([z.literal(1), z.literal(-1)]);
+export const ReactionAttestationValueSchema = z.enum(REACTION_ATTESTATION_VALUES);
+export const ReactionEmotionIdSchema = z.enum(REACTION_EMOTION_IDS);
 export const PacketRevisionStateSchema = z.enum(REVISION_STATES);
 export const PacketMergeStrategySchema = z.enum(MERGE_STRATEGIES);
-export const AttestationValueSchema = z.union([z.literal(1), z.literal(-1)]);
 export const TrustStageSchema = z.enum(TRUST_STAGES);
 export const PacketRevisionModeSchema = z.enum(PACKET_REVISION_MODES);
 export const ClaimKindSchema = z.enum(CLAIM_KINDS);
@@ -279,8 +271,8 @@ export type CanonicalLocationSubtype = z.infer<
   typeof CanonicalLocationSubtypeSchema
 >;
 export type CanonicalClaimSubtype = z.infer<typeof CanonicalClaimSubtypeSchema>;
-export type CanonicalAttestationSubtype = z.infer<
-  typeof CanonicalAttestationSubtypeSchema
+export type CanonicalReactionSubtype = z.infer<
+  typeof CanonicalReactionSubtypeSchema
 >;
 export type PersonClaimStatus = z.infer<typeof PersonClaimStatusSchema>;
 export type PersonKeyStatus = z.infer<typeof PersonKeyStatusSchema>;
@@ -290,9 +282,10 @@ export type DiscussionActorClass = z.infer<typeof DiscussionActorClassSchema>;
 export type DiscussionSort = z.infer<typeof DiscussionSortSchema>;
 export type DiscussionReplySort = z.infer<typeof DiscussionReplySortSchema>;
 export type DiscussionSubtype = z.infer<typeof DiscussionSubtypeSchema>;
-export type AttestationValue = z.infer<typeof AttestationValueSchema>;
-export type AttestationStatus = z.infer<typeof AttestationStatusSchema>;
-export type AttestationKind = z.infer<typeof AttestationKindSchema>;
+export type ReactionVoteValue = z.infer<typeof ReactionVoteValueSchema>;
+export type ReactionAttestationValue = z.infer<typeof ReactionAttestationValueSchema>;
+export type ReactionStatus = z.infer<typeof ReactionStatusSchema>;
+export type ReactionEmotionId = z.infer<typeof ReactionEmotionIdSchema>;
 export type TrustStage = z.infer<typeof TrustStageSchema>;
 export type PacketRevisionMode = z.infer<typeof PacketRevisionModeSchema>;
 export type ClaimKind = z.infer<typeof ClaimKindSchema>;
@@ -319,9 +312,8 @@ export type PacketWriteTargetSupport =
 export type PacketWriteTargetPolicy =
   | 'current_only'
   | 'supported_versions';
-export type PacketVoteValue = AttestationValue;
-export type PacketVoteStatus = AttestationStatus;
-export type PacketVoteKind = AttestationKind;
+export type PacketVoteValue = ReactionVoteValue;
+export type PacketVoteStatus = ReactionStatus;
 
 function isElementSubtypeValue(value: string): value is ElementSubtype {
   return (ELEMENT_SUBTYPES as readonly string[]).includes(value);
@@ -408,15 +400,14 @@ export function isCanonicalClaimSubtype(
   return isCanonicalSubtypeValue(value, CLAIM_SUBTYPES);
 }
 
-export function isCanonicalAttestationSubtype(
+export function isCanonicalReactionSubtype(
   value: string | null | undefined
-): value is CanonicalAttestationSubtype {
-  return isCanonicalSubtypeValue(value, ATTESTATION_SUBTYPES);
+): value is CanonicalReactionSubtype {
+  return isCanonicalSubtypeValue(value, REACTION_SUBTYPES);
 }
 
-export const PacketVoteValueSchema = AttestationValueSchema;
-export const PacketVoteStatusSchema = AttestationStatusSchema;
-export const PacketVoteKindSchema = AttestationKindSchema;
+export const PacketVoteValueSchema = ReactionVoteValueSchema;
+export const PacketVoteStatusSchema = ReactionStatusSchema;
 
 export const LOCALITY_LEVELS = ['nation', 'region', 'city', 'district'] as const;
 export const LocalityLevelSchema = z.enum(LOCALITY_LEVELS);
@@ -431,8 +422,7 @@ export const PACKET_TYPE_REVISION_MODES = {
   Relation: 'replaceable',
   Report: 'replaceable',
   Proposal: 'replaceable',
-  Vote: 'append_only',
-  Attestation: 'append_only',
+  Reaction: 'replaceable',
   Decision: 'append_only',
   Action: 'replaceable',
   Policy: 'replaceable',

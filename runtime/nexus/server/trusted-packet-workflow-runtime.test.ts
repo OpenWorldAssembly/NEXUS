@@ -137,7 +137,7 @@ test('live generic workflow enrollment includes relation, claim, and attestation
       'relation.follow.add',
       'relation.follow.clear',
       'relation.participation.add',
-      'attestation.packet_signal.set',
+      'attestation.vote.set',
     ]
   );
 

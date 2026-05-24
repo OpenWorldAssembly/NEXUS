@@ -495,7 +495,7 @@ function auditWorkflowPlanReferences(input: {
         input.mutationIds.has(mutationIntent) ||
         mutationIntent.includes('.relation.') ||
         mutationIntent.includes('.claim.') ||
-        mutationIntent.includes('.packet_signal.')
+        mutationIntent.includes('.vote.')
       ) {
         continue;
       }

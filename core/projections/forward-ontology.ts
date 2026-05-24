@@ -26,7 +26,7 @@ export type ForwardPacketType =
   | 'signal'
   | 'proposal'
   | 'vote'
-  | 'attestation'
+  | 'reaction'
   | 'decision'
   | 'action'
   | 'discussion'
@@ -70,10 +70,8 @@ function toForwardType(type: PacketType): ForwardPacketType {
       return 'report';
     case 'Proposal':
       return 'proposal';
-    case 'Vote':
-      return 'vote';
-    case 'Attestation':
-      return 'attestation';
+    case 'Reaction':
+      return 'reaction';
     case 'Decision':
       return 'decision';
     case 'Action':
@@ -106,7 +104,7 @@ function toForwardSubtype(packet: PacketEnvelope): string | null {
       return packet.body.subtype;
     case 'Role':
       return packet.body.subtype;
-    case 'Attestation':
+    case 'Reaction':
       return packet.body.subtype;
     case 'Discussion':
     case 'Preference':
@@ -114,7 +112,7 @@ function toForwardSubtype(packet: PacketEnvelope): string | null {
     case 'Bundle':
     case 'Policy':
     case 'Proposal':
-    case 'Vote':
+    case 'Reaction':
     case 'Decision':
       return packet.body.subtype;
   }

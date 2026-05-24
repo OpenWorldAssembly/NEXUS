@@ -26,7 +26,7 @@ import {
 } from '@runtime/nexus/identity-crypto';
 import { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store';
 
-import { SQLiteAttestationService } from './attestation-service.ts';
+import { SQLiteReactionService } from './reaction-service.ts';
 import { SQLiteDiscussionService } from './discussion-service.ts';
 
 const SCOPE_PACKET_ID = 'nexus:element/global-commons';
@@ -116,10 +116,10 @@ function createDiscussionHarness() {
   const packetStore = new NodeSQLitePacketStore({
     databasePath: join(directory, 'owa-discussion.db'),
   });
-  const attestationService = new SQLiteAttestationService(packetStore);
+  const reactionService = new SQLiteReactionService(packetStore);
   const discussionService = new SQLiteDiscussionService(
     packetStore,
-    attestationService
+    reactionService
   );
 
   return {

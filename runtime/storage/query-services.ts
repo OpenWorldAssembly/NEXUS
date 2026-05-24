@@ -350,7 +350,7 @@ export class PacketStoreNexusQueryService implements NexusQueryService {
   }
 
   async listVotes(lens: NexusScopeLens): Promise<NexusPacketCardProjection[]> {
-    return this.listCardsByTypes(lens, ['Proposal', 'Vote', 'Decision']);
+    return this.listCardsByTypes(lens, ['Proposal', 'Reaction', 'Decision']);
   }
 
   async listDiscussions(

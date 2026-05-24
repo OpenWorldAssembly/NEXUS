@@ -27,13 +27,7 @@ import {
 
 const DISCUSSION_RESET_FAMILIES = [
   'Discussion',
-  'Discussion',
-  'Discussion',
-  'Discussion',
-  'Discussion',
-  'Discussion',
-  'Attestation',
-  'PacketVote',
+  'Reaction',
 ] as const;
 
 function isEnvironmentFlagEnabled(value: string | undefined): boolean {
@@ -91,124 +85,9 @@ function buildApplicableScopeRefs(input: {
 }
 
 async function ensureLegacyClaimBackfill(
-  services: NodeSQLiteQueryServices
+  _services: NodeSQLiteQueryServices
 ): Promise<void> {
-  const [elementPackets, attestationPackets, claimPackets] = await Promise.all([
-    services.packetStore.listPreferredPacketsByType('Element'),
-    services.packetStore.listPreferredPacketsByType('Attestation'),
-    services.packetStore.listPreferredPacketsByType('Claim'),
-  ]);
-  const assemblyElements = elementPackets.filter(
-    (packet) => packet.body.subtype === 'assembly'
-  ) as PacketEnvelopeByType['Element'][];
-  const parentByPacketId = new Map(
-    assemblyElements.map((packet) => [
-      packet.header.packet_id,
-      packet.header.edges.find((edge) => edge.edge_type === 'parent_scope')?.target
-        .packet_id ?? null,
-    ])
-  );
-  const existingClaimIds = new Set(
-    claimPackets.map((packet) => packet.header.packet_id)
-  );
-  const activeLegacyAssemblyClaims = attestationPackets.filter(
-    (packet) =>
-      packet.body.subtype === 'association_claim' &&
-      packet.body.status === 'active'
-  ) as PacketEnvelopeByType['Attestation'][];
-
-  for (const legacyClaim of activeLegacyAssemblyClaims) {
-    const subjectPacketId = legacyClaim.header.provenance.created_by?.packet_id ?? null;
-    const scopePacketId = legacyClaim.body.target_ref.packet_id;
-
-    if (!subjectPacketId) {
-      continue;
-    }
-
-    const claimPacketId = createClaimPacketId({
-      claimKind: 'association',
-      subjectPacketId,
-      targetPacketId: legacyClaim.body.target_ref.packet_id,
-      scopePacketId,
-    });
-
-    if (existingClaimIds.has(claimPacketId)) {
-      continue;
-    }
-
-    const claimPacket = createAssociationClaimPacket({
-      claimKind: 'association',
-      subjectPacketId,
-      targetPacketId: legacyClaim.body.target_ref.packet_id,
-      scopePacketId,
-      applicableScopeRefs: buildApplicableScopeRefs({
-        scopePacketId,
-        parentByPacketId,
-      }),
-      createdByPacketId: subjectPacketId,
-      createdAt: legacyClaim.header.created_at,
-      note: legacyClaim.body.note,
-      status: 'active',
-      packetId: claimPacketId,
-    });
-
-    await writeRevisionIfMissing(services, claimPacket);
-    await services.packetStore.publishRevision({
-      packet_id: claimPacket.header.packet_id,
-      revision_id: claimPacket.header.revision_id,
-    });
-    existingClaimIds.add(claimPacketId);
-  }
-
-  for (const elementPacket of elementPackets as PacketEnvelopeByType['Element'][]) {
-    for (const roleRef of elementPacket.body.claimed_role_refs) {
-      const scopePacketId =
-        elementPacket.header.authority_scope_ref?.packet_id ??
-        (() => {
-          const activeClaims = activeLegacyAssemblyClaims.filter(
-            (packet) =>
-              packet.header.provenance.created_by?.packet_id ===
-                elementPacket.header.packet_id &&
-              packet.body.status === 'active'
-          );
-
-          return activeClaims.length === 1
-            ? activeClaims[0].body.target_ref.packet_id
-            : 'nexus:element/global-commons';
-        })();
-      const relationPacketId = createRelationPacketId({
-        subtype: 'participation',
-        subjectPacketId: elementPacket.header.packet_id,
-        targetPacketId: roleRef.packet_id,
-        scopePacketId,
-      });
-
-      if (await services.packetStore.fetchPreferredRevision({ packet_id: relationPacketId })) {
-        continue;
-      }
-
-      const relationPacket = createScopedRelationPacket({
-        subtype: 'participation',
-        subjectPacketId: elementPacket.header.packet_id,
-        targetPacketId: roleRef.packet_id,
-        scopePacketId,
-        applicableScopeRefs: buildApplicableScopeRefs({
-          scopePacketId,
-          parentByPacketId,
-        }),
-        createdByPacketId: elementPacket.header.packet_id,
-        createdAt: elementPacket.header.created_at,
-        status: 'active',
-        packetId: relationPacketId,
-      });
-
-      await writeRevisionIfMissing(services, relationPacket);
-      await services.packetStore.publishRevision({
-        packet_id: relationPacket.header.packet_id,
-        revision_id: relationPacket.header.revision_id,
-      });
-    }
-  }
+  return;
 }
 
 async function resetDiscussionPackets(
@@ -231,10 +110,8 @@ async function resetDiscussionPackets(
       .all(...DISCUSSION_RESET_FAMILIES) as { packet_id: string }[];
     const packetIds = packetRows.map((row) => row.packet_id);
 
-    database.exec('DELETE FROM attestation_index');
-    database.exec('DELETE FROM attestation_tally_index');
-    database.exec('DELETE FROM packet_vote_index');
-    database.exec('DELETE FROM packet_vote_tally_index');
+    database.exec('DELETE FROM reaction_index');
+    database.exec('DELETE FROM reaction_tally_index');
     database.exec('DELETE FROM discussion_post_index');
     database.exec('DELETE FROM discussion_actor_ledger');
 

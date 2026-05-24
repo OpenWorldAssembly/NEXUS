@@ -1,11 +1,11 @@
 /**
  * File: nexus-api-types.discussions.ts
- * Description: Discussion, vote, and attestation payloads shared across Nexus routes and clients.
+ * Description: Discussion, vote, and reaction payloads shared across Nexus routes and clients.
  */
 
 import type {
   DiscussionWorkspaceModel,
-  AttestationEdgeProjection,
+  ReactionEdgeProjection,
   DiscussionFeedProjection,
   DiscussionFocusModel,
   DiscussionForumProjection,
@@ -15,7 +15,7 @@ import type {
   DiscussionThreadDetailProjection,
   DiscussionViewerContext,
 } from '@core/contracts';
-import type { AttestationValue } from '@core/schema/packet-schema';
+import type { ReactionVoteValue } from '@core/schema/packet-schema';
 
 export type NexusDiscussionForum = DiscussionForumProjection;
 export type NexusDiscussionPost = DiscussionPostProjection;
@@ -42,30 +42,30 @@ export interface NexusVoteSummaryPayload {
   net_score: number;
   total_votes: number;
   negative_ratio: number;
-  viewer_value: AttestationValue | 0;
+  viewer_value: ReactionVoteValue | 0;
   auto_hidden: boolean;
   deprioritized: boolean;
 }
 
 export interface NexusVoteMutationPayload {
   target_packet_id: string;
-  value: AttestationValue | 0;
+  value: ReactionVoteValue | 0;
   summary: NexusVoteSummaryPayload;
 }
 
-export interface NexusAttestationSummaryPayload {
+export interface NexusReactionSummaryPayload {
   target_packet_id: string;
   summary: NexusVoteSummaryPayload;
 }
 
-export interface NexusAttestationEdgesPayload {
+export interface NexusReactionEdgesPayload {
   target_packet_id: string;
-  attestations: AttestationEdgeProjection[];
+  reactions: ReactionEdgeProjection[];
 }
 
-export interface NexusActorAttestationsPayload {
+export interface NexusActorReactionsPayload {
   actor_key: string;
-  attestations: AttestationEdgeProjection[];
+  reactions: ReactionEdgeProjection[];
 }
 
 export interface NexusDiscussionPostMutationPayload {

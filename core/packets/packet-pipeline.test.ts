@@ -175,17 +175,17 @@ test('generic builder pipeline emits active subtype bodies for current core type
       },
     }),
     buildPacket({
-      type: 'Attestation',
+      type: 'Reaction',
       body: {
-        packet_id: 'nexus:attestation/packet-signal/a',
+        packet_id: 'nexus:reaction/vote/a',
         created_at: CREATED_AT,
-        subtype: 'packet_signal',
+        subtype: 'reaction',
         target_ref: { packet_id: 'nexus:discussion/post/a' },
-        value: 1,
+        vote_value: 1,
         status: 'active',
       },
       header: {
-        packet_id: 'nexus:attestation/packet-signal/a',
+        packet_id: 'nexus:reaction/vote/a',
         created_at: CREATED_AT,
       },
     }),

@@ -20,7 +20,7 @@ export type TrustedCompositeWorkflowAdapterKind =
   | 'composite.entity_create.with_followups'
   | 'composite.path_create.with_directory_projection'
   | 'composite.discussion_message.create'
-  | 'composite.attestation_mutual_exclusion'
+  | 'composite.reaction_support_dispute'
   | 'composite.policy_self_update';
 
 export type CompositeWorkflowPhaseDescriptor = {
@@ -692,34 +692,34 @@ const TRUSTED_COMPOSITE_WORKFLOW_ADAPTERS = [
       'Reusable canonical discussion-message creation adapter for replies with legacy reply projection compatibility.',
   },
   {
-    adapter_id: 'composite.relation_participation_attestation.set.v0',
-    adapter_kind: 'composite.attestation_mutual_exclusion',
-    mutation_intents: ['relation.participation.attestation.set'],
+    adapter_id: 'composite.relation_participation_reaction.set.v0',
+    adapter_kind: 'composite.reaction_support_dispute',
+    mutation_intents: ['relation.participation.reaction.set'],
     source_module: 'runtime/nexus/server/fortress-prepare-handler-implementation.ts',
     workflow_plan_ids: [],
     operation_kinds: [
       'workflow.compose',
-      'attestation.set',
-      'attestation.clear',
+      'reaction.set',
+      'reaction.clear',
     ],
     policy_action_ids: [
-      'relation.participation.attestation.support',
-      'relation.participation.attestation.dispute',
-      'relation.participation.attestation.clear',
+      'relation.participation.reaction.support',
+      'relation.participation.reaction.dispute',
+      'relation.participation.reaction.clear',
     ],
     dependency_ids: [
       'runtime.packet_store.read',
       'runtime.policy_gate',
-      'generic.operation.attestation',
+      'generic.operation.reaction',
       'generic.resolver.packet_ref',
       'generic.resolver.input_value',
       'generic.resolver.role_scope',
     ],
     phase_order: [
       'resolve_role_participation_relation',
-      'plan_mutual_exclusion_attestations',
-      'resolve_relation_participation_attestation_policy',
-      'prepare_relation_participation_attestation_digests',
+      'plan_mutual_exclusion_reactions',
+      'resolve_relation_participation_reaction_policy',
+      'prepare_relation_participation_reaction_digests',
     ],
     phases: [
       {
@@ -734,53 +734,53 @@ const TRUSTED_COMPOSITE_WORKFLOW_ADAPTERS = [
         ],
         output_key: 'role_participation_relation_context',
         notes:
-          'Resolves the role participation relation and governing scope before attestation planning.',
+          'Resolves the role participation relation and governing scope before reaction planning.',
       },
       {
-        phase_id: 'plan_mutual_exclusion_attestations',
+        phase_id: 'plan_mutual_exclusion_reactions',
         phase_kind: 'plan_operation_batch',
-        operation_kinds: ['attestation.set', 'attestation.clear'],
+        operation_kinds: ['reaction.set', 'reaction.clear'],
         policy_action_ids: [
-          'relation.participation.attestation.support',
-          'relation.participation.attestation.dispute',
-          'relation.participation.attestation.clear',
+          'relation.participation.reaction.support',
+          'relation.participation.reaction.dispute',
+          'relation.participation.reaction.clear',
         ],
         dependency_ids: [
-          'generic.operation.attestation',
+          'generic.operation.reaction',
           'generic.resolver.input_value',
         ],
-        output_key: 'relation_participation_attestation_packets',
+        output_key: 'relation_participation_reaction_packets',
         notes:
-          'Models support/dispute/clear as a reusable mutual-exclusion attestation composition over the same participation relation target.',
+          'Models support/dispute/clear as a reusable mutual-exclusion reaction composition over the same participation relation target.',
       },
       {
-        phase_id: 'resolve_relation_participation_attestation_policy',
+        phase_id: 'resolve_relation_participation_reaction_policy',
         phase_kind: 'resolve_policy',
         operation_kinds: ['workflow.compose'],
         policy_action_ids: [
-          'relation.participation.attestation.support',
-          'relation.participation.attestation.dispute',
-          'relation.participation.attestation.clear',
+          'relation.participation.reaction.support',
+          'relation.participation.reaction.dispute',
+          'relation.participation.reaction.clear',
         ],
         dependency_ids: ['runtime.policy_gate'],
-        output_key: 'relation_participation_attestation_policy_decision',
+        output_key: 'relation_participation_reaction_policy_decision',
         notes:
-          'Keeps current role attestation policy action selection inside the fortress authority path.',
+          'Keeps current role reaction policy action selection inside the fortress authority path.',
       },
       {
-        phase_id: 'prepare_relation_participation_attestation_digests',
+        phase_id: 'prepare_relation_participation_reaction_digests',
         phase_kind: 'prepare_digests',
         operation_kinds: ['workflow.compose'],
         policy_action_ids: [],
         dependency_ids: [],
-        output_key: 'prepared_relation_participation_attestation_packets',
+        output_key: 'prepared_relation_participation_reaction_packets',
         notes:
-          'Prepares unsigned digest candidates for the selected attestation operation batch.',
+          'Prepares unsigned digest candidates for the selected reaction operation batch.',
       },
     ],
     availability: 'runtime_ready',
     notes:
-      'Reusable mutual-exclusion attestation adapter for support/dispute/clear workflows over a packet-addressable participation relation.',
+      'Reusable mutual-exclusion reaction adapter for support/dispute/clear workflows over a packet-addressable participation relation.',
   },
   {
     adapter_id: 'composite.actor_write_policy.update.v0',

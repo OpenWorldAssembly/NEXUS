@@ -201,7 +201,7 @@ This monthly log condenses the May 2026 decisions that remain most important for
 
 ## 2026-05-20: Canonical subtype reset before reseed
 
-- Active packet canon is pruned to Definition, Bundle, Element, Location, Role, Claim, Relation, Report, Proposal, Vote, Attestation, Decision, Action, Discussion, Policy, and Preference.
+- Active packet canon is pruned to Definition, Bundle, Element, Location, Role, Claim, Relation, Report, Proposal, Reaction, Decision, Action, Discussion, Policy, and Preference.
 - `Cause`, split discussion types, split initiative/work types, `Signal`, `Minutes`, `Artifact`, and other unused alpha types are removed from fresh packet canon.
 - Fresh active packet bodies use top-level `body.subtype` as the packet classifier. Old top-level classifier names are treated as alpha archive shapes, not fresh write compatibility obligations.
 - Reseed continuity will preserve identity/key continuity by default; stale packet-id relations, home locality, follow, associations, main-tree scope IDs, and old discussion placement are not carried forward by default.

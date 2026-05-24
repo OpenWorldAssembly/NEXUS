@@ -36,12 +36,12 @@ const DISCUSSION_FAMILIES = new Set<PacketType>([
   'Discussion',
   'Discussion',
 ]);
-const VOTE_FAMILIES = new Set<PacketType>(['Proposal', 'Vote', 'Decision']);
+const VOTE_FAMILIES = new Set<PacketType>(['Proposal', 'Reaction', 'Decision']);
 const ROLE_FAMILIES = new Set<PacketType>(['Role']);
 const TRUST_FAMILIES = new Set<PacketType>([
   'Claim',
   'Relation',
-  'Attestation',
+  'Reaction',
   'Policy',
 ]);
 

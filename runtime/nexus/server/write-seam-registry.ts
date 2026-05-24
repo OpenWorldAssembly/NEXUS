@@ -25,9 +25,9 @@ export const DIRECT_PACKET_WRITE_SEAMS = {
     category: 'fortress_internal_helper',
     reason: 'Fortress-internal discussion persistence helper used by finalized discussion mutations.',
   },
-  'attestation-service.ts': {
+  'reaction-service.ts': {
     category: 'fortress_internal_helper',
-    reason: 'Fortress-internal attestation persistence helper used by finalized attestation mutations.',
+    reason: 'Fortress-internal reaction persistence helper used by finalized reaction mutations.',
   },
   'default-discussion-surfaces.ts': {
     category: 'bootstrap_or_seed',

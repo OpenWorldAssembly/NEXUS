@@ -117,7 +117,7 @@ Runtime should pair these descriptors with a local allowlist of supported builde
 
 Workflow-plan helpers follow the same rule. They can audit and dry-run descriptor shape, but runtime owns resolver execution, condition interpretation, operation planning, policy verification, proof handling, and persistence. Unknown workflow operation kinds, resolvers, dependencies, policy actions, condition operators, or step references fail closed.
 
-Workflow alignment now records which external definition execution intents can be described through these workflow plans and which remain missing coverage items. Relation, Claim, Attestation, and Discussion have the first definition workflow descriptors tied to trusted local planner capabilities; the descriptors are narrower runtime recipes layered on top of the broader generic packet write descriptors.
+Workflow alignment now records which external definition execution intents can be described through these workflow plans and which remain missing coverage items. Relation, Claim, Reaction, and Discussion have the first definition workflow descriptors tied to trusted local planner capabilities; the descriptors are narrower runtime recipes layered on top of the broader generic packet write descriptors.
 
 Policy and dependency descriptors stay packet-native. A workflow dependency must be explainable through `Policy` packet semantics, a Definition `dependencies_definition` part, a manifest operation, a workflow resolver, or trusted local runtime code that points back to packet-defined meaning. Runtime registries validate and index these references; they are not a separate dependency ontology.
 

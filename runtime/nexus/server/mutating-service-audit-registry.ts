@@ -18,11 +18,11 @@ export const MUTATING_SERVICE_AUDIT_ENTRIES: MutatingServiceAuditEntry[] = [
     reason: 'Discussion writes must enter through the shared mutation corridor.',
   },
   {
-    pattern: 'attestationService.setAttestation(',
-    reason: 'Attestation writes must enter through the shared mutation corridor.',
+    pattern: 'reactionService.setReaction(',
+    reason: 'Reaction writes must enter through the shared mutation corridor.',
   },
   {
-    pattern: 'attestationService.persistSignedAttestation(',
-    reason: 'Attestation persistence is fortress-internal and should not be route-invoked directly.',
+    pattern: 'reactionService.persistSignedReaction(',
+    reason: 'Reaction persistence is fortress-internal and should not be route-invoked directly.',
   },
 ];

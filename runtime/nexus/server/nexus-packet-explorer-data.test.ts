@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 
 import {
   createAssemblyPacket,
-  createAttestationPacket,
+  createReactionPacket,
   createClaimPacket,
   createDiscussionForumPacket,
   createDiscussionPostPacket,
@@ -23,7 +23,7 @@ import {
   signPacketWithIdentity,
 } from '@runtime/nexus/identity-crypto';
 import { NexusPacketActionService } from '@runtime/nexus/server/packet-action-service';
-import { SQLiteAttestationService } from '@runtime/nexus/server/attestation-service';
+import { SQLiteReactionService } from '@runtime/nexus/server/reaction-service';
 import { buildNexusPacketExplorerPayload } from '@runtime/nexus/server/nexus-packet-explorer-data';
 import { SQLiteDiscussionService } from '@runtime/nexus/server/discussion-service';
 import { NexusPacketVerificationService } from '@runtime/nexus/server/verification-service';
@@ -62,10 +62,10 @@ async function createExplorerHarness() {
     databasePath: join(directory, 'owa-explorer.db'),
   });
   const queryServices = await createNodeSQLiteQueryServicesAsync({ packetStore });
-  const attestationService = new SQLiteAttestationService(packetStore);
+  const reactionService = new SQLiteReactionService(packetStore);
   const discussionService = new SQLiteDiscussionService(
     packetStore,
-    attestationService
+    reactionService
   );
   const verificationService = new NexusPacketVerificationService(packetStore);
   const packetActionService = new NexusPacketActionService(
@@ -152,21 +152,21 @@ test('explorer payload returns raw, adapted, read-model, and link data for packe
       scope_ref: { packet_id: SCOPE_PACKET_ID },
       note: 'Current home locality.',
     });
-    const attestationPacket = createAttestationPacket({
-      packet_id: 'nexus:attestation/test-claim-support',
+    const reactionPacket = createReactionPacket({
+      packet_id: 'nexus:reaction/test-claim-support',
       created_at: '2026-04-29T00:03:00.000Z',
       authority_scope_ref: { packet_id: SCOPE_PACKET_ID },
       applicable_scope_refs: [{ packet_id: SCOPE_PACKET_ID }],
       created_by: { packet_id: actorPacket.header.packet_id },
       target_ref: { packet_id: claimPacket.header.packet_id },
-      value: 1,
-      subtype: 'claim_support',
+      vote_value: 1,
+      subtype: 'reaction',
     });
 
     await writePreferredPacket(harness.packetStore, assemblyPacket);
     await writePreferredPacket(harness.packetStore, actorPacket);
     await writePreferredPacket(harness.packetStore, claimPacket);
-    await writePreferredPacket(harness.packetStore, attestationPacket);
+    await writePreferredPacket(harness.packetStore, reactionPacket);
 
     const payload = await buildNexusPacketExplorerPayload({
       services: harness.services,
@@ -184,12 +184,12 @@ test('explorer payload returns raw, adapted, read-model, and link data for packe
     assert.equal(payload.outgoing_link_groups.length > 0, true);
     assert.equal(payload.outgoing_links.length > 0, true);
     assert.equal(
-      payload.incoming_links.some((link) => link.packet_id === attestationPacket.header.packet_id),
+      payload.incoming_links.some((link) => link.packet_id === reactionPacket.header.packet_id),
       true
     );
     assert.equal(
       payload.incoming_link_groups.some(
-        (group) => group.packet_id === attestationPacket.header.packet_id
+        (group) => group.packet_id === reactionPacket.header.packet_id
       ),
       true
     );

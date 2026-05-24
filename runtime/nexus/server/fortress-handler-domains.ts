@@ -18,9 +18,9 @@ import {
   createAssemblyPrepareHandlers,
 } from '@runtime/nexus/server/fortress-handler-domain-assembly';
 import {
-  createAttestationFinalizeHandlers,
-  createAttestationPrepareHandlers,
-} from '@runtime/nexus/server/fortress-handler-domain-attestation';
+  createReactionFinalizeHandlers,
+  createReactionPrepareHandlers,
+} from '@runtime/nexus/server/fortress-handler-domain-reaction';
 import {
   createDiscussionFinalizeHandlers,
   createDiscussionPrepareHandlers,
@@ -48,7 +48,7 @@ export function createMutationPrepareHandlerMap(
   return {
     ...createLocalityPrepareHandlers(handlers),
     ...createDiscussionPrepareHandlers(handlers),
-    ...createAttestationPrepareHandlers(handlers),
+    ...createReactionPrepareHandlers(handlers),
     ...createAssemblyPrepareHandlers(handlers),
     ...createRelationPrepareHandlers(handlers),
     ...createRolePrepareHandlers(handlers),
@@ -63,7 +63,7 @@ export function createMutationFinalizeHandlerMap(
   return {
     ...createLocalityFinalizeHandlers(handlers),
     ...createDiscussionFinalizeHandlers(handlers),
-    ...createAttestationFinalizeHandlers(handlers),
+    ...createReactionFinalizeHandlers(handlers),
     ...createAssemblyFinalizeHandlers(handlers),
     ...createRelationFinalizeHandlers(handlers),
     ...createRoleFinalizeHandlers(handlers),

@@ -192,10 +192,10 @@ export const PACKET_WORKFLOW_PLANNER_CAPABILITIES = [
     notes: 'Looks up an existing active relation before set/clear planning.',
   },
   {
-    resolver_id: 'attestation.target_summary',
+    resolver_id: 'reaction.target_summary',
     resolver_kind: 'target_summary_lookup',
     availability: 'runtime_ready',
-    notes: 'Loads a target summary needed by attestation planners.',
+    notes: 'Loads a target summary needed by reaction planners.',
   },
   {
     resolver_id: 'projection.current',
@@ -271,7 +271,7 @@ export const TRUSTED_PACKET_PLANNER_CAPABILITIES = [
       'generic.resolver.target_summary',
     ],
     notes:
-      'Existing packet-signal target summary dependency used by Attestation planning.',
+      'Existing packet-signal target summary dependency used by Reaction planning.',
   },
   {
     capability_id: 'runtime.projection.compatibility',
@@ -306,7 +306,7 @@ export const PACKET_WORKFLOW_DEPENDENCY_IDS = [
   'runtime.policy_gate',
   'generic.operation.relation',
   'generic.operation.claim',
-  'generic.operation.attestation',
+  'generic.operation.reaction',
   'generic.operation.discussion',
   'generic.operation.projection',
   'generic.resolver.actor_ref',
@@ -330,13 +330,13 @@ export const PACKET_WORKFLOW_DEPENDENCY_IDS = [
 ] as const;
 
 export const PACKET_WORKFLOW_POLICY_ACTION_IDS = [
-  'attestation.packet_signal.set',
-  'attestation.packet_signal.clear',
+  'reaction.vote.set',
+  'reaction.vote.clear',
   'relation.participation.add',
   'relation.participation.clear',
-  'relation.participation.attestation.support',
-  'relation.participation.attestation.dispute',
-  'relation.participation.attestation.clear',
+  'relation.participation.reaction.support',
+  'relation.participation.reaction.dispute',
+  'relation.participation.reaction.clear',
   'relation.follow.add',
   'relation.follow.clear',
   'relation.association.add',
@@ -347,7 +347,7 @@ export const PACKET_WORKFLOW_POLICY_ACTION_IDS = [
   'relation.generic.write',
   'discussion.generic.write',
   'claim.generic.write',
-  'attestation.generic.write',
+  'reaction.generic.write',
   'preference.element.write',
   'definition.part.write',
   'bundle.packet_set.write',

@@ -24,7 +24,7 @@ A process packet for contest, challenge, correction, annotation, or role workflo
 
 Status: current code truth.
 
-## Attestation
+## Reaction
 
 The current packet type for support, dispute, and other evidence-oriented signals.
 

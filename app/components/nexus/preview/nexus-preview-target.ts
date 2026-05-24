@@ -37,12 +37,12 @@ const ROUTABLE_PREVIEW_SURFACES = new Set<NexusPreviewSurface>([
 
 const DISCUSSION_TYPES = new Set<string>(['Discussion']);
 
-const VOTE_FAMILIES = new Set<PacketType>(['Proposal', 'Vote', 'Decision']);
+const VOTE_FAMILIES = new Set<PacketType>(['Proposal', 'Reaction', 'Decision']);
 const ROLE_FAMILIES = new Set<PacketType>(['Role']);
 const TRUST_FAMILIES = new Set<PacketType>([
   'Claim',
   'Relation',
-  'Attestation',
+  'Reaction',
   'Policy',
 ]);
 

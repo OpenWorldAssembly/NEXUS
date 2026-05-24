@@ -9,8 +9,10 @@ import { WRITE_PROOF_LEVELS } from '@core/auth/proof-types';
 import type { PacketType } from '@core/schema/packet-ontology';
 import { DefinitionBodySchema } from '@core/packets/definitions/definition.ts';
 import {
-  AttestationStatusSchema,
-  AttestationValueSchema,
+  ReactionAttestationValueSchema,
+  ReactionEmotionIdSchema,
+  ReactionStatusSchema,
+  ReactionVoteValueSchema,
   ClaimStatusSchema,
   DEFAULT_PROTOCOL_VERSION,
   DEFAULT_SCHEMA_VERSION,
@@ -384,24 +386,14 @@ export const ProposalBodySchema = z
   })
   .strict();
 
-export const VoteBodySchema = z
+export const ReactionBodySchema = z
   .object({
-    subtype: z.string().min(1).default('vote'),
-    title: z.string().min(1),
-    proposal_ref: PacketRefSchema,
-    vote_method: z.string().min(1),
-    status: z.string().min(1),
-    opened_at: z.string().min(1).nullable().optional(),
-    closes_at: z.string().min(1).nullable().optional(),
-  })
-  .strict();
-
-export const AttestationBodySchema = z
-  .object({
-    subtype: z.string().min(1).default('packet_signal'),
+    subtype: z.string().min(1).default('reaction'),
     target_ref: PacketRefSchema,
-    value: AttestationValueSchema,
-    status: AttestationStatusSchema.default('active'),
+    status: ReactionStatusSchema.default('active'),
+    vote_value: ReactionVoteValueSchema.nullable().default(null),
+    attestation_value: ReactionAttestationValueSchema.nullable().default(null),
+    emotion_ids: z.array(ReactionEmotionIdSchema).default([]),
     context_ref: PacketRefSchema.nullable().default(null),
     supporting_refs: z.array(PacketRefSchema).default([]),
     note: z.string().min(1).nullable().default(null),
@@ -503,7 +495,7 @@ export const PolicyBodySchema = z
               .object({
                 relation_subtype: z.string().min(1),
                 required_claim_subtypes: z.array(z.string().min(1)).default([]),
-                required_attestation_subtypes: z.array(z.string().min(1)).default([]),
+                required_reaction_attestations: z.array(z.string().min(1)).default([]),
                 claim_target_mode: RelationClaimTargetModeSchema.default('relation_packet'),
                 subject_match_mode: RelationSubjectMatchModeSchema.default(
                   'relation_subject'
@@ -782,8 +774,7 @@ export const PACKET_BODY_SCHEMAS = {
   Relation: RelationBodySchema,
   Report: ReportBodySchema,
   Proposal: ProposalBodySchema,
-  Vote: VoteBodySchema,
-  Attestation: AttestationBodySchema,
+  Reaction: ReactionBodySchema,
   Decision: DecisionBodySchema,
   Action: ActionBodySchema,
   Policy: PolicyBodySchema,

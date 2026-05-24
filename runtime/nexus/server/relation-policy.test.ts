@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import {
   createActionPacket,
-  createAttestationPacket,
+  createReactionPacket,
   createClaimPacket,
   createPolicyPacket,
   createRelationPacket,
@@ -12,7 +12,7 @@ import {
 import {
   collectPoliciesForActionAnchor,
   evaluateRelationPolicyRequirements,
-  listAttestationsTargetingClaim,
+  listReactionsTargetingClaim,
 } from './relation-policy.ts';
 
 test('relation policy evaluation recognizes a supporting home-locality claim from an OWA cause-linked policy', () => {
@@ -28,7 +28,7 @@ test('relation policy evaluation recognizes a supporting home-locality claim fro
         {
           relation_subtype: 'residence',
           required_claim_subtypes: ['relation_assertion'],
-          required_attestation_subtypes: [],
+          required_reaction_subtypes: [],
           claim_target_mode: 'relation_packet',
           subject_match_mode: 'relation_subject',
         },
@@ -129,7 +129,7 @@ test('relation policy evaluation fails when the supporting claim subject does no
         {
           relation_subtype: 'residence',
           required_claim_subtypes: ['relation_assertion'],
-          required_attestation_subtypes: [],
+          required_reaction_subtypes: [],
           claim_target_mode: 'relation_packet',
           subject_match_mode: 'relation_subject',
         },
@@ -191,7 +191,7 @@ test('relation policy evaluation distinguishes not-applicable relations from sat
   assert.equal(evaluation.is_satisfied, false);
 });
 
-test('claim-targeting attestations can be discovered without changing the attestation service model', () => {
+test('claim-targeting reactions can be discovered without changing the reaction service model', () => {
   const claim = createClaimPacket({
     packet_id: 'nexus:claim/home-locality/alice',
     created_at: '2026-05-07T00:20:00.000Z',
@@ -206,21 +206,21 @@ test('claim-targeting attestations can be discovered without changing the attest
       scope_ref: { packet_id: 'nexus:element/moreno-valley' },
     },
   });
-  const attestation = createAttestationPacket({
-    packet_id: 'nexus:attestation/claim-support/alice',
+  const reaction = createReactionPacket({
+    packet_id: 'nexus:reaction/claim-support/alice',
     created_at: '2026-05-07T00:21:00.000Z',
-    subtype: 'claim_support',
+    subtype: 'reaction',
     target_ref: { packet_id: claim.header.packet_id },
-    value: 1,
+    attestation_value: 'support',
   });
 
-  const matchingAttestations = listAttestationsTargetingClaim({
+  const matchingReactions = listReactionsTargetingClaim({
     claimPacket: claim,
-    attestationPackets: [attestation],
-    attestationSubtype: 'claim_support',
+    reactionPackets: [reaction],
+    reactionValue: 'support',
   });
 
-  assert.deepEqual(matchingAttestations.map((packet) => packet.header.packet_id), [
-    attestation.header.packet_id,
+  assert.deepEqual(matchingReactions.map((packet) => packet.header.packet_id), [
+    reaction.header.packet_id,
   ]);
 });

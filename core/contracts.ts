@@ -10,7 +10,9 @@ import type {
   PacketAdaptedWritePreparation,
   PacketCompatibilityReadResult,
   PacketVersionedWritePreparation,
-  AttestationValue,
+  ReactionAttestationValue,
+  ReactionEmotionId,
+  ReactionVoteValue,
   DiscussionActorClass,
   DiscussionReplySort,
   DiscussionSort,
@@ -200,7 +202,7 @@ export type NexusActionId =
   | 'role.unclaim'
   | 'role.support_claim'
   | 'role.dispute_claim'
-  | 'role.clear_attestation'
+  | 'role.clear_reaction'
   | 'trust.set_residence';
 
 export type NexusActionExecutionKind =
@@ -274,18 +276,18 @@ export interface DiscussionViewerContext {
   write_block_reason: 'none' | 'signed_actor_required' | 'residence_required';
 }
 
-export interface AttestationSummary {
+export interface ReactionVoteSummary {
   upvote_count: number;
   downvote_count: number;
   net_score: number;
   total_votes: number;
   negative_ratio: number;
-  viewer_value: AttestationValue | 0;
+  viewer_value: ReactionVoteValue | 0;
   auto_hidden: boolean;
   deprioritized: boolean;
 }
 
-export interface AttestationEdgeProjection {
+export interface ReactionEdgeProjection {
   packet: PacketRef;
   revision: PacketRevisionRef;
   source_actor_key: string;
@@ -293,8 +295,9 @@ export interface AttestationEdgeProjection {
   source_actor_label: string | null;
   authority_scope_packet_id: string | null;
   target_ref: PacketRef;
-  attestation_kind: string;
-  value: AttestationValue;
+  vote_value: ReactionVoteValue | null;
+  attestation_value: ReactionAttestationValue | null;
+  emotion_ids: ReactionEmotionId[];
   status: 'active' | 'cleared';
   context_ref: PacketRef | null;
   supporting_refs: PacketRef[];
@@ -369,7 +372,7 @@ export interface DiscussionPostProjection {
   depth: number;
   is_hidden: boolean;
   hidden_reason: string | null;
-  vote_summary: AttestationSummary;
+  vote_summary: ReactionVoteSummary;
   state: DiscussionNodeState;
   actions: NexusActionMap;
 }
@@ -519,34 +522,35 @@ export interface DiscussionQueryService {
   }): Promise<DiscussionNavigationTarget>;
 }
 
-export interface AttestationService {
+export interface ReactionService {
   syncDerivedState(): Promise<void>;
-  setAttestation(input: {
+  setReaction(input: {
     target_packet_id: string;
     actor_key: string;
     actor_class: DiscussionActorClass;
     authority_scope_id: string | null;
-    value: AttestationValue | 0;
-    attestation_kind?: string;
+    vote_value?: ReactionVoteValue | 0 | null;
+    attestation_value?: ReactionAttestationValue | null;
+    emotion_ids?: ReactionEmotionId[];
     context_packet_id?: string | null;
     supporting_packet_ids?: string[];
     note?: string | null;
-  }): Promise<AttestationSummary>;
+  }): Promise<ReactionVoteSummary>;
   getTargetSummary(input: {
     target_packet_id: string;
     viewer_actor_key: string | null;
-  }): Promise<AttestationSummary>;
-  listTargetAttestations(input: {
+  }): Promise<ReactionVoteSummary>;
+  listTargetReactions(input: {
     target_packet_id: string;
-    attestation_kind?: string | null;
     context_packet_id?: string | null;
+    vote_only?: boolean;
+    attestation_value?: ReactionAttestationValue | null;
     active_only?: boolean;
-  }): Promise<AttestationEdgeProjection[]>;
-  listActorAttestations(input: {
+  }): Promise<ReactionEdgeProjection[]>;
+  listActorReactions(input: {
     actor_key: string;
-    attestation_kind?: string | null;
     active_only?: boolean;
-  }): Promise<AttestationEdgeProjection[]>;
+  }): Promise<ReactionEdgeProjection[]>;
   listAssociationRelationsForActor(
     actor_packet_id: string
   ): Promise<AssociationRelationProjection[]>;

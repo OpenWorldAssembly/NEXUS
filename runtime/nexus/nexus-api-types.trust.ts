@@ -5,7 +5,7 @@
 
 import type {
   AssociationRelationProjection,
-  AttestationEdgeProjection,
+  ReactionEdgeProjection,
   NexusScopeLens,
 } from '@core/contracts';
 import type { NexusScopeSummary } from '@runtime/nexus/nexus-shell';
@@ -24,8 +24,8 @@ export interface NexusTrustRoleProjection {
   support_count: number;
   dispute_count: number;
   stage: NexusTrustStageId;
-  support_edges: AttestationEdgeProjection[];
-  dispute_edges: AttestationEdgeProjection[];
+  support_edges: ReactionEdgeProjection[];
+  dispute_edges: ReactionEdgeProjection[];
 }
 
 export interface NexusHomeLocalityProjection {

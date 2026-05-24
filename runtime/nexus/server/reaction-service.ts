@@ -1,11 +1,11 @@
 /**
- * File: attestation-service.ts
- * Description: Projects and mutates canonical attestation packets across discussions and association flows.
+ * File: reaction-service.ts
+ * Description: Projects and mutates canonical reaction packets across discussions and association flows.
  */
 
 import { DatabaseSync } from 'node:sqlite';
 
-import { createAttestationPacket } from '@core/packets/builders';
+import { createReactionPacket } from '@core/packets/builders';
 import {
   isDiscussionMessagePacket,
   type DiscussionLegacyType,
@@ -15,13 +15,14 @@ import { resolvePacketTarget } from '@core/packets/packet-target-resolver';
 import type {
   AssociationClaimProjection,
   AssociationRelationProjection,
-  AttestationEdgeProjection,
-  AttestationService,
-  AttestationSummary,
+  ReactionEdgeProjection,
+  ReactionService,
+  ReactionVoteSummary,
 } from '@core/contracts';
 import type {
-  AttestationKind,
-  AttestationValue,
+  ReactionAttestationValue,
+  ReactionEmotionId,
+  ReactionVoteValue,
   DiscussionActorClass,
   PacketEnvelope,
   PacketEnvelopeByType,
@@ -36,24 +37,24 @@ import {
   listRelationPackets,
 } from '@runtime/nexus/server/relation-utils';
 import {
-  createAttestationPacketId,
+  createReactionPacketId,
   resolveDiscussionScopePacketId,
 } from '@runtime/nexus/discussion-packets';
 import type {
-  AttestationIndexRecord,
-  AttestationTallyIndexRecord,
+  ReactionIndexRecord,
+  ReactionTallyIndexRecord,
 } from '@runtime/storage/sqlite-records';
 import { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store';
 
-type AttestationAggregate = Omit<AttestationSummary, 'viewer_value'>;
+type ReactionAggregate = Omit<ReactionVoteSummary, 'viewer_value'>;
 
-type AttestationState = {
+type ReactionState = {
   packetMap: Map<string, PacketEnvelope>;
-  attestationPackets: PacketEnvelopeByType['Attestation'][];
-  summaryByTarget: Map<string, AttestationAggregate>;
-  viewerValuesByActor: Map<string, Map<string, AttestationValue>>;
-  indexRows: AttestationIndexRecord[];
-  tallyRows: AttestationTallyIndexRecord[];
+  reactionPackets: PacketEnvelopeByType['Reaction'][];
+  summaryByTarget: Map<string, ReactionAggregate>;
+  viewerValuesByActor: Map<string, Map<string, ReactionVoteValue>>;
+  indexRows: ReactionIndexRecord[];
+  tallyRows: ReactionTallyIndexRecord[];
 };
 
 function getActorKeyFromPacket(packet: PacketEnvelope): string | null {
@@ -79,8 +80,8 @@ function createNextRevisionId(
 }
 
 function applyModerationThresholds(
-  summary: AttestationAggregate
-): AttestationAggregate {
+  summary: ReactionAggregate
+): ReactionAggregate {
   return {
     ...summary,
     auto_hidden: false,
@@ -88,7 +89,7 @@ function applyModerationThresholds(
   };
 }
 
-function createEmptySummary(viewerValue: AttestationValue | 0): AttestationSummary {
+function createEmptySummary(viewerValue: ReactionVoteValue | 0): ReactionVoteSummary {
   return {
     upvote_count: 0,
     downvote_count: 0,
@@ -101,40 +102,41 @@ function createEmptySummary(viewerValue: AttestationValue | 0): AttestationSumma
   };
 }
 
-function toAttestationEdgeProjection(
-  attestationPacket: PacketEnvelopeByType['Attestation'],
+function toReactionEdgeProjection(
+  reactionPacket: PacketEnvelopeByType['Reaction'],
   packetMap: Map<string, PacketEnvelope>
-): AttestationEdgeProjection {
+): ReactionEdgeProjection {
   const sourceActorPacketId =
-    attestationPacket.header.provenance.created_by?.packet_id ?? null;
+    reactionPacket.header.provenance.created_by?.packet_id ?? null;
   const sourceActorPacket =
     sourceActorPacketId !== null ? packetMap.get(sourceActorPacketId) : null;
 
   return {
     packet: {
-      packet_id: attestationPacket.header.packet_id,
+      packet_id: reactionPacket.header.packet_id,
     },
     revision: {
-      packet_id: attestationPacket.header.packet_id,
-      revision_id: attestationPacket.header.revision_id,
+      packet_id: reactionPacket.header.packet_id,
+      revision_id: reactionPacket.header.revision_id,
     },
-    source_actor_key: getActorKeyFromPacket(attestationPacket) ?? '',
+    source_actor_key: getActorKeyFromPacket(reactionPacket) ?? '',
     source_actor_packet_id: sourceActorPacketId,
     source_actor_label:
       sourceActorPacket?.header.type === 'Element'
         ? (sourceActorPacket as PacketEnvelopeByType['Element']).body.name
         : null,
     authority_scope_packet_id:
-      attestationPacket.header.authority_scope_ref?.packet_id ?? null,
-    target_ref: attestationPacket.body.target_ref,
-    attestation_kind: attestationPacket.body.subtype,
-    value: attestationPacket.body.value,
-    status: attestationPacket.body.status,
-    context_ref: attestationPacket.body.context_ref,
-    supporting_refs: attestationPacket.body.supporting_refs,
-    note: attestationPacket.body.note,
-    supersedes_ref: attestationPacket.body.supersedes_ref,
-    created_at: attestationPacket.header.created_at,
+      reactionPacket.header.authority_scope_ref?.packet_id ?? null,
+    target_ref: reactionPacket.body.target_ref,
+    vote_value: reactionPacket.body.vote_value,
+    attestation_value: reactionPacket.body.attestation_value,
+    emotion_ids: reactionPacket.body.emotion_ids,
+    status: reactionPacket.body.status,
+    context_ref: reactionPacket.body.context_ref,
+    supporting_refs: reactionPacket.body.supporting_refs,
+    note: reactionPacket.body.note,
+    supersedes_ref: reactionPacket.body.supersedes_ref,
+    created_at: reactionPacket.header.created_at,
   };
 }
 
@@ -226,20 +228,15 @@ function toLegacyDiscussionEntry(
     );
   }
 
-  if (
-    packet.header.type === 'Discussion' ||
-    packet.header.type === 'Discussion'
-  ) {
-    return packet as
-      | PacketEnvelopeByType['Discussion']
-      | PacketEnvelopeByType['Discussion'];
+  if (packet.header.type === 'Discussion') {
+    return packet as PacketEnvelopeByType['Discussion'];
   }
 
   return null;
 }
 
-export class SQLiteAttestationService implements AttestationService {
-  private state: AttestationState | null = null;
+export class SQLiteReactionService implements ReactionService {
+  private state: ReactionState | null = null;
   private readonly packetStore: NodeSQLitePacketStore;
 
   constructor(packetStore: NodeSQLitePacketStore) {
@@ -247,47 +244,48 @@ export class SQLiteAttestationService implements AttestationService {
   }
 
   async syncDerivedState(): Promise<void> {
-    const [attestationPackets, allPackets] = await Promise.all([
-      this.packetStore.listPreferredPacketsByType('Attestation'),
+    const [reactionPackets, allPackets] = await Promise.all([
+      this.packetStore.listPreferredPacketsByType('Reaction'),
       this.packetStore.listPreferredPackets(),
     ]);
 
     const packetMap = new Map(
       allPackets.map((packet) => [packet.header.packet_id, packet])
     );
-    const viewerValuesByActor = new Map<string, Map<string, AttestationValue>>();
-    const rawSummaryByTarget = new Map<string, AttestationAggregate>();
-    const indexRows: AttestationIndexRecord[] = [];
+    const viewerValuesByActor = new Map<string, Map<string, ReactionVoteValue>>();
+    const rawSummaryByTarget = new Map<string, ReactionAggregate>();
+    const indexRows: ReactionIndexRecord[] = [];
 
-    for (const attestationPacket of attestationPackets) {
-      const actorKey = getActorKeyFromPacket(attestationPacket);
+    for (const reactionPacket of reactionPackets) {
+      const actorKey = getActorKeyFromPacket(reactionPacket);
 
       if (!actorKey) {
         continue;
       }
 
       indexRows.push({
-        attestation_packet_id: attestationPacket.header.packet_id,
-        target_packet_id: attestationPacket.body.target_ref.packet_id,
+        reaction_packet_id: reactionPacket.header.packet_id,
+        target_packet_id: reactionPacket.body.target_ref.packet_id,
         actor_key: actorKey,
-        attestation_kind: attestationPacket.body.subtype,
-        value: attestationPacket.body.value,
-        status: attestationPacket.body.status,
-        context_packet_id: attestationPacket.body.context_ref?.packet_id ?? null,
-        note: attestationPacket.body.note,
-        created_at: attestationPacket.header.created_at,
-        updated_at: attestationPacket.header.created_at,
+        vote_value: reactionPacket.body.vote_value,
+        attestation_value: reactionPacket.body.attestation_value,
+        emotion_ids_json: JSON.stringify(reactionPacket.body.emotion_ids),
+        status: reactionPacket.body.status,
+        context_packet_id: reactionPacket.body.context_ref?.packet_id ?? null,
+        note: reactionPacket.body.note,
+        created_at: reactionPacket.header.created_at,
+        updated_at: reactionPacket.header.created_at,
       });
 
       if (
-        attestationPacket.body.status !== 'active' ||
-        attestationPacket.body.subtype !== 'packet_signal'
+        reactionPacket.body.status !== 'active' ||
+        reactionPacket.body.vote_value === null
       ) {
         continue;
       }
 
       const currentSummary =
-        rawSummaryByTarget.get(attestationPacket.body.target_ref.packet_id) ?? {
+        rawSummaryByTarget.get(reactionPacket.body.target_ref.packet_id) ?? {
           upvote_count: 0,
           downvote_count: 0,
           net_score: 0,
@@ -297,7 +295,7 @@ export class SQLiteAttestationService implements AttestationService {
           deprioritized: false,
         };
 
-      if (attestationPacket.body.value === 1) {
+      if (reactionPacket.body.vote_value === 1) {
         currentSummary.upvote_count += 1;
       } else {
         currentSummary.downvote_count += 1;
@@ -312,21 +310,21 @@ export class SQLiteAttestationService implements AttestationService {
           ? 0
           : currentSummary.downvote_count / currentSummary.total_votes;
       rawSummaryByTarget.set(
-        attestationPacket.body.target_ref.packet_id,
+        reactionPacket.body.target_ref.packet_id,
         currentSummary
       );
 
       const actorValues =
-        viewerValuesByActor.get(actorKey) ?? new Map<string, AttestationValue>();
+        viewerValuesByActor.get(actorKey) ?? new Map<string, ReactionVoteValue>();
       actorValues.set(
-        attestationPacket.body.target_ref.packet_id,
-        attestationPacket.body.value
+        reactionPacket.body.target_ref.packet_id,
+        reactionPacket.body.vote_value
       );
       viewerValuesByActor.set(actorKey, actorValues);
     }
 
-    const summaryByTarget = new Map<string, AttestationAggregate>();
-    const tallyRows: AttestationTallyIndexRecord[] = [];
+    const summaryByTarget = new Map<string, ReactionAggregate>();
+    const tallyRows: ReactionTallyIndexRecord[] = [];
 
     for (const [targetPacketId, rawSummary] of rawSummaryByTarget.entries()) {
       const moderatedSummary = applyModerationThresholds(rawSummary);
@@ -346,7 +344,7 @@ export class SQLiteAttestationService implements AttestationService {
 
     this.state = {
       packetMap,
-      attestationPackets,
+      reactionPackets,
       summaryByTarget,
       viewerValuesByActor,
       indexRows,
@@ -359,21 +357,22 @@ export class SQLiteAttestationService implements AttestationService {
     });
   }
 
-  async setAttestation(input: {
+  async setReaction(input: {
     target_packet_id: string;
     actor_key: string;
     actor_class: DiscussionActorClass;
     authority_scope_id: string | null;
-    value: AttestationValue | 0;
-    attestation_kind?: string;
+    vote_value?: ReactionVoteValue | 0 | null;
+    attestation_value?: ReactionAttestationValue | null;
+    emotion_ids?: ReactionEmotionId[];
     context_packet_id?: string | null;
     supporting_packet_ids?: string[];
     note?: string | null;
-  }): Promise<AttestationSummary> {
+  }): Promise<ReactionVoteSummary> {
     await this.syncDerivedState();
 
     if (!this.state) {
-      throw new Error('Attestation state is unavailable.');
+      throw new Error('Reaction state is unavailable.');
     }
 
     const targetPacket = await this.packetStore.fetchByPacket({
@@ -381,7 +380,7 @@ export class SQLiteAttestationService implements AttestationService {
     });
 
     if (!targetPacket) {
-      throw new Error(`Unknown attestation target: ${input.target_packet_id}`);
+      throw new Error(`Unknown reaction target: ${input.target_packet_id}`);
     }
 
     const entryPacket = toLegacyDiscussionEntry(targetPacket);
@@ -416,7 +415,7 @@ export class SQLiteAttestationService implements AttestationService {
         const assemblyPacketId = forumPacket.header.authority_scope_ref?.packet_id ?? null;
 
         if (!actorPacketId || !assemblyPacketId) {
-          throw new Error('Attestations are not open to your current actor class here.');
+          throw new Error('Reactions are not open to your current actor class here.');
         }
 
         const hasMembership = await this.hasActiveAssociationRelation({
@@ -425,34 +424,50 @@ export class SQLiteAttestationService implements AttestationService {
         });
 
         if (!hasMembership) {
-          throw new Error('Attestations are not open to your current actor class here.');
+          throw new Error('Reactions are not open to your current actor class here.');
         }
       }
     }
 
-    const attestationKind = (input.attestation_kind ??
-      'packet_signal') as AttestationKind;
-    const attestationPacketId = createAttestationPacketId({
+    const actorPacketId = input.actor_key.replace(/^element:/, '');
+    const reactionPacketId = createReactionPacketId({
       targetPacketId: input.target_packet_id,
-      actorPacketId: input.actor_key.replace(/^element:/, ''),
-      attestationKind,
+      actorPacketId,
       contextPacketId: input.context_packet_id ?? null,
     });
     const existingPreferredRevision = await this.packetStore.fetchPreferredRevision({
-      packet_id: attestationPacketId,
+      packet_id: reactionPacketId,
     });
     const existingPacket =
       existingPreferredRevision === null
         ? null
         : await this.packetStore.fetchByRevision(existingPreferredRevision);
-    const currentAttestationPacket =
-      existingPacket?.header.type === 'Attestation'
-        ? (existingPacket as PacketEnvelopeByType['Attestation'])
+    const currentReactionPacket =
+      existingPacket?.header.type === 'Reaction'
+        ? (existingPacket as PacketEnvelopeByType['Reaction'])
         : null;
-    const nextValue =
-      input.value === 0 ? currentAttestationPacket?.body.value ?? 1 : input.value;
 
-    if (input.value === 0 && !currentAttestationPacket) {
+    const requestedVoteValue = input.vote_value;
+    const nextVoteValue =
+      requestedVoteValue === undefined
+        ? currentReactionPacket?.body.vote_value ?? null
+        : requestedVoteValue === 0
+          ? null
+          : requestedVoteValue;
+    const nextAttestationValue =
+      input.attestation_value === undefined
+        ? currentReactionPacket?.body.attestation_value ?? null
+        : input.attestation_value;
+    const nextEmotionIds =
+      input.emotion_ids === undefined
+        ? currentReactionPacket?.body.emotion_ids ?? []
+        : input.emotion_ids;
+    const nextStatus =
+      nextVoteValue === null && nextAttestationValue === null && nextEmotionIds.length === 0
+        ? 'cleared'
+        : 'active';
+
+    if (nextStatus === 'cleared' && !currentReactionPacket) {
       await this.syncDerivedState();
       return this.getTargetSummary({
         target_packet_id: input.target_packet_id,
@@ -460,10 +475,10 @@ export class SQLiteAttestationService implements AttestationService {
       });
     }
 
-    const nextPacket = createAttestationPacket({
-      packet_id: attestationPacketId,
+    const nextPacket = createReactionPacket({
+      packet_id: reactionPacketId,
       revision_id: createNextRevisionId(
-        attestationPacketId,
+        reactionPacketId,
         existingPreferredRevision?.revision_id ?? null
       ),
       created_at: new Date().toISOString(),
@@ -487,11 +502,13 @@ export class SQLiteAttestationService implements AttestationService {
           }
         : null,
       adapter: 'nexus-web',
-      metadata_tags: ['attestation', attestationKind.replace(/_/g, '-')],
+      metadata_tags: ['reaction'],
       target_ref: { packet_id: input.target_packet_id },
-      value: nextValue,
-      status: input.value === 0 ? 'cleared' : 'active',
-      subtype: attestationKind,
+      status: nextStatus,
+      subtype: 'reaction',
+      vote_value: nextVoteValue,
+      attestation_value: nextAttestationValue,
+      emotion_ids: nextEmotionIds,
       context_ref: input.context_packet_id
         ? {
             packet_id: input.context_packet_id,
@@ -500,10 +517,10 @@ export class SQLiteAttestationService implements AttestationService {
       supporting_refs: (input.supporting_packet_ids ?? []).map((packetId) => ({
         packet_id: packetId,
       })),
-      note: input.note ?? null,
-      supersedes_ref: currentAttestationPacket
+      note: input.note ?? currentReactionPacket?.body.note ?? null,
+      supersedes_ref: currentReactionPacket
         ? {
-            packet_id: currentAttestationPacket.header.packet_id,
+            packet_id: currentReactionPacket.header.packet_id,
           }
         : null,
     });
@@ -521,60 +538,59 @@ export class SQLiteAttestationService implements AttestationService {
     });
   }
 
-  async persistSignedAttestation(input: {
-    attestation_packet: PacketEnvelopeByType['Attestation'];
+  async persistSignedReaction(input: {
+    reaction_packet: PacketEnvelopeByType['Reaction'];
     actor_packet: PacketEnvelopeByType['Element'];
     actor_key: string;
     actor_class: DiscussionActorClass;
-  }): Promise<AttestationSummary> {
+  }): Promise<ReactionVoteSummary> {
     await this.syncDerivedState();
 
     if (!this.state) {
-      throw new Error('Attestation state is unavailable.');
+      throw new Error('Reaction state is unavailable.');
     }
 
-    const { attestation_packet: attestationPacket, actor_packet: actorPacket } = input;
-    const expectedPacketId = createAttestationPacketId({
-      targetPacketId: attestationPacket.body.target_ref.packet_id,
+    const { reaction_packet: reactionPacket, actor_packet: actorPacket } = input;
+    const expectedPacketId = createReactionPacketId({
+      targetPacketId: reactionPacket.body.target_ref.packet_id,
       actorPacketId: actorPacket.header.packet_id,
-      attestationKind: attestationPacket.body.subtype,
-      contextPacketId: attestationPacket.body.context_ref?.packet_id ?? null,
+      contextPacketId: reactionPacket.body.context_ref?.packet_id ?? null,
     });
 
-    if (attestationPacket.header.packet_id !== expectedPacketId) {
-      throw new Error('Attestation packet id does not match the attestation target.');
+    if (reactionPacket.header.packet_id !== expectedPacketId) {
+      throw new Error('Reaction packet id does not match the reaction target.');
     }
 
     if (
-      attestationPacket.header.provenance.created_by?.packet_id !==
+      reactionPacket.header.provenance.created_by?.packet_id !==
       actorPacket.header.packet_id
     ) {
-      throw new Error('Attestation packet provenance does not match the actor packet.');
+      throw new Error('Reaction packet provenance does not match the actor packet.');
     }
 
     if (
-      attestationPacket.header.integrity.embedded_signatures[0]?.signer_packet_ref
+      reactionPacket.header.integrity.embedded_signatures[0]?.signer_packet_ref
         ?.packet_id !== actorPacket.header.packet_id
     ) {
-      throw new Error('Attestation packet signature does not match the actor packet.');
+      throw new Error('Reaction packet signature does not match the actor packet.');
     }
 
     const signatureIsValid = await verifyPacketSignature({
-      packet: attestationPacket,
+      packet: reactionPacket,
       signerPacket: actorPacket,
     });
 
     if (!signatureIsValid) {
-      throw new Error('Attestation packet signature verification failed.');
+      throw new Error('Reaction packet signature verification failed.');
     }
 
     const targetPacket = await this.packetStore.fetchByPacket({
-      packet_id: attestationPacket.body.target_ref.packet_id,
+      packet_id: reactionPacket.body.target_ref.packet_id,
     });
 
     if (!targetPacket) {
       throw new Error(
-        `Unknown attestation target: ${attestationPacket.body.target_ref.packet_id}`
+        `Unknown reaction target: ${reactionPacket.body.target_ref.packet_id}`
       );
     }
 
@@ -588,7 +604,7 @@ export class SQLiteAttestationService implements AttestationService {
 
       if (!threadPacket) {
         throw new Error(
-          `Missing discussion thread for packet ${attestationPacket.body.target_ref.packet_id}.`
+          `Missing discussion thread for packet ${reactionPacket.body.target_ref.packet_id}.`
         );
       }
 
@@ -607,7 +623,7 @@ export class SQLiteAttestationService implements AttestationService {
         const assemblyPacketId = forumPacket.header.authority_scope_ref?.packet_id ?? null;
 
         if (!assemblyPacketId) {
-          throw new Error('Attestations are not open to your current actor class here.');
+          throw new Error('Reactions are not open to your current actor class here.');
         }
 
         const hasMembership = await this.hasActiveAssociationRelation({
@@ -616,33 +632,33 @@ export class SQLiteAttestationService implements AttestationService {
         });
 
         if (!hasMembership) {
-          throw new Error('Attestations are not open to your current actor class here.');
+          throw new Error('Reactions are not open to your current actor class here.');
         }
       }
     }
 
     const existingPreferredRevision = await this.packetStore.fetchPreferredRevision({
-      packet_id: attestationPacket.header.packet_id,
+      packet_id: reactionPacket.header.packet_id,
     });
 
-    if (!existingPreferredRevision && attestationPacket.body.status === 'cleared') {
+    if (!existingPreferredRevision && reactionPacket.body.status === 'cleared') {
       await this.syncDerivedState();
 
       return this.getTargetSummary({
-        target_packet_id: attestationPacket.body.target_ref.packet_id,
+        target_packet_id: reactionPacket.body.target_ref.packet_id,
         viewer_actor_key: input.actor_key,
       });
     }
 
-    await this.packetStore.writeRevision(attestationPacket);
+    await this.packetStore.writeRevision(reactionPacket);
     await this.packetStore.publishRevision({
-      packet_id: attestationPacket.header.packet_id,
-      revision_id: attestationPacket.header.revision_id,
+      packet_id: reactionPacket.header.packet_id,
+      revision_id: reactionPacket.header.revision_id,
     });
     await this.syncDerivedState();
 
     return this.getTargetSummary({
-      target_packet_id: attestationPacket.body.target_ref.packet_id,
+      target_packet_id: reactionPacket.body.target_ref.packet_id,
       viewer_actor_key: input.actor_key,
     });
   }
@@ -650,7 +666,7 @@ export class SQLiteAttestationService implements AttestationService {
   async getTargetSummary(input: {
     target_packet_id: string;
     viewer_actor_key: string | null;
-  }): Promise<AttestationSummary> {
+  }): Promise<ReactionVoteSummary> {
     if (!this.state) {
       await this.syncDerivedState();
     }
@@ -671,72 +687,70 @@ export class SQLiteAttestationService implements AttestationService {
     };
   }
 
-  async listTargetAttestations(input: {
+  async listTargetReactions(input: {
     target_packet_id: string;
-    attestation_kind?: string | null;
     context_packet_id?: string | null;
+    vote_only?: boolean;
+    attestation_value?: ReactionAttestationValue | null;
     active_only?: boolean;
-  }): Promise<AttestationEdgeProjection[]> {
+  }): Promise<ReactionEdgeProjection[]> {
     if (!this.state) {
       await this.syncDerivedState();
     }
 
-    return (this.state?.attestationPackets ?? [])
+    return (this.state?.reactionPackets ?? [])
       .filter(
-        (attestationPacket) =>
-          attestationPacket.body.target_ref.packet_id === input.target_packet_id
+        (reactionPacket) =>
+          reactionPacket.body.target_ref.packet_id === input.target_packet_id
       )
-      .filter((attestationPacket) =>
-        input.attestation_kind
-          ? attestationPacket.body.subtype === input.attestation_kind
-          : true
-      )
-      .filter((attestationPacket) =>
+      .filter((reactionPacket) =>
         input.context_packet_id
-          ? attestationPacket.body.context_ref?.packet_id === input.context_packet_id
+          ? reactionPacket.body.context_ref?.packet_id === input.context_packet_id
           : true
       )
-      .filter((attestationPacket) =>
+      .filter((reactionPacket) =>
+        input.vote_only ? reactionPacket.body.vote_value !== null : true
+      )
+      .filter((reactionPacket) =>
+        input.attestation_value
+          ? reactionPacket.body.attestation_value === input.attestation_value
+          : true
+      )
+      .filter((reactionPacket) =>
         input.active_only === false
           ? true
-          : attestationPacket.body.status === 'active'
+          : reactionPacket.body.status === 'active'
       )
       .sort((leftPacket, rightPacket) =>
         rightPacket.header.created_at.localeCompare(leftPacket.header.created_at)
       )
-      .map((attestationPacket) =>
-        toAttestationEdgeProjection(attestationPacket, this.state?.packetMap ?? new Map())
+      .map((reactionPacket) =>
+        toReactionEdgeProjection(reactionPacket, this.state?.packetMap ?? new Map())
       );
   }
 
-  async listActorAttestations(input: {
+  async listActorReactions(input: {
     actor_key: string;
-    attestation_kind?: string | null;
     active_only?: boolean;
-  }): Promise<AttestationEdgeProjection[]> {
+  }): Promise<ReactionEdgeProjection[]> {
     if (!this.state) {
       await this.syncDerivedState();
     }
 
-    return (this.state?.attestationPackets ?? [])
+    return (this.state?.reactionPackets ?? [])
       .filter(
-        (attestationPacket) => getActorKeyFromPacket(attestationPacket) === input.actor_key
+        (reactionPacket) => getActorKeyFromPacket(reactionPacket) === input.actor_key
       )
-      .filter((attestationPacket) =>
-        input.attestation_kind
-          ? attestationPacket.body.subtype === input.attestation_kind
-          : true
-      )
-      .filter((attestationPacket) =>
+      .filter((reactionPacket) =>
         input.active_only === false
           ? true
-          : attestationPacket.body.status === 'active'
+          : reactionPacket.body.status === 'active'
       )
       .sort((leftPacket, rightPacket) =>
         rightPacket.header.created_at.localeCompare(leftPacket.header.created_at)
       )
-      .map((attestationPacket) =>
-        toAttestationEdgeProjection(attestationPacket, this.state?.packetMap ?? new Map())
+      .map((reactionPacket) =>
+        toReactionEdgeProjection(reactionPacket, this.state?.packetMap ?? new Map())
       );
   }
 
@@ -776,9 +790,9 @@ export class SQLiteAttestationService implements AttestationService {
           relationPacket.body.target_ref.packet_id
         );
         const supportingByOthers = (
-          await this.listTargetAttestations({
+          await this.listTargetReactions({
             target_packet_id: relationPacket.header.packet_id,
-            attestation_kind: 'claim_support',
+            attestation_value: 'support',
             active_only: true,
           })
         ).filter((edge) => edge.source_actor_key !== actorKey).length;
@@ -825,9 +839,9 @@ export class SQLiteAttestationService implements AttestationService {
           claimPacket.body.target_ref.packet_id
         );
         const supportingByOthers = (
-          await this.listTargetAttestations({
+          await this.listTargetReactions({
             target_packet_id: claimPacket.header.packet_id,
-            attestation_kind: 'claim_support',
+            attestation_value: 'support',
             active_only: true,
           })
         ).filter((edge) => edge.source_actor_key !== actorKey).length;
@@ -873,32 +887,33 @@ export class SQLiteAttestationService implements AttestationService {
   }
 
   private persistDerivedState(input: {
-    indexRows: AttestationIndexRecord[];
-    tallyRows: AttestationTallyIndexRecord[];
+    indexRows: ReactionIndexRecord[];
+    tallyRows: ReactionTallyIndexRecord[];
   }): void {
     const database = new DatabaseSync(this.packetStore.databasePath);
 
     try {
       database.exec('BEGIN IMMEDIATE');
-      database.exec('DELETE FROM attestation_index');
-      database.exec('DELETE FROM attestation_tally_index');
+      database.exec('DELETE FROM reaction_index');
+      database.exec('DELETE FROM reaction_tally_index');
 
       const insertIndexStatement = database.prepare(`
-        INSERT INTO attestation_index (
-          attestation_packet_id,
+        INSERT INTO reaction_index (
+          reaction_packet_id,
           target_packet_id,
           actor_key,
-          attestation_kind,
-          value,
+          vote_value,
+          attestation_value,
+          emotion_ids_json,
           status,
           context_packet_id,
           note,
           created_at,
           updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       const insertTallyStatement = database.prepare(`
-        INSERT INTO attestation_tally_index (
+        INSERT INTO reaction_tally_index (
           target_packet_id,
           upvote_count,
           downvote_count,
@@ -912,11 +927,12 @@ export class SQLiteAttestationService implements AttestationService {
 
       for (const row of input.indexRows) {
         insertIndexStatement.run(
-          row.attestation_packet_id,
+          row.reaction_packet_id,
           row.target_packet_id,
           row.actor_key,
-          row.attestation_kind,
-          row.value,
+          row.vote_value,
+          row.attestation_value,
+          row.emotion_ids_json,
           row.status,
           row.context_packet_id,
           row.note,

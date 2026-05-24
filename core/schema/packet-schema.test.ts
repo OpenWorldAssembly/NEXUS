@@ -15,7 +15,7 @@ import {
 import {
   createActionPacket,
   createAssemblyPacket,
-  createAttestationPacket,
+  createReactionPacket,
   createBundlePacket,
   createClaimPacket,
   createDefinitionPacket,
@@ -28,7 +28,6 @@ import {
   createRelationPacket,
   createReportPacket,
   createRolePacket,
-  createVotePacket,
 } from '@core/packets/builders.ts';
 import { buildDefinitionPacketSeedEnvelopes } from '@core/packets/packet-definition-seeds.ts';
 
@@ -41,8 +40,7 @@ const ACTIVE_PACKET_TYPES = [
   'Relation',
   'Report',
   'Proposal',
-  'Vote',
-  'Attestation',
+  'Reaction',
   'Decision',
   'Action',
   'Policy',
@@ -143,18 +141,12 @@ test('active packet builders emit top-level subtype classifiers', () => {
     title: 'Proposal',
     status: 'draft',
   });
-  const vote = createVotePacket({
-    packet_id: 'nexus:vote/test',
-    proposal_ref: packetIds(proposal),
-    title: 'Vote',
-    vote_method: 'simple_majority',
-    status: 'open',
-  });
-  const attestation = createAttestationPacket({
-    packet_id: 'nexus:attestation/test',
-    subtype: 'claim_support',
+  const reaction = createReactionPacket({
+    packet_id: 'nexus:reaction/test',
+    subtype: 'reaction',
     target_ref: packetIds(claim),
-    value: 1,
+    vote_value: 1,
+    attestation_value: 'support',
   });
   const decision = createPacketEnvelope({
     header: {
@@ -230,8 +222,7 @@ test('active packet builders emit top-level subtype classifiers', () => {
     claim,
     report,
     proposal,
-    vote,
-    attestation,
+    reaction,
     decision,
     action,
     policy,

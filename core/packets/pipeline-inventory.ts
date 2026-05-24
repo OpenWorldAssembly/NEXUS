@@ -151,21 +151,13 @@ export const PACKET_PIPELINE_INVENTORY: Record<
     uiConsumers: ['Dashboard', 'Votes'],
     writePaths: ['Bootstrap/seed'],
   }),
-  Vote: canonicalEntry('Vote', {
-    canonicalStructure: 'Vote(subtype)',
+  Reaction: canonicalEntry('Reaction', {
+    canonicalStructure: 'Reaction(subtype)',
     builderPath:
-      'core/packets/packet-build-pipeline.ts + core/packets/types/vote.ts',
-    readProjectionPath: 'runtime vote projections',
-    uiConsumers: ['Votes'],
-    writePaths: ['Bootstrap/seed'],
-  }),
-  Attestation: canonicalEntry('Attestation', {
-    canonicalStructure: 'Attestation(subtype)',
-    builderPath:
-      'core/packets/packet-build-pipeline.ts + core/packets/types/attestation.ts',
-    readProjectionPath: 'attestation service + query services',
-    uiConsumers: ['Trust', 'Roles', 'Discussions'],
-    writePaths: ['Mutation corridor', 'Attestation service helper'],
+      'core/packets/packet-build-pipeline.ts + core/packets/types/reaction.ts',
+    readProjectionPath: 'reaction service + query services',
+    uiConsumers: ['Trust', 'Roles', 'Discussions', 'Votes'],
+    writePaths: ['Mutation corridor', 'Reaction service helper'],
   }),
   Decision: canonicalEntry('Decision', {
     canonicalStructure: 'Decision(subtype)',
@@ -210,7 +202,7 @@ export const PACKET_PIPELINE_INVENTORY: Record<
     builderPath:
       'core/packets/packet-build-pipeline.ts + core/packets/types/discussion.ts',
     readProjectionPath: 'runtime discussion projections',
-    uiConsumers: ['Discussions', 'Library labels', 'Attestation packet targets'],
+    uiConsumers: ['Discussions', 'Library labels', 'Reaction packet targets'],
     writePaths: ['Mutation corridor', 'Default discussion surface bootstrap'],
     readModelStatus: 'tested',
     nextStep:
