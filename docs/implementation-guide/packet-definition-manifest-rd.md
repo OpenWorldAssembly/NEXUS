@@ -132,7 +132,7 @@ Client ingress metadata must stay interface-neutral for the same reason. A web s
 The long-term portability model is:
 
 - packet definitions describe current builders, planners, actions, and compatibility posture
-- Definition packets describe schemas, actions, builders, planners, projections, compatibility, and dependencies
+- Definition packets describe schemas, defaults, actions, builders, planners, projections, compatibility, and dependencies
 - `definition.packet_compatibility` parts describe safe upcast/downcast steps as adjacent version-ladder edges, including current identity, default-fill, conversion, and loss posture notes
 - Bundle packets carry Definition parts and related packet inventories across nodes
 - nodes can eventually update their local systems by importing Bundle inventories that include definition parts, adapter metadata, fixtures, and safety/loss notes

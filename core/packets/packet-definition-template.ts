@@ -24,6 +24,12 @@ export const PACKET_MANIFEST_DEFINITION_TEMPLATE = [
     required_for_definition: true,
   },
   {
+    section_key: 'defaults',
+    status: 'supported',
+    summary: 'Default definition parts, default refs, merge strategy, and default resolver semantics.',
+    required_for_definition: true,
+  },
+  {
     section_key: 'storage',
     status: 'supported',
     summary: 'Storage and sync class, privacy posture, retention posture, and cache/public record semantics.',

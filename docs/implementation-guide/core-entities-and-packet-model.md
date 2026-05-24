@@ -123,7 +123,7 @@ This first live usage should still be understood narrowly. The type now exists a
 
 Defaults should remain packet-native rather than becoming `Element` fields or runtime constants. The current pre-reseed inheritance direction is:
 
-- packet definition defaults
+- `Definition(subtype: default_definition)` parts carried alongside each packet definition
 - bundle/default packet-set material
 - initiative `Action` policy/template/default packet-set refs
 - element policy/template refs or relations
@@ -131,7 +131,7 @@ Defaults should remain packet-native rather than becoming `Element` fields or ru
 
 OWA-specific behavior should be represented by the default OWA `Action(subtype: initiative)` packet and its linked policies, templates, bundles, and preferences, not by special cases in generic packet schemas.
 
-The default OWA seed now links its forward `Action(subtype: initiative)` anchor to default-inheritance and governance-baseline `Policy` packets. New default/policy resolution should use the Action anchor.
+The default OWA seed now links its forward `Action(subtype: initiative)` anchor to default-inheritance and governance-baseline `Policy` packets. New default/policy resolution should use the Action anchor, then layer policy-selected `default_definition_refs` and explicit overrides on top of definition-native defaults.
 
 ## Schema evolution discipline
 

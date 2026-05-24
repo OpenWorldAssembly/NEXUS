@@ -44,6 +44,7 @@ export type PacketActionKind =
 export type PacketManifestSectionKey =
   | 'identity'
   | 'schema'
+  | 'defaults'
   | 'storage'
   | 'revision'
   | 'actions'
@@ -151,6 +152,32 @@ export type PacketMutationDescriptor = {
   notes: string;
 };
 
+export type PacketDefaultMergeStrategy = 'deep_overlay' | 'replace';
+
+export type PacketDefaultAppliesToDescriptor = {
+  packet_type?: string;
+  packet_subtype?: string | null;
+  relation_subtype?: string;
+  policy_subtype?: string;
+  action_subtype?: string;
+  workflow_id?: string;
+};
+
+export type PacketDefaultDefinitionDescriptor = {
+  default_id: string;
+  applies_to: PacketDefaultAppliesToDescriptor;
+  default_values: Readonly<Record<string, unknown>>;
+  merge_strategy: PacketDefaultMergeStrategy;
+  notes: string;
+};
+
+export type PacketDefaultOverrideDescriptor = {
+  applies_to?: PacketDefaultAppliesToDescriptor;
+  path: string;
+  value: unknown;
+  reason?: string | null;
+};
+
 export type PacketCompatibilityAdapterDescriptor = {
   adapter_id: string;
   packet_subtype: string | null;
@@ -176,6 +203,7 @@ export type PacketDefinitionPartSubtype =
   | 'packet_planner_descriptor'
   | 'packet_projection_descriptor'
   | 'packet_compatibility'
+  | 'default_definition'
   | 'packet_dependency';
 
 export type PacketDefinitionPartDescriptor = {
@@ -188,6 +216,9 @@ export type PacketDefinitionPartDescriptor = {
   required: boolean;
   references?: readonly string[];
   covers_subtypes?: readonly string[];
+  applies_to?: PacketDefaultAppliesToDescriptor;
+  default_values?: Readonly<Record<string, unknown>>;
+  merge_strategy?: PacketDefaultMergeStrategy;
   notes: string;
 };
 

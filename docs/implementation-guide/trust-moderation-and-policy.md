@@ -62,7 +62,7 @@ Status: canon candidate
 Current implementation note:
 
 - the new `Policy.relation_requirements` seam exists so stricter relation-support rules can be expressed generically instead of being hardcoded as route-only logic
-- `Policy.default_policy` now carries packet-backed default refs for policies, templates, default packet sets, and preference material; it must not introduce runtime-only default labels
+- `Policy.default_policy` now carries packet-backed default refs for policies, templates, `Definition(subtype: default_definition)` packets, default packet sets, and preference material, plus explicit override paths; it must not introduce runtime-only default labels
 - `Policy.governance_policy` now reserves packet-backed governance hooks for voter eligibility, minimum trust stage, quorum, approval threshold, vote method, and decision-report expectations
 - this chapter should be read before changing `Claim`, `Attestation`, `Relation`, or `Policy` semantics because it owns the intended separation between assertion, evidence, graph structure, and policy requirements
 - packet-native follow does not currently require a supporting claim in this phase

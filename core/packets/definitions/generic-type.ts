@@ -198,6 +198,83 @@ function createDependencyReferences(type: GenericBuilderType): string[] {
   return Array.from(references).sort((left, right) => left.localeCompare(right));
 }
 
+function createDefaultAppliesTo(input: {
+  type: GenericBuilderType;
+  subtype: string;
+}) {
+  return {
+    packet_type: input.type,
+    packet_subtype: input.subtype,
+    ...(input.type === 'Relation' ? { relation_subtype: input.subtype } : {}),
+    ...(input.type === 'Policy' ? { policy_subtype: input.subtype } : {}),
+    ...(input.type === 'Action' ? { action_subtype: input.subtype } : {}),
+  };
+}
+
+function createDefaultValues(input: {
+  type: GenericBuilderType;
+  subtype: string;
+}): Record<string, unknown> {
+  if (input.type === 'Relation' && input.subtype === 'subscribes_to') {
+    return {
+      subtype: input.subtype,
+      status: 'active',
+      subscription_options: {
+        update_mode: 'manual_review',
+        inherit_default_policies: true,
+        inherit_default_dependencies: true,
+        inherit_default_modules: true,
+        inherit_default_templates: true,
+        inherit_default_packet_sets: true,
+        tracks: {
+          changelogs: true,
+          compatibility: true,
+          upstream_decisions: true,
+          aar_lessons: false,
+        },
+        local_behavior: {
+          require_local_ratification: false,
+          fork_on_breaking_change: false,
+          alert_on_alignment_break: true,
+        },
+      },
+    };
+  }
+
+  if (input.type === 'Relation') {
+    return {
+      subtype: input.subtype,
+      status: 'active',
+    };
+  }
+
+  return {
+    subtype: input.subtype,
+  };
+}
+
+function createDefaultDefinitionParts(input: {
+  type: GenericBuilderType;
+  schemaVersion: string;
+  declaredSubtypes: readonly string[];
+}): PacketDefinitionPartDescriptor[] {
+  const baseId = lowerFirst(input.type);
+
+  return input.declaredSubtypes.map((subtype) => ({
+    part_id: `${baseId}.default_definition.${toKebab(subtype)}.v0`,
+    part_subtype: 'default_definition',
+    defines_packet_type: input.type,
+    defines_packet_subtype: subtype,
+    schema_version: input.schemaVersion,
+    availability: 'runtime_ready',
+    required: true,
+    applies_to: createDefaultAppliesTo({ type: input.type, subtype }),
+    default_values: createDefaultValues({ type: input.type, subtype }),
+    merge_strategy: 'deep_overlay',
+    notes: `Default-definition part for ${input.type}.${subtype}; concrete OWA preferences can layer policy overrides later.`,
+  }));
+}
+
 function createDefinitionParts(input: {
   type: GenericBuilderType;
   defaultSubtype: string;
@@ -228,6 +305,7 @@ function createDefinitionParts(input: {
         `${baseId}.packet_planner_descriptor.v0`,
         `${baseId}.packet_projection_descriptor.v0`,
         `${baseId}.packet_compatibility.v0`,
+        `${baseId}.default_definition.${toKebab(input.defaultSubtype)}.v0`,
         `${baseId}.packet_dependency.v0`,
       ],
       notes: `Root Canonical definition record for ${input.type}.`,
@@ -298,6 +376,11 @@ function createDefinitionParts(input: {
       references: input.compatibilityAdapterIds,
       notes: `Compatibility part summarizing the canonical ${input.type} compatibility registry entry.`,
     },
+    ...createDefaultDefinitionParts({
+      type: input.type,
+      schemaVersion: input.schemaVersion,
+      declaredSubtypes: input.declaredSubtypes,
+    }),
     {
       part_id: `${baseId}.packet_dependency.v0`,
       part_subtype: 'packet_dependency',

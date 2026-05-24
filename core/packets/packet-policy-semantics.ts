@@ -261,6 +261,7 @@ export function resolvePolicyPacketSemantics(
       ? uniqueSorted([
           ...refIds(body.default_policy.policy_refs),
           ...refIds(body.default_policy.template_refs),
+          ...refIds(body.default_policy.default_definition_refs),
           ...refIds(body.default_policy.default_packet_set_refs),
           ...refIds(body.default_policy.preference_refs),
         ])

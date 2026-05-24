@@ -516,8 +516,20 @@ export const PolicyBodySchema = z
       .object({
         policy_refs: z.array(PacketRefSchema).default([]),
         template_refs: z.array(PacketRefSchema).default([]),
+        default_definition_refs: z.array(PacketRefSchema).default([]),
         default_packet_set_refs: z.array(PacketRefSchema).default([]),
         preference_refs: z.array(PacketRefSchema).default([]),
+        overrides: z
+          .array(
+            z
+              .object({
+                path: z.string().min(1),
+                value: z.unknown(),
+                reason: z.string().min(1).nullable().default(null),
+              })
+              .strict()
+          )
+          .default([]),
       })
       .strict()
       .nullable()

@@ -237,6 +237,7 @@ export * from '@core/packets/packet-definition-seeds.ts';
 export * from '@core/packets/packet-operation-ontology.ts';
 export * from '@core/packets/packet-workflow-planner.ts';
 export * from '@core/packets/packet-policy-dependency.ts';
+export * from '@core/packets/packet-defaults.ts';
 export {
   auditPacketPolicySemanticAuthority,
   listPacketPolicySemanticDescriptors,

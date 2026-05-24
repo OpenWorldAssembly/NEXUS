@@ -15,6 +15,7 @@ export const DEFINITION_PACKET_SUBTYPES = [
   'packet_planner_descriptor',
   'packet_projection_descriptor',
   'packet_compatibility',
+  'default_definition',
   'packet_dependency',
 ] as const;
 
@@ -82,6 +83,24 @@ export const PacketCompatibilityDefinitionBodySchema = DefinitionBaseBodySchema.
   loss_awareness: z.enum(['none', 'loss_annotated', 'loss_ack_required']).default('none'),
 }).strict();
 
+export const DefaultDefinitionAppliesToSchema = z
+  .object({
+    packet_type: z.string().min(1).optional(),
+    packet_subtype: z.string().min(1).nullable().optional(),
+    relation_subtype: z.string().min(1).optional(),
+    policy_subtype: z.string().min(1).optional(),
+    action_subtype: z.string().min(1).optional(),
+    workflow_id: z.string().min(1).optional(),
+  })
+  .strict();
+
+export const DefaultDefinitionBodySchema = DefinitionBaseBodySchema.extend({
+  subtype: z.literal('default_definition'),
+  applies_to: DefaultDefinitionAppliesToSchema,
+  default_values: z.record(z.string(), z.unknown()).default({}),
+  merge_strategy: z.enum(['deep_overlay', 'replace']).default('deep_overlay'),
+}).strict();
+
 export const PacketDependencyDefinitionBodySchema = DefinitionBaseBodySchema.extend({
   subtype: z.literal('packet_dependency'),
   required_packet_types: z.array(z.string().min(1)).default([]),
@@ -98,6 +117,7 @@ export const DefinitionBodySchema = z.discriminatedUnion('subtype', [
   PacketPlannerDescriptorDefinitionBodySchema,
   PacketProjectionDescriptorDefinitionBodySchema,
   PacketCompatibilityDefinitionBodySchema,
+  DefaultDefinitionBodySchema,
   PacketDependencyDefinitionBodySchema,
 ]);
 
@@ -345,6 +365,19 @@ export const definitionPacketDefinition = {
       required: true,
       references: ['definition.0_1_current_neighbor'],
       notes: 'Definition v0 compatibility uses an identity current-neighbor adapter descriptor.',
+    },
+    {
+      part_id: 'definition.bootstrap.default_definition.v0',
+      part_subtype: 'default_definition',
+      defines_packet_type: 'Definition',
+      defines_packet_subtype: null,
+      schema_version: '0.1.0',
+      availability: 'canonical',
+      required: true,
+      applies_to: { packet_type: 'Definition', packet_subtype: null },
+      default_values: { definition_version: '0.1.0', status: 'active' },
+      merge_strategy: 'deep_overlay',
+      notes: 'Default-definition section for Definition packets and definition parts.',
     },
     {
       part_id: 'definition.bootstrap.packet_dependency.v0',

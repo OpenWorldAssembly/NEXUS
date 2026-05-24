@@ -293,7 +293,18 @@ export interface PolicyPacketInput extends PacketBuilderBaseInput {
   dependency_policy?: PacketBodyByType['Policy']['dependency_policy'];
   alignment_policy?: PacketBodyByType['Policy']['alignment_policy'];
   relation_requirements?: PacketBodyByType['Policy']['relation_requirements'];
-  default_policy?: PacketBodyByType['Policy']['default_policy'];
+  default_policy?: {
+    policy_refs?: PacketRef[];
+    template_refs?: PacketRef[];
+    default_definition_refs?: PacketRef[];
+    default_packet_set_refs?: PacketRef[];
+    preference_refs?: PacketRef[];
+    overrides?: {
+      path: string;
+      value: unknown;
+      reason?: string | null;
+    }[];
+  } | null;
   governance_policy?: PacketBodyByType['Policy']['governance_policy'];
 }
 

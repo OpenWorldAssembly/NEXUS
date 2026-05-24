@@ -264,6 +264,23 @@ export const bundlePacketDefinition = {
       notes: 'Compatibility part records Bundle v0 identity current-neighbor compatibility.',
     },
     {
+      part_id: 'bundle.packet_set.default_definition.v0',
+      part_subtype: 'default_definition',
+      defines_packet_type: 'Bundle',
+      defines_packet_subtype: 'packet_set',
+      schema_version: '0.1.0',
+      availability: 'canonical',
+      required: true,
+      applies_to: { packet_type: 'Bundle', packet_subtype: 'packet_set' },
+      default_values: {
+        subtype: 'packet_set',
+        status: 'active',
+        bundle_version: '0.1.0',
+      },
+      merge_strategy: 'deep_overlay',
+      notes: 'Default-definition part for Bundle.packet_set inventory packets.',
+    },
+    {
       part_id: 'bundle.packet_set.packet_dependency.v0',
       part_subtype: 'packet_dependency',
       defines_packet_type: 'Bundle',

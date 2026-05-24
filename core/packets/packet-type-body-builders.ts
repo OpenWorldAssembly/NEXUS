@@ -209,7 +209,17 @@ function buildDefinitionPartBody(
                       supports_downcast: definition.compatibility.supports_downcast,
                       loss_awareness: definition.compatibility.loss_awareness,
                     }
-                  : {
+                  : part.part_subtype === 'default_definition'
+                    ? {
+                        ...base,
+                        applies_to: part.applies_to ?? {
+                          packet_type: definition.packet_type,
+                          packet_subtype: part.defines_packet_subtype,
+                        },
+                        default_values: part.default_values ?? {},
+                        merge_strategy: part.merge_strategy ?? 'deep_overlay',
+                      }
+                    : {
                       ...base,
                       required_packet_types: references.filter(
                         (reference) =>
@@ -218,7 +228,7 @@ function buildDefinitionPartBody(
                           !reference.startsWith('core.')
                       ),
                       required_definition_parts: references.filter((reference) =>
-                        reference.includes('.packet_')
+                        reference.includes('.packet_') || reference.includes('.default_definition')
                       ),
                       required_runtime_capabilities: references.filter(
                         (reference) =>

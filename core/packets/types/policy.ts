@@ -69,8 +69,10 @@ export const policyBuildDefinition: PacketTypeBuildDefinition<
       ? {
           policy_refs: input.default_policy.policy_refs ?? [],
           template_refs: input.default_policy.template_refs ?? [],
+          default_definition_refs: input.default_policy.default_definition_refs ?? [],
           default_packet_set_refs: input.default_policy.default_packet_set_refs ?? [],
           preference_refs: input.default_policy.preference_refs ?? [],
+          overrides: input.default_policy.overrides ?? [],
         }
       : null,
     governance_policy: input.governance_policy

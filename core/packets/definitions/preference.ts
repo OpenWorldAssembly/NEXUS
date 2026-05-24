@@ -403,6 +403,7 @@ export const preferencePacketDefinition = {
         'preference.element.packet_planner_descriptor.v0',
         'preference.element.packet_projection_descriptor.v0',
         'preference.element.packet_compatibility.v0',
+        'preference.element.default_definition.v0',
         'preference.element.packet_dependency.v0',
       ],
       notes:
@@ -488,6 +489,23 @@ export const preferencePacketDefinition = {
         'preference.element.0_1_current_neighbor',
       ],
       notes: 'Compatibility definition part for nearest-current, loss-aware element preference adapters.',
+    },
+    {
+      part_id: 'preference.element.default_definition.v0',
+      part_subtype: 'default_definition',
+      defines_packet_type: 'Preference',
+      defines_packet_subtype: 'element',
+      schema_version: '0.1.0',
+      availability: 'canonical',
+      required: true,
+      applies_to: { packet_type: 'Preference', packet_subtype: 'element' },
+      default_values: {
+        subtype: 'element',
+        status: 'active',
+        value: {},
+      },
+      merge_strategy: 'deep_overlay',
+      notes: 'Default-definition part for Preference.element packets; concrete scope-display preferences layer in later seed/default packets.',
     },
     {
       part_id: 'preference.element.packet_dependency.v0',

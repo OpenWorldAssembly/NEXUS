@@ -199,6 +199,12 @@ export function getPacketDefinitionSectionStatus(
   switch (sectionKey) {
     case 'actions':
       return definition.actions.length > 0 ? 'supported' : 'unsupported';
+    case 'defaults':
+      return (definition.packet_definition_parts ?? []).some(
+        (part) => part.part_subtype === 'default_definition'
+      )
+        ? 'supported'
+        : 'unsupported';
     case 'builders':
       return definition.builders.length > 0 ? 'supported' : 'unsupported';
     case 'planners':
