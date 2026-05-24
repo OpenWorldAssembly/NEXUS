@@ -208,7 +208,7 @@ test('scope graph prefers canonical ancestry relations and projects packet-nativ
       createdByPacketId: actor.header.packet_id,
     });
     const associatedRelation = createScopedRelationPacket({
-      subtype: 'assembly_association',
+      subtype: 'association',
       subjectPacketId: actor.header.packet_id,
       targetPacketId: associatedScope.header.packet_id,
       scopePacketId: associatedScope.header.packet_id,
@@ -216,7 +216,7 @@ test('scope graph prefers canonical ancestry relations and projects packet-nativ
       createdByPacketId: actor.header.packet_id,
     });
     const associatedClaim = createRelationAssertionClaimPacket({
-      claimKind: 'assembly_association',
+      claimKind: 'association',
       subjectPacketId: actor.header.packet_id,
       relationPacketId: associatedRelation.header.packet_id,
       assertedTargetPacketId: associatedScope.header.packet_id,
@@ -313,7 +313,7 @@ test('scope graph keeps canonical association projection when the supporting cla
       locality_label: 'Aaron',
     });
     const canonicalRelation = createScopedRelationPacket({
-      subtype: 'assembly_association',
+      subtype: 'association',
       subjectPacketId: actor.header.packet_id,
       targetPacketId: scope.header.packet_id,
       scopePacketId: scope.header.packet_id,
@@ -321,7 +321,7 @@ test('scope graph keeps canonical association projection when the supporting cla
       createdByPacketId: actor.header.packet_id,
     });
     const canonicalClaim = createRelationAssertionClaimPacket({
-      claimKind: 'assembly_association',
+      claimKind: 'association',
       subjectPacketId: actor.header.packet_id,
       relationPacketId: canonicalRelation.header.packet_id,
       assertedTargetPacketId: scope.header.packet_id,

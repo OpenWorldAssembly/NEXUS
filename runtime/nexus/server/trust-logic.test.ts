@@ -10,7 +10,7 @@ import {
 test('deriveTrustStage walks from self-claimed to role-eligible using thresholds', () => {
   assert.equal(
     deriveTrustStage({
-      has_association_claim: false,
+      has_association_relation: false,
       association_support_count: 0,
       claimed_role_count: 0,
       supported_role_count: 0,
@@ -21,7 +21,7 @@ test('deriveTrustStage walks from self-claimed to role-eligible using thresholds
 
   assert.equal(
     deriveTrustStage({
-      has_association_claim: true,
+      has_association_relation: true,
       association_support_count: 0,
       claimed_role_count: 0,
       supported_role_count: 0,
@@ -32,7 +32,7 @@ test('deriveTrustStage walks from self-claimed to role-eligible using thresholds
 
   assert.equal(
     deriveTrustStage({
-      has_association_claim: true,
+      has_association_relation: true,
       association_support_count: 1,
       claimed_role_count: 0,
       supported_role_count: 0,
@@ -43,7 +43,7 @@ test('deriveTrustStage walks from self-claimed to role-eligible using thresholds
 
   assert.equal(
     deriveTrustStage({
-      has_association_claim: true,
+      has_association_relation: true,
       association_support_count: 1,
       claimed_role_count: 1,
       supported_role_count: 1,

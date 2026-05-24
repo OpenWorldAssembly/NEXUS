@@ -185,7 +185,7 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
     status: findings.length > 0 ? 'fail' : 'pass',
     canonical_write_intents: uniqueSorted(canonicalWriteIntents),
     compatibility_only_legacy_surfaces: [
-      'assembly_association.claim.set',
+      'association.claim.set',
       'home_locality.claim.set',
       'archived alpha packet types only',
       'legacy parent_scope ancestry archive records',

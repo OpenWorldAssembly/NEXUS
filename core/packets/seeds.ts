@@ -16,7 +16,6 @@ import {
 import {
   createActionPacket,
   createAssemblyPacket,
-  createClaimPacket,
   createDiscussionForumPacket,
   createDiscussionPostPacket,
   createDiscussionReplyPacket,
@@ -661,26 +660,15 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     applicable_scope_refs: globalApplicableScopeRefs,
     title: 'OWA Home Locality Relation Policy',
     summary:
-      'Requires a supporting relation assertion claim for home-locality relations that count for mounted ancestry.',
+      'Declares home-locality relations as structural graph facts; legitimacy evidence can attach separately.',
     subtype: 'charter',
     body_markdown: [
       '# OWA Home Locality Relation Policy',
       '',
       '- Home-locality relations are structural graph facts.',
-      '- A supporting relation assertion claim is required for the relation to count as the effective mounted home locality.',
+      '- Claims and attestations may support, dispute, or contextualize a residency relation, but fresh relation writes do not auto-wrap themselves in claims.',
     ].join('\n'),
     status: 'active',
-    relation_requirements: {
-      rules: [
-        {
-          relation_subtype: 'home_locality',
-          required_claim_subtypes: ['relation_assertion'],
-          required_attestation_subtypes: [],
-          claim_target_mode: 'relation_packet',
-          subject_match_mode: 'relation_subject',
-        },
-      ],
-    },
   });
 
 
@@ -935,19 +923,13 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     opened_at: SEED_CREATED_AT,
     closes_at: '2026-04-12T00:00:00.000Z',
   });
-  const aaronSunnymeadClaimPacket = createClaimPacket({
-    packet_id: 'nexus:claim/assembly-association/aaron-sunnymead-ranch',
+  const aaronSunnymeadAssociationRelation = createRelationPacket({
+    packet_id: 'nexus:relation/association/aaron-sunnymead-ranch',
     created_at: SEED_CREATED_AT,
     authority_scope_ref: PERSONAL_TREE_REFS.sunnymead_ranch,
     applicable_scope_refs: sunnymeadApplicableScopeRefs,
     created_by: PERSONAL_TREE_REFS.aaron,
-    subtype: 'relation_assertion',
-    relation_assertion: {
-      subtype: 'assembly_association',
-      subject_ref: PERSONAL_TREE_REFS.aaron,
-      target_ref: PERSONAL_TREE_REFS.sunnymead_ranch,
-      scope_ref: PERSONAL_TREE_REFS.sunnymead_ranch,
-    },
+    subtype: 'association',
     subject_ref: PERSONAL_TREE_REFS.aaron,
     target_ref: PERSONAL_TREE_REFS.sunnymead_ranch,
     scope_ref: PERSONAL_TREE_REFS.sunnymead_ranch,
@@ -977,7 +959,7 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     councilorRolePacket,
     sunnymeadOnboardingProposalPacket,
     globalOnboardingVotePacket,
-    aaronSunnymeadClaimPacket,
+    aaronSunnymeadAssociationRelation,
     ...createScopeDiscussionPackets({
       packetRef: PERSONAL_TREE_REFS.global_commons,
       applicableScopeRefs: globalApplicableScopeRefs,

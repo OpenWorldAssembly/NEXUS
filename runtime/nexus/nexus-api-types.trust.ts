@@ -1,10 +1,10 @@
 /**
  * File: nexus-api-types.trust.ts
- * Description: Trust workspace payloads and role-claim mutation contracts shared across Nexus routes and clients.
+ * Description: Trust workspace payloads and relation/role mutation contracts shared across Nexus routes and clients.
  */
 
 import type {
-  AssemblyAssociationClaimProjection,
+  AssociationRelationProjection,
   AttestationEdgeProjection,
   NexusScopeLens,
 } from '@core/contracts';
@@ -55,6 +55,6 @@ export interface NexusTrustPayload {
   can_vote: boolean;
   can_review: boolean;
   home_locality: NexusHomeLocalityProjection;
-  assembly_claims: AssemblyAssociationClaimProjection[];
+  association_relations: AssociationRelationProjection[];
   role_cards: NexusTrustRoleProjection[];
 }

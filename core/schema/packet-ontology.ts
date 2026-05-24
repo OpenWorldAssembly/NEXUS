@@ -41,13 +41,12 @@ export const ELEMENT_SUBTYPES = [
 
 export const RELATION_SUBTYPES = [
   'home_locality',
-  'assembly_association',
+  'association',
   'role_association',
   'follows',
   'subscribes_to',
   'adopts_policy',
   'depends_on',
-  'aligned_with_cause',
   'defined_by_location',
   'contains',
   'overlaps',
@@ -149,7 +148,7 @@ export const ATTESTATION_KINDS = [
   'proposal_oppose',
   'attendance_vouch',
   'identity_attest',
-  'assembly_association_claim',
+  'association_claim',
   'role_support',
   'role_dispute',
   'claim_support',
@@ -160,7 +159,7 @@ export const ATTESTATION_KINDS = [
 
 export const CLAIM_KINDS = [
   'role_association',
-  'assembly_association',
+  'association',
   'home_locality',
 ] as const;
 

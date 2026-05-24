@@ -176,7 +176,7 @@ Current forward direction:
 - legacy `subtype` packets such as:
 
 - `role_association`
-- `assembly_association`
+- `association`
 - `home_locality`
 
 remain readable and are projected into the widened claim shape through compatibility.

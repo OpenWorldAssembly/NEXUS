@@ -78,8 +78,8 @@ test('remaining direct relation claim and attestation operation paths are closed
   );
 
   for (const mutationIntent of [
-    'assembly_association.relation.set',
-    'assembly_association.relation.clear',
+    'relation.association.add',
+    'relation.association.clear',
     'home_locality.relation.set',
     'role_association.claim.set',
     'attestation.packet_signal.set',
@@ -98,7 +98,7 @@ test('legacy bridge mutation intents are retired before reseed readiness', () =>
     report.live_mutation_intents.map((entry) => entry.subject_id)
   );
 
-  assert.equal(mutationIntentIds.has('assembly_association.claim.set'), false);
+  assert.equal(mutationIntentIds.has('association.claim.set'), false);
   assert.equal(mutationIntentIds.has('home_locality.claim.set'), false);
   assert.deepEqual(report.follow_on_pass_queue, []);
 });

@@ -236,7 +236,7 @@ export const TRUSTED_PACKET_PLANNER_CAPABILITIES = [
       'generic.compatibility_projection',
     ],
     notes:
-      'Existing local planner for assembly association, home locality, and follow relation packets plus compatibility claim projection.',
+      'Existing local planner for association, home locality, and follow relation packets.',
   },
   {
     capability_id: 'runtime.planner.discussion_reply',
@@ -336,8 +336,8 @@ export const PACKET_WORKFLOW_POLICY_ACTION_IDS = [
   'role_association.claim.withdraw',
   'follows.relation.set',
   'follows.relation.clear',
-  'assembly_association.relation.set',
-  'assembly_association.relation.clear',
+  'relation.association.add',
+  'relation.association.clear',
   'home_locality.relation.set',
   'home_locality.relation.clear',
   'discussion.reply.create',

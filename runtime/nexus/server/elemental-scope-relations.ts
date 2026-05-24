@@ -9,7 +9,7 @@ import {
   listRelationPackets,
 } from '@runtime/nexus/server/relation-utils';
 import {
-  projectLegacyAssemblyAssociationScopeCompatibility,
+  projectLegacyAssociationScopeCompatibility,
   projectLegacyFollowedScopeCompatibility,
 } from '@runtime/nexus/server/scope-graph-compatibility';
 import { readFollowedScopeIdsCompatibility } from '@runtime/nexus/server/shell-preferences';
@@ -62,7 +62,7 @@ export async function resolveElementalScopeRelations(input: {
 
   for (const relationPacket of filterRelationPackets({
     relations: relationPackets,
-    relationSubtype: 'assembly_association',
+    relationSubtype: 'association',
     subjectPacketId: input.actorPacketId ?? null,
     activeOnly: true,
   })) {
@@ -83,7 +83,7 @@ export async function resolveElementalScopeRelations(input: {
           .filter((claimPacket) =>
             filterClaimPackets({
               claims: [claimPacket],
-              claimKind: 'assembly_association',
+              claimKind: 'association',
               activeOnly: true,
             }).length > 0
           )
@@ -99,7 +99,7 @@ export async function resolveElementalScopeRelations(input: {
   }
 
   const compatibilityAssociatedScopeClaimIdsByPacketId =
-    projectLegacyAssemblyAssociationScopeCompatibility({
+    projectLegacyAssociationScopeCompatibility({
       claimPackets,
       actorPacketId: input.actorPacketId ?? null,
       scopePacketIds: input.scopePacketIds ?? new Set<string>(),

@@ -97,7 +97,7 @@ Working direction:
 ### Locality and scope backlog
 
 - continue refining the `Global + You` baseline
-- keep `home_locality` distinct from `assembly_association`
+- keep `home_locality` distinct from `association`
 - improve canonical locality directory behavior and creation quality
 - preserve the distinction between mounted scopes, followed scopes, and merely known scopes
 - defer shared assembly custody or keyset work until after semantic foundations are clearer

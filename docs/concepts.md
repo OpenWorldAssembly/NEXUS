@@ -20,7 +20,7 @@ A policy and template lineage. OWA is intended to be modeled as an initiative in
 
 ## Claim
 
-The current packet type for scoped social assertions such as `role_association`, `assembly_association`, and `home_locality`.
+The current packet type for scoped social assertions such as `role_association`, `association`, and `home_locality`.
 
 Status: current code truth.
 

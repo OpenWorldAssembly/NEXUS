@@ -70,8 +70,8 @@ test('prepare route rejects empty Preference.element set intents', () => {
 test('prepare route rejects retired legacy claim mutation intents at schema boundary', () => {
   for (const intent of [
     {
-      kind: 'assembly_association.claim.set',
-      assembly_packet_id: 'nexus:element/assembly',
+      kind: 'association.claim.set',
+      target_packet_id: 'nexus:element/assembly',
       scope_id: 'nexus:element/scope',
     },
     {

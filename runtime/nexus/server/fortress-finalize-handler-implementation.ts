@@ -270,7 +270,7 @@ export class MutationFinalizeHandlers {
       persist_effects: toMutationPersistEffects(input.signedPackets),
       result: {
         assembly_packet: assemblyPacket ?? null,
-        claims: await this.attestationService.listAssemblyAssociationClaimsForActor(
+        claims: await this.attestationService.listAssociationClaimsForActor(
           input.actorContext.actorPacket.header.packet_id
         ),
       },
@@ -292,13 +292,8 @@ export class MutationFinalizeHandlers {
         packet.header.type === 'Relation' &&
         (packet as PacketEnvelopeByType['Relation']).body.status === 'active'
     );
-    const activeClaimPacket = [...input.signedPackets].reverse().find(
-      (packet): packet is PacketEnvelopeByType['Claim'] =>
-        packet.header.type === 'Claim' &&
-        (packet as PacketEnvelopeByType['Claim']).body.status === 'active'
-    );
     const wasClearIntent =
-      input.storedTicket.intent.kind === 'assembly_association.relation.clear';
+      input.storedTicket.intent.kind === 'relation.association.clear';
 
     return {
       persist_effects: toMutationPersistEffects(input.signedPackets),
@@ -306,13 +301,10 @@ export class MutationFinalizeHandlers {
         relation_packet_id: activeRelationPacket?.header.packet_id ?? null,
         relation_status:
           activeRelationPacket?.body.status ?? (wasClearIntent ? 'withdrawn' : null),
-        claim_packet_id: activeClaimPacket?.header.packet_id ?? null,
-        claim_status:
-          activeClaimPacket?.body.status ?? (wasClearIntent ? 'withdrawn' : null),
-        assembly_packet_id:
-          input.storedTicket.intent.kind === 'assembly_association.relation.set' ||
-          input.storedTicket.intent.kind === 'assembly_association.relation.clear'
-            ? input.storedTicket.intent.assembly_packet_id
+        target_packet_id:
+          input.storedTicket.intent.kind === 'relation.association.add' ||
+          input.storedTicket.intent.kind === 'relation.association.clear'
+            ? input.storedTicket.intent.target_packet_id
             : null,
       },
     };
@@ -395,11 +387,6 @@ export class MutationFinalizeHandlers {
         packet.header.type === 'Relation' &&
         (packet as PacketEnvelopeByType['Relation']).body.status === 'active'
     );
-    const activeClaimPacket = [...input.signedPackets].reverse().find(
-      (packet): packet is PacketEnvelopeByType['Claim'] =>
-        packet.header.type === 'Claim' &&
-        (packet as PacketEnvelopeByType['Claim']).body.status === 'active'
-    );
     const homeIntent = isHomeLocalityMutationKind(input.storedTicket.intent.kind)
       ? (input.storedTicket.intent as Extract<
           MutationIntent,
@@ -412,16 +399,8 @@ export class MutationFinalizeHandlers {
       persist_effects: toMutationPersistEffects(input.signedPackets),
       result: {
         relation_packet_id: activeRelationPacket?.header.packet_id ?? null,
-        claim_packet_id: activeClaimPacket?.header.packet_id ?? null,
-        claim_status:
-          activeClaimPacket?.body.status ??
-          (homeIntent && clearedHomeScopePacketId === null
-            ? 'withdrawn'
-            : null),
         home_scope_packet_id:
           activeRelationPacket?.body.target_ref.packet_id ??
-          activeClaimPacket?.body.relation_assertion?.target_ref.packet_id ??
-          activeClaimPacket?.body.target_ref.packet_id ??
           (homeIntent ? clearedHomeScopePacketId : null),
       },
     };

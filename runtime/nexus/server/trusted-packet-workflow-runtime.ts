@@ -20,7 +20,7 @@ import type {
   PacketEnvelopeByType,
 } from '@core/schema/packet-schema';
 import {
-  planAssemblyAssociationRelationPackets,
+  planAssociationRelationPackets,
   planFollowRelationPackets,
   planHomeLocalityRelationPackets,
   type ScopeRelationPacketPlan,
@@ -33,8 +33,8 @@ import type { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-
 
 export type LiveGenericWorkflowMutationIntent = Extract<
   MutationIntent['kind'],
-  | 'assembly_association.relation.set'
-  | 'assembly_association.relation.clear'
+  | 'relation.association.add'
+  | 'relation.association.clear'
   | 'home_locality.relation.set'
   | 'follows.relation.set'
   | 'follows.relation.clear'
@@ -59,7 +59,7 @@ export type LiveGenericWorkflowEnrollment = {
   dependency_ids: string[];
   trusted_capability_ids: string[];
   fortress_prepare_handler:
-    | 'prepareAssemblyAssociationRelation'
+    | 'prepareAssociationRelation'
     | 'prepareHomeLocalityRelation'
     | 'prepareFollowRelation'
     | 'prepareRoleAssociationClaim'
@@ -78,8 +78,8 @@ export type TrustedRelationOperationPlan = {
   plan_kind: 'trusted_relation_operation_plan';
   mutation_intent: Extract<
     LiveGenericWorkflowMutationIntent,
-    | 'assembly_association.relation.set'
-    | 'assembly_association.relation.clear'
+    | 'relation.association.add'
+    | 'relation.association.clear'
     | 'home_locality.relation.set'
     | 'follows.relation.set'
     | 'follows.relation.clear'
@@ -87,7 +87,7 @@ export type TrustedRelationOperationPlan = {
   operation_kind: 'relation.set' | 'relation.clear';
   workflow_plan_id: string;
   packet_type: 'Relation';
-  packet_subtype: 'assembly_association' | 'home_locality' | 'follows';
+  packet_subtype: 'association' | 'home_locality' | 'follows';
   policy_action_ids: MutationActionId[];
   dependency_ids: string[];
   trusted_capability_ids: string[];
@@ -137,8 +137,8 @@ export type TrustedPacketWorkflowMutationInput = {
   actorKey?: string;
   actorPacket: PacketEnvelopeByType['Element'];
   intent:
-    | Extract<MutationIntent, { kind: 'assembly_association.relation.set' }>
-    | Extract<MutationIntent, { kind: 'assembly_association.relation.clear' }>
+    | Extract<MutationIntent, { kind: 'relation.association.add' }>
+    | Extract<MutationIntent, { kind: 'relation.association.clear' }>
     | Extract<MutationIntent, { kind: 'home_locality.relation.set' }>
     | Extract<MutationIntent, { kind: 'follows.relation.set' }>
     | Extract<MutationIntent, { kind: 'follows.relation.clear' }>
@@ -160,8 +160,8 @@ export type LiveGenericWorkflowEnrollmentAuditReport = {
 };
 
 const LIVE_GENERIC_WORKFLOW_INTENTS = [
-  'assembly_association.relation.set',
-  'assembly_association.relation.clear',
+  'relation.association.add',
+  'relation.association.clear',
   'home_locality.relation.set',
   'follows.relation.set',
   'follows.relation.clear',
@@ -237,24 +237,24 @@ async function requireDiscussionTargetPacket(input: {
 function relationEnrollmentConfig(
   mutationIntent: LiveGenericWorkflowMutationIntent
 ) {
-  if (mutationIntent === 'assembly_association.relation.set') {
+  if (mutationIntent === 'relation.association.add') {
     return {
-      packet_subtype: 'assembly_association' as const,
-      workflow_plan_id: 'relation.assembly_association.set.workflow.v0',
+      packet_subtype: 'association' as const,
+      workflow_plan_id: 'relation.association.add.workflow.v0',
       operation_kind: 'relation.set' as const,
-      policy_action_ids: ['assembly_association.relation.set'] as MutationActionId[],
-      fortress_prepare_handler: 'prepareAssemblyAssociationRelation' as const,
+      policy_action_ids: ['relation.association.add'] as MutationActionId[],
+      fortress_prepare_handler: 'prepareAssociationRelation' as const,
       fortress_finalize_handler: 'finalizeAssociationRelationUpdate' as const,
     };
   }
 
-  if (mutationIntent === 'assembly_association.relation.clear') {
+  if (mutationIntent === 'relation.association.clear') {
     return {
-      packet_subtype: 'assembly_association' as const,
-      workflow_plan_id: 'relation.assembly_association.clear.workflow.v0',
+      packet_subtype: 'association' as const,
+      workflow_plan_id: 'relation.association.clear.workflow.v0',
       operation_kind: 'relation.clear' as const,
-      policy_action_ids: ['assembly_association.relation.clear'] as MutationActionId[],
-      fortress_prepare_handler: 'prepareAssemblyAssociationRelation' as const,
+      policy_action_ids: ['relation.association.clear'] as MutationActionId[],
+      fortress_prepare_handler: 'prepareAssociationRelation' as const,
       fortress_finalize_handler: 'finalizeAssociationRelationUpdate' as const,
     };
   }
@@ -456,15 +456,15 @@ export async function resolveTrustedRelationOperationPlan(
 ): Promise<TrustedRelationOperationPlan> {
   const enrollment = requireLiveGenericEnrollment(input.intent.kind);
 
-  if (input.intent.kind === 'assembly_association.relation.set') {
-    const assemblyPacket = await requireElementPacket({
+  if (input.intent.kind === 'relation.association.add') {
+    const targetPacket = await requireElementPacket({
       packetStore: input.packetStore,
-      packetId: input.intent.assembly_packet_id,
+      packetId: input.intent.target_packet_id,
     });
-    const relationPlan = await planAssemblyAssociationRelationPackets({
+    const relationPlan = await planAssociationRelationPackets({
       packetStore: input.packetStore,
       actorPacket: input.actorPacket,
-      targetScopePacket: assemblyPacket,
+      targetScopePacket: targetPacket,
       mode: 'set',
       note: input.intent.note ?? null,
     });
@@ -475,25 +475,25 @@ export async function resolveTrustedRelationOperationPlan(
       operation_kind: 'relation.set',
       workflow_plan_id: enrollment.workflow_plan_id,
       packet_type: 'Relation',
-      packet_subtype: 'assembly_association',
-      policy_action_ids: ['assembly_association.relation.set'],
+      packet_subtype: 'association',
+      policy_action_ids: ['relation.association.add'],
       dependency_ids: [...enrollment.dependency_ids],
       trusted_capability_ids: [...enrollment.trusted_capability_ids],
-      target_scope_packet: assemblyPacket,
-      governing_scope_packet: assemblyPacket,
+      target_scope_packet: targetPacket,
+      governing_scope_packet: targetPacket,
       relation_plan: relationPlan,
     };
   }
 
-  if (input.intent.kind === 'assembly_association.relation.clear') {
-    const assemblyPacket = await requireElementPacket({
+  if (input.intent.kind === 'relation.association.clear') {
+    const targetPacket = await requireElementPacket({
       packetStore: input.packetStore,
-      packetId: input.intent.assembly_packet_id,
+      packetId: input.intent.target_packet_id,
     });
-    const relationPlan = await planAssemblyAssociationRelationPackets({
+    const relationPlan = await planAssociationRelationPackets({
       packetStore: input.packetStore,
       actorPacket: input.actorPacket,
-      targetScopePacket: assemblyPacket,
+      targetScopePacket: targetPacket,
       mode: 'clear',
     });
 
@@ -503,12 +503,12 @@ export async function resolveTrustedRelationOperationPlan(
       operation_kind: 'relation.clear',
       workflow_plan_id: enrollment.workflow_plan_id,
       packet_type: 'Relation',
-      packet_subtype: 'assembly_association',
-      policy_action_ids: ['assembly_association.relation.clear'],
+      packet_subtype: 'association',
+      policy_action_ids: ['relation.association.clear'],
       dependency_ids: [...enrollment.dependency_ids],
       trusted_capability_ids: [...enrollment.trusted_capability_ids],
-      target_scope_packet: assemblyPacket,
-      governing_scope_packet: assemblyPacket,
+      target_scope_packet: targetPacket,
+      governing_scope_packet: targetPacket,
       relation_plan: relationPlan,
     };
   }
@@ -735,8 +735,8 @@ export async function runTrustedPacketWorkflowMutation(
   input: TrustedPacketWorkflowMutationInput
 ): Promise<PreparedMutation> {
   if (
-    input.intent.kind === 'assembly_association.relation.set' ||
-    input.intent.kind === 'assembly_association.relation.clear' ||
+    input.intent.kind === 'relation.association.add' ||
+    input.intent.kind === 'relation.association.clear' ||
     input.intent.kind === 'home_locality.relation.set' ||
     input.intent.kind === 'follows.relation.set' ||
     input.intent.kind === 'follows.relation.clear'

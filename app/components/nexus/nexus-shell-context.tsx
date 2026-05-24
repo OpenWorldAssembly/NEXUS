@@ -510,14 +510,14 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
     await runFortressMutation({
       intent: isAssociated
         ? {
-            kind: 'assembly_association.relation.set',
+            kind: 'relation.association.add',
             scope_id: scopeId,
-            assembly_packet_id: targetScope.packetId,
+            target_packet_id: targetScope.packetId,
           }
         : {
-            kind: 'assembly_association.relation.clear',
+            kind: 'relation.association.clear',
             scope_id: scopeId,
-            assembly_packet_id: targetScope.packetId,
+            target_packet_id: targetScope.packetId,
           },
       writeRisk: 'standard',
     });

@@ -198,7 +198,7 @@ A generic Nexus concept for policy and template lineage. OWA should be modeled a
 The current canonical packet type for scoped social assertions, including:
 
 - `role_association`
-- `assembly_association`
+- `association`
 - `home_locality`
 
 Current code truth:

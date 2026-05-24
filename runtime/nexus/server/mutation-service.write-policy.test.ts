@@ -74,7 +74,7 @@ test('retired legacy home-locality mutation intent has no live prepare alias', (
   );
 });
 
-test('retired legacy assembly-association mutation intent has no live prepare alias', () => {
+test('retired association-claim mutation intent has no live prepare alias', () => {
   const source = readFileSync(
     join(process.cwd(), 'runtime', 'nexus', 'server', 'fortress-prepare-handler-implementation.ts'),
     'utf8'
@@ -83,10 +83,10 @@ test('retired legacy assembly-association mutation intent has no live prepare al
     (descriptor) => descriptor.kind
   );
 
-  assert.equal(source.includes('prepareAssemblyAssociationClaimCompatibilityAlias'), false);
-  assert.equal(registryKinds.includes('assembly_association.claim.set' as never), false);
+  assert.equal(source.includes('prepareAssociationClaimCompatibilityAlias'), false);
+  assert.equal(registryKinds.includes('association.claim.set' as never), false);
   assert.equal(
-    getMutationIntentDescriptor('assembly_association.relation.set').finalize,
+    getMutationIntentDescriptor('relation.association.add').finalize,
     'finalizeAssociationRelationUpdate'
   );
 });

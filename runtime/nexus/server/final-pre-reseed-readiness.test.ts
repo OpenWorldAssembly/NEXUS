@@ -9,7 +9,7 @@ import { listPacketClientIntentEnrollments } from './packet-client-intent-enroll
 import { listPacketRuntimeFortressHandoffCoverage } from './packet-runtime-fortress-handoff.ts';
 
 const RETIRED_LEGACY_MUTATION_INTENTS = [
-  'assembly_association.claim.set',
+  'association.claim.set',
   'home_locality.claim.set',
 ] as const;
 
@@ -19,8 +19,8 @@ test('final pre-reseed readiness report passes with no open in-scope work', () =
   assert.equal(report.status, 'pass', JSON.stringify(report.findings, null, 2));
   assert.deepEqual(report.findings, []);
   assert.ok(report.canonical_write_intents.includes('home_locality.relation.set'));
-  assert.ok(report.canonical_write_intents.includes('assembly_association.relation.set'));
-  assert.ok(report.canonical_write_intents.includes('assembly_association.relation.clear'));
+  assert.ok(report.canonical_write_intents.includes('relation.association.add'));
+  assert.ok(report.canonical_write_intents.includes('relation.association.clear'));
 });
 
 test('retired legacy mutation intents are absent from live registries', () => {
@@ -53,7 +53,7 @@ test('final readiness handoff records compatibility-only legacy surfaces', () =>
   const report = createFinalPreReseedReadinessReport();
 
   for (const legacySurface of [
-    'assembly_association.claim.set',
+    'association.claim.set',
     'home_locality.claim.set',
     'archived alpha packet types only',
     'legacy parent_scope ancestry archive records',

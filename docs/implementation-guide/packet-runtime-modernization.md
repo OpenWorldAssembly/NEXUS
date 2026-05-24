@@ -139,8 +139,8 @@ The alignment map is the working checklist for retiring packet-specific fortress
 
 This pass expands definition workflow coverage for knowable planner-extraction candidates:
 
-- `assembly_association.relation.set`
-- `assembly_association.relation.clear`
+- `relation.association.add`
+- `relation.association.clear`
 - `home_locality.relation.set`
 - `discussion.reply.create`
 
@@ -223,8 +223,8 @@ The second live generic promotion expands the trusted workflow seam beyond follo
 
 - `follows.relation.set`
 - `follows.relation.clear`
-- `assembly_association.relation.set`
-- `assembly_association.relation.clear`
+- `relation.association.add`
+- `relation.association.clear`
 - `home_locality.relation.set`
 - `role_association.claim.set`
 - `attestation.packet_signal.set`
@@ -289,10 +289,10 @@ Every active packet body uses top-level `body.subtype` as its packet classifier.
 
 The final wrap-up retires the remaining live legacy bridge mutation intents from fresh writes:
 
-- `assembly_association.claim.set`
+- `association.claim.set`
 - `home_locality.claim.set`
 
-Canonical writes now enter through `assembly_association.relation.set`, `assembly_association.relation.clear`, and `home_locality.relation.set`. Historical legacy claim material remains readable/importable/projectable through compatibility surfaces, but the signed fortress prepare corridor, client ingress registry, handoff coverage, and live write-policy action list no longer enroll the legacy bridge intents.
+Canonical writes now enter through `relation.association.add`, `relation.association.clear`, and `home_locality.relation.set`. Historical legacy claim material remains readable/importable/projectable through compatibility surfaces, but the signed fortress prepare corridor, client ingress registry, handoff coverage, and live write-policy action list no longer enroll the legacy bridge intents.
 
 The final readiness handoff lives in runtime audit code as `createFinalPreReseedReadinessReport()`. It records canonical write intents, compatibility-only legacy surfaces, OWA seed/default anchors, required default policies, discussion default packets, canonical definition packet types, and out-of-scope never-live packet types. Reseed design should start from that report rather than rediscovering chapter state from scattered modernization audits.
 

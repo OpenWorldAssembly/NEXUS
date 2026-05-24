@@ -12,7 +12,7 @@ export type MutationPrepareHandlerKey =
   | 'prepareDiscussionReply'
   | 'preparePacketSignal'
   | 'prepareAssemblyElementCreate'
-  | 'prepareAssemblyAssociationRelation'
+  | 'prepareAssociationRelation'
   | 'prepareHomeLocalityRelation'
   | 'prepareFollowRelation'
   | 'prepareRoleAssociationClaim'
@@ -88,15 +88,15 @@ const MUTATION_INTENT_DESCRIPTORS = [
     finalize: 'finalizeAssemblyElementCreate',
   },
   {
-    kind: 'assembly_association.relation.set',
+    kind: 'relation.association.add',
     domain: 'relation',
-    prepare: 'prepareAssemblyAssociationRelation',
+    prepare: 'prepareAssociationRelation',
     finalize: 'finalizeAssociationRelationUpdate',
   },
   {
-    kind: 'assembly_association.relation.clear',
+    kind: 'relation.association.clear',
     domain: 'relation',
-    prepare: 'prepareAssemblyAssociationRelation',
+    prepare: 'prepareAssociationRelation',
     finalize: 'finalizeAssociationRelationUpdate',
   },
   {

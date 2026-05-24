@@ -97,16 +97,16 @@ This monthly log condenses the May 2026 decisions that remain most important for
 
 ## 2026-05 Dynamic scope graph consumer pass 1
 
-- Home locality is now relation-first in the mutation corridor: canonical writes use `home_locality.relation.set` and produce both `Relation(subtype: home_locality)` and a supporting `Claim(subtype: relation_assertion)`.
+- Home locality is now relation-first in the mutation corridor: canonical writes use `home_locality.relation.set` and produce `Relation(subtype: home_locality)` without automatically minting supporting claims.
 - Legacy `home_locality.claim.set`, legacy `Claim(home_locality)`, and legacy `parent_scope` ancestry remain readable only through named compatibility adapters and projections rather than through mixed main-path shell logic.
 - Mounted scope projection now prefers packet-native structural relations such as `default_ancestry_parent` and `defined_by_location`, while also exposing richer packet-backed shell metadata for later UI graph and dashboard work.
-- OWA home-locality legitimacy now evaluates through `Policy.relation_requirements` sourced from the forward `Action(subtype: initiative)` anchor path instead of route-local hardcoding.
+- OWA home-locality projection now resolves from packet-native relations sourced through the forward `Action(subtype: initiative)` anchor path; relation requirements remain available for stricter policies but are not the default fresh-write wrapper.
 
 ## 2026-05 Scope graph hardening and packet-native scope writers
 
 - Scope ancestry resolution now explicitly surfaces structural graph state, including `compatibility_parent`, `conflicting_parents`, `cyclic_ancestry`, and `missing_parent`, instead of silently treating all non-canonical cases as equivalent.
 - Follow is now canonical and actor-only: new writes use `follows.relation.set` / `follows.relation.clear`, while shell cookie follows remain a compatibility read bridge only.
-- Assembly association is now relation-first in the mutation corridor: canonical writes use `assembly_association.relation.set` / `assembly_association.relation.clear`, keep the supporting self-claim layer, and mount associated scopes as related mounted scopes rather than leaving them as badge-only side state.
+- Association is now relation-first in the mutation corridor: canonical writes use `relation.association.add` / `relation.association.clear`, keep the supporting self-claim layer, and mount associated scopes as related mounted scopes rather than leaving them as badge-only side state.
 - The first packet-native shell UI pass keeps the current rail layout but now groups scope context into Home, Associated, Followed, and Discoverable sections, roots the home trunk at `You`, and routes follow/associate sidebar actions through the canonical mutation corridor with a refetched shell projection afterward.
 - `locality.path.create` now emits locality `Element` packets, canonical `default_ancestry_parent` relations, provisional `Location(subtype: region)` packets, and `defined_by_location` relations in one signed packet batch, while `parent_scope` remains a named compatibility mirror only.
 
@@ -177,7 +177,7 @@ This monthly log condenses the May 2026 decisions that remain most important for
 
 - Locality confirmation now routes through one composite `locality.graph.apply` mutation intent above `locality.path.create`, so structural locality writes, selected home-locality changes, scope associations, follows, and display preferences are coordinated together instead of being chained from the client.
 - Partial success is now explicit at that runtime seam: structural locality planning and packet writes remain phase one, while relation and display-preference writes report their own outcomes without pretending the whole flow is all-or-nothing.
-- Actor-to-scope relationship reads are now centralized through one runtime controller that treats canonical `home_locality`, `assembly_association`, and `follows` relations as the main truth, while preserving guest and compatibility follow behavior as an explicit fallback bridge.
+- Actor-to-scope relationship reads are now centralized through one runtime controller that treats canonical `home_locality`, `association`, and `follows` relations as the main truth, while preserving guest and compatibility follow behavior as an explicit fallback bridge.
 - `main` is a visible-scope preference rather than a relation, and associated/followed parent-context display toggles are persisted alongside it through the current claimed-actor preference bridge.
 - The generic scope-graph projection now returns server-projected `home`, `associated`, `followed`, `main`, and `discoverable` sections for the sidebar, and OWA-specific initiative-anchor relation-policy lookup has been moved out of the generic graph core into a narrower adapter layer.
 
@@ -208,7 +208,7 @@ This monthly log condenses the May 2026 decisions that remain most important for
 
 ## 2026-05 final pre-reseed wrap-up
 
-- Live fresh writes no longer accept `assembly_association.claim.set` or `home_locality.claim.set`; canonical association and home-locality writes now use relation-first mutation intents only.
+- Live fresh writes no longer accept `association.claim.set` or `home_locality.claim.set`; canonical association and home-locality writes now use relation-first mutation intents only.
 - Legacy claim/home-locality material remains compatibility-readable and importable, but it is no longer a live mutation corridor entrypoint.
 - A final pre-reseed readiness report now inventories canonical write intents, compatibility-only surfaces, OWA default anchors, required seed policies, discussion defaults, canonical definition packet types, and out-of-scope packet types for the separate reseed design pass.
 

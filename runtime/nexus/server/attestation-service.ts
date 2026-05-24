@@ -1,6 +1,6 @@
 /**
  * File: attestation-service.ts
- * Description: Projects and mutates canonical attestation packets across discussions and assembly-association flows.
+ * Description: Projects and mutates canonical attestation packets across discussions and association flows.
  */
 
 import { DatabaseSync } from 'node:sqlite';
@@ -13,7 +13,8 @@ import {
 import { interpretPacket } from '@core/packets/packet-interpreter';
 import { resolvePacketTarget } from '@core/packets/packet-target-resolver';
 import type {
-  AssemblyAssociationClaimProjection,
+  AssociationClaimProjection,
+  AssociationRelationProjection,
   AttestationEdgeProjection,
   AttestationService,
   AttestationSummary,
@@ -30,6 +31,10 @@ import {
   filterClaimPackets,
   listClaimPackets,
 } from '@runtime/nexus/server/claim-utils';
+import {
+  filterRelationPackets,
+  listRelationPackets,
+} from '@runtime/nexus/server/relation-utils';
 import {
   createAttestationPacketId,
   resolveDiscussionScopePacketId,
@@ -414,9 +419,9 @@ export class SQLiteAttestationService implements AttestationService {
           throw new Error('Attestations are not open to your current actor class here.');
         }
 
-        const hasMembership = await this.hasActiveAssemblyAssociationClaim({
+        const hasMembership = await this.hasActiveAssociationRelation({
           actor_packet_id: actorPacketId,
-          assembly_packet_id: assemblyPacketId,
+          target_packet_id: assemblyPacketId,
         });
 
         if (!hasMembership) {
@@ -605,9 +610,9 @@ export class SQLiteAttestationService implements AttestationService {
           throw new Error('Attestations are not open to your current actor class here.');
         }
 
-        const hasMembership = await this.hasActiveAssemblyAssociationClaim({
+        const hasMembership = await this.hasActiveAssociationRelation({
           actor_packet_id: actorPacket.header.packet_id,
-          assembly_packet_id: assemblyPacketId,
+          target_packet_id: assemblyPacketId,
         });
 
         if (!hasMembership) {
@@ -735,9 +740,74 @@ export class SQLiteAttestationService implements AttestationService {
       );
   }
 
-  async listAssemblyAssociationClaimsForActor(
+  private async hasActiveAssociationRelation(input: {
+    actor_packet_id: string;
+    target_packet_id: string;
+  }): Promise<boolean> {
+    const relations = await listRelationPackets(this.packetStore);
+
+    return filterRelationPackets({
+      relations,
+      relationSubtype: 'association',
+      subjectPacketId: input.actor_packet_id,
+      targetPacketId: input.target_packet_id,
+      scopePacketId: input.target_packet_id,
+      activeOnly: true,
+    }).length > 0;
+  }
+
+  async listAssociationRelationsForActor(
     actor_packet_id: string
-  ): Promise<AssemblyAssociationClaimProjection[]> {
+  ): Promise<AssociationRelationProjection[]> {
+    if (!this.state) {
+      await this.syncDerivedState();
+    }
+
+    const actorKey = `element:${actor_packet_id}`;
+    const associationRelations = filterRelationPackets({
+      relations: await listRelationPackets(this.packetStore),
+      relationSubtype: 'association',
+      subjectPacketId: actor_packet_id,
+    });
+
+    return Promise.all(
+      associationRelations.map(async (relationPacket) => {
+        const targetPacket = this.state?.packetMap.get(
+          relationPacket.body.target_ref.packet_id
+        );
+        const supportingByOthers = (
+          await this.listTargetAttestations({
+            target_packet_id: relationPacket.header.packet_id,
+            attestation_kind: 'claim_support',
+            active_only: true,
+          })
+        ).filter((edge) => edge.source_actor_key !== actorKey).length;
+
+        return {
+          target_packet_id: relationPacket.body.target_ref.packet_id,
+          target_name:
+            targetPacket?.header.type === 'Element'
+              ? (targetPacket as PacketEnvelopeByType['Element']).body.name
+              : relationPacket.body.target_ref.packet_id,
+          relation_packet_id: relationPacket.header.packet_id,
+          status: relationPacket.body.status,
+          note: relationPacket.body.note,
+          created_at: relationPacket.header.created_at,
+          supported_by_other_count: supportingByOthers,
+          is_self_issued_only: supportingByOthers === 0,
+          is_current: relationPacket.body.status === 'active',
+        } satisfies AssociationRelationProjection;
+      })
+    ).then((relations) =>
+      relations.sort((leftRelation, rightRelation) =>
+        rightRelation.created_at.localeCompare(leftRelation.created_at)
+      )
+    );
+  }
+
+  async listAssociationClaimsForActor(
+    actor_packet_id: string
+  ): Promise<AssociationClaimProjection[]> {
     if (!this.state) {
       await this.syncDerivedState();
     }
@@ -745,13 +815,13 @@ export class SQLiteAttestationService implements AttestationService {
     const actorKey = `element:${actor_packet_id}`;
     const associationClaims = filterClaimPackets({
       claims: await listClaimPackets(this.packetStore),
-      claimKind: 'assembly_association',
+      claimKind: 'association',
       subjectPacketId: actor_packet_id,
     });
 
     return Promise.all(
       associationClaims.map(async (claimPacket) => {
-        const assemblyPacket = this.state?.packetMap.get(
+        const targetPacket = this.state?.packetMap.get(
           claimPacket.body.target_ref.packet_id
         );
         const supportingByOthers = (
@@ -763,10 +833,10 @@ export class SQLiteAttestationService implements AttestationService {
         ).filter((edge) => edge.source_actor_key !== actorKey).length;
 
         return {
-          assembly_packet_id: claimPacket.body.target_ref.packet_id,
-          assembly_name:
-            assemblyPacket?.header.type === 'Element'
-              ? (assemblyPacket as PacketEnvelopeByType['Element']).body.name
+          target_packet_id: claimPacket.body.target_ref.packet_id,
+          target_name:
+            targetPacket?.header.type === 'Element'
+              ? (targetPacket as PacketEnvelopeByType['Element']).body.name
               : claimPacket.body.target_ref.packet_id,
           claim_packet_id: claimPacket.header.packet_id,
           status: claimPacket.body.status,
@@ -775,7 +845,7 @@ export class SQLiteAttestationService implements AttestationService {
           supported_by_other_count: supportingByOthers,
           is_self_issued_only: supportingByOthers === 0,
           is_current: claimPacket.body.status === 'active',
-        } satisfies AssemblyAssociationClaimProjection;
+        } satisfies AssociationClaimProjection;
       })
     ).then((claims) =>
       claims.sort((leftClaim, rightClaim) =>
@@ -784,9 +854,9 @@ export class SQLiteAttestationService implements AttestationService {
     );
   }
 
-  async hasActiveAssemblyAssociationClaim(input: {
+  async hasActiveAssociationClaim(input: {
     actor_packet_id: string;
-    assembly_packet_id: string;
+    target_packet_id: string;
   }): Promise<boolean> {
     if (!this.state) {
       await this.syncDerivedState();
@@ -794,10 +864,10 @@ export class SQLiteAttestationService implements AttestationService {
 
     return filterClaimPackets({
       claims: await listClaimPackets(this.packetStore),
-      claimKind: 'assembly_association',
+      claimKind: 'association',
       subjectPacketId: input.actor_packet_id,
-      targetPacketId: input.assembly_packet_id,
-      scopePacketId: input.assembly_packet_id,
+      targetPacketId: input.target_packet_id,
+      scopePacketId: input.target_packet_id,
       activeOnly: true,
     }).length > 0;
   }

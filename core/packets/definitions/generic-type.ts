@@ -91,7 +91,7 @@ const GENERIC_TYPE_CONFIGS = [
     type: 'Relation',
     canonical_body_type: 'relation',
     declared_subtypes: RELATION_SUBTYPES,
-    default_subtype: 'assembly_association',
+    default_subtype: 'association',
     index_fields: [
       'body.subtype',
       'body.subject_ref.packet_id',
@@ -456,14 +456,14 @@ function createGenericReadyWorkflowPlans(input: {
           'Describes the generic-ready follows.relation.clear fortress intent without enrolling live execution.',
       },
       {
-        workflow_plan_id: 'relation.assembly_association.set.workflow.v0',
+        workflow_plan_id: 'relation.association.add.workflow.v0',
         packet_type: 'Relation',
-        packet_subtype: 'assembly_association',
+        packet_subtype: 'association',
         planner_id: input.writePlannerId,
-        mutation_intents: ['assembly_association.relation.set'],
+        mutation_intents: ['relation.association.add'],
         operation_kinds: ['relation.set'],
         resolver_ids: ['actor.ref', 'input.packet_ref', 'input.value', 'static.value', 'relation.active_lookup', 'compatibility.projection'],
-        policy_action_ids: ['assembly_association.relation.set'],
+        policy_action_ids: ['relation.association.add'],
         dependency_ids: [
           'runtime.packet_store.read',
           'runtime.policy_gate',
@@ -478,12 +478,12 @@ function createGenericReadyWorkflowPlans(input: {
         ],
         steps: [
           operationStep({
-            step_id: 'write_assembly_association_relation',
+            step_id: 'write_association_relation',
             operation_kind: 'relation.set',
             packet_type: 'Relation',
-            packet_subtype: 'assembly_association',
+            packet_subtype: 'association',
             resolver_ids: ['actor.ref', 'input.packet_ref', 'input.value', 'static.value', 'relation.active_lookup', 'compatibility.projection'],
-            policy_action_ids: ['assembly_association.relation.set'],
+            policy_action_ids: ['relation.association.add'],
             dependency_ids: [
               'runtime.packet_store.read',
               'runtime.policy_gate',
@@ -493,30 +493,30 @@ function createGenericReadyWorkflowPlans(input: {
             ],
             input_bindings: {
               subject_ref: actorRef(),
-              target_ref: inputPath('assembly_packet_id'),
+              target_ref: inputPath('target_packet_id'),
               scope_ref: inputPath('scope_id'),
-              subtype: staticValue('assembly_association'),
+              subtype: staticValue('association'),
               status: staticValue('active'),
               note: inputPath('note'),
             },
             output_key: 'relation_write',
             notes:
-              'Canonical relation.set workflow for canonical assembly association writes, including compatibility projection dependency.',
+              'Canonical relation.set workflow for canonical association writes; fresh writes do not auto-mint relation assertion claims.',
           }),
         ],
         availability: 'runtime_ready',
         notes:
-          'Describes the planner-extraction assembly_association.relation.set intent without enrolling live execution.',
+          'Describes the planner-extraction relation.association.add intent without enrolling live execution.',
       },
       {
-        workflow_plan_id: 'relation.assembly_association.clear.workflow.v0',
+        workflow_plan_id: 'relation.association.clear.workflow.v0',
         packet_type: 'Relation',
-        packet_subtype: 'assembly_association',
+        packet_subtype: 'association',
         planner_id: input.writePlannerId,
-        mutation_intents: ['assembly_association.relation.clear'],
+        mutation_intents: ['relation.association.clear'],
         operation_kinds: ['relation.clear'],
         resolver_ids: ['actor.ref', 'input.packet_ref', 'static.value', 'relation.active_lookup', 'compatibility.projection'],
-        policy_action_ids: ['assembly_association.relation.clear'],
+        policy_action_ids: ['relation.association.clear'],
         dependency_ids: [
           'runtime.packet_store.read',
           'runtime.policy_gate',
@@ -530,12 +530,12 @@ function createGenericReadyWorkflowPlans(input: {
         ],
         steps: [
           operationStep({
-            step_id: 'clear_assembly_association_relation',
+            step_id: 'clear_association_relation',
             operation_kind: 'relation.clear',
             packet_type: 'Relation',
-            packet_subtype: 'assembly_association',
+            packet_subtype: 'association',
             resolver_ids: ['actor.ref', 'input.packet_ref', 'static.value', 'relation.active_lookup', 'compatibility.projection'],
-            policy_action_ids: ['assembly_association.relation.clear'],
+            policy_action_ids: ['relation.association.clear'],
             dependency_ids: [
               'runtime.packet_store.read',
               'runtime.policy_gate',
@@ -545,19 +545,19 @@ function createGenericReadyWorkflowPlans(input: {
             ],
             input_bindings: {
               subject_ref: actorRef(),
-              target_ref: inputPath('assembly_packet_id'),
+              target_ref: inputPath('target_packet_id'),
               scope_ref: inputPath('scope_id'),
-              subtype: staticValue('assembly_association'),
+              subtype: staticValue('association'),
               status: staticValue('withdrawn'),
             },
             output_key: 'relation_write',
             notes:
-              'Canonical relation.clear workflow for canonical assembly association clears, including compatibility projection dependency.',
+              'Canonical relation.clear workflow for canonical association clears.',
           }),
         ],
         availability: 'runtime_ready',
         notes:
-          'Describes the planner-extraction assembly_association.relation.clear intent without enrolling live execution.',
+          'Describes the planner-extraction relation.association.clear intent without enrolling live execution.',
       },
       {
         workflow_plan_id: 'relation.home_locality.set.workflow.v0',
@@ -610,7 +610,7 @@ function createGenericReadyWorkflowPlans(input: {
                 },
                 output_key: 'relation_write',
                 notes:
-                  'Canonical relation.set workflow for home locality selection.',
+                  'Canonical relation.set workflow for home locality selection; fresh writes do not auto-mint relation assertion claims.',
               }),
             ],
             else_steps: [

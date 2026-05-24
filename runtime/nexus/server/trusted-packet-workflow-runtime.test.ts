@@ -11,7 +11,7 @@ import type { MutationActionId } from '@core/auth/write-policy';
 import type { PacketEnvelope, PacketEnvelopeByType } from '@core/schema/packet-schema';
 import { createIdentityKeyBinding } from '@runtime/nexus/identity-crypto';
 import {
-  planAssemblyAssociationRelationPackets,
+  planAssociationRelationPackets,
   planFollowRelationPackets,
   planHomeLocalityRelationPackets,
 } from './elemental-scope-relation-planner.ts';
@@ -131,8 +131,8 @@ test('live generic workflow enrollment includes relation, claim, and attestation
       (enrollment) => enrollment.mutation_intent
     ),
     [
-      'assembly_association.relation.set',
-      'assembly_association.relation.clear',
+      'relation.association.add',
+      'relation.association.clear',
       'home_locality.relation.set',
       'follows.relation.set',
       'follows.relation.clear',
@@ -146,17 +146,17 @@ test('live generic workflow enrollment includes relation, claim, and attestation
   assert.deepEqual(report.findings, []);
 });
 
-test('trusted assembly association planner matches the existing relation planner oracle', async () => {
+test('trusted association planner matches the existing relation planner oracle', async () => {
   const actorPacket = await createClaimedActor();
   const targetScopePacket = createTargetScope();
   const packetStore = createFakeStore({ targetScopePacket });
   const intent: Extract<
     MutationIntent,
-    { kind: 'assembly_association.relation.set' }
+    { kind: 'relation.association.add' }
   > = {
-    kind: 'assembly_association.relation.set',
+    kind: 'relation.association.add',
     scope_id: 'target-scope',
-    assembly_packet_id: targetScopePacket.header.packet_id,
+    target_packet_id: targetScopePacket.header.packet_id,
     note: 'Joining the assembly',
   };
 
@@ -166,7 +166,7 @@ test('trusted assembly association planner matches the existing relation planner
     actorPacket,
     intent,
   });
-  const oraclePlan = await planAssemblyAssociationRelationPackets({
+  const oraclePlan = await planAssociationRelationPackets({
     packetStore: packetStore as never,
     actorPacket,
     targetScopePacket,
@@ -177,11 +177,15 @@ test('trusted assembly association planner matches the existing relation planner
   assert.equal(trustedPlan.operation_kind, 'relation.set');
   assert.equal(
     trustedPlan.workflow_plan_id,
-    'relation.assembly_association.set.workflow.v0'
+    'relation.association.add.workflow.v0'
   );
   assert.deepEqual(
     trustedPlan.relation_plan.packets.map(normalizeGeneratedTimestamps),
     oraclePlan.packets.map(normalizeGeneratedTimestamps)
+  );
+  assert.deepEqual(
+    trustedPlan.relation_plan.packets.map((packet) => packet.header.type),
+    ['Relation']
   );
 });
 
@@ -211,6 +215,10 @@ test('trusted home locality planner matches the existing relation planner oracle
   assert.deepEqual(
     trustedPlan.relation_plan.packets.map(normalizeGeneratedTimestamps),
     oraclePlan.packets.map(normalizeGeneratedTimestamps)
+  );
+  assert.deepEqual(
+    trustedPlan.relation_plan.packets.map((packet) => packet.header.type),
+    ['Relation']
   );
 });
 

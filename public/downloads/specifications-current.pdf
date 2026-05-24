@@ -4,7 +4,7 @@
 << /Type /Catalog /Pages 2 0 R >>
 endobj
 2 0 obj
-<< /Type /Pages /Kids [6 0 R 8 0 R 10 0 R 12 0 R 14 0 R 16 0 R 18 0 R 20 0 R 22 0 R] /Count 9 >>
+<< /Type /Pages /Kids [6 0 R 8 0 R 10 0 R 12 0 R 14 0 R 16 0 R 18 0 R 20 0 R 22 0 R 24 0 R 26 0 R 28 0 R 30 0 R 32 0 R 34 0 R 36 0 R] /Count 16 >>
 endobj
 3 0 obj
 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
@@ -54,7 +54,7 @@ endobj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 5 0 R >>
 endobj
 7 0 obj
-<< /Length 4119 >>
+<< /Length 4000 >>
 stream
 0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
 BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Specifications - 2) Tj ET
@@ -82,319 +82,653 @@ BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 292.50 Tm (Packet Explorer is 
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 269.25 Tm (- it opens as a shell-level overlay) Tj ET
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 250.00 Tm (- it is still read-only for packet mutation, but its Home workspace now includes live) Tj ET
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 234.75 Tm (search, import, and export workbenches) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 215.50 Tm (- it is separate from Library) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 196.25 Tm (- it supports session-persistent tabs with an auto-created Home tab) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 177.00 Tm (- its Home workspace now splits into Search, Import, and Export sub-tabs rendered directly) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 161.75 Tm (in the shared inspector row) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 142.50 Tm (- Search is now a manual grouped packet finder over the current preferred packet index, with) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 127.25 Tm (All, Direct, Name, and Text result groupings, capped preview slices inside All, and paged) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 112.00 Tm (category views for deeper result review) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 92.75 Tm (- Import now supports two-step packet and bundle ingest through Analyze then Commit, with) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 77.50 Tm (paste-first JSON input plus web-only .json file upload) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 215.50 Tm (- packet validation is now a first-class Explorer workflow rather than only a future concept) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 196.25 Tm (- it is separate from Library) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 177.00 Tm (- it supports session-persistent tabs with an auto-created Home tab) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 157.75 Tm (- its Home workspace now splits into Search, Import, and Export sub-tabs rendered directly) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 142.50 Tm (in the shared inspector row) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 123.25 Tm (- Search is now a manual grouped packet finder over the current preferred packet index, with) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 108.00 Tm (All, Direct, Name, and Text result groupings, capped preview slices inside All, and paged) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 92.75 Tm (category views for deeper result review) Tj ET
 endstream
 endobj
 8 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 7 0 R >>
 endobj
 9 0 obj
-<< /Length 4575 >>
+<< /Length 5428 >>
 stream
 0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
 BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Specifications - 3) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- Export now supports raw preferred-revision packet export, bounded bundle export, full) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 718.75 Tm (local-store bundle export, a compact direct packet lookup when no export target is) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 703.50 Tm (preloaded, and an explicit cancel/reset path when a packet export target was preloaded) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 688.25 Tm (earlier) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 669.00 Tm (- it now uses shared packet display-title normalization instead of exposing raw encoded) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 653.75 Tm (packet ids as loaded titles where a human title can be derived) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 634.50 Tm (- it supports View as inspection lenses for Summary, Raw, Adapted, and Read Model) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 615.25 Tm (- it exposes Data, Lineage, Links, and Actions inspector rails using the same compact) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 600.00 Tm (attached-tab style as the Home workspace tabs) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 580.75 Tm (- its packet tab deck now presents Home as the leftmost workspace tab, uses middle) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 565.50 Tm (truncation for packet labels, and exposes desktop hover metadata for full packet titles) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 550.25 Tm (and revision context) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 531.00 Tm (- its main content region now reads as one primary scroll surface inside the drawer instead) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 515.75 Tm (of trapping long packet reads inside tiny inner scroll panes) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 496.50 Tm (- its packet-shell and inspector-control header bands can now collapse locally to reclaim) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 481.25 Tm (vertical space without leaving helper rows behind, and collapsed bands are restored from) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 466.00 Tm (the top command row) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 446.75 Tm (- it groups Incoming and Outgoing links by related packet, with explicit Open in new tab,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 431.50 Tm (Open in current tab, and View in Library actions for graph traversal) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 412.25 Tm (- it surfaces read-only NexusActionState and NexusActionIntentDescriptor data where) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 397.00 Tm (available) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 363.75 Tm (Discussions) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 337.75 Tm (Discussions are the most mature interactive Nexus surface today.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 314.50 Tm (- discussion feed, thread, and post workspaces are packet-backed) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 295.25 Tm (- reply, vote, expand, and create actions are now runtime-projected instead of being only) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 280.00 Tm (page-local heuristics) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 260.75 Tm (- interactive writes use the shared fortress prepare/sign/finalize corridor) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 241.50 Tm (- compatibility still keeps legacy discussion family shapes readable while canonical) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 226.25 Tm (discussion packets drive current writes) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 193.00 Tm (Votes) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 167.00 Tm (Votes are currently read-only.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 143.75 Tm (- the route is packet-backed) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 124.50 Tm (- guests can inspect governance visibility cues and proposal or vote cards) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 105.25 Tm (- voting, objection, delegation, and execution workflows are not yet live) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- Import now supports two-step packet and bundle ingest through Analyze then Commit, with) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 718.75 Tm (paste-first JSON input plus web-only .json file upload) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 699.50 Tm (- Import now also supports three explicit validation modes: Validate first, Validate after,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 684.25 Tm (and Don't validate) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 665.00 Tm (- Import now exposes recent import-report history and direct Open report follow-up actions) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 649.75 Tm (using the existing import_report packet type, with the current history view intentionally) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 634.50 Tm (reflecting the latest local report per imported artifact identity rather than a full) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 619.25 Tm (append-only event ledger) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 600.00 Tm (- Export now supports raw preferred-revision packet export, bounded bundle export, full) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 584.75 Tm (local-store bundle export, a compact direct packet lookup when no export target is) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 569.50 Tm (preloaded, and an explicit cancel/reset path when a packet export target was preloaded) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 554.25 Tm (earlier) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 535.00 Tm (- it now uses shared packet display-title normalization instead of exposing raw encoded) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 519.75 Tm (packet ids as loaded titles where a human title can be derived) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 500.50 Tm (- it supports View as inspection lenses for Summary, Raw, Adapted, and Read Model) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 481.25 Tm (- it exposes Data, Lineage, Verification, Links, and Actions inspector rails using the same) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 466.00 Tm (compact attached-tab style as the Home workspace tabs) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 446.75 Tm (- its packet tab deck now presents Home as the leftmost workspace tab, uses middle) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 431.50 Tm (truncation for packet labels, and exposes desktop hover metadata for full packet titles) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 416.25 Tm (and revision context) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 397.00 Tm (- its main content region now reads as one primary scroll surface inside the drawer instead) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 381.75 Tm (of trapping long packet reads inside tiny inner scroll panes) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 362.50 Tm (- its packet-shell and inspector-control header bands can now collapse locally to reclaim) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 347.25 Tm (vertical space without leaving helper rows behind, and collapsed bands are restored from) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 332.00 Tm (the top command row) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 312.75 Tm (- it groups Incoming and Outgoing links by related packet, with explicit Open in new tab,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 297.50 Tm (Open in current tab, and View in Library actions for graph traversal) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 278.25 Tm (- it surfaces read-only NexusActionState and NexusActionIntentDescriptor data where) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 263.00 Tm (available) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 243.75 Tm (- its verification rail now distinguishes structural validity, compatibility, signature) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 228.50 Tm (result, signer result, provenance, local trust, and local versus external report history) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 209.25 Tm (- its verification rail now includes a direct Verify or Reverify control, refreshes the) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 194.00 Tm (active packet payload after local validation, and explicitly surfaces whether the latest) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 178.75 Tm (local report is current for the preferred revision or stale against newer packet revisions) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 159.50 Tm (- packet search rows and export lookup rows now surface cached verification state when) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 144.25 Tm (available so untrusted or failed packets are visible before opening the inspector) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 111.00 Tm (Discussions) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 85.00 Tm (Discussions are the most mature interactive Nexus surface today.) Tj ET
 endstream
 endobj
 10 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 9 0 R >>
 endobj
 11 0 obj
-<< /Length 3496 >>
+<< /Length 4762 >>
 stream
 0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
 BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Specifications - 4) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- visible disabled actions now use the same shared feature-status explainer pattern rather) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 718.75 Tm (than acting like dead buttons) Tj ET
-0.720 0.820 0.900 RG 0.80 w 54.00 690.50 m 558.00 690.50 l S
-BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 681.50 Tm (Current caveats) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 649.50 Tm (The following behaviors are not active product truth yet:) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 626.25 Tm (- initiative filtering in feeds, Library, or Explorer) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 607.00 Tm (- official versus unofficial packet visibility modes) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 587.75 Tm (- automoderation or visibility projection beyond current placeholders and packet-backed) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 572.50 Tm (evidence reads) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 553.25 Tm (- policy-driven governance execution) Tj ET
-0.720 0.820 0.900 RG 0.80 w 54.00 525.00 m 558.00 525.00 l S
-BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 516.00 Tm (Nexus Routes And Workflows) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 470.00 Tm (Public routes) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 444.00 Tm (- / = landing page for OWA) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 424.75 Tm (- /about = public explanation page) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 405.50 Tm (- /docs = public charter destination page and source-material explainer) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 386.25 Tm (- /login = redirect to /nexus/identity/sign-in) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 367.00 Tm (- /signup = redirect to /nexus/identity/create) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 333.75 Tm (Nexus routes) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 307.75 Tm (- /nexus redirects to /nexus/dashboard) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 288.50 Tm (- /nexus/dashboard = packet-backed dashboard) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 269.25 Tm (- /nexus/discussions = packet-backed discussion shell with Feed, Thread, and Post) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 250.00 Tm (- /nexus/votes = read-only vote floor) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 230.75 Tm (- /nexus/library = scoped packet browse surface) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 211.50 Tm (- /nexus/trust = scoped trust posture and relationship surface) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 192.25 Tm (- /nexus/roles = scope-centric role review surface) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 173.00 Tm (- /nexus/account = hidden wrapper-level custody route) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 153.75 Tm (- /nexus/identity/* = sign-in, create, claim, restore, and security ceremonies) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 134.50 Tm (- /nexus/locality/create = guided locality directory and creation flow) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 101.25 Tm (Core workflows) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- discussion feed, thread, and post workspaces are packet-backed) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 714.75 Tm (- reply, vote, expand, and create actions are now runtime-projected instead of being only) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 699.50 Tm (page-local heuristics) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 680.25 Tm (- interactive writes use the shared fortress prepare/sign/finalize corridor) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 661.00 Tm (- compatibility still keeps legacy discussion type shapes readable while canonical) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 645.75 Tm (discussion packets drive current writes) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 612.50 Tm (Dashboard) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 586.50 Tm (Dashboard is now a real packet-backed preview workspace rather than only a shell landing) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 571.25 Tm (page.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 548.00 Tm (- it loads scope-backed metrics, queue items, and preview packet projections from runtime) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 532.75 Tm (payloads) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 513.50 Tm (- preview sections now use the shared packet-card and action-list language rather than) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 498.25 Tm (route-local one-off cards) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 479.00 Tm (- one packet can be focused at a time inside each preview surface, and that focus state) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 463.75 Tm (remains local to the surface rather than becoming a routed detail view) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 444.50 Tm (- focused packet actions still use the same shared packet action menu language as) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 429.25 Tm (non-focused preview rows) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 410.00 Tm (- packet action menus now include Validate, Revalidate, and View verification where local or) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 394.75 Tm (imported verification evidence exists) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 361.50 Tm (Locality creation) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 335.50 Tm (/nexus/locality/create is now a guided review-first locality workflow rather than a thin) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 320.25 Tm (write form.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 297.00 Tm (- the route still searches the existing locality directory first) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 277.75 Tm (- when search does not find the intended locality, the existing create_candidate seam now) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 262.50 Tm (seeds the broad-to-narrow builder directly instead of dead-ending) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 243.25 Tm (- top-level search can now still hand off into locality creation when same-name results) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 228.00 Tm (exist elsewhere, so a result like Ontario in one branch does not suppress creating Ontario) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 212.75 Tm (under another chosen parent path) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 193.50 Tm (- the create UI can still be edited target-first, but preview and create now normalize that) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 178.25 Tm (editing state into a broad-to-narrow planner path before runtime planning) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 159.00 Tm (- the builder now uses a real non-mutating Review path step before any write occurs) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 139.75 Tm (- locality rows are now descriptor-first under the hood: each row can carry a hierarchy) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 124.50 Tm (system, local type label, local type key, and legacy compatibility bucket) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 105.25 Tm (- sparse paths are now valid planner truth, so a path such as Canada -> Vancouver no longer) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 90.00 Tm (needs a required intermediate region row just to satisfy the old ladder) Tj ET
 endstream
 endobj
 12 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 11 0 R >>
 endobj
 13 0 obj
-<< /Length 4324 >>
+<< /Length 5188 >>
 stream
 0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
 BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Specifications - 5) Tj ET
-BT 0.090 0.160 0.240 rg /F2 11.5 Tf 1 0 0 1 54.00 724.00 Tm (Nexus entry) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 702.00 Tm (1. User enters /nexus. 2. The route redirects to /nexus/dashboard. 3. The shell loads in) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 686.75 Tm (Global Guest state. 4. The initial mounted baseline is Global + You.) Tj ET
-BT 0.090 0.160 0.240 rg /F2 11.5 Tf 1 0 0 1 54.00 653.50 Tm (Scope selection) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 631.50 Tm (1. User opens the scope menu or followed scopes. 2. The shell updates the active scope lens.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 616.25 Tm (3. Dashboard, discussions, votes, roles, trust, and Library re-project against that scope.) Tj ET
-BT 0.090 0.160 0.240 rg /F2 11.5 Tf 1 0 0 1 54.00 583.00 Tm (Discussion posting) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 561.00 Tm (1. The route loads packet-backed discussion state. 2. The actor is a real Element\(kind:) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 545.75 Tm ("person"\), including temporary guests. 3. The browser prepares a canonical mutation through) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 530.50 Tm (the shared fortress corridor. 4. The active web identity shell signs the prepared packets) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 515.25 Tm (locally. 5. Finalize re-verifies digest, signature, proof level, authority, and policy) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 500.00 Tm (before persistence.) Tj ET
-BT 0.090 0.160 0.240 rg /F2 11.5 Tf 1 0 0 1 54.00 466.75 Tm (Trust and role review) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 444.75 Tm (1. Trust loads scope-local trust posture and relationship state. 2. Roles loads exact-scope) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 429.50 Tm (role claims, claimants, and support or dispute evidence. 3. Protected guest actions open the) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 414.25 Tm (shared auth-gate flow instead of trying raw writes.) Tj ET
-BT 0.090 0.160 0.240 rg /F2 11.5 Tf 1 0 0 1 54.00 381.00 Tm (Packet inspection) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 359.00 Tm (1. User opens Packet Explorer from the shell, Library, or link traversal. 2. Explorer loads) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 343.75 Tm (packet summary, raw data, adapted data, read model, lineage, grouped links, and runtime) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 328.50 Tm (action visibility. 3. Explorer stays read-only and uses session-backed tab state. 4. Library) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 313.25 Tm (packet highlighting now clears itself when the highlighted packet is no longer represented) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 298.00 Tm (by an Explorer packet tab.) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 260.75 Tm (Shell behavior) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 234.75 Tm (The Nexus shell currently provides:) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 211.50 Tm (- a dedicated Nexus layout separate from the public shell) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 192.25 Tm (- a two-column left-side navigation model on desktop) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 173.00 Tm (- a mobile overlay tray that opens the real menu rails immediately, uses Open menu as the) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 157.75 Tm (visible trigger label, shrinks with rail collapse, and closes when both rails are) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 142.50 Tm (minimized) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 123.25 Tm (- a desktop Packet Explorer drawer that keeps its width session-persistent and uses a) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 108.00 Tm (dedicated drag-resize seam) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 88.75 Tm (- a session-scoped early-access welcome gate that blocks shell interaction until dismissed) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- review distinguishes reused existing levels from newly planned locality levels) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 714.75 Tm (- duplicate warnings are now actionable through Use existing, Edit name, and Create anyway) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 695.50 Tm (- Use as home locality is now an explicit toggle shared by both existing-locality selection) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 680.25 Tm (and newly created locality completion) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 661.00 Tm (- review can also show a pre-checked home-branch inclusion checklist, but that checklist) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 645.75 Tm (remains preview-only in this pass and does not yet change persisted home-locality) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 630.50 Tm (semantics) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 611.25 Tm (- created locality packets now record descriptor metadata inside linked) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 596.00 Tm (Location.spatial_payload, while legacy nation | region | city | district levels remain) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 580.75 Tm (compatibility buckets rather than the full future locality model) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 561.50 Tm (- locality confirm now writes through one composite runtime apply seam above) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 546.25 Tm (locality.path.create, so locality graph creation, home-locality selection, association,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 531.00 Tm (follow, and temporary main-tree display choices are orchestrated together instead of being) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 515.75 Tm (chained one mutation at a time in the page) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 482.50 Tm (Scope sidebar) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 456.50 Tm (The Nexus scope sidebar now reflects the packet-native scope graph more directly.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 433.25 Tm (- it groups scope context into Main tree, Home scopes, Associated scopes, Followed scopes,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 418.00 Tm (and Discoverable scopes) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 398.75 Tm (- Home scopes render as a projected trunk ordered from the broadest mounted geography down) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 383.50 Tm (toward the personal You scope) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 364.25 Tm (- associated scopes now count as mounted related scopes, but remain outside the geographic) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 349.00 Tm (home trunk rather than being mixed into its ancestry chain) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 329.75 Tm (- associated, followed, main, and discoverable scopes are now server-projected grouped) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 314.50 Tm (sections instead of thin client-side reconstructions from id arrays) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 295.25 Tm (- associated and followed sections can now persist lightweight parent-context display) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 280.00 Tm (independently, using text-only contextual chains rather than full extra scope cards) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 260.75 Tm (- Main tree defaults to the home scope trunk when no explicit visibility preference has been) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 245.50 Tm (saved, then uses explicit packet-backed display preferences for add/remove actions over) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 230.25 Tm (eligible home, associated, and followed scopes) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 211.00 Tm (- scope rows stay click-to-open, while secondary actions move into compact side overflow) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 195.75 Tm (menus) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 176.50 Tm (- section placement now carries most of the relationship meaning, rather than depending on) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 161.25 Tm (inline badge clutter) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 142.00 Tm (- follow and association actions now use the canonical packet-native mutation corridor and) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 126.75 Tm (then refresh shell projection from the server result) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 107.50 Tm (- guests are routed through the existing identity/auth gate instead of silently writing) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 92.25 Tm (follow or association state) Tj ET
 endstream
 endobj
 14 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 13 0 R >>
 endobj
 15 0 obj
-<< /Length 3627 >>
+<< /Length 3730 >>
 stream
 0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
 BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Specifications - 6) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- function-first versus scope-first as a shell preference) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 714.75 Tm (- You as a first-class personal scope lens) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 695.50 Tm (- independent rail collapse state) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 676.25 Tm (- a profile-area route into account and identity custody surfaces) Tj ET
-0.720 0.820 0.900 RG 0.80 w 54.00 648.00 m 558.00 648.00 l S
-BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 639.00 Tm (Architecture And State) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 593.00 Tm (Active source split) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 567.00 Tm (- core/* holds portable packet logic, schemas, builders, interpreters, contracts, and pure) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 551.75 Tm (projections) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 532.50 Tm (- runtime/* holds storage adapters, runtime services, query services, auth/trust/discussion) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 517.25 Tm (orchestration, and API-facing glue) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 498.00 Tm (- app/* holds application-layer components, hooks, constants, public content, and shared) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 482.75 Tm (shell state) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 463.50 Tm (- src/app/* holds the Expo Router route shell and API entrypoints) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 430.25 Tm (Current runtime and state patterns) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 404.25 Tm (- public pages are still mostly stateless) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 385.00 Tm (- Nexus state is shared through local React context providers) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 365.75 Tm (- shell and route projections load from packet-backed API routes) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 346.50 Tm (- the runtime store is SQLite-backed) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 327.25 Tm (- packet parsing runs through family compatibility and adaptation instead of route-local) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 312.00 Tm (patches) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 292.75 Tm (- Packet Explorer session state is shell-level rather than route-level page state) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 259.50 Tm (Packet and compatibility foundations in active use) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 233.50 Tm (Current packet behavior in code includes:) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 210.25 Tm (- PacketEnvelope = { header, body }) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 191.00 Tm (- stable packet_id) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 171.75 Tm (- immutable revision_id) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 152.50 Tm (- multi-parent parentrevisionrefs) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 133.25 Tm (- family schema_version) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 114.00 Tm (- family revision_mode) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 94.75 Tm (- raw stored packets preserved as historical fact) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 720.00 Tm (Shared packet-card action UI) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 694.00 Tm (Several packet-facing surfaces now share one compact card and row action language.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 670.75 Tm (- dashboard preview rows, focused packet panels, and related Nexus packet lists now use) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 655.50 Tm (reusable packet action menus instead of route-local action clusters) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 636.25 Tm (- compact icon badges can surface packet state without consuming card body space, and expose) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 621.00 Tm (tooltip detail when needed) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 601.75 Tm (- Open in Explorer is now part of the shared packet action vocabulary rather than a one-off) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 586.50 Tm (dashboard affordance) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 567.25 Tm (- validation actions now use the same shared packet action language, with local modal) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 552.00 Tm (feedback and a deep-link path into Explorer verification) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 518.75 Tm (Votes) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 492.75 Tm (Votes are currently read-only.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 469.50 Tm (- the route is packet-backed) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 450.25 Tm (- guests can inspect governance visibility cues and proposal or vote cards) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 431.00 Tm (- voting, objection, delegation, and execution workflows are not yet live) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 411.75 Tm (- visible disabled actions now use the same shared feature-status explainer pattern rather) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 396.50 Tm (than acting like dead buttons) Tj ET
+0.720 0.820 0.900 RG 0.80 w 54.00 368.25 m 558.00 368.25 l S
+BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 359.25 Tm (Current caveats) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 327.25 Tm (The following behaviors are not active product truth yet:) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 304.00 Tm (- initiative filtering in feeds, Library, or Explorer) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 284.75 Tm (- official versus unofficial packet visibility modes) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 265.50 Tm (- automoderation or visibility projection beyond current placeholders and packet-backed) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 250.25 Tm (evidence reads) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 231.00 Tm (- policy-driven governance execution) Tj ET
+0.720 0.820 0.900 RG 0.80 w 54.00 202.75 m 558.00 202.75 l S
+BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 193.75 Tm (Nexus Routes And Workflows) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 147.75 Tm (Public routes) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 121.75 Tm (- / = landing page for OWA) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 102.50 Tm (- /about = public explanation page) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 83.25 Tm (- /docs = public charter destination page and source-material explainer) Tj ET
 endstream
 endobj
 16 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 15 0 R >>
 endobj
 17 0 obj
-<< /Length 4146 >>
+<< /Length 3786 >>
 stream
 0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
 BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Specifications - 7) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- adapted runtime packets used as the normal read shape) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 714.75 Tm (- target-version-aware compatibility reads for supported families) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 695.50 Tm (Forward ontology currently active in code includes:) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 672.25 Tm (- Cause, Action, Relation, and Location as first-class packet families) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 653.00 Tm (- Element.subtype as the forward classifier, with kind preserved as compatibility metadata) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 633.75 Tm (- widened Claim packets for packet-targeted assertion content plus optional) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 618.50 Tm (relation_assertion) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 599.25 Tm (- widened Attestation packets with canonical type/subtype semantics and legacy) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 584.00 Tm (attestation_kind compatibility) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 564.75 Tm (- Policy.relation_requirements as the packet-backed seam for relation support rules) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 531.50 Tm (Public docs build system) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 505.50 Tm (- docs/public/public-docs.manifest.json is the source list for generated public docs) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 486.25 Tm (- scripts/validate-public-docs.mjs validates manifest and source-of-truth rules before) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 471.00 Tm (generation) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 451.75 Tm (- scripts/build-public-docs.mjs compiles readable docs data into) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 436.50 Tm (app/public/generated/public-docs.generated.ts) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 417.25 Tm (- the same build emits Markdown and PDF downloads under public/downloads/ and version) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 402.00 Tm (records under docs/public/version-records/) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 382.75 Tm (- the chaptered internal docs use chapter files as canonical source material; the top-level) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 367.50 Tm (shell docs are not part of the public compiled document content) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 348.25 Tm (Current runtime contracts worth keeping visible here:) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 325.00 Tm (- NexusActionState) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 305.75 Tm (- NexusActionIntentDescriptor) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 286.50 Tm (- NexusPacketExplorerPayload) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 253.25 Tm (Query and surface boundaries) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 227.25 Tm (- packet storage, compatibility, import/export, and merge remain below the route layer) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 208.00 Tm (- route components consume query payloads rather than storage classes directly) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 188.75 Tm (- runtime projects discussion and Explorer action visibility rather than leaving those rules) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 173.50 Tm (entirely in page code) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 140.25 Tm (Current naming and structure notes) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 114.25 Tm (- route file names are lowercase and match path segments directly) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 95.00 Tm (- React components use PascalCase) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- /login = redirect to /nexus/identity/sign-in) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 714.75 Tm (- /signup = redirect to /nexus/identity/create) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 681.50 Tm (Nexus routes) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 655.50 Tm (- /nexus redirects to /nexus/dashboard) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 636.25 Tm (- /nexus/dashboard = packet-backed dashboard) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 617.00 Tm (- /nexus/discussions = packet-backed discussion shell with Feed, Thread, and Post) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 597.75 Tm (- /nexus/votes = read-only vote floor) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 578.50 Tm (- /nexus/library = scoped packet browse surface) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 559.25 Tm (- /nexus/trust = scoped trust posture and relationship surface) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 540.00 Tm (- /nexus/roles = scope-centric role review surface) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 520.75 Tm (- /nexus/account = hidden wrapper-level custody route) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 501.50 Tm (- /nexus/identity/* = sign-in, create, claim, restore, and security ceremonies) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 482.25 Tm (- /nexus/locality/create = guided locality directory and creation flow) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 449.00 Tm (Core workflows) Tj ET
+BT 0.090 0.160 0.240 rg /F2 11.5 Tf 1 0 0 1 54.00 413.00 Tm (Nexus entry) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 391.00 Tm (1. User enters /nexus. 2. The route redirects to /nexus/dashboard. 3. The shell loads in) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 375.75 Tm (Global Guest state. 4. The initial mounted baseline is Global + You.) Tj ET
+BT 0.090 0.160 0.240 rg /F2 11.5 Tf 1 0 0 1 54.00 342.50 Tm (Scope selection) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 320.50 Tm (1. User opens the grouped scope sidebar. 2. The shell updates the active scope lens. 3.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 305.25 Tm (Dashboard, discussions, votes, roles, trust, and Library re-project against that scope.) Tj ET
+BT 0.090 0.160 0.240 rg /F2 11.5 Tf 1 0 0 1 54.00 272.00 Tm (Dashboard review) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 250.00 Tm (1. Dashboard loads packet-backed metrics, queue items, and preview packet lists for the) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 234.75 Tm (active scope. 2. Clicking a packet row opens its preferred surface or falls back to Explorer) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 219.50 Tm (when no route surface is appropriate. 3. Packet action menus can focus a packet inside the) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 204.25 Tm (local preview section or open it in Explorer. 4. Validation actions can run local packet) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 189.00 Tm (verification, return a compact result modal, and then deep-link into Explorer verification) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 173.75 Tm (when needed. 5. Focus remains a surface-local interaction rather than a separate route or) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 158.50 Tm (shell-wide mode.) Tj ET
+BT 0.090 0.160 0.240 rg /F2 11.5 Tf 1 0 0 1 54.00 125.25 Tm (Discussion posting) Tj ET
 endstream
 endobj
 18 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 17 0 R >>
 endobj
 19 0 obj
-<< /Length 4086 >>
+<< /Length 5179 >>
 stream
 0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
 BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Specifications - 8) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- route screens continue to end with Page) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 714.75 Tm (- shared Nexus components live under app/components/nexus) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 695.50 Tm (The current repo is no longer using the older domain or storage root names. The active) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 680.25 Tm (architecture is the core / runtime / app / src/app split described above.) Tj ET
-0.720 0.820 0.900 RG 0.80 w 54.00 648.00 m 558.00 648.00 l S
-BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 639.00 Tm (Known Gaps And Provisional Notes) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 593.00 Tm (Current known gaps) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 567.00 Tm (- identity/auth and discussions remain the two strongest end-to-end verticals) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 547.75 Tm (- dashboard, votes, trust, roles, and Library are packet-backed, but are still comparatively) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 532.50 Tm (provisional) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 513.25 Tm (- role creation and editing remain deferred) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 494.00 Tm (- packet-native follows remain deferred) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 474.75 Tm (- broader moderation, trust weighting, and governance execution remain deferred) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 441.50 Tm (Location and relationship caveats) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 415.50 Tm (- home_locality is now the packet-backed source of mounted geographic ancestry) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 396.25 Tm (- identity.location_disclosure remains optional profile metadata rather than mounted-scope) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 381.00 Tm (truth) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 361.75 Tm (- assemblyassociation remains distinct from homelocality) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 342.50 Tm (- generic abstract assembly creation and richer locality governance are still later work) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 309.25 Tm (Explorer caveats) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 283.25 Tm (- Packet Explorer is read-only) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 264.00 Tm (- follow semantics, fork or adapt execution, diff, and compare are not live yet) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 244.75 Tm (- official versus unofficial initiative filtering is not active product behavior) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 225.50 Tm (- initiative-version subscription behavior is not active product behavior) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 192.25 Tm (Moderation and governance caveats) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 166.25 Tm (- moderation workflows are not yet implemented as live user-facing policy systems) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 147.00 Tm (- current disabled controls should be read as placeholders, not as hidden active features) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 127.75 Tm (- the first high-friction Nexus surfaces now attach compact inline explainers to disabled or) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 112.50 Tm (partial controls so users can see whether a seam is coming soon, read-only, or partial) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 93.25 Tm (- proposals, votes, and decisions are present in packets and read surfaces, but governance) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 78.00 Tm (is not yet a fully interactive trusted workflow) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 734.00 Tm (1. The route loads packet-backed discussion state. 2. The actor is a real Element\(kind:) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 718.75 Tm ("person"\), including temporary guests. 3. The browser prepares a canonical mutation through) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 703.50 Tm (the shared fortress corridor. 4. The active web identity shell signs the prepared packets) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 688.25 Tm (locally. 5. Finalize re-verifies digest, signature, proof level, authority, and policy) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 673.00 Tm (before persistence.) Tj ET
+BT 0.090 0.160 0.240 rg /F2 11.5 Tf 1 0 0 1 54.00 639.75 Tm (Trust and role review) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 617.75 Tm (1. Trust loads scope-local trust posture and relationship state. 2. Roles loads exact-scope) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 602.50 Tm (role claims, claimants, and support or dispute evidence. 3. Protected guest actions open the) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 587.25 Tm (shared auth-gate flow instead of trying raw writes.) Tj ET
+BT 0.090 0.160 0.240 rg /F2 11.5 Tf 1 0 0 1 54.00 554.00 Tm (Locality search and creation) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 532.00 Tm (1. User opens /nexus/locality/create. 2. The route searches the existing locality directory) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 516.75 Tm (first and still allows selecting an existing locality immediately. 3. If search does not) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 501.50 Tm (find the intended place, createcandidate can seed the builder directly, including from the) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 486.25 Tm (top search input when Enter is pressed. 4. If same-name locality results exist elsewhere in) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 471.00 Tm (Nexus, top-level search can still route into the create flow instead of forcing reuse from) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 455.75 Tm (the wrong branch. 5. The builder may be edited as one lowest-locality row plus optional) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 440.50 Tm (parent rows, but the adapter normalizes that state into one broad-to-narrow ordered path) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 425.25 Tm (before preview or create. 6. The user runs Review path, which now previews the canonical) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 410.00 Tm (planner without writing packets. 7. Planner ancestry now follows the ordered path itself) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 394.75 Tm (rather than the old fixed ladder, so sparse paths like Canada -> Vancouver are valid current) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 379.50 Tm (behavior. 8. Review shows which levels would reuse existing localities, which levels would) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 364.25 Tm (create new locality packets, and any duplicate warnings that still need a decision. 9.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 349.00 Tm (Review rows and search results now expose descriptor-aware locality labels when linked) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 333.75 Tm (Location metadata is available, while legacy levels remain compatibility buckets. 10.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 318.50 Tm (Duplicate warnings can now route back into the builder through Use existing, Edit name, or) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 303.25 Tm (forward into an explicit Create anyway path. 11. Confirm now routes through one composite) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 288.00 Tm (locality.graph.apply runtime seam, which reruns the structural locality planner, writes) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 272.75 Tm (locality packets, applies selected home or association or follow relations, stores temporary) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 257.50 Tm (main-tree display preferences, and then returns refreshed shell graph data. 12. If Use as) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 242.25 Tm (home locality is on, selecting an existing locality or creating a new one both apply the) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 227.00 Tm (canonical homelocality.relation.set path inside that composite apply flow. 13. The) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 211.75 Tm (review-only home-branch checklist can be adjusted visually in this pass, but it does not yet) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 196.50 Tm (change stored home-locality packet semantics.) Tj ET
+BT 0.090 0.160 0.240 rg /F2 11.5 Tf 1 0 0 1 54.00 163.25 Tm (Packet inspection) Tj ET
 endstream
 endobj
 20 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 19 0 R >>
 endobj
 21 0 obj
-<< /Length 1694 >>
+<< /Length 5564 >>
 stream
 0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
 BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Specifications - 9) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 720.00 Tm (Provisional guidance) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 694.00 Tm (The following areas should still be treated as provisional:) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 670.75 Tm (- the shell-level early-access gate is now an honest entry warning, but it is not yet a) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 655.50 Tm (tutorial, release-note system, or scope-aware onboarding flow) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 636.25 Tm (- the new feature-status registry and popover system currently covers Explorer, Votes, and) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 621.00 Tm (Library first; broader surface rollout is still pending) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 601.75 Tm (- deeper trust weighting and moderation consequences) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 582.50 Tm (- vote execution, delegation, and propagation semantics) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 563.25 Tm (- long-term initiative filtering and visibility modes) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 544.00 Tm (- packet actions that currently appear as disabled placeholders) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 524.75 Tm (- any architecture or theory in the implementation guide that is not already represented in) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 509.50 Tm (executable code) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 734.00 Tm (1. User opens Packet Explorer from the shell, Library, or link traversal. 2. Explorer loads) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 718.75 Tm (packet summary, raw data, adapted data, read model, lineage, verification, grouped links,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 703.50 Tm (and runtime action visibility. 3. Explorer stays read-only for packet mutation, but its Home) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 688.25 Tm (workspace now includes live Search, Import, and Export workbenches. 4. Search and export) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 673.00 Tm (lookup rows now surface cached verification state when local or imported reports exist. 5.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 657.75 Tm (Explorer verification shows local summary state, imported or external report history,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 642.50 Tm (explicit current-versus-stale revision anchoring for the latest local report, and the) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 627.25 Tm (layered breakdown that keeps structural validity, cryptographic validity, provenance, and) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 612.00 Tm (local trust separate. 6. Library packet highlighting now clears itself when the highlighted) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 596.75 Tm (packet is no longer represented by an Explorer packet tab.) Tj ET
+BT 0.090 0.160 0.240 rg /F2 11.5 Tf 1 0 0 1 54.00 563.50 Tm (Packet import and validation) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 541.50 Tm (1. User opens Packet Explorer Home and selects Import. 2. The import workspace accepts) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 526.25 Tm (pasted JSON or a browser .json file. 3. Analyze can run in one of three modes: Validate) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 511.00 Tm (first, Validate after, or Don't validate. 4. Validate first runs structural checks plus) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 495.75 Tm (packet verification before commit, and blocks commit on invalid signatures or) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 480.50 Tm (canonicalization mismatches. 5. Validate after commits structurally safe packets first, then) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 465.25 Tm (writes verification reports and local cache state immediately afterward. 6. Don't validate) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 450.00 Tm (keeps the import structural-only, but still records a local import report for the) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 434.75 Tm (artifact/session. 7. The Import workspace keeps recent import_report history visible so the) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 419.50 Tm (operator can reopen a report or jump into one affected packet without rerunning the whole) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 404.25 Tm (import flow. 8. That Import History surface currently represents the latest local report per) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 389.00 Tm (imported artifact identity, not a complete append-only import event ledger.) Tj ET
+BT 0.090 0.160 0.240 rg /F2 11.5 Tf 1 0 0 1 54.00 355.75 Tm (Packet validation) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 333.75 Tm (1. A packet action menu can expose Validate, Revalidate, or View verification depending on) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 318.50 Tm (current local and imported evidence. 2. Validation runs through a runtime verification) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 303.25 Tm (service rather than the fortress mutation corridor. 3. The local runtime signs) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 288.00 Tm (verificationreport and importreport packets with its own validator identity and also updates) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 272.75 Tm (a local fast-read verification index. 4. Imported external verification reports are readable) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 257.50 Tm (in Explorer, but local trusted status still comes only from the local node's own validation) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 242.25 Tm (reports in this phase. 5. The Explorer Verification rail now exposes a direct Verify /) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 227.00 Tm (Reverify control that refreshes the current packet payload after a local validation pass. 6.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 211.75 Tm (If a later preferred revision replaces the revision a local report targeted, that older) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 196.50 Tm (report remains visible as history but is surfaced as stale rather than current verification) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 181.25 Tm (state.) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 144.00 Tm (Shell behavior) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 118.00 Tm (The Nexus shell currently provides:) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 94.75 Tm (- a dedicated Nexus layout separate from the public shell) Tj ET
 endstream
 endobj
 22 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 21 0 R >>
 endobj
+23 0 obj
+<< /Length 4179 >>
+stream
+0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
+BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Specifications - 10) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- a two-column left-side navigation model on desktop) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 714.75 Tm (- a mobile overlay tray that opens the real menu rails immediately, uses Open menu as the) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 699.50 Tm (visible trigger label, shrinks with rail collapse, and closes when both rails are) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 684.25 Tm (minimized) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 665.00 Tm (- a desktop Packet Explorer drawer that keeps its width session-persistent and uses a) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 649.75 Tm (dedicated drag-resize seam) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 630.50 Tm (- a session-scoped early-access welcome gate that blocks shell interaction until dismissed) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 611.25 Tm (- function-first versus scope-first as a shell preference) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 592.00 Tm (- You as a first-class personal scope lens) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 572.75 Tm (- grouped Home, Associated, Followed, Main, and Discoverable scope sections with compact) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 557.50 Tm (row-level overflow menus) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 538.25 Tm (- server-projected scope sections, including independent temporary preferences for Main) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 523.00 Tm (visibility and parent-context display in the associated and followed sections) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 503.75 Tm (- independent rail collapse state) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 484.50 Tm (- a profile-area route into account and identity custody surfaces) Tj ET
+0.720 0.820 0.900 RG 0.80 w 54.00 456.25 m 558.00 456.25 l S
+BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 447.25 Tm (Architecture And State) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 401.25 Tm (Active source split) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 375.25 Tm (- core/* holds portable packet logic, schemas, builders, interpreters, contracts, and pure) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 360.00 Tm (projections) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 340.75 Tm (- runtime/* holds storage adapters, runtime services, query services, auth/trust/discussion) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 325.50 Tm (orchestration, and API-facing glue) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 306.25 Tm (- app/* holds application-layer components, hooks, constants, public content, and shared) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 291.00 Tm (shell state) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 271.75 Tm (- src/app/* holds the Expo Router route shell and API entrypoints) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 238.50 Tm (Current runtime and state patterns) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 212.50 Tm (- public pages are still mostly stateless) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 193.25 Tm (- Nexus state is shared through local React context providers) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 174.00 Tm (- shell and route projections load from packet-backed API routes) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 154.75 Tm (- the runtime store is SQLite-backed) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 135.50 Tm (- packet parsing runs through type compatibility and adaptation instead of route-local) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 120.25 Tm (patches) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 101.00 Tm (- Packet Explorer session state is shell-level rather than route-level page state) Tj ET
+endstream
+endobj
+24 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 23 0 R >>
+endobj
+25 0 obj
+<< /Length 4582 >>
+stream
+0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
+BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Specifications - 11) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 720.00 Tm (Packet and compatibility foundations in active use) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 694.00 Tm (Current packet behavior in code includes:) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 670.75 Tm (- PacketEnvelope = { header, body }) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 651.50 Tm (- stable packet_id) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 632.25 Tm (- immutable revision_id) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 613.00 Tm (- multi-parent parentrevisionrefs) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 593.75 Tm (- type schema_version) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 574.50 Tm (- type revision_mode) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 555.25 Tm (- raw stored packets preserved as historical fact) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 536.00 Tm (- adapted runtime packets used as the normal read shape) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 516.75 Tm (- target-version-aware compatibility reads for supported types) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 497.50 Tm (Forward ontology currently active in code includes:) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 474.25 Tm (- Action, Relation, and Location as first-class packet types, with Action\(subtype:) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 459.00 Tm (initiative\) carrying the forward initiative/default anchor) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 439.75 Tm (- Report as a first-class packet type for verification and import reporting) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 420.50 Tm (- Element.subtype as the forward classifier, with kind preserved as compatibility metadata) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 401.25 Tm (- widened Claim packets for packet-targeted assertion content plus optional) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 386.00 Tm (relation_assertion) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 366.75 Tm (- widened Attestation packets with canonical subtype semantics) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 347.50 Tm (- Policy.relation_requirements as the packet-backed seam for relation support rules) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 328.25 Tm (Current scope consumer direction in code includes:) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 305.00 Tm (- shell scope projection now prefers packet-native Relation\(subtype: defaultancestryparent\)) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 289.75 Tm (for ancestry) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 270.50 Tm (- home locality now resolves through relation-first projection with explicit compatibility) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 255.25 Tm (fallback instead of claim-first shell logic) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 236.00 Tm (- follow now resolves packet-natively from Relation\(subtype: follows\) first, with legacy) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 220.75 Tm (shell preference state reduced to an explicit compatibility bridge) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 201.50 Tm (- association now resolves packet-natively from Relation\(subtype: association\) first, with) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 186.25 Tm (legacy claim-only reads reduced to explicit compatibility projection and associated scopes) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 171.00 Tm (treated as mounted related scopes) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 151.75 Tm (- followed, associated, known, discoverable, and home-ancestor semantics are now carried as) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 136.50 Tm (additive packet-backed scope-summary metadata) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 117.25 Tm (- locality creation now emits provisional Location\(subtype: region\) packets plus) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 102.00 Tm (Relation\(subtype: definedbylocation\) so linked location packets are part of the live) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 86.75 Tm (writer path as well as the read seam) Tj ET
+endstream
+endobj
+26 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 25 0 R >>
+endobj
+27 0 obj
+<< /Length 5234 >>
+stream
+0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
+BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Specifications - 12) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- the active shell sidebar now consumes server-projected graph sections rather than) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 718.75 Tm (reconstructing section truth from thin scope-id arrays) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 699.50 Tm (- scope projection now returns home, associated, followed, main, and discoverable sections,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 684.25 Tm (with descriptor-aware grouping and optional lightweight parent-context chains for) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 669.00 Tm (associated and followed scopes) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 649.75 Tm (- locality confirmation now uses one composite runtime apply seam above locality.path.create) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 634.50 Tm (so structural locality writes, scope relations, and packet-backed claimed display) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 619.25 Tm (preferences are coordinated together) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 600.00 Tm (- main is a display preference, not a relation; claimed actors now persist it through) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 584.75 Tm (Preference.element packets with the legacy runtime table kept as a compatibility cache) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 565.50 Tm (- claimed shell preference reads are session-bound before projecting private) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 550.25 Tm (Preference.element state) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 531.00 Tm (- guest scope-display preference behavior remains an explicit compatibility/session bridge) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 511.75 Tm (- Preference.element.value.interface.shell_chrome now carries live navigation mode, theme) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 496.50 Tm (mode, and UI density reads/writes through the signed mutation corridor for claimed actors,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 481.25 Tm (with the shell preferences API reserved for guest compatibility state) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 462.00 Tm (- the current home trunk renders broadest-to-smallest, while associated scopes remain) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 446.75 Tm (mounted related scopes outside the geographic ancestry chain) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 427.50 Tm (- shell UI actions for follow and association now route through the canonical mutation) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 412.25 Tm (corridor and refresh scope projection after success instead of relying on local-only) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 397.00 Tm (toggles) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 377.75 Tm (- dashboard payloads are now scope-backed runtime projections rather than static shell) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 362.50 Tm (filler) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 343.25 Tm (- shared packet-card projection and action-menu behavior now spans dashboard previews and) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 328.00 Tm (related Nexus surfaces) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 308.75 Tm (- focused packet state is currently a surface-local UI layer over packet-backed preview) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 293.50 Tm (lists rather than a separate routed or core packet concept) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 274.25 Tm (- the first verification chapter now treats report packets as the signed source of truth for) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 259.00 Tm (local packet verification and import reporting, with a runtime-owned verification cache) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 243.75 Tm (layered on top for fast UI reads) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 224.50 Tm (- the local runtime now owns a normal signed validator identity and uses it to sign) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 209.25 Tm (verificationreport and importreport packets without routing those writes through) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 194.00 Tm (user-authored fortress mutations) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 174.75 Tm (- OWA-specific initiative-anchor relation-policy lookup now lives in a narrower adapter) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 159.50 Tm (layer instead of being embedded directly inside the generic scope-graph projection core) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 126.25 Tm (Public docs build system) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 100.25 Tm (- docs/public/public-docs.manifest.json is the source list for generated public docs) Tj ET
+endstream
+endobj
+28 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 27 0 R >>
+endobj
+29 0 obj
+<< /Length 4026 >>
+stream
+0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
+BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Specifications - 13) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- scripts/validate-public-docs.mjs validates manifest and source-of-truth rules before) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 718.75 Tm (generation) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 699.50 Tm (- scripts/build-public-docs.mjs compiles readable docs data into) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 684.25 Tm (app/public/generated/public-docs.generated.ts) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 665.00 Tm (- the same build emits Markdown and PDF downloads under public/downloads/ and version) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 649.75 Tm (records under docs/public/version-records/) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 630.50 Tm (- the chaptered internal docs use chapter files as canonical source material; the top-level) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 615.25 Tm (shell docs are not part of the public compiled document content) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 596.00 Tm (Current runtime contracts worth keeping visible here:) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 572.75 Tm (- NexusActionState) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 553.50 Tm (- NexusActionIntentDescriptor) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 534.25 Tm (- NexusPacketExplorerPayload) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 501.00 Tm (Query and surface boundaries) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 475.00 Tm (- packet storage, compatibility, import/export, and merge remain below the route layer) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 455.75 Tm (- route components consume query payloads rather than storage classes directly) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 436.50 Tm (- runtime projects discussion and Explorer action visibility rather than leaving those rules) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 421.25 Tm (entirely in page code) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 388.00 Tm (Current naming and structure notes) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 362.00 Tm (- route file names are lowercase and match path segments directly) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 342.75 Tm (- React components use PascalCase) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 323.50 Tm (- route screens continue to end with Page) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 304.25 Tm (- shared Nexus components live under app/components/nexus) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 285.00 Tm (The current repo is no longer using the older domain or storage root names. The active) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 269.75 Tm (architecture is the core / runtime / app / src/app split described above.) Tj ET
+0.720 0.820 0.900 RG 0.80 w 54.00 237.50 m 558.00 237.50 l S
+BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 228.50 Tm (Known Gaps And Provisional Notes) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 182.50 Tm (Current known gaps) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 156.50 Tm (- identity/auth and discussions remain the two strongest end-to-end verticals) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 137.25 Tm (- votes, trust, roles, and Library are packet-backed, but are still comparatively) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 122.00 Tm (provisional) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 102.75 Tm (- dashboard is live and packet-backed, but deeper verification, trust, and governance) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 87.50 Tm (meaning on its preview surfaces remains provisional) Tj ET
+endstream
+endobj
+30 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 29 0 R >>
+endobj
+31 0 obj
+<< /Length 4953 >>
+stream
+0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
+BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Specifications - 14) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- role creation and editing remain unsupported) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 714.75 Tm (- broader moderation, trust weighting, and governance execution remain unsupported) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 681.50 Tm (Location and relationship caveats) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 655.50 Tm (- home_locality is now the packet-backed source of mounted geographic ancestry, with) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 640.25 Tm (canonical writes producing a relation without automatic claim wrapping) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 621.00 Tm (- identity.location_disclosure remains optional profile metadata rather than mounted-scope) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 605.75 Tm (truth) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 586.50 Tm (- association remains distinct from home_locality) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 567.25 Tm (- followed scopes are now packet-native on the write path, but legacy shell-preference) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 552.00 Tm (follows remain readable through an explicit compatibility bridge during transition) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 532.75 Tm (- Location is now part of locality creation through provisional region packets, and those) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 517.50 Tm (packets now carry descriptor metadata in spatialpayload.scopedescriptor, but) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 502.25 Tm (provider-backed normalization, richer external refs, and broader equivalence handling) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 487.00 Tm (remain later work) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 467.75 Tm (- legacy nation | region | city | district locality levels remain current compatibility) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 452.50 Tm (buckets rather than the full future locality model) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 433.25 Tm (- locality ancestry is now planned from ordered broad-to-narrow path entries, and sparse) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 418.00 Tm (paths are valid current behavior; absolute depth is still projection-only and is not) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 402.75 Tm (stored on packets) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 383.50 Tm (- locality creation now has a real non-mutating review seam, but the home-branch inclusion) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 368.25 Tm (checklist shown during review is still preview-only and does not yet alter stored) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 353.00 Tm (home_locality relation semantics) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 333.75 Tm (- locality confirm now applies home, association, follow, and main visibility choices) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 318.50 Tm (through one composite runtime write seam; claimed main scope-display state now persists) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 303.25 Tm (through Preference.element packets while guest/session behavior remains compatibility) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 288.00 Tm (state) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 268.75 Tm (- associated and followed parent-context display now persists through the same claimed-actor) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 253.50 Tm (fortress-enrolled Preference.element path, with guest compatibility fallback still) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 238.25 Tm (session/cookie-based) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 219.00 Tm (- same-name locality matches in other parent branches no longer need to suppress the) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 203.75 Tm (create-path handoff, but orphan existing-scope remounting is still intentionally) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 188.50 Tm (unresolved rather than silently repaired in this phase) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 169.25 Tm (- generic abstract assembly creation and richer locality governance are still later work) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 136.00 Tm (Explorer caveats) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 110.00 Tm (- Packet Explorer is read-only for packet mutation) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 90.75 Tm (- Packet Explorer Search, Import, and Export are live) Tj ET
+endstream
+endobj
+32 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 31 0 R >>
+endobj
+33 0 obj
+<< /Length 5055 >>
+stream
+0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
+BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Specifications - 15) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- Packet Explorer verification is now live for local validation, imported report reading,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 718.75 Tm (and truthful layered status display) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 699.50 Tm (- Packet Explorer verification is now revision-aware and stale-aware for the currently) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 684.25 Tm (preferred revision, but richer revalidation workflows remain unsupported) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 665.00 Tm (- Packet Explorer Import now keeps recent import-report history visible inside the Import) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 649.75 Tm (workspace, but that history currently reflects the latest local report per imported) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 634.50 Tm (artifact identity rather than a full event-by-event ledger; richer filtering, artifact) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 619.25 Tm (lineage browsing, and bundle-native history are still later work) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 600.00 Tm (- fork or adapt execution, diff, and compare are not live yet) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 580.75 Tm (- validation now distinguishes validate first, validate after, and don't validate, but local) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 565.50 Tm (trust still remains node-local rather than peer-weighted) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 546.25 Tm (- packet verification reports and import reports now exist, but richer provenance surfacing,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 531.00 Tm (peer-trust weighting, and broader report semantics remain next seams) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 511.75 Tm (- a dedicated validation workflow screen is intentionally unsupported) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 492.50 Tm (- official versus unofficial initiative filtering is not active product behavior) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 473.25 Tm (- initiative-version subscription behavior is not active product behavior) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 454.00 Tm (- the generic scope graph is now decoupled from OWA-specific initiative-anchor policy) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 438.75 Tm (lookup, but broader initiative and locality projection cleanup is still incomplete) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 405.50 Tm (Moderation and governance caveats) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 379.50 Tm (- moderation workflows are not yet implemented as live user-facing policy systems) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 360.25 Tm (- current disabled controls should be read as placeholders, not as hidden active features) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 341.00 Tm (- the first high-friction Nexus surfaces now attach compact inline explainers to disabled or) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 325.75 Tm (partial controls so users can see whether a seam is coming soon, read-only, or partial) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 306.50 Tm (- proposals, votes, and decisions are present in packets and read surfaces, but governance) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 291.25 Tm (is not yet a fully interactive trusted workflow) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 258.00 Tm (Provisional guidance) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 232.00 Tm (The following areas should still be treated as provisional:) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 208.75 Tm (- the shell-level early-access gate is now an honest entry warning, but it is not yet a) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 193.50 Tm (tutorial, release-note system, or scope-aware onboarding flow) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 174.25 Tm (- the new feature-status registry and popover system currently covers Explorer, Votes, and) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 159.00 Tm (Library first; broader surface rollout is still pending) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 139.75 Tm (- deeper trust weighting and moderation consequences) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 120.50 Tm (- vote execution, delegation, and propagation semantics) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 101.25 Tm (- long-term initiative filtering and visibility modes) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 82.00 Tm (- packet actions that currently appear as disabled placeholders) Tj ET
+endstream
+endobj
+34 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 33 0 R >>
+endobj
+35 0 obj
+<< /Length 667 >>
+stream
+0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
+BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Specifications - 16) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- hardening the remaining Preference runtime connector corridor before applying the same) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 718.75 Tm (procedure to other packet types) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 699.50 Tm (- any architecture or theory in the implementation guide that is not already represented in) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 684.25 Tm (executable code) Tj ET
+endstream
+endobj
+36 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 35 0 R >>
+endobj
 xref
-0 23
+0 37
 0000000000 65535 f 
 0000000015 00000 n 
 0000000064 00000 n 
-0000000176 00000 n 
-0000000246 00000 n 
-0000000321 00000 n 
-0000003960 00000 n 
-0000004096 00000 n 
-0000008267 00000 n 
-0000008403 00000 n 
-0000013030 00000 n 
-0000013167 00000 n 
-0000016716 00000 n 
-0000016854 00000 n 
-0000021231 00000 n 
-0000021369 00000 n 
-0000025049 00000 n 
-0000025187 00000 n 
-0000029386 00000 n 
-0000029524 00000 n 
-0000033663 00000 n 
-0000033801 00000 n 
-0000035548 00000 n 
+0000000226 00000 n 
+0000000296 00000 n 
+0000000371 00000 n 
+0000004010 00000 n 
+0000004146 00000 n 
+0000008198 00000 n 
+0000008334 00000 n 
+0000013814 00000 n 
+0000013951 00000 n 
+0000018766 00000 n 
+0000018904 00000 n 
+0000024145 00000 n 
+0000024283 00000 n 
+0000028066 00000 n 
+0000028204 00000 n 
+0000032043 00000 n 
+0000032181 00000 n 
+0000037413 00000 n 
+0000037551 00000 n 
+0000043168 00000 n 
+0000043306 00000 n 
+0000047538 00000 n 
+0000047676 00000 n 
+0000052311 00000 n 
+0000052449 00000 n 
+0000057736 00000 n 
+0000057874 00000 n 
+0000061953 00000 n 
+0000062091 00000 n 
+0000067097 00000 n 
+0000067235 00000 n 
+0000072343 00000 n 
+0000072481 00000 n 
+0000073200 00000 n 
 trailer
-<< /Size 23 /Root 1 0 R >>
+<< /Size 37 /Root 1 0 R >>
 startxref
-35686
+73338
 %%EOF

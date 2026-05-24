@@ -21,9 +21,9 @@ Working direction:
 ## Locality and scope backlog
 
 - continue refining the `Global + You` baseline
-- keep `home_locality` distinct from `assembly_association`
+- keep `home_locality` distinct from `association`
 - keep canonical packet-native home locality relation writes and explicit compatibility projections as the base for later shell UI graph work
-- keep packet-native follows and assembly association relations as the base for the later shell graph UI pass
+- keep packet-native follows and association relations as the base for the later shell graph UI pass
 - treat the current ancestry and provisional `Location(region)` writer path as the new locality substrate rather than as pending exploratory work
 - locality UX pass 1 is now the active baseline: guided search, search-to-create handoff, non-mutating review, actionable duplicate warnings, explicit home-locality toggle, and a preview-only home-branch checklist are all live
 - locality foundations phase 2A is now the active next layer underneath that UI: descriptor-first locality rows, Unicode-safe normalization, sparse ordered ancestry, and descriptor storage in linked `Location.spatial_payload`

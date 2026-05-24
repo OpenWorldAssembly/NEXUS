@@ -290,7 +290,7 @@ The current repo is no longer using the older `domain` or `storage` root names. 
 
 - `home_locality` is now the packet-backed source of mounted geographic ancestry
 - `identity.location_disclosure` remains optional profile metadata rather than mounted-scope truth
-- `assembly_association` remains distinct from `home_locality`
+- `association` remains distinct from `home_locality`
 - generic abstract assembly creation and richer locality governance are still later work
 
 ## Explorer caveats

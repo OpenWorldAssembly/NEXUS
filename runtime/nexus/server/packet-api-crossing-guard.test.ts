@@ -34,7 +34,7 @@ test('prepare API preflight rejects custom mutation intents', () => {
 
 test('prepare API preflight rejects retired legacy bridge mutation intents', () => {
   for (const kind of [
-    'assembly_association.claim.set',
+    'association.claim.set',
     'home_locality.claim.set',
   ]) {
     assert.throws(

@@ -61,16 +61,16 @@ const MutationIntentSchemaOptions = [
       summary: z.string().min(1).optional().nullable().default(null),
       locality_label: z.string().min(1).optional().nullable().default(null),
       seed_discussions: z.boolean().optional().default(true),
-      claim_association: z.boolean().optional().default(true),
-      claim_note: z.string().min(1).optional().nullable().default(null),
+      add_association: z.boolean().optional().default(true),
+      association_note: z.string().min(1).optional().nullable().default(null),
       created_at: z.string().optional().nullable().default(null),
       mutation_nonce: z.string().optional().nullable().default(null),
     })
     .strict(),
   z
     .object({
-      kind: z.literal('assembly_association.relation.set'),
-      assembly_packet_id: z.string().min(1),
+      kind: z.literal('relation.association.add'),
+      target_packet_id: z.string().min(1),
       scope_id: z.string().min(1),
       note: z.string().min(1).optional().nullable().default(null),
       created_at: z.string().optional().nullable().default(null),
@@ -79,8 +79,8 @@ const MutationIntentSchemaOptions = [
     .strict(),
   z
     .object({
-      kind: z.literal('assembly_association.relation.clear'),
-      assembly_packet_id: z.string().min(1),
+      kind: z.literal('relation.association.clear'),
+      target_packet_id: z.string().min(1),
       scope_id: z.string().min(1),
       created_at: z.string().optional().nullable().default(null),
       mutation_nonce: z.string().optional().nullable().default(null),

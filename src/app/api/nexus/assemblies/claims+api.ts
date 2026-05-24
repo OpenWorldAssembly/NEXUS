@@ -1,6 +1,6 @@
 /**
  * File: claims+api.ts
- * Description: Lists assembly-association claims and deprecates the legacy direct-write mutation route.
+ * Description: Lists association assertion claims and rejects direct-write mutation attempts.
  */
 
 import type { RequestHandler } from 'expo-router/server';
@@ -32,7 +32,7 @@ export const GET: RequestHandler = async (request) => {
 
     const services = await getNexusPacketServices();
     const claims =
-      await services.attestationService.listAssemblyAssociationClaimsForActor(
+      await services.attestationService.listAssociationClaimsForActor(
         actorPacketId
       );
 
@@ -44,7 +44,7 @@ export const GET: RequestHandler = async (request) => {
     const message =
       error instanceof Error
         ? error.message
-        : 'Unable to load assembly-association claims.';
+        : 'Unable to load association assertion claims.';
 
     return createJsonResponse({ error: message }, 500);
   }
@@ -54,7 +54,7 @@ export const PUT: RequestHandler = async () =>
   createJsonResponse(
     {
       error:
-        'Assembly-association claim writes have moved to the shared fortress mutation corridor.',
+        'Association claim writes are not available through this route; use the shared fortress mutation corridor for supported workflows.',
     },
     410
   );

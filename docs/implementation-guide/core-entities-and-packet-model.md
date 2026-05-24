@@ -61,7 +61,7 @@ Current forward direction:
 Current home-locality direction:
 
 - canonical writes now use `home_locality.relation.set`
-- that write produces `Relation(subtype: home_locality)` plus a supporting `Claim(subtype: relation_assertion)`
+- that write produces `Relation(subtype: home_locality)` only; claims and attestations can be added around the relation, but are not automatically minted
 - legacy `home_locality.claim.set` is retired from live fresh writes; historical `Claim(home_locality)` material remains readable through compatibility projections
 - revise and withdraw semantics remain packet-native: status changes are represented by newly signed packet material rather than in-place mutation
 
@@ -165,9 +165,9 @@ The graph should continue to express relationships through typed refs and edges 
 Current scope-graph direction:
 
 - canonical mounted ancestry prefers `Relation(subtype: default_ancestry_parent)`
-- canonical home-locality legitimacy prefers `Relation(subtype: home_locality)` evaluated through `Policy.relation_requirements`
+- canonical home-locality projection prefers `Relation(subtype: home_locality)`; legitimacy evidence can attach through separate Claims and Attestations when policy or contestation requires it
 - canonical follows now use `Relation(subtype: follows)` and are actor-only; legacy shell follow preferences are compatibility-only read input
-- canonical assembly association now uses `Relation(subtype: assembly_association)` plus a supporting `Claim(subtype: relation_assertion)`, and associated scopes now count as mounted related scopes in shell projection
+- canonical association now uses `Relation(subtype: association)` without automatic claim wrapping, and associated scopes now count as mounted related scopes in shell projection
 - `Relation(subtype: defined_by_location)` is the live read seam for linked `Location` packets
 - `locality.path.create` now emits locality `Element` packets, `default_ancestry_parent` relations, provisional `Location(subtype: region)` packets, and `defined_by_location` relations together
 - locality rows can now carry dynamic descriptor metadata, which is currently stored in linked `Location.spatial_payload.scope_descriptor` rather than through a packet schema bump

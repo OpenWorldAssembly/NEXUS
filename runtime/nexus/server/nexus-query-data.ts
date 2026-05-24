@@ -4,7 +4,7 @@
  */
 
 import type {
-  AssemblyAssociationClaimProjection,
+  AssociationRelationProjection,
   NexusPacketCardProjection,
   NexusScopeLens,
 } from '@core/contracts';
@@ -669,13 +669,13 @@ function isClaimInExactScope(input: {
 }
 
 function getRoleClaimTrustStage(input: {
-  hasAssociationClaim: boolean;
+  hasAssociationRelation: boolean;
   associationSupportCount: number;
   roleSupportCount: number;
   thresholds: NexusTrustPolicySnapshot;
 }): ReturnType<typeof deriveTrustStage> {
   return deriveTrustStage({
-    has_association_claim: input.hasAssociationClaim,
+    has_association_relation: input.hasAssociationRelation,
     association_support_count: input.associationSupportCount,
     claimed_role_count: 1,
     supported_role_count:
@@ -1399,17 +1399,17 @@ export async function getNexusTrustPayload(input: {
         )?.name ?? null
     )
     .filter((scopeName): scopeName is string => scopeName !== null);
-  const assemblyClaims =
+  const associationRelations =
     actorPacket?.header.packet_id
-      ? await services.attestationService.listAssemblyAssociationClaimsForActor(
+      ? await services.attestationService.listAssociationRelationsForActor(
           actorPacket.header.packet_id
         )
       : [];
-  const activeAssemblyClaim = assemblyPacketId
-    ? assemblyClaims.find(
-        (claim) =>
-          claim.assembly_packet_id === assemblyPacketId &&
-          claim.status === 'active'
+  const activeAssociationRelation = assemblyPacketId
+    ? associationRelations.find(
+        (relation) =>
+          relation.target_packet_id === assemblyPacketId &&
+          relation.status === 'active'
       ) ?? null
     : null;
   const actorRoleClaims = filterClaimPackets({
@@ -1487,8 +1487,8 @@ export async function getNexusTrustPayload(input: {
     (roleCard) => roleCard.support_count >= trustPolicy.role_support_threshold
   ).length;
   const trustStage = deriveTrustStage({
-    has_association_claim: activeAssemblyClaim !== null,
-    association_support_count: activeAssemblyClaim?.supported_by_other_count ?? 0,
+    has_association_relation: activeAssociationRelation !== null,
+    association_support_count: activeAssociationRelation?.supported_by_other_count ?? 0,
     claimed_role_count: roleCards.filter((roleCard) => roleCard.is_claimed).length,
     supported_role_count: supportedRoleCount,
     thresholds: trustPolicy,
@@ -1527,12 +1527,12 @@ export async function getNexusTrustPayload(input: {
       derived_scope_ids: homeLocalityRouteIds,
       derived_scope_names: homeLocalityScopeNames,
     },
-    assembly_claims:
+    association_relations:
       assemblyPacketId !== null
-        ? assemblyClaims.filter(
-            (claim) => claim.assembly_packet_id === assemblyPacketId
+        ? associationRelations.filter(
+            (relation) => relation.target_packet_id === assemblyPacketId
           )
-        : assemblyClaims,
+        : associationRelations,
     role_cards: roleCards,
   };
 }
@@ -1566,9 +1566,9 @@ export async function getNexusRolesPayload(input: {
   const eligibleClaimants = elementPackets.filter((packet) =>
     ['person', 'assembly', 'team'].includes(packet.body.subtype)
   );
-  const assemblyClaimsByActor = new Map<
+  const associationRelationsByActor = new Map<
     string,
-    AssemblyAssociationClaimProjection[]
+    AssociationRelationProjection[]
   >();
 
   for (const claimantPacket of eligibleClaimants) {
@@ -1576,9 +1576,9 @@ export async function getNexusRolesPayload(input: {
       continue;
     }
 
-    assemblyClaimsByActor.set(
+    associationRelationsByActor.set(
       claimantPacket.header.packet_id,
-      await services.attestationService.listAssemblyAssociationClaimsForActor(
+      await services.attestationService.listAssociationRelationsForActor(
         claimantPacket.header.packet_id
       )
     );
@@ -1614,15 +1614,15 @@ export async function getNexusRolesPayload(input: {
         continue;
       }
 
-      const claimantAssemblyClaims =
-        assemblyClaimsByActor.get(claimantPacket.header.packet_id) ?? [];
-      const activeAssemblyClaim =
+      const claimantAssociationRelations =
+        associationRelationsByActor.get(claimantPacket.header.packet_id) ?? [];
+      const activeAssociationRelation =
         assemblyPacketId === null
-          ? claimantAssemblyClaims.find((claim) => claim.status === 'active') ?? null
-          : claimantAssemblyClaims.find(
-              (claim) =>
-                claim.assembly_packet_id === assemblyPacketId &&
-                claim.status === 'active'
+          ? claimantAssociationRelations.find((relation) => relation.status === 'active') ?? null
+          : claimantAssociationRelations.find(
+              (relation) =>
+                relation.target_packet_id === assemblyPacketId &&
+                relation.status === 'active'
             ) ?? null;
       const matchesAuthorityScope =
         assemblyPacketId !== null &&
@@ -1630,9 +1630,9 @@ export async function getNexusRolesPayload(input: {
       const hasScopeAssociation =
         assemblyPacketId === null
           ? true
-          : matchesAuthorityScope || activeAssemblyClaim !== null;
+          : matchesAuthorityScope || activeAssociationRelation !== null;
       const associationSupportCount =
-        activeAssemblyClaim?.supported_by_other_count ?? 0;
+        activeAssociationRelation?.supported_by_other_count ?? 0;
 
       const supportEdges = await services.attestationService.listTargetAttestations({
         target_packet_id: claimPacket.header.packet_id,
@@ -1667,13 +1667,13 @@ export async function getNexusRolesPayload(input: {
             ? 'dispute'
             : 'none';
       const roleTrustStage = getRoleClaimTrustStage({
-        hasAssociationClaim: hasScopeAssociation,
+        hasAssociationRelation: hasScopeAssociation,
         associationSupportCount,
         roleSupportCount: scopedSupportEdges.length,
         thresholds: trustPolicy,
       });
       const scopeTrustStage = deriveTrustStage({
-        has_association_claim: hasScopeAssociation,
+        has_association_relation: hasScopeAssociation,
         association_support_count: associationSupportCount,
         claimed_role_count: 0,
         supported_role_count: 0,

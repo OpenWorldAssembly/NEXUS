@@ -21,7 +21,7 @@ export function fetchNexusAssemblyClaims(input: {
   );
 }
 
-export function setNexusAssemblyAssociationClaim(input: {
+export function setNexusAssociationClaim(input: {
   requestBody: Record<string, unknown>;
 }): Promise<NexusAssemblyClaimMutationPayload> {
   return fetchMutationJsonOrThrow<NexusAssemblyClaimMutationPayload>({

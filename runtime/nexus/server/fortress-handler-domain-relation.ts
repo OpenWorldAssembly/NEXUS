@@ -15,19 +15,19 @@ export function createRelationPrepareHandlers(
   handlers: MutationPrepareHandlers
 ): Pick<
   FortressPrepareHandlerMap,
-  | 'prepareAssemblyAssociationRelation'
+  | 'prepareAssociationRelation'
   | 'prepareHomeLocalityRelation'
   | 'prepareFollowRelation'
 > {
   return {
-    prepareAssemblyAssociationRelation: async ({ intent, actorPacket }) =>
-      handlers.prepareAssemblyAssociationRelation({
+    prepareAssociationRelation: async ({ intent, actorPacket }) =>
+      handlers.prepareAssociationRelation({
         intent: intent as Extract<
           MutationIntent,
           {
             kind:
-              | 'assembly_association.relation.set'
-              | 'assembly_association.relation.clear';
+              | 'relation.association.add'
+              | 'relation.association.clear';
           }
         >,
         actorPacket,

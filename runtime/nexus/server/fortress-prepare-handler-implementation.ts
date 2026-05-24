@@ -111,10 +111,10 @@ export class MutationPrepareHandlers {
     }) as Promise<PreparedMutation>;
   }
 
-  async prepareAssemblyAssociationRelation(input: {
+  async prepareAssociationRelation(input: {
     intent:
-      | Extract<MutationIntent, { kind: 'assembly_association.relation.set' }>
-      | Extract<MutationIntent, { kind: 'assembly_association.relation.clear' }>;
+      | Extract<MutationIntent, { kind: 'relation.association.add' }>
+      | Extract<MutationIntent, { kind: 'relation.association.clear' }>;
     actorPacket: PacketEnvelopeByType['Element'];
   }): Promise<PreparedMutation> {
     return runTrustedPacketWorkflowMutation({

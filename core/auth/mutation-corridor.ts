@@ -47,24 +47,24 @@ export type AssemblyElementCreateMutationIntent = {
   summary?: string | null;
   locality_label?: string | null;
   seed_discussions?: boolean;
-  claim_association?: boolean;
-  claim_note?: string | null;
+  add_association?: boolean;
+  association_note?: string | null;
   created_at?: string | null;
   mutation_nonce?: string | null;
 };
 
-export type AssemblyAssociationRelationSetMutationIntent = {
-  kind: 'assembly_association.relation.set';
-  assembly_packet_id: string;
+export type AssociationRelationSetMutationIntent = {
+  kind: 'relation.association.add';
+  target_packet_id: string;
   scope_id: string;
   note?: string | null;
   created_at?: string | null;
   mutation_nonce?: string | null;
 };
 
-export type AssemblyAssociationRelationClearMutationIntent = {
-  kind: 'assembly_association.relation.clear';
-  assembly_packet_id: string;
+export type AssociationRelationClearMutationIntent = {
+  kind: 'relation.association.clear';
+  target_packet_id: string;
   scope_id: string;
   created_at?: string | null;
   mutation_nonce?: string | null;
@@ -193,8 +193,8 @@ export type MutationIntent =
   | DiscussionReplyMutationIntent
   | PacketSignalMutationIntent
   | AssemblyElementCreateMutationIntent
-  | AssemblyAssociationRelationSetMutationIntent
-  | AssemblyAssociationRelationClearMutationIntent
+  | AssociationRelationSetMutationIntent
+  | AssociationRelationClearMutationIntent
   | HomeLocalityRelationMutationIntent
   | FollowRelationSetMutationIntent
   | FollowRelationClearMutationIntent

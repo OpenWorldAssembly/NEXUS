@@ -26,7 +26,7 @@ test('claim packet ids are deterministic by subject, target, scope, and kind', (
 
 test('association claim packets keep the claim scope as the authority scope', () => {
   const packet = createAssociationClaimPacket({
-    claimKind: 'assembly_association',
+    claimKind: 'association',
     subjectPacketId: 'nexus:element/person-a',
     targetPacketId: 'nexus:element/scope-a',
     scopePacketId: 'nexus:element/scope-a',
@@ -42,7 +42,7 @@ test('association claim packets keep the claim scope as the authority scope', ()
   );
   assert.equal(packet.header.schema_version, '1.1.0');
   assert.equal(packet.body.subtype, 'relation_assertion');
-  assert.equal(packet.body.relation_assertion?.subtype, 'assembly_association');
+  assert.equal(packet.body.relation_assertion?.subtype, 'association');
   assert.equal(packet.body.claim_markdown, 'Lives here.');
   assert.equal(packet.body.status, 'active');
 });

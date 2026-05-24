@@ -93,7 +93,7 @@ test('custom or unregistered client intent requests fail closed', () => {
 
 test('retired legacy bridge client intents fail closed', () => {
   for (const mutationIntent of [
-    'assembly_association.claim.set',
+    'association.claim.set',
     'home_locality.claim.set',
   ]) {
     const preflight = resolvePacketClientIntentPreflight({

@@ -15,7 +15,7 @@ import {
   type LocalityGraphPlanResult,
 } from '@runtime/nexus/server/locality-directory-service';
 import {
-  planAssemblyAssociationRelationPackets,
+  planAssociationRelationPackets,
   planFollowRelationPackets,
   planHomeLocalityRelationPackets,
   requireElementPacketFromStoreOrPrepared,
@@ -172,7 +172,7 @@ export async function planLocalityGraphApplyPackets(input: {
       packetId: targetScopePacketId,
       preparedElementPacketsById,
     });
-    const associationResult = await planAssemblyAssociationRelationPackets({
+    const associationResult = await planAssociationRelationPackets({
       packetStore: input.packetStore,
       actorPacket: input.actorPacket,
       targetScopePacket,
@@ -222,7 +222,7 @@ export async function planLocalityGraphApplyPackets(input: {
   const actionIds: MutationActionId[] = [
     ...(plannedResult.created_packets.length > 0 ? ['locality.element.create' as const] : []),
     ...(homePackets.packets.length > 0 ? ['home_locality.relation.set' as const] : []),
-    ...(associationPackets.length > 0 ? ['assembly_association.relation.set' as const] : []),
+    ...(associationPackets.length > 0 ? ['relation.association.add' as const] : []),
     ...(followPackets.length > 0 ? ['follows.relation.set' as const] : []),
   ];
   const firstCreatedScopePacket = plannedResult.created_packets.find(
@@ -252,7 +252,7 @@ export async function planLocalityGraphApplyPackets(input: {
     },
     ...associationPolicyScopes.map((scopePacket) => ({
       scopePacket,
-      actionIds: ['assembly_association.relation.set'] as MutationActionId[],
+      actionIds: ['relation.association.add'] as MutationActionId[],
     })),
     ...followPolicyScopes.map((scopePacket) => ({
       scopePacket,

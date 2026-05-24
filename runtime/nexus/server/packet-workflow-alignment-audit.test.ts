@@ -74,8 +74,8 @@ test('planner-extraction candidates are definition-planned or explicitly gapped'
   }
 
   for (const mutationIntent of [
-    'assembly_association.relation.set',
-    'assembly_association.relation.clear',
+    'relation.association.add',
+    'relation.association.clear',
     'home_locality.relation.set',
     'discussion.reply.create',
   ] as const) {
@@ -150,7 +150,7 @@ test('legacy bridge intents are absent from live workflow alignment coverage', (
   assert.deepEqual(legacyEntries, []);
   assert.equal(getPacketWorkflowAlignmentCoverage('home_locality.claim.set' as never), null);
   assert.equal(
-    getPacketWorkflowAlignmentCoverage('assembly_association.claim.set' as never),
+    getPacketWorkflowAlignmentCoverage('association.claim.set' as never),
     null
   );
 });

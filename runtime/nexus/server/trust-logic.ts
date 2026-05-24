@@ -44,13 +44,13 @@ export function meetsTrustGate(
 }
 
 export function deriveTrustStage(input: {
-  has_association_claim: boolean;
+  has_association_relation: boolean;
   association_support_count: number;
   claimed_role_count: number;
   supported_role_count: number;
   thresholds: NexusTrustPolicySnapshot;
 }): NexusTrustStageId {
-  if (!input.has_association_claim) {
+  if (!input.has_association_relation) {
     return 'self_claimed';
   }
 
@@ -68,7 +68,7 @@ export function deriveTrustStage(input: {
   if (
     input.claimed_role_count > 0 ||
     input.association_support_count > 0 ||
-    input.has_association_claim
+    input.has_association_relation
   ) {
     return 'emerging';
   }

@@ -118,7 +118,7 @@ export function projectLegacyHomeLocalityCompatibility(input: {
   return homeContext;
 }
 
-export function projectLegacyAssemblyAssociationScopeCompatibility(input: {
+export function projectLegacyAssociationScopeCompatibility(input: {
   claimPackets: ClaimPacket[];
   actorPacketId?: string | null;
   scopePacketIds: Set<string>;
@@ -129,14 +129,14 @@ export function projectLegacyAssemblyAssociationScopeCompatibility(input: {
     return associatedScopeIds;
   }
 
-  const assemblyClaims = filterClaimPackets({
+  const associationClaims = filterClaimPackets({
     claims: input.claimPackets,
-    claimKind: 'assembly_association',
+    claimKind: 'association',
     subjectPacketId: input.actorPacketId,
     activeOnly: true,
   });
 
-  for (const claimPacket of assemblyClaims) {
+  for (const claimPacket of associationClaims) {
     const scopePacketId =
       claimPacket.body.relation_assertion?.target_ref.packet_id ??
       claimPacket.body.target_ref.packet_id;

@@ -10,9 +10,9 @@
 
 ## Location and relationship caveats
 
-- `home_locality` is now the packet-backed source of mounted geographic ancestry, with canonical writes producing both a relation and supporting claim
+- `home_locality` is now the packet-backed source of mounted geographic ancestry, with canonical writes producing a relation without automatic claim wrapping
 - `identity.location_disclosure` remains optional profile metadata rather than mounted-scope truth
-- `assembly_association` remains distinct from `home_locality`
+- `association` remains distinct from `home_locality`
 - followed scopes are now packet-native on the write path, but legacy shell-preference follows remain readable through an explicit compatibility bridge during transition
 - `Location` is now part of locality creation through provisional `region` packets, and those packets now carry descriptor metadata in `spatial_payload.scope_descriptor`, but provider-backed normalization, richer external refs, and broader equivalence handling remain later work
 - legacy `nation | region | city | district` locality levels remain current compatibility buckets rather than the full future locality model

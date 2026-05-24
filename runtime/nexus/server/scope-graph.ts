@@ -646,7 +646,7 @@ export async function buildNexusScopeGraphProjection(input: {
     associatedScopeIds.add(routeId);
     mountedScopeIds.add(routeId);
     addMountReason(mountReasonsByScopeId, routeId, 'associated');
-    associationKindByRouteId.set(routeId, 'assembly_association_claim_compatibility');
+    associationKindByRouteId.set(routeId, 'association_claim_compatibility');
     associatedScopeJustificationPacketIdsByRouteId.set(routeId, claimPacketIds);
     appendPacketIds(justificationPacketIdsByScopeId, routeId, claimPacketIds);
   }

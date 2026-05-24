@@ -1,6 +1,6 @@
 /**
  * File: claims.ts
- * Description: Portable claim-packet helpers for scoped role and assembly associations.
+ * Description: Portable claim-packet helpers for scoped role and associations.
  */
 
 import type {

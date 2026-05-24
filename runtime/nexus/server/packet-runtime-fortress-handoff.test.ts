@@ -53,8 +53,8 @@ test('generic-ready intents resolve to definition-ready handoffs', () => {
 
 test('workflow-aligned planner extraction intents produce definition handoffs but not external definition execution readiness', () => {
   for (const mutationIntent of [
-    'assembly_association.relation.set',
-    'assembly_association.relation.clear',
+    'relation.association.add',
+    'relation.association.clear',
     'home_locality.relation.set',
     'discussion.reply.create',
   ] as const) {
@@ -92,7 +92,7 @@ test('retired legacy bridge intents fail closed before fortress handoff', () => 
   assert.deepEqual(legacyEntries, []);
 
   for (const mutationIntent of [
-    'assembly_association.claim.set',
+    'association.claim.set',
     'home_locality.claim.set',
   ]) {
     const handoff = resolvePacketRuntimeFortressHandoff({

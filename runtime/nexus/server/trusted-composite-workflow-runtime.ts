@@ -17,10 +17,6 @@ import {
 } from '@core/auth/mutation-verifier';
 import { getPacketUnsignedDigestCandidates } from '@core/auth/mutation-digests';
 import type { MutationActionId } from '@core/auth/write-policy';
-import {
-  createClaimPacketId,
-  createRelationAssertionClaimPacket,
-} from '@core/packets/claims';
 import { createElementPolicyRefsRevision } from '@core/packets/identity';
 import {
   createAssemblyPacket,
@@ -816,42 +812,28 @@ export async function resolveTrustedAssemblyElementCompositePlan(
     actionIds.push('discussion.surfaces.ensure');
   }
 
-  if (input.intent.claim_association !== false) {
+  const shouldAddAssociation = input.intent.add_association ?? true;
+
+  if (shouldAddAssociation) {
     const relationPacketId = createRelationPacketId({
-      subtype: 'assembly_association',
+      subtype: 'association',
       subjectPacketId: input.actorPacket.header.packet_id,
       targetPacketId: assemblyPacket.header.packet_id,
       scopePacketId: assemblyPacket.header.packet_id,
     });
     const relationPacket = createScopedRelationPacket({
-      subtype: 'assembly_association',
+      subtype: 'association',
       subjectPacketId: input.actorPacket.header.packet_id,
       targetPacketId: assemblyPacket.header.packet_id,
       scopePacketId: assemblyPacket.header.packet_id,
       applicableScopeRefs,
       createdByPacketId: input.actorPacket.header.packet_id,
       status: 'active',
+      note: input.intent.association_note ?? null,
       packetId: relationPacketId,
     });
-    const claimPacket = createRelationAssertionClaimPacket({
-      claimKind: 'assembly_association',
-      subjectPacketId: input.actorPacket.header.packet_id,
-      relationPacketId,
-      assertedTargetPacketId: assemblyPacket.header.packet_id,
-      scopePacketId: assemblyPacket.header.packet_id,
-      applicableScopeRefs,
-      createdByPacketId: input.actorPacket.header.packet_id,
-      note: input.intent.claim_note ?? null,
-      status: 'active',
-      packetId: createClaimPacketId({
-        claimKind: 'assembly_association',
-        subjectPacketId: input.actorPacket.header.packet_id,
-        targetPacketId: assemblyPacket.header.packet_id,
-        scopePacketId: assemblyPacket.header.packet_id,
-      }),
-    });
-    packets.push(relationPacket, claimPacket);
-    actionIds.push('assembly_association.relation.set');
+    packets.push(relationPacket);
+    actionIds.push('relation.association.add');
   }
 
   const mergedPolicyDecision = await input.policyGate.resolveScopePolicyDecision({

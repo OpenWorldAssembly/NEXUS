@@ -303,9 +303,21 @@ export interface AttestationEdgeProjection {
   created_at: string;
 }
 
-export interface AssemblyAssociationClaimProjection {
-  assembly_packet_id: string;
-  assembly_name: string;
+export interface AssociationRelationProjection {
+  target_packet_id: string;
+  target_name: string;
+  relation_packet_id: string;
+  status: 'active' | 'withdrawn';
+  note: string | null;
+  created_at: string;
+  supported_by_other_count: number;
+  is_self_issued_only: boolean;
+  is_current: boolean;
+}
+
+export interface AssociationClaimProjection {
+  target_packet_id: string;
+  target_name: string;
   claim_packet_id: string;
   status: 'active' | 'withdrawn';
   note: string | null;
@@ -535,11 +547,14 @@ export interface AttestationService {
     attestation_kind?: string | null;
     active_only?: boolean;
   }): Promise<AttestationEdgeProjection[]>;
-  listAssemblyAssociationClaimsForActor(
+  listAssociationRelationsForActor(
     actor_packet_id: string
-  ): Promise<AssemblyAssociationClaimProjection[]>;
-  hasActiveAssemblyAssociationClaim(input: {
+  ): Promise<AssociationRelationProjection[]>;
+  listAssociationClaimsForActor(
+    actor_packet_id: string
+  ): Promise<AssociationClaimProjection[]>;
+  hasActiveAssociationClaim(input: {
     actor_packet_id: string;
-    assembly_packet_id: string;
+    target_packet_id: string;
   }): Promise<boolean>;
 }

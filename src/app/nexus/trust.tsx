@@ -1,6 +1,6 @@
 /**
  * File: trust.tsx
- * Description: Renders the scoped trust workspace, including legitimacy state, assembly claims, and role claims.
+ * Description: Renders the scoped trust workspace, including legitimacy state, association relations, and role claims.
  */
 
 import { useRouter } from 'expo-router';
@@ -101,16 +101,16 @@ export default function NexusTrustPage() {
   }, [activeScope.id, currentActorPacketId]);
 
   const roleCards = trustPayload?.role_cards ?? [];
-  const activeAssemblyClaim = useMemo(
+  const activeAssociationRelation = useMemo(
     () =>
-      (trustPayload?.assembly_claims ?? []).find(
-        (claim) =>
-          claim.assembly_packet_id === activeScope.packetId &&
-          claim.status === 'active'
+      (trustPayload?.association_relations ?? []).find(
+        (relation) =>
+          relation.target_packet_id === activeScope.packetId &&
+          relation.status === 'active'
       ) ?? null,
     [activeScope.packetId, trustPayload]
   );
-  const assemblyClaims = trustPayload?.assembly_claims ?? [];
+  const associationRelations = trustPayload?.association_relations ?? [];
   const isClaimedIdentity = currentMode === 'claimed' && isAuthenticated;
   const canSetActiveScopeAsHome =
     trustPayload?.home_locality.can_set_active_scope ?? false;
@@ -126,22 +126,22 @@ export default function NexusTrustPage() {
     (followedScope) => followedScope.id === activeScope.id
   );
 
-  const handleAssemblyAssociationClaim = async (value: 1 | 0) => {
+  const handleAssociationRelation = async (value: 1 | 0) => {
     if (activeScope.level === 'personal') {
-      setErrorMessage('Open an assembly scope to update an association claim.');
+      setErrorMessage('Open a scope to update an association relation.');
       setStatusMessage(null);
       return;
     }
 
-    const applyAssociationClaim = async () => {
+    const applyAssociationRelation = async () => {
       try {
         await runFortressMutation({
           intent: {
             kind:
               value === 1
-                ? 'assembly_association.relation.set'
-                : 'assembly_association.relation.clear',
-            assembly_packet_id: activeScope.packetId,
+                ? 'relation.association.add'
+                : 'relation.association.clear',
+            target_packet_id: activeScope.packetId,
             scope_id: activeScope.id,
             ...(value === 1
               ? {
@@ -158,19 +158,19 @@ export default function NexusTrustPage() {
         setTrustPayload(nextTrustPayload);
         setStatusMessage(
           value === 1
-            ? `Claimed association with ${activeScope.name}.`
-            : `Withdrew association with ${activeScope.name}.`
+            ? `Added association with ${activeScope.name}.`
+            : `Cleared association with ${activeScope.name}.`
         );
         setErrorMessage(null);
       } catch (error) {
-        if (openNexusAuthGateForError(error, applyAssociationClaim)) {
+        if (openNexusAuthGateForError(error, applyAssociationRelation)) {
           return;
         }
 
         setErrorMessage(
           error instanceof Error
             ? error.message
-            : 'Unable to update the assembly association.'
+            : 'Unable to update the association.'
         );
         setStatusMessage(null);
       }
@@ -181,7 +181,7 @@ export default function NexusTrustPage() {
         requiresClaimedIdentity: true,
         writeRisk: 'standard',
       },
-      applyAssociationClaim
+      applyAssociationRelation
     );
   };
 
@@ -448,15 +448,15 @@ export default function NexusTrustPage() {
 
             <NexusCard className={`min-w-[220px] flex-1 gap-3 overflow-visible p-4 pb-6 ${appearance.cardInsetClass}`}>
               <View className="gap-2">
-                <Text className={appearance.itemTitleClass}>Assembly association</Text>
+                <Text className={appearance.itemTitleClass}>Association</Text>
                 <Text className={appearance.itemBodyClass}>
                   Association records relationship, participation, or trust with
-                  this assembly. It does not by itself grant locality posting or
+                  this scope. It does not by itself grant locality posting or
                   voting rights.
                 </Text>
                 <NexusBadge
-                  label={activeAssemblyClaim ? 'Association active' : 'No active association'}
-                  tone={activeAssemblyClaim ? 'mint' : 'default'}
+                  label={activeAssociationRelation ? 'Association active' : 'No active association'}
+                  tone={activeAssociationRelation ? 'mint' : 'default'}
                 />
               </View>
               {activeScope.level !== 'personal' ? (
@@ -470,20 +470,20 @@ export default function NexusTrustPage() {
                   />
                   <View className="flex-row flex-wrap gap-3">
                     <NexusActionButton
-                      label={activeAssemblyClaim ? 'Refresh association' : 'Claim association'}
-                      onPress={() => void handleAssemblyAssociationClaim(1)}
+                      label={activeAssociationRelation ? 'Refresh association' : 'Add association'}
+                      onPress={() => void handleAssociationRelation(1)}
                     />
                     <NexusActionButton
-                      label="Withdraw association"
+                      label="Clear association"
                       variant="ghost"
-                      onPress={() => void handleAssemblyAssociationClaim(0)}
-                      disabled={!activeAssemblyClaim}
+                      onPress={() => void handleAssociationRelation(0)}
+                      disabled={!activeAssociationRelation}
                     />
                   </View>
                 </>
               ) : (
                 <Text className={appearance.itemBodyClass}>
-                  Open an assembly scope to claim or withdraw association there.
+                  Open a non-personal scope to add or clear association there.
                 </Text>
               )}
             </NexusCard>
@@ -535,55 +535,55 @@ export default function NexusTrustPage() {
 
             <NexusCard className="gap-4">
               <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
-                Assembly association evidence
+                Association evidence
               </Text>
               <Text className={appearance.itemBodyClass}>
-                Current association claims and support evidence for this scope.
-                Use Scope relationship above to claim or withdraw your own
+                Current association relations and support evidence for this scope.
+                Use Scope relationship above to add or clear your own
                 association.
               </Text>
-              {assemblyClaims.length === 0 ? (
+              {associationRelations.length === 0 ? (
                 <Text className={appearance.itemBodyClass}>
-                  No assembly association claims are active in this scope yet.
+                  No association relations are active in this scope yet.
                 </Text>
               ) : (
                 <View className="gap-3">
-                  {assemblyClaims.map((claim) => (
+                  {associationRelations.map((relation) => (
                     <NexusCard
-                      key={claim.claim_packet_id}
+                      key={relation.relation_packet_id}
                       className={`gap-3 p-4 ${appearance.cardInsetClass} ${
-                        claim.claim_packet_id === highlightedPacketId
+                        relation.relation_packet_id === highlightedPacketId
                           ? 'border-nexus-sky/70 bg-nexus-sky/10'
                           : ''
                       }`}
                     >
                       <View className="flex-row flex-wrap items-center gap-2">
                         <Text className={appearance.itemTitleClass}>
-                          {claim.assembly_name}
+                          {relation.target_name}
                         </Text>
                         <NexusBadge
-                          label={claim.status === 'active' ? 'Active claim' : 'Withdrawn'}
-                          tone={claim.status === 'active' ? 'mint' : 'default'}
+                          label={relation.status === 'active' ? 'Active relation' : 'Withdrawn'}
+                          tone={relation.status === 'active' ? 'mint' : 'default'}
                         />
-                        {claim.claim_packet_id === highlightedPacketId ? (
+                        {relation.relation_packet_id === highlightedPacketId ? (
                           <NexusBadge label="Focused" tone="sky" />
                         ) : null}
                       </View>
                       <Text className={appearance.itemBodyClass}>
-                        {claim.note ?? 'No note added to this claim yet.'}
+                        {relation.note ?? 'No note added to this association yet.'}
                       </Text>
                       <View className="flex-row flex-wrap gap-3">
                         <NexusBadge
-                          label={`${claim.supported_by_other_count} outside supports`}
+                          label={`${relation.supported_by_other_count} outside supports`}
                           tone="sky"
                         />
                         <NexusBadge
                           label={
-                            claim.is_self_issued_only
+                            relation.is_self_issued_only
                               ? 'Self-issued only'
                               : 'Supported by others'
                           }
-                          tone={claim.is_self_issued_only ? 'gold' : 'mint'}
+                          tone={relation.is_self_issued_only ? 'gold' : 'mint'}
                         />
                       </View>
                     </NexusCard>

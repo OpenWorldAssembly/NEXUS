@@ -22,8 +22,8 @@ const GUARDED_ACTION_IDS: MutationActionId[] = [
   'assembly.element.create',
   'home_locality.relation.set',
   'home_locality.relation.clear',
-  'assembly_association.relation.set',
-  'assembly_association.relation.clear',
+  'relation.association.add',
+  'relation.association.clear',
   'actor.write_policy.update',
 ];
 

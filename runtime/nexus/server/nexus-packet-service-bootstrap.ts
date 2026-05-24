@@ -109,7 +109,7 @@ async function ensureLegacyClaimBackfill(
   );
   const activeLegacyAssemblyClaims = attestationPackets.filter(
     (packet) =>
-      packet.body.subtype === 'assembly_association_claim' &&
+      packet.body.subtype === 'association_claim' &&
       packet.body.status === 'active'
   ) as PacketEnvelopeByType['Attestation'][];
 
@@ -122,7 +122,7 @@ async function ensureLegacyClaimBackfill(
     }
 
     const claimPacketId = createClaimPacketId({
-      claimKind: 'assembly_association',
+      claimKind: 'association',
       subjectPacketId,
       targetPacketId: legacyClaim.body.target_ref.packet_id,
       scopePacketId,
@@ -133,7 +133,7 @@ async function ensureLegacyClaimBackfill(
     }
 
     const claimPacket = createAssociationClaimPacket({
-      claimKind: 'assembly_association',
+      claimKind: 'association',
       subjectPacketId,
       targetPacketId: legacyClaim.body.target_ref.packet_id,
       scopePacketId,
