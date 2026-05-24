@@ -96,6 +96,14 @@ Expected workflow:
 
 Adapters should not invent parallel business logic for trust, validation, compatibility, or merge behavior.
 
+### Nexus scoped loading
+
+Nexus loading chrome is an app-layer concern. The scoped loading provider, boundary, overlay, and hook live under `app/components/nexus/loading/*` and track caller-owned visual scopes such as a page, panel, tab, card, menu, or action pane.
+
+The loading system must not depend on packet type, mutation intent, packet action registry entries, or runtime operation categories. Runtime and core code should remain unaware of blur overlays, spinners, and UI input blocking.
+
+The active state starts immediately so duplicate input inside the same boundary can be blocked before the delayed visual overlay appears. The visible state is delayed to prevent spinner flicker on fast operations, and visible overlays may remain briefly to satisfy the minimum visible duration. Shared buttons, menus, cards, and tabs may later accept optional loading scopes, but v1 integration is hook-driven.
+
 ## Navigation and shell model
 
 The intended navigation model still uses three mental axes:

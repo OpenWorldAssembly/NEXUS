@@ -35,6 +35,13 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - The gate is intentionally lightweight and UI-owned: it is not packet-backed, not actor-specific, and not yet a tutorial flow.
 - The same shell seam should later be able to host onboarding, release notes, or other blocking notices without redesigning the overlay stack.
 
+## 2026-05 scoped Nexus loading foundation
+
+- Nexus loading now has a UI-owned provider, boundary, overlay, and hook for caller-selected visual scopes.
+- The loading layer intentionally ignores packet type, action registry identity, mutation intent, and runtime operation categories; UI boundaries decide what visual area is busy.
+- A scope becomes active immediately to block duplicate input, while the visual overlay is delayed and minimum-duration guarded to avoid spinner flicker.
+- Shared button and menu loading-scope integration is deferred until the infrastructure has real usage patterns.
+
 ## 2026-05 feature-status explainers
 
 - Disabled and partial Nexus controls now route through a centralized feature-status registry instead of scattering one-off placeholder copy through route files.
