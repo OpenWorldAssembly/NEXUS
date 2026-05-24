@@ -189,6 +189,64 @@ export async function planFollowRelationPackets(input: {
   };
 }
 
+
+export async function planRoleParticipationRelationPackets(input: {
+  packetStore: NodeSQLitePacketStore;
+  actorPacket: PacketEnvelopeByType['Element'];
+  rolePacket: PacketEnvelopeByType['Role'];
+  scopePacket: PacketEnvelopeByType['Element'];
+  mode: 'set' | 'clear';
+  note?: string | null;
+}): Promise<ScopeRelationPacketPlan> {
+  const applicableScopeRefs = getApplicableScopeRefs(input.scopePacket);
+  const relationPacketId = createRelationPacketId({
+    subtype: 'participation',
+    subjectPacketId: input.actorPacket.header.packet_id,
+    targetPacketId: input.rolePacket.header.packet_id,
+    scopePacketId: input.scopePacket.header.packet_id,
+  });
+  const [existingPreferredRelationRevision, existingPreferredRelationPacket] =
+    await Promise.all([
+      input.packetStore.fetchPreferredRevision({ packet_id: relationPacketId }),
+      input.packetStore.fetchByPacket({ packet_id: relationPacketId }),
+    ]);
+  const existingRelationPacket =
+    existingPreferredRelationPacket?.header.type === 'Relation'
+      ? (existingPreferredRelationPacket as PacketEnvelopeByType['Relation'])
+      : null;
+  const isSetMode = input.mode === 'set';
+  const packets: PacketEnvelope[] = [];
+
+  if (isSetMode || existingRelationPacket) {
+    packets.push(
+      createScopedRelationPacket({
+        subtype: 'participation',
+        subjectPacketId: input.actorPacket.header.packet_id,
+        targetPacketId: input.rolePacket.header.packet_id,
+        scopePacketId: input.scopePacket.header.packet_id,
+        applicableScopeRefs,
+        createdByPacketId: input.actorPacket.header.packet_id,
+        note: isSetMode
+          ? input.note ?? null
+          : existingRelationPacket?.body.note ?? null,
+        status: isSetMode ? 'active' : 'withdrawn',
+        packetId: relationPacketId,
+        parentRevisionRefs: existingPreferredRelationRevision
+          ? [existingPreferredRelationRevision]
+          : [],
+        supportingRefs: existingRelationPacket?.body.supporting_refs ?? [],
+        policyRef: existingRelationPacket?.body.policy_ref ?? null,
+        termsRef: existingRelationPacket?.body.terms_ref ?? null,
+      })
+    );
+  }
+
+  return {
+    packets,
+    governingScopePacket: input.scopePacket,
+  };
+}
+
 export async function planResidenceRelationPackets(input: {
   packetStore: NodeSQLitePacketStore;
   actorPacket: PacketEnvelopeByType['Element'];

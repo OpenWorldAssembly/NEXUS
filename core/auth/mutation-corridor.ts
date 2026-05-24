@@ -93,19 +93,19 @@ export type FollowRelationClearMutationIntent = {
   mutation_nonce?: string | null;
 };
 
-export type RoleAssociationClaimMutationIntent = {
-  kind: 'role_association.claim.set';
+export type RoleParticipationMutationIntent = {
+  kind: 'relation.participation.add' | 'relation.participation.clear';
   scope_id: string;
   role_packet_id: string;
-  claimed: boolean;
+  note?: string | null;
   created_at?: string | null;
   mutation_nonce?: string | null;
 };
 
-export type RoleAssociationAttestationMutationIntent = {
-  kind: 'role_association.attestation.set';
+export type RoleParticipationAttestationMutationIntent = {
+  kind: 'relation.participation.attestation.set';
   scope_id: string;
-  claim_packet_id: string;
+  relation_packet_id: string;
   mode: 'support' | 'dispute' | 'clear';
   note?: string | null;
   created_at?: string | null;
@@ -198,8 +198,8 @@ export type MutationIntent =
   | ResidenceRelationMutationIntent
   | FollowRelationSetMutationIntent
   | FollowRelationClearMutationIntent
-  | RoleAssociationClaimMutationIntent
-  | RoleAssociationAttestationMutationIntent
+  | RoleParticipationMutationIntent
+  | RoleParticipationAttestationMutationIntent
   | LocalityPathCreateMutationIntent
   | LocalityGraphApplyMutationIntent
   | DiscussionSurfacesEnsureMutationIntent

@@ -692,9 +692,9 @@ const TRUSTED_COMPOSITE_WORKFLOW_ADAPTERS = [
       'Reusable canonical discussion-message creation adapter for replies with legacy reply projection compatibility.',
   },
   {
-    adapter_id: 'composite.role_attestation.set.v0',
+    adapter_id: 'composite.relation_participation_attestation.set.v0',
     adapter_kind: 'composite.attestation_mutual_exclusion',
-    mutation_intents: ['role_association.attestation.set'],
+    mutation_intents: ['relation.participation.attestation.set'],
     source_module: 'runtime/nexus/server/fortress-prepare-handler-implementation.ts',
     workflow_plan_ids: [],
     operation_kinds: [
@@ -703,9 +703,9 @@ const TRUSTED_COMPOSITE_WORKFLOW_ADAPTERS = [
       'attestation.clear',
     ],
     policy_action_ids: [
-      'role_association.attestation.support',
-      'role_association.attestation.dispute',
-      'role_association.attestation.clear',
+      'relation.participation.attestation.support',
+      'relation.participation.attestation.dispute',
+      'relation.participation.attestation.clear',
     ],
     dependency_ids: [
       'runtime.packet_store.read',
@@ -716,14 +716,14 @@ const TRUSTED_COMPOSITE_WORKFLOW_ADAPTERS = [
       'generic.resolver.role_scope',
     ],
     phase_order: [
-      'resolve_role_claim',
+      'resolve_role_participation_relation',
       'plan_mutual_exclusion_attestations',
-      'resolve_role_attestation_policy',
-      'prepare_role_attestation_digests',
+      'resolve_relation_participation_attestation_policy',
+      'prepare_relation_participation_attestation_digests',
     ],
     phases: [
       {
-        phase_id: 'resolve_role_claim',
+        phase_id: 'resolve_role_participation_relation',
         phase_kind: 'resolve_inputs',
         operation_kinds: ['workflow.compose'],
         policy_action_ids: [],
@@ -732,55 +732,55 @@ const TRUSTED_COMPOSITE_WORKFLOW_ADAPTERS = [
           'generic.resolver.packet_ref',
           'generic.resolver.role_scope',
         ],
-        output_key: 'role_claim_context',
+        output_key: 'role_participation_relation_context',
         notes:
-          'Resolves the role association claim and governing scope before attestation planning.',
+          'Resolves the role participation relation and governing scope before attestation planning.',
       },
       {
         phase_id: 'plan_mutual_exclusion_attestations',
         phase_kind: 'plan_operation_batch',
         operation_kinds: ['attestation.set', 'attestation.clear'],
         policy_action_ids: [
-          'role_association.attestation.support',
-          'role_association.attestation.dispute',
-          'role_association.attestation.clear',
+          'relation.participation.attestation.support',
+          'relation.participation.attestation.dispute',
+          'relation.participation.attestation.clear',
         ],
         dependency_ids: [
           'generic.operation.attestation',
           'generic.resolver.input_value',
         ],
-        output_key: 'role_attestation_packets',
+        output_key: 'relation_participation_attestation_packets',
         notes:
-          'Models support/dispute/clear as a reusable mutual-exclusion attestation composition over the same claim target.',
+          'Models support/dispute/clear as a reusable mutual-exclusion attestation composition over the same participation relation target.',
       },
       {
-        phase_id: 'resolve_role_attestation_policy',
+        phase_id: 'resolve_relation_participation_attestation_policy',
         phase_kind: 'resolve_policy',
         operation_kinds: ['workflow.compose'],
         policy_action_ids: [
-          'role_association.attestation.support',
-          'role_association.attestation.dispute',
-          'role_association.attestation.clear',
+          'relation.participation.attestation.support',
+          'relation.participation.attestation.dispute',
+          'relation.participation.attestation.clear',
         ],
         dependency_ids: ['runtime.policy_gate'],
-        output_key: 'role_attestation_policy_decision',
+        output_key: 'relation_participation_attestation_policy_decision',
         notes:
           'Keeps current role attestation policy action selection inside the fortress authority path.',
       },
       {
-        phase_id: 'prepare_role_attestation_digests',
+        phase_id: 'prepare_relation_participation_attestation_digests',
         phase_kind: 'prepare_digests',
         operation_kinds: ['workflow.compose'],
         policy_action_ids: [],
         dependency_ids: [],
-        output_key: 'prepared_role_attestation_packets',
+        output_key: 'prepared_relation_participation_attestation_packets',
         notes:
           'Prepares unsigned digest candidates for the selected attestation operation batch.',
       },
     ],
     availability: 'runtime_ready',
     notes:
-      'Reusable mutual-exclusion attestation adapter for support/dispute/clear workflows over a packet-addressable claim.',
+      'Reusable mutual-exclusion attestation adapter for support/dispute/clear workflows over a packet-addressable participation relation.',
   },
   {
     adapter_id: 'composite.actor_write_policy.update.v0',

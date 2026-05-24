@@ -134,7 +134,7 @@ test('complex graph workflow intents name reusable composite adapters', () => {
   assert.deepEqual(adapterIdsByIntent.get('discussion.reply.create'), [
     'composite.discussion_reply.create.v0',
   ]);
-  assert.deepEqual(adapterIdsByIntent.get('role_association.attestation.set'), [
+  assert.deepEqual(adapterIdsByIntent.get('relation.participation.attestation.set'), [
     'composite.role_attestation.set.v0',
   ]);
   assert.deepEqual(adapterIdsByIntent.get('actor.write_policy.update'), [

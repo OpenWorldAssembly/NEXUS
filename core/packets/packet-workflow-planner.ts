@@ -213,7 +213,7 @@ export const PACKET_WORKFLOW_PLANNER_CAPABILITIES = [
     resolver_id: 'role.scope',
     resolver_kind: 'role_scope_lookup',
     availability: 'runtime_ready',
-    notes: 'Resolves the governing scope for role association claim planning.',
+    notes: 'Resolves the governing scope for role participation relation planning.',
   },
   {
     resolver_id: 'compatibility.projection',
@@ -236,7 +236,7 @@ export const TRUSTED_PACKET_PLANNER_CAPABILITIES = [
       'generic.compatibility_projection',
     ],
     notes:
-      'Existing local planner for association, home locality, and follow relation packets.',
+      'Existing local planner for association, residence, follow, and role participation relation packets.',
   },
   {
     capability_id: 'runtime.planner.discussion_reply',
@@ -260,7 +260,7 @@ export const TRUSTED_PACKET_PLANNER_CAPABILITIES = [
       'generic.resolver.role_scope',
     ],
     notes:
-      'Existing role association claim resolver for authority scope and applicable scope refs.',
+      'Existing role participation relation resolver for authority scope and applicable scope refs.',
   },
   {
     capability_id: 'runtime.resolver.target_summary',
@@ -332,8 +332,11 @@ export const PACKET_WORKFLOW_DEPENDENCY_IDS = [
 export const PACKET_WORKFLOW_POLICY_ACTION_IDS = [
   'attestation.packet_signal.set',
   'attestation.packet_signal.clear',
-  'role_association.claim.set',
-  'role_association.claim.withdraw',
+  'relation.participation.add',
+  'relation.participation.clear',
+  'relation.participation.attestation.support',
+  'relation.participation.attestation.dispute',
+  'relation.participation.attestation.clear',
   'relation.follow.add',
   'relation.follow.clear',
   'relation.association.add',

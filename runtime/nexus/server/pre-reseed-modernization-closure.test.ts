@@ -71,7 +71,7 @@ test('follow set and clear are closed as the first live generic workflow promoti
   }
 });
 
-test('remaining direct relation claim and attestation operation paths are closed', () => {
+test('remaining direct relation and attestation operation paths are closed', () => {
   const report = createPreReseedModernizationClosureReport();
   const closureByIntent = new Map(
     report.live_mutation_intents.map((entry) => [entry.subject_id, entry])
@@ -81,7 +81,8 @@ test('remaining direct relation claim and attestation operation paths are closed
     'relation.association.add',
     'relation.association.clear',
     'relation.residence.add',
-    'role_association.claim.set',
+    'relation.participation.add',
+    'relation.participation.clear',
     'attestation.packet_signal.set',
   ] as const) {
     const entry = closureByIntent.get(mutationIntent);
@@ -116,7 +117,7 @@ test('composite workflow mutation intents are closed as live generic-composite w
     'assembly.element.create',
     'discussion.thread_post.create',
     'discussion.reply.create',
-    'role_association.attestation.set',
+    'relation.participation.attestation.set',
     'actor.write_policy.update',
   ] as const) {
     const entry = closureByIntent.get(mutationIntent);

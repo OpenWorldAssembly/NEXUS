@@ -1,17 +1,10 @@
 /**
  * File: nexus-query-api.roles.ts
- * Description: Client-side query helpers for the roles workspace and scoped role attestation mutations.
+ * Description: Client-side query helpers for the roles workspace.
  */
 
-import type {
-  NexusRoleAttestationMutationPayload,
-  NexusRoleClaimMutationPayload,
-  NexusRolesPayload,
-} from '@runtime/nexus/nexus-api-types';
-import {
-  fetchJsonOrThrow,
-  fetchMutationJsonOrThrow,
-} from '@runtime/nexus/nexus-query-api.shared';
+import type { NexusRolesPayload } from '@runtime/nexus/nexus-api-types';
+import { fetchJsonOrThrow } from '@runtime/nexus/nexus-query-api.shared';
 
 export function fetchNexusRolesPayload(input: {
   scopeId: string;
@@ -33,26 +26,4 @@ export function fetchNexusRolesPayload(input: {
       cache: 'no-store',
     }
   );
-}
-
-export function setNexusScopedRoleClaim(input: {
-  scopeId: string;
-  requestBody: Record<string, unknown>;
-}): Promise<NexusRoleClaimMutationPayload> {
-  return fetchMutationJsonOrThrow<NexusRoleClaimMutationPayload>({
-    path: `/api/nexus/scopes/${encodeURIComponent(input.scopeId)}/roles/claims`,
-    method: 'PUT',
-    body: input.requestBody,
-  });
-}
-
-export function setNexusRoleAttestation(input: {
-  scopeId: string;
-  requestBody: Record<string, unknown>;
-}): Promise<NexusRoleAttestationMutationPayload> {
-  return fetchMutationJsonOrThrow<NexusRoleAttestationMutationPayload>({
-    path: `/api/nexus/scopes/${encodeURIComponent(input.scopeId)}/roles/attestations`,
-    method: 'PUT',
-    body: input.requestBody,
-  });
 }

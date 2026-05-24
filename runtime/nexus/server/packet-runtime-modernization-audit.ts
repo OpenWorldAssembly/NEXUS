@@ -74,14 +74,14 @@ const MUTATION_POLICY_ACTION_IDS = {
   ],
   'relation.follow.add': ['relation.follow.add'],
   'relation.follow.clear': ['relation.follow.clear'],
-  'role_association.claim.set': [
-    'role_association.claim.set',
-    'role_association.claim.withdraw',
+  'relation.participation.add': [
+    'relation.participation.add',
+    'relation.participation.clear',
   ],
-  'role_association.attestation.set': [
-    'role_association.attestation.support',
-    'role_association.attestation.dispute',
-    'role_association.attestation.clear',
+  'relation.participation.attestation.set': [
+    'relation.participation.attestation.support',
+    'relation.participation.attestation.dispute',
+    'relation.participation.attestation.clear',
   ],
   'actor.write_policy.update': ['actor.write_policy.update'],
   'preference.element.set': ['preference.element.write'],

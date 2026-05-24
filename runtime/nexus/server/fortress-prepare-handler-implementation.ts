@@ -151,8 +151,10 @@ export class MutationPrepareHandlers {
     });
   }
 
-  async prepareRoleAssociationClaim(input: {
-    intent: Extract<MutationIntent, { kind: 'role_association.claim.set' }>;
+  async prepareRoleParticipationRelation(input: {
+    intent:
+      | Extract<MutationIntent, { kind: 'relation.participation.add' }>
+      | Extract<MutationIntent, { kind: 'relation.participation.clear' }>;
     actorPacket: PacketEnvelopeByType['Element'];
   }): Promise<PreparedMutation> {
     return runTrustedPacketWorkflowMutation({
@@ -163,8 +165,8 @@ export class MutationPrepareHandlers {
     });
   }
 
-  async prepareRoleAssociationAttestation(input: {
-    intent: Extract<MutationIntent, { kind: 'role_association.attestation.set' }>;
+  async prepareRoleParticipationAttestation(input: {
+    intent: Extract<MutationIntent, { kind: 'relation.participation.attestation.set' }>;
     actorPacket: PacketEnvelopeByType['Element'];
   }): Promise<PreparedMutation> {
     return runTrustedCompositeWorkflowMutation({

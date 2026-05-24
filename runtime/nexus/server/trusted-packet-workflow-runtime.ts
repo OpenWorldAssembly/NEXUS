@@ -10,10 +10,6 @@ import type {
 } from '@core/auth/mutation-corridor';
 import type { MutationActionId } from '@core/auth/write-policy';
 import type { AttestationService } from '@core/contracts';
-import {
-  createAssociationClaimPacket,
-  createClaimPacketId,
-} from '@core/packets/claims';
 import { buildPacketSignalAttestationPacket } from '@core/packets/discussion';
 import type {
   PacketEnvelope,
@@ -23,6 +19,7 @@ import {
   planAssociationRelationPackets,
   planFollowRelationPackets,
   planResidenceRelationPackets,
+  planRoleParticipationRelationPackets,
   type ScopeRelationPacketPlan,
 } from '@runtime/nexus/server/elemental-scope-relation-planner';
 import type { MutationPolicyGate } from '@runtime/nexus/server/mutation-policy-gate';
@@ -38,7 +35,8 @@ export type LiveGenericWorkflowMutationIntent = Extract<
   | 'relation.residence.add'
   | 'relation.follow.add'
   | 'relation.follow.clear'
-  | 'role_association.claim.set'
+  | 'relation.participation.add'
+  | 'relation.participation.clear'
   | 'attestation.packet_signal.set'
 >;
 
@@ -51,8 +49,6 @@ export type LiveGenericWorkflowEnrollment = {
   operation_kind:
     | 'relation.set'
     | 'relation.clear'
-    | 'claim.assert'
-    | 'claim.withdraw'
     | 'attestation.set'
     | 'attestation.clear';
   policy_action_ids: MutationActionId[];
@@ -62,13 +58,13 @@ export type LiveGenericWorkflowEnrollment = {
     | 'prepareAssociationRelation'
     | 'prepareHomeLocalityRelation'
     | 'prepareFollowRelation'
-    | 'prepareRoleAssociationClaim'
+    | 'prepareRoleParticipationRelation'
     | 'preparePacketSignal';
   fortress_finalize_handler:
     | 'finalizeAssociationRelationUpdate'
     | 'finalizeHomeLocalityRelation'
     | 'finalizeFollowRelationUpdate'
-    | 'finalizeClaimUpdate'
+    | 'finalizeRoleParticipationRelationUpdate'
     | 'finalizePacketSignal';
   live_mode: 'trusted_generic_workflow';
   notes: string;
@@ -83,33 +79,19 @@ export type TrustedRelationOperationPlan = {
     | 'relation.residence.add'
     | 'relation.follow.add'
     | 'relation.follow.clear'
+    | 'relation.participation.add'
+    | 'relation.participation.clear'
   >;
   operation_kind: 'relation.set' | 'relation.clear';
   workflow_plan_id: string;
   packet_type: 'Relation';
-  packet_subtype: 'association' | 'residence' | 'follow';
+  packet_subtype: 'association' | 'residence' | 'follow' | 'participation';
   policy_action_ids: MutationActionId[];
   dependency_ids: string[];
   trusted_capability_ids: string[];
   target_scope_packet: PacketEnvelopeByType['Element'] | null;
   governing_scope_packet: PacketEnvelopeByType['Element'] | null;
   relation_plan: ScopeRelationPacketPlan;
-};
-
-export type TrustedClaimOperationPlan = {
-  plan_kind: 'trusted_claim_operation_plan';
-  mutation_intent: 'role_association.claim.set';
-  operation_kind: 'claim.assert' | 'claim.withdraw';
-  workflow_plan_id: string;
-  packet_type: 'Claim';
-  packet_subtype: 'relation_assertion';
-  policy_action_ids: MutationActionId[];
-  dependency_ids: string[];
-  trusted_capability_ids: string[];
-  role_packet: PacketEnvelopeByType['Role'];
-  governing_scope_packet: PacketEnvelopeByType['Element'] | null;
-  scope_packet_id: string;
-  claim_packet: PacketEnvelopeByType['Claim'];
 };
 
 export type TrustedAttestationOperationPlan = {
@@ -142,7 +124,8 @@ export type TrustedPacketWorkflowMutationInput = {
     | Extract<MutationIntent, { kind: 'relation.residence.add' }>
     | Extract<MutationIntent, { kind: 'relation.follow.add' }>
     | Extract<MutationIntent, { kind: 'relation.follow.clear' }>
-    | Extract<MutationIntent, { kind: 'role_association.claim.set' }>
+    | Extract<MutationIntent, { kind: 'relation.participation.add' }>
+    | Extract<MutationIntent, { kind: 'relation.participation.clear' }>
     | Extract<MutationIntent, { kind: 'attestation.packet_signal.set' }>;
 };
 
@@ -165,7 +148,8 @@ const LIVE_GENERIC_WORKFLOW_INTENTS = [
   'relation.residence.add',
   'relation.follow.add',
   'relation.follow.clear',
-  'role_association.claim.set',
+  'relation.participation.add',
+  'relation.participation.clear',
   'attestation.packet_signal.set',
 ] as const satisfies readonly LiveGenericWorkflowMutationIntent[];
 
@@ -295,6 +279,28 @@ function relationEnrollmentConfig(
     };
   }
 
+  if (mutationIntent === 'relation.participation.add') {
+    return {
+      packet_subtype: 'participation' as const,
+      workflow_plan_id: 'relation.participation.add.workflow.v0',
+      operation_kind: 'relation.set' as const,
+      policy_action_ids: ['relation.participation.add'] as MutationActionId[],
+      fortress_prepare_handler: 'prepareRoleParticipationRelation' as const,
+      fortress_finalize_handler: 'finalizeRoleParticipationRelationUpdate' as const,
+    };
+  }
+
+  if (mutationIntent === 'relation.participation.clear') {
+    return {
+      packet_subtype: 'participation' as const,
+      workflow_plan_id: 'relation.participation.clear.workflow.v0',
+      operation_kind: 'relation.clear' as const,
+      policy_action_ids: ['relation.participation.clear'] as MutationActionId[],
+      fortress_prepare_handler: 'prepareRoleParticipationRelation' as const,
+      fortress_finalize_handler: 'finalizeRoleParticipationRelationUpdate' as const,
+    };
+  }
+
   return null;
 }
 
@@ -331,28 +337,6 @@ function createEnrollment(
       live_mode: 'trusted_generic_workflow',
       notes:
         'Trusted generic relation workflow: local Relation planner executes definition-declared relation operation metadata inside the existing fortress prepare/finalize corridor.',
-    };
-  }
-
-  if (mutationIntent === 'role_association.claim.set') {
-    return {
-      enrollment_id: `live.generic.workflow.${mutationIntent}`,
-      mutation_intent: mutationIntent,
-      packet_type: 'Claim',
-      packet_subtype: 'relation_assertion',
-      workflow_plan_id: 'claim.role_association.set.workflow.v0',
-      operation_kind: 'claim.assert',
-      policy_action_ids: [
-        'role_association.claim.set',
-        'role_association.claim.withdraw',
-      ],
-      dependency_ids: [...alignment.dependency_ids],
-      trusted_capability_ids: [...alignment.trusted_capability_ids],
-      fortress_prepare_handler: 'prepareRoleAssociationClaim',
-      fortress_finalize_handler: 'finalizeClaimUpdate',
-      live_mode: 'trusted_generic_workflow',
-      notes:
-        'Trusted generic claim workflow: local Claim planner executes definition-declared role association claim metadata inside the existing fortress corridor.',
     };
   }
 
@@ -590,12 +574,15 @@ export async function resolveTrustedRelationOperationPlan(
   };
 }
 
-export async function resolveTrustedClaimOperationPlan(
+export async function resolveTrustedRoleParticipationRelationOperationPlan(
   input: TrustedPacketWorkflowMutationInput
-): Promise<TrustedClaimOperationPlan> {
-  if (input.intent.kind !== 'role_association.claim.set') {
+): Promise<TrustedRelationOperationPlan> {
+  if (
+    input.intent.kind !== 'relation.participation.add' &&
+    input.intent.kind !== 'relation.participation.clear'
+  ) {
     throw new Error(
-      `Unsupported claim workflow mutation intent: ${input.intent.kind}`
+      `Unsupported role participation workflow mutation intent: ${input.intent.kind}`
     );
   }
 
@@ -604,60 +591,35 @@ export async function resolveTrustedClaimOperationPlan(
     packetStore: input.packetStore,
     packetId: input.intent.role_packet_id,
   });
-  const governingScopePacket = rolePacket.header.authority_scope_ref
-    ? await requireElementPacket({
-        packetStore: input.packetStore,
-        packetId: rolePacket.header.authority_scope_ref.packet_id,
-      })
-    : null;
-  const scopePacketId =
-    governingScopePacket?.header.packet_id ??
-    rolePacket.header.authority_scope_ref?.packet_id ??
-    input.actorPacket.header.packet_id;
-  const claimPacketId = createClaimPacketId({
-    claimKind: 'role_association',
-    subjectPacketId: input.actorPacket.header.packet_id,
-    targetPacketId: rolePacket.header.packet_id,
-    scopePacketId,
+  const scopePacket = await requireElementPacket({
+    packetStore: input.packetStore,
+    packetId: input.intent.scope_id,
   });
-  const existingPreferredRevision = await input.packetStore.fetchPreferredRevision({
-    packet_id: claimPacketId,
-  });
-  const claimPacket = createAssociationClaimPacket({
-    claimKind: 'role_association',
-    subjectPacketId: input.actorPacket.header.packet_id,
-    targetPacketId: rolePacket.header.packet_id,
-    scopePacketId,
-    applicableScopeRefs:
-      governingScopePacket?.header.applicable_scope_refs.length
-        ? governingScopePacket.header.applicable_scope_refs
-        : rolePacket.header.applicable_scope_refs.length > 0
-          ? rolePacket.header.applicable_scope_refs
-          : [{ packet_id: scopePacketId }],
-    createdByPacketId: input.actorPacket.header.packet_id,
-    status: input.intent.claimed ? 'active' : 'withdrawn',
-    packetId: claimPacketId,
-    parentRevisionRefs: existingPreferredRevision ? [existingPreferredRevision] : [],
+  const isSetIntent = input.intent.kind === 'relation.participation.add';
+  const relationPlan = await planRoleParticipationRelationPackets({
+    packetStore: input.packetStore,
+    actorPacket: input.actorPacket,
+    rolePacket,
+    scopePacket,
+    mode: isSetIntent ? 'set' : 'clear',
+    note: input.intent.note ?? null,
   });
 
   return {
-    plan_kind: 'trusted_claim_operation_plan',
+    plan_kind: 'trusted_relation_operation_plan',
     mutation_intent: input.intent.kind,
-    operation_kind: input.intent.claimed ? 'claim.assert' : 'claim.withdraw',
+    operation_kind: isSetIntent ? 'relation.set' : 'relation.clear',
     workflow_plan_id: enrollment.workflow_plan_id,
-    packet_type: 'Claim',
-    packet_subtype: 'relation_assertion',
+    packet_type: 'Relation',
+    packet_subtype: 'participation',
     policy_action_ids: [
-      input.intent.claimed
-        ? 'role_association.claim.set'
-        : 'role_association.claim.withdraw',
+      isSetIntent ? 'relation.participation.add' : 'relation.participation.clear',
     ],
     dependency_ids: [...enrollment.dependency_ids],
     trusted_capability_ids: [...enrollment.trusted_capability_ids],
-    role_packet: rolePacket,
-    governing_scope_packet: governingScopePacket,
-    scope_packet_id: scopePacketId,
-    claim_packet: claimPacket,
+    target_scope_packet: scopePacket,
+    governing_scope_packet: scopePacket,
+    relation_plan: relationPlan,
   };
 }
 
@@ -739,9 +701,15 @@ export async function runTrustedPacketWorkflowMutation(
     input.intent.kind === 'relation.association.clear' ||
     input.intent.kind === 'relation.residence.add' ||
     input.intent.kind === 'relation.follow.add' ||
-    input.intent.kind === 'relation.follow.clear'
+    input.intent.kind === 'relation.follow.clear' ||
+    input.intent.kind === 'relation.participation.add' ||
+    input.intent.kind === 'relation.participation.clear'
   ) {
-    const operationPlan = await resolveTrustedRelationOperationPlan(input);
+    const operationPlan =
+      input.intent.kind === 'relation.participation.add' ||
+      input.intent.kind === 'relation.participation.clear'
+        ? await resolveTrustedRoleParticipationRelationOperationPlan(input)
+        : await resolveTrustedRelationOperationPlan(input);
     const policyDecision = await input.policyGate.resolveScopePolicyDecision({
       governingScopePacket: operationPlan.governing_scope_packet,
       actorPacket: input.actorPacket,
@@ -768,29 +736,6 @@ export async function runTrustedPacketWorkflowMutation(
     };
   }
 
-  if (input.intent.kind === 'role_association.claim.set') {
-    const operationPlan = await resolveTrustedClaimOperationPlan(input);
-    const policyDecision = await input.policyGate.resolveScopePolicyDecision({
-      governingScopePacket: operationPlan.governing_scope_packet,
-      actorPacket: input.actorPacket,
-      actionIds: operationPlan.policy_action_ids,
-    });
-    const digests = await getPacketUnsignedDigestCandidates(
-      operationPlan.claim_packet
-    );
-
-    return {
-      kind: input.intent.kind,
-      ...policyDecision,
-      governing_scope_packet_id: operationPlan.scope_packet_id,
-      prepared_packets: [
-        {
-          packet: operationPlan.claim_packet,
-          unsigned_digest: digests[0]?.digest ?? '',
-        },
-      ],
-    };
-  }
 
   const operationPlan = await resolveTrustedAttestationOperationPlan(input);
   const policyDecision = await input.policyGate.resolveScopePolicyDecision({

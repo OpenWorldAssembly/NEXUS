@@ -35,10 +35,6 @@ import type {
   PacketEnvelope,
   PacketEnvelopeByType,
 } from '@core/schema/packet-schema';
-import {
-  filterClaimPackets,
-  listClaimPackets,
-} from '@runtime/nexus/server/claim-utils';
 import { planDefaultDiscussionSurfaces } from '@runtime/nexus/server/default-discussion-surfaces';
 import { toRouteScopeId } from '@runtime/nexus/server/discussion-service.scope';
 import { getLegacyParentScopePacketIdCompatibility } from '@runtime/nexus/server/scope-graph-compatibility';
@@ -71,7 +67,7 @@ export type LiveCompositeWorkflowMutationIntent = Extract<
   | 'assembly.element.create'
   | 'discussion.thread_post.create'
   | 'discussion.reply.create'
-  | 'role_association.attestation.set'
+  | 'relation.participation.attestation.set'
   | 'actor.write_policy.update'
 >;
 
@@ -90,7 +86,7 @@ export type LiveCompositeWorkflowEnrollment = {
     | 'prepareAssemblyElementCreate'
     | 'prepareDiscussionThreadPost'
     | 'prepareDiscussionReply'
-    | 'prepareRoleAssociationAttestation'
+    | 'prepareRoleParticipationAttestation'
     | 'prepareActorWritePolicyUpdate';
   live_mode: 'trusted_generic_composite_workflow';
   notes: string;
@@ -146,7 +142,7 @@ const LIVE_COMPOSITE_ADAPTER_IDS_BY_INTENT = {
   'assembly.element.create': 'composite.assembly_element.create.v0',
   'discussion.thread_post.create': 'composite.discussion_thread_post.create.v0',
   'discussion.reply.create': 'composite.discussion_reply.create.v0',
-  'role_association.attestation.set': 'composite.role_attestation.set.v0',
+  'relation.participation.attestation.set': 'composite.relation_participation_attestation.set.v0',
   'actor.write_policy.update': 'composite.actor_write_policy.update.v0',
 } as const satisfies Record<LiveCompositeWorkflowMutationIntent, string>;
 
@@ -157,7 +153,7 @@ const PREPARE_HANDLER_BY_INTENT = {
   'assembly.element.create': 'prepareAssemblyElementCreate',
   'discussion.thread_post.create': 'prepareDiscussionThreadPost',
   'discussion.reply.create': 'prepareDiscussionReply',
-  'role_association.attestation.set': 'prepareRoleAssociationAttestation',
+  'relation.participation.attestation.set': 'prepareRoleParticipationAttestation',
   'actor.write_policy.update': 'prepareActorWritePolicyUpdate',
 } as const satisfies Record<
   LiveCompositeWorkflowMutationIntent,
@@ -855,35 +851,31 @@ export async function resolveTrustedAssemblyElementCompositePlan(
   };
 }
 
-export async function resolveTrustedRoleAttestationCompositePlan(
+export async function resolveTrustedRoleParticipationAttestationCompositePlan(
   input: TrustedCompositeWorkflowMutationInput
 ): Promise<TrustedCompositeWorkflowPlan> {
-  if (input.intent.kind !== 'role_association.attestation.set') {
+  if (input.intent.kind !== 'relation.participation.attestation.set') {
     throw new Error(
-      `Unsupported role attestation composite workflow intent: ${input.intent.kind}`
+      `Unsupported role participation attestation composite workflow intent: ${input.intent.kind}`
     );
   }
   const intent = input.intent as Extract<
     MutationIntent,
-    { kind: 'role_association.attestation.set' }
+    { kind: 'relation.participation.attestation.set' }
   >;
 
-  const claimPackets = await listClaimPackets(input.packetStore);
-  const claimPacket = filterClaimPackets({
-    claims: claimPackets,
-    claimKind: 'role_association',
-  }).find((candidate) => candidate.header.packet_id === intent.claim_packet_id);
+  const relationPacket = await requirePacket({
+    packetStore: input.packetStore,
+    packetId: intent.relation_packet_id,
+    type: 'Relation',
+  });
 
-  if (!claimPacket) {
-    throw new Error('Unknown role claim packet.');
+  if (relationPacket.body.subtype !== 'participation') {
+    throw new Error('Role participation attestations require a participation relation.');
   }
 
-  if (
-    (claimPacket.body.subject_ref?.packet_id ??
-      claimPacket.body.relation_assertion?.subject_ref.packet_id) ===
-    input.actorPacket.header.packet_id
-  ) {
-    throw new Error('Use claim or unclaim for your own role associations.');
+  if (relationPacket.body.subject_ref.packet_id === input.actorPacket.header.packet_id) {
+    throw new Error('Use participate or stop participating for your own role relation.');
   }
 
   const trimmedNote = intent.note?.trim() ?? null;
@@ -892,14 +884,14 @@ export async function resolveTrustedRoleAttestationCompositePlan(
     throw new Error('A dispute attestation requires a comment.');
   }
 
-  const claimScopePacketId = claimPacket.body.scope_ref?.packet_id;
-  if (!claimScopePacketId) {
-    throw new Error('Role claim packet is missing a governing scope.');
+  const scopePacketId = relationPacket.body.scope_ref?.packet_id;
+  if (!scopePacketId) {
+    throw new Error('Role participation relation is missing a governing scope.');
   }
 
   const governingScopePacket = await requirePacket({
     packetStore: input.packetStore,
-    packetId: claimScopePacketId,
+    packetId: scopePacketId,
     type: 'Element',
   });
   const packets: PacketEnvelope[] = [];
@@ -913,12 +905,12 @@ export async function resolveTrustedRoleAttestationCompositePlan(
       ? governingScopePacket.header.applicable_scope_refs
       : [{ packet_id: governingScopePacket.header.packet_id }];
   const createRoleAttestationRevision = async (
-    attestationKind: 'claim_support' | 'claim_dispute',
+    attestationKind: 'support' | 'dispute',
     desiredValue: AttestationValue | 0,
     note: string | null
   ) => {
     const packetId = createAttestationPacketId({
-      targetPacketId: claimPacket.header.packet_id,
+      targetPacketId: relationPacket.header.packet_id,
       actorPacketId,
       attestationKind,
     });
@@ -957,8 +949,8 @@ export async function resolveTrustedRoleAttestationCompositePlan(
       applicable_scope_refs: applicableScopeRefs,
       created_by: createPacketRef(actorPacketId),
       adapter: 'nexus-web',
-      metadata_tags: ['attestation', attestationKind.replace(/_/g, '-')],
-      target_ref: { packet_id: claimPacket.header.packet_id },
+      metadata_tags: ['attestation', attestationKind],
+      target_ref: { packet_id: relationPacket.header.packet_id },
       value: nextValue,
       status: desiredValue === 0 ? 'cleared' : 'active',
       subtype: attestationKind,
@@ -972,16 +964,8 @@ export async function resolveTrustedRoleAttestationCompositePlan(
   };
 
   if (intent.mode === 'clear') {
-    const supportClear = await createRoleAttestationRevision(
-      'claim_support',
-      0,
-      null
-    );
-    const disputeClear = await createRoleAttestationRevision(
-      'claim_dispute',
-      0,
-      null
-    );
+    const supportClear = await createRoleAttestationRevision('support', 0, null);
+    const disputeClear = await createRoleAttestationRevision('dispute', 0, null);
 
     if (supportClear) {
       packets.push(supportClear);
@@ -991,10 +975,8 @@ export async function resolveTrustedRoleAttestationCompositePlan(
       packets.push(disputeClear);
     }
   } else {
-    const nextKind =
-      intent.mode === 'support' ? 'claim_support' : 'claim_dispute';
-    const oppositeKind =
-      intent.mode === 'support' ? 'claim_dispute' : 'claim_support';
+    const nextKind = intent.mode === 'support' ? 'support' : 'dispute';
+    const oppositeKind = intent.mode === 'support' ? 'dispute' : 'support';
     const nextValue = intent.mode === 'support' ? 1 : -1;
     const oppositeClear = await createRoleAttestationRevision(
       oppositeKind,
@@ -1019,10 +1001,10 @@ export async function resolveTrustedRoleAttestationCompositePlan(
 
   const actionId: MutationActionId =
     intent.mode === 'support'
-      ? 'role_association.attestation.support'
+      ? 'relation.participation.attestation.support'
       : intent.mode === 'dispute'
-        ? 'role_association.attestation.dispute'
-        : 'role_association.attestation.clear';
+        ? 'relation.participation.attestation.dispute'
+        : 'relation.participation.attestation.clear';
   const mergedPolicyDecision = await input.policyGate.resolveScopePolicyDecision({
     governingScopePacket,
     actorPacket: input.actorPacket,
@@ -1216,8 +1198,8 @@ export async function runTrustedCompositeWorkflowMutation(
       .prepared_mutation;
   }
 
-  if (input.intent.kind === 'role_association.attestation.set') {
-    return (await resolveTrustedRoleAttestationCompositePlan(input))
+  if (input.intent.kind === 'relation.participation.attestation.set') {
+    return (await resolveTrustedRoleParticipationAttestationCompositePlan(input))
       .prepared_mutation;
   }
 

@@ -19,7 +19,7 @@ import type { MutationPolicyGate } from './mutation-policy-gate.ts';
 import {
   auditLiveGenericWorkflowEnrollments,
   listLiveGenericWorkflowEnrollments,
-  resolveTrustedClaimOperationPlan,
+  resolveTrustedRoleParticipationRelationOperationPlan,
   resolveTrustedRelationOperationPlan,
   runTrustedPacketWorkflowMutation,
 } from './trusted-packet-workflow-runtime.ts';
@@ -136,7 +136,7 @@ test('live generic workflow enrollment includes relation, claim, and attestation
       'relation.residence.add',
       'relation.follow.add',
       'relation.follow.clear',
-      'role_association.claim.set',
+      'relation.participation.add',
       'attestation.packet_signal.set',
     ]
   );
@@ -344,34 +344,33 @@ test('trusted role claim planner creates assert and withdraw operations from pac
     extraPackets: [rolePacket],
   });
 
-  const setPlan = await resolveTrustedClaimOperationPlan({
+  const setPlan = await resolveTrustedRoleParticipationRelationOperationPlan({
     packetStore: packetStore as never,
     policyGate: createPolicyGate(),
     actorPacket,
     intent: {
-      kind: 'role_association.claim.set',
+      kind: 'relation.participation.add',
       role_packet_id: rolePacket.header.packet_id,
       scope_id: 'target-scope',
-      claimed: true,
+      
     },
   });
-  const withdrawPlan = await resolveTrustedClaimOperationPlan({
+  const withdrawPlan = await resolveTrustedRoleParticipationRelationOperationPlan({
     packetStore: packetStore as never,
     policyGate: createPolicyGate(),
     actorPacket,
     intent: {
-      kind: 'role_association.claim.set',
+      kind: 'relation.participation.clear',
       role_packet_id: rolePacket.header.packet_id,
       scope_id: 'target-scope',
-      claimed: false,
     },
   });
 
-  assert.equal(setPlan.operation_kind, 'claim.assert');
-  assert.equal(setPlan.claim_packet.body.status, 'active');
-  assert.equal(withdrawPlan.operation_kind, 'claim.withdraw');
-  assert.equal(withdrawPlan.claim_packet.body.status, 'withdrawn');
-  assert.equal(setPlan.scope_packet_id, targetScopePacket.header.packet_id);
+  assert.equal(setPlan.operation_kind, 'relation.set');
+  assert.equal(setPlan.relation_plan.packets[0]?.body.status, 'active');
+  assert.equal(withdrawPlan.operation_kind, 'relation.clear');
+  assert.equal(withdrawPlan.relation_plan.packets[0]?.body.status, 'withdrawn');
+  assert.equal(setPlan.target_scope_packet.header.packet_id, targetScopePacket.header.packet_id);
 });
 
 test('unsupported generic workflow requests fail closed', async () => {
@@ -385,9 +384,9 @@ test('unsupported generic workflow requests fail closed', async () => {
         policyGate: createPolicyGate(),
         actorPacket,
         intent: {
-          kind: 'role_association.claim.set',
+          kind: 'relation.participation.add',
           role_packet_id: 'nexus:role/facilitator',
-          claimed: true,
+          
         } as never,
       }),
     /Unsupported relation workflow mutation intent/

@@ -71,7 +71,7 @@ test('discussion surfaces and assembly creation have reusable adapter descriptor
     'composite.discussion_message.create'
   );
   assert.equal(
-    adaptersByIntent.get('role_association.attestation.set')?.adapter_kind,
+    adaptersByIntent.get('relation.participation.attestation.set')?.adapter_kind,
     'composite.attestation_mutual_exclusion'
   );
   assert.equal(

@@ -15,8 +15,8 @@ export type MutationPrepareHandlerKey =
   | 'prepareAssociationRelation'
   | 'prepareHomeLocalityRelation'
   | 'prepareFollowRelation'
-  | 'prepareRoleAssociationClaim'
-  | 'prepareRoleAssociationAttestation'
+  | 'prepareRoleParticipationRelation'
+  | 'prepareRoleParticipationAttestation'
   | 'prepareDiscussionSurfacesEnsure'
   | 'prepareActorWritePolicyUpdate'
   | 'preparePreferenceElementSet';
@@ -31,8 +31,8 @@ export type MutationFinalizeHandlerKey =
   | 'finalizeAssociationRelationUpdate'
   | 'finalizeHomeLocalityRelation'
   | 'finalizeFollowRelationUpdate'
-  | 'finalizeClaimUpdate'
-  | 'finalizeRoleAssociationAttestation'
+  | 'finalizeRoleParticipationRelationUpdate'
+  | 'finalizeRoleParticipationAttestation'
   | 'finalizeDiscussionSurfacesEnsure'
   | 'finalizeActorWritePolicyUpdate'
   | 'finalizePreferenceElementSet';
@@ -118,16 +118,22 @@ const MUTATION_INTENT_DESCRIPTORS = [
     finalize: 'finalizeFollowRelationUpdate',
   },
   {
-    kind: 'role_association.claim.set',
+    kind: 'relation.participation.add',
     domain: 'role',
-    prepare: 'prepareRoleAssociationClaim',
-    finalize: 'finalizeClaimUpdate',
+    prepare: 'prepareRoleParticipationRelation',
+    finalize: 'finalizeRoleParticipationRelationUpdate',
   },
   {
-    kind: 'role_association.attestation.set',
+    kind: 'relation.participation.clear',
     domain: 'role',
-    prepare: 'prepareRoleAssociationAttestation',
-    finalize: 'finalizeRoleAssociationAttestation',
+    prepare: 'prepareRoleParticipationRelation',
+    finalize: 'finalizeRoleParticipationRelationUpdate',
+  },
+  {
+    kind: 'relation.participation.attestation.set',
+    domain: 'role',
+    prepare: 'prepareRoleParticipationAttestation',
+    finalize: 'finalizeRoleParticipationAttestation',
   },
   {
     kind: 'actor.write_policy.update',

@@ -731,93 +731,115 @@ function createGenericReadyWorkflowPlans(input: {
         notes:
           'Describes the planner-extraction relation.residence.add intent without enrolling live execution.',
       },
-    ];
-  }
-
-  if (input.type === 'Claim') {
-    return [
       {
-        workflow_plan_id: 'claim.role_association.set.workflow.v0',
-        packet_type: 'Claim',
-        packet_subtype: 'relation_assertion',
+        workflow_plan_id: 'relation.participation.add.workflow.v0',
+        packet_type: 'Relation',
+        packet_subtype: 'participation',
         planner_id: input.writePlannerId,
-        mutation_intents: ['role_association.claim.set'],
-        operation_kinds: ['claim.assert', 'claim.withdraw'],
-        resolver_ids: ['actor.ref', 'input.packet_ref', 'input.value', 'static.value', 'role.scope'],
-        policy_action_ids: [
-          'role_association.claim.set',
-          'role_association.claim.withdraw',
-        ],
+        mutation_intents: ['relation.participation.add'],
+        operation_kinds: ['relation.set'],
+        resolver_ids: ['actor.ref', 'input.packet_ref', 'input.value', 'static.value', 'relation.active_lookup', 'compatibility.projection'],
+        policy_action_ids: ['relation.participation.add'],
         dependency_ids: [
+          'runtime.packet_store.read',
           'runtime.policy_gate',
-          'generic.operation.claim',
+          'generic.operation.relation',
           'generic.resolver.actor_ref',
           'generic.resolver.packet_ref',
           'generic.resolver.input_value',
           'generic.resolver.static_value',
-          'generic.resolver.role_scope',
+          'generic.resolver.relation_lookup',
+          'generic.compatibility_projection',
+          'runtime.planner.scoped_relation',
         ],
         steps: [
-          {
-            step_id: 'choose_role_claim_mode',
-            step_kind: 'condition',
-            condition: {
-              condition_kind: 'equals',
-              left: inputPath('enabled'),
-              right: staticValue(true),
+          operationStep({
+            step_id: 'write_participation_relation',
+            operation_kind: 'relation.set',
+            packet_type: 'Relation',
+            packet_subtype: 'participation',
+            resolver_ids: ['actor.ref', 'input.packet_ref', 'input.value', 'static.value', 'relation.active_lookup', 'compatibility.projection'],
+            policy_action_ids: ['relation.participation.add'],
+            dependency_ids: [
+              'runtime.packet_store.read',
+              'runtime.policy_gate',
+              'generic.operation.relation',
+              'generic.compatibility_projection',
+              'runtime.planner.scoped_relation',
+            ],
+            input_bindings: {
+              subject_ref: actorRef(),
+              target_ref: inputPath('role_packet_id'),
+              scope_ref: inputPath('scope_id'),
+              subtype: staticValue('participation'),
+              status: staticValue('active'),
+              note: inputPath('note'),
             },
-            then_steps: [
-              operationStep({
-                step_id: 'assert_role_association_claim',
-                operation_kind: 'claim.assert',
-                packet_type: 'Claim',
-                packet_subtype: 'relation_assertion',
-                resolver_ids: ['actor.ref', 'input.packet_ref', 'input.value', 'static.value', 'role.scope'],
-                policy_action_ids: ['role_association.claim.set'],
-                dependency_ids: ['runtime.policy_gate', 'generic.operation.claim', 'generic.resolver.role_scope'],
-                input_bindings: {
-                  actor_ref: actorRef(),
-                  role_ref: inputPath('role_ref'),
-                  subject_ref: inputPath('subject_ref'),
-                  subtype: staticValue('relation_assertion'),
-                  relation_assertion_subtype: staticValue('role_association'),
-                  status: staticValue('active'),
-                },
-                output_key: 'claim_write',
-                notes: 'Canonical claim.assert workflow for role association claims.',
-              }),
-            ],
-            else_steps: [
-              operationStep({
-                step_id: 'withdraw_role_association_claim',
-                operation_kind: 'claim.withdraw',
-                packet_type: 'Claim',
-                packet_subtype: 'relation_assertion',
-                resolver_ids: ['actor.ref', 'input.packet_ref', 'input.value', 'static.value', 'role.scope'],
-                policy_action_ids: ['role_association.claim.withdraw'],
-                dependency_ids: ['runtime.policy_gate', 'generic.operation.claim', 'generic.resolver.role_scope'],
-                input_bindings: {
-                  actor_ref: actorRef(),
-                  role_ref: inputPath('role_ref'),
-                  subject_ref: inputPath('subject_ref'),
-                  subtype: staticValue('relation_assertion'),
-                  relation_assertion_subtype: staticValue('role_association'),
-                  status: staticValue('withdrawn'),
-                },
-                output_key: 'claim_write',
-                notes: 'Canonical claim.withdraw workflow for role association claims.',
-              }),
-            ],
-            on_failure: 'abort_workflow',
+            output_key: 'relation_write',
             notes:
-              'Branches role association claim set/withdraw behavior from the typed enabled input.',
-          },
+              'Canonical relation.set workflow for role participation; fresh writes do not auto-mint relation assertion claims.',
+          }),
         ],
         availability: 'runtime_ready',
         notes:
-          'Describes the generic-ready role_association.claim.set fortress intent without enrolling live execution.',
+          'Describes the planner-extraction relation.participation.add intent without enrolling live execution.',
+      },
+      {
+        workflow_plan_id: 'relation.participation.clear.workflow.v0',
+        packet_type: 'Relation',
+        packet_subtype: 'participation',
+        planner_id: input.writePlannerId,
+        mutation_intents: ['relation.participation.clear'],
+        operation_kinds: ['relation.clear'],
+        resolver_ids: ['actor.ref', 'input.packet_ref', 'static.value', 'relation.active_lookup', 'compatibility.projection'],
+        policy_action_ids: ['relation.participation.clear'],
+        dependency_ids: [
+          'runtime.packet_store.read',
+          'runtime.policy_gate',
+          'generic.operation.relation',
+          'generic.resolver.actor_ref',
+          'generic.resolver.packet_ref',
+          'generic.resolver.static_value',
+          'generic.resolver.relation_lookup',
+          'generic.compatibility_projection',
+          'runtime.planner.scoped_relation',
+        ],
+        steps: [
+          operationStep({
+            step_id: 'clear_participation_relation',
+            operation_kind: 'relation.clear',
+            packet_type: 'Relation',
+            packet_subtype: 'participation',
+            resolver_ids: ['actor.ref', 'input.packet_ref', 'static.value', 'relation.active_lookup', 'compatibility.projection'],
+            policy_action_ids: ['relation.participation.clear'],
+            dependency_ids: [
+              'runtime.packet_store.read',
+              'runtime.policy_gate',
+              'generic.operation.relation',
+              'generic.compatibility_projection',
+              'runtime.planner.scoped_relation',
+            ],
+            input_bindings: {
+              subject_ref: actorRef(),
+              target_ref: inputPath('role_packet_id'),
+              scope_ref: inputPath('scope_id'),
+              subtype: staticValue('participation'),
+              status: staticValue('withdrawn'),
+            },
+            output_key: 'relation_write',
+            notes:
+              'Canonical relation.clear workflow for role participation.',
+          }),
+        ],
+        availability: 'runtime_ready',
+        notes:
+          'Describes the planner-extraction relation.participation.clear intent without enrolling live execution.',
       },
     ];
+  }
+
+  if (input.type === 'Claim') {
+    return [];
   }
 
   if (input.type === 'Attestation') {
@@ -904,6 +926,58 @@ function createGenericReadyWorkflowPlans(input: {
         availability: 'runtime_ready',
         notes:
           'Describes the generic-ready attestation.packet_signal.set fortress intent without enrolling live execution.',
+      },
+      {
+        workflow_plan_id: 'attestation.relation_participation.set.workflow.v0',
+        packet_type: 'Attestation',
+        packet_subtype: 'support',
+        planner_id: input.writePlannerId,
+        mutation_intents: ['relation.participation.attestation.set'],
+        operation_kinds: ['attestation.set', 'attestation.clear'],
+        resolver_ids: ['actor.ref', 'input.packet_ref', 'input.value'],
+        policy_action_ids: [
+          'relation.participation.attestation.support',
+          'relation.participation.attestation.dispute',
+          'relation.participation.attestation.clear',
+        ],
+        dependency_ids: [
+          'runtime.packet_store.read',
+          'runtime.policy_gate',
+          'generic.operation.attestation',
+          'generic.resolver.actor_ref',
+          'generic.resolver.packet_ref',
+          'generic.resolver.input_value',
+        ],
+        steps: [
+          operationStep({
+            step_id: 'set_relation_participation_attestation',
+            operation_kind: 'attestation.set',
+            packet_type: 'Attestation',
+            packet_subtype: 'support',
+            resolver_ids: ['actor.ref', 'input.packet_ref', 'input.value'],
+            policy_action_ids: [
+              'relation.participation.attestation.support',
+              'relation.participation.attestation.dispute',
+              'relation.participation.attestation.clear',
+            ],
+            dependency_ids: [
+              'runtime.packet_store.read',
+              'runtime.policy_gate',
+              'generic.operation.attestation',
+            ],
+            input_bindings: {
+              actor_ref: actorRef(),
+              target_ref: inputPath('relation_packet_id'),
+              subtype: inputPath('mode'),
+            },
+            output_key: 'attestation_write',
+            notes:
+              'Canonical support/dispute/clear attestation workflow for participation relations.',
+          }),
+        ],
+        availability: 'runtime_ready',
+        notes:
+          'Describes the generic-ready relation.participation.attestation.set fortress intent without enrolling live execution.',
       },
     ];
   }

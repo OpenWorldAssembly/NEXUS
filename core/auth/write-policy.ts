@@ -22,11 +22,11 @@ export type MutationActionId =
   | 'discussion.reply.create'
   | 'attestation.packet_signal.set'
   | 'attestation.packet_signal.clear'
-  | 'role_association.claim.set'
-  | 'role_association.claim.withdraw'
-  | 'role_association.attestation.support'
-  | 'role_association.attestation.dispute'
-  | 'role_association.attestation.clear'
+  | 'relation.participation.add'
+  | 'relation.participation.clear'
+  | 'relation.participation.attestation.support'
+  | 'relation.participation.attestation.dispute'
+  | 'relation.participation.attestation.clear'
   | 'relation.association.add'
   | 'relation.association.clear'
   | 'relation.residence.add'
@@ -47,11 +47,11 @@ export const MUTATION_ACTION_IDS = [
   'discussion.reply.create',
   'attestation.packet_signal.set',
   'attestation.packet_signal.clear',
-  'role_association.claim.set',
-  'role_association.claim.withdraw',
-  'role_association.attestation.support',
-  'role_association.attestation.dispute',
-  'role_association.attestation.clear',
+  'relation.participation.add',
+  'relation.participation.clear',
+  'relation.participation.attestation.support',
+  'relation.participation.attestation.dispute',
+  'relation.participation.attestation.clear',
   'relation.association.add',
   'relation.association.clear',
   'relation.residence.add',

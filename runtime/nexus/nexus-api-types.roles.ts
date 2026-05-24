@@ -1,6 +1,6 @@
 /**
  * File: nexus-api-types.roles.ts
- * Description: Roles workspace payloads and role-attestation mutation contracts shared across Nexus routes and clients.
+ * Description: Roles workspace payloads and role-participation mutation contracts shared across Nexus routes and clients.
  */
 
 import type { AttestationEdgeProjection, NexusScopeLens } from '@core/contracts';
@@ -10,9 +10,9 @@ import type {
   NexusTrustStageId,
 } from '@runtime/nexus/server/trust-logic';
 
-export interface NexusRoleClaimantProjection {
-  claim_packet_id: string;
-  claim_status: 'active' | 'withdrawn';
+export interface NexusRoleParticipantProjection {
+  participation_relation_packet_id: string;
+  participation_status: 'active' | 'withdrawn';
   actor_packet_id: string;
   actor_label: string;
   actor_kind: string;
@@ -34,8 +34,8 @@ export interface NexusRoleCardProjection {
   role_kind: string;
   summary: string | null;
   responsibility_markdown: string | null;
-  is_claimed_by_current_actor: boolean;
-  claimants: NexusRoleClaimantProjection[];
+  is_participated_by_current_actor: boolean;
+  participants: NexusRoleParticipantProjection[];
 }
 
 export interface NexusRolesPayload {
@@ -47,15 +47,15 @@ export interface NexusRolesPayload {
   role_cards: NexusRoleCardProjection[];
 }
 
-export interface NexusRoleAttestationMutationPayload {
-  claim_packet_id: string;
+export interface NexusRoleParticipationAttestationMutationPayload {
+  relation_packet_id: string;
   mode: 'support' | 'dispute' | 'clear';
   support_count: number;
   dispute_count: number;
   viewer_attestation: 'support' | 'dispute' | 'none';
 }
 
-export interface NexusRoleClaimMutationPayload {
-  claim_packet_id: string;
-  claim_status: 'active' | 'withdrawn';
+export interface NexusRoleParticipationMutationPayload {
+  relation_packet_id: string | null;
+  relation_status: 'active' | 'withdrawn' | null;
 }

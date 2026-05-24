@@ -11,6 +11,10 @@ import {
   createClaimPacketId,
 } from '@core/packets/claims';
 import {
+  createRelationPacketId,
+  createScopedRelationPacket,
+} from '@core/packets/relations';
+import {
   CANONICAL_SEED_PACKETS,
   DISCUSSION_SEED_VERSION,
 } from '@core/packets/seeds';
@@ -172,19 +176,19 @@ async function ensureLegacyClaimBackfill(
             ? activeClaims[0].body.target_ref.packet_id
             : 'nexus:element/global-commons';
         })();
-      const claimPacketId = createClaimPacketId({
-        claimKind: 'role_association',
+      const relationPacketId = createRelationPacketId({
+        subtype: 'participation',
         subjectPacketId: elementPacket.header.packet_id,
         targetPacketId: roleRef.packet_id,
         scopePacketId,
       });
 
-      if (existingClaimIds.has(claimPacketId)) {
+      if (await services.packetStore.fetchPreferredRevision({ packet_id: relationPacketId })) {
         continue;
       }
 
-      const claimPacket = createAssociationClaimPacket({
-        claimKind: 'role_association',
+      const relationPacket = createScopedRelationPacket({
+        subtype: 'participation',
         subjectPacketId: elementPacket.header.packet_id,
         targetPacketId: roleRef.packet_id,
         scopePacketId,
@@ -195,15 +199,14 @@ async function ensureLegacyClaimBackfill(
         createdByPacketId: elementPacket.header.packet_id,
         createdAt: elementPacket.header.created_at,
         status: 'active',
-        packetId: claimPacketId,
+        packetId: relationPacketId,
       });
 
-      await writeRevisionIfMissing(services, claimPacket);
+      await writeRevisionIfMissing(services, relationPacket);
       await services.packetStore.publishRevision({
-        packet_id: claimPacket.header.packet_id,
-        revision_id: claimPacket.header.revision_id,
+        packet_id: relationPacket.header.packet_id,
+        revision_id: relationPacket.header.revision_id,
       });
-      existingClaimIds.add(claimPacketId);
     }
   }
 }

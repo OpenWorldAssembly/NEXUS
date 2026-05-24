@@ -34,7 +34,7 @@ import type {
   NexusDiscussionsPayload,
   NexusLibraryPayload,
   NexusRoleCardProjection,
-  NexusRoleClaimantProjection,
+  NexusRoleParticipantProjection,
   NexusRolesPayload,
   NexusShellPayload,
   NexusTrustPayload,
@@ -64,7 +64,11 @@ import {
   listClaimPackets,
   type ClaimPacket,
 } from '@runtime/nexus/server/claim-utils';
-import { listRelationPackets } from '@runtime/nexus/server/relation-utils';
+import {
+  filterRelationPackets,
+  listRelationPackets,
+  type AssociationRelationProjection,
+} from '@runtime/nexus/server/relation-utils';
 import {
   buildNexusScopeGraphProjection,
   buildPersonalScopeSummary as buildScopeGraphPersonalScopeSummary,
@@ -1385,6 +1389,7 @@ export async function getNexusTrustPayload(input: {
     shellPayload,
   });
   const claimPackets = await listClaimPackets(services.packetStore);
+  const relationPackets = await listRelationPackets(services.packetStore);
   const homeLocalityRouteIds = scopeGraph.effectiveHomeLocality
     ? [
         ...scopeGraph.effectiveHomeLocality.ancestorRouteIds,
@@ -1412,38 +1417,35 @@ export async function getNexusTrustPayload(input: {
           relation.status === 'active'
       ) ?? null
     : null;
-  const actorRoleClaims = filterClaimPackets({
-    claims: claimPackets,
-    claimKind: 'role_association',
+  const actorRoleParticipationRelations = filterRelationPackets({
+    relations: relationPackets,
+    relationSubtype: 'participation',
     subjectPacketId: actorPacket?.header.packet_id ?? null,
+    scopePacketId: assemblyPacketId,
     activeOnly: true,
   });
   const roleCards: NexusTrustRoleProjection[] = [];
 
   for (const rolePacket of rolePackets) {
     const typedRolePacket = rolePacket as PacketEnvelopeByType['Role'];
-    const scopedClaim =
-      actorRoleClaims.find(
-        (claimPacket) =>
-          claimPacket.body.target_ref.packet_id === typedRolePacket.header.packet_id &&
-          isClaimInExactScope({
-            claimPacket,
-            scopePacketId: assemblyPacketId,
-          })
+    const scopedRelation =
+      actorRoleParticipationRelations.find(
+        (relationPacket) =>
+          relationPacket.body.target_ref.packet_id === typedRolePacket.header.packet_id
       ) ?? null;
     const supportEdges =
-      scopedClaim
+      scopedRelation
         ? await services.attestationService.listTargetAttestations({
-            target_packet_id: scopedClaim.header.packet_id,
-            attestation_kind: 'claim_support',
+            target_packet_id: scopedRelation.header.packet_id,
+            attestation_kind: 'support',
             active_only: true,
           })
         : [];
     const disputeEdges =
-      scopedClaim
+      scopedRelation
         ? await services.attestationService.listTargetAttestations({
-            target_packet_id: scopedClaim.header.packet_id,
-            attestation_kind: 'claim_dispute',
+            target_packet_id: scopedRelation.header.packet_id,
+            attestation_kind: 'dispute',
             active_only: true,
           })
         : [];
@@ -1461,21 +1463,21 @@ export async function getNexusTrustPayload(input: {
           );
 
     roleCards.push({
-      claim_packet_id: scopedClaim?.header.packet_id ?? null,
-      claim_status: scopedClaim?.body.status ?? null,
-      claimed_scope_packet_id: scopedClaim?.body.scope_ref?.packet_id ?? null,
+      claim_packet_id: scopedRelation?.header.packet_id ?? null,
+      claim_status: scopedRelation?.body.status ?? null,
+      claimed_scope_packet_id: scopedRelation?.body.scope_ref?.packet_id ?? null,
       role_packet_id: typedRolePacket.header.packet_id,
       title: typedRolePacket.body.title,
       role_kind: typedRolePacket.body.subtype,
       summary: typedRolePacket.body.summary ?? null,
       responsibility_markdown: typedRolePacket.body.responsibility_markdown,
-      is_claimed: scopedClaim !== null,
+      is_claimed: scopedRelation !== null,
       support_count: scopedSupportEdges.length,
       dispute_count: scopedDisputeEdges.length,
       stage:
         scopedSupportEdges.length >= trustPolicy.role_support_threshold
           ? 'role_eligible'
-          : scopedClaim !== null
+          : scopedRelation !== null
             ? 'emerging'
             : 'self_claimed',
       support_edges: scopedSupportEdges,
@@ -1561,9 +1563,9 @@ export async function getNexusRolesPayload(input: {
   const elementPackets = (
     await services.packetStore.listPreferredPacketsByType('Element')
   ) as PacketEnvelopeByType['Element'][];
-  const claimPackets = await listClaimPackets(services.packetStore);
+  const relationPackets = await listRelationPackets(services.packetStore);
   const currentActorPacketId = actorPacket?.header.packet_id ?? null;
-  const eligibleClaimants = elementPackets.filter((packet) =>
+  const eligibleParticipants = elementPackets.filter((packet) =>
     ['person', 'assembly', 'team'].includes(packet.body.subtype)
   );
   const associationRelationsByActor = new Map<
@@ -1571,15 +1573,15 @@ export async function getNexusRolesPayload(input: {
     AssociationRelationProjection[]
   >();
 
-  for (const claimantPacket of eligibleClaimants) {
-    if (claimantPacket.body.subtype !== 'person') {
+  for (const participantPacket of eligibleParticipants) {
+    if (participantPacket.body.subtype !== 'person') {
       continue;
     }
 
     associationRelationsByActor.set(
-      claimantPacket.header.packet_id,
+      participantPacket.header.packet_id,
       await services.attestationService.listAssociationRelationsForActor(
-        claimantPacket.header.packet_id
+        participantPacket.header.packet_id
       )
     );
   }
@@ -1587,46 +1589,38 @@ export async function getNexusRolesPayload(input: {
   const roleCards: NexusRoleCardProjection[] = [];
 
   for (const rolePacket of rolePackets) {
-    const claimants: NexusRoleClaimantProjection[] = [];
-    const roleClaims = filterClaimPackets({
-      claims: claimPackets,
-      claimKind: 'role_association',
+    const participants: NexusRoleParticipantProjection[] = [];
+    const roleParticipationRelations = filterRelationPackets({
+      relations: relationPackets,
+      relationSubtype: 'participation',
       targetPacketId: rolePacket.header.packet_id,
       scopePacketId: assemblyPacketId,
       activeOnly: true,
     });
 
-    for (const claimPacket of roleClaims) {
-      const claimantPacketId =
-        claimPacket.body.subject_ref?.packet_id ??
-        claimPacket.body.relation_assertion?.subject_ref.packet_id ??
-        null;
-
-      if (!claimantPacketId) {
-        continue;
-      }
-
-      const claimantPacket = eligibleClaimants.find(
-        (packet) => packet.header.packet_id === claimantPacketId
+    for (const relationPacket of roleParticipationRelations) {
+      const participantPacketId = relationPacket.body.subject_ref.packet_id;
+      const participantPacket = eligibleParticipants.find(
+        (packet) => packet.header.packet_id === participantPacketId
       );
 
-      if (!claimantPacket) {
+      if (!participantPacket) {
         continue;
       }
 
-      const claimantAssociationRelations =
-        associationRelationsByActor.get(claimantPacket.header.packet_id) ?? [];
+      const participantAssociationRelations =
+        associationRelationsByActor.get(participantPacket.header.packet_id) ?? [];
       const activeAssociationRelation =
         assemblyPacketId === null
-          ? claimantAssociationRelations.find((relation) => relation.status === 'active') ?? null
-          : claimantAssociationRelations.find(
+          ? participantAssociationRelations.find((relation) => relation.status === 'active') ?? null
+          : participantAssociationRelations.find(
               (relation) =>
                 relation.target_packet_id === assemblyPacketId &&
                 relation.status === 'active'
             ) ?? null;
       const matchesAuthorityScope =
         assemblyPacketId !== null &&
-        claimantPacket.header.authority_scope_ref?.packet_id === assemblyPacketId;
+        participantPacket.header.authority_scope_ref?.packet_id === assemblyPacketId;
       const hasScopeAssociation =
         assemblyPacketId === null
           ? true
@@ -1635,13 +1629,13 @@ export async function getNexusRolesPayload(input: {
         activeAssociationRelation?.supported_by_other_count ?? 0;
 
       const supportEdges = await services.attestationService.listTargetAttestations({
-        target_packet_id: claimPacket.header.packet_id,
-        attestation_kind: 'claim_support',
+        target_packet_id: relationPacket.header.packet_id,
+        attestation_kind: 'support',
         active_only: true,
       });
       const disputeEdges = await services.attestationService.listTargetAttestations({
-        target_packet_id: claimPacket.header.packet_id,
-        attestation_kind: 'claim_dispute',
+        target_packet_id: relationPacket.header.packet_id,
+        attestation_kind: 'dispute',
         active_only: true,
       });
       const scopedSupportEdges =
@@ -1680,13 +1674,13 @@ export async function getNexusRolesPayload(input: {
         thresholds: trustPolicy,
       });
 
-      claimants.push({
-        claim_packet_id: claimPacket.header.packet_id,
-        claim_status: claimPacket.body.status,
-        actor_packet_id: claimantPacket.header.packet_id,
-        actor_label: claimantPacket.body.name,
-        actor_kind: claimantPacket.body.subtype,
-        is_current_actor: claimantPacket.header.packet_id === currentActorPacketId,
+      participants.push({
+        participation_relation_packet_id: relationPacket.header.packet_id,
+        participation_status: relationPacket.body.status,
+        actor_packet_id: participantPacket.header.packet_id,
+        actor_label: participantPacket.body.name,
+        actor_kind: participantPacket.body.subtype,
+        is_current_actor: participantPacket.header.packet_id === currentActorPacketId,
         trust_stage: roleTrustStage,
         scope_trust_stage: scopeTrustStage,
         has_scope_association: hasScopeAssociation,
@@ -1699,20 +1693,20 @@ export async function getNexusRolesPayload(input: {
       });
     }
 
-    claimants.sort((leftClaimant, rightClaimant) => {
-      if (leftClaimant.is_current_actor !== rightClaimant.is_current_actor) {
-        return leftClaimant.is_current_actor ? -1 : 1;
+    participants.sort((leftParticipant, rightParticipant) => {
+      if (leftParticipant.is_current_actor !== rightParticipant.is_current_actor) {
+        return leftParticipant.is_current_actor ? -1 : 1;
       }
 
-      if (leftClaimant.support_count !== rightClaimant.support_count) {
-        return rightClaimant.support_count - leftClaimant.support_count;
+      if (leftParticipant.support_count !== rightParticipant.support_count) {
+        return rightParticipant.support_count - leftParticipant.support_count;
       }
 
-      if (leftClaimant.dispute_count !== rightClaimant.dispute_count) {
-        return leftClaimant.dispute_count - rightClaimant.dispute_count;
+      if (leftParticipant.dispute_count !== rightParticipant.dispute_count) {
+        return leftParticipant.dispute_count - rightParticipant.dispute_count;
       }
 
-      return leftClaimant.actor_label.localeCompare(rightClaimant.actor_label);
+      return leftParticipant.actor_label.localeCompare(rightParticipant.actor_label);
     });
 
     roleCards.push({
@@ -1721,25 +1715,23 @@ export async function getNexusRolesPayload(input: {
       role_kind: rolePacket.body.subtype,
       summary: rolePacket.body.summary ?? null,
       responsibility_markdown: rolePacket.body.responsibility_markdown ?? null,
-      is_claimed_by_current_actor:
+      is_participated_by_current_actor:
         currentActorPacketId === null
           ? false
-          : roleClaims.some(
-              (claimPacket) =>
-                (claimPacket.body.subject_ref?.packet_id ??
-                  claimPacket.body.relation_assertion?.subject_ref.packet_id) ===
-                currentActorPacketId
+          : roleParticipationRelations.some(
+              (relationPacket) =>
+                relationPacket.body.subject_ref.packet_id === currentActorPacketId
             ),
-      claimants,
+      participants,
     });
   }
 
   roleCards.sort((leftRole, rightRole) => {
     if (
-      leftRole.is_claimed_by_current_actor !==
-      rightRole.is_claimed_by_current_actor
+      leftRole.is_participated_by_current_actor !==
+      rightRole.is_participated_by_current_actor
     ) {
-      return leftRole.is_claimed_by_current_actor ? -1 : 1;
+      return leftRole.is_participated_by_current_actor ? -1 : 1;
     }
 
     return leftRole.title.localeCompare(rightRole.title);

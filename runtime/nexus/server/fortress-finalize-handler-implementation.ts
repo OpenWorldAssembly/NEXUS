@@ -344,7 +344,8 @@ export class MutationFinalizeHandlers {
     };
   }
 
-  async finalizeClaimUpdate(input: {
+
+  async finalizeRoleParticipationRelationUpdate(input: {
     actorContext: MutationFinalizeActorContext;
     signedPackets: PacketEnvelope[];
     storedTicket: StoredMutationTicket;
@@ -354,20 +355,26 @@ export class MutationFinalizeHandlers {
       signedPackets: input.signedPackets,
     });
     await this.attestationService.syncDerivedState();
-    const claimPacket = [...input.signedPackets].reverse().find(
-      (packet): packet is PacketEnvelopeByType['Claim'] =>
-        packet.header.type === 'Claim'
+    const activeRelationPacket = [...input.signedPackets].reverse().find(
+      (packet): packet is PacketEnvelopeByType['Relation'] =>
+        packet.header.type === 'Relation' &&
+        (packet as PacketEnvelopeByType['Relation']).body.status === 'active'
     );
 
     return {
       persist_effects: toMutationPersistEffects(input.signedPackets),
       result: {
-        claim_packet_id: claimPacket?.header.packet_id ?? null,
-        claim_status:
-          claimPacket?.body.status ??
-          (input.storedTicket.intent.kind === 'role_association.claim.set' &&
-          !input.storedTicket.intent.claimed
+        relation_packet_id: activeRelationPacket?.header.packet_id ?? null,
+        relation_status:
+          activeRelationPacket?.body.status ??
+          (input.storedTicket.intent.kind === 'relation.participation.clear'
             ? 'withdrawn'
+            : null),
+        role_packet_id:
+          activeRelationPacket?.body.target_ref.packet_id ??
+          (input.storedTicket.intent.kind === 'relation.participation.add' ||
+          input.storedTicket.intent.kind === 'relation.participation.clear'
+            ? input.storedTicket.intent.role_packet_id
             : null),
       },
     };
@@ -406,7 +413,7 @@ export class MutationFinalizeHandlers {
     };
   }
 
-  async finalizeRoleAssociationAttestation(input: {
+  async finalizeRoleParticipationAttestation(input: {
     actorContext: MutationFinalizeActorContext;
     signedPackets: PacketEnvelope[];
     storedTicket: StoredMutationTicket;
@@ -417,22 +424,22 @@ export class MutationFinalizeHandlers {
     });
     await this.attestationService.syncDerivedState();
 
-    if (input.storedTicket.intent.kind !== 'role_association.attestation.set') {
-      throw new Error('Unexpected role attestation mutation ticket.');
+    if (input.storedTicket.intent.kind !== 'relation.participation.attestation.set') {
+      throw new Error('Unexpected role participation attestation mutation ticket.');
     }
     const roleAttestationIntent = input.storedTicket.intent;
 
     const supportCount = (
       await this.attestationService.listTargetAttestations({
-        target_packet_id: roleAttestationIntent.claim_packet_id,
-        attestation_kind: 'claim_support',
+        target_packet_id: roleAttestationIntent.relation_packet_id,
+        attestation_kind: 'support',
         active_only: true,
       })
     ).length;
     const disputeCount = (
       await this.attestationService.listTargetAttestations({
-        target_packet_id: roleAttestationIntent.claim_packet_id,
-        attestation_kind: 'claim_dispute',
+        target_packet_id: roleAttestationIntent.relation_packet_id,
+        attestation_kind: 'dispute',
         active_only: true,
       })
     ).length;
@@ -440,22 +447,22 @@ export class MutationFinalizeHandlers {
     const viewerSupport = (
       await this.attestationService.listActorAttestations({
         actor_key: actorKey,
-        attestation_kind: 'claim_support',
+        attestation_kind: 'support',
         active_only: true,
       })
-    ).some((edge) => edge.target_ref.packet_id === roleAttestationIntent.claim_packet_id);
+    ).some((edge) => edge.target_ref.packet_id === roleAttestationIntent.relation_packet_id);
     const viewerDispute = (
       await this.attestationService.listActorAttestations({
         actor_key: actorKey,
-        attestation_kind: 'claim_dispute',
+        attestation_kind: 'dispute',
         active_only: true,
       })
-    ).some((edge) => edge.target_ref.packet_id === roleAttestationIntent.claim_packet_id);
+    ).some((edge) => edge.target_ref.packet_id === roleAttestationIntent.relation_packet_id);
 
     return {
       persist_effects: toMutationPersistEffects(input.signedPackets),
       result: {
-        claim_packet_id: roleAttestationIntent.claim_packet_id,
+        relation_packet_id: roleAttestationIntent.relation_packet_id,
         mode: roleAttestationIntent.mode,
         support_count: supportCount,
         dispute_count: disputeCount,

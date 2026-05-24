@@ -1,6 +1,6 @@
 /**
  * File: roles.tsx
- * Description: Renders the scoped roles workspace, including role claims, claimant review, and scoped role evidence.
+ * Description: Renders the scoped roles workspace, including role participation, participant review, and scoped role evidence.
  */
 
 import { useRouter } from 'expo-router';
@@ -24,11 +24,11 @@ import {
   fetchNexusRolesPayload,
 } from '@runtime/nexus/nexus-query-api';
 
-function formatRoleClaimantBadge(claimantCount: number): string {
-  return `${claimantCount} ${claimantCount === 1 ? 'claimant' : 'claimants'}`;
+function formatRoleParticipantBadge(participantCount: number): string {
+  return `${participantCount} ${participantCount === 1 ? 'participant' : 'participants'}`;
 }
 
-function formatTrustStage(stage: NexusRolesPayload['role_cards'][number]['claimants'][number]['trust_stage']): string {
+function formatTrustStage(stage: NexusRolesPayload['role_cards'][number]['participants'][number]['trust_stage']): string {
   return stage.replace(/_/g, ' ');
 }
 
@@ -126,11 +126,11 @@ export default function NexusRolesPage() {
         return true;
       }
 
-      return roleCard.claimants.some(
-        (claimant) =>
-          claimant.claim_packet_id === focusedPacketId ||
-          claimant.support_edges.some((edge) => edge.packet.packet_id === focusedPacketId) ||
-          claimant.dispute_edges.some((edge) => edge.packet.packet_id === focusedPacketId)
+      return roleCard.participants.some(
+        (participant) =>
+          participant.participation_relation_packet_id === focusedPacketId ||
+          participant.support_edges.some((edge) => edge.packet.packet_id === focusedPacketId) ||
+          participant.dispute_edges.some((edge) => edge.packet.packet_id === focusedPacketId)
       );
     });
 
@@ -140,18 +140,18 @@ export default function NexusRolesPage() {
 
     setActiveRolePacketId(targetedRoleCard.role_packet_id);
 
-    const targetedClaimant = targetedRoleCard.claimants.find(
-      (claimant) =>
-        claimant.claim_packet_id === focusedPacketId ||
-        claimant.support_edges.some((edge) => edge.packet.packet_id === focusedPacketId) ||
-        claimant.dispute_edges.some((edge) => edge.packet.packet_id === focusedPacketId)
+    const targetedParticipant = targetedRoleCard.participants.find(
+      (participant) =>
+        participant.participation_relation_packet_id === focusedPacketId ||
+        participant.support_edges.some((edge) => edge.packet.packet_id === focusedPacketId) ||
+        participant.dispute_edges.some((edge) => edge.packet.packet_id === focusedPacketId)
     );
 
-    if (targetedClaimant) {
+    if (targetedParticipant) {
       setExpandedEvidenceKeys((currentKeys) =>
-        currentKeys.includes(targetedClaimant.claim_packet_id)
+        currentKeys.includes(targetedParticipant.participation_relation_packet_id)
           ? currentKeys
-          : [...currentKeys, targetedClaimant.claim_packet_id]
+          : [...currentKeys, targetedParticipant.participation_relation_packet_id]
       );
     }
   }, [focusedPacketId, rolesPayload?.role_cards]);
@@ -171,27 +171,28 @@ export default function NexusRolesPage() {
     }
   };
 
-  const handleRoleClaim = async (rolePacketId: string, claimed: boolean) => {
-    const applyRoleClaim = async () => {
+  const handleRoleParticipation = async (rolePacketId: string, participating: boolean) => {
+    const applyRoleParticipation = async () => {
       try {
         await runFortressMutation({
           intent: {
-            kind: 'role_association.claim.set',
+            kind: participating
+              ? 'relation.participation.add'
+              : 'relation.participation.clear',
             scope_id: activeScope.id,
             role_packet_id: rolePacketId,
-            claimed,
           },
         });
         await refreshRolesPayload();
-        setStatusMessage(claimed ? 'Role claimed in this scope.' : 'Role claim removed.');
+        setStatusMessage(participating ? 'Role participation recorded in this scope.' : 'Role participation removed.');
         setErrorMessage(null);
       } catch (error) {
-        if (openNexusAuthGateForError(error, applyRoleClaim)) {
+        if (openNexusAuthGateForError(error, applyRoleParticipation)) {
           return;
         }
 
         setErrorMessage(
-          error instanceof Error ? error.message : 'Unable to update the role claim.'
+          error instanceof Error ? error.message : 'Unable to update role participation.'
         );
         setStatusMessage(null);
       }
@@ -202,15 +203,15 @@ export default function NexusRolesPage() {
         requiresClaimedIdentity: true,
         writeRisk: 'standard',
       },
-      applyRoleClaim
+      applyRoleParticipation
     );
   };
 
   const handleRoleAttestation = async (input: {
-    claimPacketId: string;
+    relationPacketId: string;
     mode: 'support' | 'dispute' | 'clear';
   }) => {
-    const draftKey = input.claimPacketId;
+    const draftKey = input.relationPacketId;
     const note = noteDrafts[draftKey]?.trim() ?? '';
 
     if (input.mode === 'dispute' && note.length === 0) {
@@ -223,9 +224,9 @@ export default function NexusRolesPage() {
       try {
         await runFortressMutation({
           intent: {
-            kind: 'role_association.attestation.set',
+            kind: 'relation.participation.attestation.set',
             scope_id: activeScope.id,
-            claim_packet_id: input.claimPacketId,
+            relation_packet_id: input.relationPacketId,
             mode: input.mode,
             note: note.length > 0 ? note : null,
           },
@@ -233,7 +234,7 @@ export default function NexusRolesPage() {
         await refreshRolesPayload();
         setStatusMessage(
           input.mode === 'clear'
-            ? 'Role attestation cleared.'
+            ? 'Role participation attestation cleared.'
             : input.mode === 'support'
               ? 'Role support recorded.'
               : 'Role dispute recorded.'
@@ -254,7 +255,7 @@ export default function NexusRolesPage() {
         setErrorMessage(
           error instanceof Error
             ? error.message
-            : 'Unable to update the role attestation.'
+            : 'Unable to update the role participation attestation.'
         );
         setStatusMessage(null);
       }
@@ -269,17 +270,17 @@ export default function NexusRolesPage() {
     );
   };
 
-  const totalClaimants = useMemo(
+  const totalParticipants = useMemo(
     () =>
       rolesPayload?.role_cards.reduce(
-        (total, roleCard) => total + roleCard.claimants.length,
+        (total, roleCard) => total + roleCard.participants.length,
         0
       ) ?? 0,
     [rolesPayload]
   );
-  const claimedRoleCount = useMemo(
+  const participatingRoleCount = useMemo(
     () =>
-      rolesPayload?.role_cards.filter((roleCard) => roleCard.is_claimed_by_current_actor)
+      rolesPayload?.role_cards.filter((roleCard) => roleCard.is_participated_by_current_actor)
         .length ?? 0,
     [rolesPayload]
   );
@@ -291,10 +292,10 @@ export default function NexusRolesPage() {
   const roleTabs = roleCards.map((roleCard) => ({
     id: roleCard.role_packet_id,
     title: roleCard.title,
-    detail: roleCard.is_claimed_by_current_actor
-      ? 'claimed'
-      : `${roleCard.claimants.length} claimant${
-          roleCard.claimants.length === 1 ? '' : 's'
+    detail: roleCard.is_participated_by_current_actor
+      ? 'participating'
+      : `${roleCard.participants.length} participant${
+          roleCard.participants.length === 1 ? '' : 's'
         }`,
   }));
 
@@ -305,15 +306,15 @@ export default function NexusRolesPage() {
         <NexusSectionHeader
           eyebrow="Roles"
           title={`${activeScope.name} Roles`}
-          description="Claim roles in this scope, review who else has claimed them, and add scoped support or disputes with visible evidence."
+          description="Participate in roles in this scope, review who else participates, and add scoped support or disputes with visible evidence."
           trailing={
             <View className="flex-row flex-wrap gap-3">
               <NexusBadge
-                label={`${claimedRoleCount} claimed`}
+                label={`${participatingRoleCount} participating`}
                 tone="mint"
               />
               <NexusBadge
-                label={`${totalClaimants} visible claimants`}
+                label={`${totalParticipants} visible participants`}
                 tone="sky"
               />
               <NexusBadge label={currentActorLabel} tone="default" />
@@ -348,7 +349,7 @@ export default function NexusRolesPage() {
               {rolesPayload?.scope.name ?? activeScope.name}
             </Text>
             <Text className={appearance.itemBodyClass}>
-              Review roles in this scope context and compare claimant standing.
+              Review roles in this scope context and compare participant standing.
             </Text>
           </NexusCard>
           <NexusCard className="min-w-[220px] flex-1" tone="mint">
@@ -357,7 +358,7 @@ export default function NexusRolesPage() {
               {rolesPayload?.policy_snapshot.role_support_threshold ?? 0}
             </Text>
             <Text className={appearance.itemBodyClass}>
-              Supports needed in this scope before a role claim becomes role eligible.
+              Supports needed in this scope before role participation becomes role eligible.
             </Text>
           </NexusCard>
           <NexusCard className="min-w-[220px] flex-1" tone="gold">
@@ -413,8 +414,8 @@ export default function NexusRolesPage() {
                     {roleCard.role_packet_id === highlightedPacketId ? (
                       <NexusBadge label="Focused" tone="sky" />
                     ) : null}
-                    {roleCard.is_claimed_by_current_actor ? (
-                      <NexusBadge label="You claimed this" tone="mint" />
+                    {roleCard.is_participated_by_current_actor ? (
+                      <NexusBadge label="You participate" tone="mint" />
                     ) : null}
                   </View>
                   <Text className={appearance.itemBodyClass}>
@@ -430,101 +431,101 @@ export default function NexusRolesPage() {
                 <View className="flex-row flex-wrap gap-3">
                   <NexusActionButton
                     label={
-                      roleCard.is_claimed_by_current_actor ? 'Unclaim role' : 'Claim role'
+                      roleCard.is_participated_by_current_actor ? 'Stop participating' : 'Participate'
                     }
                     variant={
-                      roleCard.is_claimed_by_current_actor ? 'secondary' : 'primary'
+                      roleCard.is_participated_by_current_actor ? 'secondary' : 'primary'
                     }
                     onPress={() =>
-                      void handleRoleClaim(
+                      void handleRoleParticipation(
                         roleCard.role_packet_id,
-                        !roleCard.is_claimed_by_current_actor
+                        !roleCard.is_participated_by_current_actor
                       )
                     }
                   />
                 </View>
               </View>
 
-              {roleCard.claimants.length === 0 ? (
+              {roleCard.participants.length === 0 ? (
                 <Text className={appearance.itemBodyClass}>
-                  Nobody in this scope has claimed the role yet.
+                  Nobody in this scope has participated in the role yet.
                 </Text>
               ) : (
                 <View className="gap-3">
-                  {roleCard.claimants.map((claimant) => {
-                    const evidenceKey = claimant.claim_packet_id;
+                  {roleCard.participants.map((participant) => {
+                    const evidenceKey = participant.participation_relation_packet_id;
                     const evidenceIsExpanded =
                       expandedEvidenceKeys.includes(evidenceKey);
 
-                    const claimantIsHighlighted =
-                      claimant.claim_packet_id === highlightedPacketId ||
-                      claimant.support_edges.some((edge) => edge.packet.packet_id === highlightedPacketId) ||
-                      claimant.dispute_edges.some((edge) => edge.packet.packet_id === highlightedPacketId);
+                    const participantIsHighlighted =
+                      participant.participation_relation_packet_id === highlightedPacketId ||
+                      participant.support_edges.some((edge) => edge.packet.packet_id === highlightedPacketId) ||
+                      participant.dispute_edges.some((edge) => edge.packet.packet_id === highlightedPacketId);
 
                     return (
                       <NexusCard
                         key={evidenceKey}
                         className={`gap-3 p-4 ${appearance.cardInsetClass} ${
-                          claimantIsHighlighted ? 'border-nexus-sky/70 bg-nexus-sky/10' : ''
+                          participantIsHighlighted ? 'border-nexus-sky/70 bg-nexus-sky/10' : ''
                         }`}
                       >
                         <View className="gap-2 lg:flex-row lg:items-start lg:justify-between">
                           <View className="min-w-0 flex-1 gap-2">
                             <View className="flex-row flex-wrap items-center gap-2">
                               <Text className={appearance.itemTitleClass}>
-                                {claimant.actor_label}
+                                {participant.actor_label}
                               </Text>
                               <NexusBadge
-                                label={formatTrustStage(claimant.trust_stage)}
+                                label={formatTrustStage(participant.trust_stage)}
                                 tone={
-                                  claimant.trust_stage === 'role_eligible'
+                                  participant.trust_stage === 'role_eligible'
                                     ? 'mint'
-                                    : claimant.trust_stage === 'recognized'
+                                    : participant.trust_stage === 'recognized'
                                       ? 'sky'
                                       : 'gold'
                                 }
                               />
-                              <NexusBadge label={claimant.actor_kind} tone="default" />
-                              {claimantIsHighlighted ? (
+                              <NexusBadge label={participant.actor_kind} tone="default" />
+                              {participantIsHighlighted ? (
                                 <NexusBadge label="Focused" tone="sky" />
                               ) : null}
-                              {claimant.is_current_actor ? (
+                              {participant.is_current_actor ? (
                                 <NexusBadge label="You" tone="sky" />
                               ) : null}
                             </View>
                             <View className="flex-row flex-wrap gap-3">
                               <NexusBadge
-                                label={`Scope: ${formatTrustStage(claimant.scope_trust_stage)}`}
+                                label={`Scope: ${formatTrustStage(participant.scope_trust_stage)}`}
                                 tone={
-                                  claimant.scope_trust_stage === 'recognized'
+                                  participant.scope_trust_stage === 'recognized'
                                     ? 'sky'
-                                    : claimant.scope_trust_stage === 'emerging'
+                                    : participant.scope_trust_stage === 'emerging'
                                       ? 'mint'
                                       : 'gold'
                                 }
                               />
                               <NexusBadge
                                 label={
-                                  claimant.has_scope_association
+                                  participant.has_scope_association
                                     ? 'Associated in this scope'
                                     : 'No direct scope association'
                                 }
-                                tone={claimant.has_scope_association ? 'mint' : 'default'}
+                                tone={participant.has_scope_association ? 'mint' : 'default'}
                               />
                               <NexusBadge
-                                label={`${claimant.scope_association_support_count} association supports`}
+                                label={`${participant.scope_association_support_count} association supports`}
                                 tone="sky"
                               />
                               <NexusBadge
-                                label={`${claimant.support_count} supports`}
+                                label={`${participant.support_count} supports`}
                                 tone="mint"
                               />
                               <NexusBadge
-                                label={`${claimant.dispute_count} disputes`}
+                                label={`${participant.dispute_count} disputes`}
                                 tone="rose"
                               />
                               <NexusBadge
-                                label={`Viewer: ${claimant.viewer_attestation}`}
+                                label={`Viewer: ${participant.viewer_attestation}`}
                                 tone="default"
                               />
                             </View>
@@ -547,7 +548,7 @@ export default function NexusRolesPage() {
                           </View>
                         </View>
 
-                        {!claimant.is_current_actor ? (
+                        {!participant.is_current_actor ? (
                           <>
                             <TextInput
                               value={noteDrafts[evidenceKey] ?? ''}
@@ -568,13 +569,13 @@ export default function NexusRolesPage() {
                               <NexusActionButton
                                 label="Support"
                                 variant={
-                                  claimant.viewer_attestation === 'support'
+                                  participant.viewer_attestation === 'support'
                                     ? 'primary'
                                     : 'secondary'
                                 }
                                 onPress={() =>
                                   void handleRoleAttestation({
-                                    claimPacketId: claimant.claim_packet_id,
+                                    relationPacketId: participant.participation_relation_packet_id,
                                     mode: 'support',
                                   })
                                 }
@@ -582,13 +583,13 @@ export default function NexusRolesPage() {
                               <NexusActionButton
                                 label="Dispute"
                                 variant={
-                                  claimant.viewer_attestation === 'dispute'
+                                  participant.viewer_attestation === 'dispute'
                                     ? 'primary'
                                     : 'secondary'
                                 }
                                 onPress={() =>
                                   void handleRoleAttestation({
-                                    claimPacketId: claimant.claim_packet_id,
+                                    relationPacketId: participant.participation_relation_packet_id,
                                     mode: 'dispute',
                                   })
                                 }
@@ -598,7 +599,7 @@ export default function NexusRolesPage() {
                                 variant="ghost"
                                 onPress={() =>
                                   void handleRoleAttestation({
-                                    claimPacketId: claimant.claim_packet_id,
+                                    relationPacketId: participant.participation_relation_packet_id,
                                     mode: 'clear',
                                   })
                                 }
@@ -607,7 +608,7 @@ export default function NexusRolesPage() {
                           </>
                         ) : (
                           <Text className={appearance.itemBodyClass}>
-                            Claim or unclaim this role for yourself from the role card above. Support and dispute controls are only available for other listed claimants.
+                            Participate or stop participating in this role for yourself from the role card above. Support and dispute controls are only available for other listed participants.
                           </Text>
                         )}
 
@@ -617,13 +618,13 @@ export default function NexusRolesPage() {
                               <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-mint">
                                 Support evidence
                               </Text>
-                              {claimant.support_edges.length === 0 ? (
+                              {participant.support_edges.length === 0 ? (
                                 <Text className={appearance.itemBodyClass}>
                                   No scoped support attestations yet.
                                 </Text>
                               ) : (
                                 <View className="gap-2">
-                                  {claimant.support_edges.map((edge) => (
+                                  {participant.support_edges.map((edge) => (
                                     <NexusCard
                                       key={edge.packet.packet_id}
                                       className={`gap-2 p-4 ${appearance.cardInsetClass} ${
@@ -654,13 +655,13 @@ export default function NexusRolesPage() {
                               <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-rose">
                                 Dispute evidence
                               </Text>
-                              {claimant.dispute_edges.length === 0 ? (
+                              {participant.dispute_edges.length === 0 ? (
                                 <Text className={appearance.itemBodyClass}>
                                   No scoped dispute attestations yet.
                                 </Text>
                               ) : (
                                 <View className="gap-2">
-                                  {claimant.dispute_edges.map((edge) => (
+                                  {participant.dispute_edges.map((edge) => (
                                     <NexusCard
                                       key={edge.packet.packet_id}
                                       className={`gap-2 p-4 ${appearance.cardInsetClass} ${

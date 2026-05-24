@@ -15,22 +15,22 @@ export function createRolePrepareHandlers(
   handlers: MutationPrepareHandlers
 ): Pick<
   FortressPrepareHandlerMap,
-  'prepareRoleAssociationClaim' | 'prepareRoleAssociationAttestation'
+  'prepareRoleParticipationRelation' | 'prepareRoleParticipationAttestation'
 > {
   return {
-    prepareRoleAssociationClaim: async ({ intent, actorPacket }) =>
-      handlers.prepareRoleAssociationClaim({
+    prepareRoleParticipationRelation: async ({ intent, actorPacket }) =>
+      handlers.prepareRoleParticipationRelation({
         intent: intent as Extract<
           MutationIntent,
-          { kind: 'role_association.claim.set' }
+          { kind: 'relation.participation.add' | 'relation.participation.clear' }
         >,
         actorPacket,
       }),
-    prepareRoleAssociationAttestation: async ({ intent, actorPacket }) =>
-      handlers.prepareRoleAssociationAttestation({
+    prepareRoleParticipationAttestation: async ({ intent, actorPacket }) =>
+      handlers.prepareRoleParticipationAttestation({
         intent: intent as Extract<
           MutationIntent,
-          { kind: 'role_association.attestation.set' }
+          { kind: 'relation.participation.attestation.set' }
         >,
         actorPacket,
       }),
@@ -41,21 +41,25 @@ export function createRoleFinalizeHandlers(
   handlers: MutationFinalizeHandlers
 ): Pick<
   FortressFinalizeHandlerMap,
-  'finalizeClaimUpdate' | 'finalizeRoleAssociationAttestation'
+  'finalizeRoleParticipationRelationUpdate' | 'finalizeRoleParticipationAttestation'
 > {
   return {
-    finalizeClaimUpdate: async ({ storedTicket, actorContext, signedPackets }) =>
-      handlers.finalizeClaimUpdate({
-        actorContext,
-        signedPackets,
-        storedTicket,
-      }),
-    finalizeRoleAssociationAttestation: async ({
+    finalizeRoleParticipationRelationUpdate: async ({
       storedTicket,
       actorContext,
       signedPackets,
     }) =>
-      handlers.finalizeRoleAssociationAttestation({
+      handlers.finalizeRoleParticipationRelationUpdate({
+        actorContext,
+        signedPackets,
+        storedTicket,
+      }),
+    finalizeRoleParticipationAttestation: async ({
+      storedTicket,
+      actorContext,
+      signedPackets,
+    }) =>
+      handlers.finalizeRoleParticipationAttestation({
         actorContext,
         signedPackets,
         storedTicket,

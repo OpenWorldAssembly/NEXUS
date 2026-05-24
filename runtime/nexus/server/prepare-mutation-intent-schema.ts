@@ -114,19 +114,19 @@ const MutationIntentSchemaOptions = [
     .strict(),
   z
     .object({
-      kind: z.literal('role_association.claim.set'),
+      kind: z.enum(['relation.participation.add', 'relation.participation.clear']),
       scope_id: z.string().min(1),
       role_packet_id: z.string().min(1),
-      claimed: z.boolean(),
+      note: z.string().optional().nullable().default(null),
       created_at: z.string().optional().nullable().default(null),
       mutation_nonce: z.string().optional().nullable().default(null),
     })
     .strict(),
   z
     .object({
-      kind: z.literal('role_association.attestation.set'),
+      kind: z.literal('relation.participation.attestation.set'),
       scope_id: z.string().min(1),
-      claim_packet_id: z.string().min(1),
+      relation_packet_id: z.string().min(1),
       mode: z.enum(['support', 'dispute', 'clear']),
       note: z.string().optional().nullable().default(null),
       created_at: z.string().optional().nullable().default(null),

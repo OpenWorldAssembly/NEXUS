@@ -80,8 +80,9 @@ const CLIENT_INTENT_BY_MUTATION_INTENT: Record<string, string> = {
   'relation.residence.add': 'scope.home.set',
   'relation.follow.add': 'scope.follow.set',
   'relation.follow.clear': 'scope.follow.clear',
-  'role_association.claim.set': 'role.association.claim.set',
-  'role_association.attestation.set': 'role.association.attestation.set',
+  'relation.participation.add': 'relation.participation.add',
+  'relation.participation.clear': 'relation.participation.clear',
+  'relation.participation.attestation.set': 'relation.participation.attestation.set',
   'actor.write_policy.update': 'actor.write_policy.update',
   'preference.element.set': 'preference.interface.set',
 };

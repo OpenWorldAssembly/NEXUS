@@ -146,8 +146,6 @@ export const ATTESTATION_KINDS = [
   'attendance_vouch',
   'identity_attest',
   'association_claim',
-  'role_support',
-  'role_dispute',
   'claim_support',
   'claim_dispute',
   'packet_confirm',

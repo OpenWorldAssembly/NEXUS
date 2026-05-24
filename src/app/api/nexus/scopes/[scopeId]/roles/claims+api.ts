@@ -1,24 +1,14 @@
 /**
  * File: claims+api.ts
- * Description: Deprecates the legacy direct-write scoped role-claim route in favor of the fortress corridor.
+ * Description: Deprecated role-claim endpoint retained only to reject stale clients after roles moved to participation relations.
  */
 
-import type { RequestHandler } from 'expo-router/server';
-
-function createJsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      'content-type': 'application/json',
-    },
-  });
-}
-
-export const PUT: RequestHandler = async () =>
-  createJsonResponse(
+export async function PUT(): Promise<Response> {
+  return Response.json(
     {
       error:
-        'Role-claim writes have moved to the shared fortress mutation corridor.',
+        'Role claims have been replaced by participation relations. Use /roles/participation.',
     },
-    410
+    { status: 410 }
   );
+}
