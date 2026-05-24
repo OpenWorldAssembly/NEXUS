@@ -24,9 +24,8 @@ export type MutationActionId =
   | 'reaction.vote.clear'
   | 'relation.participation.add'
   | 'relation.participation.clear'
-  | 'relation.participation.reaction.support'
-  | 'relation.participation.reaction.dispute'
-  | 'relation.participation.reaction.clear'
+  | 'reaction.attestation.set'
+  | 'reaction.attestation.clear'
   | 'relation.association.add'
   | 'relation.association.clear'
   | 'relation.residence.add'
@@ -49,9 +48,8 @@ export const MUTATION_ACTION_IDS = [
   'reaction.vote.clear',
   'relation.participation.add',
   'relation.participation.clear',
-  'relation.participation.reaction.support',
-  'relation.participation.reaction.dispute',
-  'relation.participation.reaction.clear',
+  'reaction.attestation.set',
+  'reaction.attestation.clear',
   'relation.association.add',
   'relation.association.clear',
   'relation.residence.add',

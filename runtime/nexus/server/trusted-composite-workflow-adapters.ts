@@ -20,7 +20,7 @@ export type TrustedCompositeWorkflowAdapterKind =
   | 'composite.entity_create.with_followups'
   | 'composite.path_create.with_directory_projection'
   | 'composite.discussion_message.create'
-  | 'composite.reaction_support_dispute'
+  | 'composite.reaction_attestation'
   | 'composite.policy_self_update';
 
 export type CompositeWorkflowPhaseDescriptor = {
@@ -692,9 +692,9 @@ const TRUSTED_COMPOSITE_WORKFLOW_ADAPTERS = [
       'Reusable canonical discussion-message creation adapter for replies with legacy reply projection compatibility.',
   },
   {
-    adapter_id: 'composite.relation_participation_reaction.set.v0',
-    adapter_kind: 'composite.reaction_support_dispute',
-    mutation_intents: ['relation.participation.reaction.set'],
+    adapter_id: 'composite.reaction_attestation.set.v0',
+    adapter_kind: 'composite.reaction_attestation',
+    mutation_intents: ['reaction.attestation.set'],
     source_module: 'runtime/nexus/server/fortress-prepare-handler-implementation.ts',
     workflow_plan_ids: [],
     operation_kinds: [
@@ -703,9 +703,8 @@ const TRUSTED_COMPOSITE_WORKFLOW_ADAPTERS = [
       'reaction.clear',
     ],
     policy_action_ids: [
-      'relation.participation.reaction.support',
-      'relation.participation.reaction.dispute',
-      'relation.participation.reaction.clear',
+      'reaction.attestation.set',
+      'reaction.attestation.clear',
     ],
     dependency_ids: [
       'runtime.packet_store.read',
@@ -718,8 +717,8 @@ const TRUSTED_COMPOSITE_WORKFLOW_ADAPTERS = [
     phase_order: [
       'resolve_role_participation_relation',
       'plan_mutual_exclusion_reactions',
-      'resolve_relation_participation_reaction_policy',
-      'prepare_relation_participation_reaction_digests',
+      'resolve_reaction_attestation_policy',
+      'prepare_reaction_attestation_digests',
     ],
     phases: [
       {
@@ -741,39 +740,37 @@ const TRUSTED_COMPOSITE_WORKFLOW_ADAPTERS = [
         phase_kind: 'plan_operation_batch',
         operation_kinds: ['reaction.set', 'reaction.clear'],
         policy_action_ids: [
-          'relation.participation.reaction.support',
-          'relation.participation.reaction.dispute',
-          'relation.participation.reaction.clear',
+          'reaction.attestation.set',
+          'reaction.attestation.clear',
         ],
         dependency_ids: [
           'generic.operation.reaction',
           'generic.resolver.input_value',
         ],
-        output_key: 'relation_participation_reaction_packets',
+        output_key: 'reaction_attestation_packets',
         notes:
           'Models support/dispute/clear as a reusable mutual-exclusion reaction composition over the same participation relation target.',
       },
       {
-        phase_id: 'resolve_relation_participation_reaction_policy',
+        phase_id: 'resolve_reaction_attestation_policy',
         phase_kind: 'resolve_policy',
         operation_kinds: ['workflow.compose'],
         policy_action_ids: [
-          'relation.participation.reaction.support',
-          'relation.participation.reaction.dispute',
-          'relation.participation.reaction.clear',
+          'reaction.attestation.set',
+          'reaction.attestation.clear',
         ],
         dependency_ids: ['runtime.policy_gate'],
-        output_key: 'relation_participation_reaction_policy_decision',
+        output_key: 'reaction_attestation_policy_decision',
         notes:
           'Keeps current role reaction policy action selection inside the fortress authority path.',
       },
       {
-        phase_id: 'prepare_relation_participation_reaction_digests',
+        phase_id: 'prepare_reaction_attestation_digests',
         phase_kind: 'prepare_digests',
         operation_kinds: ['workflow.compose'],
         policy_action_ids: [],
         dependency_ids: [],
-        output_key: 'prepared_relation_participation_reaction_packets',
+        output_key: 'prepared_reaction_attestation_packets',
         notes:
           'Prepares unsigned digest candidates for the selected reaction operation batch.',
       },

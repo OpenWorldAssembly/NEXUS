@@ -82,7 +82,7 @@ const CLIENT_INTENT_BY_MUTATION_INTENT: Record<string, string> = {
   'relation.follow.clear': 'scope.follow.clear',
   'relation.participation.add': 'relation.participation.add',
   'relation.participation.clear': 'relation.participation.clear',
-  'relation.participation.reaction.set': 'relation.participation.reaction.set',
+  'reaction.attestation.set': 'reaction.attestation.set',
   'actor.write_policy.update': 'actor.write_policy.update',
   'preference.element.set': 'preference.interface.set',
 };

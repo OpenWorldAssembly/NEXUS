@@ -350,14 +350,14 @@ export function buildPacketVoteReactionPacket(input: {
     | 'applicable_scope_packet_ids'
     | 'vote_summary'
   >;
-  value: ReactionVoteValue | 0;
+  value: ReactionVoteValue | null;
   createdAt?: string;
 }): PacketEnvelopeByType['Reaction'] | null {
   const createdAt = input.createdAt ?? new Date().toISOString();
   const scopePacketId = resolveDiscussionScopePacketId(input.scopeId);
   const currentValue = input.targetPost.vote_summary.viewer_value;
 
-  if (input.value === 0 && currentValue === 0) {
+  if (input.value === null && currentValue === null) {
     return null;
   }
 
@@ -365,7 +365,7 @@ export function buildPacketVoteReactionPacket(input: {
     targetPacketId: input.targetPost.packet.packet_id,
     actorPacketId: input.actorPacket.header.packet_id,
   });
-  const persistedValue = input.value === 0 ? currentValue : input.value;
+  const persistedValue = input.value === null ? currentValue : input.value;
 
   return createReactionPacket({
     packet_id: packetId,
@@ -386,11 +386,11 @@ export function buildPacketVoteReactionPacket(input: {
     },
     metadata_tags: ['reaction', 'vote'],
     target_ref: input.targetPost.packet,
-    vote_value: persistedValue === -1 ? -1 : 1,
-    status: input.value === 0 ? 'cleared' : 'active',
+    vote_value: persistedValue === 'down' ? 'down' : 'up',
+    status: input.value === null ? 'cleared' : 'active',
     subtype: 'reaction',
     supersedes_ref:
-      currentValue === 0
+      currentValue === null
         ? null
         : {
             packet_id: packetId,

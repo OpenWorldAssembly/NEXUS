@@ -43,7 +43,7 @@ export const reactionBuildDefinition: PacketTypeBuildDefinition<
     status: input.status ?? 'active',
     vote_value: input.vote_value ?? null,
     attestation_value: input.attestation_value ?? null,
-    emotion_ids: input.emotion_ids ?? [],
+    emoji_keys: input.emoji_keys ?? [],
     context_ref: input.context_ref ?? null,
     supporting_refs: input.supporting_refs ?? [],
     note: input.note ?? null,

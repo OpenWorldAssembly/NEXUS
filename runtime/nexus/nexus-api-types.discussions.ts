@@ -42,14 +42,14 @@ export interface NexusVoteSummaryPayload {
   net_score: number;
   total_votes: number;
   negative_ratio: number;
-  viewer_value: ReactionVoteValue | 0;
+  viewer_value: ReactionVoteValue | null;
   auto_hidden: boolean;
   deprioritized: boolean;
 }
 
 export interface NexusVoteMutationPayload {
   target_packet_id: string;
-  value: ReactionVoteValue | 0;
+  value: ReactionVoteValue | null;
   summary: NexusVoteSummaryPayload;
 }
 

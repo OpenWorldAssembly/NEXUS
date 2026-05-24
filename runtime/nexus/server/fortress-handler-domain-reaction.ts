@@ -14,7 +14,10 @@ import type { MutationPrepareHandlers } from '@runtime/nexus/server/mutation-pre
 
 export function createReactionPrepareHandlers(
   handlers: MutationPrepareHandlers
-): Pick<FortressPrepareHandlerMap, 'preparePacketVoteReaction'> {
+): Pick<
+  FortressPrepareHandlerMap,
+  'preparePacketVoteReaction' | 'prepareReactionAttestation'
+> {
   return {
     preparePacketVoteReaction: async ({ intent, actorPacket, actorKey }) =>
       handlers.preparePacketVoteReaction({
@@ -22,17 +25,31 @@ export function createReactionPrepareHandlers(
         actorPacket,
         actorKey,
       }),
+    prepareReactionAttestation: async ({ intent, actorPacket }) =>
+      handlers.prepareReactionAttestation({
+        intent: intent as Extract<MutationIntent, { kind: 'reaction.attestation.set' }>,
+        actorPacket,
+      }),
   };
 }
 
 export function createReactionFinalizeHandlers(
   handlers: MutationFinalizeHandlers
-): Pick<FortressFinalizeHandlerMap, 'finalizePacketVoteReaction'> {
+): Pick<
+  FortressFinalizeHandlerMap,
+  'finalizePacketVoteReaction' | 'finalizeReactionAttestation'
+> {
   return {
     finalizePacketVoteReaction: async ({ actorContext, signedPackets }) =>
       handlers.finalizePacketVoteReaction({
         actorContext,
         signedPackets: signedPackets as [PacketEnvelopeByType['Reaction']],
+      }),
+    finalizeReactionAttestation: async ({ storedTicket, actorContext, signedPackets }) =>
+      handlers.finalizeReactionAttestation({
+        storedTicket,
+        actorContext,
+        signedPackets,
       }),
   };
 }

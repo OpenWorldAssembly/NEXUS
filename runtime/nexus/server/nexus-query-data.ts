@@ -615,7 +615,7 @@ function parseTrustPolicyFromPacket(
   return {
     association_support_threshold:
       packet.body.trust_policy.association_support_threshold,
-    role_support_threshold: packet.body.trust_policy.role_support_threshold,
+    required_support_count: packet.body.trust_policy.required_support_count,
     posting_gate: packet.body.trust_policy.posting_gate,
     voting_gate: packet.body.trust_policy.voting_gate,
     review_gate: packet.body.trust_policy.review_gate,
@@ -683,7 +683,7 @@ function getRoleClaimTrustStage(input: {
     association_support_count: input.associationSupportCount,
     claimed_role_count: 1,
     supported_role_count:
-      input.roleSupportCount >= input.thresholds.role_support_threshold ? 1 : 0,
+      input.roleSupportCount >= input.thresholds.required_support_count ? 1 : 0,
     thresholds: input.thresholds,
   });
 }
@@ -1475,7 +1475,7 @@ export async function getNexusTrustPayload(input: {
       support_count: scopedSupportEdges.length,
       dispute_count: scopedDisputeEdges.length,
       stage:
-        scopedSupportEdges.length >= trustPolicy.role_support_threshold
+        scopedSupportEdges.length >= trustPolicy.required_support_count
           ? 'role_eligible'
           : scopedRelation !== null
             ? 'emerging'
@@ -1486,7 +1486,7 @@ export async function getNexusTrustPayload(input: {
   }
 
   const supportedRoleCount = roleCards.filter(
-    (roleCard) => roleCard.support_count >= trustPolicy.role_support_threshold
+    (roleCard) => roleCard.support_count >= trustPolicy.required_support_count
   ).length;
   const trustStage = deriveTrustStage({
     has_association_relation: activeAssociationRelation !== null,
@@ -1687,7 +1687,7 @@ export async function getNexusRolesPayload(input: {
         scope_association_support_count: associationSupportCount,
         support_count: scopedSupportEdges.length,
         dispute_count: scopedDisputeEdges.length,
-        viewer_reaction: viewerReaction,
+        viewer_attestation: viewerReaction,
         support_edges: scopedSupportEdges,
         dispute_edges: scopedDisputeEdges,
       });

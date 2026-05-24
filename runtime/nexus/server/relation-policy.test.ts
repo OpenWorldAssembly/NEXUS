@@ -28,7 +28,7 @@ test('relation policy evaluation recognizes a supporting home-locality claim fro
         {
           relation_subtype: 'residence',
           required_claim_subtypes: ['relation_assertion'],
-          required_reaction_subtypes: [],
+          required_reaction_attestations: [],
           claim_target_mode: 'relation_packet',
           subject_match_mode: 'relation_subject',
         },
@@ -129,7 +129,7 @@ test('relation policy evaluation fails when the supporting claim subject does no
         {
           relation_subtype: 'residence',
           required_claim_subtypes: ['relation_assertion'],
-          required_reaction_subtypes: [],
+          required_reaction_attestations: [],
           claim_target_mode: 'relation_packet',
           subject_match_mode: 'relation_subject',
         },

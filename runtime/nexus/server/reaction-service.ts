@@ -21,7 +21,7 @@ import type {
 } from '@core/contracts';
 import type {
   ReactionAttestationValue,
-  ReactionEmotionId,
+  ReactionEmojiKey,
   ReactionVoteValue,
   DiscussionActorClass,
   PacketEnvelope,
@@ -89,7 +89,7 @@ function applyModerationThresholds(
   };
 }
 
-function createEmptySummary(viewerValue: ReactionVoteValue | 0): ReactionVoteSummary {
+function createEmptySummary(viewerValue: ReactionVoteValue | null): ReactionVoteSummary {
   return {
     upvote_count: 0,
     downvote_count: 0,
@@ -130,7 +130,7 @@ function toReactionEdgeProjection(
     target_ref: reactionPacket.body.target_ref,
     vote_value: reactionPacket.body.vote_value,
     attestation_value: reactionPacket.body.attestation_value,
-    emotion_ids: reactionPacket.body.emotion_ids,
+    emoji_keys: reactionPacket.body.emoji_keys,
     status: reactionPacket.body.status,
     context_ref: reactionPacket.body.context_ref,
     supporting_refs: reactionPacket.body.supporting_refs,
@@ -269,7 +269,7 @@ export class SQLiteReactionService implements ReactionService {
         actor_key: actorKey,
         vote_value: reactionPacket.body.vote_value,
         attestation_value: reactionPacket.body.attestation_value,
-        emotion_ids_json: JSON.stringify(reactionPacket.body.emotion_ids),
+        emoji_keys_json: JSON.stringify(reactionPacket.body.emoji_keys),
         status: reactionPacket.body.status,
         context_packet_id: reactionPacket.body.context_ref?.packet_id ?? null,
         note: reactionPacket.body.note,
@@ -295,7 +295,7 @@ export class SQLiteReactionService implements ReactionService {
           deprioritized: false,
         };
 
-      if (reactionPacket.body.vote_value === 1) {
+      if (reactionPacket.body.vote_value === 'up') {
         currentSummary.upvote_count += 1;
       } else {
         currentSummary.downvote_count += 1;
@@ -362,9 +362,9 @@ export class SQLiteReactionService implements ReactionService {
     actor_key: string;
     actor_class: DiscussionActorClass;
     authority_scope_id: string | null;
-    vote_value?: ReactionVoteValue | 0 | null;
+    vote_value?: ReactionVoteValue | null;
     attestation_value?: ReactionAttestationValue | null;
-    emotion_ids?: ReactionEmotionId[];
+    emoji_keys?: ReactionEmojiKey[];
     context_packet_id?: string | null;
     supporting_packet_ids?: string[];
     note?: string | null;
@@ -451,19 +451,17 @@ export class SQLiteReactionService implements ReactionService {
     const nextVoteValue =
       requestedVoteValue === undefined
         ? currentReactionPacket?.body.vote_value ?? null
-        : requestedVoteValue === 0
-          ? null
-          : requestedVoteValue;
+        : requestedVoteValue;
     const nextAttestationValue =
       input.attestation_value === undefined
         ? currentReactionPacket?.body.attestation_value ?? null
         : input.attestation_value;
-    const nextEmotionIds =
-      input.emotion_ids === undefined
-        ? currentReactionPacket?.body.emotion_ids ?? []
-        : input.emotion_ids;
+    const nextEmojiKeys =
+      input.emoji_keys === undefined
+        ? currentReactionPacket?.body.emoji_keys ?? []
+        : input.emoji_keys;
     const nextStatus =
-      nextVoteValue === null && nextAttestationValue === null && nextEmotionIds.length === 0
+      nextVoteValue === null && nextAttestationValue === null && nextEmojiKeys.length === 0
         ? 'cleared'
         : 'active';
 
@@ -508,7 +506,7 @@ export class SQLiteReactionService implements ReactionService {
       subtype: 'reaction',
       vote_value: nextVoteValue,
       attestation_value: nextAttestationValue,
-      emotion_ids: nextEmotionIds,
+      emoji_keys: nextEmojiKeys,
       context_ref: input.context_packet_id
         ? {
             packet_id: input.context_packet_id,
@@ -674,7 +672,7 @@ export class SQLiteReactionService implements ReactionService {
     const viewerValues = input.viewer_actor_key
       ? this.state?.viewerValuesByActor.get(input.viewer_actor_key)
       : null;
-    const viewerValue = viewerValues?.get(input.target_packet_id) ?? 0;
+    const viewerValue = viewerValues?.get(input.target_packet_id) ?? null;
     const summary = this.state?.summaryByTarget.get(input.target_packet_id);
 
     if (!summary) {
@@ -732,6 +730,7 @@ export class SQLiteReactionService implements ReactionService {
   async listActorReactions(input: {
     actor_key: string;
     active_only?: boolean;
+    attestation_value?: ReactionAttestationValue | null;
   }): Promise<ReactionEdgeProjection[]> {
     if (!this.state) {
       await this.syncDerivedState();
@@ -740,6 +739,11 @@ export class SQLiteReactionService implements ReactionService {
     return (this.state?.reactionPackets ?? [])
       .filter(
         (reactionPacket) => getActorKeyFromPacket(reactionPacket) === input.actor_key
+      )
+      .filter((reactionPacket) =>
+        input.attestation_value
+          ? reactionPacket.body.attestation_value === input.attestation_value
+          : true
       )
       .filter((reactionPacket) =>
         input.active_only === false
@@ -904,7 +908,7 @@ export class SQLiteReactionService implements ReactionService {
           actor_key,
           vote_value,
           attestation_value,
-          emotion_ids_json,
+          emoji_keys_json,
           status,
           context_packet_id,
           note,
@@ -932,7 +936,7 @@ export class SQLiteReactionService implements ReactionService {
           row.actor_key,
           row.vote_value,
           row.attestation_value,
-          row.emotion_ids_json,
+          row.emoji_keys_json,
           row.status,
           row.context_packet_id,
           row.note,

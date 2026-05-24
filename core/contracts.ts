@@ -11,7 +11,7 @@ import type {
   PacketCompatibilityReadResult,
   PacketVersionedWritePreparation,
   ReactionAttestationValue,
-  ReactionEmotionId,
+  ReactionEmojiKey,
   ReactionVoteValue,
   DiscussionActorClass,
   DiscussionReplySort,
@@ -282,7 +282,7 @@ export interface ReactionVoteSummary {
   net_score: number;
   total_votes: number;
   negative_ratio: number;
-  viewer_value: ReactionVoteValue | 0;
+  viewer_value: ReactionVoteValue | null;
   auto_hidden: boolean;
   deprioritized: boolean;
 }
@@ -297,7 +297,7 @@ export interface ReactionEdgeProjection {
   target_ref: PacketRef;
   vote_value: ReactionVoteValue | null;
   attestation_value: ReactionAttestationValue | null;
-  emotion_ids: ReactionEmotionId[];
+  emoji_keys: ReactionEmojiKey[];
   status: 'active' | 'cleared';
   context_ref: PacketRef | null;
   supporting_refs: PacketRef[];
@@ -529,9 +529,9 @@ export interface ReactionService {
     actor_key: string;
     actor_class: DiscussionActorClass;
     authority_scope_id: string | null;
-    vote_value?: ReactionVoteValue | 0 | null;
+    vote_value?: ReactionVoteValue | null;
     attestation_value?: ReactionAttestationValue | null;
-    emotion_ids?: ReactionEmotionId[];
+    emoji_keys?: ReactionEmojiKey[];
     context_packet_id?: string | null;
     supporting_packet_ids?: string[];
     note?: string | null;
@@ -550,6 +550,7 @@ export interface ReactionService {
   listActorReactions(input: {
     actor_key: string;
     active_only?: boolean;
+    attestation_value?: ReactionAttestationValue | null;
   }): Promise<ReactionEdgeProjection[]>;
   listAssociationRelationsForActor(
     actor_packet_id: string

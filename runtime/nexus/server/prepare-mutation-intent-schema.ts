@@ -47,7 +47,7 @@ const MutationIntentSchemaOptions = [
       kind: z.literal('reaction.vote.set'),
       scope_id: z.string().min(1),
       target_packet_id: z.string().min(1),
-      value: z.union([z.literal(-1), z.literal(0), z.literal(1)]),
+      value: z.enum(['up', 'down']).nullable(),
       created_at: z.string().optional().nullable().default(null),
       mutation_nonce: z.string().optional().nullable().default(null),
     })
@@ -124,10 +124,10 @@ const MutationIntentSchemaOptions = [
     .strict(),
   z
     .object({
-      kind: z.literal('relation.participation.reaction.set'),
+      kind: z.literal('reaction.attestation.set'),
       scope_id: z.string().min(1),
-      relation_packet_id: z.string().min(1),
-      mode: z.enum(['support', 'dispute', 'clear']),
+      target_packet_id: z.string().min(1),
+      attestation_value: z.enum(['support', 'dispute']).nullable(),
       note: z.string().optional().nullable().default(null),
       created_at: z.string().optional().nullable().default(null),
       mutation_nonce: z.string().optional().nullable().default(null),
@@ -287,8 +287,19 @@ export const MutationIntentSchema = z
   });
 
 export function listPrepareMutationIntentSchemaKinds(): string[] {
-  return MutationIntentSchemaOptions.map((option) => option.shape.kind.value as string)
-    .sort((left, right) => left.localeCompare(right));
+  return MutationIntentSchemaOptions.flatMap((option) => {
+    const kindSchema = option.shape.kind;
+
+    if ('value' in kindSchema) {
+      return [kindSchema.value as string];
+    }
+
+    if ('options' in kindSchema) {
+      return [...kindSchema.options] as string[];
+    }
+
+    return [];
+  }).sort((left, right) => left.localeCompare(right));
 }
 
 export const PrepareMutationRequestSchema = z

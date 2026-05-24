@@ -32,9 +32,9 @@ export const GET: RequestHandler = async (request) => {
     }
 
     const services = await getNexusPacketServices();
-    const attestations = await services.attestationService.listActorAttestations({
+    const attestations = await services.reactionService.listActorReactions({
       actor_key: `element:${actorPacketId}`,
-      attestation_kind: attestationKind,
+      attestation_value: attestationKind === 'support' || attestationKind === 'dispute' ? attestationKind : undefined,
       active_only: false,
     });
 

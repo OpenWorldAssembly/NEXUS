@@ -165,8 +165,8 @@ export class MutationPrepareHandlers {
     });
   }
 
-  async prepareRoleParticipationReaction(input: {
-    intent: Extract<MutationIntent, { kind: 'relation.participation.reaction.set' }>;
+  async prepareReactionAttestation(input: {
+    intent: Extract<MutationIntent, { kind: 'reaction.attestation.set' }>;
     actorPacket: PacketEnvelopeByType['Element'];
   }): Promise<PreparedMutation> {
     return runTrustedCompositeWorkflowMutation({

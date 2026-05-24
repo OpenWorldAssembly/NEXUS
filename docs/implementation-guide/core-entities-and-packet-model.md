@@ -181,12 +181,12 @@ Current scope-graph direction:
 
 ## Reaction
 
-`Reaction` is the current packet family for target-agnostic responses. It replaces the prior split between standalone vote packets and reaction packets.
+`Reaction` is the current packet type for target-agnostic responses. It replaces the prior split between standalone vote packets and reaction packets.
 
 A reaction can carry independent channels for signal aggregation, support/dispute posture, and emotional response:
 
 - `vote_value`: basic up/down signal used for visibility and formal vote-like aggregation
 - `reaction_value`: support or dispute only
-- `emotion_ids`: small emoji/emotion set for how people feel about a target
+- `emoji_keys`: small emoji-key set for how people feel about a target
 
 Relations, roles, proposals, discussion packets, and future action packets can all be reaction targets without the reaction needing packet-type-specific semantics.

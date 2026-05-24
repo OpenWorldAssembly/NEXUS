@@ -78,10 +78,9 @@ const MUTATION_POLICY_ACTION_IDS = {
     'relation.participation.add',
     'relation.participation.clear',
   ],
-  'relation.participation.reaction.set': [
-    'relation.participation.reaction.support',
-    'relation.participation.reaction.dispute',
-    'relation.participation.reaction.clear',
+  'reaction.attestation.set': [
+    'reaction.attestation.set',
+    'reaction.attestation.clear',
   ],
   'actor.write_policy.update': ['actor.write_policy.update'],
   'preference.element.set': ['preference.element.write'],

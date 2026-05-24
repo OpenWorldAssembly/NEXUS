@@ -16,7 +16,7 @@ export type MutationPrepareHandlerKey =
   | 'prepareHomeLocalityRelation'
   | 'prepareFollowRelation'
   | 'prepareRoleParticipationRelation'
-  | 'prepareRoleParticipationReaction'
+  | 'prepareReactionAttestation'
   | 'prepareDiscussionSurfacesEnsure'
   | 'prepareActorWritePolicyUpdate'
   | 'preparePreferenceElementSet';
@@ -32,7 +32,7 @@ export type MutationFinalizeHandlerKey =
   | 'finalizeHomeLocalityRelation'
   | 'finalizeFollowRelationUpdate'
   | 'finalizeRoleParticipationRelationUpdate'
-  | 'finalizeRoleParticipationReaction'
+  | 'finalizeReactionAttestation'
   | 'finalizeDiscussionSurfacesEnsure'
   | 'finalizeActorWritePolicyUpdate'
   | 'finalizePreferenceElementSet';
@@ -130,10 +130,10 @@ const MUTATION_INTENT_DESCRIPTORS = [
     finalize: 'finalizeRoleParticipationRelationUpdate',
   },
   {
-    kind: 'relation.participation.reaction.set',
-    domain: 'role',
-    prepare: 'prepareRoleParticipationReaction',
-    finalize: 'finalizeRoleParticipationReaction',
+    kind: 'reaction.attestation.set',
+    domain: 'reaction',
+    prepare: 'prepareReactionAttestation',
+    finalize: 'finalizeReactionAttestation',
   },
   {
     kind: 'actor.write_policy.update',

@@ -10,7 +10,7 @@ import type { PacketType } from '@core/schema/packet-ontology';
 import { DefinitionBodySchema } from '@core/packets/definitions/definition.ts';
 import {
   ReactionAttestationValueSchema,
-  ReactionEmotionIdSchema,
+  ReactionEmojiKeySchema,
   ReactionStatusSchema,
   ReactionVoteValueSchema,
   ClaimStatusSchema,
@@ -393,7 +393,7 @@ export const ReactionBodySchema = z
     status: ReactionStatusSchema.default('active'),
     vote_value: ReactionVoteValueSchema.nullable().default(null),
     attestation_value: ReactionAttestationValueSchema.nullable().default(null),
-    emotion_ids: z.array(ReactionEmotionIdSchema).default([]),
+    emoji_keys: z.array(ReactionEmojiKeySchema).default([]),
     context_ref: PacketRefSchema.nullable().default(null),
     supporting_refs: z.array(PacketRefSchema).default([]),
     note: z.string().min(1).nullable().default(null),
@@ -453,7 +453,7 @@ export const PolicyBodySchema = z
     trust_policy: z
       .object({
         association_support_threshold: z.number().int().nonnegative().default(1),
-        role_support_threshold: z.number().int().nonnegative().default(2),
+        required_support_count: z.number().int().nonnegative().default(2),
         posting_gate: TrustStageSchema.default('emerging'),
         voting_gate: TrustStageSchema.default('recognized'),
         review_gate: TrustStageSchema.default('role_eligible'),
@@ -495,7 +495,7 @@ export const PolicyBodySchema = z
               .object({
                 relation_subtype: z.string().min(1),
                 required_claim_subtypes: z.array(z.string().min(1)).default([]),
-                required_reaction_attestations: z.array(z.string().min(1)).default([]),
+                required_reaction_attestations: z.array(ReactionAttestationValueSchema).default([]),
                 claim_target_mode: RelationClaimTargetModeSchema.default('relation_packet'),
                 subject_match_mode: RelationSubjectMatchModeSchema.default(
                   'relation_subject'

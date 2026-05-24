@@ -21,7 +21,7 @@ import type {
   PacketRevisionMode,
 } from '@core/schema/packet-ontology';
 import {
-  CHANGE_KINDS,
+  PACKET_ADAPTATION_CHANGE_KINDS as CHANGE_KINDS,
   DEFAULT_SCHEMA_VERSION,
   PACKET_TYPES,
   PACKET_TYPE_REVISION_MODES,
@@ -104,7 +104,7 @@ const LegacyPolicyBodySchema = PolicyBodySchemaV1_0.omit({
   trust_policy: z
     .object({
       association_support_threshold: z.number().int().nonnegative().default(1),
-      role_support_threshold: z.number().int().nonnegative().default(2),
+      required_support_count: z.number().int().nonnegative().default(2),
       posting_gate: TrustStageSchema.default('emerging'),
       voting_gate: TrustStageSchema.default('recognized'),
       review_gate: TrustStageSchema.default('role_eligible'),
@@ -971,7 +971,7 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
 
           const previousBody = {
             subtype:
-              currentBody.subtype ?? relationAssertion?.subtype ?? subtypeS[0],
+              currentBody.subtype ?? relationAssertion?.subtype ?? 'relation_assertion',
             subject_ref: currentBody.subject_ref ??
               relationAssertion?.subject_ref ?? {
                 packet_id: currentBody.target_ref.packet_id,

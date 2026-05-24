@@ -117,7 +117,7 @@ test('composite workflow mutation intents are closed as live generic-composite w
     'assembly.element.create',
     'discussion.thread_post.create',
     'discussion.reply.create',
-    'relation.participation.attestation.set',
+    'reaction.attestation.set',
     'actor.write_policy.update',
   ] as const) {
     const entry = closureByIntent.get(mutationIntent);

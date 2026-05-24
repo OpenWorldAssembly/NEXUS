@@ -36,7 +36,7 @@ import {
   type PacketRef,
   type PacketRevisionRef,
   type ReactionAttestationValue,
-  type ReactionEmotionId,
+  type ReactionEmojiKey,
   type ReactionVoteValue,
   type LocalityLevel,
 } from '@core/schema/packet-schema';
@@ -286,7 +286,7 @@ export interface PolicyPacketInput extends PacketBuilderBaseInput {
   status: string;
   trust_policy?: {
     association_support_threshold?: number;
-    role_support_threshold?: number;
+    required_support_count?: number;
     posting_gate?: TrustStage;
     voting_gate?: TrustStage;
     review_gate?: TrustStage;
@@ -343,7 +343,7 @@ export interface ReactionPacketInput extends PacketBuilderBaseInput {
   status?: 'active' | 'cleared';
   vote_value?: ReactionVoteValue | null;
   attestation_value?: ReactionAttestationValue | null;
-  emotion_ids?: ReactionEmotionId[];
+  emoji_keys?: ReactionEmojiKey[];
   context_ref?: PacketRef | null;
   supporting_refs?: PacketRef[];
   note?: string | null;

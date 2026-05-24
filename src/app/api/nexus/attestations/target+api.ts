@@ -35,15 +35,15 @@ export const GET: RequestHandler = async (request) => {
     }
 
     const services = await getNexusPacketServices();
-    const summary = await services.attestationService.getTargetSummary({
+    const summary = await services.reactionService.getTargetSummary({
       target_packet_id: targetPacketId,
       viewer_actor_key: viewerActorPacketId
         ? `element:${viewerActorPacketId}`
         : null,
     });
-    const attestations = await services.attestationService.listTargetAttestations({
+    const attestations = await services.reactionService.listTargetReactions({
       target_packet_id: targetPacketId,
-      attestation_kind: attestationKind,
+      attestation_value: attestationKind === 'support' || attestationKind === 'dispute' ? attestationKind : undefined,
       context_packet_id: contextPacketId,
       active_only: false,
     });

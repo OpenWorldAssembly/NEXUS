@@ -32,7 +32,7 @@ export const GET: RequestHandler = async (request) => {
 
     const services = await getNexusPacketServices();
     const claims =
-      await services.attestationService.listAssociationClaimsForActor(
+      await services.reactionService.listAssociationClaimsForActor(
         actorPacketId
       );
 

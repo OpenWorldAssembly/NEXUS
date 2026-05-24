@@ -777,7 +777,7 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     status: 'active',
     trust_policy: {
       association_support_threshold: 1,
-      role_support_threshold: 2,
+      required_support_count: 2,
       posting_gate: 'emerging',
       voting_gate: 'recognized',
       review_gate: 'role_eligible',

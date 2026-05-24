@@ -274,7 +274,7 @@ function getHotScore(voteSummary: VoteAggregate, createdAt: string): number {
 
 function createVoteSummary(
   voteSummary: Omit<ReactionVoteSummary, 'viewer_value'> | undefined,
-  viewerValue: ReactionVoteValue | 0
+  viewerValue: ReactionVoteValue | null
 ): ReactionVoteSummary {
   return {
     upvote_count: voteSummary?.upvote_count ?? 0,
@@ -780,7 +780,7 @@ export class SQLiteDiscussionService
             actor_key,
             vote_value,
             attestation_value,
-            emotion_ids_json,
+            emoji_keys_json,
             status,
             context_packet_id,
             note,
@@ -2007,7 +2007,7 @@ export class SQLiteDiscussionService
     const viewerVotes = viewerActorKey
       ? this.state?.viewerVotesByActor.get(viewerActorKey)
       : null;
-    const viewerValue = viewerVotes?.get(targetPacketId) ?? 0;
+    const viewerValue = viewerVotes?.get(targetPacketId) ?? null;
 
     return createVoteSummary(
       this.state?.voteSummaryByTarget.get(targetPacketId),

@@ -145,7 +145,7 @@ test('active packet builders emit top-level subtype classifiers', () => {
     packet_id: 'nexus:reaction/test',
     subtype: 'reaction',
     target_ref: packetIds(claim),
-    vote_value: 1,
+    vote_value: 'up',
     attestation_value: 'support',
   });
   const decision = createPacketEnvelope({
@@ -161,7 +161,7 @@ test('active packet builders emit top-level subtype classifiers', () => {
       title: 'Decision',
       outcome: 'approved',
       proposal_ref: packetIds(proposal),
-      vote_ref: packetIds(vote),
+      vote_ref: packetIds(reaction),
     },
   });
   const action = createActionPacket({

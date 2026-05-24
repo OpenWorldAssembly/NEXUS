@@ -8,7 +8,10 @@ import type {
   WriteProofLevel,
 } from '@core/auth/proof-types';
 import type { MutationActionId } from '@core/auth/write-policy';
-import type { PacketEnvelope } from '@core/schema/packet-schema';
+import type {
+  PacketEnvelope,
+  ReactionAttestationValue,
+} from '@core/schema/packet-schema';
 
 export type DiscussionThreadPostMutationIntent = {
   kind: 'discussion.thread_post.create';
@@ -34,7 +37,7 @@ export type PacketVoteMutationIntent = {
   kind: 'reaction.vote.set';
   scope_id: string;
   target_packet_id: string;
-  value: -1 | 0 | 1;
+  value: 'up' | 'down' | null;
   created_at?: string | null;
   mutation_nonce?: string | null;
 };
@@ -102,11 +105,11 @@ export type RoleParticipationMutationIntent = {
   mutation_nonce?: string | null;
 };
 
-export type RoleParticipationReactionMutationIntent = {
-  kind: 'relation.participation.reaction.set';
+export type ReactionAttestationMutationIntent = {
+  kind: 'reaction.attestation.set';
   scope_id: string;
-  relation_packet_id: string;
-  mode: 'support' | 'dispute' | 'clear';
+  target_packet_id: string;
+  attestation_value: ReactionAttestationValue | null;
   note?: string | null;
   created_at?: string | null;
   mutation_nonce?: string | null;
@@ -199,7 +202,7 @@ export type MutationIntent =
   | FollowRelationSetMutationIntent
   | FollowRelationClearMutationIntent
   | RoleParticipationMutationIntent
-  | RoleParticipationReactionMutationIntent
+  | ReactionAttestationMutationIntent
   | LocalityPathCreateMutationIntent
   | LocalityGraphApplyMutationIntent
   | DiscussionSurfacesEnsureMutationIntent

@@ -84,9 +84,9 @@ export interface ReactionIndexRecord {
   reaction_packet_id: string;
   target_packet_id: string;
   actor_key: string;
-  vote_value: number | null;
+  vote_value: 'up' | 'down' | null;
   attestation_value: string | null;
-  emotion_ids_json: string;
+  emoji_keys_json: string;
   status: string;
   context_packet_id: string | null;
   note: string | null;

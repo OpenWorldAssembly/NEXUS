@@ -132,7 +132,7 @@ test('scope graph prefers canonical ancestry relations and projects packet-nativ
           {
             relation_subtype: 'residence',
             required_claim_subtypes: ['relation_assertion'],
-            required_attestation_subtypes: [],
+            required_reaction_attestations: [],
             claim_target_mode: 'relation_packet',
             subject_match_mode: 'relation_subject',
           },
@@ -462,7 +462,7 @@ test('scope graph does not let legacy home-locality compatibility bypass an unsa
           {
             relation_subtype: 'residence',
             required_claim_subtypes: ['relation_assertion'],
-            required_attestation_subtypes: [],
+            required_reaction_attestations: [],
             claim_target_mode: 'relation_packet',
             subject_match_mode: 'relation_subject',
           },
@@ -568,7 +568,7 @@ test('scope graph does not silently fall back to legacy home-locality compatibil
           {
             relation_subtype: 'residence',
             required_claim_subtypes: ['relation_assertion'],
-            required_attestation_subtypes: [],
+            required_reaction_attestations: [],
             claim_target_mode: 'relation_packet',
             subject_match_mode: 'relation_subject',
           },

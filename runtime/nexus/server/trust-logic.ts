@@ -11,7 +11,7 @@ export type NexusTrustStageId =
 
 export type NexusTrustPolicySnapshot = {
   association_support_threshold: number;
-  role_support_threshold: number;
+  required_support_count: number;
   posting_gate: NexusTrustStageId;
   voting_gate: NexusTrustStageId;
   review_gate: NexusTrustStageId;
@@ -19,7 +19,7 @@ export type NexusTrustPolicySnapshot = {
 
 export const DEFAULT_TRUST_POLICY_SNAPSHOT: NexusTrustPolicySnapshot = {
   association_support_threshold: 1,
-  role_support_threshold: 2,
+  required_support_count: 2,
   posting_gate: 'emerging',
   voting_gate: 'recognized',
   review_gate: 'role_eligible',

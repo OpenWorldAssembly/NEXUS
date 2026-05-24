@@ -64,10 +64,10 @@ type InlineReplyComposerProps = {
 
 type DiscussionVotePillProps = {
   score: number;
-  viewerValue: -1 | 0 | 1;
+  viewerValue: 'up' | 'down' | null;
   canVote: boolean;
   disabled: boolean;
-  onVote: (event: GestureResponderEvent, value: -1 | 1) => void;
+  onVote: (event: GestureResponderEvent, value: 'up' | 'down') => void;
 };
 
 type ReplyBranchState = {
@@ -99,7 +99,7 @@ type ReplyNodeProps = {
   onEnsureReplyChildren: (reply: NexusDiscussionReply) => void;
   onLoadMoreReplyChildren: (reply: NexusDiscussionReply) => void;
   onReply: (postId: string) => void;
-  onVote: (post: NexusDiscussionPost, value: -1 | 1) => void;
+  onVote: (post: NexusDiscussionPost, value: 'up' | 'down') => void;
   onChangeReplyBody: (nextValue: string) => void;
   onSubmitReply: () => void;
 };
@@ -459,13 +459,13 @@ function DiscussionVotePill({
     <View className={`flex-row items-center overflow-hidden rounded-full border ${containerClass}`}>
         <Pressable
           accessibilityRole="button"
-          className={`px-4 py-2.5 ${viewerValue === 1 ? activeVoteSegmentClass : ''}`}
+          className={`px-4 py-2.5 ${viewerValue === 'up' ? activeVoteSegmentClass : ''}`}
           disabled={!canVote || disabled}
-          onPress={(event) => onVote(event, 1)}
+          onPress={(event) => onVote(event, 'up')}
         >
           <Text
             className={`text-sm font-semibold ${
-              viewerValue === 1 ? '' : buttonClass
+              viewerValue === 'up' ? '' : buttonClass
             }`}
           >
             +1
@@ -477,14 +477,14 @@ function DiscussionVotePill({
         <Pressable
           accessibilityRole="button"
           className={`border-l px-4 py-2.5 ${dividerClass} ${
-            viewerValue === -1 ? activeVoteSegmentClass : ''
+            viewerValue === 'down' ? activeVoteSegmentClass : ''
           }`}
           disabled={!canVote || disabled}
-          onPress={(event) => onVote(event, -1)}
+          onPress={(event) => onVote(event, 'down')}
         >
           <Text
             className={`text-sm font-semibold ${
-              viewerValue === -1 ? '' : buttonClass
+              viewerValue === 'down' ? '' : buttonClass
             }`}
           >
             -1
@@ -1382,7 +1382,7 @@ export default function NexusDiscussionsPage() {
    * Output: writes the vote and updates any loaded local projections for that post.
    */
   const handleVote = useCallback(
-    async (post: NexusDiscussionPost, value: -1 | 1) => {
+    async (post: NexusDiscussionPost, value: 'up' | 'down') => {
       await guardNexusWrite(
         {
           writeRisk: 'standard',
@@ -1398,14 +1398,14 @@ export default function NexusDiscussionsPage() {
         const applyVote = async () => {
           const finalizedMutation = await runFortressMutation<{
             target_packet_id: string;
-            value: -1 | 0 | 1;
+            value: 'up' | 'down' | null;
             summary: NexusDiscussionPost['vote_summary'];
           }>({
             intent: {
-              kind: 'attestation.packet_signal.set',
+              kind: 'reaction.vote.set',
               scope_id: activeScope.id,
               target_packet_id: post.packet.packet_id,
-              value: post.vote_summary.viewer_value === value ? 0 : value,
+              value: post.vote_summary.viewer_value === value ? null : value,
             },
           });
           const voteResult = finalizedMutation.result;

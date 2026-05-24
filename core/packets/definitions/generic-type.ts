@@ -929,13 +929,12 @@ function createGenericReadyWorkflowPlans(input: {
         packet_type: 'Reaction',
         packet_subtype: 'reaction',
         planner_id: input.writePlannerId,
-        mutation_intents: ['relation.participation.reaction.set'],
+        mutation_intents: ['reaction.attestation.set'],
         operation_kinds: ['reaction.set', 'reaction.clear'],
         resolver_ids: ['actor.ref', 'input.packet_ref', 'input.value'],
         policy_action_ids: [
-          'relation.participation.reaction.support',
-          'relation.participation.reaction.dispute',
-          'relation.participation.reaction.clear',
+          'reaction.attestation.set',
+          'reaction.attestation.clear',
         ],
         dependency_ids: [
           'runtime.packet_store.read',
@@ -947,15 +946,14 @@ function createGenericReadyWorkflowPlans(input: {
         ],
         steps: [
           operationStep({
-            step_id: 'set_relation_participation_reaction',
+            step_id: 'set_reaction_attestation',
             operation_kind: 'reaction.set',
             packet_type: 'Reaction',
             packet_subtype: 'reaction',
             resolver_ids: ['actor.ref', 'input.packet_ref', 'input.value'],
             policy_action_ids: [
-              'relation.participation.reaction.support',
-              'relation.participation.reaction.dispute',
-              'relation.participation.reaction.clear',
+              'reaction.attestation.set',
+              'reaction.attestation.clear',
             ],
             dependency_ids: [
               'runtime.packet_store.read',
@@ -975,7 +973,7 @@ function createGenericReadyWorkflowPlans(input: {
         ],
         availability: 'runtime_ready',
         notes:
-          'Describes the generic-ready relation.participation.reaction.set fortress intent without enrolling live execution.',
+          'Describes the generic-ready reaction.attestation.set fortress intent without enrolling live execution.',
       },
     ];
   }

@@ -66,7 +66,7 @@ export type LiveCompositeWorkflowMutationIntent = Extract<
   | 'assembly.element.create'
   | 'discussion.thread_post.create'
   | 'discussion.reply.create'
-  | 'relation.participation.reaction.set'
+  | 'reaction.attestation.set'
   | 'actor.write_policy.update'
 >;
 
@@ -85,7 +85,7 @@ export type LiveCompositeWorkflowEnrollment = {
     | 'prepareAssemblyElementCreate'
     | 'prepareDiscussionThreadPost'
     | 'prepareDiscussionReply'
-    | 'prepareRoleParticipationReaction'
+    | 'prepareReactionAttestation'
     | 'prepareActorWritePolicyUpdate';
   live_mode: 'trusted_generic_composite_workflow';
   notes: string;
@@ -141,7 +141,7 @@ const LIVE_COMPOSITE_ADAPTER_IDS_BY_INTENT = {
   'assembly.element.create': 'composite.assembly_element.create.v0',
   'discussion.thread_post.create': 'composite.discussion_thread_post.create.v0',
   'discussion.reply.create': 'composite.discussion_reply.create.v0',
-  'relation.participation.reaction.set': 'composite.relation_participation_reaction.set.v0',
+  'reaction.attestation.set': 'composite.reaction_attestation.set.v0',
   'actor.write_policy.update': 'composite.actor_write_policy.update.v0',
 } as const satisfies Record<LiveCompositeWorkflowMutationIntent, string>;
 
@@ -152,7 +152,7 @@ const PREPARE_HANDLER_BY_INTENT = {
   'assembly.element.create': 'prepareAssemblyElementCreate',
   'discussion.thread_post.create': 'prepareDiscussionThreadPost',
   'discussion.reply.create': 'prepareDiscussionReply',
-  'relation.participation.reaction.set': 'prepareRoleParticipationReaction',
+  'reaction.attestation.set': 'prepareReactionAttestation',
   'actor.write_policy.update': 'prepareActorWritePolicyUpdate',
 } as const satisfies Record<
   LiveCompositeWorkflowMutationIntent,
@@ -848,27 +848,27 @@ export async function resolveTrustedAssemblyElementCompositePlan(
   };
 }
 
-export async function resolveTrustedRoleParticipationReactionCompositePlan(
+export async function resolveTrustedReactionAttestationCompositePlan(
   input: TrustedCompositeWorkflowMutationInput
 ): Promise<TrustedCompositeWorkflowPlan> {
-  if (input.intent.kind !== 'relation.participation.reaction.set') {
+  if (input.intent.kind !== 'reaction.attestation.set') {
     throw new Error(
-      `Unsupported role participation reaction composite workflow intent: ${input.intent.kind}`
+      `Unsupported reaction attestation composite workflow intent: ${input.intent.kind}`
     );
   }
   const intent = input.intent as Extract<
     MutationIntent,
-    { kind: 'relation.participation.reaction.set' }
+    { kind: 'reaction.attestation.set' }
   >;
 
   const relationPacket = await requirePacket({
     packetStore: input.packetStore,
-    packetId: intent.relation_packet_id,
+    packetId: intent.target_packet_id,
     type: 'Relation',
   });
 
   if (relationPacket.body.subtype !== 'participation') {
-    throw new Error('Role participation reactions require a participation relation.');
+    throw new Error('Reaction attestations require a participation relation.');
   }
 
   if (relationPacket.body.subject_ref.packet_id === input.actorPacket.header.packet_id) {
@@ -877,7 +877,7 @@ export async function resolveTrustedRoleParticipationReactionCompositePlan(
 
   const trimmedNote = intent.note?.trim() ?? null;
 
-  if (intent.mode === 'dispute' && !trimmedNote) {
+  if (intent.attestation_value === 'dispute' && !trimmedNote) {
     throw new Error('A dispute reaction requires a comment.');
   }
 
@@ -901,7 +901,7 @@ export async function resolveTrustedRoleParticipationReactionCompositePlan(
     governingScopePacket.header.applicable_scope_refs.length > 0
       ? governingScopePacket.header.applicable_scope_refs
       : [{ packet_id: governingScopePacket.header.packet_id }];
-  const createRoleReactionRevision = async (
+  const createReactionAttestationRevision = async (
     attestationValue: ReactionAttestationValue | null,
     note: string | null
   ) => {
@@ -945,7 +945,7 @@ export async function resolveTrustedRoleParticipationReactionCompositePlan(
       subtype: 'reaction',
       vote_value: currentReactionPacket?.body.vote_value ?? null,
       attestation_value: attestationValue,
-      emotion_ids: currentReactionPacket?.body.emotion_ids ?? [],
+      emoji_keys: currentReactionPacket?.body.emoji_keys ?? [],
       context_ref: null,
       supporting_refs: [],
       note,
@@ -955,9 +955,9 @@ export async function resolveTrustedRoleParticipationReactionCompositePlan(
     });
   };
 
-  const desiredPacket = await createRoleReactionRevision(
-    intent.mode === 'clear' ? null : intent.mode,
-    intent.mode === 'clear' ? null : trimmedNote
+  const desiredPacket = await createReactionAttestationRevision(
+    intent.attestation_value,
+    intent.attestation_value === null ? null : trimmedNote
   );
 
   if (desiredPacket) {
@@ -965,11 +965,9 @@ export async function resolveTrustedRoleParticipationReactionCompositePlan(
   }
 
   const actionId: MutationActionId =
-    intent.mode === 'support'
-      ? 'relation.participation.reaction.support'
-      : intent.mode === 'dispute'
-        ? 'relation.participation.reaction.dispute'
-        : 'relation.participation.reaction.clear';
+    intent.attestation_value === null
+      ? 'reaction.attestation.clear'
+      : 'reaction.attestation.set';
   const mergedPolicyDecision = await input.policyGate.resolveScopePolicyDecision({
     governingScopePacket,
     actorPacket: input.actorPacket,
@@ -1163,8 +1161,8 @@ export async function runTrustedCompositeWorkflowMutation(
       .prepared_mutation;
   }
 
-  if (input.intent.kind === 'relation.participation.reaction.set') {
-    return (await resolveTrustedRoleParticipationReactionCompositePlan(input))
+  if (input.intent.kind === 'reaction.attestation.set') {
+    return (await resolveTrustedReactionAttestationCompositePlan(input))
       .prepared_mutation;
   }
 

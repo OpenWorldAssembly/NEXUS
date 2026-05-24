@@ -159,7 +159,7 @@ test('explorer payload returns raw, adapted, read-model, and link data for packe
       applicable_scope_refs: [{ packet_id: SCOPE_PACKET_ID }],
       created_by: { packet_id: actorPacket.header.packet_id },
       target_ref: { packet_id: claimPacket.header.packet_id },
-      vote_value: 1,
+      vote_value: 'up',
       subtype: 'reaction',
     });
 

@@ -308,12 +308,12 @@ Claimed `Preference.element` writes now use the signed fortress prepare/finalize
 
 ## Reaction packet convergence pass
 
-Current pre-reseed canon collapses lightweight votes, packet signals, support/dispute posture, and emoji-style emotional responses into `Reaction` as the single packet family for target-agnostic responses.
+Current pre-reseed canon collapses lightweight votes, packet signals, support/dispute posture, and emoji-style emotional responses into `Reaction` as the single packet type for target-agnostic responses.
 
 `Reaction` packets are replaceable per actor/target/context. A revision can carry any combination of:
 
-- `vote_value`: `1`, `-1`, or `null`
+- `vote_value`: `'up'`, `'down'`, or `null`
 - `reaction_value`: `support`, `dispute`, or `null`
-- `emotion_ids`: a bounded list of basic reaction/emotion ids
+- `emoji_keys`: a bounded list of basic emoji keys
 
-`Reaction` does not encode target packet type or target-specific purpose. Proposal voting, discussion up/down signaling, role support/dispute posture, and later emoji/reaction UI should all route through the same packet type and projection layer. The old standalone `Vote` and `Attestation` packet families are removed from fresh canon for the clean pre-reseed path.
+`Reaction` does not encode target packet type or target-specific purpose. Proposal voting, discussion up/down signaling, role support/dispute posture, and later emoji/reaction UI should all route through the same packet type and projection layer. The old standalone `Vote` and `Attestation` packet types are removed from fresh canon for the clean pre-reseed path.

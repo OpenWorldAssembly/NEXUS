@@ -125,10 +125,10 @@ export const DISCUSSION_SUBTYPES = [
   'message',
 ] as const;
 
-export const REACTION_VOTE_VALUES = [1, -1] as const;
+export const REACTION_VOTE_VALUES = ['up', 'down'] as const;
 export const REACTION_ATTESTATION_VALUES = ['support', 'dispute'] as const;
 export const REACTION_STATUSES = ['active', 'cleared'] as const;
-export const REACTION_EMOTION_IDS = [
+export const REACTION_EMOJI_KEYS = [
   'heart',
   'thanks',
   'insightful',
@@ -245,9 +245,9 @@ export const DiscussionSortSchema = z.enum(DISCUSSION_SORTS);
 export const DiscussionReplySortSchema = z.enum(DISCUSSION_REPLY_SORTS);
 export const DiscussionSubtypeSchema = z.enum(DISCUSSION_SUBTYPES);
 export const ReactionStatusSchema = z.enum(REACTION_STATUSES);
-export const ReactionVoteValueSchema = z.union([z.literal(1), z.literal(-1)]);
+export const ReactionVoteValueSchema = z.enum(REACTION_VOTE_VALUES);
 export const ReactionAttestationValueSchema = z.enum(REACTION_ATTESTATION_VALUES);
-export const ReactionEmotionIdSchema = z.enum(REACTION_EMOTION_IDS);
+export const ReactionEmojiKeySchema = z.enum(REACTION_EMOJI_KEYS);
 export const PacketRevisionStateSchema = z.enum(REVISION_STATES);
 export const PacketMergeStrategySchema = z.enum(MERGE_STRATEGIES);
 export const TrustStageSchema = z.enum(TRUST_STAGES);
@@ -285,7 +285,7 @@ export type DiscussionSubtype = z.infer<typeof DiscussionSubtypeSchema>;
 export type ReactionVoteValue = z.infer<typeof ReactionVoteValueSchema>;
 export type ReactionAttestationValue = z.infer<typeof ReactionAttestationValueSchema>;
 export type ReactionStatus = z.infer<typeof ReactionStatusSchema>;
-export type ReactionEmotionId = z.infer<typeof ReactionEmotionIdSchema>;
+export type ReactionEmojiKey = z.infer<typeof ReactionEmojiKeySchema>;
 export type TrustStage = z.infer<typeof TrustStageSchema>;
 export type PacketRevisionMode = z.infer<typeof PacketRevisionModeSchema>;
 export type ClaimKind = z.infer<typeof ClaimKindSchema>;

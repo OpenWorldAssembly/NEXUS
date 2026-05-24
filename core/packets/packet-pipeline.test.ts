@@ -181,7 +181,7 @@ test('generic builder pipeline emits active subtype bodies for current core type
         created_at: CREATED_AT,
         subtype: 'reaction',
         target_ref: { packet_id: 'nexus:discussion/post/a' },
-        vote_value: 1,
+        vote_value: 'up',
         status: 'active',
       },
       header: {

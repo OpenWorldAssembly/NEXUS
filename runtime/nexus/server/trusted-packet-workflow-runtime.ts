@@ -669,7 +669,7 @@ export async function resolveTrustedReactionOperationPlan(
       })
     : null;
   const actionId: MutationActionId =
-    input.intent.value === 0
+    input.intent.value === null
       ? 'reaction.vote.clear'
       : 'reaction.vote.set';
 
@@ -677,7 +677,7 @@ export async function resolveTrustedReactionOperationPlan(
     plan_kind: 'trusted_reaction_operation_plan',
     mutation_intent: input.intent.kind,
     operation_kind:
-      input.intent.value === 0 ? 'reaction.clear' : 'reaction.set',
+      input.intent.value === null ? 'reaction.clear' : 'reaction.set',
     workflow_plan_id: enrollment.workflow_plan_id,
     packet_type: 'Reaction',
     packet_subtype: 'reaction',

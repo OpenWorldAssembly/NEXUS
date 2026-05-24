@@ -204,9 +204,9 @@ export class MutationFinalizeHandlers {
       persist_effects: toMutationPersistEffects([reactionPacket]),
       result: {
         target_packet_id: reactionPacket.body.target_ref.packet_id,
-        value: (reactionPacket.body.status === 'cleared'
-          ? 0
-          : reactionPacket.body.vote_value) as -1 | 0 | 1,
+        value: reactionPacket.body.status === 'cleared'
+          ? null
+          : reactionPacket.body.vote_value,
         summary,
       },
     };
@@ -413,7 +413,7 @@ export class MutationFinalizeHandlers {
     };
   }
 
-  async finalizeRoleParticipationReaction(input: {
+  async finalizeReactionAttestation(input: {
     actorContext: MutationFinalizeActorContext;
     signedPackets: PacketEnvelope[];
     storedTicket: StoredMutationTicket;
@@ -424,21 +424,21 @@ export class MutationFinalizeHandlers {
     });
     await this.reactionService.syncDerivedState();
 
-    if (input.storedTicket.intent.kind !== 'relation.participation.reaction.set') {
-      throw new Error('Unexpected role participation reaction mutation ticket.');
+    if (input.storedTicket.intent.kind !== 'reaction.attestation.set') {
+      throw new Error('Unexpected reaction attestation mutation ticket.');
     }
-    const roleReactionIntent = input.storedTicket.intent;
+    const reactionAttestationIntent = input.storedTicket.intent;
 
     const supportCount = (
       await this.reactionService.listTargetReactions({
-        target_packet_id: roleReactionIntent.relation_packet_id,
+        target_packet_id: reactionAttestationIntent.target_packet_id,
         attestation_value: 'support',
         active_only: true,
       })
     ).length;
     const disputeCount = (
       await this.reactionService.listTargetReactions({
-        target_packet_id: roleReactionIntent.relation_packet_id,
+        target_packet_id: reactionAttestationIntent.target_packet_id,
         attestation_value: 'dispute',
         active_only: true,
       })
@@ -450,7 +450,7 @@ export class MutationFinalizeHandlers {
         active_only: true,
       })
     ).some((edge) =>
-      edge.target_ref.packet_id === roleReactionIntent.relation_packet_id &&
+      edge.target_ref.packet_id === reactionAttestationIntent.target_packet_id &&
       edge.attestation_value === 'support'
     );
     const viewerDispute = (
@@ -459,18 +459,18 @@ export class MutationFinalizeHandlers {
         active_only: true,
       })
     ).some((edge) =>
-      edge.target_ref.packet_id === roleReactionIntent.relation_packet_id &&
+      edge.target_ref.packet_id === reactionAttestationIntent.target_packet_id &&
       edge.attestation_value === 'dispute'
     );
 
     return {
       persist_effects: toMutationPersistEffects(input.signedPackets),
       result: {
-        relation_packet_id: roleReactionIntent.relation_packet_id,
-        mode: roleReactionIntent.mode,
+        relation_packet_id: reactionAttestationIntent.target_packet_id,
+        mode: reactionAttestationIntent.attestation_value ?? 'clear',
         support_count: supportCount,
         dispute_count: disputeCount,
-        viewer_reaction: viewerSupport
+        viewer_attestation: viewerSupport
           ? 'support'
           : viewerDispute
             ? 'dispute'
