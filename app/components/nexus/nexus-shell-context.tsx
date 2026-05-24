@@ -487,12 +487,12 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
     await runFortressMutation({
       intent: isFollowed
         ? {
-            kind: 'follows.relation.set',
+            kind: 'relation.follow.add',
             scope_id: scopeId,
             target_scope_packet_id: targetScope.packetId,
           }
         : {
-            kind: 'follows.relation.clear',
+            kind: 'relation.follow.clear',
             scope_id: scopeId,
             target_scope_packet_id: targetScope.packetId,
           },

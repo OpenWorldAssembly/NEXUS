@@ -19,8 +19,8 @@ export const REQUIRED_PACKET_DEFINITION_PARTS = [
   'packet_planner_descriptor',
   'packet_projection_descriptor',
   'packet_compatibility',
-  'default_definition',
-  'packet_dependency',
+  'defaults_definition',
+  'dependencies_definition',
 ] as const satisfies readonly PacketDefinitionPartSubtype[];
 
 export type ResolvedDefinitionBootstrapProfile = {

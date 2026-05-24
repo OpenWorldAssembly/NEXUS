@@ -100,19 +100,19 @@ const MUTATION_INTENT_DESCRIPTORS = [
     finalize: 'finalizeAssociationRelationUpdate',
   },
   {
-    kind: 'home_locality.relation.set',
+    kind: 'relation.residence.add',
     domain: 'relation',
     prepare: 'prepareHomeLocalityRelation',
     finalize: 'finalizeHomeLocalityRelation',
   },
   {
-    kind: 'follows.relation.set',
+    kind: 'relation.follow.add',
     domain: 'relation',
     prepare: 'prepareFollowRelation',
     finalize: 'finalizeFollowRelationUpdate',
   },
   {
-    kind: 'follows.relation.clear',
+    kind: 'relation.follow.clear',
     domain: 'relation',
     prepare: 'prepareFollowRelation',
     finalize: 'finalizeFollowRelationUpdate',

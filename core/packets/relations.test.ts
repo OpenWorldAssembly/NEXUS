@@ -11,13 +11,13 @@ import {
 
 test('relation packet ids are deterministic by subtype, subject, target, and scope', () => {
   const firstId = createRelationPacketId({
-    subtype: 'home_locality',
+    subtype: 'residence',
     subjectPacketId: 'nexus:element/person-a',
     targetPacketId: 'nexus:element/scope-a',
     scopePacketId: 'nexus:element/scope-a',
   });
   const secondId = createRelationPacketId({
-    subtype: 'home_locality',
+    subtype: 'residence',
     subjectPacketId: 'nexus:element/person-a',
     targetPacketId: 'nexus:element/scope-a',
     scopePacketId: 'nexus:element/scope-a',
@@ -28,7 +28,7 @@ test('relation packet ids are deterministic by subtype, subject, target, and sco
 
 test('scoped relation packets keep the relation scope as the authority scope', () => {
   const packet = createScopedRelationPacket({
-    subtype: 'home_locality',
+    subtype: 'residence',
     subjectPacketId: 'nexus:element/person-a',
     targetPacketId: 'nexus:element/moreno-valley',
     scopePacketId: 'nexus:element/moreno-valley',
@@ -42,14 +42,14 @@ test('scoped relation packets keep the relation scope as the authority scope', (
     packet.header.authority_scope_ref?.packet_id,
     'nexus:element/moreno-valley'
   );
-  assert.equal(packet.body.subtype, 'home_locality');
+  assert.equal(packet.body.subtype, 'residence');
   assert.equal(packet.body.target_ref.packet_id, 'nexus:element/moreno-valley');
   assert.equal(packet.body.note, 'Canonical home locality relation.');
 });
 
 test('relation revisions preserve compact parent revision refs', () => {
   const packet = createScopedRelationPacket({
-    subtype: 'home_locality',
+    subtype: 'residence',
     subjectPacketId: 'nexus:element/person-a',
     targetPacketId: 'nexus:element/moreno-valley',
     scopePacketId: 'nexus:element/moreno-valley',
@@ -77,24 +77,25 @@ test('relation revisions preserve compact parent revision refs', () => {
 test('stale policy-adoption and dependency relation subtypes are not canonical relation subtypes', () => {
   assert.equal(CanonicalRelationSubtypeSchema.safeParse('adopts_policy').success, false);
   assert.equal(CanonicalRelationSubtypeSchema.safeParse('depends_on').success, false);
-  assert.equal(CanonicalRelationSubtypeSchema.safeParse('subscribes_to').success, true);
+  assert.equal(CanonicalRelationSubtypeSchema.safeParse('subscription').success, true);
 });
 
-test('subscription options are preserved on subscribes_to relation packets', () => {
+test('subscription options are preserved on subscription relation packets', () => {
   const policyRef = { packet_id: 'nexus:policy/nonviolence' };
   const packet = createScopedRelationPacket({
-    subtype: 'subscribes_to',
+    subtype: 'subscription',
     subjectPacketId: 'nexus:element/moreno-valley',
     targetPacketId: 'nexus:action/owa',
     scopePacketId: 'nexus:action/owa',
     createdByPacketId: 'nexus:element/moreno-valley',
     subscriptionOptions: {
       included_policy_refs: [policyRef],
-      excluded_dependency_refs: [{ packet_id: 'nexus:bundle/legacy-defaults' }],
+      included_defaults_definition_refs: [{ packet_id: 'nexus:definition/relation.defaults_definition.subscription.v0' }],
+      excluded_dependencies_definition_refs: [{ packet_id: 'nexus:definition/relation.dependencies_definition.v0' }],
     },
   });
 
-  assert.equal(packet.body.subtype, 'subscribes_to');
+  assert.equal(packet.body.subtype, 'subscription');
   assert.equal(packet.body.subscription_options?.update_mode, 'manual_review');
   assert.deepEqual(packet.body.subscription_options?.included_policy_refs, [policyRef]);
   assert.equal(
@@ -109,47 +110,56 @@ test('subscription options are preserved on subscribes_to relation packets', () 
 test('relation semantic profiles avoid global civic rank while preserving effective involvement', () => {
   assert.deepEqual(
     {
-      follow: getRelationSemanticProfile('follows').effectiveFollow,
-      subscribe: getRelationSemanticProfile('subscribes_to').effectiveSubscribe,
-      participate: getRelationSemanticProfile('participates_in').effectiveParticipate,
+      follow: getRelationSemanticProfile('follow').effectiveFollow,
+      subscribe: getRelationSemanticProfile('subscription').effectiveSubscribe,
+      participate: getRelationSemanticProfile('participation').effectiveParticipate,
       associationStanding: getRelationSemanticProfile('association').standingKind,
-      residenceStanding: getRelationSemanticProfile('home_locality').standingKind,
+      associationFollow: getRelationSemanticProfile('association').effectiveFollow,
+      residenceStanding: getRelationSemanticProfile('residence').standingKind,
+      residenceParticipate: getRelationSemanticProfile('residence').effectiveParticipate,
     },
     {
       follow: true,
       subscribe: true,
       participate: true,
       associationStanding: 'association',
+      associationFollow: true,
       residenceStanding: 'residency',
+      residenceParticipate: true,
     }
   );
   assert.equal(getRelationSemanticProfile('association').effectiveParticipate, false);
-  assert.equal(getRelationSemanticProfile('home_locality').effectiveSubscribe, false);
+  assert.equal(getRelationSemanticProfile('residence').effectiveSubscribe, true);
 });
 
 test('subscription alignment inherits defaults and reports deselected required refs', () => {
   const requiredPolicyRef = { packet_id: 'nexus:policy/nonviolence' };
-  const requiredDependencyRef = { packet_id: 'nexus:bundle/owa-baseline' };
+  const requiredDefaultsDefinitionRef = { packet_id: 'nexus:definition/relation.defaults_definition.subscription.v0' };
+  const requiredDependencyRef = { packet_id: 'nexus:definition/relation.dependencies_definition.v0' };
   const aligned = resolveSubscriptionAlignment({
-    relationSubtype: 'subscribes_to',
+    relationSubtype: 'subscription',
     requiredPolicyRefs: [requiredPolicyRef],
-    requiredDependencyRefs: [requiredDependencyRef],
+    requiredDefaultsDefinitionRefs: [requiredDefaultsDefinitionRef],
+    requiredDependenciesDefinitionRefs: [requiredDependencyRef],
   });
 
   assert.equal(aligned.alignmentState, 'aligned');
   assert.deepEqual(aligned.inheritedRefs.policy_refs, [requiredPolicyRef]);
-  assert.deepEqual(aligned.inheritedRefs.dependency_refs, [requiredDependencyRef]);
+  assert.deepEqual(aligned.inheritedRefs.defaults_definition_refs, [requiredDefaultsDefinitionRef]);
+  assert.deepEqual(aligned.inheritedRefs.dependencies_definition_refs, [requiredDependencyRef]);
 
   const partial = resolveSubscriptionAlignment({
-    relationSubtype: 'subscribes_to',
+    relationSubtype: 'subscription',
     requiredPolicyRefs: [requiredPolicyRef],
-    requiredDependencyRefs: [requiredDependencyRef],
+    requiredDefaultsDefinitionRefs: [requiredDefaultsDefinitionRef],
+    requiredDependenciesDefinitionRefs: [requiredDependencyRef],
     subscriptionOptions: {
       excluded_policy_refs: [requiredPolicyRef],
-      excluded_dependency_refs: [requiredDependencyRef],
+      excluded_defaults_definition_refs: [requiredDefaultsDefinitionRef],
+      excluded_dependencies_definition_refs: [requiredDependencyRef],
     },
   });
 
   assert.equal(partial.alignmentState, 'partially_aligned');
-  assert.equal(partial.warnings.length, 2);
+  assert.equal(partial.warnings.length, 3);
 });

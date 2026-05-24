@@ -22,7 +22,7 @@ import type {
 import {
   planAssociationRelationPackets,
   planFollowRelationPackets,
-  planHomeLocalityRelationPackets,
+  planResidenceRelationPackets,
   type ScopeRelationPacketPlan,
 } from '@runtime/nexus/server/elemental-scope-relation-planner';
 import type { MutationPolicyGate } from '@runtime/nexus/server/mutation-policy-gate';
@@ -35,9 +35,9 @@ export type LiveGenericWorkflowMutationIntent = Extract<
   MutationIntent['kind'],
   | 'relation.association.add'
   | 'relation.association.clear'
-  | 'home_locality.relation.set'
-  | 'follows.relation.set'
-  | 'follows.relation.clear'
+  | 'relation.residence.add'
+  | 'relation.follow.add'
+  | 'relation.follow.clear'
   | 'role_association.claim.set'
   | 'attestation.packet_signal.set'
 >;
@@ -80,14 +80,14 @@ export type TrustedRelationOperationPlan = {
     LiveGenericWorkflowMutationIntent,
     | 'relation.association.add'
     | 'relation.association.clear'
-    | 'home_locality.relation.set'
-    | 'follows.relation.set'
-    | 'follows.relation.clear'
+    | 'relation.residence.add'
+    | 'relation.follow.add'
+    | 'relation.follow.clear'
   >;
   operation_kind: 'relation.set' | 'relation.clear';
   workflow_plan_id: string;
   packet_type: 'Relation';
-  packet_subtype: 'association' | 'home_locality' | 'follows';
+  packet_subtype: 'association' | 'residence' | 'follow';
   policy_action_ids: MutationActionId[];
   dependency_ids: string[];
   trusted_capability_ids: string[];
@@ -139,9 +139,9 @@ export type TrustedPacketWorkflowMutationInput = {
   intent:
     | Extract<MutationIntent, { kind: 'relation.association.add' }>
     | Extract<MutationIntent, { kind: 'relation.association.clear' }>
-    | Extract<MutationIntent, { kind: 'home_locality.relation.set' }>
-    | Extract<MutationIntent, { kind: 'follows.relation.set' }>
-    | Extract<MutationIntent, { kind: 'follows.relation.clear' }>
+    | Extract<MutationIntent, { kind: 'relation.residence.add' }>
+    | Extract<MutationIntent, { kind: 'relation.follow.add' }>
+    | Extract<MutationIntent, { kind: 'relation.follow.clear' }>
     | Extract<MutationIntent, { kind: 'role_association.claim.set' }>
     | Extract<MutationIntent, { kind: 'attestation.packet_signal.set' }>;
 };
@@ -162,9 +162,9 @@ export type LiveGenericWorkflowEnrollmentAuditReport = {
 const LIVE_GENERIC_WORKFLOW_INTENTS = [
   'relation.association.add',
   'relation.association.clear',
-  'home_locality.relation.set',
-  'follows.relation.set',
-  'follows.relation.clear',
+  'relation.residence.add',
+  'relation.follow.add',
+  'relation.follow.clear',
   'role_association.claim.set',
   'attestation.packet_signal.set',
 ] as const satisfies readonly LiveGenericWorkflowMutationIntent[];
@@ -259,37 +259,37 @@ function relationEnrollmentConfig(
     };
   }
 
-  if (mutationIntent === 'home_locality.relation.set') {
+  if (mutationIntent === 'relation.residence.add') {
     return {
-      packet_subtype: 'home_locality' as const,
-      workflow_plan_id: 'relation.home_locality.set.workflow.v0',
+      packet_subtype: 'residence' as const,
+      workflow_plan_id: 'relation.residence.add.workflow.v0',
       operation_kind: 'relation.set' as const,
       policy_action_ids: [
-        'home_locality.relation.set',
-        'home_locality.relation.clear',
+        'relation.residence.add',
+        'relation.residence.clear',
       ] as MutationActionId[],
       fortress_prepare_handler: 'prepareHomeLocalityRelation' as const,
       fortress_finalize_handler: 'finalizeHomeLocalityRelation' as const,
     };
   }
 
-  if (mutationIntent === 'follows.relation.set') {
+  if (mutationIntent === 'relation.follow.add') {
     return {
-      packet_subtype: 'follows' as const,
-      workflow_plan_id: 'relation.follows.set.workflow.v0',
+      packet_subtype: 'follow' as const,
+      workflow_plan_id: 'relation.follow.add.workflow.v0',
       operation_kind: 'relation.set' as const,
-      policy_action_ids: ['follows.relation.set'] as MutationActionId[],
+      policy_action_ids: ['relation.follow.add'] as MutationActionId[],
       fortress_prepare_handler: 'prepareFollowRelation' as const,
       fortress_finalize_handler: 'finalizeFollowRelationUpdate' as const,
     };
   }
 
-  if (mutationIntent === 'follows.relation.clear') {
+  if (mutationIntent === 'relation.follow.clear') {
     return {
-      packet_subtype: 'follows' as const,
-      workflow_plan_id: 'relation.follows.clear.workflow.v0',
+      packet_subtype: 'follow' as const,
+      workflow_plan_id: 'relation.follow.clear.workflow.v0',
       operation_kind: 'relation.clear' as const,
-      policy_action_ids: ['follows.relation.clear'] as MutationActionId[],
+      policy_action_ids: ['relation.follow.clear'] as MutationActionId[],
       fortress_prepare_handler: 'prepareFollowRelation' as const,
       fortress_finalize_handler: 'finalizeFollowRelationUpdate' as const,
     };
@@ -513,43 +513,43 @@ export async function resolveTrustedRelationOperationPlan(
     };
   }
 
-  if (input.intent.kind === 'home_locality.relation.set') {
-    const homeScopePacket = input.intent.home_scope_packet_id
+  if (input.intent.kind === 'relation.residence.add') {
+    const residenceScopePacket = input.intent.residence_scope_packet_id
       ? await requireElementPacket({
           packetStore: input.packetStore,
-          packetId: input.intent.home_scope_packet_id,
+          packetId: input.intent.residence_scope_packet_id,
         })
       : null;
-    const relationPlan = await planHomeLocalityRelationPackets({
+    const relationPlan = await planResidenceRelationPackets({
       packetStore: input.packetStore,
       actorPacket: input.actorPacket,
-      homeScopePacket,
+      residenceScopePacket,
       forceSelectedRevision: true,
     });
 
     return {
       plan_kind: 'trusted_relation_operation_plan',
       mutation_intent: input.intent.kind,
-      operation_kind: homeScopePacket ? 'relation.set' : 'relation.clear',
+      operation_kind: residenceScopePacket ? 'relation.set' : 'relation.clear',
       workflow_plan_id: enrollment.workflow_plan_id,
       packet_type: 'Relation',
-      packet_subtype: 'home_locality',
+      packet_subtype: 'residence',
       policy_action_ids: [
-        homeScopePacket
-          ? 'home_locality.relation.set'
-          : 'home_locality.relation.clear',
+        residenceScopePacket
+          ? 'relation.residence.add'
+          : 'relation.residence.clear',
       ],
       dependency_ids: [...enrollment.dependency_ids],
       trusted_capability_ids: [...enrollment.trusted_capability_ids],
-      target_scope_packet: homeScopePacket,
+      target_scope_packet: residenceScopePacket,
       governing_scope_packet: relationPlan.governingScopePacket,
       relation_plan: relationPlan,
     };
   }
 
   if (
-    input.intent.kind !== 'follows.relation.set' &&
-    input.intent.kind !== 'follows.relation.clear'
+    input.intent.kind !== 'relation.follow.add' &&
+    input.intent.kind !== 'relation.follow.clear'
   ) {
     throw new Error(
       `Unsupported relation workflow mutation intent: ${input.intent.kind}`
@@ -564,7 +564,7 @@ export async function resolveTrustedRelationOperationPlan(
     packetStore: input.packetStore,
     packetId: input.intent.target_scope_packet_id,
   });
-  const isSetIntent = input.intent.kind === 'follows.relation.set';
+  const isSetIntent = input.intent.kind === 'relation.follow.add';
   const relationPlan = await planFollowRelationPackets({
     packetStore: input.packetStore,
     actorPacket: input.actorPacket,
@@ -578,9 +578,9 @@ export async function resolveTrustedRelationOperationPlan(
     operation_kind: isSetIntent ? 'relation.set' : 'relation.clear',
     workflow_plan_id: enrollment.workflow_plan_id,
     packet_type: 'Relation',
-    packet_subtype: 'follows',
+    packet_subtype: 'follow',
     policy_action_ids: [
-      isSetIntent ? 'follows.relation.set' : 'follows.relation.clear',
+      isSetIntent ? 'relation.follow.add' : 'relation.follow.clear',
     ],
     dependency_ids: [...enrollment.dependency_ids],
     trusted_capability_ids: [...enrollment.trusted_capability_ids],
@@ -737,9 +737,9 @@ export async function runTrustedPacketWorkflowMutation(
   if (
     input.intent.kind === 'relation.association.add' ||
     input.intent.kind === 'relation.association.clear' ||
-    input.intent.kind === 'home_locality.relation.set' ||
-    input.intent.kind === 'follows.relation.set' ||
-    input.intent.kind === 'follows.relation.clear'
+    input.intent.kind === 'relation.residence.add' ||
+    input.intent.kind === 'relation.follow.add' ||
+    input.intent.kind === 'relation.follow.clear'
   ) {
     const operationPlan = await resolveTrustedRelationOperationPlan(input);
     const policyDecision = await input.policyGate.resolveScopePolicyDecision({

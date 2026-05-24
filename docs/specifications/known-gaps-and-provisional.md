@@ -10,14 +10,14 @@
 
 ## Location and relationship caveats
 
-- `home_locality` is now the packet-backed source of mounted geographic ancestry, with canonical writes producing a relation without automatic claim wrapping
+- `residence` is now the packet-backed source of mounted geographic ancestry, with canonical writes producing a relation without automatic claim wrapping
 - `identity.location_disclosure` remains optional profile metadata rather than mounted-scope truth
-- `association` remains distinct from `home_locality`
-- followed scopes are now packet-native on the write path, but legacy shell-preference follows remain readable through an explicit compatibility bridge during transition
+- `association` remains distinct from `residence`
+- followed scopes are now packet-native on the write path, but legacy shell-preference follow remain readable through an explicit compatibility bridge during transition
 - `Location` is now part of locality creation through provisional `region` packets, and those packets now carry descriptor metadata in `spatial_payload.scope_descriptor`, but provider-backed normalization, richer external refs, and broader equivalence handling remain later work
 - legacy `nation | region | city | district` locality levels remain current compatibility buckets rather than the full future locality model
 - locality ancestry is now planned from ordered broad-to-narrow path entries, and sparse paths are valid current behavior; absolute depth is still projection-only and is not stored on packets
-- locality creation now has a real non-mutating review seam, but the home-branch inclusion checklist shown during review is still preview-only and does not yet alter stored `home_locality` relation semantics
+- locality creation now has a real non-mutating review seam, but the home-branch inclusion checklist shown during review is still preview-only and does not yet alter stored `residence` relation semantics
 - locality confirm now applies home, association, follow, and `main` visibility choices through one composite runtime write seam; claimed `main` scope-display state now persists through `Preference.element` packets while guest/session behavior remains compatibility state
 - associated and followed parent-context display now persists through the same claimed-actor fortress-enrolled `Preference.element` path, with guest compatibility fallback still session/cookie-based
 - same-name locality matches in other parent branches no longer need to suppress the create-path handoff, but orphan existing-scope remounting is still intentionally unresolved rather than silently repaired in this phase

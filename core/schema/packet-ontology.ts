@@ -40,17 +40,16 @@ export const ELEMENT_SUBTYPES = [
 ] as const;
 
 export const RELATION_SUBTYPES = [
-  'home_locality',
+  'follow',
+  'subscription',
   'association',
-  'role_association',
-  'follows',
-  'subscribes_to',
+  'participation',
+  'residence',
   'defined_by_location',
   'contains',
   'overlaps',
   'equivalent_to',
   'default_ancestry_parent',
-  'participates_in',
 ] as const;
 
 export const LOCATION_SUBTYPES = [
@@ -158,7 +157,7 @@ export const ATTESTATION_KINDS = [
 export const CLAIM_KINDS = [
   'role_association',
   'association',
-  'home_locality',
+  'residence',
 ] as const;
 
 export const CLAIM_STATUSES = ['active', 'withdrawn'] as const;

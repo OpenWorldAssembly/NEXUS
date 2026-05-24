@@ -126,7 +126,7 @@ export class MutationPrepareHandlers {
   }
 
   async prepareHomeLocalityRelation(input: {
-    intent: Extract<MutationIntent, { kind: 'home_locality.relation.set' }>;
+    intent: Extract<MutationIntent, { kind: 'relation.residence.add' }>;
     actorPacket: PacketEnvelopeByType['Element'];
   }): Promise<PreparedMutation> {
     return runTrustedPacketWorkflowMutation({
@@ -139,8 +139,8 @@ export class MutationPrepareHandlers {
 
   async prepareFollowRelation(input: {
     intent:
-      | Extract<MutationIntent, { kind: 'follows.relation.set' }>
-      | Extract<MutationIntent, { kind: 'follows.relation.clear' }>;
+      | Extract<MutationIntent, { kind: 'relation.follow.add' }>
+      | Extract<MutationIntent, { kind: 'relation.follow.clear' }>;
     actorPacket: PacketEnvelopeByType['Element'];
   }): Promise<PreparedMutation> {
     return runTrustedPacketWorkflowMutation({

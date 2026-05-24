@@ -130,7 +130,7 @@ test('scope graph prefers canonical ancestry relations and projects packet-nativ
       relation_requirements: {
         rules: [
           {
-            relation_subtype: 'home_locality',
+            relation_subtype: 'residence',
             required_claim_subtypes: ['relation_assertion'],
             required_attestation_subtypes: [],
             claim_target_mode: 'relation_packet',
@@ -181,7 +181,7 @@ test('scope graph prefers canonical ancestry relations and projects packet-nativ
       createdByPacketId: global.header.packet_id,
     });
     const homeRelation = createScopedRelationPacket({
-      subtype: 'home_locality',
+      subtype: 'residence',
       subjectPacketId: actor.header.packet_id,
       targetPacketId: sunnymead.header.packet_id,
       scopePacketId: sunnymead.header.packet_id,
@@ -194,7 +194,7 @@ test('scope graph prefers canonical ancestry relations and projects packet-nativ
       createdByPacketId: actor.header.packet_id,
     });
     const supportingClaim = createRelationAssertionClaimPacket({
-      claimKind: 'home_locality',
+      claimKind: 'residence',
       subjectPacketId: actor.header.packet_id,
       relationPacketId: homeRelation.header.packet_id,
       assertedTargetPacketId: sunnymead.header.packet_id,
@@ -387,7 +387,7 @@ test('scope graph falls back to explicit legacy home-locality compatibility when
       subtype: 'resident',
     });
     const legacyClaim = createAssociationClaimPacket({
-      claimKind: 'home_locality',
+      claimKind: 'residence',
       subjectPacketId: actor.header.packet_id,
       targetPacketId: morenoValley.header.packet_id,
       scopePacketId: morenoValley.header.packet_id,
@@ -407,7 +407,7 @@ test('scope graph falls back to explicit legacy home-locality compatibility when
 
     assert.equal(
       graph.effectiveHomeLocality?.source,
-      'legacy_home_locality_claim_compatibility'
+      'legacy_residence_claim_compatibility'
     );
     assert.equal(graph.effectiveHomeLocality?.compatibilityClaimPacketId, legacyClaim.header.packet_id);
     assert.equal(graph.homeScopeId, 'moreno-valley');
@@ -460,7 +460,7 @@ test('scope graph does not let legacy home-locality compatibility bypass an unsa
       relation_requirements: {
         rules: [
           {
-            relation_subtype: 'home_locality',
+            relation_subtype: 'residence',
             required_claim_subtypes: ['relation_assertion'],
             required_attestation_subtypes: [],
             claim_target_mode: 'relation_packet',
@@ -480,7 +480,7 @@ test('scope graph does not let legacy home-locality compatibility bypass an unsa
       policy_refs: [{ packet_id: owaPolicy.header.packet_id }],
     });
     const canonicalHomeRelation = createScopedRelationPacket({
-      subtype: 'home_locality',
+      subtype: 'residence',
       subjectPacketId: actor.header.packet_id,
       targetPacketId: morenoValley.header.packet_id,
       scopePacketId: morenoValley.header.packet_id,
@@ -491,7 +491,7 @@ test('scope graph does not let legacy home-locality compatibility bypass an unsa
       createdByPacketId: actor.header.packet_id,
     });
     const legacyHomeClaim = createAssociationClaimPacket({
-      claimKind: 'home_locality',
+      claimKind: 'residence',
       subjectPacketId: actor.header.packet_id,
       targetPacketId: morenoValley.header.packet_id,
       scopePacketId: morenoValley.header.packet_id,
@@ -566,7 +566,7 @@ test('scope graph does not silently fall back to legacy home-locality compatibil
       relation_requirements: {
         rules: [
           {
-            relation_subtype: 'home_locality',
+            relation_subtype: 'residence',
             required_claim_subtypes: ['relation_assertion'],
             required_attestation_subtypes: [],
             claim_target_mode: 'relation_packet',
@@ -586,7 +586,7 @@ test('scope graph does not silently fall back to legacy home-locality compatibil
       policy_refs: [{ packet_id: owaPolicy.header.packet_id }],
     });
     const homeRelation = createScopedRelationPacket({
-      subtype: 'home_locality',
+      subtype: 'residence',
       subjectPacketId: actor.header.packet_id,
       targetPacketId: morenoValley.header.packet_id,
       scopePacketId: morenoValley.header.packet_id,
@@ -594,7 +594,7 @@ test('scope graph does not silently fall back to legacy home-locality compatibil
       createdByPacketId: actor.header.packet_id,
     });
     const legacyClaim = createAssociationClaimPacket({
-      claimKind: 'home_locality',
+      claimKind: 'residence',
       subjectPacketId: actor.header.packet_id,
       targetPacketId: morenoValley.header.packet_id,
       scopePacketId: morenoValley.header.packet_id,

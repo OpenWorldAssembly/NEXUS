@@ -42,7 +42,7 @@ export const PERSONAL_TREE_PACKET_IDS = {
   sunnymead_ranch: 'nexus:element/sunnymead-ranch',
   aaron: 'nexus:element/aaron',
   owa_action: 'nexus:action/owa',
-  owa_home_locality_policy: 'nexus:policy/owa-home-locality',
+  owa_residence_policy: 'nexus:policy/owa-residence',
   owa_default_inheritance_policy: 'nexus:policy/owa-default-inheritance',
   owa_governance_baseline_policy: 'nexus:policy/owa-governance-baseline',
   visitor_lobby_policy: 'nexus:policy/visitor-lobby-baseline',
@@ -63,8 +63,8 @@ export const PERSONAL_TREE_REFS = {
   sunnymead_ranch: createPacketRef(PERSONAL_TREE_PACKET_IDS.sunnymead_ranch),
   aaron: createPacketRef(PERSONAL_TREE_PACKET_IDS.aaron),
   owa_action: createPacketRef(PERSONAL_TREE_PACKET_IDS.owa_action),
-  owa_home_locality_policy: createPacketRef(
-    PERSONAL_TREE_PACKET_IDS.owa_home_locality_policy
+  owa_residence_policy: createPacketRef(
+    PERSONAL_TREE_PACKET_IDS.owa_residence_policy
   ),
   owa_default_inheritance_policy: createPacketRef(
     PERSONAL_TREE_PACKET_IDS.owa_default_inheritance_policy
@@ -653,14 +653,14 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     tags: ['person', 'resident'],
   });
 
-  const owaHomeLocalityPolicyPacket = createPolicyPacket({
-    packet_id: PERSONAL_TREE_PACKET_IDS.owa_home_locality_policy,
+  const owaResidencePolicyPacket = createPolicyPacket({
+    packet_id: PERSONAL_TREE_PACKET_IDS.owa_residence_policy,
     created_at: SEED_CREATED_AT,
     authority_scope_ref: PERSONAL_TREE_REFS.global_commons,
     applicable_scope_refs: globalApplicableScopeRefs,
     title: 'OWA Home Locality Relation Policy',
     summary:
-      'Declares home-locality relations as structural graph facts; legitimacy evidence can attach separately.',
+      'Declares residence relations as structural graph facts; legitimacy evidence can attach separately.',
     subtype: 'charter',
     body_markdown: [
       '# OWA Home Locality Relation Policy',
@@ -685,7 +685,7 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     objective_markdown:
       'Provides the default initiative action for OWA policy, template defaults, and schema-aware scope behavior.',
     policy_refs: [
-      PERSONAL_TREE_REFS.owa_home_locality_policy,
+      PERSONAL_TREE_REFS.owa_residence_policy,
       PERSONAL_TREE_REFS.trust_baseline_policy,
       PERSONAL_TREE_REFS.owa_default_inheritance_policy,
       PERSONAL_TREE_REFS.owa_governance_baseline_policy,
@@ -808,7 +808,7 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     status: 'active',
     default_policy: {
       policy_refs: [
-        PERSONAL_TREE_REFS.owa_home_locality_policy,
+        PERSONAL_TREE_REFS.owa_residence_policy,
         PERSONAL_TREE_REFS.visitor_lobby_policy,
         PERSONAL_TREE_REFS.trust_baseline_policy,
       ],
@@ -944,7 +944,7 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     morenoValleyPacket,
     sunnymeadRanchPacket,
     aaronPacket,
-    owaHomeLocalityPolicyPacket,
+    owaResidencePolicyPacket,
     owaActionPacket,
     visitorLobbyPolicyPacket,
     trustBaselinePolicyPacket,

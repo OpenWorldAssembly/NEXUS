@@ -39,7 +39,7 @@ test('client intent ids stay interface-neutral', () => {
 test('enrolled prepare intent preflight resolves handoff and packet-backed requirements', () => {
   const preflight = resolvePacketClientIntentPreflight({
     sourceRoute: '/api/nexus/mutations/prepare',
-    mutationIntent: 'follows.relation.set',
+    mutationIntent: 'relation.follow.add',
     clientIntentId: 'scope.follow.set',
   });
 
@@ -94,7 +94,7 @@ test('custom or unregistered client intent requests fail closed', () => {
 test('retired legacy bridge client intents fail closed', () => {
   for (const mutationIntent of [
     'association.claim.set',
-    'home_locality.claim.set',
+    'residence.claim.set',
   ]) {
     const preflight = resolvePacketClientIntentPreflight({
       sourceRoute: '/api/nexus/mutations/prepare',

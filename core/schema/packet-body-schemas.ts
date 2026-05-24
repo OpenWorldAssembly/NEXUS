@@ -311,13 +311,16 @@ export const RelationSubscriptionOptionsSchema = z
     update_mode: RelationSubscriptionUpdateModeSchema.default('manual_review'),
     inherit_default_policies: z.boolean().default(true),
     inherit_default_dependencies: z.boolean().default(true),
+    inherit_default_defaults: z.boolean().default(true),
     inherit_default_modules: z.boolean().default(true),
     inherit_default_templates: z.boolean().default(true),
     inherit_default_packet_sets: z.boolean().default(true),
     included_policy_refs: z.array(PacketRefSchema).default([]),
     excluded_policy_refs: z.array(PacketRefSchema).default([]),
-    included_dependency_refs: z.array(PacketRefSchema).default([]),
-    excluded_dependency_refs: z.array(PacketRefSchema).default([]),
+    included_defaults_definition_refs: z.array(PacketRefSchema).default([]),
+    excluded_defaults_definition_refs: z.array(PacketRefSchema).default([]),
+    included_dependencies_definition_refs: z.array(PacketRefSchema).default([]),
+    excluded_dependencies_definition_refs: z.array(PacketRefSchema).default([]),
     included_module_refs: z.array(PacketRefSchema).default([]),
     excluded_module_refs: z.array(PacketRefSchema).default([]),
     included_template_refs: z.array(PacketRefSchema).default([]),
@@ -474,10 +477,11 @@ export const PolicyBodySchema = z
       .strict()
       .nullable()
       .default(null),
-    dependency_policy: z
+    dependencies_policy: z
       .object({
         required_refs: z.array(PacketRefSchema).default([]),
         optional_refs: z.array(PacketRefSchema).default([]),
+        dependencies_definition_refs: z.array(PacketRefSchema).default([]),
         required_relation_subtypes: z.array(z.string().min(1)).default([]),
       })
       .strict()
@@ -516,7 +520,7 @@ export const PolicyBodySchema = z
       .object({
         policy_refs: z.array(PacketRefSchema).default([]),
         template_refs: z.array(PacketRefSchema).default([]),
-        default_definition_refs: z.array(PacketRefSchema).default([]),
+        defaults_definition_refs: z.array(PacketRefSchema).default([]),
         default_packet_set_refs: z.array(PacketRefSchema).default([]),
         preference_refs: z.array(PacketRefSchema).default([]),
         overrides: z

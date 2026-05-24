@@ -201,7 +201,7 @@ export function getPacketDefinitionSectionStatus(
       return definition.actions.length > 0 ? 'supported' : 'unsupported';
     case 'defaults':
       return (definition.packet_definition_parts ?? []).some(
-        (part) => part.part_subtype === 'default_definition'
+        (part) => part.part_subtype === 'defaults_definition'
       )
         ? 'supported'
         : 'unsupported';

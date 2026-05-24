@@ -60,8 +60,8 @@ test('follow set and clear are closed as the first live generic workflow promoti
   );
 
   for (const mutationIntent of [
-    'follows.relation.set',
-    'follows.relation.clear',
+    'relation.follow.add',
+    'relation.follow.clear',
   ] as const) {
     const entry = closureByIntent.get(mutationIntent);
 
@@ -80,7 +80,7 @@ test('remaining direct relation claim and attestation operation paths are closed
   for (const mutationIntent of [
     'relation.association.add',
     'relation.association.clear',
-    'home_locality.relation.set',
+    'relation.residence.add',
     'role_association.claim.set',
     'attestation.packet_signal.set',
   ] as const) {
@@ -99,7 +99,7 @@ test('legacy bridge mutation intents are retired before reseed readiness', () =>
   );
 
   assert.equal(mutationIntentIds.has('association.claim.set'), false);
-  assert.equal(mutationIntentIds.has('home_locality.claim.set'), false);
+  assert.equal(mutationIntentIds.has('residence.claim.set'), false);
   assert.deepEqual(report.follow_on_pass_queue, []);
 });
 

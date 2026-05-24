@@ -78,7 +78,7 @@ const LOCAL_SCOPE: NexusScopeSummary = {
   isAssociated: false,
   isHomeAncestor: false,
   associationKind: null,
-  mountReasons: ['home_locality'],
+  mountReasons: ['residence'],
   justificationPacketIds: [],
   structuralRelationPacketIds: [],
   locationPacketIds: [],

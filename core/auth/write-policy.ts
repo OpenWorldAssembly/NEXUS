@@ -29,10 +29,10 @@ export type MutationActionId =
   | 'role_association.attestation.clear'
   | 'relation.association.add'
   | 'relation.association.clear'
-  | 'home_locality.relation.set'
-  | 'home_locality.relation.clear'
-  | 'follows.relation.set'
-  | 'follows.relation.clear'
+  | 'relation.residence.add'
+  | 'relation.residence.clear'
+  | 'relation.follow.add'
+  | 'relation.follow.clear'
   | 'locality.element.create'
   | 'assembly.element.create'
   | 'discussion.surfaces.ensure'
@@ -54,10 +54,10 @@ export const MUTATION_ACTION_IDS = [
   'role_association.attestation.clear',
   'relation.association.add',
   'relation.association.clear',
-  'home_locality.relation.set',
-  'home_locality.relation.clear',
-  'follows.relation.set',
-  'follows.relation.clear',
+  'relation.residence.add',
+  'relation.residence.clear',
+  'relation.follow.add',
+  'relation.follow.clear',
   'locality.element.create',
   'assembly.element.create',
   'discussion.surfaces.ensure',

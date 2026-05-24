@@ -17,7 +17,7 @@ export type RelationSemanticProfile = {
   effectiveFollow: boolean;
   effectiveSubscribe: boolean;
   effectiveParticipate: boolean;
-  standingKind: 'none' | 'association' | 'residency' | 'role' | 'location' | 'containment';
+  standingKind: 'none' | 'association' | 'residency' | 'location' | 'containment';
   notes: string[];
 };
 
@@ -31,14 +31,16 @@ export type SubscriptionAlignmentProjection = {
   alignmentState: SubscriptionAlignmentState;
   inheritedRefs: {
     policy_refs: PacketRef[];
-    dependency_refs: PacketRef[];
+    defaults_definition_refs: PacketRef[];
+    dependencies_definition_refs: PacketRef[];
     module_refs: PacketRef[];
     template_refs: PacketRef[];
     default_packet_set_refs: PacketRef[];
   };
   excludedRefs: {
     policy_refs: PacketRef[];
-    dependency_refs: PacketRef[];
+    defaults_definition_refs: PacketRef[];
+    dependencies_definition_refs: PacketRef[];
     module_refs: PacketRef[];
     template_refs: PacketRef[];
     default_packet_set_refs: PacketRef[];
@@ -50,9 +52,11 @@ type SubscriptionAlignmentInput = {
   relationSubtype: string;
   subscriptionOptions?: RelationSubscriptionOptionsInput | null;
   requiredPolicyRefs?: PacketRef[];
-  requiredDependencyRefs?: PacketRef[];
+  requiredDefaultsDefinitionRefs?: PacketRef[];
+  requiredDependenciesDefinitionRefs?: PacketRef[];
   defaultPolicyRefs?: PacketRef[];
-  defaultDependencyRefs?: PacketRef[];
+  defaultDefaultsDefinitionRefs?: PacketRef[];
+  defaultDependenciesDefinitionRefs?: PacketRef[];
   defaultModuleRefs?: PacketRef[];
   defaultTemplateRefs?: PacketRef[];
   defaultPacketSetRefs?: PacketRef[];
@@ -99,7 +103,7 @@ function findMissingRefs(requiredRefs: PacketRef[], effectiveRefs: PacketRef[]):
 }
 
 export function getRelationSemanticProfile(subtype: string): RelationSemanticProfile {
-  if (subtype === 'follows') {
+  if (subtype === 'follow') {
     return {
       relationSubtype: subtype,
       effectiveFollow: true,
@@ -110,7 +114,7 @@ export function getRelationSemanticProfile(subtype: string): RelationSemanticPro
     };
   }
 
-  if (subtype === 'subscribes_to') {
+  if (subtype === 'subscription') {
     return {
       relationSubtype: subtype,
       effectiveFollow: true,
@@ -121,7 +125,7 @@ export function getRelationSemanticProfile(subtype: string): RelationSemanticPro
     };
   }
 
-  if (subtype === 'participates_in') {
+  if (subtype === 'participation') {
     return {
       relationSubtype: subtype,
       effectiveFollow: true,
@@ -135,7 +139,7 @@ export function getRelationSemanticProfile(subtype: string): RelationSemanticPro
   if (subtype === 'association') {
     return {
       relationSubtype: subtype,
-      effectiveFollow: false,
+      effectiveFollow: true,
       effectiveSubscribe: false,
       effectiveParticipate: false,
       standingKind: 'association',
@@ -143,25 +147,14 @@ export function getRelationSemanticProfile(subtype: string): RelationSemanticPro
     };
   }
 
-  if (subtype === 'home_locality') {
+  if (subtype === 'residence') {
     return {
       relationSubtype: subtype,
-      effectiveFollow: false,
-      effectiveSubscribe: false,
-      effectiveParticipate: false,
+      effectiveFollow: true,
+      effectiveSubscribe: true,
+      effectiveParticipate: true,
       standingKind: 'residency',
-      notes: ['Residency/locality standing relation; not a global permission rank.'],
-    };
-  }
-
-  if (subtype === 'role_association') {
-    return {
-      relationSubtype: subtype,
-      effectiveFollow: false,
-      effectiveSubscribe: false,
-      effectiveParticipate: false,
-      standingKind: 'role',
-      notes: ['Role association remains claim-workflow backed until the role model is redesigned.'],
+      notes: ['Residency/locality standing relation; policies decide exact access and voting rights.'],
     };
   }
 
@@ -208,7 +201,7 @@ export function resolveSubscriptionAlignment(
   const profile = getRelationSemanticProfile(input.relationSubtype);
   const options = input.subscriptionOptions ?? {};
 
-  if (input.relationSubtype !== 'subscribes_to') {
+  if (input.relationSubtype !== 'subscription') {
     return {
       relationSubtype: input.relationSubtype,
       effectiveFollow: profile.effectiveFollow,
@@ -217,30 +210,34 @@ export function resolveSubscriptionAlignment(
       alignmentState: 'needs_review',
       inheritedRefs: {
         policy_refs: [],
-        dependency_refs: [],
+        defaults_definition_refs: [],
+        dependencies_definition_refs: [],
         module_refs: [],
         template_refs: [],
         default_packet_set_refs: [],
       },
       excludedRefs: {
         policy_refs: [],
-        dependency_refs: [],
+        defaults_definition_refs: [],
+        dependencies_definition_refs: [],
         module_refs: [],
         template_refs: [],
         default_packet_set_refs: [],
       },
-      warnings: ['Subscription alignment projection only resolves subscribes_to relations.'],
+      warnings: ['Subscription alignment projection only resolves subscription relations.'],
     };
   }
 
   const excludedPolicyRefs = options.excluded_policy_refs ?? [];
-  const excludedDependencyRefs = options.excluded_dependency_refs ?? [];
+  const excludedDefaultsDefinitionRefs = options.excluded_defaults_definition_refs ?? [];
+  const excludedDependenciesDefinitionRefs = options.excluded_dependencies_definition_refs ?? [];
   const excludedModuleRefs = options.excluded_module_refs ?? [];
   const excludedTemplateRefs = options.excluded_template_refs ?? [];
   const excludedPacketSetRefs = options.excluded_default_packet_set_refs ?? [];
 
   const inheritPolicies = options.inherit_default_policies ?? true;
   const inheritDependencies = options.inherit_default_dependencies ?? true;
+  const inheritDefaults = options.inherit_default_defaults ?? true;
   const inheritModules = options.inherit_default_modules ?? true;
   const inheritTemplates = options.inherit_default_templates ?? true;
   const inheritPacketSets = options.inherit_default_packet_sets ?? true;
@@ -253,13 +250,21 @@ export function resolveSubscriptionAlignment(
     ]),
     excludedPolicyRefs
   );
-  const effectiveDependencyRefs = filterExcludedRefs(
+  const effectiveDefaultsDefinitionRefs = filterExcludedRefs(
     dedupeRefs([
-      ...(inheritDependencies ? input.defaultDependencyRefs ?? [] : []),
-      ...(inheritDependencies ? input.requiredDependencyRefs ?? [] : []),
-      ...(options.included_dependency_refs ?? []),
+      ...(inheritDefaults ? input.defaultDefaultsDefinitionRefs ?? [] : []),
+      ...(inheritDefaults ? input.requiredDefaultsDefinitionRefs ?? [] : []),
+      ...(options.included_defaults_definition_refs ?? []),
     ]),
-    excludedDependencyRefs
+    excludedDefaultsDefinitionRefs
+  );
+  const effectiveDependenciesDefinitionRefs = filterExcludedRefs(
+    dedupeRefs([
+      ...(inheritDependencies ? input.defaultDependenciesDefinitionRefs ?? [] : []),
+      ...(inheritDependencies ? input.requiredDependenciesDefinitionRefs ?? [] : []),
+      ...(options.included_dependencies_definition_refs ?? []),
+    ]),
+    excludedDependenciesDefinitionRefs
   );
   const effectiveModuleRefs = filterExcludedRefs(
     dedupeRefs([
@@ -287,15 +292,22 @@ export function resolveSubscriptionAlignment(
     input.requiredPolicyRefs ?? [],
     effectivePolicyRefs
   );
-  const missingRequiredDependencyRefs = findMissingRefs(
-    input.requiredDependencyRefs ?? [],
-    effectiveDependencyRefs
+  const missingRequiredDefaultsDefinitionRefs = findMissingRefs(
+    input.requiredDefaultsDefinitionRefs ?? [],
+    effectiveDefaultsDefinitionRefs
+  );
+  const missingRequiredDependenciesDefinitionRefs = findMissingRefs(
+    input.requiredDependenciesDefinitionRefs ?? [],
+    effectiveDependenciesDefinitionRefs
   );
   const warnings = [
     ...missingRequiredPolicyRefs.map(
       (ref) => `Required policy is not included in subscription alignment: ${ref.packet_id}`
     ),
-    ...missingRequiredDependencyRefs.map(
+    ...missingRequiredDefaultsDefinitionRefs.map(
+      (ref) => `Required defaults definition is not included in subscription alignment: ${ref.packet_id}`
+    ),
+    ...missingRequiredDependenciesDefinitionRefs.map(
       (ref) => `Required dependency is not included in subscription alignment: ${ref.packet_id}`
     ),
   ];
@@ -308,14 +320,16 @@ export function resolveSubscriptionAlignment(
     alignmentState: warnings.length > 0 ? 'partially_aligned' : 'aligned',
     inheritedRefs: {
       policy_refs: effectivePolicyRefs,
-      dependency_refs: effectiveDependencyRefs,
+      defaults_definition_refs: effectiveDefaultsDefinitionRefs,
+      dependencies_definition_refs: effectiveDependenciesDefinitionRefs,
       module_refs: effectiveModuleRefs,
       template_refs: effectiveTemplateRefs,
       default_packet_set_refs: effectivePacketSetRefs,
     },
     excludedRefs: {
       policy_refs: excludedPolicyRefs,
-      dependency_refs: excludedDependencyRefs,
+      defaults_definition_refs: excludedDefaultsDefinitionRefs,
+      dependencies_definition_refs: excludedDependenciesDefinitionRefs,
       module_refs: excludedModuleRefs,
       template_refs: excludedTemplateRefs,
       default_packet_set_refs: excludedPacketSetRefs,

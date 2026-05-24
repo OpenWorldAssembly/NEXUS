@@ -128,8 +128,8 @@ Workflow plans are data, not code. Definitions can say "resolve actor and target
 
 The first definition workflow plans cover the generic-ready fortress candidates:
 
-- `follows.relation.set`
-- `follows.relation.clear`
+- `relation.follow.add`
+- `relation.follow.clear`
 - `role_association.claim.set`
 - `attestation.packet_signal.set`
 
@@ -147,7 +147,7 @@ This pass expands definition workflow coverage for knowable planner-extraction c
 
 - `relation.association.add`
 - `relation.association.clear`
-- `home_locality.relation.set`
+- `relation.residence.add`
 - `discussion.reply.create`
 
 The alignment remains runtime-ready. Existing runtime planner modules are registered as trusted local capabilities by descriptor, but their implementation is not moved, rewritten, or invoked through generic execution yet. Unused removed packet types remain visible missing coverage items and do not block switch-over planning.
@@ -195,8 +195,8 @@ Reseed design is now gated on full closure of in-scope live runtime modernizatio
 
 The first proving promotion is follow relation set/clear:
 
-- `follows.relation.set`
-- `follows.relation.clear`
+- `relation.follow.add`
+- `relation.follow.clear`
 
 These intents now prepare through trusted generic workflow planning while `NexusMutationService` remains the signed fortress authority. API routes, route payloads, response shapes, policy action IDs, packet schemas, proof behavior, tickets, signatures, persistence, and projections remain unchanged. The promoted path uses manifest workflow metadata and trusted local relation planning to produce the same packet candidates and policy metadata as the previous fortress-specific follow planner path.
 
@@ -227,11 +227,11 @@ This pass remains runtime-ready. Live API routes, payloads, fortress ticketing, 
 
 The second live generic promotion expands the trusted workflow seam beyond follow relations. The direct operation paths now enrolled behind `NexusMutationService` are:
 
-- `follows.relation.set`
-- `follows.relation.clear`
+- `relation.follow.add`
+- `relation.follow.clear`
 - `relation.association.add`
 - `relation.association.clear`
-- `home_locality.relation.set`
+- `relation.residence.add`
 - `role_association.claim.set`
 - `attestation.packet_signal.set`
 
@@ -279,7 +279,7 @@ Policy and dependency semantic authority is now closed for reseed readiness, whi
 
 Policy packets are the semantic home for write locks, trust baselines, relation requirements, dependency and alignment rules, default inheritance, and governance hooks. The live write-lock path still runs through `MutationPolicyGate`; the new semantic helpers resolve and audit packet meaning without executing proposal/vote/decision behavior.
 
-Definition `packet_dependency` parts now carry meaningful dependency refs for packet operations, builder pipelines, action bridges, canonical packet-type builders, Preference projections, Bundle inventory building, and trusted compatibility/projection seams. Workflow and runtime dependency IDs must resolve through one of these anchors, Policy packet semantics, the operation ontology, a trusted workflow resolver, or an explicit trusted local engine contract.
+Definition `dependencies_definition` parts now carry meaningful dependency refs for packet operations, builder pipelines, action bridges, canonical packet-type builders, Preference projections, Bundle inventory building, and trusted compatibility/projection seams. Workflow and runtime dependency IDs must resolve through one of these anchors, Policy packet semantics, the operation ontology, a trusted workflow resolver, or an explicit trusted local engine contract.
 
 The seeded OWA `Action(subtype: initiative)` now links to default-inheritance and governance-baseline policies. Forward default/policy resolution uses the Action initiative anchor.
 
@@ -296,9 +296,9 @@ Every active packet body uses top-level `body.subtype` as its packet classifier.
 The final wrap-up retires the remaining live legacy bridge mutation intents from fresh writes:
 
 - `association.claim.set`
-- `home_locality.claim.set`
+- `residence.claim.set`
 
-Canonical writes now enter through `relation.association.add`, `relation.association.clear`, and `home_locality.relation.set`. Historical legacy claim material remains readable/importable/projectable through compatibility surfaces, but the signed fortress prepare corridor, client ingress registry, handoff coverage, and live write-policy action list no longer enroll the legacy bridge intents.
+Canonical writes now enter through `relation.association.add`, `relation.association.clear`, and `relation.residence.add`. Historical legacy claim material remains readable/importable/projectable through compatibility surfaces, but the signed fortress prepare corridor, client ingress registry, handoff coverage, and live write-policy action list no longer enroll the legacy bridge intents.
 
 The final readiness handoff lives in runtime audit code as `createFinalPreReseedReadinessReport()`. It records canonical write intents, compatibility-only legacy surfaces, OWA seed/default anchors, required default policies, discussion default packets, canonical definition packet types, and out-of-scope never-live packet types. Reseed design should start from that report rather than rediscovering chapter state from scattered modernization audits.
 
@@ -491,9 +491,9 @@ Current forward direction:
 
 Current home-locality direction:
 
-- canonical writes now use `home_locality.relation.set`
-- that write produces `Relation(subtype: home_locality)` only; claims and attestations can be added around the relation, but are not automatically minted
-- legacy `home_locality.claim.set` is retired from live fresh writes; historical `Claim(home_locality)` material remains readable through compatibility projections
+- canonical writes now use `relation.residence.add`
+- that write produces `Relation(subtype: residence)` only; claims and attestations can be added around the relation, but are not automatically minted
+- legacy `residence.claim.set` is retired from live fresh writes; historical `Claim(residence)` material remains readable through compatibility projections
 - revise and withdraw semantics remain packet-native: status changes are represented by newly signed packet material rather than in-place mutation
 
 #### Attestation
@@ -522,7 +522,7 @@ Current direction:
 - legitimacy-sensitive relation rules belong in `Policy.relation_requirements`
 - default inheritance belongs in `Policy.default_policy`, using packet refs for policies, templates, default packet sets, and preference material rather than runtime-only default names
 - governance readiness belongs in `Policy.governance_policy`, reserving voter eligibility, trust stage, quorum, approval, vote method, and decision-report hooks without executing voting yet
-- dependency requirements remain in `Policy.dependency_policy`; subscriptions record what a subject accepts or excludes, and projections compare the two
+- dependency requirements remain in `Policy.dependencies_policy`; subscriptions record what a subject accepts or excludes, and projections compare the two
 
 #### Decision
 
@@ -597,18 +597,18 @@ The graph should continue to express relationships through typed refs and edges 
 Current scope-graph direction:
 
 - canonical mounted ancestry prefers `Relation(subtype: default_ancestry_parent)`
-- canonical home-locality projection prefers `Relation(subtype: home_locality)`; legitimacy evidence can attach through separate Claims and Attestations when policy or contestation requires it
-- canonical follows now use `Relation(subtype: follows)` and are actor-only; legacy shell follow preferences are compatibility-only read input
+- canonical home-locality projection prefers `Relation(subtype: residence)`; legitimacy evidence can attach through separate Claims and Attestations when policy or contestation requires it
+- canonical follow relations now use `Relation(subtype: follow)` and are actor-only; legacy shell follow preferences are compatibility-only read input
 - canonical association now uses `Relation(subtype: association)` without automatic claim wrapping, and associated scopes now count as mounted related scopes in shell projection
-- canonical policy adoption now uses `Relation(subtype: subscribes_to)` targeting a Policy packet rather than a separate `adopts_policy` relation subtype
-- dependency requirements remain policy-layer semantics, usually `Policy.dependency_policy`, while `depends_on` remains available only as a structural edge type rather than a Relation subtype
+- canonical policy adoption now uses `Relation(subtype: subscription)` targeting a Policy packet rather than a separate `adopts_policy` relation subtype
+- dependency requirements remain policy-layer semantics, usually `Policy.dependencies_policy`, while `depends_on` remains available only as a structural edge type rather than a Relation subtype
 - subscription relations can carry `subscription_options` for inherited/default policies, dependencies, modules, templates, and default packet sets; excluding a required default does not erase the subscription, but projection should report partial alignment or review needs
 - `Relation(subtype: defined_by_location)` is the live read seam for linked `Location` packets
 - `locality.path.create` now emits locality `Element` packets, `default_ancestry_parent` relations, provisional `Location(subtype: region)` packets, and `defined_by_location` relations together
 - locality rows can now carry dynamic descriptor metadata, which is currently stored in linked `Location.spatial_payload.scope_descriptor` rather than through a packet schema bump
 - legacy locality levels such as `nation | region | city | district` now function as compatibility buckets, while actual ancestry comes from the ordered path graph and not from a hardcoded four-slot ladder
 - locality depth remains projection-only and should not be stored as a universal packet truth
-- legacy `parent_scope` ancestry, shell follow preferences, and legacy `Claim(home_locality)` reads now belong in explicit compatibility projections or compatibility mirrors rather than inline main-path logic
+- legacy `parent_scope` ancestry, shell follow preferences, and legacy `Claim(residence)` reads now belong in explicit compatibility projections or compatibility mirrors rather than inline main-path logic
 
 ## Trust, Moderation, And Policy
 
@@ -683,13 +683,13 @@ Current implementation note:
 Current home-locality policy note:
 
 - OWA-sensitive home-locality legitimacy resolves through `Action(subtype: initiative)` as the forward OWA policy/default anchor
-- a canonical `Relation(subtype: home_locality)` is enough for default mounted home-locality projection; stricter `Policy.relation_requirements` can still require extra evidence for specific scopes
+- a canonical `Relation(subtype: residence)` is enough for default mounted home-locality projection; stricter `Policy.relation_requirements` can still require extra evidence for specific scopes
 - the expected support model in this phase is separate Claims and Attestations attached around Relations only when evidence, dispute, or policy asks for them
 - legacy claim-only home-locality reads remain compatibility projections, not the forward legitimacy model
 
 Current dependency authority note:
 
-- Definition `packet_dependency` parts describe packet requirements and local engine contracts; runtime registries only validate and interpret those refs
+- Definition `dependencies_definition` parts describe packet requirements and local engine contracts; runtime registries only validate and interpret those refs
 - workflow dependency IDs must resolve to a Definition dependency part, Policy semantic, operation ontology entry, workflow resolver allowlist, or trusted local engine contract
 - trusted runtime capability metadata is allowed only when it points back to packet meaning or an explicit local engine contract
 
@@ -744,7 +744,7 @@ Status: canon candidate
 - lower work hierarchy levels should be represented through Action subtypes such as `campaign`, `program`, `mission`, and provisional `task`
 - "official OWA" should mean conforming to recognized OWA dependencies, templates, and policies
 - dependency requirements remain policy-layer semantics; `depends_on` is not a Relation subtype
-- policy adoption is modeled by `Relation(subtype: subscribes_to)` targeting a Policy, not by a separate `adopts_policy` relation subtype
+- policy adoption is modeled by `Relation(subtype: subscription)` targeting a Policy, not by a separate `adopts_policy` relation subtype
 - assemblies remain valid Nexus objects even when they fork or diverge from canonical OWA lineage
 
 #### Unresolved
@@ -869,7 +869,7 @@ This monthly log condenses the April 2026 decisions that remain most important f
 ### 2026-04-18 to 2026-04-20 locality and identity hardening
 
 - Legacy signed identities remained valid after the roles-and-claims refactor.
-- Home locality became the mounted geographic truth, while follows became shell preferences.
+- Home locality became the mounted geographic truth, while follow became shell preferences.
 - Locality search and locality creation hardened around canonical geographic assembly flows.
 - Location disclosure remained separate from mounted home-locality truth.
 
@@ -990,15 +990,15 @@ This monthly log condenses the May 2026 decisions that remain most important for
 
 ### 2026-05 Dynamic scope graph consumer pass 1
 
-- Home locality is now relation-first in the mutation corridor: canonical writes use `home_locality.relation.set` and produce `Relation(subtype: home_locality)` without automatically minting supporting claims.
-- Legacy `home_locality.claim.set`, legacy `Claim(home_locality)`, and legacy `parent_scope` ancestry remain readable only through named compatibility adapters and projections rather than through mixed main-path shell logic.
+- Home locality is now relation-first in the mutation corridor: canonical writes use `relation.residence.add` and produce `Relation(subtype: residence)` without automatically minting supporting claims.
+- Legacy `residence.claim.set`, legacy `Claim(residence)`, and legacy `parent_scope` ancestry remain readable only through named compatibility adapters and projections rather than through mixed main-path shell logic.
 - Mounted scope projection now prefers packet-native structural relations such as `default_ancestry_parent` and `defined_by_location`, while also exposing richer packet-backed shell metadata for later UI graph and dashboard work.
 - OWA home-locality projection now resolves from packet-native relations sourced through the forward `Action(subtype: initiative)` anchor path; relation requirements remain available for stricter policies but are not the default fresh-write wrapper.
 
 ### 2026-05 Scope graph hardening and packet-native scope writers
 
 - Scope ancestry resolution now explicitly surfaces structural graph state, including `compatibility_parent`, `conflicting_parents`, `cyclic_ancestry`, and `missing_parent`, instead of silently treating all non-canonical cases as equivalent.
-- Follow is now canonical and actor-only: new writes use `follows.relation.set` / `follows.relation.clear`, while shell cookie follows remain a compatibility read bridge only.
+- Follow is now canonical and actor-only: new writes use `relation.follow.add` / `relation.follow.clear`, while shell cookie follow remain a compatibility read bridge only.
 - Association is now relation-first in the mutation corridor: canonical writes use `relation.association.add` / `relation.association.clear`, keep the supporting self-claim layer, and mount associated scopes as related mounted scopes rather than leaving them as badge-only side state.
 - The first packet-native shell UI pass keeps the current rail layout but now groups scope context into Home, Associated, Followed, and Discoverable sections, roots the home trunk at `You`, and routes follow/associate sidebar actions through the canonical mutation corridor with a refetched shell projection afterward.
 - `locality.path.create` now emits locality `Element` packets, canonical `default_ancestry_parent` relations, provisional `Location(subtype: region)` packets, and `defined_by_location` relations in one signed packet batch, while `parent_scope` remains a named compatibility mirror only.
@@ -1068,9 +1068,9 @@ This monthly log condenses the May 2026 decisions that remain most important for
 
 ### 2026-05 locality runtime catch-up chapter
 
-- Locality confirmation now routes through one composite `locality.graph.apply` mutation intent above `locality.path.create`, so structural locality writes, selected home-locality changes, scope associations, follows, and display preferences are coordinated together instead of being chained from the client.
+- Locality confirmation now routes through one composite `locality.graph.apply` mutation intent above `locality.path.create`, so structural locality writes, selected home-locality changes, scope associations, follow, and display preferences are coordinated together instead of being chained from the client.
 - Partial success is now explicit at that runtime seam: structural locality planning and packet writes remain phase one, while relation and display-preference writes report their own outcomes without pretending the whole flow is all-or-nothing.
-- Actor-to-scope relationship reads are now centralized through one runtime controller that treats canonical `home_locality`, `association`, and `follows` relations as the main truth, while preserving guest and compatibility follow behavior as an explicit fallback bridge.
+- Actor-to-scope relationship reads are now centralized through one runtime controller that treats canonical `residence`, `association`, and `follow` relations as the main truth, while preserving guest and compatibility follow behavior as an explicit fallback bridge.
 - `main` is a visible-scope preference rather than a relation, and associated/followed parent-context display toggles are persisted alongside it through the current claimed-actor preference bridge.
 - The generic scope-graph projection now returns server-projected `home`, `associated`, `followed`, `main`, and `discoverable` sections for the sidebar, and OWA-specific initiative-anchor relation-policy lookup has been moved out of the generic graph core into a narrower adapter layer.
 
@@ -1096,11 +1096,11 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - Active packet canon is pruned to Definition, Bundle, Element, Location, Role, Claim, Relation, Report, Proposal, Vote, Attestation, Decision, Action, Discussion, Policy, and Preference.
 - `Cause`, split discussion types, split initiative/work types, `Signal`, `Minutes`, `Artifact`, and other unused alpha types are removed from fresh packet canon.
 - Fresh active packet bodies use top-level `body.subtype` as the packet classifier. Old top-level classifier names are treated as alpha archive shapes, not fresh write compatibility obligations.
-- Reseed continuity will preserve identity/key continuity by default; stale packet-id relations, home locality, follows, associations, main-tree scope IDs, and old discussion placement are not carried forward by default.
+- Reseed continuity will preserve identity/key continuity by default; stale packet-id relations, home locality, follow, associations, main-tree scope IDs, and old discussion placement are not carried forward by default.
 
 ### 2026-05 final pre-reseed wrap-up
 
-- Live fresh writes no longer accept `association.claim.set` or `home_locality.claim.set`; canonical association and home-locality writes now use relation-first mutation intents only.
+- Live fresh writes no longer accept `association.claim.set` or `residence.claim.set`; canonical association and home-locality writes now use relation-first mutation intents only.
 - Legacy claim/home-locality material remains compatibility-readable and importable, but it is no longer a live mutation corridor entrypoint.
 - A final pre-reseed readiness report now inventories canonical write intents, compatibility-only surfaces, OWA default anchors, required seed policies, discussion defaults, canonical definition packet types, and out-of-scope packet types for the separate reseed design pass.
 

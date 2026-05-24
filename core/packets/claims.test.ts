@@ -49,18 +49,18 @@ test('association claim packets keep the claim scope as the authority scope', ()
 
 test('home locality claims share the same deterministic claim identity model', () => {
   const packetId = createClaimPacketId({
-    claimKind: 'home_locality',
+    claimKind: 'residence',
     subjectPacketId: 'nexus:element/person-a',
     targetPacketId: 'nexus:element/moreno-valley',
     scopePacketId: 'nexus:element/moreno-valley',
   });
 
-  assert.match(packetId, /^nexus:claim\/home_locality\//);
+  assert.match(packetId, /^nexus:claim\/residence\//);
 });
 
 test('claim revisions preserve compact parent revision refs', () => {
   const packet = createAssociationClaimPacket({
-    claimKind: 'home_locality',
+    claimKind: 'residence',
     subjectPacketId: 'nexus:element/person-a',
     targetPacketId: 'nexus:element/moreno-valley',
     scopePacketId: 'nexus:element/moreno-valley',
@@ -87,9 +87,9 @@ test('claim revisions preserve compact parent revision refs', () => {
 
 test('relation assertion claim packets can target a relation packet while preserving the asserted scope target', () => {
   const packet = createRelationAssertionClaimPacket({
-    claimKind: 'home_locality',
+    claimKind: 'residence',
     subjectPacketId: 'nexus:element/person-a',
-    relationPacketId: 'nexus:relation/home_locality/person-a--scope-a--scope-a',
+    relationPacketId: 'nexus:relation/residence/person-a--scope-a--scope-a',
     assertedTargetPacketId: 'nexus:element/scope-a',
     scopePacketId: 'nexus:element/scope-a',
     applicableScopeRefs: [{ packet_id: 'nexus:element/global-commons' }],
@@ -100,9 +100,9 @@ test('relation assertion claim packets can target a relation packet while preser
   assert.equal(packet.header.type, 'Claim');
   assert.equal(
     packet.body.target_ref.packet_id,
-    'nexus:relation/home_locality/person-a--scope-a--scope-a'
+    'nexus:relation/residence/person-a--scope-a--scope-a'
   );
   assert.equal(packet.body.relation_assertion?.target_ref.packet_id, 'nexus:element/scope-a');
-  assert.equal(packet.body.relation_assertion?.subtype, 'home_locality');
+  assert.equal(packet.body.relation_assertion?.subtype, 'residence');
   assert.equal(packet.body.claim_markdown, 'I live here.');
 });

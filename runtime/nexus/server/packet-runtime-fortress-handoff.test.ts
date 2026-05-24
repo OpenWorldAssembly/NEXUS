@@ -55,7 +55,7 @@ test('workflow-aligned planner extraction intents produce definition handoffs bu
   for (const mutationIntent of [
     'relation.association.add',
     'relation.association.clear',
-    'home_locality.relation.set',
+    'relation.residence.add',
     'discussion.reply.create',
   ] as const) {
     const handoff = resolvePacketRuntimeFortressHandoff({ mutationIntent });
@@ -93,7 +93,7 @@ test('retired legacy bridge intents fail closed before fortress handoff', () => 
 
   for (const mutationIntent of [
     'association.claim.set',
-    'home_locality.claim.set',
+    'residence.claim.set',
   ]) {
     const handoff = resolvePacketRuntimeFortressHandoff({
       mutationIntent,

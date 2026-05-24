@@ -57,7 +57,7 @@ test('claim packets project as relation assertions without losing claim semantic
   const claim = createClaimPacket({
     packet_id: 'nexus:claim/home-locality/alice',
     created_at: '2026-05-07T00:02:00.000Z',
-    subtype: 'home_locality',
+    subtype: 'residence',
     subject_ref: { packet_id: 'nexus:element/alice' },
     target_ref: { packet_id: 'nexus:element/moreno-valley' },
     scope_ref: { packet_id: 'nexus:element/moreno-valley' },
@@ -67,7 +67,7 @@ test('claim packets project as relation assertions without losing claim semantic
   const projection = projectClaimAsRelationAssertion(claim);
 
   assert.equal(claim.body.subtype, 'relation_assertion');
-  assert.equal(projection.relation_subtype, 'home_locality');
+  assert.equal(projection.relation_subtype, 'residence');
   assert.equal(projection.claim_subtype, 'relation_assertion');
   assert.equal(projection.subject_ref.packet_id, 'nexus:element/alice');
   assert.equal(projection.target_ref.packet_id, 'nexus:element/moreno-valley');

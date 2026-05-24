@@ -39,7 +39,7 @@ test('locality graph apply resolves through the composite batch adapter', () => 
   assert.ok(dryRun.operation_kinds.includes('relation.set'));
   assert.ok(dryRun.operation_kinds.includes('projection.refresh'));
   assert.ok(dryRun.policy_action_ids.includes('locality.element.create'));
-  assert.ok(dryRun.policy_action_ids.includes('follows.relation.set'));
+  assert.ok(dryRun.policy_action_ids.includes('relation.follow.add'));
   assert.ok(dryRun.dependency_ids.includes('runtime.planner.scoped_relation'));
 });
 
@@ -136,7 +136,7 @@ test('unsupported live composite workflow requests fail closed', async () => {
         policyGate: {} as never,
         ticketService: {} as never,
         actorPacket: {} as never,
-        intent: { kind: 'follows.relation.set' } as never,
+        intent: { kind: 'relation.follow.add' } as never,
       }),
     /Missing live composite workflow adapter/
   );

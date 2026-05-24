@@ -13,7 +13,7 @@ import { createIdentityKeyBinding } from '@runtime/nexus/identity-crypto';
 import {
   planAssociationRelationPackets,
   planFollowRelationPackets,
-  planHomeLocalityRelationPackets,
+  planResidenceRelationPackets,
 } from './elemental-scope-relation-planner.ts';
 import type { MutationPolicyGate } from './mutation-policy-gate.ts';
 import {
@@ -133,9 +133,9 @@ test('live generic workflow enrollment includes relation, claim, and attestation
     [
       'relation.association.add',
       'relation.association.clear',
-      'home_locality.relation.set',
-      'follows.relation.set',
-      'follows.relation.clear',
+      'relation.residence.add',
+      'relation.follow.add',
+      'relation.follow.clear',
       'role_association.claim.set',
       'attestation.packet_signal.set',
     ]
@@ -193,9 +193,9 @@ test('trusted home locality planner matches the existing relation planner oracle
   const actorPacket = await createClaimedActor();
   const targetScopePacket = createTargetScope();
   const packetStore = createFakeStore({ targetScopePacket });
-  const intent: Extract<MutationIntent, { kind: 'home_locality.relation.set' }> = {
-    kind: 'home_locality.relation.set',
-    home_scope_packet_id: targetScopePacket.header.packet_id,
+  const intent: Extract<MutationIntent, { kind: 'relation.residence.add' }> = {
+    kind: 'relation.residence.add',
+    residence_scope_packet_id: targetScopePacket.header.packet_id,
   };
 
   const trustedPlan = await resolveTrustedRelationOperationPlan({
@@ -204,10 +204,10 @@ test('trusted home locality planner matches the existing relation planner oracle
     actorPacket,
     intent,
   });
-  const oraclePlan = await planHomeLocalityRelationPackets({
+  const oraclePlan = await planResidenceRelationPackets({
     packetStore: packetStore as never,
     actorPacket,
-    homeScopePacket: targetScopePacket,
+    residenceScopePacket: targetScopePacket,
     forceSelectedRevision: true,
   });
 
@@ -226,8 +226,8 @@ test('trusted follow set planner matches the existing relation planner oracle', 
   const actorPacket = await createClaimedActor();
   const targetScopePacket = createTargetScope();
   const packetStore = createFakeStore({ targetScopePacket });
-  const intent: Extract<MutationIntent, { kind: 'follows.relation.set' }> = {
-    kind: 'follows.relation.set',
+  const intent: Extract<MutationIntent, { kind: 'relation.follow.add' }> = {
+    kind: 'relation.follow.add',
     scope_id: 'target-scope',
     target_scope_packet_id: targetScopePacket.header.packet_id,
   };
@@ -246,7 +246,7 @@ test('trusted follow set planner matches the existing relation planner oracle', 
   });
 
   assert.equal(trustedPlan.operation_kind, 'relation.set');
-  assert.equal(trustedPlan.workflow_plan_id, 'relation.follows.set.workflow.v0');
+  assert.equal(trustedPlan.workflow_plan_id, 'relation.follow.add.workflow.v0');
   assert.deepEqual(
     trustedPlan.relation_plan.packets.map(normalizeGeneratedTimestamps),
     oraclePlan.packets.map(normalizeGeneratedTimestamps)
@@ -270,8 +270,8 @@ test('trusted follow clear planner matches withdrawn relation oracle', async () 
     targetScopePacket,
     existingRelationPacket,
   });
-  const intent: Extract<MutationIntent, { kind: 'follows.relation.clear' }> = {
-    kind: 'follows.relation.clear',
+  const intent: Extract<MutationIntent, { kind: 'relation.follow.clear' }> = {
+    kind: 'relation.follow.clear',
     scope_id: 'target-scope',
     target_scope_packet_id: targetScopePacket.header.packet_id,
   };
@@ -306,14 +306,14 @@ test('trusted workflow mutation returns existing fortress prepare shape', async 
     policyGate: createPolicyGate(),
     actorPacket,
     intent: {
-      kind: 'follows.relation.set',
+      kind: 'relation.follow.add',
       scope_id: 'target-scope',
       target_scope_packet_id: targetScopePacket.header.packet_id,
     },
   });
 
-  assert.equal(preparedMutation.kind, 'follows.relation.set');
-  assert.deepEqual(preparedMutation.action_ids, ['follows.relation.set']);
+  assert.equal(preparedMutation.kind, 'relation.follow.add');
+  assert.deepEqual(preparedMutation.action_ids, ['relation.follow.add']);
   assert.equal(
     preparedMutation.governing_scope_packet_id,
     targetScopePacket.header.packet_id

@@ -48,12 +48,12 @@ const MUTATION_POLICY_ACTION_IDS = {
   'locality.path.create': ['locality.element.create'],
   'locality.graph.apply': [
     'locality.element.create',
-    'home_locality.relation.set',
-    'home_locality.relation.clear',
+    'relation.residence.add',
+    'relation.residence.clear',
     'relation.association.add',
     'relation.association.clear',
-    'follows.relation.set',
-    'follows.relation.clear',
+    'relation.follow.add',
+    'relation.follow.clear',
   ],
   'discussion.thread_post.create': [
     'discussion.thread.create',
@@ -68,12 +68,12 @@ const MUTATION_POLICY_ACTION_IDS = {
   'assembly.element.create': ['assembly.element.create'],
   'relation.association.add': ['relation.association.add'],
   'relation.association.clear': ['relation.association.clear'],
-  'home_locality.relation.set': [
-    'home_locality.relation.set',
-    'home_locality.relation.clear',
+  'relation.residence.add': [
+    'relation.residence.add',
+    'relation.residence.clear',
   ],
-  'follows.relation.set': ['follows.relation.set'],
-  'follows.relation.clear': ['follows.relation.clear'],
+  'relation.follow.add': ['relation.follow.add'],
+  'relation.follow.clear': ['relation.follow.clear'],
   'role_association.claim.set': [
     'role_association.claim.set',
     'role_association.claim.withdraw',

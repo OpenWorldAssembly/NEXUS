@@ -71,7 +71,7 @@
 9. Review rows and search results now expose descriptor-aware locality labels when linked `Location` metadata is available, while legacy levels remain compatibility buckets.
 10. Duplicate warnings can now route back into the builder through `Use existing`, `Edit name`, or forward into an explicit `Create anyway` path.
 11. Confirm now routes through one composite `locality.graph.apply` runtime seam, which reruns the structural locality planner, writes locality packets, applies selected home or association or follow relations, stores temporary main-tree display preferences, and then returns refreshed shell graph data.
-12. If `Use as home locality` is on, selecting an existing locality or creating a new one both apply the canonical `home_locality.relation.set` path inside that composite apply flow.
+12. If `Use as home locality` is on, selecting an existing locality or creating a new one both apply the canonical `relation.residence.add` path inside that composite apply flow.
 13. The review-only home-branch checklist can be adjusted visually in this pass, but it does not yet change stored home-locality packet semantics.
 
 ### Packet inspection

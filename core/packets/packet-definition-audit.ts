@@ -291,8 +291,8 @@ function auditDefinitionParts(input: {
     'packet_planner_descriptor',
     'packet_projection_descriptor',
     'packet_compatibility',
-    'default_definition',
-    'packet_dependency',
+    'defaults_definition',
+    'dependencies_definition',
   ] as const) {
     if (requiredPartSubtypes.has(requiredSubtype)) {
       continue;

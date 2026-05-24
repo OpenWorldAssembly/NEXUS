@@ -146,7 +146,7 @@ test('explorer payload returns raw, adapted, read-model, and link data for packe
       authority_scope_ref: { packet_id: SCOPE_PACKET_ID },
       applicable_scope_refs: [{ packet_id: SCOPE_PACKET_ID }],
       created_by: { packet_id: actorPacket.header.packet_id },
-      subtype: 'home_locality',
+      subtype: 'residence',
       subject_ref: { packet_id: actorPacket.header.packet_id },
       target_ref: { packet_id: SCOPE_PACKET_ID },
       scope_ref: { packet_id: SCOPE_PACKET_ID },

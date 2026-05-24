@@ -20,7 +20,7 @@ export const PUT: RequestHandler = async () =>
   createJsonResponse(
     {
       error:
-        'Follow writes moved to the fortress mutation corridor. Use follows.relation.set or follows.relation.clear.',
+        'Follow writes moved to the fortress mutation corridor. Use relation.follow.add or relation.follow.clear.',
     },
     410
   );

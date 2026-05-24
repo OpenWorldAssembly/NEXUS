@@ -60,9 +60,9 @@ Current forward direction:
 
 Current home-locality direction:
 
-- canonical writes now use `home_locality.relation.set`
-- that write produces `Relation(subtype: home_locality)` only; claims and attestations can be added around the relation, but are not automatically minted
-- legacy `home_locality.claim.set` is retired from live fresh writes; historical `Claim(home_locality)` material remains readable through compatibility projections
+- canonical writes now use `relation.residence.add`
+- that write produces `Relation(subtype: residence)` only; claims and attestations can be added around the relation, but are not automatically minted
+- legacy `residence.claim.set` is retired from live fresh writes; historical `Claim(residence)` material remains readable through compatibility projections
 - revise and withdraw semantics remain packet-native: status changes are represented by newly signed packet material rather than in-place mutation
 
 ### Attestation
@@ -91,7 +91,7 @@ Current direction:
 - legitimacy-sensitive relation rules belong in `Policy.relation_requirements`
 - default inheritance belongs in `Policy.default_policy`, using packet refs for policies, templates, default packet sets, and preference material rather than runtime-only default names
 - governance readiness belongs in `Policy.governance_policy`, reserving voter eligibility, trust stage, quorum, approval, vote method, and decision-report hooks without executing voting yet
-- dependency requirements remain in `Policy.dependency_policy`; subscriptions record what a subject accepts or excludes, and projections compare the two
+- dependency requirements remain in `Policy.dependencies_policy`; subscriptions record what a subject accepts or excludes, and projections compare the two
 
 ### Decision
 
@@ -123,7 +123,7 @@ This first live usage should still be understood narrowly. The type now exists a
 
 Defaults should remain packet-native rather than becoming `Element` fields or runtime constants. The current pre-reseed inheritance direction is:
 
-- `Definition(subtype: default_definition)` parts carried alongside each packet definition
+- `Definition(subtype: defaults_definition)` parts carried alongside each packet definition
 - bundle/default packet-set material
 - initiative `Action` policy/template/default packet-set refs
 - element policy/template refs or relations
@@ -131,7 +131,7 @@ Defaults should remain packet-native rather than becoming `Element` fields or ru
 
 OWA-specific behavior should be represented by the default OWA `Action(subtype: initiative)` packet and its linked policies, templates, bundles, and preferences, not by special cases in generic packet schemas.
 
-The default OWA seed now links its forward `Action(subtype: initiative)` anchor to default-inheritance and governance-baseline `Policy` packets. New default/policy resolution should use the Action anchor, then layer policy-selected `default_definition_refs` and explicit overrides on top of definition-native defaults.
+The default OWA seed now links its forward `Action(subtype: initiative)` anchor to default-inheritance and governance-baseline `Policy` packets. New default/policy resolution should use the Action anchor, then layer policy-selected `defaults_definition_refs` and explicit overrides on top of definition-native defaults.
 
 ## Schema evolution discipline
 
@@ -166,15 +166,15 @@ The graph should continue to express relationships through typed refs and edges 
 Current scope-graph direction:
 
 - canonical mounted ancestry prefers `Relation(subtype: default_ancestry_parent)`
-- canonical home-locality projection prefers `Relation(subtype: home_locality)`; legitimacy evidence can attach through separate Claims and Attestations when policy or contestation requires it
-- canonical follows now use `Relation(subtype: follows)` and are actor-only; legacy shell follow preferences are compatibility-only read input
+- canonical home-locality projection prefers `Relation(subtype: residence)`; legitimacy evidence can attach through separate Claims and Attestations when policy or contestation requires it
+- canonical follow relations now use `Relation(subtype: follow)` and are actor-only; legacy shell follow preferences are compatibility-only read input
 - canonical association now uses `Relation(subtype: association)` without automatic claim wrapping, and associated scopes now count as mounted related scopes in shell projection
-- canonical policy adoption now uses `Relation(subtype: subscribes_to)` targeting a Policy packet rather than a separate `adopts_policy` relation subtype
-- dependency requirements remain policy-layer semantics, usually `Policy.dependency_policy`, while `depends_on` remains available only as a structural edge type rather than a Relation subtype
+- canonical policy adoption now uses `Relation(subtype: subscription)` targeting a Policy packet rather than a separate `adopts_policy` relation subtype
+- dependency requirements remain policy-layer semantics, usually `Policy.dependencies_policy`, while `depends_on` remains available only as a structural edge type rather than a Relation subtype
 - subscription relations can carry `subscription_options` for inherited/default policies, dependencies, modules, templates, and default packet sets; excluding a required default does not erase the subscription, but projection should report partial alignment or review needs
 - `Relation(subtype: defined_by_location)` is the live read seam for linked `Location` packets
 - `locality.path.create` now emits locality `Element` packets, `default_ancestry_parent` relations, provisional `Location(subtype: region)` packets, and `defined_by_location` relations together
 - locality rows can now carry dynamic descriptor metadata, which is currently stored in linked `Location.spatial_payload.scope_descriptor` rather than through a packet schema bump
 - legacy locality levels such as `nation | region | city | district` now function as compatibility buckets, while actual ancestry comes from the ordered path graph and not from a hardcoded four-slot ladder
 - locality depth remains projection-only and should not be stored as a universal packet truth
-- legacy `parent_scope` ancestry, shell follow preferences, and legacy `Claim(home_locality)` reads now belong in explicit compatibility projections or compatibility mirrors rather than inline main-path logic
+- legacy `parent_scope` ancestry, shell follow preferences, and legacy `Claim(residence)` reads now belong in explicit compatibility projections or compatibility mirrors rather than inline main-path logic

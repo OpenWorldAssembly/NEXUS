@@ -36,7 +36,7 @@ export function createRelationPrepareHandlers(
       handlers.prepareHomeLocalityRelation({
         intent: intent as Extract<
           MutationIntent,
-          { kind: 'home_locality.relation.set' }
+          { kind: 'relation.residence.add' }
         >,
         actorPacket,
       }),
@@ -44,7 +44,7 @@ export function createRelationPrepareHandlers(
       handlers.prepareFollowRelation({
         intent: intent as Extract<
           MutationIntent,
-          { kind: 'follows.relation.set' | 'follows.relation.clear' }
+          { kind: 'relation.follow.add' | 'relation.follow.clear' }
         >,
         actorPacket,
       }),

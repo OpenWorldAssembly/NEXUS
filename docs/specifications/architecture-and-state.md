@@ -43,7 +43,7 @@ Current scope consumer direction in code includes:
 
 - shell scope projection now prefers packet-native `Relation(subtype: default_ancestry_parent)` for ancestry
 - home locality now resolves through relation-first projection with explicit compatibility fallback instead of claim-first shell logic
-- follow now resolves packet-natively from `Relation(subtype: follows)` first, with legacy shell preference state reduced to an explicit compatibility bridge
+- follow now resolves packet-natively from `Relation(subtype: follow)` first, with legacy shell preference state reduced to an explicit compatibility bridge
 - association now resolves packet-natively from `Relation(subtype: association)` first, with legacy claim-only reads reduced to explicit compatibility projection and associated scopes treated as mounted related scopes
 - followed, associated, known, discoverable, and home-ancestor semantics are now carried as additive packet-backed scope-summary metadata
 - locality creation now emits provisional `Location(subtype: region)` packets plus `Relation(subtype: defined_by_location)` so linked location packets are part of the live writer path as well as the read seam

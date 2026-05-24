@@ -209,7 +209,7 @@ function buildDefinitionPartBody(
                       supports_downcast: definition.compatibility.supports_downcast,
                       loss_awareness: definition.compatibility.loss_awareness,
                     }
-                  : part.part_subtype === 'default_definition'
+                  : part.part_subtype === 'defaults_definition'
                     ? {
                         ...base,
                         applies_to: part.applies_to ?? {
@@ -228,7 +228,7 @@ function buildDefinitionPartBody(
                           !reference.startsWith('core.')
                       ),
                       required_definition_parts: references.filter((reference) =>
-                        reference.includes('.packet_') || reference.includes('.default_definition')
+                        reference.includes('.packet_') || reference.includes('.defaults_definition')
                       ),
                       required_runtime_capabilities: references.filter(
                         (reference) =>

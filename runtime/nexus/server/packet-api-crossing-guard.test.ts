@@ -35,7 +35,7 @@ test('prepare API preflight rejects custom mutation intents', () => {
 test('prepare API preflight rejects retired legacy bridge mutation intents', () => {
   for (const kind of [
     'association.claim.set',
-    'home_locality.claim.set',
+    'residence.claim.set',
   ]) {
     assert.throws(
       () =>
@@ -49,11 +49,11 @@ test('prepare API preflight rejects retired legacy bridge mutation intents', () 
 
 test('finalize API preflight uses the stored ticket intent direction', () => {
   const preflight = resolveFinalizeMutationApiPreflight({
-    kind: 'follows.relation.set',
+    kind: 'relation.follow.add',
   });
 
   assert.equal(preflight.source_route, '/api/nexus/mutations/finalize');
-  assert.equal(preflight.mutation_intent, 'follows.relation.set');
+  assert.equal(preflight.mutation_intent, 'relation.follow.add');
   assert.equal(preflight.status, 'allowed_definition');
 
   assert.throws(

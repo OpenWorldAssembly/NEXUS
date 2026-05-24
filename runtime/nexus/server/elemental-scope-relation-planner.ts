@@ -132,7 +132,7 @@ export async function planFollowRelationPackets(input: {
 }): Promise<ScopeRelationPacketPlan> {
   const applicableScopeRefs = getApplicableScopeRefs(input.targetScopePacket);
   const relationPacketId = createRelationPacketId({
-    subtype: 'follows',
+    subtype: 'follow',
     subjectPacketId: input.actorPacket.header.packet_id,
     targetPacketId: input.targetScopePacket.header.packet_id,
     scopePacketId: input.targetScopePacket.header.packet_id,
@@ -164,7 +164,7 @@ export async function planFollowRelationPackets(input: {
   if (isSetMode || existingRelationPacket) {
     packets.push(
       createScopedRelationPacket({
-        subtype: 'follows',
+        subtype: 'follow',
         subjectPacketId: input.actorPacket.header.packet_id,
         targetPacketId: input.targetScopePacket.header.packet_id,
         scopePacketId: input.targetScopePacket.header.packet_id,
@@ -189,16 +189,16 @@ export async function planFollowRelationPackets(input: {
   };
 }
 
-export async function planHomeLocalityRelationPackets(input: {
+export async function planResidenceRelationPackets(input: {
   packetStore: NodeSQLitePacketStore;
   actorPacket: PacketEnvelopeByType['Element'];
-  homeScopePacket: PacketEnvelopeByType['Element'] | null;
+  residenceScopePacket: PacketEnvelopeByType['Element'] | null;
   forceSelectedRevision?: boolean;
 }): Promise<ScopeRelationPacketPlan> {
   const relationPackets = await listRelationPackets(input.packetStore);
   const activeHomeRelations = filterRelationPackets({
     relations: relationPackets,
-    relationSubtype: 'home_locality',
+    relationSubtype: 'residence',
     subjectPacketId: input.actorPacket.header.packet_id,
     activeOnly: true,
   });
@@ -207,8 +207,8 @@ export async function planHomeLocalityRelationPackets(input: {
 
   for (const activeHomeRelation of activeHomeRelations) {
     if (
-      input.homeScopePacket &&
-      activeHomeRelation.body.target_ref.packet_id === input.homeScopePacket.header.packet_id
+      input.residenceScopePacket &&
+      activeHomeRelation.body.target_ref.packet_id === input.residenceScopePacket.header.packet_id
     ) {
       continue;
     }
@@ -225,7 +225,7 @@ export async function planHomeLocalityRelationPackets(input: {
 
     packets.push(
       createScopedRelationPacket({
-        subtype: 'home_locality',
+        subtype: 'residence',
         subjectPacketId: input.actorPacket.header.packet_id,
         targetPacketId: activeHomeRelation.body.target_ref.packet_id,
         scopePacketId:
@@ -249,19 +249,19 @@ export async function planHomeLocalityRelationPackets(input: {
     );
   }
 
-  if (!input.homeScopePacket) {
+  if (!input.residenceScopePacket) {
     return {
       packets,
       governingScopePacket: fallbackGoverningScopePacket,
     };
   }
 
-  const applicableScopeRefs = getApplicableScopeRefs(input.homeScopePacket);
+  const applicableScopeRefs = getApplicableScopeRefs(input.residenceScopePacket);
   const homeRelationPacketId = createRelationPacketId({
-    subtype: 'home_locality',
+    subtype: 'residence',
     subjectPacketId: input.actorPacket.header.packet_id,
-    targetPacketId: input.homeScopePacket.header.packet_id,
-    scopePacketId: input.homeScopePacket.header.packet_id,
+    targetPacketId: input.residenceScopePacket.header.packet_id,
+    scopePacketId: input.residenceScopePacket.header.packet_id,
   });
   const [
     existingPreferredRelationRevision,
@@ -277,10 +277,10 @@ export async function planHomeLocalityRelationPackets(input: {
   if (input.forceSelectedRevision || existingRelationPacket?.body.status !== 'active') {
     packets.push(
       createScopedRelationPacket({
-        subtype: 'home_locality',
+        subtype: 'residence',
         subjectPacketId: input.actorPacket.header.packet_id,
-        targetPacketId: input.homeScopePacket.header.packet_id,
-        scopePacketId: input.homeScopePacket.header.packet_id,
+        targetPacketId: input.residenceScopePacket.header.packet_id,
+        scopePacketId: input.residenceScopePacket.header.packet_id,
         applicableScopeRefs,
         createdByPacketId: input.actorPacket.header.packet_id,
         status: 'active',
@@ -294,6 +294,6 @@ export async function planHomeLocalityRelationPackets(input: {
 
   return {
     packets,
-    governingScopePacket: input.homeScopePacket,
+    governingScopePacket: input.residenceScopePacket,
   };
 }

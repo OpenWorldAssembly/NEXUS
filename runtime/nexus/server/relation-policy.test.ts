@@ -26,7 +26,7 @@ test('relation policy evaluation recognizes a supporting home-locality claim fro
     relation_requirements: {
       rules: [
         {
-          relation_subtype: 'home_locality',
+          relation_subtype: 'residence',
           required_claim_subtypes: ['relation_assertion'],
           required_attestation_subtypes: [],
           claim_target_mode: 'relation_packet',
@@ -46,7 +46,7 @@ test('relation policy evaluation recognizes a supporting home-locality claim fro
   const relation = createRelationPacket({
     packet_id: 'nexus:relation/home-locality/alice',
     created_at: '2026-05-07T00:02:00.000Z',
-    subtype: 'home_locality',
+    subtype: 'residence',
     subject_ref: { packet_id: 'nexus:element/person/alice' },
     target_ref: { packet_id: 'nexus:element/moreno-valley' },
     scope_ref: { packet_id: 'nexus:element/moreno-valley' },
@@ -59,7 +59,7 @@ test('relation policy evaluation recognizes a supporting home-locality claim fro
     subject_ref: { packet_id: 'nexus:element/person/alice' },
     scope_ref: { packet_id: 'nexus:element/moreno-valley' },
     relation_assertion: {
-      subtype: 'home_locality',
+      subtype: 'residence',
       subject_ref: { packet_id: 'nexus:element/person/alice' },
       target_ref: { packet_id: 'nexus:element/moreno-valley' },
       scope_ref: { packet_id: 'nexus:element/moreno-valley' },
@@ -127,7 +127,7 @@ test('relation policy evaluation fails when the supporting claim subject does no
     relation_requirements: {
       rules: [
         {
-          relation_subtype: 'home_locality',
+          relation_subtype: 'residence',
           required_claim_subtypes: ['relation_assertion'],
           required_attestation_subtypes: [],
           claim_target_mode: 'relation_packet',
@@ -139,7 +139,7 @@ test('relation policy evaluation fails when the supporting claim subject does no
   const relation = createRelationPacket({
     packet_id: 'nexus:relation/home-locality/alice',
     created_at: '2026-05-07T00:11:00.000Z',
-    subtype: 'home_locality',
+    subtype: 'residence',
     subject_ref: { packet_id: 'nexus:element/person/alice' },
     target_ref: { packet_id: 'nexus:element/moreno-valley' },
     scope_ref: { packet_id: 'nexus:element/moreno-valley' },
@@ -152,7 +152,7 @@ test('relation policy evaluation fails when the supporting claim subject does no
     subject_ref: { packet_id: 'nexus:element/person/bob' },
     scope_ref: { packet_id: 'nexus:element/moreno-valley' },
     relation_assertion: {
-      subtype: 'home_locality',
+      subtype: 'residence',
       subject_ref: { packet_id: 'nexus:element/person/bob' },
       target_ref: { packet_id: 'nexus:element/moreno-valley' },
       scope_ref: { packet_id: 'nexus:element/moreno-valley' },
@@ -172,9 +172,9 @@ test('relation policy evaluation fails when the supporting claim subject does no
 
 test('relation policy evaluation distinguishes not-applicable relations from satisfied ones', () => {
   const relation = createRelationPacket({
-    packet_id: 'nexus:relation/alice-follows-owa',
+    packet_id: 'nexus:relation/alice-follow-owa',
     created_at: '2026-05-07T00:15:00.000Z',
-    subtype: 'follows',
+    subtype: 'follow',
     subject_ref: { packet_id: 'nexus:element/person/alice' },
     target_ref: { packet_id: 'nexus:action/initiative/owa' },
   });
@@ -200,7 +200,7 @@ test('claim-targeting attestations can be discovered without changing the attest
     subject_ref: { packet_id: 'nexus:element/person/alice' },
     scope_ref: { packet_id: 'nexus:element/moreno-valley' },
     relation_assertion: {
-      subtype: 'home_locality',
+      subtype: 'residence',
       subject_ref: { packet_id: 'nexus:element/person/alice' },
       target_ref: { packet_id: 'nexus:element/moreno-valley' },
       scope_ref: { packet_id: 'nexus:element/moreno-valley' },

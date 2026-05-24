@@ -79,7 +79,7 @@ const LegacyElementBodySchema = ElementBodySchemaV1_0.omit({
 });
 
 const PolicyBodySchemaV1_0 = PolicyBodySchema.omit({
-  dependency_policy: true,
+  dependencies_policy: true,
   alignment_policy: true,
   relation_requirements: true,
   default_policy: true,
@@ -122,7 +122,7 @@ const LegacyPolicyBodySchema = PolicyBodySchemaV1_0.omit({
     .strict()
     .nullable()
     .optional(),
-  dependency_policy: z
+  dependencies_policy: z
     .object({
       required_refs: z.array(PacketRefSchema).default([]),
       optional_refs: z.array(PacketRefSchema).default([]),
@@ -439,10 +439,10 @@ function stripPolicyV1_1CompatibilityFields(
   let changed = false;
 
   if (
-    Object.prototype.hasOwnProperty.call(nextBody, 'dependency_policy') &&
-    nextBody.dependency_policy === null
+    Object.prototype.hasOwnProperty.call(nextBody, 'dependencies_policy') &&
+    nextBody.dependencies_policy === null
   ) {
-    const { dependency_policy: _dependencyPolicy, ...withoutDependencyPolicy } =
+    const { dependencies_policy: _dependencyPolicy, ...withoutDependencyPolicy } =
       nextBody;
     nextBody = withoutDependencyPolicy;
     changed = true;
@@ -1379,7 +1379,7 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
         matchesDeclaredCurrentBodyShape: (body) =>
           bodyHasOwnProperty(body, 'trust_policy') &&
           bodyHasOwnProperty(body, 'write_policy') &&
-          (!bodyHasOwnProperty(body, 'dependency_policy') ||
+          (!bodyHasOwnProperty(body, 'dependencies_policy') ||
             !bodyHasOwnProperty(body, 'alignment_policy')),
         previous_schema_version: '0.9.0',
         adaptToPrevious: (body) => {
@@ -1401,17 +1401,17 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
           return {
             body: {
               ...currentBody,
-              dependency_policy: null,
+              dependencies_policy: null,
               alignment_policy: null,
             },
             changes: [
               createAdaptationChange({
                 kind: 'normalized_null_default',
-                path: 'body.dependency_policy',
+                path: 'body.dependencies_policy',
                 fromSchemaVersion: '1.0.0',
                 toSchemaVersion: '1.1.0',
                 message:
-                  'Normalized missing dependency_policy field to explicit null.',
+                  'Normalized missing dependencies_policy field to explicit null.',
               }),
               createAdaptationChange({
                 kind: 'normalized_null_default',

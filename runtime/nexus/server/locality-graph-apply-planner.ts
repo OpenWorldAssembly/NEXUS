@@ -17,7 +17,7 @@ import {
 import {
   planAssociationRelationPackets,
   planFollowRelationPackets,
-  planHomeLocalityRelationPackets,
+  planResidenceRelationPackets,
   requireElementPacketFromStoreOrPrepared,
 } from '@runtime/nexus/server/elemental-scope-relation-planner';
 import type { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store';
@@ -55,9 +55,9 @@ function getResolvedLocalityScopePacketId(entry: {
 
 export function collectHomeBranchScopePacketIds(input: {
   preparedResult: LocalityGraphApplyPreparedResult | undefined;
-  homeScopePacketId: string | null;
+  residenceScopePacketId: string | null;
 }): string[] {
-  if (!input.homeScopePacketId) {
+  if (!input.residenceScopePacketId) {
     return [];
   }
 
@@ -65,14 +65,14 @@ export function collectHomeBranchScopePacketIds(input: {
     const pathScopePacketIds = (pathResult.resolved_path ?? [])
       .map((entry) => getResolvedLocalityScopePacketId(entry))
       .filter((scopeId): scopeId is string => Boolean(scopeId));
-    const homeIndex = pathScopePacketIds.indexOf(input.homeScopePacketId);
+    const homeIndex = pathScopePacketIds.indexOf(input.residenceScopePacketId);
 
     if (homeIndex >= 0) {
       return pathScopePacketIds.slice(0, homeIndex + 1);
     }
   }
 
-  return [input.homeScopePacketId];
+  return [input.residenceScopePacketId];
 }
 
 export function collectEligibleMainScopePacketIds(input: {
@@ -83,7 +83,7 @@ export function collectEligibleMainScopePacketIds(input: {
     new Set([
       ...collectHomeBranchScopePacketIds({
         preparedResult: input.preparedResult,
-        homeScopePacketId: input.intent.home_scope_packet_id ?? null,
+        residenceScopePacketId: input.intent.residence_scope_packet_id ?? null,
       }),
       ...(input.intent.associated_scope_packet_ids ?? []),
       ...(input.intent.followed_scope_packet_ids ?? []),
@@ -136,7 +136,7 @@ export async function planLocalityGraphApplyPackets(input: {
   );
   const selectedScopePacketIds = new Set(
     [
-      input.intent.home_scope_packet_id ?? null,
+      input.intent.residence_scope_packet_id ?? null,
       ...(input.intent.associated_scope_packet_ids ?? []),
       ...(input.intent.followed_scope_packet_ids ?? []),
     ].filter((packetId): packetId is string => typeof packetId === 'string')
@@ -148,17 +148,17 @@ export async function planLocalityGraphApplyPackets(input: {
     preparedElementPacketsById,
   });
 
-  const homeScopePacket = input.intent.home_scope_packet_id
+  const residenceScopePacket = input.intent.residence_scope_packet_id
     ? await requireElementPacketFromStoreOrPrepared({
         packetStore: input.packetStore,
-        packetId: input.intent.home_scope_packet_id,
+        packetId: input.intent.residence_scope_packet_id,
         preparedElementPacketsById,
       })
     : null;
-  const homePackets = await planHomeLocalityRelationPackets({
+  const residencePackets = await planResidenceRelationPackets({
     packetStore: input.packetStore,
     actorPacket: input.actorPacket,
-    homeScopePacket,
+    residenceScopePacket,
     forceSelectedRevision: false,
   });
   const associationPackets: PacketEnvelope[] = [];
@@ -215,15 +215,15 @@ export async function planLocalityGraphApplyPackets(input: {
 
   const createdPackets = [
     ...plannedResult.created_packets,
-    ...homePackets.packets,
+    ...residencePackets.packets,
     ...associationPackets,
     ...followPackets,
   ];
   const actionIds: MutationActionId[] = [
     ...(plannedResult.created_packets.length > 0 ? ['locality.element.create' as const] : []),
-    ...(homePackets.packets.length > 0 ? ['home_locality.relation.set' as const] : []),
+    ...(residencePackets.packets.length > 0 ? ['relation.residence.add' as const] : []),
     ...(associationPackets.length > 0 ? ['relation.association.add' as const] : []),
-    ...(followPackets.length > 0 ? ['follows.relation.set' as const] : []),
+    ...(followPackets.length > 0 ? ['relation.follow.add' as const] : []),
   ];
   const firstCreatedScopePacket = plannedResult.created_packets.find(
     (packet): packet is PacketEnvelopeByType['Element'] => packet.header.type === 'Element'
@@ -244,10 +244,10 @@ export async function planLocalityGraphApplyPackets(input: {
           : [],
     },
     {
-      scopePacket: homePackets.governingScopePacket,
+      scopePacket: residencePackets.governingScopePacket,
       actionIds:
-        homePackets.packets.length > 0
-          ? (['home_locality.relation.set'] as MutationActionId[])
+        residencePackets.packets.length > 0
+          ? (['relation.residence.add'] as MutationActionId[])
           : [],
     },
     ...associationPolicyScopes.map((scopePacket) => ({
@@ -256,7 +256,7 @@ export async function planLocalityGraphApplyPackets(input: {
     })),
     ...followPolicyScopes.map((scopePacket) => ({
       scopePacket,
-      actionIds: ['follows.relation.set'] as MutationActionId[],
+      actionIds: ['relation.follow.add'] as MutationActionId[],
     })),
   ].filter((entry) => entry.actionIds.length > 0);
 
@@ -266,6 +266,6 @@ export async function planLocalityGraphApplyPackets(input: {
     actionIds,
     governingScopes,
     preferredGoverningScopePacket:
-      homePackets.governingScopePacket ?? localityGoverningScopePacket,
+      residencePackets.governingScopePacket ?? localityGoverningScopePacket,
   };
 }

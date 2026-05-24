@@ -70,15 +70,15 @@ export type AssociationRelationClearMutationIntent = {
   mutation_nonce?: string | null;
 };
 
-export type HomeLocalityRelationMutationIntent = {
-  kind: 'home_locality.relation.set';
-  home_scope_packet_id: string | null;
+export type ResidenceRelationMutationIntent = {
+  kind: 'relation.residence.add';
+  residence_scope_packet_id: string | null;
   created_at?: string | null;
   mutation_nonce?: string | null;
 };
 
 export type FollowRelationSetMutationIntent = {
-  kind: 'follows.relation.set';
+  kind: 'relation.follow.add';
   scope_id: string;
   target_scope_packet_id: string;
   created_at?: string | null;
@@ -86,7 +86,7 @@ export type FollowRelationSetMutationIntent = {
 };
 
 export type FollowRelationClearMutationIntent = {
-  kind: 'follows.relation.clear';
+  kind: 'relation.follow.clear';
   scope_id: string;
   target_scope_packet_id: string;
   created_at?: string | null;
@@ -147,7 +147,7 @@ export type LocalityGraphApplyMutationIntent = {
   kind: 'locality.graph.apply';
   paths: LocalityPathEntryIntent[][];
   create_anyway?: boolean;
-  home_scope_packet_id?: string | null;
+  residence_scope_packet_id?: string | null;
   associated_scope_packet_ids?: string[];
   followed_scope_packet_ids?: string[];
   main_visible_scope_packet_ids?: string[];
@@ -195,7 +195,7 @@ export type MutationIntent =
   | AssemblyElementCreateMutationIntent
   | AssociationRelationSetMutationIntent
   | AssociationRelationClearMutationIntent
-  | HomeLocalityRelationMutationIntent
+  | ResidenceRelationMutationIntent
   | FollowRelationSetMutationIntent
   | FollowRelationClearMutationIntent
   | RoleAssociationClaimMutationIntent

@@ -122,8 +122,8 @@ Workflow plans are data, not code. Definitions can say "resolve actor and target
 
 The first definition workflow plans cover the generic-ready fortress candidates:
 
-- `follows.relation.set`
-- `follows.relation.clear`
+- `relation.follow.add`
+- `relation.follow.clear`
 - `role_association.claim.set`
 - `attestation.packet_signal.set`
 
@@ -141,7 +141,7 @@ This pass expands definition workflow coverage for knowable planner-extraction c
 
 - `relation.association.add`
 - `relation.association.clear`
-- `home_locality.relation.set`
+- `relation.residence.add`
 - `discussion.reply.create`
 
 The alignment remains runtime-ready. Existing runtime planner modules are registered as trusted local capabilities by descriptor, but their implementation is not moved, rewritten, or invoked through generic execution yet. Unused removed packet types remain visible missing coverage items and do not block switch-over planning.
@@ -189,8 +189,8 @@ Reseed design is now gated on full closure of in-scope live runtime modernizatio
 
 The first proving promotion is follow relation set/clear:
 
-- `follows.relation.set`
-- `follows.relation.clear`
+- `relation.follow.add`
+- `relation.follow.clear`
 
 These intents now prepare through trusted generic workflow planning while `NexusMutationService` remains the signed fortress authority. API routes, route payloads, response shapes, policy action IDs, packet schemas, proof behavior, tickets, signatures, persistence, and projections remain unchanged. The promoted path uses manifest workflow metadata and trusted local relation planning to produce the same packet candidates and policy metadata as the previous fortress-specific follow planner path.
 
@@ -221,11 +221,11 @@ This pass remains runtime-ready. Live API routes, payloads, fortress ticketing, 
 
 The second live generic promotion expands the trusted workflow seam beyond follow relations. The direct operation paths now enrolled behind `NexusMutationService` are:
 
-- `follows.relation.set`
-- `follows.relation.clear`
+- `relation.follow.add`
+- `relation.follow.clear`
 - `relation.association.add`
 - `relation.association.clear`
-- `home_locality.relation.set`
+- `relation.residence.add`
 - `role_association.claim.set`
 - `attestation.packet_signal.set`
 
@@ -273,7 +273,7 @@ Policy and dependency semantic authority is now closed for reseed readiness, whi
 
 Policy packets are the semantic home for write locks, trust baselines, relation requirements, dependency and alignment rules, default inheritance, and governance hooks. The live write-lock path still runs through `MutationPolicyGate`; the new semantic helpers resolve and audit packet meaning without executing proposal/vote/decision behavior.
 
-Definition `packet_dependency` parts now carry meaningful dependency refs for packet operations, builder pipelines, action bridges, canonical packet-type builders, Preference projections, Bundle inventory building, and trusted compatibility/projection seams. Workflow and runtime dependency IDs must resolve through one of these anchors, Policy packet semantics, the operation ontology, a trusted workflow resolver, or an explicit trusted local engine contract.
+Definition `dependencies_definition` parts now carry meaningful dependency refs for packet operations, builder pipelines, action bridges, canonical packet-type builders, Preference projections, Bundle inventory building, and trusted compatibility/projection seams. Workflow and runtime dependency IDs must resolve through one of these anchors, Policy packet semantics, the operation ontology, a trusted workflow resolver, or an explicit trusted local engine contract.
 
 The seeded OWA `Action(subtype: initiative)` now links to default-inheritance and governance-baseline policies. Forward default/policy resolution uses the Action initiative anchor.
 
@@ -290,9 +290,9 @@ Every active packet body uses top-level `body.subtype` as its packet classifier.
 The final wrap-up retires the remaining live legacy bridge mutation intents from fresh writes:
 
 - `association.claim.set`
-- `home_locality.claim.set`
+- `residence.claim.set`
 
-Canonical writes now enter through `relation.association.add`, `relation.association.clear`, and `home_locality.relation.set`. Historical legacy claim material remains readable/importable/projectable through compatibility surfaces, but the signed fortress prepare corridor, client ingress registry, handoff coverage, and live write-policy action list no longer enroll the legacy bridge intents.
+Canonical writes now enter through `relation.association.add`, `relation.association.clear`, and `relation.residence.add`. Historical legacy claim material remains readable/importable/projectable through compatibility surfaces, but the signed fortress prepare corridor, client ingress registry, handoff coverage, and live write-policy action list no longer enroll the legacy bridge intents.
 
 The final readiness handoff lives in runtime audit code as `createFinalPreReseedReadinessReport()`. It records canonical write intents, compatibility-only legacy surfaces, OWA seed/default anchors, required default policies, discussion default packets, canonical definition packet types, and out-of-scope never-live packet types. Reseed design should start from that report rather than rediscovering chapter state from scattered modernization audits.
 

@@ -88,15 +88,15 @@ const MutationIntentSchemaOptions = [
     .strict(),
   z
     .object({
-      kind: z.literal('home_locality.relation.set'),
-      home_scope_packet_id: z.string().min(1).optional().nullable().default(null),
+      kind: z.literal('relation.residence.add'),
+      residence_scope_packet_id: z.string().min(1).optional().nullable().default(null),
       created_at: z.string().optional().nullable().default(null),
       mutation_nonce: z.string().optional().nullable().default(null),
     })
     .strict(),
   z
     .object({
-      kind: z.literal('follows.relation.set'),
+      kind: z.literal('relation.follow.add'),
       scope_id: z.string().min(1),
       target_scope_packet_id: z.string().min(1),
       created_at: z.string().optional().nullable().default(null),
@@ -105,7 +105,7 @@ const MutationIntentSchemaOptions = [
     .strict(),
   z
     .object({
-      kind: z.literal('follows.relation.clear'),
+      kind: z.literal('relation.follow.clear'),
       scope_id: z.string().min(1),
       target_scope_packet_id: z.string().min(1),
       created_at: z.string().optional().nullable().default(null),
@@ -215,7 +215,7 @@ const MutationIntentSchemaOptions = [
         )
         .min(1),
       create_anyway: z.boolean().optional().default(false),
-      home_scope_packet_id: z.string().min(1).optional().nullable().default(null),
+      residence_scope_packet_id: z.string().min(1).optional().nullable().default(null),
       associated_scope_packet_ids: z.array(z.string().min(1)).optional().default([]),
       followed_scope_packet_ids: z.array(z.string().min(1)).optional().default([]),
       main_visible_scope_packet_ids: z.array(z.string().min(1)).optional().default([]),

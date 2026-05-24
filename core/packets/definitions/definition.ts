@@ -7,6 +7,12 @@ import { z } from 'zod';
 
 import type { PacketTypeDefinition } from './packet-definition-types.ts';
 
+const DefinitionPacketRefSchema = z
+  .object({
+    packet_id: z.string().min(1),
+  })
+  .strict();
+
 export const DEFINITION_PACKET_SUBTYPES = [
   'packet_definition',
   'packet_schema',
@@ -15,8 +21,8 @@ export const DEFINITION_PACKET_SUBTYPES = [
   'packet_planner_descriptor',
   'packet_projection_descriptor',
   'packet_compatibility',
-  'default_definition',
-  'packet_dependency',
+  'defaults_definition',
+  'dependencies_definition',
 ] as const;
 
 export const DefinitionPartRefSchema = z
@@ -83,7 +89,7 @@ export const PacketCompatibilityDefinitionBodySchema = DefinitionBaseBodySchema.
   loss_awareness: z.enum(['none', 'loss_annotated', 'loss_ack_required']).default('none'),
 }).strict();
 
-export const DefaultDefinitionAppliesToSchema = z
+export const DefaultsDefinitionAppliesToSchema = z
   .object({
     packet_type: z.string().min(1).optional(),
     packet_subtype: z.string().min(1).nullable().optional(),
@@ -94,15 +100,19 @@ export const DefaultDefinitionAppliesToSchema = z
   })
   .strict();
 
-export const DefaultDefinitionBodySchema = DefinitionBaseBodySchema.extend({
-  subtype: z.literal('default_definition'),
-  applies_to: DefaultDefinitionAppliesToSchema,
+export const DefaultsDefinitionBodySchema = DefinitionBaseBodySchema.extend({
+  subtype: z.literal('defaults_definition'),
+  applies_to: DefaultsDefinitionAppliesToSchema,
   default_values: z.record(z.string(), z.unknown()).default({}),
   merge_strategy: z.enum(['deep_overlay', 'replace']).default('deep_overlay'),
 }).strict();
 
-export const PacketDependencyDefinitionBodySchema = DefinitionBaseBodySchema.extend({
-  subtype: z.literal('packet_dependency'),
+export const DependenciesDefinitionBodySchema = DefinitionBaseBodySchema.extend({
+  subtype: z.literal('dependencies_definition'),
+  applies_to: DefaultsDefinitionAppliesToSchema.default({}),
+  required_refs: z.array(DefinitionPacketRefSchema).default([]),
+  optional_refs: z.array(DefinitionPacketRefSchema).default([]),
+  required_relation_subtypes: z.array(z.string().min(1)).default([]),
   required_packet_types: z.array(z.string().min(1)).default([]),
   required_definition_parts: z.array(z.string().min(1)).default([]),
   required_runtime_capabilities: z.array(z.string().min(1)).default([]),
@@ -117,8 +127,8 @@ export const DefinitionBodySchema = z.discriminatedUnion('subtype', [
   PacketPlannerDescriptorDefinitionBodySchema,
   PacketProjectionDescriptorDefinitionBodySchema,
   PacketCompatibilityDefinitionBodySchema,
-  DefaultDefinitionBodySchema,
-  PacketDependencyDefinitionBodySchema,
+  DefaultsDefinitionBodySchema,
+  DependenciesDefinitionBodySchema,
 ]);
 
 export type DefinitionBody = z.infer<typeof DefinitionBodySchema>;
@@ -367,8 +377,8 @@ export const definitionPacketDefinition = {
       notes: 'Definition v0 compatibility uses an identity current-neighbor adapter descriptor.',
     },
     {
-      part_id: 'definition.bootstrap.default_definition.v0',
-      part_subtype: 'default_definition',
+      part_id: 'definition.bootstrap.defaults_definition.v0',
+      part_subtype: 'defaults_definition',
       defines_packet_type: 'Definition',
       defines_packet_subtype: null,
       schema_version: '0.1.0',
@@ -380,8 +390,8 @@ export const definitionPacketDefinition = {
       notes: 'Default-definition section for Definition packets and definition parts.',
     },
     {
-      part_id: 'definition.bootstrap.packet_dependency.v0',
-      part_subtype: 'packet_dependency',
+      part_id: 'definition.bootstrap.dependencies_definition.v0',
+      part_subtype: 'dependencies_definition',
       defines_packet_type: 'Definition',
       defines_packet_subtype: null,
       schema_version: '0.1.0',

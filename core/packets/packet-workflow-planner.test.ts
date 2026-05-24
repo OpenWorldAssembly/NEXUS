@@ -14,8 +14,8 @@ import {
 } from '@core/packets/packet-definition-manifest';
 
 const GENERIC_READY_WORKFLOW_PLAN_IDS = [
-  'relation.follows.set.workflow.v0',
-  'relation.follows.clear.workflow.v0',
+  'relation.follow.add.workflow.v0',
+  'relation.follow.clear.workflow.v0',
   'claim.role_association.set.workflow.v0',
   'attestation.packet_signal.set.workflow.v0',
 ] as const;
@@ -86,7 +86,7 @@ test('workflow dry-run interpretation preserves order and metadata', () => {
 test('workflow audit fails closed for unknown operation kinds', () => {
   const { definition, workflowPlan } = getWorkflowFixture(
     'Relation',
-    'relation.follows.set.workflow.v0'
+    'relation.follow.add.workflow.v0'
   );
   const brokenWorkflow = {
     ...workflowPlan,
@@ -111,7 +111,7 @@ test('workflow audit fails closed for unknown operation kinds', () => {
 test('workflow audit fails closed for unknown resolver and dependency ids', () => {
   const { definition, workflowPlan } = getWorkflowFixture(
     'Relation',
-    'relation.follows.set.workflow.v0'
+    'relation.follow.add.workflow.v0'
   );
   const brokenWorkflow = {
     ...workflowPlan,
@@ -144,15 +144,15 @@ test('workflow audit fails closed for unknown resolver and dependency ids', () =
 test('workflow audit fails closed for unknown policy action ids', () => {
   const { definition, workflowPlan } = getWorkflowFixture(
     'Relation',
-    'relation.follows.set.workflow.v0'
+    'relation.follow.add.workflow.v0'
   );
   const brokenWorkflow = {
     ...workflowPlan,
-    policy_action_ids: ['follows.relation.set'],
+    policy_action_ids: ['relation.follow.add'],
     steps: [
       {
         ...workflowPlan.steps[0],
-        policy_action_ids: ['follows.relation.teleport'],
+        policy_action_ids: ['follow.relation.teleport'],
       },
     ],
   } as unknown as PacketWorkflowPlanDescriptor;
@@ -170,7 +170,7 @@ test('workflow audit fails closed for unknown policy action ids', () => {
 test('workflow audit fails closed for invalid step references', () => {
   const { definition, workflowPlan } = getWorkflowFixture(
     'Relation',
-    'relation.follows.set.workflow.v0'
+    'relation.follow.add.workflow.v0'
   );
   const brokenWorkflow = {
     ...workflowPlan,

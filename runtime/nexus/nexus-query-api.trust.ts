@@ -30,7 +30,7 @@ export function setNexusHomeLocality(input: {
 }): Promise<{
   claim_packet_id: string | null;
   claim_status: 'active' | 'withdrawn';
-  home_scope_packet_id: string | null;
+  residence_scope_packet_id: string | null;
 }> {
   return fetchJsonOrThrow('/api/nexus/locality/home', {
     method: 'PUT',

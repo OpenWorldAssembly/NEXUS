@@ -113,14 +113,14 @@ export default function NexusTrustPage() {
   const associationRelations = trustPayload?.association_relations ?? [];
   const isClaimedIdentity = currentMode === 'claimed' && isAuthenticated;
   const canSetActiveScopeAsHome =
-    trustPayload?.home_locality.can_set_active_scope ?? false;
+    trustPayload?.residence.can_set_active_scope ?? false;
   const isActiveScopeHomeLocality =
-    trustPayload?.home_locality.is_active_scope ?? false;
+    trustPayload?.residence.is_active_scope ?? false;
   const activeScopeIsInHomeChain =
-    trustPayload?.home_locality.is_active_scope_in_chain ?? false;
-  const homeLocalityName = trustPayload?.home_locality.scope_name ?? null;
+    trustPayload?.residence.is_active_scope_in_chain ?? false;
+  const homeLocalityName = trustPayload?.residence.scope_name ?? null;
   const homeChainLabel = formatHomeChain(
-    trustPayload?.home_locality.derived_scope_names ?? []
+    trustPayload?.residence.derived_scope_names ?? []
   );
   const isActiveScopeFollowed = followedScopes.some(
     (followedScope) => followedScope.id === activeScope.id
@@ -185,13 +185,13 @@ export default function NexusTrustPage() {
     );
   };
 
-  const handleHomeLocalityChange = async (homeScopePacketId: string | null) => {
+  const handleHomeLocalityChange = async (residenceScopePacketId: string | null) => {
     const applyHomeLocalityChange = async () => {
       try {
         await runFortressMutation({
           intent: {
-            kind: 'home_locality.relation.set',
-            home_scope_packet_id: homeScopePacketId,
+            kind: 'relation.residence.add',
+            residence_scope_packet_id: residenceScopePacketId,
           },
         });
         await Promise.all([
@@ -202,7 +202,7 @@ export default function NexusTrustPage() {
           refreshShellData(),
         ]);
         setStatusMessage(
-          homeScopePacketId
+          residenceScopePacketId
             ? `${activeScope.name} is now your home locality.`
             : 'Home locality cleared.'
         );

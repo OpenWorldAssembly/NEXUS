@@ -403,8 +403,8 @@ export const preferencePacketDefinition = {
         'preference.element.packet_planner_descriptor.v0',
         'preference.element.packet_projection_descriptor.v0',
         'preference.element.packet_compatibility.v0',
-        'preference.element.default_definition.v0',
-        'preference.element.packet_dependency.v0',
+        'preference.element.defaults_definition.v0',
+        'preference.element.dependencies_definition.v0',
       ],
       notes:
         'Root definition record for the canonical Preference.element packet subtype.',
@@ -491,8 +491,8 @@ export const preferencePacketDefinition = {
       notes: 'Compatibility definition part for nearest-current, loss-aware element preference adapters.',
     },
     {
-      part_id: 'preference.element.default_definition.v0',
-      part_subtype: 'default_definition',
+      part_id: 'preference.element.defaults_definition.v0',
+      part_subtype: 'defaults_definition',
       defines_packet_type: 'Preference',
       defines_packet_subtype: 'element',
       schema_version: '0.1.0',
@@ -508,8 +508,8 @@ export const preferencePacketDefinition = {
       notes: 'Default-definition part for Preference.element packets; concrete scope-display preferences layer in later seed/default packets.',
     },
     {
-      part_id: 'preference.element.packet_dependency.v0',
-      part_subtype: 'packet_dependency',
+      part_id: 'preference.element.dependencies_definition.v0',
+      part_subtype: 'dependencies_definition',
       defines_packet_type: 'Preference',
       defines_packet_subtype: 'element',
       schema_version: '0.1.0',

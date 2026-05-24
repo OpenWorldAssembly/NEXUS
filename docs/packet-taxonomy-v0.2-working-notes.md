@@ -227,7 +227,7 @@ Potential subtypes:
 - packet_action_registry
 - packet_builder_descriptor
 - packet_projection_descriptor
-- packet_dependency_manifest
+- dependencies_definition_manifest
 - packet_validation_descriptor
 
 ## compatibility

@@ -234,7 +234,7 @@ The following behaviors are not active product truth yet:
 9. Review rows and search results now expose descriptor-aware locality labels when linked `Location` metadata is available, while legacy levels remain compatibility buckets.
 10. Duplicate warnings can now route back into the builder through `Use existing`, `Edit name`, or forward into an explicit `Create anyway` path.
 11. Confirm now routes through one composite `locality.graph.apply` runtime seam, which reruns the structural locality planner, writes locality packets, applies selected home or association or follow relations, stores temporary main-tree display preferences, and then returns refreshed shell graph data.
-12. If `Use as home locality` is on, selecting an existing locality or creating a new one both apply the canonical `home_locality.relation.set` path inside that composite apply flow.
+12. If `Use as home locality` is on, selecting an existing locality or creating a new one both apply the canonical `relation.residence.add` path inside that composite apply flow.
 13. The review-only home-branch checklist can be adjusted visually in this pass, but it does not yet change stored home-locality packet semantics.
 
 #### Packet inspection
@@ -327,7 +327,7 @@ Current scope consumer direction in code includes:
 
 - shell scope projection now prefers packet-native `Relation(subtype: default_ancestry_parent)` for ancestry
 - home locality now resolves through relation-first projection with explicit compatibility fallback instead of claim-first shell logic
-- follow now resolves packet-natively from `Relation(subtype: follows)` first, with legacy shell preference state reduced to an explicit compatibility bridge
+- follow now resolves packet-natively from `Relation(subtype: follow)` first, with legacy shell preference state reduced to an explicit compatibility bridge
 - association now resolves packet-natively from `Relation(subtype: association)` first, with legacy claim-only reads reduced to explicit compatibility projection and associated scopes treated as mounted related scopes
 - followed, associated, known, discoverable, and home-ancestor semantics are now carried as additive packet-backed scope-summary metadata
 - locality creation now emits provisional `Location(subtype: region)` packets plus `Relation(subtype: defined_by_location)` so linked location packets are part of the live writer path as well as the read seam
@@ -388,14 +388,14 @@ The current repo is no longer using the older `domain` or `storage` root names. 
 
 ### Location and relationship caveats
 
-- `home_locality` is now the packet-backed source of mounted geographic ancestry, with canonical writes producing a relation without automatic claim wrapping
+- `residence` is now the packet-backed source of mounted geographic ancestry, with canonical writes producing a relation without automatic claim wrapping
 - `identity.location_disclosure` remains optional profile metadata rather than mounted-scope truth
-- `association` remains distinct from `home_locality`
-- followed scopes are now packet-native on the write path, but legacy shell-preference follows remain readable through an explicit compatibility bridge during transition
+- `association` remains distinct from `residence`
+- followed scopes are now packet-native on the write path, but legacy shell-preference follow remain readable through an explicit compatibility bridge during transition
 - `Location` is now part of locality creation through provisional `region` packets, and those packets now carry descriptor metadata in `spatial_payload.scope_descriptor`, but provider-backed normalization, richer external refs, and broader equivalence handling remain later work
 - legacy `nation | region | city | district` locality levels remain current compatibility buckets rather than the full future locality model
 - locality ancestry is now planned from ordered broad-to-narrow path entries, and sparse paths are valid current behavior; absolute depth is still projection-only and is not stored on packets
-- locality creation now has a real non-mutating review seam, but the home-branch inclusion checklist shown during review is still preview-only and does not yet alter stored `home_locality` relation semantics
+- locality creation now has a real non-mutating review seam, but the home-branch inclusion checklist shown during review is still preview-only and does not yet alter stored `residence` relation semantics
 - locality confirm now applies home, association, follow, and `main` visibility choices through one composite runtime write seam; claimed `main` scope-display state now persists through `Preference.element` packets while guest/session behavior remains compatibility state
 - associated and followed parent-context display now persists through the same claimed-actor fortress-enrolled `Preference.element` path, with guest compatibility fallback still session/cookie-based
 - same-name locality matches in other parent branches no longer need to suppress the create-path handoff, but orphan existing-scope remounting is still intentionally unresolved rather than silently repaired in this phase

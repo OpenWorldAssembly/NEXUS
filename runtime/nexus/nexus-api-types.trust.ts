@@ -31,7 +31,7 @@ export interface NexusTrustRoleProjection {
 export interface NexusHomeLocalityProjection {
   relation_packet_id: string | null;
   claim_packet_id: string | null;
-  compatibility_source: 'canonical_relation' | 'legacy_home_locality_claim_compatibility' | null;
+  compatibility_source: 'canonical_relation' | 'legacy_residence_claim_compatibility' | null;
   policy_evaluation_state: 'not_applicable' | 'satisfied' | 'unsatisfied' | null;
   scope_packet_id: string | null;
   scope_id: string | null;
@@ -54,7 +54,7 @@ export interface NexusTrustPayload {
   can_post: boolean;
   can_vote: boolean;
   can_review: boolean;
-  home_locality: NexusHomeLocalityProjection;
+  residence: NexusHomeLocalityProjection;
   association_relations: AssociationRelationProjection[];
   role_cards: NexusTrustRoleProjection[];
 }

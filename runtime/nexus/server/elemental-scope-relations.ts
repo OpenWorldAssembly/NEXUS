@@ -28,13 +28,13 @@ export async function resolveElementalScopeRelations(input: {
   ]);
   const activeHomeRelations = filterRelationPackets({
     relations: relationPackets,
-    relationSubtype: 'home_locality',
+    relationSubtype: 'residence',
     subjectPacketId: input.actorPacketId ?? null,
     activeOnly: true,
   });
   const activeHomeClaims = filterClaimPackets({
     claims: claimPackets,
-    claimKind: 'home_locality',
+    claimKind: 'residence',
     subjectPacketId: input.actorPacketId ?? null,
     activeOnly: true,
   });
@@ -42,7 +42,7 @@ export async function resolveElementalScopeRelations(input: {
 
   for (const relationPacket of filterRelationPackets({
     relations: relationPackets,
-    relationSubtype: 'follows',
+    relationSubtype: 'follow',
     subjectPacketId: input.actorPacketId ?? null,
     activeOnly: true,
   })) {

@@ -102,7 +102,7 @@ function getPacketDependencyPart(
 ): PacketDefinitionPartDescriptor | null {
   return (
     definition?.packet_definition_parts?.find(
-      (part) => part.part_subtype === 'packet_dependency'
+      (part) => part.part_subtype === 'dependencies_definition'
     ) ?? null
   );
 }
@@ -372,7 +372,7 @@ export function auditPacketPolicyDependencyCoverageFromDefinitions(input: {
           severity: 'error',
           code: 'dependency_missing_packet_definition_part',
           subject_id: dependencyId,
-          message: `${dependencyId} is packet-backed but has no packet_dependency Definition part anchor.`,
+          message: `${dependencyId} is packet-backed but has no dependencies_definition Definition part anchor.`,
         });
       }
 

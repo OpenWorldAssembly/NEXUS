@@ -75,8 +75,8 @@ test('prepare route rejects retired legacy claim mutation intents at schema boun
       scope_id: 'nexus:element/scope',
     },
     {
-      kind: 'home_locality.claim.set',
-      home_scope_packet_id: 'nexus:element/home',
+      kind: 'residence.claim.set',
+      residence_scope_packet_id: 'nexus:element/home',
     },
   ]) {
     assert.equal(MutationIntentSchema.safeParse(intent).success, false);

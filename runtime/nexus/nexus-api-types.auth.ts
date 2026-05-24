@@ -236,7 +236,7 @@ export interface NexusCreateLocalityPayload {
 export interface NexusLocalityGraphApplyRequest {
   paths: NexusLocalityPathEntryPayload[][];
   create_anyway?: boolean;
-  home_scope_packet_id?: string | null;
+  residence_scope_packet_id?: string | null;
   associated_scope_packet_ids?: string[];
   followed_scope_packet_ids?: string[];
   main_visible_scope_packet_ids?: string[];
@@ -270,7 +270,7 @@ export interface NexusLocalityGraphApplyPayload {
   preferences_phase: NexusLocalityGraphApplyPhaseOutcome;
   path_results: NexusLocalityGraphApplyPathResultPayload[];
   final_result: NexusLocationSearchResult | null;
-  home_scope_packet_id: string | null;
+  residence_scope_packet_id: string | null;
   associated_scope_packet_ids: string[];
   followed_scope_packet_ids: string[];
   preferences: NexusScopeDisplayPreferencesPayload;

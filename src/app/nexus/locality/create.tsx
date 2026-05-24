@@ -2455,8 +2455,8 @@ export default function NexusLocalityCreatePage() {
   ) => {
     await runFortressMutation({
       intent: {
-        kind: 'home_locality.relation.set',
-        home_scope_packet_id: locality.scope_id,
+        kind: 'relation.residence.add',
+        residence_scope_packet_id: locality.scope_id,
       },
     });
     await refreshShellData();
@@ -2674,7 +2674,7 @@ export default function NexusLocalityCreatePage() {
               kind: 'locality.graph.apply',
               paths,
               create_anyway: createAnyway,
-              home_scope_packet_id: selectedHomePreviewRow?.scopeId ?? null,
+              residence_scope_packet_id: selectedHomePreviewRow?.scopeId ?? null,
               associated_scope_packet_ids: associatedScopePacketIds,
               followed_scope_packet_ids: followedScopePacketIds,
               main_visible_scope_packet_ids: mainVisibleScopePacketIds,

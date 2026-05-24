@@ -172,7 +172,7 @@ function toDiscussionAuthGateReason(
     return 'sign_in_required';
   }
 
-  if (writeBlockReason === 'home_locality_required') {
+  if (writeBlockReason === 'residence_required') {
     return 'community_claim_required';
   }
 
@@ -964,7 +964,7 @@ export class SQLiteDiscussionService
       hasForumAccess
         ? 'none'
         : requiresMembership
-          ? 'home_locality_required'
+          ? 'residence_required'
           : 'signed_actor_required';
 
     return {
@@ -987,7 +987,7 @@ export class SQLiteDiscussionService
 
     const homeClaims = filterClaimPackets({
       claims: await listClaimPackets(this.packetStore),
-      claimKind: 'home_locality',
+      claimKind: 'residence',
       subjectPacketId: input.actorPacketId,
       activeOnly: true,
     });

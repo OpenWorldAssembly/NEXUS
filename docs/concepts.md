@@ -20,7 +20,7 @@ A policy and template lineage. OWA is intended to be modeled as an initiative in
 
 ## Claim
 
-A process packet for contest, challenge, correction, annotation, or role workflows. Relations such as `association` and `home_locality` are now written directly as Relation packets; Claims can target them later when scrutiny is needed.
+A process packet for contest, challenge, correction, annotation, or role workflows. Relations such as `association` and `residence` are now written directly as Relation packets; Claims can target them later when scrutiny is needed.
 
 Status: current code truth.
 
@@ -52,7 +52,7 @@ A lightweight read or visibility relation. It helps an actor find updates withou
 
 ## Subscribe
 
-A sync and adoption relation. `Relation(subtype: subscribes_to)` may target an initiative, action, policy, module, template, or packet set. It replaces a separate `adopts_policy` relation: adopting a policy is modeled as subscribing to that Policy packet. Subscription options can inherit default policies and dependencies, or exclude them and surface partial alignment.
+A sync and adoption relation. `Relation(subtype: subscription)` may target an initiative, action, policy, module, template, or packet set. It replaces a separate `adopts_policy` relation: adopting a policy is modeled as subscribing to that Policy packet. Subscription options can inherit default policies and dependencies, or exclude them and surface partial alignment.
 
 ## Association
 

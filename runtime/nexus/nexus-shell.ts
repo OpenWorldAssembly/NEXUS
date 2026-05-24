@@ -31,7 +31,7 @@ export type NexusScopeRelationship =
 export type NexusScopeMountReason =
   | 'global_default'
   | 'personal_default'
-  | 'home_locality'
+  | 'residence'
   | 'home_ancestor'
   | 'associated'
   | 'followed';
@@ -386,7 +386,7 @@ export function isNexusGeographicTreeScope(
     [
       'global_default',
       'home_ancestor',
-      'home_locality',
+      'residence',
       'personal_default',
     ].includes(mountReason)
   );
@@ -411,7 +411,7 @@ export function buildNexusHomeScopeIds(
   }
 
   const homeScope =
-    scopes.find((scope) => scope.mountReasons.includes('home_locality')) ??
+    scopes.find((scope) => scope.mountReasons.includes('residence')) ??
     scopes.find((scope) => scope.mountReasons.includes('home_ancestor')) ??
     scopes.find(
       (scope) => scope.isMounted && isNexusGeographicTreeScope(scope)

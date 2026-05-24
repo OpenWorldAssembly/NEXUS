@@ -29,10 +29,10 @@ test('relation subscription defaults carry inheritance posture', () => {
 
   const profile = resolvePacketDefaultProfile({
     definition: relationDefinition,
-    packet_subtype: 'subscribes_to',
+    packet_subtype: 'subscription',
   });
 
-  assert.equal(profile.resolved_values.subtype, 'subscribes_to');
+  assert.equal(profile.resolved_values.subtype, 'subscription');
   assert.equal(
     (profile.resolved_values.subscription_options as Record<string, unknown>)
       .inherit_default_policies,
@@ -59,8 +59,8 @@ test('policy default sections can reference default definitions and override res
     default_policy: {
       policy_refs: [],
       template_refs: [],
-      default_definition_refs: [
-        { packet_id: 'nexus:definition/relation/relation-default-definition-subscribes-to-v0' },
+      defaults_definition_refs: [
+        { packet_id: 'nexus:definition/relation/relation-defaults-definition-subscription-v0' },
       ],
       default_packet_set_refs: [],
       preference_refs: [],
@@ -76,15 +76,15 @@ test('policy default sections can reference default definitions and override res
 
   const profile = resolvePacketDefaultProfile({
     definition: relationDefinition,
-    packet_subtype: 'subscribes_to',
+    packet_subtype: 'subscription',
     policy_packets: [policy],
   });
   const subscriptionOptions = profile.resolved_values
     .subscription_options as Record<string, unknown>;
   const localBehavior = subscriptionOptions.local_behavior as Record<string, unknown>;
 
-  assert.deepEqual(profile.policy_default_definition_refs, [
-    { packet_id: 'nexus:definition/relation/relation-default-definition-subscribes-to-v0' },
+  assert.deepEqual(profile.policy_defaults_definition_refs, [
+    { packet_id: 'nexus:definition/relation/relation-defaults-definition-subscription-v0' },
   ]);
   assert.equal(localBehavior.require_local_ratification, true);
 });

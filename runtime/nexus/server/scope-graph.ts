@@ -60,7 +60,7 @@ export type ScopeGraphNode = {
 };
 
 export type EffectiveHomeLocalityProjection = {
-  source: 'canonical_relation' | 'legacy_home_locality_claim_compatibility';
+  source: 'canonical_relation' | 'legacy_residence_claim_compatibility';
   relationPacketId: string | null;
   supportingClaimPacketIds: string[];
   compatibilityClaimPacketId: string | null;
@@ -313,7 +313,7 @@ async function resolveCanonicalHomeLocality(input: {
 
   const activeHomeRelations = filterRelationPackets({
     relations: input.relationPackets,
-    relationSubtype: 'home_locality',
+    relationSubtype: 'residence',
     subjectPacketId: input.actorPacketId,
     activeOnly: true,
   });
@@ -481,7 +481,7 @@ export async function buildNexusScopeGraphProjection(input: {
     Boolean(input.actorPacketId) &&
     filterRelationPackets({
       relations: relationPackets,
-      relationSubtype: 'home_locality',
+      relationSubtype: 'residence',
       subjectPacketId: input.actorPacketId ?? null,
       activeOnly: true,
     }).length > 0;
@@ -507,7 +507,7 @@ export async function buildNexusScopeGraphProjection(input: {
       }
 
       return {
-        source: 'legacy_home_locality_claim_compatibility' as const,
+        source: 'legacy_residence_claim_compatibility' as const,
         relationPacketId: null,
         supportingClaimPacketIds: [],
         compatibilityClaimPacketId: compatibilityProjection.claimPacket.header.packet_id,
@@ -554,7 +554,7 @@ export async function buildNexusScopeGraphProjection(input: {
     addMountReason(
       mountReasonsByScopeId,
       effectiveHomeLocality.scopeRouteId,
-      'home_locality'
+      'residence'
     );
     appendPacketIds(
       justificationPacketIdsByScopeId,
@@ -660,7 +660,7 @@ export async function buildNexusScopeGraphProjection(input: {
 
       return reasons.some((reason) =>
         reason === 'global_default' ||
-        reason === 'home_locality' ||
+        reason === 'residence' ||
         reason === 'home_ancestor'
       );
     });

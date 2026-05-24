@@ -19,8 +19,10 @@ function collectSubscriptionOptionRefs(
   return [
     ...(options.included_policy_refs ?? []),
     ...(options.excluded_policy_refs ?? []),
-    ...(options.included_dependency_refs ?? []),
-    ...(options.excluded_dependency_refs ?? []),
+    ...(options.included_defaults_definition_refs ?? []),
+    ...(options.excluded_defaults_definition_refs ?? []),
+    ...(options.included_dependencies_definition_refs ?? []),
+    ...(options.excluded_dependencies_definition_refs ?? []),
     ...(options.included_module_refs ?? []),
     ...(options.excluded_module_refs ?? []),
     ...(options.included_template_refs ?? []),

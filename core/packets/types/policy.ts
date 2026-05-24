@@ -38,12 +38,14 @@ export const policyBuildDefinition: PacketTypeBuildDefinition<
           action_overrides: input.write_policy.action_overrides ?? {},
         }
       : null,
-    dependency_policy: input.dependency_policy
+    dependencies_policy: input.dependencies_policy
       ? {
-          required_refs: input.dependency_policy.required_refs ?? [],
-          optional_refs: input.dependency_policy.optional_refs ?? [],
+          required_refs: input.dependencies_policy.required_refs ?? [],
+          optional_refs: input.dependencies_policy.optional_refs ?? [],
+          dependencies_definition_refs:
+            input.dependencies_policy.dependencies_definition_refs ?? [],
           required_relation_subtypes:
-            input.dependency_policy.required_relation_subtypes ?? [],
+            input.dependencies_policy.required_relation_subtypes ?? [],
         }
       : null,
     alignment_policy: input.alignment_policy
@@ -69,7 +71,7 @@ export const policyBuildDefinition: PacketTypeBuildDefinition<
       ? {
           policy_refs: input.default_policy.policy_refs ?? [],
           template_refs: input.default_policy.template_refs ?? [],
-          default_definition_refs: input.default_policy.default_definition_refs ?? [],
+          defaults_definition_refs: input.default_policy.defaults_definition_refs ?? [],
           default_packet_set_refs: input.default_policy.default_packet_set_refs ?? [],
           preference_refs: input.default_policy.preference_refs ?? [],
           overrides: input.default_policy.overrides ?? [],

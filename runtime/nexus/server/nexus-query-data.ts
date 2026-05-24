@@ -253,7 +253,7 @@ async function countResidentsInScopeTree(input: {
 
   for (const relationPacket of relationPackets) {
     if (
-      relationPacket.body.subtype === 'home_locality' &&
+      relationPacket.body.subtype === 'residence' &&
       relationPacket.body.status === 'active' &&
       scopeTreePacketIds.has(relationPacket.body.target_ref.packet_id) &&
       personPacketIds.has(relationPacket.body.subject_ref.packet_id)
@@ -268,8 +268,8 @@ async function countResidentsInScopeTree(input: {
     }
 
     if (
-      claimPacket.body.subtype !== 'home_locality' &&
-      claimPacket.body.relation_assertion?.subtype !== 'home_locality'
+      claimPacket.body.subtype !== 'residence' &&
+      claimPacket.body.relation_assertion?.subtype !== 'residence'
     ) {
       continue;
     }
@@ -1505,7 +1505,7 @@ export async function getNexusTrustPayload(input: {
     can_post: meetsTrustGate(trustStage, trustPolicy.posting_gate),
     can_vote: meetsTrustGate(trustStage, trustPolicy.voting_gate),
     can_review: meetsTrustGate(trustStage, trustPolicy.review_gate),
-    home_locality: {
+    residence: {
       relation_packet_id: scopeGraph.effectiveHomeLocality?.relationPacketId ?? null,
       claim_packet_id:
         scopeGraph.effectiveHomeLocality?.compatibilityClaimPacketId ??

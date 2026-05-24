@@ -102,7 +102,7 @@ test('dependency semantic authority covers workflows and Definition dependency p
 
   for (const definition of definitions) {
     for (const dependencyPart of definition.packet_definition_parts?.filter(
-      (part) => part.part_subtype === 'packet_dependency'
+      (part) => part.part_subtype === 'dependencies_definition'
     ) ?? []) {
       for (const reference of dependencyPart.references ?? []) {
         assert.ok(
@@ -117,7 +117,7 @@ test('dependency semantic authority covers workflows and Definition dependency p
   assert.ok(
     getDefinedPacketTypeDefinition('Policy')?.packet_definition_parts?.some(
       (part) =>
-        part.part_subtype === 'packet_dependency' &&
+        part.part_subtype === 'dependencies_definition' &&
         part.references?.includes('generic.operation.policy')
     )
   );

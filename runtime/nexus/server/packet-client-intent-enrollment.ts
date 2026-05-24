@@ -37,7 +37,7 @@ export type PacketClientIntentEnrollment = {
   operation_kinds: string[];
   workflow_plan_ids: string[];
   policy_action_ids: string[];
-  packet_dependency_ids: string[];
+  dependencies_definition_ids: string[];
   live_mode: PacketClientIntentEnrollmentMode;
   handoff_status: PacketRuntimeFortressHandoffStatus | 'connector_live';
   notes: string;
@@ -77,9 +77,9 @@ const CLIENT_INTENT_BY_MUTATION_INTENT: Record<string, string> = {
   'assembly.element.create': 'assembly.element.create',
   'relation.association.add': 'scope.association.set',
   'relation.association.clear': 'scope.association.clear',
-  'home_locality.relation.set': 'scope.home.set',
-  'follows.relation.set': 'scope.follow.set',
-  'follows.relation.clear': 'scope.follow.clear',
+  'relation.residence.add': 'scope.home.set',
+  'relation.follow.add': 'scope.follow.set',
+  'relation.follow.clear': 'scope.follow.clear',
   'role_association.claim.set': 'role.association.claim.set',
   'role_association.attestation.set': 'role.association.attestation.set',
   'actor.write_policy.update': 'actor.write_policy.update',
@@ -110,7 +110,7 @@ function createPrepareEnrollment(
     operation_kinds: handoff.operation_kinds,
     workflow_plan_ids: handoff.workflow_plan_ids,
     policy_action_ids: handoff.policy_action_ids,
-    packet_dependency_ids: handoff.dependency_ids,
+    dependencies_definition_ids: handoff.dependency_ids,
     live_mode: 'signed_fortress_prepare',
     handoff_status: handoff.status,
     notes:
@@ -187,7 +187,7 @@ export function resolvePacketClientIntentPreflight(input: {
     (descriptor) => enrollment.policy_action_ids.includes(descriptor.policy_action_id)
   );
   const dependencyRequirements = listPacketDependencyRequirementDescriptors().filter(
-    (descriptor) => enrollment.packet_dependency_ids.includes(descriptor.dependency_id)
+    (descriptor) => enrollment.dependencies_definition_ids.includes(descriptor.dependency_id)
   );
   const handoff =
     enrollment.live_mode === 'signed_fortress_prepare'
@@ -201,11 +201,11 @@ export function resolvePacketClientIntentPreflight(input: {
         (descriptor) => descriptor.policy_action_id === policyActionId
       )
   );
-  const missingDependencyRequirements = enrollment.packet_dependency_ids.filter(
+  const missingDependencyRequirements = enrollment.dependencies_definition_ids.filter(
     (dependencyId) =>
       !dependencyRequirements.some(
         (descriptor) => descriptor.dependency_id === dependencyId
-      ) && !dependencyId.endsWith('.packet_dependency.v0')
+      ) && !dependencyId.endsWith('.dependencies_definition.v0')
   );
   const reasonCodes = [
     ...missingPolicyRequirements.map(
@@ -356,8 +356,8 @@ export function auditPacketClientIntentEnrollments(): PacketClientIntentEnrollme
       }
     }
 
-    for (const dependencyId of enrollment.packet_dependency_ids) {
-      if (dependencyIds.has(dependencyId) || dependencyId.endsWith('.packet_dependency.v0')) {
+    for (const dependencyId of enrollment.dependencies_definition_ids) {
+      if (dependencyIds.has(dependencyId) || dependencyId.endsWith('.dependencies_definition.v0')) {
         continue;
       }
 

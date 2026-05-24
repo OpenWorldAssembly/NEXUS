@@ -41,8 +41,8 @@ export type MutationFinalizeActorContext = {
 
 function isHomeLocalityMutationKind(
   kind: MutationIntent['kind']
-): kind is 'home_locality.relation.set' {
-  return kind === 'home_locality.relation.set';
+): kind is 'relation.residence.add' {
+  return kind === 'relation.residence.add';
 }
 
 export class MutationFinalizeHandlers {
@@ -331,13 +331,13 @@ export class MutationFinalizeHandlers {
         relation_packet_id: activeRelationPacket?.header.packet_id ?? null,
         relation_status:
           activeRelationPacket?.body.status ??
-          (input.storedTicket.intent.kind === 'follows.relation.clear'
+          (input.storedTicket.intent.kind === 'relation.follow.clear'
             ? 'withdrawn'
             : null),
         target_scope_packet_id:
           activeRelationPacket?.body.target_ref.packet_id ??
-          (input.storedTicket.intent.kind === 'follows.relation.set' ||
-          input.storedTicket.intent.kind === 'follows.relation.clear'
+          (input.storedTicket.intent.kind === 'relation.follow.add' ||
+          input.storedTicket.intent.kind === 'relation.follow.clear'
             ? input.storedTicket.intent.target_scope_packet_id
             : null),
       },
@@ -390,16 +390,16 @@ export class MutationFinalizeHandlers {
     const homeIntent = isHomeLocalityMutationKind(input.storedTicket.intent.kind)
       ? (input.storedTicket.intent as Extract<
           MutationIntent,
-          { kind: 'home_locality.relation.set' }
+          { kind: 'relation.residence.add' }
         >)
       : null;
-    const clearedHomeScopePacketId = homeIntent?.home_scope_packet_id ?? null;
+    const clearedHomeScopePacketId = homeIntent?.residence_scope_packet_id ?? null;
 
     return {
       persist_effects: toMutationPersistEffects(input.signedPackets),
       result: {
         relation_packet_id: activeRelationPacket?.header.packet_id ?? null,
-        home_scope_packet_id:
+        residence_scope_packet_id:
           activeRelationPacket?.body.target_ref.packet_id ??
           (homeIntent ? clearedHomeScopePacketId : null),
       },
@@ -603,7 +603,7 @@ export class MutationFinalizeHandlers {
             ),
           })) ?? [],
         final_result: preparedResult?.final_result ?? null,
-        home_scope_packet_id: input.storedTicket.intent.home_scope_packet_id ?? null,
+        residence_scope_packet_id: input.storedTicket.intent.residence_scope_packet_id ?? null,
         associated_scope_packet_ids:
           input.storedTicket.intent.associated_scope_packet_ids ?? [],
         followed_scope_packet_ids:

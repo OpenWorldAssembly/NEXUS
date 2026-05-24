@@ -67,9 +67,9 @@ test('retired legacy home-locality mutation intent has no live prepare alias', (
   );
 
   assert.equal(source.includes('prepareHomeLocalityClaimCompatibilityAlias'), false);
-  assert.equal(registryKinds.includes('home_locality.claim.set' as never), false);
+  assert.equal(registryKinds.includes('residence.claim.set' as never), false);
   assert.equal(
-    getMutationIntentDescriptor('home_locality.relation.set').finalize,
+    getMutationIntentDescriptor('relation.residence.add').finalize,
     'finalizeHomeLocalityRelation'
   );
 });

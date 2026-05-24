@@ -133,14 +133,14 @@ type IdentityShellContextValue = {
     alias: string;
     passphrase: string;
     locationDisclosure?: IdentityLocationDisclosure | null;
-    homeScopePacketId?: string | null;
+    residenceScopePacketId?: string | null;
     keepMeLoggedIn: boolean;
   }) => Promise<void>;
   claimCurrentGuest: (input: {
     alias: string;
     passphrase: string;
     locationDisclosure?: IdentityLocationDisclosure | null;
-    homeScopePacketId?: string | null;
+    residenceScopePacketId?: string | null;
     keepMeLoggedIn: boolean;
   }) => Promise<void>;
   signInStoredIdentity: (input: {
@@ -726,9 +726,9 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
   const setInitialHomeLocality = async (input: {
     identity: ActiveIdentityState & { privateJwk: JsonWebKey };
     session: NexusAuthSessionPayload;
-    homeScopePacketId?: string | null;
+    residenceScopePacketId?: string | null;
   }) => {
-    if (!input.homeScopePacketId) {
+    if (!input.residenceScopePacketId) {
       return;
     }
 
@@ -736,8 +736,8 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
       identity: input.identity,
       session: input.session,
       intent: {
-        kind: 'home_locality.relation.set',
-        home_scope_packet_id: input.homeScopePacketId,
+        kind: 'relation.residence.add',
+        residence_scope_packet_id: input.residenceScopePacketId,
       },
     });
   };
@@ -1405,7 +1405,7 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
     alias: string;
     passphrase: string;
     locationDisclosure?: IdentityLocationDisclosure | null;
-    homeScopePacketId?: string | null;
+    residenceScopePacketId?: string | null;
     keepMeLoggedIn: boolean;
   }) => {
     if (currentIdentity && currentIdentity.claimStatus !== 'claimed') {
@@ -1472,7 +1472,7 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
         storedKind: 'claimed',
       },
       session: createdSession,
-      homeScopePacketId: input.homeScopePacketId ?? null,
+      residenceScopePacketId: input.residenceScopePacketId ?? null,
     });
 
     setAuthSession(createdSession);
@@ -1482,7 +1482,7 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
     alias: string;
     passphrase: string;
     locationDisclosure?: IdentityLocationDisclosure | null;
-    homeScopePacketId?: string | null;
+    residenceScopePacketId?: string | null;
     keepMeLoggedIn: boolean;
   }) => {
     if (!currentIdentity) {
@@ -1567,7 +1567,7 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
         storedKind: 'claimed',
       },
       session: createdSession,
-      homeScopePacketId: input.homeScopePacketId ?? null,
+      residenceScopePacketId: input.residenceScopePacketId ?? null,
     });
 
     setAuthSession(createdSession);

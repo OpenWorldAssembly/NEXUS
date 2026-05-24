@@ -18,7 +18,7 @@ type ScopeNodeLike = {
 };
 
 export type LegacyHomeLocalityCompatibilityCandidate = {
-  source: 'legacy_home_locality_claim_compatibility';
+  source: 'legacy_residence_claim_compatibility';
   claimPacket: ClaimPacket;
   scopeRouteId: string;
   scopePacketId: string;
@@ -70,7 +70,7 @@ export function projectLegacyHomeLocalityCompatibility(input: {
 
   const activeHomeClaims = filterClaimPackets({
     claims: input.claimPackets,
-    claimKind: 'home_locality',
+    claimKind: 'residence',
     subjectPacketId: input.actorPacketId,
     activeOnly: true,
   });
@@ -91,7 +91,7 @@ export function projectLegacyHomeLocalityCompatibility(input: {
       const ancestorRouteIds = getAncestorRouteIds(input.scopeMap, scopeRouteId);
 
       return {
-        source: 'legacy_home_locality_claim_compatibility' as const,
+        source: 'legacy_residence_claim_compatibility' as const,
         claimPacket,
         scopeRouteId,
         scopePacketId: targetPacketId,

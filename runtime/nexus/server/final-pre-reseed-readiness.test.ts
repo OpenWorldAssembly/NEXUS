@@ -10,7 +10,7 @@ import { listPacketRuntimeFortressHandoffCoverage } from './packet-runtime-fortr
 
 const RETIRED_LEGACY_MUTATION_INTENTS = [
   'association.claim.set',
-  'home_locality.claim.set',
+  'residence.claim.set',
 ] as const;
 
 test('final pre-reseed readiness report passes with no open in-scope work', () => {
@@ -18,7 +18,7 @@ test('final pre-reseed readiness report passes with no open in-scope work', () =
 
   assert.equal(report.status, 'pass', JSON.stringify(report.findings, null, 2));
   assert.deepEqual(report.findings, []);
-  assert.ok(report.canonical_write_intents.includes('home_locality.relation.set'));
+  assert.ok(report.canonical_write_intents.includes('relation.residence.add'));
   assert.ok(report.canonical_write_intents.includes('relation.association.add'));
   assert.ok(report.canonical_write_intents.includes('relation.association.clear'));
 });
@@ -54,7 +54,7 @@ test('final readiness handoff records compatibility-only legacy surfaces', () =>
 
   for (const legacySurface of [
     'association.claim.set',
-    'home_locality.claim.set',
+    'residence.claim.set',
     'archived alpha packet types only',
     'legacy parent_scope ancestry archive records',
   ]) {

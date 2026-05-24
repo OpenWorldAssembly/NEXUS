@@ -215,7 +215,7 @@ function createDefaultValues(input: {
   type: GenericBuilderType;
   subtype: string;
 }): Record<string, unknown> {
-  if (input.type === 'Relation' && input.subtype === 'subscribes_to') {
+  if (input.type === 'Relation' && input.subtype === 'subscription') {
     return {
       subtype: input.subtype,
       status: 'active',
@@ -223,6 +223,7 @@ function createDefaultValues(input: {
         update_mode: 'manual_review',
         inherit_default_policies: true,
         inherit_default_dependencies: true,
+        inherit_default_defaults: true,
         inherit_default_modules: true,
         inherit_default_templates: true,
         inherit_default_packet_sets: true,
@@ -261,8 +262,8 @@ function createDefaultDefinitionParts(input: {
   const baseId = lowerFirst(input.type);
 
   return input.declaredSubtypes.map((subtype) => ({
-    part_id: `${baseId}.default_definition.${toKebab(subtype)}.v0`,
-    part_subtype: 'default_definition',
+    part_id: `${baseId}.defaults_definition.${toKebab(subtype)}.v0`,
+    part_subtype: 'defaults_definition',
     defines_packet_type: input.type,
     defines_packet_subtype: subtype,
     schema_version: input.schemaVersion,
@@ -305,8 +306,8 @@ function createDefinitionParts(input: {
         `${baseId}.packet_planner_descriptor.v0`,
         `${baseId}.packet_projection_descriptor.v0`,
         `${baseId}.packet_compatibility.v0`,
-        `${baseId}.default_definition.${toKebab(input.defaultSubtype)}.v0`,
-        `${baseId}.packet_dependency.v0`,
+        `${baseId}.defaults_definition.${toKebab(input.defaultSubtype)}.v0`,
+        `${baseId}.dependencies_definition.v0`,
       ],
       notes: `Root Canonical definition record for ${input.type}.`,
     },
@@ -382,8 +383,8 @@ function createDefinitionParts(input: {
       declaredSubtypes: input.declaredSubtypes,
     }),
     {
-      part_id: `${baseId}.packet_dependency.v0`,
-      part_subtype: 'packet_dependency',
+      part_id: `${baseId}.dependencies_definition.v0`,
+      part_subtype: 'dependencies_definition',
       defines_packet_type: input.type,
       defines_packet_subtype: input.defaultSubtype,
       schema_version: input.schemaVersion,
@@ -449,14 +450,14 @@ function createGenericReadyWorkflowPlans(input: {
   if (input.type === 'Relation') {
     return [
       {
-        workflow_plan_id: 'relation.follows.set.workflow.v0',
+        workflow_plan_id: 'relation.follow.add.workflow.v0',
         packet_type: 'Relation',
-        packet_subtype: 'follows',
+        packet_subtype: 'follow',
         planner_id: input.writePlannerId,
-        mutation_intents: ['follows.relation.set'],
+        mutation_intents: ['relation.follow.add'],
         operation_kinds: ['relation.set'],
         resolver_ids: ['actor.ref', 'input.packet_ref', 'static.value', 'relation.active_lookup'],
-        policy_action_ids: ['follows.relation.set'],
+        policy_action_ids: ['relation.follow.add'],
         dependency_ids: [
           'runtime.packet_store.read',
           'runtime.policy_gate',
@@ -468,12 +469,12 @@ function createGenericReadyWorkflowPlans(input: {
         ],
         steps: [
           operationStep({
-            step_id: 'write_follows_relation',
+            step_id: 'write_follow_relation',
             operation_kind: 'relation.set',
             packet_type: 'Relation',
-            packet_subtype: 'follows',
+            packet_subtype: 'follow',
             resolver_ids: ['actor.ref', 'input.packet_ref', 'static.value', 'relation.active_lookup'],
-            policy_action_ids: ['follows.relation.set'],
+            policy_action_ids: ['relation.follow.add'],
             dependency_ids: [
               'runtime.packet_store.read',
               'runtime.policy_gate',
@@ -482,7 +483,7 @@ function createGenericReadyWorkflowPlans(input: {
             input_bindings: {
               subject_ref: actorRef(),
               target_ref: inputPath('target_ref'),
-              subtype: staticValue('follows'),
+              subtype: staticValue('follow'),
               status: staticValue('active'),
             },
             output_key: 'relation_write',
@@ -491,17 +492,17 @@ function createGenericReadyWorkflowPlans(input: {
         ],
         availability: 'runtime_ready',
         notes:
-          'Describes the generic-ready follows.relation.set fortress intent without enrolling live execution.',
+          'Describes the generic-ready relation.follow.add fortress intent without enrolling live execution.',
       },
       {
-        workflow_plan_id: 'relation.follows.clear.workflow.v0',
+        workflow_plan_id: 'relation.follow.clear.workflow.v0',
         packet_type: 'Relation',
-        packet_subtype: 'follows',
+        packet_subtype: 'follow',
         planner_id: input.writePlannerId,
-        mutation_intents: ['follows.relation.clear'],
+        mutation_intents: ['relation.follow.clear'],
         operation_kinds: ['relation.clear'],
         resolver_ids: ['actor.ref', 'input.packet_ref', 'static.value', 'relation.active_lookup'],
-        policy_action_ids: ['follows.relation.clear'],
+        policy_action_ids: ['relation.follow.clear'],
         dependency_ids: [
           'runtime.packet_store.read',
           'runtime.policy_gate',
@@ -513,12 +514,12 @@ function createGenericReadyWorkflowPlans(input: {
         ],
         steps: [
           operationStep({
-            step_id: 'clear_follows_relation',
+            step_id: 'clear_follow_relation',
             operation_kind: 'relation.clear',
             packet_type: 'Relation',
-            packet_subtype: 'follows',
+            packet_subtype: 'follow',
             resolver_ids: ['actor.ref', 'input.packet_ref', 'static.value', 'relation.active_lookup'],
-            policy_action_ids: ['follows.relation.clear'],
+            policy_action_ids: ['relation.follow.clear'],
             dependency_ids: [
               'runtime.packet_store.read',
               'runtime.policy_gate',
@@ -527,7 +528,7 @@ function createGenericReadyWorkflowPlans(input: {
             input_bindings: {
               subject_ref: actorRef(),
               target_ref: inputPath('target_ref'),
-              subtype: staticValue('follows'),
+              subtype: staticValue('follow'),
               status: staticValue('withdrawn'),
             },
             output_key: 'relation_write',
@@ -536,7 +537,7 @@ function createGenericReadyWorkflowPlans(input: {
         ],
         availability: 'runtime_ready',
         notes:
-          'Describes the generic-ready follows.relation.clear fortress intent without enrolling live execution.',
+          'Describes the generic-ready relation.follow.clear fortress intent without enrolling live execution.',
       },
       {
         workflow_plan_id: 'relation.association.add.workflow.v0',
@@ -643,14 +644,14 @@ function createGenericReadyWorkflowPlans(input: {
           'Describes the planner-extraction relation.association.clear intent without enrolling live execution.',
       },
       {
-        workflow_plan_id: 'relation.home_locality.set.workflow.v0',
+        workflow_plan_id: 'relation.residence.add.workflow.v0',
         packet_type: 'Relation',
-        packet_subtype: 'home_locality',
+        packet_subtype: 'residence',
         planner_id: input.writePlannerId,
-        mutation_intents: ['home_locality.relation.set'],
+        mutation_intents: ['relation.residence.add'],
         operation_kinds: ['relation.set', 'relation.clear'],
         resolver_ids: ['actor.ref', 'input.packet_ref', 'static.value', 'relation.active_lookup', 'compatibility.projection'],
-        policy_action_ids: ['home_locality.relation.set', 'home_locality.relation.clear'],
+        policy_action_ids: ['relation.residence.add', 'relation.residence.clear'],
         dependency_ids: [
           'runtime.packet_store.read',
           'runtime.policy_gate',
@@ -664,20 +665,20 @@ function createGenericReadyWorkflowPlans(input: {
         ],
         steps: [
           {
-            step_id: 'choose_home_locality_mode',
+            step_id: 'choose_residence_mode',
             step_kind: 'condition',
             condition: {
               condition_kind: 'present',
-              left: inputPath('home_scope_packet_id'),
+              left: inputPath('residence_scope_packet_id'),
             },
             then_steps: [
               operationStep({
-                step_id: 'write_home_locality_relation',
+                step_id: 'write_residence_relation',
                 operation_kind: 'relation.set',
                 packet_type: 'Relation',
-                packet_subtype: 'home_locality',
+                packet_subtype: 'residence',
                 resolver_ids: ['actor.ref', 'input.packet_ref', 'static.value', 'relation.active_lookup', 'compatibility.projection'],
-                policy_action_ids: ['home_locality.relation.set'],
+                policy_action_ids: ['relation.residence.add'],
                 dependency_ids: [
                   'runtime.packet_store.read',
                   'runtime.policy_gate',
@@ -687,23 +688,23 @@ function createGenericReadyWorkflowPlans(input: {
                 ],
                 input_bindings: {
                   subject_ref: actorRef(),
-                  target_ref: inputPath('home_scope_packet_id'),
-                  subtype: staticValue('home_locality'),
+                  target_ref: inputPath('residence_scope_packet_id'),
+                  subtype: staticValue('residence'),
                   status: staticValue('active'),
                 },
                 output_key: 'relation_write',
                 notes:
-                  'Canonical relation.set workflow for home locality selection; fresh writes do not auto-mint relation assertion claims.',
+                  'Canonical relation.set workflow for residence selection; fresh writes do not auto-mint relation assertion claims.',
               }),
             ],
             else_steps: [
               operationStep({
-                step_id: 'clear_home_locality_relation',
+                step_id: 'clear_residence_relation',
                 operation_kind: 'relation.clear',
                 packet_type: 'Relation',
-                packet_subtype: 'home_locality',
+                packet_subtype: 'residence',
                 resolver_ids: ['actor.ref', 'static.value', 'relation.active_lookup', 'compatibility.projection'],
-                policy_action_ids: ['home_locality.relation.clear'],
+                policy_action_ids: ['relation.residence.clear'],
                 dependency_ids: [
                   'runtime.packet_store.read',
                   'runtime.policy_gate',
@@ -713,22 +714,22 @@ function createGenericReadyWorkflowPlans(input: {
                 ],
                 input_bindings: {
                   subject_ref: actorRef(),
-                  subtype: staticValue('home_locality'),
+                  subtype: staticValue('residence'),
                   status: staticValue('withdrawn'),
                 },
                 output_key: 'relation_write',
                 notes:
-                  'Canonical relation.clear workflow for clearing home locality when no home scope is supplied.',
+                  'Canonical relation.clear workflow for clearing residence when no residence scope is supplied.',
               }),
             ],
             on_failure: 'abort_workflow',
             notes:
-              'Branches home locality set/clear behavior from the presence of home_scope_packet_id.',
+              'Branches residence set/clear behavior from the presence of residence_scope_packet_id.',
           },
         ],
         availability: 'runtime_ready',
         notes:
-          'Describes the planner-extraction home_locality.relation.set intent without enrolling live execution.',
+          'Describes the planner-extraction relation.residence.add intent without enrolling live execution.',
       },
     ];
   }

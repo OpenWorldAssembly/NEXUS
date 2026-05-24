@@ -127,7 +127,7 @@ export default function NexusIdentityCreatePage() {
   };
 
   const locationDisclosure = buildLocationDisclosure(locationSelection);
-  const homeScopePacketId = locationSelection.selectedResult?.scope_id ?? null;
+  const residenceScopePacketId = locationSelection.selectedResult?.scope_id ?? null;
   const aliasError =
     alias.length > 0 ? validateDisplayAlias(alias) : 'Display alias is required.';
   const passphraseError =
@@ -151,7 +151,7 @@ export default function NexusIdentityCreatePage() {
         passphrase,
         keepMeLoggedIn: selectedRememberedSessions,
         locationDisclosure,
-        homeScopePacketId,
+        residenceScopePacketId,
       });
       await refreshAuthSession();
 

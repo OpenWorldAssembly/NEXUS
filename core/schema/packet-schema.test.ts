@@ -116,8 +116,8 @@ test('active packet builders emit top-level subtype classifiers', () => {
     status: 'active',
   });
   const relation = createRelationPacket({
-    packet_id: 'nexus:relation/follows',
-    subtype: 'follows',
+    packet_id: 'nexus:relation/follow',
+    subtype: 'follow',
     subject_ref: actorRef,
     target_ref: targetRef,
   });
@@ -127,7 +127,7 @@ test('active packet builders emit top-level subtype classifiers', () => {
     target_ref: packetIds(relation),
     subject_ref: actorRef,
     relation_assertion: {
-      subtype: 'follows',
+      subtype: 'follow',
       subject_ref: actorRef,
       target_ref: targetRef,
     },

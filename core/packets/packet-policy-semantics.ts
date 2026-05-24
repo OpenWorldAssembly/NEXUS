@@ -16,7 +16,7 @@ export type PacketPolicySemanticKind =
   | 'write_lock'
   | 'trust_baseline'
   | 'relation_requirements'
-  | 'dependency_policy'
+  | 'dependencies_policy'
   | 'alignment_policy'
   | 'default_inheritance'
   | 'governance';
@@ -29,7 +29,7 @@ export type PacketPolicySemanticDescriptor = {
     | 'write_policy'
     | 'trust_policy'
     | 'relation_requirements'
-    | 'dependency_policy'
+    | 'dependencies_policy'
     | 'alignment_policy'
     | 'default_policy'
     | 'governance_policy';
@@ -116,10 +116,10 @@ const POLICY_SEMANTIC_DESCRIPTORS: PacketPolicySemanticDescriptor[] = [
       'Relation legitimacy requirements are evaluated by trusted relation policy helpers.',
   },
   {
-    semantic_kind: 'dependency_policy',
-    policy_subtype: 'dependency_policy',
+    semantic_kind: 'dependencies_policy',
+    policy_subtype: 'dependencies_policy',
     packet_type: 'Policy',
-    section_key: 'dependency_policy',
+    section_key: 'dependencies_policy',
     live_enforcement: 'definition_audit',
     notes:
       'Dependency policies describe required packet refs and relation subtypes for reseed readiness.',
@@ -220,7 +220,7 @@ export function resolvePolicyPacketSemantics(
   if (body.write_policy) semanticKinds.push('write_lock');
   if (body.trust_policy) semanticKinds.push('trust_baseline');
   if (body.relation_requirements) semanticKinds.push('relation_requirements');
-  if (body.dependency_policy) semanticKinds.push('dependency_policy');
+  if (body.dependencies_policy) semanticKinds.push('dependencies_policy');
   if (body.alignment_policy) semanticKinds.push('alignment_policy');
   if (body.default_policy) semanticKinds.push('default_inheritance');
   if (body.governance_policy) semanticKinds.push('governance');
@@ -244,11 +244,12 @@ export function resolvePolicyPacketSemantics(
       : [],
     relation_requirement_subtypes:
       body.relation_requirements?.rules.map((rule) => rule.relation_subtype) ?? [],
-    dependency_ref_ids: body.dependency_policy
+    dependency_ref_ids: body.dependencies_policy
       ? uniqueSorted([
-          ...refIds(body.dependency_policy.required_refs),
-          ...refIds(body.dependency_policy.optional_refs),
-          ...body.dependency_policy.required_relation_subtypes,
+          ...refIds(body.dependencies_policy.required_refs),
+          ...refIds(body.dependencies_policy.optional_refs),
+          ...refIds(body.dependencies_policy.dependencies_definition_refs),
+          ...body.dependencies_policy.required_relation_subtypes,
         ])
       : [],
     alignment_action_ref_ids: body.alignment_policy
@@ -261,7 +262,7 @@ export function resolvePolicyPacketSemantics(
       ? uniqueSorted([
           ...refIds(body.default_policy.policy_refs),
           ...refIds(body.default_policy.template_refs),
-          ...refIds(body.default_policy.default_definition_refs),
+          ...refIds(body.default_policy.defaults_definition_refs),
           ...refIds(body.default_policy.default_packet_set_refs),
           ...refIds(body.default_policy.preference_refs),
         ])
@@ -352,7 +353,7 @@ function getPacketDependencyPartIds(
 
   return (
     definition?.packet_definition_parts
-      ?.filter((part) => part.part_subtype === 'packet_dependency')
+      ?.filter((part) => part.part_subtype === 'dependencies_definition')
       .map((part) => part.part_id) ?? []
   );
 }
@@ -417,7 +418,7 @@ export function listPacketDependencySemanticDescriptors(input?: {
         ),
         runtime_metadata_only: false,
         notes:
-          'Anchored to a Definition packet_dependency part; trusted runtime code may implement the local engine, but packet meaning remains definition-backed.',
+          'Anchored to a Definition dependencies_definition part; trusted runtime code may implement the local engine, but packet meaning remains definition-backed.',
       };
     }
 
@@ -476,7 +477,7 @@ export function auditPacketDependencySemanticAuthority(input?: {
         severity: 'error',
         code: 'dependency_missing_definition_part',
         subject_id: descriptor.dependency_id,
-        message: `${descriptor.dependency_id} is packet-backed but has no Definition packet_dependency part anchor.`,
+        message: `${descriptor.dependency_id} is packet-backed but has no Definition dependencies_definition part anchor.`,
       });
     }
 
@@ -496,7 +497,7 @@ export function auditPacketDependencySemanticAuthority(input?: {
 
   for (const definition of input?.definitions ?? []) {
     for (const dependencyPart of definition.packet_definition_parts?.filter(
-      (part) => part.part_subtype === 'packet_dependency'
+      (part) => part.part_subtype === 'dependencies_definition'
     ) ?? []) {
       for (const reference of dependencyPart.references ?? []) {
         if (!descriptorIds.has(reference)) {

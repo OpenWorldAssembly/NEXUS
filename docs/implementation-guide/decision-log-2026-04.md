@@ -38,7 +38,7 @@ This monthly log condenses the April 2026 decisions that remain most important f
 ## 2026-04-18 to 2026-04-20 locality and identity hardening
 
 - Legacy signed identities remained valid after the roles-and-claims refactor.
-- Home locality became the mounted geographic truth, while follows became shell preferences.
+- Home locality became the mounted geographic truth, while follow became shell preferences.
 - Locality search and locality creation hardened around canonical geographic assembly flows.
 - Location disclosure remained separate from mounted home-locality truth.
 

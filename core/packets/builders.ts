@@ -290,13 +290,13 @@ export interface PolicyPacketInput extends PacketBuilderBaseInput {
     review_gate?: TrustStage;
   } | null;
   write_policy?: PacketBodyByType['Policy']['write_policy'];
-  dependency_policy?: PacketBodyByType['Policy']['dependency_policy'];
+  dependencies_policy?: PacketBodyByType['Policy']['dependencies_policy'];
   alignment_policy?: PacketBodyByType['Policy']['alignment_policy'];
   relation_requirements?: PacketBodyByType['Policy']['relation_requirements'];
   default_policy?: {
     policy_refs?: PacketRef[];
     template_refs?: PacketRef[];
-    default_definition_refs?: PacketRef[];
+    defaults_definition_refs?: PacketRef[];
     default_packet_set_refs?: PacketRef[];
     preference_refs?: PacketRef[];
     overrides?: {

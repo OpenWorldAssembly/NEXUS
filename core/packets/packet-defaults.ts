@@ -16,7 +16,7 @@ export type PacketDefaultProfile = {
   packet_subtype: string | null;
   definition_defaults: readonly PacketDefaultDefinitionDescriptor[];
   policy_default_refs: readonly PacketRef[];
-  policy_default_definition_refs: readonly PacketRef[];
+  policy_defaults_definition_refs: readonly PacketRef[];
   policy_template_refs: readonly PacketRef[];
   policy_preference_refs: readonly PacketRef[];
   policy_default_packet_set_refs: readonly PacketRef[];
@@ -87,7 +87,7 @@ function applyOverride(
 function toDefaultDescriptor(
   part: PacketDefinitionPartDescriptor
 ): PacketDefaultDefinitionDescriptor | null {
-  if (part.part_subtype !== 'default_definition') {
+  if (part.part_subtype !== 'defaults_definition') {
     return null;
   }
 
@@ -149,7 +149,7 @@ export function applyPacketDefaultOverrides(input: {
 
 function refsFromPolicies(
   policyPackets: readonly PacketEnvelopeByType['Policy'][],
-  key: 'policy_refs' | 'template_refs' | 'default_definition_refs' | 'default_packet_set_refs' | 'preference_refs'
+  key: 'policy_refs' | 'template_refs' | 'defaults_definition_refs' | 'default_packet_set_refs' | 'preference_refs'
 ): PacketRef[] {
   const refs = policyPackets.flatMap((packet) => packet.body.default_policy?.[key] ?? []);
   const seen = new Set<string>();
@@ -194,9 +194,9 @@ export function resolvePacketDefaultProfile(input: {
     packet_subtype: packetSubtype,
     definition_defaults: definitionDefaults,
     policy_default_refs: refsFromPolicies(policyPackets, 'policy_refs'),
-    policy_default_definition_refs: refsFromPolicies(
+    policy_defaults_definition_refs: refsFromPolicies(
       policyPackets,
-      'default_definition_refs'
+      'defaults_definition_refs'
     ),
     policy_template_refs: refsFromPolicies(policyPackets, 'template_refs'),
     policy_preference_refs: refsFromPolicies(policyPackets, 'preference_refs'),

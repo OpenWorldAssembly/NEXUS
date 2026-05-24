@@ -218,7 +218,7 @@ test('Preference definition exposes required Definition parts', () => {
   assert.ok(partSubtypes.includes('packet_definition'));
   assert.ok(partSubtypes.includes('packet_schema'));
   assert.ok(partSubtypes.includes('packet_compatibility'));
-  assert.ok(partSubtypes.includes('packet_dependency'));
+  assert.ok(partSubtypes.includes('dependencies_definition'));
 });
 
 test('generic type definitions expose required Definition parts', () => {
@@ -237,7 +237,7 @@ test('generic type definitions expose required Definition parts', () => {
     assert.ok(partSubtypes.includes('packet_planner_descriptor'), `${type} planner part`);
     assert.ok(partSubtypes.includes('packet_projection_descriptor'), `${type} projection part`);
     assert.ok(partSubtypes.includes('packet_compatibility'), `${type} compatibility part`);
-    assert.ok(partSubtypes.includes('packet_dependency'), `${type} dependency part`);
+    assert.ok(partSubtypes.includes('dependencies_definition'), `${type} dependency part`);
   }
 });
 

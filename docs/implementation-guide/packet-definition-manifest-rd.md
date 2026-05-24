@@ -84,7 +84,7 @@ Current Definition subtypes are intentionally limited to packet-definition work 
 - `packet_planner_descriptor`
 - `packet_projection_descriptor`
 - `packet_compatibility`
-- `packet_dependency`
+- `dependencies_definition`
 
 The long-term model is graph-discoverable definition parts resolved into a pinned local definition profile. The current implementation builds a local seeded definition profile: every active manifest definition part is represented as a valid `Definition` packet envelope and grouped into one `Bundle.packet_set` inventory for reseed readiness. Runtime execution still resolves trusted local code rather than executing behavior supplied by those packets.
 
@@ -105,7 +105,7 @@ Preference packets are actor-owned configuration. They do not create relationshi
 
 Bundle packets are generic carrier inventories for packet sets, exports, sync payloads, and archives. Bundle is not the semantic home for packet definitions or compatibility.
 
-Definition parts such as `definition.packet_compatibility` and `definition.packet_dependency` may travel inside a Bundle inventory while retaining their own packet meaning.
+Definition parts such as `definition.packet_compatibility` and `definition.dependencies_definition` may travel inside a Bundle inventory while retaining their own packet meaning.
 
 ## Helper model
 
@@ -119,7 +119,7 @@ Workflow-plan helpers follow the same rule. They can audit and dry-run descripto
 
 Workflow alignment now records which external definition execution intents can be described through these workflow plans and which remain missing coverage items. Relation, Claim, Attestation, and Discussion have the first definition workflow descriptors tied to trusted local planner capabilities; the descriptors are narrower runtime recipes layered on top of the broader generic packet write descriptors.
 
-Policy and dependency descriptors stay packet-native. A workflow dependency must be explainable through `Policy` packet semantics, a Definition `packet_dependency` part, a manifest operation, a workflow resolver, or trusted local runtime code that points back to packet-defined meaning. Runtime registries validate and index these references; they are not a separate dependency ontology.
+Policy and dependency descriptors stay packet-native. A workflow dependency must be explainable through `Policy` packet semantics, a Definition `dependencies_definition` part, a manifest operation, a workflow resolver, or trusted local runtime code that points back to packet-defined meaning. Runtime registries validate and index these references; they are not a separate dependency ontology.
 
 Free-floating dependency strings should fail audit unless they are explicitly recorded as runtime metadata backed by a trusted local capability. This preserves the long-term portability model: packets define meaning and requirements, while local runtimes decide whether they have trusted engines capable of interpreting and executing those requirements.
 

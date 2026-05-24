@@ -851,7 +851,7 @@ export default function NexusDiscussionsPage() {
   const canVote = selectedViewer?.can_vote ?? false;
   const communityClaimRequired =
     createTopLevelAction?.auth_gate_reason === 'community_claim_required' ||
-    selectedViewer?.write_block_reason === 'home_locality_required';
+    selectedViewer?.write_block_reason === 'residence_required';
   const canAddDiscussionSurfaces =
     activeScope.level !== 'personal' && activeScope.level !== 'global';
   const topLevelPostingLocked =

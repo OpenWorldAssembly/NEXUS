@@ -131,7 +131,7 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
     PERSONAL_TREE_PACKET_IDS.owa_action,
   ];
   const requiredDefaultPolicyPacketIds = [
-    PERSONAL_TREE_PACKET_IDS.owa_home_locality_policy,
+    PERSONAL_TREE_PACKET_IDS.owa_residence_policy,
     PERSONAL_TREE_PACKET_IDS.owa_default_inheritance_policy,
     PERSONAL_TREE_PACKET_IDS.owa_governance_baseline_policy,
     PERSONAL_TREE_PACKET_IDS.trust_baseline_policy,
@@ -186,7 +186,7 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
     canonical_write_intents: uniqueSorted(canonicalWriteIntents),
     compatibility_only_legacy_surfaces: [
       'association.claim.set',
-      'home_locality.claim.set',
+      'residence.claim.set',
       'archived alpha packet types only',
       'legacy parent_scope ancestry archive records',
     ],

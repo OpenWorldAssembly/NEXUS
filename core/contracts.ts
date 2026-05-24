@@ -201,7 +201,7 @@ export type NexusActionId =
   | 'role.support_claim'
   | 'role.dispute_claim'
   | 'role.clear_attestation'
-  | 'trust.set_home_locality';
+  | 'trust.set_residence';
 
 export type NexusActionExecutionKind =
   | 'mutation'
@@ -271,7 +271,7 @@ export interface DiscussionViewerContext {
   can_create_top_level: boolean;
   can_reply: boolean;
   can_vote: boolean;
-  write_block_reason: 'none' | 'signed_actor_required' | 'home_locality_required';
+  write_block_reason: 'none' | 'signed_actor_required' | 'residence_required';
 }
 
 export interface AttestationSummary {

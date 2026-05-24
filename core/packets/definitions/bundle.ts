@@ -264,8 +264,8 @@ export const bundlePacketDefinition = {
       notes: 'Compatibility part records Bundle v0 identity current-neighbor compatibility.',
     },
     {
-      part_id: 'bundle.packet_set.default_definition.v0',
-      part_subtype: 'default_definition',
+      part_id: 'bundle.packet_set.defaults_definition.v0',
+      part_subtype: 'defaults_definition',
       defines_packet_type: 'Bundle',
       defines_packet_subtype: 'packet_set',
       schema_version: '0.1.0',
@@ -281,8 +281,8 @@ export const bundlePacketDefinition = {
       notes: 'Default-definition part for Bundle.packet_set inventory packets.',
     },
     {
-      part_id: 'bundle.packet_set.packet_dependency.v0',
-      part_subtype: 'packet_dependency',
+      part_id: 'bundle.packet_set.dependencies_definition.v0',
+      part_subtype: 'dependencies_definition',
       defines_packet_type: 'Bundle',
       defines_packet_subtype: 'packet_set',
       schema_version: '0.1.0',
