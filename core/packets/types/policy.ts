@@ -26,7 +26,7 @@ export const policyBuildDefinition: PacketTypeBuildDefinition<
       ? {
           association_support_threshold:
             input.trust_policy.association_support_threshold ?? 1,
-          required_support_count: input.trust_policy.required_support_count ?? 2,
+          role_participation_support_threshold: input.trust_policy.role_participation_support_threshold ?? 2,
           posting_gate: input.trust_policy.posting_gate ?? 'emerging',
           voting_gate: input.trust_policy.voting_gate ?? 'recognized',
           review_gate: input.trust_policy.review_gate ?? 'role_eligible',

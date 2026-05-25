@@ -504,7 +504,7 @@ export const preferencePacketDefinition = {
         status: 'active',
         value: {},
       },
-      merge_strategy: 'deep_overlay',
+      default_merge_strategy: 'deep_overlay',
       notes: 'Default-definition part for Preference.element packets; concrete scope-display preferences layer in later seed/default packets.',
     },
     {

@@ -98,7 +98,7 @@ function toDefaultDescriptor(
       packet_subtype: part.defines_packet_subtype,
     },
     default_values: part.default_values ?? {},
-    merge_strategy: part.merge_strategy ?? 'deep_overlay',
+    default_merge_strategy: part.default_merge_strategy ?? 'deep_overlay',
     notes: part.notes,
   };
 }
@@ -129,7 +129,7 @@ export function mergePacketDefaultValues(
   defaults: readonly PacketDefaultDefinitionDescriptor[]
 ): Record<string, unknown> {
   return defaults.reduce<Record<string, unknown>>((merged, descriptor) => {
-    if (descriptor.merge_strategy === 'replace') {
+    if (descriptor.default_merge_strategy === 'replace') {
       return cloneRecord(descriptor.default_values);
     }
 

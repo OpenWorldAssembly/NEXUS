@@ -286,7 +286,7 @@ export interface PolicyPacketInput extends PacketBuilderBaseInput {
   status: string;
   trust_policy?: {
     association_support_threshold?: number;
-    required_support_count?: number;
+    role_participation_support_threshold?: number;
     posting_gate?: TrustStage;
     voting_gate?: TrustStage;
     review_gate?: TrustStage;

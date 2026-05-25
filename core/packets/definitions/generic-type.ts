@@ -268,7 +268,7 @@ function createDefaultDefinitionParts(input: {
     required: true,
     applies_to: createDefaultAppliesTo({ type: input.type, subtype }),
     default_values: createDefaultValues({ type: input.type, subtype }),
-    merge_strategy: 'deep_overlay',
+    default_merge_strategy: 'deep_overlay',
     notes: `Default-definition part for ${input.type}.${subtype}; concrete OWA preferences can layer policy overrides later.`,
   }));
 }

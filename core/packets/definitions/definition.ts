@@ -104,7 +104,7 @@ export const DefaultsDefinitionBodySchema = DefinitionBaseBodySchema.extend({
   subtype: z.literal('defaults_definition'),
   applies_to: DefaultsDefinitionAppliesToSchema,
   default_values: z.record(z.string(), z.unknown()).default({}),
-  merge_strategy: z.enum(['deep_overlay', 'replace']).default('deep_overlay'),
+  default_merge_strategy: z.enum(['deep_overlay', 'replace']).default('deep_overlay'),
 }).strict();
 
 export const DependenciesDefinitionBodySchema = DefinitionBaseBodySchema.extend({
@@ -386,7 +386,7 @@ export const definitionPacketDefinition = {
       required: true,
       applies_to: { packet_type: 'Definition', packet_subtype: null },
       default_values: { definition_version: '0.1.0', status: 'active' },
-      merge_strategy: 'deep_overlay',
+      default_merge_strategy: 'deep_overlay',
       notes: 'Default-definition section for Definition packets and definition parts.',
     },
     {

@@ -217,7 +217,7 @@ function buildDefinitionPartBody(
                           packet_subtype: part.defines_packet_subtype,
                         },
                         default_values: part.default_values ?? {},
-                        merge_strategy: part.merge_strategy ?? 'deep_overlay',
+                        default_merge_strategy: part.default_merge_strategy ?? 'deep_overlay',
                       }
                     : {
                       ...base,

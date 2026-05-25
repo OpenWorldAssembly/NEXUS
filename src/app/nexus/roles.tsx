@@ -355,7 +355,7 @@ export default function NexusRolesPage() {
           <NexusCard className="min-w-[220px] flex-1" tone="mint">
             <Text className={appearance.metricLabelClass}>Required support</Text>
             <Text className={appearance.metricValueClass}>
-              {rolesPayload?.policy_snapshot.required_support_count ?? 0}
+              {rolesPayload?.policy_snapshot.role_participation_support_threshold ?? 0}
             </Text>
             <Text className={appearance.itemBodyClass}>
               Supports needed in this scope before role participation becomes role eligible.

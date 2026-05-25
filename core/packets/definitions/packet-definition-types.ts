@@ -167,7 +167,7 @@ export type PacketDefaultDefinitionDescriptor = {
   default_id: string;
   applies_to: PacketDefaultAppliesToDescriptor;
   default_values: Readonly<Record<string, unknown>>;
-  merge_strategy: PacketDefaultMergeStrategy;
+  default_merge_strategy: PacketDefaultMergeStrategy;
   notes: string;
 };
 
@@ -218,7 +218,7 @@ export type PacketDefinitionPartDescriptor = {
   covers_subtypes?: readonly string[];
   applies_to?: PacketDefaultAppliesToDescriptor;
   default_values?: Readonly<Record<string, unknown>>;
-  merge_strategy?: PacketDefaultMergeStrategy;
+  default_merge_strategy?: PacketDefaultMergeStrategy;
   notes: string;
 };
 

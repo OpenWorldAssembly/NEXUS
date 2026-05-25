@@ -504,7 +504,7 @@ export default function NexusTrustPage() {
                   label={`Association threshold ${trustPayload?.policy_snapshot.association_support_threshold ?? 0}`}
                 />
                 <NexusBadge
-                  label={`Required support ${trustPayload?.policy_snapshot.required_support_count ?? 0}`}
+                  label={`Required support ${trustPayload?.policy_snapshot.role_participation_support_threshold ?? 0}`}
                 />
                 <NexusBadge
                   label={trustPayload?.scope.level === 'personal' ? 'Personal scope' : 'Assembly scope'}

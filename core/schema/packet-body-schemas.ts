@@ -453,7 +453,7 @@ export const PolicyBodySchema = z
     trust_policy: z
       .object({
         association_support_threshold: z.number().int().nonnegative().default(1),
-        required_support_count: z.number().int().nonnegative().default(2),
+        role_participation_support_threshold: z.number().int().nonnegative().default(2),
         posting_gate: TrustStageSchema.default('emerging'),
         voting_gate: TrustStageSchema.default('recognized'),
         review_gate: TrustStageSchema.default('role_eligible'),
