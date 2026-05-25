@@ -42,6 +42,7 @@ For the implementation guide, the chapter files under `docs/implementation-guide
 - [Packet Runtime Modernization](implementation-guide/packet-runtime-modernization.md)
 
 - [Architecture And Layers](implementation-guide/architecture-and-layers.md)
+- [Nexus UI Component Catalog](implementation-guide/nexus-ui-component-catalog.md)
 - [Core Entities And Packet Model](implementation-guide/core-entities-and-packet-model.md)
 - [Trust, Moderation, And Policy](implementation-guide/trust-moderation-and-policy.md)
 - [Governance, Initiatives, And Decisions](implementation-guide/governance-initiatives-and-decisions.md)

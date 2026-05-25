@@ -43,6 +43,7 @@
       "sourceFiles": [
         "docs/implementation-guide/packet-runtime-modernization.md",
         "docs/implementation-guide/architecture-and-layers.md",
+        "docs/implementation-guide/nexus-ui-component-catalog.md",
         "docs/implementation-guide/core-entities-and-packet-model.md",
         "docs/implementation-guide/trust-moderation-and-policy.md",
         "docs/implementation-guide/governance-initiatives-and-decisions.md",
