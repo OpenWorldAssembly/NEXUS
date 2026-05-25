@@ -30,6 +30,10 @@ import {
   createRolePacket,
 } from '@core/packets/builders.ts';
 import { buildDefinitionPacketSeedEnvelopes } from '@core/packets/packet-definition-seeds.ts';
+import {
+  buildElementDefaultDiscussionPackets,
+  createElementDiscussionForumId,
+} from '@core/packets/defaults/element-discussion-defaults.ts';
 
 const ACTIVE_PACKET_TYPES = [
   'Definition',
@@ -266,6 +270,85 @@ test('fresh schemas reject old top-level classifier fields', () => {
       title: 'Old Policy',
       body_markdown: 'Old.',
       status: 'active',
+    }).success,
+    false
+  );
+});
+
+
+test('default discussion recipe creates different baselines for people and assemblies', () => {
+  const personPackets = buildElementDefaultDiscussionPackets({
+    elementRef: { packet_id: 'nexus:element/actor' },
+    elementName: 'Actor',
+    profile: 'person',
+    createdAt: '2026-04-18T00:00:00.000Z',
+    applicableScopeRefs: [{ packet_id: 'nexus:element/actor' }],
+  });
+  const assemblyPackets = buildElementDefaultDiscussionPackets({
+    elementRef: { packet_id: 'nexus:element/scope' },
+    elementName: 'Scope',
+    profile: 'locality_assembly',
+    createdAt: '2026-04-18T00:00:00.000Z',
+    applicableScopeRefs: [{ packet_id: 'nexus:element/scope' }],
+    includeProposalsForum: true,
+  });
+
+  assert.equal(
+    personPackets.some(
+      (packet) =>
+        packet.header.packet_id ===
+        createElementDiscussionForumId('nexus:element/actor', 'visitor_lobby')
+    ),
+    false
+  );
+  assert.equal(
+    personPackets.some(
+      (packet) =>
+        packet.header.packet_id ===
+        createElementDiscussionForumId('nexus:element/actor', 'general')
+    ),
+    true
+  );
+  assert.equal(
+    assemblyPackets.some(
+      (packet) =>
+        packet.header.packet_id ===
+        createElementDiscussionForumId('nexus:element/scope', 'visitor_lobby')
+    ),
+    true
+  );
+  assert.equal(
+    assemblyPackets.some(
+      (packet) =>
+        packet.header.packet_id ===
+        createElementDiscussionForumId('nexus:element/scope', 'proposals')
+    ),
+    true
+  );
+});
+
+test('Claim schema keeps support and dispute vocabulary out of stale claim subtypes', () => {
+  assert.equal(
+    PACKET_BODY_SCHEMAS.Claim.safeParse({
+      subtype: 'analysis',
+      target_ref: targetRef,
+      claim_markdown: 'This packet needs review.',
+    }).success,
+    true
+  );
+  assert.equal(
+    PACKET_BODY_SCHEMAS.Claim.safeParse({
+      subtype: 'support_claim',
+      target_ref: targetRef,
+      claim_markdown: 'Old reaction-flavored claim subtype.',
+    }).success,
+    false
+  );
+  assert.equal(
+    PACKET_BODY_SCHEMAS.Claim.safeParse({
+      subtype: 'dispute_claim',
+      target_ref: targetRef,
+      claim_markdown: 'Old reaction-flavored claim subtype.',
     }).success,
     false
   );

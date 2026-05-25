@@ -942,10 +942,7 @@ export const PACKET_COMPATIBILITY_REGISTRY = {
           const currentBody = ClaimBodySchema.parse(body);
           const losses: PacketAdaptationLoss[] = [];
 
-          if (
-            currentBody.subtype !== 'relation_assertion' &&
-            currentBody.subtype === null
-          ) {
+          if (currentBody.subtype !== 'relation_assertion') {
             losses.push(
               createAdaptationLoss({
                 kind: 'unsupported_target_feature_omission',

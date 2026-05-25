@@ -4,7 +4,6 @@
  */
 
 import type {
-  DiscussionActorClass,
   PacketEnvelope,
   PacketRef,
 } from '@core/schema/packet-schema';
@@ -16,11 +15,7 @@ import {
 import {
   createActionPacket,
   createAssemblyPacket,
-  createDiscussionForumPacket,
-  createDiscussionPostPacket,
   createDiscussionReplyPacket,
-  createDiscussionSpacePacket,
-  createDiscussionThreadPacket,
   createPacketEdge,
   createPacketRef,
   createPersonPacket,
@@ -29,6 +24,13 @@ import {
   createRelationPacket,
   createRolePacket,
 } from '@core/packets/builders';
+import {
+  buildElementDefaultDiscussionPackets,
+  createElementDiscussionPostId,
+  createElementDiscussionReplyId,
+  createElementDiscussionThreadId,
+  type ElementDiscussionStarterThreadInput,
+} from '@core/packets/defaults/element-discussion-defaults';
 
 export const SEED_CREATED_AT = '2026-04-08T00:00:00.000Z';
 export const DISCUSSION_SEED_VERSION = '2026-04-11-discussions-membership-v1';
@@ -91,36 +93,10 @@ type ScopeSeedConfig = {
   authorRef: PacketRef;
 };
 
-type StarterThreadConfig = {
-  forumKind: 'visitor_lobby' | 'general' | 'proposals' | 'reports';
-  suffix: string;
-  title: string;
-  body: string;
-  relatedRefs?: PacketRef[];
-};
+type StarterThreadConfig = ElementDiscussionStarterThreadInput;
 
 function createApplicableScopeRefs(scopeChain: PacketRef[]): PacketRef[] {
   return [...scopeChain];
-}
-
-function getScopeSlug(scopePacketId: string): string {
-  return scopePacketId.startsWith('nexus:element/')
-    ? scopePacketId.slice('nexus:element/'.length)
-    : scopePacketId.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
-}
-
-function createDiscussionSpaceId(scopePacketId: string): string {
-  return `nexus:discussion-space/${getScopeSlug(scopePacketId)}`;
-}
-
-function createDiscussionForumId(
-  scopePacketId: string,
-  forumKind: string
-): string {
-  return `nexus:discussion-forum/${getScopeSlug(scopePacketId)}-${forumKind.replace(
-    /_/g,
-    '-'
-  )}`;
 }
 
 function createDiscussionThreadId(
@@ -128,10 +104,11 @@ function createDiscussionThreadId(
   forumKind: string,
   suffix: string
 ): string {
-  return `nexus:discussion-thread/${getScopeSlug(scopePacketId)}-${forumKind.replace(
-    /_/g,
-    '-'
-  )}-${suffix}`;
+  return createElementDiscussionThreadId({
+    elementPacketId: scopePacketId,
+    forumKind,
+    suffix,
+  });
 }
 
 function createDiscussionPostId(
@@ -139,10 +116,11 @@ function createDiscussionPostId(
   forumKind: string,
   suffix: string
 ): string {
-  return `nexus:discussion-post/${getScopeSlug(scopePacketId)}-${forumKind.replace(
-    /_/g,
-    '-'
-  )}-${suffix}`;
+  return createElementDiscussionPostId({
+    elementPacketId: scopePacketId,
+    forumKind,
+    suffix,
+  });
 }
 
 function createDiscussionReplyId(
@@ -150,171 +128,15 @@ function createDiscussionReplyId(
   forumKind: string,
   suffix: string
 ): string {
-  return `nexus:discussion-reply/${getScopeSlug(scopePacketId)}-${forumKind.replace(
-    /_/g,
-    '-'
-  )}-${suffix}`;
-}
-
-function createDiscussionForumTitle(
-  scopeName: string,
-  forumKind: StarterThreadConfig['forumKind']
-): string {
-  if (forumKind === 'visitor_lobby') {
-    return `${scopeName} visitor lobby`;
-  }
-
-  if (forumKind === 'general') {
-    return `${scopeName} general`;
-  }
-
-  if (forumKind === 'proposals') {
-    return `${scopeName} proposals`;
-  }
-
-  return `${scopeName} reports and AARs`;
-}
-
-function createForumParticipationRules(
-  forumKind: StarterThreadConfig['forumKind']
-): {
-  top_level_actor_classes: DiscussionActorClass[];
-  reply_actor_classes: DiscussionActorClass[];
-  reaction_actor_classes: DiscussionActorClass[];
-  top_level_post_cost: number;
-} {
-  if (forumKind === 'visitor_lobby') {
-    return {
-      top_level_actor_classes: [
-        'anonymous_guest',
-        'scope_member',
-        'trusted_member',
-        'steward',
-      ],
-      reply_actor_classes: [
-        'anonymous_guest',
-        'scope_member',
-        'trusted_member',
-        'steward',
-      ],
-      reaction_actor_classes: [
-        'anonymous_guest',
-        'scope_member',
-        'trusted_member',
-        'steward',
-      ],
-      top_level_post_cost: 0,
-    };
-  }
-
-  return {
-    top_level_actor_classes: ['scope_member', 'trusted_member', 'steward'],
-    reply_actor_classes: ['scope_member', 'trusted_member', 'steward'],
-    reaction_actor_classes: ['scope_member', 'trusted_member', 'steward'],
-    top_level_post_cost: 0,
-  };
+  return createElementDiscussionReplyId({
+    elementPacketId: scopePacketId,
+    forumKind,
+    suffix,
+  });
 }
 
 function createScopeDiscussionPackets(input: ScopeSeedConfig): PacketEnvelope[] {
-  const discussionSpaceRef = createPacketRef(
-    createDiscussionSpaceId(input.packetRef.packet_id)
-  );
-  const visitorLobbyForumRef = createPacketRef(
-    createDiscussionForumId(input.packetRef.packet_id, 'visitor_lobby')
-  );
-  const generalForumRef = createPacketRef(
-    createDiscussionForumId(input.packetRef.packet_id, 'general')
-  );
-  const proposalsForumRef = createPacketRef(
-    createDiscussionForumId(input.packetRef.packet_id, 'proposals')
-  );
-  const reportsForumRef = createPacketRef(
-    createDiscussionForumId(input.packetRef.packet_id, 'reports')
-  );
-  const forums = [
-    {
-      packetRef: visitorLobbyForumRef,
-      forumKind: 'visitor_lobby' as const,
-      summary:
-        'Public newcomer space for orientation, introductions, and locality routing.',
-      defaultSort: 'new' as const,
-    },
-    {
-      packetRef: generalForumRef,
-      forumKind: 'general' as const,
-      summary:
-        'Open assembly discussion for context, updates, and broad questions.',
-      defaultSort: 'hot' as const,
-    },
-    {
-      packetRef: proposalsForumRef,
-      forumKind: 'proposals' as const,
-      summary:
-        'Proposal review space for drafts, amendments, and governance context.',
-      defaultSort: 'hot' as const,
-    },
-    {
-      packetRef: reportsForumRef,
-      forumKind: 'reports' as const,
-      summary:
-        'Record and after-action reporting space for outcomes and learning.',
-      defaultSort: 'hot' as const,
-    },
-  ];
-
-  const packets: PacketEnvelope[] = [
-    createDiscussionSpacePacket({
-      packet_id: discussionSpaceRef.packet_id,
-      created_at: SEED_CREATED_AT,
-      authority_scope_ref: input.packetRef,
-      applicable_scope_refs: input.applicableScopeRefs,
-      title: `${input.scopeName} discussions`,
-      summary: `Packet-backed discussion surface for ${input.scopeName}.`,
-      scope_ref: input.packetRef,
-      status: 'open',
-      metadata_tags: ['discussion-space', 'scope-discussions'],
-    }),
-    ...forums.map((forum) =>
-      createDiscussionForumPacket({
-        packet_id: forum.packetRef.packet_id,
-        created_at: SEED_CREATED_AT,
-        authority_scope_ref: input.packetRef,
-        applicable_scope_refs: input.applicableScopeRefs,
-        title: createDiscussionForumTitle(input.scopeName, forum.forumKind),
-        summary: forum.summary,
-        discussion_space_ref: discussionSpaceRef,
-        forum_kind: forum.forumKind,
-        status: 'open',
-        participation_rules: createForumParticipationRules(forum.forumKind),
-        default_sort: forum.defaultSort,
-        metadata_tags: ['discussion-forum', forum.forumKind.replace(/_/g, '-')],
-      })
-    ),
-  ];
-
-  const starterThreads: StarterThreadConfig[] = [
-    {
-      forumKind: 'visitor_lobby',
-      suffix: 'welcome',
-      title:
-        input.scopeName === 'Global Commons'
-          ? 'Start here if you do not know your locality yet'
-          : `${input.scopeName} newcomer thread`,
-      body:
-        input.scopeName === 'Global Commons'
-          ? [
-              'Guests can browse first, ask questions here, and narrow down to a local assembly later.',
-              '',
-              'If you already know your general area, mention it and we can point you toward the right branch.',
-            ].join('\n\n')
-          : [
-              `This is the public newcomer thread for ${input.scopeName}.`,
-              '',
-              'Reply here with your question, area, or intent and we can help route you to the right next step.',
-            ].join('\n\n'),
-      relatedRefs: [PERSONAL_TREE_REFS.visitor_lobby_policy],
-    },
-  ];
+  const starterThreads: StarterThreadConfig[] = [];
 
   if (input.packetRef.packet_id === PERSONAL_TREE_PACKET_IDS.global_commons) {
     starterThreads.push(
@@ -366,56 +188,38 @@ function createScopeDiscussionPackets(input: ScopeSeedConfig): PacketEnvelope[] 
     });
   }
 
-  for (const starterThread of starterThreads) {
-    const forumRef = createPacketRef(
-      createDiscussionForumId(input.packetRef.packet_id, starterThread.forumKind)
-    );
-    const threadRef = createPacketRef(
-      createDiscussionThreadId(
-        input.packetRef.packet_id,
-        starterThread.forumKind,
-        starterThread.suffix
-      )
-    );
-    const rootPostRef = createPacketRef(
-      createDiscussionPostId(
-        input.packetRef.packet_id,
-        starterThread.forumKind,
-        starterThread.suffix
-      )
-    );
-
-    packets.push(
-      createDiscussionThreadPacket({
-        packet_id: threadRef.packet_id,
-        created_at: SEED_CREATED_AT,
-        authority_scope_ref: input.packetRef,
-        applicable_scope_refs: input.applicableScopeRefs,
-        forum_ref: forumRef,
-        title: starterThread.title,
-        summary: starterThread.title,
-        thread_kind: starterThread.forumKind,
-        status: 'open',
-        related_refs: starterThread.relatedRefs ?? [],
-        participation_rules: createForumParticipationRules(starterThread.forumKind),
-        default_sort:
-          starterThread.forumKind === 'visitor_lobby' ? 'new' : 'hot',
-        metadata_tags: ['discussion-thread', starterThread.forumKind.replace(/_/g, '-')],
-      }),
-      createDiscussionPostPacket({
-        packet_id: rootPostRef.packet_id,
-        created_at: SEED_CREATED_AT,
-        authority_scope_ref: input.packetRef,
-        applicable_scope_refs: input.applicableScopeRefs,
-        created_by: input.authorRef,
-        thread_ref: threadRef,
-        title: starterThread.title,
-        content_markdown: starterThread.body,
-        reference_refs: starterThread.relatedRefs ?? [],
-        metadata_tags: ['discussion-post', 'thread-root', starterThread.forumKind.replace(/_/g, '-')],
-      })
-    );
-  }
+  const packets: PacketEnvelope[] = buildElementDefaultDiscussionPackets({
+    elementRef: input.packetRef,
+    elementName: input.scopeName,
+    profile: 'locality_assembly',
+    createdAt: SEED_CREATED_AT,
+    applicableScopeRefs: input.applicableScopeRefs,
+    authorRef: input.authorRef,
+    includeProposalsForum: true,
+    includeReportsForum: true,
+    welcomeThread: {
+      forumKind: 'visitor_lobby',
+      suffix: 'welcome',
+      title:
+        input.scopeName === 'Global Commons'
+          ? 'Start here if you do not know your locality yet'
+          : `${input.scopeName} newcomer thread`,
+      body:
+        input.scopeName === 'Global Commons'
+          ? [
+              'Guests can browse first, ask questions here, and narrow down to a local assembly later.',
+              '',
+              'If you already know your general area, mention it and we can point you toward the right branch.',
+            ].join('\n\n')
+          : [
+              `This is the public newcomer thread for ${input.scopeName}.`,
+              '',
+              'Reply here with your question, area, or intent and we can help route you to the right next step.',
+            ].join('\n\n'),
+      relatedRefs: [PERSONAL_TREE_REFS.visitor_lobby_policy],
+    },
+    starterThreads,
+  });
 
   if (input.packetRef.packet_id === PERSONAL_TREE_PACKET_IDS.global_commons) {
     const rootPostRef = createPacketRef(
@@ -970,6 +774,14 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
       packetRef: PERSONAL_TREE_REFS.sunnymead_ranch,
       applicableScopeRefs: sunnymeadApplicableScopeRefs,
       scopeName: 'Sunnymead Ranch',
+      authorRef: PERSONAL_TREE_REFS.aaron,
+    }),
+    ...buildElementDefaultDiscussionPackets({
+      elementRef: PERSONAL_TREE_REFS.aaron,
+      elementName: 'Aaron',
+      profile: 'person',
+      createdAt: SEED_CREATED_AT,
+      applicableScopeRefs: [PERSONAL_TREE_REFS.aaron, ...sunnymeadApplicableScopeRefs],
       authorRef: PERSONAL_TREE_REFS.aaron,
     }),
   ];

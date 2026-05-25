@@ -14,6 +14,7 @@ import {
   ReactionStatusSchema,
   ReactionVoteValueSchema,
   ClaimStatusSchema,
+  CanonicalClaimSubtypeSchema,
   DEFAULT_PROTOCOL_VERSION,
   DEFAULT_SCHEMA_VERSION,
   DiscussionActorClassSchema,
@@ -279,7 +280,7 @@ export const RoleBodySchema = z
 
 export const ClaimBodySchema = z
   .object({
-    subtype: z.string().min(1).default('relation_assertion'),
+    subtype: CanonicalClaimSubtypeSchema.default('relation_assertion'),
     target_ref: PacketRefSchema,
     subject_ref: PacketRefSchema.nullable().default(null),
     scope_ref: PacketRefSchema.nullable().default(null),

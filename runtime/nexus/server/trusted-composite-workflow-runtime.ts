@@ -131,6 +131,7 @@ type AssemblyScopeNode = {
   packetId: string;
   routeId: string;
   name: string;
+  subtype: PacketEnvelopeByType['Element']['body']['subtype'];
   parentPacketId: string | null;
 };
 
@@ -287,6 +288,45 @@ async function listAssemblyScopeNodes(
       packetId: packet.header.packet_id,
       routeId: toRouteScopeId(packet.header.packet_id),
       name: packet.body.name,
+      subtype: packet.body.subtype,
+      parentPacketId:
+        parentResolutionsByPacketId.get(packet.header.packet_id)?.parentPacketId ??
+        null,
+    }));
+}
+
+
+async function listElementDiscussionTargetNodes(
+  packetStore: NodeSQLitePacketStore
+): Promise<AssemblyScopeNode[]> {
+  const [elementPackets, relationPackets] = await Promise.all([
+    packetStore.listPreferredPacketsByType('Element'),
+    listRelationPackets(packetStore),
+  ]);
+  const typedElementPackets = elementPackets as PacketEnvelopeByType['Element'][];
+  const assemblyPackets = typedElementPackets.filter(
+    (packet) =>
+      packet.body.subtype === 'assembly' || packet.body.subtype === 'locality'
+  );
+  const parentResolutionsByPacketId = resolveScopeParentResolutions({
+    scopePackets: assemblyPackets,
+    relationPackets,
+    getCompatibilityParentPacketId: getLegacyParentScopePacketIdCompatibility,
+  });
+
+  return typedElementPackets
+    .filter(
+      (packet) =>
+        packet.body.subtype === 'person' ||
+        packet.body.subtype === 'assembly' ||
+        packet.body.subtype === 'locality'
+    )
+    .map((packet) => ({
+      packet,
+      packetId: packet.header.packet_id,
+      routeId: toRouteScopeId(packet.header.packet_id),
+      name: packet.body.name,
+      subtype: packet.body.subtype,
       parentPacketId:
         parentResolutionsByPacketId.get(packet.header.packet_id)?.parentPacketId ??
         null,
@@ -800,6 +840,7 @@ export async function resolveTrustedAssemblyElementCompositePlan(
       scopePacketId: assemblyPacket.header.packet_id,
       scopeName: assemblyPacket.body.name,
       applicableScopeRefs,
+      elementSubtype: assemblyPacket.body.subtype,
     });
     packets.push(...discussionPackets);
     actionIds.push('discussion.surfaces.ensure');
@@ -1086,13 +1127,15 @@ export async function resolveTrustedDiscussionSurfacesCompositePlan(
     { kind: 'discussion.surfaces.ensure' }
   >;
 
-  const scopeNodes = await listAssemblyScopeNodes(input.packetStore);
+  const scopeNodes = await listElementDiscussionTargetNodes(input.packetStore);
   const scopeNode =
     scopeNodes.find((candidate) => candidate.routeId === intent.scope_id) ??
     null;
 
   if (!scopeNode) {
-    throw new Error('Discussion surfaces can only be added to known assembly scopes.');
+    throw new Error(
+      'Discussion surfaces can only be added to known person, assembly, or locality Elements.'
+    );
   }
 
   const packets = await planDefaultDiscussionSurfaces({
@@ -1103,6 +1146,7 @@ export async function resolveTrustedDiscussionSurfacesCompositePlan(
       scopePacketId: scopeNode.packetId,
       scopeNodes,
     }),
+    elementSubtype: scopeNode.subtype,
   });
   const mergedPolicyDecision = await input.policyGate.resolveScopePolicyDecision({
     governingScopePacket: scopeNode.packet,

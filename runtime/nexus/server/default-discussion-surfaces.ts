@@ -1,120 +1,48 @@
 /**
  * File: default-discussion-surfaces.ts
- * Description: Ensures newly minted locality scopes get empty local discussion surfaces.
+ * Description: Plans and writes default packet-backed discussion surfaces for Element packets.
  */
 
-import {
-  createDiscussionPacket,
-  createPacketRef,
-} from '@core/packets/builders';
+import { buildElementDefaultDiscussionPackets } from '@core/packets/defaults/element-discussion-defaults';
 import type {
-  DiscussionActorClass,
   PacketEnvelopeByType,
   PacketRef,
 } from '@core/schema/packet-schema';
 import type { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store';
 
-function createDiscussionSpaceId(scopePacketId: string): string {
-  return `nexus:discussion/space/${scopePacketId.slice('nexus:element/'.length)}`;
-}
+type ElementDiscussionProfile = 'person' | 'assembly' | 'locality_assembly';
 
-function createDiscussionForumId(scopePacketId: string, forumKind: string): string {
-  return `nexus:discussion/forum/${scopePacketId.slice('nexus:element/'.length)}-${forumKind.replace(/_/g, '-')}`;
+function resolveElementDiscussionProfile(
+  elementSubtype?: PacketEnvelopeByType['Element']['body']['subtype'] | null
+): ElementDiscussionProfile {
+  if (elementSubtype === 'person') {
+    return 'person';
+  }
+
+  if (elementSubtype === 'locality') {
+    return 'locality_assembly';
+  }
+
+  return 'assembly';
 }
 
 function createDefaultDiscussionSurfacePackets(input: {
-  scopePacketId: string;
-  scopeName: string;
+  elementPacketId: string;
+  elementName: string;
+  elementSubtype?: PacketEnvelopeByType['Element']['body']['subtype'] | null;
   createdAt: string;
   applicableScopeRefs: PacketRef[];
+  includeProposalsForum?: boolean;
 }): PacketEnvelopeByType['Discussion'][] {
-  const guestForumActors = [
-    'anonymous_guest',
-    'scope_member',
-    'trusted_member',
-    'steward',
-  ] satisfies DiscussionActorClass[];
-  const memberForumActors = [
-    'scope_member',
-    'trusted_member',
-    'steward',
-  ] satisfies DiscussionActorClass[];
-  const discussionSpaceRef = createPacketRef(
-    createDiscussionSpaceId(input.scopePacketId)
-  );
-  const forumKinds = [
-    {
-      forum_kind: 'visitor_lobby',
-      title: `${input.scopeName} visitor lobby`,
-      summary:
-        'Public newcomer space for orientation, introductions, and locality routing.',
-      default_sort: 'new' as const,
-      participation_rules: {
-        top_level_actor_classes: guestForumActors,
-        reply_actor_classes: guestForumActors,
-        reaction_actor_classes: guestForumActors,
-        top_level_post_cost: 0,
-      },
-    },
-    {
-      forum_kind: 'general',
-      title: `${input.scopeName} general`,
-      summary: 'Open assembly discussion for context, updates, and broad questions.',
-      default_sort: 'hot' as const,
-      participation_rules: {
-        top_level_actor_classes: memberForumActors,
-        reply_actor_classes: memberForumActors,
-        reaction_actor_classes: memberForumActors,
-        top_level_post_cost: 0,
-      },
-    },
-    {
-      forum_kind: 'proposals',
-      title: `${input.scopeName} proposals`,
-      summary:
-        'Proposal review space for drafts, amendments, and governance context.',
-      default_sort: 'hot' as const,
-      participation_rules: {
-        top_level_actor_classes: memberForumActors,
-        reply_actor_classes: memberForumActors,
-        reaction_actor_classes: memberForumActors,
-        top_level_post_cost: 0,
-      },
-    },
-  ];
-
-  return [
-    createDiscussionPacket({
-      packet_id: discussionSpaceRef.packet_id,
-      created_at: input.createdAt,
-      authority_scope_ref: { packet_id: input.scopePacketId },
-      applicable_scope_refs: input.applicableScopeRefs,
-      subtype: 'space',
-      role: 'space',
-      title: `${input.scopeName} discussions`,
-      summary: `Packet-backed discussion surface for ${input.scopeName}.`,
-      scope_ref: { packet_id: input.scopePacketId },
-      status: 'open',
-      metadata_tags: ['discussion', 'space', 'scope-discussions'],
-    }),
-    ...forumKinds.map((forumKind) =>
-      createDiscussionPacket({
-        packet_id: createDiscussionForumId(input.scopePacketId, forumKind.forum_kind),
-        created_at: input.createdAt,
-        authority_scope_ref: { packet_id: input.scopePacketId },
-        applicable_scope_refs: input.applicableScopeRefs,
-        subtype: 'forum',
-        role: forumKind.forum_kind,
-        title: forumKind.title,
-        summary: forumKind.summary,
-        parent_ref: discussionSpaceRef,
-        status: 'open',
-        participation_rules: forumKind.participation_rules,
-        default_sort: forumKind.default_sort,
-        metadata_tags: ['discussion', 'forum', forumKind.forum_kind.replace(/_/g, '-')],
-      })
-    ),
-  ];
+  return buildElementDefaultDiscussionPackets({
+    elementRef: { packet_id: input.elementPacketId },
+    elementName: input.elementName,
+    profile: resolveElementDiscussionProfile(input.elementSubtype),
+    createdAt: input.createdAt,
+    applicableScopeRefs: input.applicableScopeRefs,
+    includeProposalsForum: input.includeProposalsForum,
+    includeReportsForum: input.elementSubtype !== 'person',
+  });
 }
 
 export async function planDefaultDiscussionSurfaces(input: {
@@ -122,13 +50,17 @@ export async function planDefaultDiscussionSurfaces(input: {
   scopePacketId: string;
   scopeName: string;
   applicableScopeRefs: PacketRef[];
+  elementSubtype?: PacketEnvelopeByType['Element']['body']['subtype'] | null;
+  includeProposalsForum?: boolean;
 }): Promise<PacketEnvelopeByType['Discussion'][]> {
   const plannedPackets: PacketEnvelopeByType['Discussion'][] = [];
   const packets = createDefaultDiscussionSurfacePackets({
-    scopePacketId: input.scopePacketId,
-    scopeName: input.scopeName,
+    elementPacketId: input.scopePacketId,
+    elementName: input.scopeName,
+    elementSubtype: input.elementSubtype,
     createdAt: new Date().toISOString(),
     applicableScopeRefs: input.applicableScopeRefs,
+    includeProposalsForum: input.includeProposalsForum,
   });
 
   for (const packet of packets) {
@@ -145,14 +77,16 @@ export async function planDefaultDiscussionSurfaces(input: {
 }
 
 /**
- * Inputs: a scope packet id/name and packet store.
- * Output: creates missing empty default discussion surface packets only once.
+ * Inputs: an Element packet id/name and packet store.
+ * Output: creates missing default discussion surface packets only once.
  */
 export async function ensureDefaultDiscussionSurfaces(input: {
   packetStore: NodeSQLitePacketStore;
   scopePacketId: string;
   scopeName: string;
   applicableScopeRefs: PacketRef[];
+  elementSubtype?: PacketEnvelopeByType['Element']['body']['subtype'] | null;
+  includeProposalsForum?: boolean;
 }): Promise<PacketEnvelopeByType['Discussion'][]> {
   const createdPackets: PacketEnvelopeByType['Discussion'][] = [];
   const packets = await planDefaultDiscussionSurfaces(input);
