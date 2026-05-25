@@ -1,13 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Text, TextInput, View } from 'react-native';
 
 import {
   NexusActionButton,
   NexusBadge,
   NexusCard,
   NexusInlineSelect,
+  NexusSearchErrorState,
+  NexusSearchField,
+  NexusSearchResultList,
+  NexusSearchResultRow,
+  NexusSearchResultsBoundary,
+  NexusSearchStatusText,
   NexusSegmentedPill,
   useNexusAppearance,
+  useNexusLoading,
 } from '@app/components/nexus/ui';
 import type {
   NexusPacketExplorerBundleExportMode,
@@ -44,6 +51,9 @@ type ExportWorkflowState = {
   isLoadingPreview: boolean;
   isDownloading: boolean;
 };
+
+const PACKET_EXPLORER_EXPORT_LOOKUP_LOADING_SCOPE =
+  'packet-explorer:export-lookup-results';
 
 const BUNDLE_SCOPE_OPTIONS: {
   id: NexusPacketExplorerBundleExportMode;
@@ -214,6 +224,7 @@ export function NexusPacketExplorerExportPanel({
   onClearPacketExportTarget,
 }: NexusPacketExplorerExportPanelProps) {
   const appearance = useNexusAppearance();
+  const loading = useNexusLoading();
   const [packetArtifactMode, setPacketArtifactMode] = useState<
     'raw_packet' | 'bundle'
   >('raw_packet');
@@ -288,6 +299,10 @@ export function NexusPacketExplorerExportPanel({
     const timeoutHandle = setTimeout(() => {
       setIsLookupLoading(true);
       setLookupError(null);
+      const operationId = loading.beginLoading(
+        PACKET_EXPLORER_EXPORT_LOOKUP_LOADING_SCOPE,
+        { label: 'Searching packets...' }
+      );
 
       void searchNexusPacketExplorerPackets({
         query: trimmedQuery,
@@ -319,6 +334,7 @@ export function NexusPacketExplorerExportPanel({
           if (isMounted) {
             setIsLookupLoading(false);
           }
+          loading.endLoading(operationId);
         });
     }, 180);
 
@@ -326,7 +342,7 @@ export function NexusPacketExplorerExportPanel({
       isMounted = false;
       clearTimeout(timeoutHandle);
     };
-  }, [lookupQuery, selectedPacketId]);
+  }, [loading, lookupQuery, selectedPacketId]);
 
   const lookupSelection = useMemo(() => {
     if (lookupResults.length === 0) {
@@ -621,8 +637,8 @@ export function NexusPacketExplorerExportPanel({
           <View className="gap-4">
             <View className="gap-3">
               <Text className={appearance.itemMetaClass}>Enter packet id/etc</Text>
-              <TextInput
-                className={`rounded-[22px] border px-4 py-3 ${appearance.textInputClass}`}
+              <NexusSearchField
+                inputClassName="rounded-[22px]"
                 onChangeText={setLookupQuery}
                 onKeyPress={(event) => {
                   if (lookupResults.length === 0) {
@@ -653,8 +669,6 @@ export function NexusPacketExplorerExportPanel({
                   }
                 }}
                 placeholder="Load a packet by packet id or exact title"
-                placeholderTextColor={appearance.textInputPlaceholderColor}
-                returnKeyType="search"
                 value={lookupQuery}
               />
               <Text className={appearance.itemBodyClass}>
@@ -662,58 +676,60 @@ export function NexusPacketExplorerExportPanel({
               </Text>
 
               {isLookupLoading ? (
-                <Text className={appearance.itemMetaClass}>
-                  Searching packets...
-                </Text>
+                <NexusSearchStatusText>Searching packets...</NexusSearchStatusText>
               ) : null}
 
               {lookupError ? (
-                <NexusCard tone="rose">
-                  <Text className={appearance.itemBodyClass}>{lookupError}</Text>
-                </NexusCard>
+                <NexusSearchErrorState>{lookupError}</NexusSearchErrorState>
               ) : null}
 
-              {lookupResults.length > 0 ? (
-                <NexusCard className="gap-2">
-                  {lookupResults.map((result, resultIndex) => (
-                    (() => {
-                      const verificationBadge = getVerificationLookupBadge(
-                        result.verification
-                      );
+              <NexusSearchResultsBoundary
+                loadingLabel="Searching packets..."
+                loadingScope={PACKET_EXPLORER_EXPORT_LOOKUP_LOADING_SCOPE}
+              >
+                {lookupResults.length > 0 ? (
+                  <NexusCard className="gap-2">
+                    <NexusSearchResultList>
+                      {lookupResults.map((result, resultIndex) => {
+                        const verificationBadge = getVerificationLookupBadge(
+                          result.verification
+                        );
 
-                      return (
-                        <Pressable
-                          key={`${result.packet_id}:${result.match_type}:${result.matched_revision_id ?? result.revision_id ?? 'none'}`}
-                          className={`rounded-[3px] border px-3 py-3 ${
-                            resultIndex === activeLookupIndex
-                              ? appearance.cardInsetClass
-                              : 'border-transparent'
-                          }`}
-                          onPress={() => handleSelectLookupResult(result)}
-                        >
-                          <View className="flex-row flex-wrap items-center gap-2">
-                            <Text className={appearance.itemTitleClass}>
-                              {result.title}
+                        return (
+                          <NexusSearchResultRow
+                            key={`${result.packet_id}:${result.match_type}:${result.matched_revision_id ?? result.revision_id ?? 'none'}`}
+                            unstyled
+                            className={`rounded-[3px] border px-3 py-3 ${
+                              resultIndex === activeLookupIndex
+                                ? appearance.cardInsetClass
+                                : 'border-transparent'
+                            }`}
+                            onPress={() => handleSelectLookupResult(result)}
+                          >
+                            <View className="flex-row flex-wrap items-center gap-2">
+                              <Text className={appearance.itemTitleClass}>
+                                {result.title}
+                              </Text>
+                              {verificationBadge ? (
+                                <NexusBadge
+                                  label={verificationBadge.label}
+                                  tone={verificationBadge.tone}
+                                />
+                              ) : null}
+                            </View>
+                            <Text className={appearance.itemMetaClass}>
+                              {result.match_reason}
                             </Text>
-                            {verificationBadge ? (
-                              <NexusBadge
-                                label={verificationBadge.label}
-                                tone={verificationBadge.tone}
-                              />
-                            ) : null}
-                          </View>
-                          <Text className={appearance.itemMetaClass}>
-                            {result.match_reason}
-                          </Text>
-                          <Text className={appearance.itemBodyClass}>
-                            {result.packet_id}
-                          </Text>
-                        </Pressable>
-                      );
-                    })()
-                  ))}
-                </NexusCard>
-              ) : null}
+                            <Text className={appearance.itemBodyClass}>
+                              {result.packet_id}
+                            </Text>
+                          </NexusSearchResultRow>
+                        );
+                      })}
+                    </NexusSearchResultList>
+                  </NexusCard>
+                ) : null}
+              </NexusSearchResultsBoundary>
             </View>
           </View>
         )}

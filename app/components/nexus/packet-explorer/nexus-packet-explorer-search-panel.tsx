@@ -1,9 +1,13 @@
-import { Text, TextInput, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import {
   NexusActionButton,
   NexusBadge,
   NexusCard,
+  NexusSearchEmptyState,
+  NexusSearchErrorState,
+  NexusSearchField,
+  NexusSearchResultsBoundary,
   NexusSegmentedPill,
   useNexusAppearance,
 } from '@app/components/nexus/ui';
@@ -67,6 +71,9 @@ function getVerificationBadgeProps(
 export type NexusPacketExplorerSearchCategory =
   | 'all'
   | NexusPacketExplorerSearchGroupKey;
+
+export const PACKET_EXPLORER_SEARCH_RESULTS_LOADING_SCOPE =
+  'packet-explorer:search-results';
 
 type PacketExplorerRoutePacketInput = {
   packetId: string;
@@ -304,13 +311,11 @@ export function NexusPacketExplorerSearchPanel({
           </Text>
         </View>
 
-        <TextInput
-          className={`rounded-[22px] border px-4 py-3 ${appearance.textInputClass}`}
+        <NexusSearchField
+          inputClassName="rounded-[22px]"
           onChangeText={onChangeSearchValue}
           onSubmitEditing={() => onSearch()}
           placeholder="Search packet id, revision id, title, label, or summary"
-          placeholderTextColor={appearance.textInputPlaceholderColor}
-          returnKeyType="search"
           value={searchValue}
         />
 
@@ -330,12 +335,14 @@ export function NexusPacketExplorerSearchPanel({
         </View>
 
         {searchError ? (
-          <NexusCard tone="rose">
-            <Text className={appearance.itemBodyClass}>{searchError}</Text>
-          </NexusCard>
+          <NexusSearchErrorState>{searchError}</NexusSearchErrorState>
         ) : null}
       </NexusCard>
 
+      <NexusSearchResultsBoundary
+        loadingLabel="Searching packets..."
+        loadingScope={PACKET_EXPLORER_SEARCH_RESULTS_LOADING_SCOPE}
+      >
       {searchResult ? (
         <View className="gap-4">
           <NexusCard className="gap-4">
@@ -359,11 +366,7 @@ export function NexusPacketExplorerSearchPanel({
 
           {activeCategory === 'all' ? (
             searchResult.total_result_count === 0 ? (
-              <NexusCard>
-                <Text className={appearance.itemBodyClass}>
-                  No packets matched this search.
-                </Text>
-              </NexusCard>
+              <NexusSearchEmptyState>No packets matched this search.</NexusSearchEmptyState>
             ) : (
               searchResult.groups.map((group) => (
                 <SearchGroupSection
@@ -387,14 +390,13 @@ export function NexusPacketExplorerSearchPanel({
               onRoutePacketToExport={onRoutePacketToExport}
             />
           ) : (
-            <NexusCard>
-              <Text className={appearance.itemBodyClass}>
-                No results found in this category.
-              </Text>
-            </NexusCard>
+            <NexusSearchEmptyState>
+              No results found in this category.
+            </NexusSearchEmptyState>
           )}
         </View>
       ) : null}
+      </NexusSearchResultsBoundary>
     </View>
   );
 }

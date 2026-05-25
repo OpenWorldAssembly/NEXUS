@@ -6,7 +6,7 @@
 import type { Href } from 'expo-router';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { buildIdentityRouteHref, getIdentityReturnDestination } from '@app/components/nexus/nexus-route-utils';
 import {
@@ -19,7 +19,14 @@ import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import {
   NexusActionButton,
   NexusCard,
+  NexusSearchEmptyState,
+  NexusSearchField,
+  NexusSearchResultList,
+  NexusSearchResultRow,
+  NexusSearchResultsBoundary,
+  NexusSearchStatusText,
   useNexusAppearance,
+  useNexusLoading,
 } from '@app/components/nexus/ui';
 import { NexusTabRail, type NexusTabNode } from '@app/components/nexus/ui/tabs/nexus-tabs';
 import type { NexusIdentitySearchResultPayload } from '@runtime/nexus/nexus-api-types';
@@ -36,6 +43,8 @@ const IDENTITY_MODE_TAB_NODES: NexusTabNode[] = [
   { id: 'passkey', label: 'Passkey' },
   { id: 'import', label: 'Import bundle', shortLabel: 'Import' },
 ];
+
+const IDENTITY_SIGN_IN_RESULTS_LOADING_SCOPE = 'identity:sign-in-results';
 
 function getStorageModeCopy(
   storageMode: 'none' | 'session_only' | 'saved_on_device' | null
@@ -84,6 +93,7 @@ export default function NexusIdentitySignInPage() {
   }>();
   const router = useRouter();
   const appearance = useNexusAppearance();
+  const loading = useNexusLoading();
   const { setActiveScopeId } = useNexusShell();
   const {
     currentLabel,
@@ -153,6 +163,11 @@ export default function NexusIdentitySignInPage() {
 
     setIsSearchingIdentities(true);
     const timeoutHandle = setTimeout(() => {
+      const operationId = loading.beginLoading(
+        IDENTITY_SIGN_IN_RESULTS_LOADING_SCOPE,
+        { label: 'Searching identities...' }
+      );
+
       void fetchNexusIdentitySearchPayload({
         query: identityQuery,
         savedActorPacketIds: claimedIdentities.map((identity) => identity.actor_packet_id),
@@ -181,6 +196,7 @@ export default function NexusIdentitySignInPage() {
           if (isMounted) {
             setIsSearchingIdentities(false);
           }
+          loading.endLoading(operationId);
         });
     }, 220);
 
@@ -188,7 +204,7 @@ export default function NexusIdentitySignInPage() {
       isMounted = false;
       clearTimeout(timeoutHandle);
     };
-  }, [claimedIdentities, identityQuery, normalizedIdentityQuery]);
+  }, [claimedIdentities, identityQuery, loading, normalizedIdentityQuery]);
 
   const visibleIdentities = useMemo(() => {
     if (normalizedIdentityQuery.length === 0) {
@@ -384,7 +400,7 @@ export default function NexusIdentitySignInPage() {
               hint="Search Nexus by display alias, packet id, or key match."
               error={identitySearchError ?? undefined}
             >
-              <IdentityInput
+              <NexusSearchField
                 value={identityQuery}
                 onChangeText={setIdentityQuery}
                 placeholder="Search claimed identities in Nexus"
@@ -409,30 +425,28 @@ export default function NexusIdentitySignInPage() {
             ) : null}
 
             {isSearchingIdentities ? (
-              <Text className={appearance.itemMetaClass}>Searching identities…</Text>
+              <NexusSearchStatusText>Searching identities…</NexusSearchStatusText>
             ) : null}
 
-            {visibleIdentities.length === 0 ? (
-              <NexusCard className={`gap-3 p-4 ${appearance.cardInsetClass}`}>
-                <Text className={appearance.itemBodyClass}>
-                  {normalizedIdentityQuery.length > 0
-                    ? 'No claimed identities match this search in Nexus.'
-                    : 'No claimed identities are saved on this device yet.'}
-                </Text>
-              </NexusCard>
-            ) : showIdentityResults ? (
-              <View className="gap-3">
+            <NexusSearchResultsBoundary
+              loadingLabel="Searching identities..."
+              loadingScope={IDENTITY_SIGN_IN_RESULTS_LOADING_SCOPE}
+            >
+              {visibleIdentities.length === 0 ? (
+              <NexusSearchEmptyState className={`gap-3 p-4 ${appearance.cardInsetClass}`}>
+                {normalizedIdentityQuery.length > 0
+                  ? 'No claimed identities match this search in Nexus.'
+                  : 'No claimed identities are saved on this device yet.'}
+              </NexusSearchEmptyState>
+              ) : showIdentityResults ? (
+              <NexusSearchResultList className="gap-3">
                 {visibleIdentities.map((identity) => {
                   const isSelected = selectedIdentityId === identity.actor_packet_id;
 
                   return (
-                    <Pressable
+                    <NexusSearchResultRow
                       key={identity.actor_packet_id}
-                      className={`rounded-[18px] border px-4 py-3 ${
-                        isSelected
-                          ? 'border-nexus-sky bg-nexus-sky/10'
-                          : appearance.cardInsetClass
-                      }`}
+                      isSelected={isSelected}
                       onPress={() => {
                         setSelectedIdentityId(identity.actor_packet_id);
                         setIdentityQuery(identity.display_alias ?? '');
@@ -449,11 +463,12 @@ export default function NexusIdentitySignInPage() {
                           ? 'Saved on this device'
                           : 'Known in Nexus only'}
                       </Text>
-                    </Pressable>
+                    </NexusSearchResultRow>
                   );
                 })}
-              </View>
-            ) : null}
+              </NexusSearchResultList>
+              ) : null}
+            </NexusSearchResultsBoundary>
 
             <IdentityField
               label="Bundle passphrase"

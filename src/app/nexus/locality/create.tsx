@@ -25,8 +25,14 @@ import {
   NexusActionButton,
   NexusBadge,
   NexusCard,
+  NexusSearchField,
+  NexusSearchResultList,
+  NexusSearchResultRow,
+  NexusSearchResultsBoundary,
+  NexusSearchStatusText,
   NexusSectionHeader,
   useNexusAppearance,
+  useNexusLoading,
 } from '@app/components/nexus/ui';
 import { NexusTabRail, type NexusTabNode } from '@app/components/nexus/ui/tabs/nexus-tabs';
 import { NexusModalShell } from '@app/components/nexus/ui/overlays';
@@ -61,6 +67,9 @@ type LocalityTypePickerContext = {
 
 const LOCALITY_LEVELS: LocalityLevel[] = ['nation', 'region', 'city', 'district'];
 const SEARCH_RESULT_LIMIT = 8;
+const LOCALITY_CREATE_SEARCH_LOADING_SCOPE = 'locality-create:search-results';
+const LOCALITY_CREATE_PARENT_PICKER_LOADING_SCOPE =
+  'locality-create:parent-picker-results';
 
 const LOCALITY_WORKFLOW_TAB_NODES: NexusTabNode[] = [
   { id: 'search', label: 'Search', shortLabel: 'Search' },
@@ -1207,6 +1216,8 @@ function LocalityLevelSearchRow(input: {
   errorMessage?: string | null;
 }) {
   const appearance = useNexusAppearance();
+  const loading = useNexusLoading();
+  const searchLoadingScope = `locality-create:level-row-results:${input.level}`;
   const [results, setResults] = useState<NexusLocationSearchResult[]>([]);
   const query = input.entry.query.trim();
   const parentScopeId = input.parentResult?.scope_id ?? null;
@@ -1228,6 +1239,10 @@ function LocalityLevelSearchRow(input: {
     }
 
     const timeoutHandle = setTimeout(() => {
+      const operationId = loading.beginLoading(searchLoadingScope, {
+        label: 'Searching existing localities...',
+      });
+
       void fetchNexusLocationSearchPayload(query, {
         level: input.level,
         parentScopeId,
@@ -1245,6 +1260,9 @@ function LocalityLevelSearchRow(input: {
           }
 
           setResults([]);
+        })
+        .finally(() => {
+          loading.endLoading(operationId);
         });
     }, 220);
 
@@ -1252,7 +1270,7 @@ function LocalityLevelSearchRow(input: {
       isMounted = false;
       clearTimeout(timeoutHandle);
     };
-  }, [input.level, parentScopeId, query, shouldSearch]);
+  }, [input.level, loading, parentScopeId, query, searchLoadingScope, shouldSearch]);
 
   return (
     <View className="gap-2">
@@ -1278,7 +1296,7 @@ function LocalityLevelSearchRow(input: {
           </View>
         </Pressable>
       </View>
-      <TextInput
+      <NexusSearchField
         ref={input.inputRef}
         value={input.entry.query}
         editable={input.isEnabled}
@@ -1290,10 +1308,7 @@ function LocalityLevelSearchRow(input: {
             ? `Search or enter ${input.selectedKind.label.toLowerCase()}`
             : `Choose ${getLevelLabel(getPreviousLevel(input.level) ?? 'nation').toLowerCase()} first`
         }
-        placeholderTextColor={appearance.textInputPlaceholderColor}
-        className={`rounded-[18px] border px-4 py-3 ${
-          input.isEnabled ? appearance.textInputClass : appearance.cardInsetClass
-        }`}
+        isInset={!input.isEnabled}
       />
 
       {input.errorMessage ? (
@@ -1301,11 +1316,14 @@ function LocalityLevelSearchRow(input: {
       ) : null}
 
       {results.length > 0 ? (
-        <View className="gap-2">
+        <NexusSearchResultsBoundary
+          loadingLabel="Searching existing localities..."
+          loadingScope={searchLoadingScope}
+        >
+        <NexusSearchResultList>
           {results.map((result) => (
-            <Pressable
+            <NexusSearchResultRow
               key={result.scope_id}
-              className={`rounded-[18px] border px-4 py-3 ${appearance.cardInsetClass}`}
               onPress={() => input.onSelectResult(input.level, result)}
             >
               <View className="flex-row flex-wrap items-center gap-2">
@@ -1319,9 +1337,10 @@ function LocalityLevelSearchRow(input: {
                   ? ` · ${result.scope_hierarchy_system}`
                   : ''}
               </Text>
-            </Pressable>
+            </NexusSearchResultRow>
           ))}
-        </View>
+        </NexusSearchResultList>
+        </NexusSearchResultsBoundary>
       ) : null}
     </View>
   );
@@ -1336,6 +1355,7 @@ export default function NexusLocalityCreatePage() {
   }>();
   const router = useRouter();
   const appearance = useNexusAppearance();
+  const loading = useNexusLoading();
   const {
     activeScope,
     currentActorPacketId,
@@ -1537,6 +1557,11 @@ export default function NexusLocalityCreatePage() {
 
     setIsParentSearching(true);
     const timeoutHandle = setTimeout(() => {
+      const operationId = loading.beginLoading(
+        LOCALITY_CREATE_PARENT_PICKER_LOADING_SCOPE,
+        { label: 'Searching existing localities...' }
+      );
+
       void fetchNexusLocationSearchPayload(query)
         .then((payload) => {
           if (!isMounted) {
@@ -1567,6 +1592,7 @@ export default function NexusLocalityCreatePage() {
           if (isMounted) {
             setIsParentSearching(false);
           }
+          loading.endLoading(operationId);
         });
     }, 220);
 
@@ -1574,7 +1600,7 @@ export default function NexusLocalityCreatePage() {
       isMounted = false;
       clearTimeout(timeoutHandle);
     };
-  }, [parentPickerNode, parentSearchQuery]);
+  }, [loading, parentPickerNode, parentSearchQuery]);
 
   const scrollToBuilder = () => {
     setTimeout(() => {
@@ -1643,6 +1669,11 @@ export default function NexusLocalityCreatePage() {
 
     setIsSearching(true);
     const timeoutHandle = setTimeout(() => {
+      const operationId = loading.beginLoading(
+        LOCALITY_CREATE_SEARCH_LOADING_SCOPE,
+        { label: 'Searching Nexus directory...' }
+      );
+
       void fetchNexusLocationSearchPayload(searchQuery)
         .then((payload) => {
           if (!isMounted) {
@@ -1667,6 +1698,7 @@ export default function NexusLocalityCreatePage() {
           if (isMounted) {
             setIsSearching(false);
           }
+          loading.endLoading(operationId);
         });
     }, 220);
 
@@ -1674,7 +1706,7 @@ export default function NexusLocalityCreatePage() {
       isMounted = false;
       clearTimeout(timeoutHandle);
     };
-  }, [searchQuery, searchRefreshNonce]);
+  }, [loading, searchQuery, searchRefreshNonce]);
 
   const handleTopSearchSubmit = () => {
     if (showSearchCreateRow && effectiveSearchCreateCandidate && visibleSearchResults.length === 0) {
@@ -2954,7 +2986,7 @@ export default function NexusLocalityCreatePage() {
                   </Text>
                 </View>
                 <View className="gap-0">
-                  <TextInput
+                  <NexusSearchField
                     value={searchQuery}
                     onChangeText={(nextValue) => {
                       setSearchQuery(nextValue);
@@ -2964,20 +2996,19 @@ export default function NexusLocalityCreatePage() {
                     }}
                     onSubmitEditing={handleTopSearchSubmit}
                     placeholder="Search city, region, country, or path"
-                    placeholderTextColor={appearance.textInputPlaceholderColor}
-                    className={`${
-                      hasSearchDropdown
-                        ? 'rounded-t-[18px] rounded-b-none border px-4 py-3'
-                        : 'rounded-[18px] border px-4 py-3'
-                    } ${appearance.textInputClass}`}
+                    hasAttachedResults={hasSearchDropdown}
                   />
 
-                  {hasSearchDropdown ? (
-                    <View className="overflow-hidden rounded-b-[18px] border border-t-0 border-nexus-line/70 bg-white/[0.03]">
+                  <NexusSearchResultsBoundary
+                    loadingLabel="Searching Nexus directory..."
+                    loadingScope={LOCALITY_CREATE_SEARCH_LOADING_SCOPE}
+                  >
+                    {hasSearchDropdown ? (
+                    <NexusSearchResultList attached>
                       {visibleSearchResults.map((result) => (
-                        <Pressable
+                        <NexusSearchResultRow
                           key={result.scope_id}
-                          className="border-t border-nexus-line/60 px-4 py-3"
+                          attached
                           onPress={() => setSelectedExistingResult(result)}
                         >
                           <View className="flex-row flex-wrap items-center gap-2">
@@ -2991,11 +3022,11 @@ export default function NexusLocalityCreatePage() {
                               ? ` · ${result.scope_hierarchy_system}`
                               : ''}
                           </Text>
-                        </Pressable>
+                        </NexusSearchResultRow>
                       ))}
                       {showSearchCreateRow && effectiveSearchCreateCandidate ? (
-                        <Pressable
-                          className="border-t border-nexus-line/60 px-4 py-3"
+                        <NexusSearchResultRow
+                          attached
                           onPress={() => {
                             setCreateKindCandidate(effectiveSearchCreateCandidate);
                             setSelectedCreateKindId(
@@ -3011,19 +3042,20 @@ export default function NexusLocalityCreatePage() {
                             </Text>
                             <NexusBadge label="new locality" tone="gold" />
                           </View>
-                        </Pressable>
+                        </NexusSearchResultRow>
                       ) : null}
                       {hiddenSearchResultCount > 0 ? (
                         <Text className={`border-t border-nexus-line/60 px-4 py-3 ${appearance.itemMetaClass}`}>
                           Showing first {SEARCH_RESULT_LIMIT} of {results.length}. Refine your search to narrow results.
                         </Text>
                       ) : null}
-                    </View>
-                  ) : null}
+                    </NexusSearchResultList>
+                    ) : null}
+                  </NexusSearchResultsBoundary>
                 </View>
 
                 {isSearching ? (
-                  <Text className={appearance.itemMetaClass}>Searching Nexus directory...</Text>
+                  <NexusSearchStatusText>Searching Nexus directory...</NexusSearchStatusText>
                 ) : null}
               </View>
 
@@ -3334,7 +3366,7 @@ export default function NexusLocalityCreatePage() {
 
                   <View className="gap-2">
                     <Text className={appearance.itemMetaClass}>Search existing localities</Text>
-                    <TextInput
+                    <NexusSearchField
                       ref={parentSearchInputRef}
                       autoFocus={parentPickerNode !== null}
                       value={parentSearchQuery}
@@ -3347,19 +3379,18 @@ export default function NexusLocalityCreatePage() {
                         }
                       }}
                       placeholder="Search existing parent scope"
-                      placeholderTextColor={appearance.textInputPlaceholderColor}
-                      className={`${
-                        parentSearchResults.length > 0
-                          ? 'rounded-t-[18px] rounded-b-none border px-4 py-3'
-                          : 'rounded-[18px] border px-4 py-3'
-                      } ${appearance.textInputClass}`}
+                      hasAttachedResults={parentSearchResults.length > 0}
                     />
-                    {parentSearchResults.length > 0 ? (
-                      <View className="overflow-hidden rounded-b-[18px] border border-t-0 border-nexus-line/70 bg-white/[0.03]">
+                    <NexusSearchResultsBoundary
+                      loadingLabel="Searching existing localities..."
+                      loadingScope={LOCALITY_CREATE_PARENT_PICKER_LOADING_SCOPE}
+                    >
+                      {parentSearchResults.length > 0 ? (
+                      <NexusSearchResultList attached>
                         {parentSearchResults.map((result) => (
-                          <Pressable
+                          <NexusSearchResultRow
                             key={result.scope_id}
-                            className="border-t border-nexus-line/60 px-4 py-3"
+                            attached
                             onPress={() => handleSelectExistingGraphParent(parentPickerNode.id, result)}
                           >
                             <View className="flex-row flex-wrap items-center gap-2">
@@ -3370,12 +3401,13 @@ export default function NexusLocalityCreatePage() {
                               ) : null}
                             </View>
                             <Text className={appearance.itemMetaClass}>{result.path_label}</Text>
-                          </Pressable>
+                          </NexusSearchResultRow>
                         ))}
-                      </View>
-                    ) : null}
+                      </NexusSearchResultList>
+                      ) : null}
+                    </NexusSearchResultsBoundary>
                     {isParentSearching ? (
-                      <Text className={appearance.itemMetaClass}>Searching existing localities...</Text>
+                      <NexusSearchStatusText>Searching existing localities...</NexusSearchStatusText>
                     ) : null}
                   </View>
                 </View>

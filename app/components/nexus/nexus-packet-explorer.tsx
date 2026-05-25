@@ -12,10 +12,14 @@ import {
   NexusActionButton,
   NexusCard,
   NexusChevronIcon,
+  useNexusLoading,
 } from '@app/components/nexus/ui';
 import { NexusPacketExplorerContent } from '@app/components/nexus/packet-explorer/nexus-packet-explorer-content';
 import { NexusPacketExplorerPrimaryRail } from '@app/components/nexus/packet-explorer/nexus-packet-explorer-primary-rail';
-import type { NexusPacketExplorerSearchCategory } from '@app/components/nexus/packet-explorer/nexus-packet-explorer-search-panel';
+import {
+  PACKET_EXPLORER_SEARCH_RESULTS_LOADING_SCOPE,
+  type NexusPacketExplorerSearchCategory,
+} from '@app/components/nexus/packet-explorer/nexus-packet-explorer-search-panel';
 import { NexusPacketExplorerShellHeader } from '@app/components/nexus/packet-explorer/nexus-packet-explorer-shell-header';
 import { NexusPacketExplorerTabDeck } from '@app/components/nexus/packet-explorer/nexus-packet-explorer-tab-deck';
 import { NexusPacketExplorerToolbar } from '@app/components/nexus/packet-explorer/nexus-packet-explorer-toolbar';
@@ -88,6 +92,7 @@ export default function NexusPacketExplorer() {
     themeMode,
   } = useNexusShell();
   const router = useRouter();
+  const loading = useNexusLoading();
   const { width } = useWindowDimensions();
   const [searchValue, setSearchValue] = useState('');
   const [searchResult, setSearchResult] =
@@ -432,6 +437,10 @@ export default function NexusPacketExplorer() {
 
     setIsSearchingPackets(true);
     setSearchError(null);
+    const operationId = loading.beginLoading(
+      PACKET_EXPLORER_SEARCH_RESULTS_LOADING_SCOPE,
+      { label: 'Searching packets...' }
+    );
 
     try {
       const nextPageByCategory = createDefaultSearchPageState();
@@ -454,6 +463,7 @@ export default function NexusPacketExplorer() {
       );
     } finally {
       setIsSearchingPackets(false);
+      loading.endLoading(operationId);
     }
   };
 
@@ -477,6 +487,10 @@ export default function NexusPacketExplorer() {
 
     setIsSearchingPackets(true);
     setSearchError(null);
+    const operationId = loading.beginLoading(
+      PACKET_EXPLORER_SEARCH_RESULTS_LOADING_SCOPE,
+      { label: 'Searching packets...' }
+    );
 
     try {
       const nextSearchResult = await runPacketSearch({
@@ -493,6 +507,7 @@ export default function NexusPacketExplorer() {
       );
     } finally {
       setIsSearchingPackets(false);
+      loading.endLoading(operationId);
     }
   };
 
@@ -513,6 +528,10 @@ export default function NexusPacketExplorer() {
     setActiveSearchCategory(category);
     setIsSearchingPackets(true);
     setSearchError(null);
+    const operationId = loading.beginLoading(
+      PACKET_EXPLORER_SEARCH_RESULTS_LOADING_SCOPE,
+      { label: 'Searching packets...' }
+    );
 
     try {
       const nextSearchResult = await runPacketSearch({
@@ -530,6 +549,7 @@ export default function NexusPacketExplorer() {
       );
     } finally {
       setIsSearchingPackets(false);
+      loading.endLoading(operationId);
     }
   };
 

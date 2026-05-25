@@ -5,14 +5,20 @@
 
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ScrollView, Text, TextInput, View } from 'react-native';
 
 import {
   NexusActionButton,
   NexusCard,
+  NexusSearchField,
+  NexusSearchResultList,
+  NexusSearchResultRow,
+  NexusSearchResultsBoundary,
+  NexusSearchStatusText,
   NexusSegmentedPill,
   NexusSectionHeader,
   useNexusAppearance,
+  useNexusLoading,
 } from '@app/components/nexus/ui';
 import type { NexusLocationSearchResult } from '@runtime/nexus/location-search';
 import type { NexusSecurityMode } from '@runtime/nexus/nexus-api-types';
@@ -23,6 +29,9 @@ export type IdentityLocationSelection = {
   selectedResult: NexusLocationSearchResult | null;
   selectedDisclosureIndex: number | null;
 };
+
+const IDENTITY_LOCATION_LOOKUP_LOADING_SCOPE =
+  'identity:location-lookup-results';
 
 export function buildLocationDisclosure(selection: IdentityLocationSelection) {
   if (!selection.selectedResult) {
@@ -226,6 +235,7 @@ export function LocationLookupField({
   error?: string;
 }) {
   const appearance = useNexusAppearance();
+  const loading = useNexusLoading();
   const [results, setResults] = useState<NexusLocationSearchResult[]>([]);
   const [hasCreateCandidate, setHasCreateCandidate] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
@@ -257,6 +267,11 @@ export function LocationLookupField({
 
     setIsSearching(true);
     const timeoutHandle = setTimeout(() => {
+      const operationId = loading.beginLoading(
+        IDENTITY_LOCATION_LOOKUP_LOADING_SCOPE,
+        { label: 'Searching locations...' }
+      );
+
       void fetchNexusLocationSearchPayload(selection.query)
         .then((payload) => {
           if (!isMounted) {
@@ -284,6 +299,7 @@ export function LocationLookupField({
           if (isMounted) {
             setIsSearching(false);
           }
+          loading.endLoading(operationId);
         });
     }, 220);
 
@@ -291,7 +307,7 @@ export function LocationLookupField({
       isMounted = false;
       clearTimeout(timeoutHandle);
     };
-  }, [selection.query]);
+  }, [loading, selection.query]);
 
   return (
     <IdentityField
@@ -299,7 +315,7 @@ export function LocationLookupField({
       hint="Optional. Choose a community branch now, or skip this and start with Global + You. This sets your geographic scope tree, not a public profile disclosure."
       error={error ?? searchError ?? undefined}
     >
-      <IdentityInput
+      <NexusSearchField
         value={selection.query}
         onChangeText={(nextQuery) =>
           onChange({
@@ -315,18 +331,20 @@ export function LocationLookupField({
         }
         placeholder="Search city, region, or district"
       />
-      {isSearching ? <Text className={appearance.itemMetaClass}>Searching locations...</Text> : null}
+      {isSearching ? <NexusSearchStatusText>Searching locations...</NexusSearchStatusText> : null}
+      <NexusSearchResultsBoundary
+        loadingLabel="Searching locations..."
+        loadingScope={IDENTITY_LOCATION_LOOKUP_LOADING_SCOPE}
+      >
       {shouldShowResults ? (
-        <View className="gap-2">
+        <NexusSearchResultList>
           {results.map((result) => {
             const isSelected = selection.selectedResult?.scope_id === result.scope_id;
 
             return (
-              <Pressable
+              <NexusSearchResultRow
                 key={result.scope_id}
-                className={`rounded-[18px] border px-4 py-3 ${
-                  isSelected ? 'border-nexus-sky bg-nexus-sky/10' : appearance.cardInsetClass
-                }`}
+                isSelected={isSelected}
                 onPress={() =>
                   onChange({
                     query: result.name,
@@ -344,11 +362,12 @@ export function LocationLookupField({
                     Similar match. Confirm this is the right locality before selecting.
                   </Text>
                 ) : null}
-              </Pressable>
+              </NexusSearchResultRow>
             );
           })}
-        </View>
+        </NexusSearchResultList>
       ) : null}
+      </NexusSearchResultsBoundary>
       {onCreateLocality && hasCreateCandidate && selection.query.trim().length >= 2 ? (
         <NexusCard className={`gap-3 p-4 ${appearance.cardInsetClass}`}>
           <Text className={appearance.itemTitleClass}>Not found?</Text>

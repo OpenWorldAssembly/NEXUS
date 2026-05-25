@@ -9,7 +9,13 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 import {
   NexusActionButton,
   NexusBadge,
+  NexusSearchField,
+  NexusSearchResultList,
+  NexusSearchResultRow,
+  NexusSearchResultsBoundary,
+  NexusSearchStatusText,
   useNexusAppearance,
+  useNexusLoading,
 } from '@app/components/nexus/ui';
 import type { NexusLocationSearchResult } from '@runtime/nexus/location-search';
 import { fetchNexusLocationSearchPayload } from '@runtime/nexus/nexus-query-api';
@@ -65,7 +71,9 @@ export function LocalityCreateGraphRow(input: {
   onClearExistingNode: (nodeId: string) => void;
 }) {
   const appearance = useNexusAppearance();
+  const loading = useNexusLoading();
   const query = input.node.query.trim();
+  const searchLoadingScope = `locality-create:graph-row-results:${input.node.id}`;
   const [results, setResults] = useState<NexusLocationSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showChildren, setShowChildren] = useState(false);
@@ -89,6 +97,10 @@ export function LocalityCreateGraphRow(input: {
 
     setIsSearching(true);
     const timeoutHandle = setTimeout(() => {
+      const operationId = loading.beginLoading(searchLoadingScope, {
+        label: 'Searching existing localities...',
+      });
+
       void fetchNexusLocationSearchPayload(query)
         .then((payload) => {
           if (!isMounted) {
@@ -108,6 +120,7 @@ export function LocalityCreateGraphRow(input: {
           if (isMounted) {
             setIsSearching(false);
           }
+          loading.endLoading(operationId);
         });
     }, 220);
 
@@ -115,7 +128,7 @@ export function LocalityCreateGraphRow(input: {
       isMounted = false;
       clearTimeout(timeoutHandle);
     };
-  }, [input.searchResultLimit, query, shouldSearch]);
+  }, [input.searchResultLimit, loading, query, searchLoadingScope, shouldSearch]);
 
   useEffect(() => {
     let isMounted = true;
@@ -249,7 +262,7 @@ export function LocalityCreateGraphRow(input: {
           </View>
 
           <View className="gap-0">
-            <TextInput
+            <NexusSearchField
               ref={input.inputRef}
               value={input.node.query}
               editable={!isExistingScope}
@@ -257,19 +270,19 @@ export function LocalityCreateGraphRow(input: {
               onSubmitEditing={submitNode}
               returnKeyType="next"
               placeholder={`Search or enter ${input.kindLabel.toLowerCase()}`}
-              placeholderTextColor={appearance.textInputPlaceholderColor}
-              className={`${
-                results.length > 0
-                  ? 'rounded-t-[18px] rounded-b-none border px-4 py-3'
-                  : 'rounded-[18px] border px-4 py-3'
-              } ${isExistingScope ? appearance.cardInsetClass : appearance.textInputClass}`}
+              hasAttachedResults={results.length > 0}
+              isInset={isExistingScope}
             />
-            {results.length > 0 ? (
-              <View className="overflow-hidden rounded-b-[18px] border border-t-0 border-nexus-line/70 bg-white/[0.03]">
+            <NexusSearchResultsBoundary
+              loadingLabel="Searching existing localities..."
+              loadingScope={searchLoadingScope}
+            >
+              {results.length > 0 ? (
+              <NexusSearchResultList attached>
                 {results.map((result) => (
-                  <Pressable
+                  <NexusSearchResultRow
                     key={result.scope_id}
-                    className="border-t border-nexus-line/60 px-4 py-3"
+                    attached
                     onPress={() => {
                       input.onSelectResult(input.node.id, result);
                       setResults([]);
@@ -281,14 +294,15 @@ export function LocalityCreateGraphRow(input: {
                       <NexusBadge label={result.match_type.replace(/_/g, ' ')} />
                     </View>
                     <Text className={appearance.itemMetaClass}>{result.path_label}</Text>
-                  </Pressable>
+                  </NexusSearchResultRow>
                 ))}
-              </View>
-            ) : null}
+              </NexusSearchResultList>
+              ) : null}
+            </NexusSearchResultsBoundary>
           </View>
 
           {isSearching ? (
-            <Text className={appearance.itemMetaClass}>Searching existing localities...</Text>
+            <NexusSearchStatusText>Searching existing localities...</NexusSearchStatusText>
           ) : null}
 
           {input.existingParentResult && showChildren ? (

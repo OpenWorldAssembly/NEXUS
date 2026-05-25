@@ -53,6 +53,12 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - Dashboard packet validation, packet Explorer import outcomes, and locality create/reuse/picker dialogs now share the same modal shell while preserving their existing visual classes, close behavior, and route-local content.
 - Auth/session gates and feature-status overlays remain specialized for later migration so generic overlay UI does not absorb session or shell behavior.
 
+## 2026-05 Nexus search UI consolidation start
+
+- Nexus search presentation now has shared primitives under `app/components/nexus/ui/forms/search/*` for search fields, result lists, result rows, status text, empty/error states, and loading-aware result boundaries.
+- The consolidation is UI-only: Packet Explorer, identity, and locality create keep their own debounce timing, API calls, ranking, filtering, selection, and create-candidate behavior.
+- Search loading scopes attach to the visual result surface, such as a dropdown or dedicated results panel, instead of packet types, route names, or search engine semantics.
+
 ## 2026-05 Nexus UI primitive split
 
 - The broad `app/components/nexus/nexus-ui.tsx` primitive file is now a compatibility bridge over focused `app/components/nexus/ui/*` component-type modules.

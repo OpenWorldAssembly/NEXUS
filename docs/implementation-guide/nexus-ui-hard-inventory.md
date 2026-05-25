@@ -194,7 +194,7 @@ Recommended order, based on duplication, risk, and likely payoff:
 
 1. **Overlays and modal shells**: initial shared modal shell and outcome/confirm primitives now exist under `ui/overlays`; remaining work should focus on auth/session gates, feature-status overlays, badge tooltips, and any modal content that deserves picker/outcome-specific composition. Keep auth/session logic separate from modal chrome.
 
-2. **Form field shells and searchable result lists**: base segmented and inline-select primitives now live under `ui/forms`; remaining work should target locality search, identity lookup, Explorer search/export/import, trust/roles inputs, and discussion composers that repeat label/hint/error/input/list behavior.
+2. **Form field shells and searchable result lists**: base segmented, inline-select, and search-result primitives now live under `ui/forms`; Explorer search/export lookup, identity lookup, and locality create search dropdowns now share `ui/forms/search` presentation and loading-boundary hooks. Remaining work should target packet import fields, trust/roles inputs, discussion composers, and broader label/hint/error/input shell behavior.
 
 3. **Layout frames and section scaffolds**: large routes repeat page scroll containers, section gutters, card grids, toolbar rows, rail sections, and panel frames.
 
@@ -213,7 +213,7 @@ app/components/nexus/ui/
   cards/       # base surfaces, packet cards, focus/preview cards, stat cards, warning/outcome cards
   tabs/        # shared tab frame/label/rail/stack plus Explorer document-tab extensions
   overlays/    # modal shell, confirmation, outcome dialog, popover, gates, tooltip hosts
-  forms/       # field shell, text input, composer, search box, result list, picker shell, toggles
+  forms/       # field shell, text input, composer, search box/result list, picker shell, toggles
   layout/      # page frame, section band/header, panel split, rail section, toolbar frame
   feedback/    # loading, empty, error, warning, operation result/status rows
 ```
