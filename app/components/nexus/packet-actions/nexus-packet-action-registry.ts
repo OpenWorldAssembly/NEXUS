@@ -2,7 +2,7 @@
  * File: nexus-packet-action-registry.ts
  * Description: Builds reusable Nexus packet action menu items without binding them to a surface.
  */
-import type { NexusActionMenuItem } from '@app/components/nexus/action-card';
+import type { NexusActionMenuItem } from '@app/components/nexus/ui/cards/action-card';
 
 export type NexusPacketActionInput = {
   packetId: string;

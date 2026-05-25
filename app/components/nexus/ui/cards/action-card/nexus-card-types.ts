@@ -7,7 +7,7 @@ import type { ReactNode } from 'react';
 import type {
   NexusLoadingOptions,
   NexusLoadingScope,
-} from '@app/components/nexus/loading';
+} from '@app/components/nexus/ui/feedback/loading';
 
 export type NexusActionMenuTone =
   | 'default'

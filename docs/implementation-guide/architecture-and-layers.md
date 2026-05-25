@@ -98,7 +98,7 @@ Adapters should not invent parallel business logic for trust, validation, compat
 
 ### Nexus scoped loading
 
-Nexus loading chrome is an app-layer concern. The scoped loading provider, boundary, overlay, and hook live under `app/components/nexus/loading/*` and track caller-owned visual scopes such as a page, panel, tab, card, menu, or action pane.
+Nexus loading chrome is an app-layer concern. The scoped loading provider, boundary, overlay, and hook live under `app/components/nexus/ui/feedback/loading/*` and track caller-owned visual scopes such as a page, panel, tab, card, menu, or action pane.
 
 The loading system must not depend on packet type, mutation intent, packet action registry entries, or runtime operation categories. Runtime and core code should remain unaware of blur overlays, spinners, and UI input blocking.
 

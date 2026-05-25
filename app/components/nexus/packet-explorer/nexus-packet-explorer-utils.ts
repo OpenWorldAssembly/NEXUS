@@ -1,4 +1,4 @@
-import { middleTruncateText } from '@app/components/nexus/nexus-tab-primitives';
+import { middleTruncateText } from '@app/components/nexus/ui/tabs/nexus-tab-primitives';
 import type { NexusActionIntentDescriptor, NexusActionState } from '@core/contracts';
 import type {
   NexusPacketExplorerLinkGroup,

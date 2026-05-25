@@ -3,7 +3,7 @@
  * Description: Builds temporary dashboard lifecycle/trust badges from dashboard packet projections.
  */
 import type { NexusPacketVerificationSummary } from '@core/contracts';
-import type { NexusCardBadge } from '@app/components/nexus/action-card';
+import type { NexusCardBadge } from '@app/components/nexus/ui/cards/action-card';
 
 export type NexusDashboardLifecycleState = 'active' | 'archived' | 'withdrawn';
 export type NexusDashboardTrustState = 'trusted' | 'unverified' | 'flagged';

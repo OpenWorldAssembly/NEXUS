@@ -4,7 +4,7 @@
  */
 
 import type { NexusActionState, NexusPacketCardProjection } from '@core/contracts';
-import type { NexusActionMenuItem } from '@app/components/nexus/action-card';
+import type { NexusActionMenuItem } from '@app/components/nexus/ui/cards/action-card';
 import {
   getNexusPreviewSurfaceLabel,
   resolveNexusPreviewTargetHref,

@@ -18,7 +18,7 @@ import {
   NexusSectionHeader,
   useNexusAppearance,
 } from '@app/components/nexus/nexus-ui';
-import { NexusTabRail, type NexusTabNode } from '@app/components/nexus/nexus-tabs';
+import { NexusTabRail, type NexusTabNode } from '@app/components/nexus/ui/tabs/nexus-tabs';
 import type { NexusRolesPayload } from '@runtime/nexus/nexus-api-types';
 import {
   fetchNexusRolesPayload,

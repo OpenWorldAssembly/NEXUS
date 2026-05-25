@@ -9,7 +9,7 @@ import {
   hasNexusCardActionClusterContent,
   type NexusActionMenuItem,
   type NexusCardBadge,
-} from '@app/components/nexus/action-card';
+} from '@app/components/nexus/ui/cards/action-card';
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import { useNexusAppearance } from '@app/components/nexus/nexus-ui';
 

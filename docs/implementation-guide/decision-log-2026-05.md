@@ -42,6 +42,11 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - A scope becomes active immediately to block duplicate input, while the visual overlay is delayed and minimum-duration guarded to avoid spinner flicker.
 - Shared buttons and action-menu items can now opt into scoped loading with caller-supplied scope strings, while packet action registries and runtime operations remain loading-agnostic.
 
+## 2026-05 Nexus UI folder foundation
+
+- Nexus UI consolidation began with safe shared-module moves only: loading moved under `ui/feedback/loading`, action cards under `ui/cards/action-card`, action lists under `ui/actions/action-list`, and shared tab primitives under `ui/tabs`.
+- The move establishes the canonical `app/components/nexus/ui/*` home without splitting `nexus-ui.tsx`, changing visuals, or moving feature-specific Explorer, locality, discussion, dashboard, preview, or focus components.
+
 ## 2026-05 feature-status explainers
 
 - Disabled and partial Nexus controls now route through a centralized feature-status registry instead of scattering one-off placeholder copy through route files.

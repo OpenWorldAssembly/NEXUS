@@ -25,14 +25,14 @@ import {
   useOptionalNexusLoading,
   type NexusLoadingOptions,
   type NexusLoadingScope,
-} from '@app/components/nexus/loading';
+} from '@app/components/nexus/ui/feedback/loading';
 import { useNexusShellChrome } from '@app/components/nexus/nexus-shell-chrome-context';
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import {
   NexusTabDetail,
   NexusTabFrame,
   NexusTabLabel,
-} from '@app/components/nexus/nexus-tab-primitives';
+} from '@app/components/nexus/ui/tabs/nexus-tab-primitives';
 import type { NexusCardTone } from '@runtime/nexus/nexus-content';
 import {
   getNexusSectionMenuTitle,
@@ -40,7 +40,7 @@ import {
   type NexusUiDensity,
 } from '@runtime/nexus/nexus-shell';
 
-export { NexusCardMenuButton } from '@app/components/nexus/action-card/nexus-card-menu-button';
+export { NexusCardMenuButton } from '@app/components/nexus/ui/cards/action-card/nexus-card-menu-button';
 
 type NexusCardProps = PropsWithChildren<{
   accessibilityLabel?: string;

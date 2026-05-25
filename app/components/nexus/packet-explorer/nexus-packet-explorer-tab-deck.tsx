@@ -12,7 +12,7 @@ import {
   NexusTabCloseButton,
   NexusTabFrame,
   NexusTabLabel,
-} from '@app/components/nexus/nexus-tab-primitives';
+} from '@app/components/nexus/ui/tabs/nexus-tab-primitives';
 import type { PacketExplorerTab } from '@runtime/nexus/packet-explorer-session';
 
 import { getExplorerTabLabel } from './nexus-packet-explorer-utils';

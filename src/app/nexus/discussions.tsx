@@ -15,7 +15,7 @@ import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import { useNexusPreviewTargetParams } from '@app/components/nexus/preview';
-import { NexusTabStack, type NexusTabNode } from '@app/components/nexus/nexus-tabs';
+import { NexusTabStack, type NexusTabNode } from '@app/components/nexus/ui/tabs/nexus-tabs';
 import { useNexusAuthGate } from '@app/components/nexus/nexus-auth-gate';
 import {
   NexusActionButton,

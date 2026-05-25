@@ -4,7 +4,7 @@
  */
 import { Pressable, Text, View } from 'react-native';
 
-import { useOptionalNexusLoading } from '@app/components/nexus/loading';
+import { useOptionalNexusLoading } from '@app/components/nexus/ui/feedback/loading';
 import { NexusThemedBevelEdges, getNexusChromeClasses } from '@app/components/nexus/nexus-ui';
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import type { NexusActionMenuItem, NexusActionMenuTone } from './nexus-card-types';

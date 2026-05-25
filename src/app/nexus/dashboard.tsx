@@ -7,14 +7,14 @@ import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import type { Href } from 'expo-router';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
-import { type NexusActionMenuItem, type NexusCardBadge } from '@app/components/nexus/action-card';
+import { type NexusActionMenuItem, type NexusCardBadge } from '@app/components/nexus/ui/cards/action-card';
 import { NexusFocusedPacketSection } from '@app/components/nexus/focus';
 import {
   createNexusPacketActionMenuItems,
   getNexusPacketActionProjectionKey,
   useNexusPacketActions,
 } from '@app/components/nexus/packet-actions';
-import { NexusActionList, NexusActionListItem } from '@app/components/nexus/action-list';
+import { NexusActionList, NexusActionListItem } from '@app/components/nexus/ui/actions/action-list';
 import {
   NexusPreviewPanel,
   NexusStatCard,

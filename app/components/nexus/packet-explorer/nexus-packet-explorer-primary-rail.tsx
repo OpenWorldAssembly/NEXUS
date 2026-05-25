@@ -1,4 +1,4 @@
-import { NexusTabRail } from '@app/components/nexus/nexus-tabs';
+import { NexusTabRail } from '@app/components/nexus/ui/tabs/nexus-tabs';
 import type { PacketExplorerPrimaryTab } from '@runtime/nexus/packet-explorer-session';
 
 const PRIMARY_TAB_OPTIONS: {

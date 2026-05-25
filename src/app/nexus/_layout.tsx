@@ -5,8 +5,8 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 
-import { NexusActionMenuControllerProvider } from '@app/components/nexus/action-card/nexus-action-menu-controller';
-import { NexusLoadingProvider } from '@app/components/nexus/loading';
+import { NexusActionMenuControllerProvider } from '@app/components/nexus/ui/cards/action-card/nexus-action-menu-controller';
+import { NexusLoadingProvider } from '@app/components/nexus/ui/feedback/loading';
 import NexusShell from '@app/components/nexus/nexus-shell';
 import {
   NexusShellProvider,

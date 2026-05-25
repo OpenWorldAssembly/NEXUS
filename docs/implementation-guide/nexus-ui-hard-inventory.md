@@ -6,6 +6,18 @@ This chapter is the hard inventory behind the higher-level Nexus UI component ca
 
 This is an audit artifact only. It should guide later consolidation, not imply that every item listed should move immediately.
 
+## Post-inventory folder foundation
+
+After this snapshot, the first safe folder foundation pass moved stable shared modules into the canonical `app/components/nexus/ui/*` tree without visual or route behavior changes:
+
+- `app/components/nexus/loading/*` -> `app/components/nexus/ui/feedback/loading/*`
+- `app/components/nexus/action-card/*` -> `app/components/nexus/ui/cards/action-card/*`
+- `app/components/nexus/action-list/*` -> `app/components/nexus/ui/actions/action-list/*`
+- `app/components/nexus/nexus-tab-primitives.tsx` -> `app/components/nexus/ui/tabs/nexus-tab-primitives.tsx`
+- `app/components/nexus/nexus-tabs.tsx` -> `app/components/nexus/ui/tabs/nexus-tabs.tsx`
+
+The counts below remain useful as the pre-move hard inventory. New shared UI should prefer the `ui/*` paths.
+
 ## Snapshot summary
 
 - Scope inspected: `app/components/nexus/*` and `src/app/nexus/*`.
@@ -213,4 +225,3 @@ app/components/nexus/ui/
 - Prefer one migration family per pass. A pass that touches overlays, tabs, forms, and route controllers at once is too wide.
 
 - Update this hard inventory or the component catalog after each consolidation pass so the map does not rot into wall art.
-
