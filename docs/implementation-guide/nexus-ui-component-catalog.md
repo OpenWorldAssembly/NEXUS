@@ -6,6 +6,8 @@ This catalog records the current Nexus UI component landscape before a broader u
 
 Public-site components may be useful references, but Nexus should keep its own component system because the public site and Nexus workspace are separate product surfaces.
 
+For exact file-level counts, route-local component candidates, raw React Native primitive usage, and extraction sequencing, see [Nexus UI Hard Inventory](nexus-ui-hard-inventory.md).
+
 ## Current pressure points
 
 - `src/app/nexus/locality/create.tsx` and `src/app/nexus/discussions.tsx` are the largest route-local UI surfaces and contain many one-off controls, pickers, composers, modals, and layout sections.
