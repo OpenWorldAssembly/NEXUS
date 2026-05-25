@@ -23,7 +23,7 @@ import {
   NexusCard,
   NexusSectionHeader,
   useNexusAppearance,
-} from '@app/components/nexus/nexus-ui';
+} from '@app/components/nexus/ui';
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
 import type {
   NexusDiscussionPost,

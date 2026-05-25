@@ -18,7 +18,7 @@ import {
   NexusCard,
   NexusSectionHeader,
   useNexusAppearance,
-} from '@app/components/nexus/nexus-ui';
+} from '@app/components/nexus/ui';
 import type { NexusTrustPayload } from '@runtime/nexus/nexus-api-types';
 import { fetchNexusTrustPayload } from '@runtime/nexus/nexus-query-api';
 

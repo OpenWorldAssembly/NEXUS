@@ -4,7 +4,7 @@ import {
   NexusActionButton,
   NexusInlineSelect,
   useNexusAppearance,
-} from '@app/components/nexus/nexus-ui';
+} from '@app/components/nexus/ui';
 import { NexusTabRail, type NexusTabNode } from '@app/components/nexus/ui/tabs/nexus-tabs';
 import type {
   PacketExplorerHomeSubtab,

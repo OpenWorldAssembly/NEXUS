@@ -11,7 +11,7 @@ For exact file-level counts, route-local component candidates, raw React Native 
 ## Current pressure points
 
 - `src/app/nexus/locality/create.tsx` and `src/app/nexus/discussions.tsx` are the largest route-local UI surfaces and contain many one-off controls, pickers, composers, modals, and layout sections.
-- `app/components/nexus/nexus-ui.tsx` is the main shared primitive file, but it now carries many unrelated primitives in one place.
+- `app/components/nexus/nexus-ui.tsx` is now a temporary compatibility bridge; shared primitive implementations live in focused `app/components/nexus/ui/*` component-type modules.
 - `app/components/nexus/ui/tabs/nexus-tabs.tsx`, `app/components/nexus/ui/tabs/nexus-tab-primitives.tsx`, and `app/components/nexus/packet-explorer/nexus-packet-explorer-tab-deck.tsx` already share some tab skeleton pieces, but the Explorer tab deck remains a separate document-tab system.
 - Modal and overlay behavior is spread across route-local `Modal` usage, auth gates, feature-status explainers, packet explorer overlays, sidebar drawers, and loading boundaries.
 - Action chrome is the most mature shared area: packet cards, badge strips, menu buttons, action menus, action lists, and scoped loading plumbing already form a reusable foundation.
@@ -27,20 +27,43 @@ The first Nexus UI folder foundation pass moved stable shared modules into `app/
 
 The older locations should not be reused for new shared UI. Larger feature folders and route-local surfaces are intentionally unchanged until later extraction passes.
 
-## Component family catalog
+## Overlay consolidation status
 
-| Family | Current files and usages | Current status | Duplication notes | Future template target | Migration risk |
+The first universal-template consolidation pass added shared overlay primitives under `app/components/nexus/ui/overlays/*`:
+
+- `NexusModalShell` owns the reusable `Modal` backdrop, close press target, centering, and Nexus card frame.
+- `NexusOutcomeDialog` and `NexusConfirmDialog` compose common outcome and confirmation dialog patterns on top of the shell.
+- `NexusPopover` reserves a lightweight shared frame for caller-positioned overlay panels.
+
+The initial migration moved repeated modal chrome in dashboard packet validation, packet Explorer import outcomes, and locality create/reuse/picker dialogs onto the shared shell while preserving their existing visual classes and handlers. Auth/session logic remains outside the generic overlay primitives.
+
+## Primitive split status
+
+The broad `nexus-ui.tsx` primitive file has been split into focused component-type modules while preserving visual behavior:
+
+- card surfaces live in `ui/cards/nexus-card.tsx`
+- action buttons and chevrons live in `ui/actions/*`
+- badges live in `ui/feedback/nexus-badge.tsx`
+- segmented controls and inline selects live in `ui/forms/*`
+- chrome, appearance, bevel, and section-header helpers live in `ui/layout/*`
+- attached tab rails live in `ui/tabs/nexus-attached-tab-rail.tsx`
+
+Nexus callers should import from `@app/components/nexus/ui` or a direct family path. `app/components/nexus/nexus-ui.tsx` remains only as a temporary bridge for compatibility and should not be the source for new imports.
+
+## Component Type Catalog
+
+| Component type | Current files and usages | Current status | Duplication notes | Future template target | Migration risk |
 | --- | --- | --- | --- | --- | --- |
-| Cards and packet cards | `app/components/nexus/nexus-ui.tsx` (`NexusCard`), `ui/cards/action-card/*`, `focus/*`, `dashboard/*`, route-local nested cards in `trust`, `roles`, `votes`, `library`, `discussions`, `locality/create`, and packet explorer panels | Shared base plus feature-specific compositions | `NexusCard` is used widely, but route files still compose repeated metric cards, inset cards, warning cards, focused packet panels, and packet preview rows manually | `ui/cards` with base surface, metric/stat card, packet card, focused packet panel, warning/outcome card, and repeated inset section patterns | Medium |
-| Action buttons, menus, lists, and badge strips | `NexusActionButton` in `nexus-ui.tsx`; `ui/cards/action-card/*`; `ui/actions/action-list/*`; packet action conversion in `packet-actions/*`; dashboard queue/list actions | Strongest shared foundation | Shared action menus and badge strips exist, but route-local action clusters and raw buttons still appear in large pages; button/menu scoped loading is now available but adoption is caller-owned | `ui/actions` with action button, icon/menu button, action menu, action cluster, action list, badge strip, and packet-action adapters | Low |
+| Cards and packet cards | `ui/cards/nexus-card.tsx`, `ui/cards/action-card/*`, `focus/*`, `dashboard/*`, route-local nested cards in `trust`, `roles`, `votes`, `library`, `discussions`, `locality/create`, and packet explorer panels | Shared base plus feature-specific compositions | `NexusCard` is used widely, but route files still compose repeated metric cards, inset cards, warning cards, focused packet panels, and packet preview rows manually | `ui/cards` with base surface, metric/stat card, packet card, focused packet panel, warning/outcome card, and repeated inset section patterns | Medium |
+| Action buttons, menus, lists, and badge strips | `NexusActionButton` and `NexusChevronIcon` in `ui/actions/*`; `ui/cards/action-card/*`; `ui/actions/action-list/*`; packet action conversion in `packet-actions/*`; dashboard queue/list actions | Strongest shared foundation | Shared action menus and badge strips exist, but route-local action clusters and raw buttons still appear in large pages; button/menu scoped loading is now available but adoption is caller-owned | `ui/actions` with action button, icon/menu button, action menu, action cluster, action list, badge strip, and packet-action adapters | Low |
 | Tabs and tab decks | `ui/tabs/nexus-tabs.tsx`, `ui/tabs/nexus-tab-primitives.tsx`, route uses in `roles`, `identity/sign-in`, `locality/create`, packet explorer toolbar and primary rail; Explorer document tabs in `packet-explorer/nexus-packet-explorer-tab-deck.tsx` | Shared navigation tabs plus separate Explorer document tabs | Function-surface tabs and Explorer tabs both use `NexusTabFrame` / `NexusTabLabel`, but differ in close controls, tooltip behavior, wrapping, and session/document semantics | `ui/tabs` with shared frame/label/close primitives, navigation rail/stack, segmented tabs, and Explorer document-tab extension | Medium |
-| Modals, gates, confirmations, and overlays | `nexus-auth-gate.tsx`, `nexus-shell-entry-gate.tsx`, `nexus-feature-status-context.tsx`, route-local `Modal` in `dashboard`, `locality/create`, `packet-explorer/import`, plus packet explorer shell overlay | Scattered, partially shared | Repeated backdrop-card-close patterns exist across dashboard validation, import outcomes, locality success/error/remove/type/parent pickers, and auth/entry gates | `ui/overlays` with modal shell, confirmation dialog, outcome dialog, anchored popover, blocking gate, and shell overlay host | High |
-| Dropdowns, selects, pickers, and menus | `NexusInlineSelect` in `nexus-ui.tsx`; `NexusActionMenu`; locality kind/parent/result pickers; identity location search; packet explorer search/export lookup lists; sidebar menus | Mixed shared and route-local | Action menus are shared; inline select is shared; most result pickers and search dropdowns are route-local despite similar listbox/search-result behavior | `ui/menus` or `ui/forms` with inline select, anchored menu, searchable result list, picker modal, and selectable row | Medium |
+| Modals, gates, confirmations, and overlays | `ui/overlays/*`, `nexus-auth-gate.tsx`, `nexus-shell-entry-gate.tsx`, `nexus-feature-status-context.tsx`, packet explorer shell overlay, remaining route-local overlay variants | Shared modal shell now exists; gates remain specialized | Dashboard validation, packet import outcome, and locality create/reuse/picker dialogs now use shared modal chrome; auth/entry gates and feature-status overlays still need careful migration because they carry session or shell-specific behavior | `ui/overlays` with modal shell, confirmation dialog, outcome dialog, anchored popover, blocking gate, and shell overlay host | Medium |
+| Dropdowns, selects, pickers, and menus | `NexusInlineSelect` in `ui/forms/*`; `NexusActionMenu`; locality kind/parent/result pickers; identity location search; packet explorer search/export lookup lists; sidebar menus | Mixed shared and route-local | Action menus are shared; inline select is shared; most result pickers and search dropdowns are route-local despite similar listbox/search-result behavior | `ui/menus` or `ui/forms` with inline select, anchored menu, searchable result list, picker modal, and selectable row | Medium |
 | Text inputs, composers, search fields, and form rows | Raw `TextInput` in `trust`, `roles`, `discussions`, `locality/create`, packet explorer search/import/export; `nexus-identity-ui.tsx` identity fields; discussion reply/post composers | Mostly route-local with one identity-specific shared set | Text inputs use shared appearance classes but not a universal field/composer shell. Search-result dropdowns, multiline composers, passphrase fields, and note fields repeat label/error/hint patterns | `ui/forms` with field shell, text input, textarea/composer, search box, result list, error text, hint text, and field action row | High |
 | Loading and feedback states | `ui/feedback/loading/*`; local `isLoading*` flags in route pages; text-only loading states in discussions and packet explorer; warnings/errors with `NexusCard` tones | New shared loading foundation plus local display states | Scoped loading provider/boundary exists, but most routes still render custom loading, refreshing, empty, and error copy locally | `ui/feedback` with loading boundary, inline loading row, empty state, error state, warning state, status badge, and operation outcome card | Medium |
 | Shell, sidebars, rails, and page layout | `nexus-shell.tsx`, `nexus-shell-context.tsx`, `nexus-shell-chrome-context.tsx`, `nexus-sidebar.tsx`, route-level `NexusSectionHeader`, page `ScrollView` containers, packet explorer panel layout | Shared shell with large route-local page composition | Route pages repeat scroll containers, page gutters, card grids, metric rows, and section groupings; sidebar is large and contains several embedded control patterns | `ui/layout` with page frame, section header, section band, metric grid, rail section, shell drawer primitives, panel split, and responsive content frame | High |
 | Preview, focus, and inspection panels | `preview/*`, `focus/*`, dashboard focused panels, packet explorer inspector panels, library packet cards | Feature-specific with reusable pieces | Preview/focus/Explorer all present selected packet context with actions, badges, summary, provenance, and navigation; the visual grammar is related but not unified | `ui/inspection` or `ui/cards` extension with packet summary panel, focus panel, preview rail, inspector section, and packet action slot | Medium |
-| Segmented controls and toggles | `NexusSegmentedPill` in `nexus-ui.tsx`; identity security preferences; import source/validation mode; sidebar preference toggles | Shared segmented primitive plus route/sidebar variants | Segmented controls exist, but preference switches and binary toggles are still custom in sidebar/security contexts | `ui/forms` with segmented control, binary toggle, preference row, and compact option group | Low |
+| Segmented controls and toggles | `NexusSegmentedPill` in `ui/forms/*`; identity security preferences; import source/validation mode; sidebar preference toggles | Shared segmented primitive plus route/sidebar variants | Segmented controls exist, but preference switches and binary toggles are still custom in sidebar/security contexts | `ui/forms` with segmented control, binary toggle, preference row, and compact option group | Low |
 
 ## Route-local areas to audit first during consolidation
 
@@ -87,7 +110,7 @@ The existing folders can then become either adapters around the shared UI or fea
 
 - `packet-explorer/*` should keep Explorer state/workbench logic but use shared tabs, overlays, forms, feedback, and panel frames.
 - `locality/*` should keep locality graph/search semantics but use shared picker, form, modal, and warning/outcome components.
-- `ui/cards/action-card/*`, `ui/actions/action-list/*`, `ui/feedback/loading/*`, and `ui/tabs/*` now form the initial shared UI folder foundation.
+- `ui/overlays/*`, `ui/cards/action-card/*`, `ui/actions/action-list/*`, `ui/feedback/loading/*`, and `ui/tabs/*` now form the initial shared UI foundation.
 
 ## Migration guidance
 

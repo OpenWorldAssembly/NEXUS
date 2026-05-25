@@ -4,9 +4,12 @@
  */
 import { Pressable, Text, View } from 'react-native';
 
-import { useOptionalNexusLoading } from '@app/components/nexus/ui/feedback/loading';
-import { NexusThemedBevelEdges, getNexusChromeClasses } from '@app/components/nexus/nexus-ui';
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
+import { useOptionalNexusLoading } from '../../feedback/loading';
+import {
+  NexusThemedBevelEdges,
+  getNexusChromeClasses,
+} from '../../layout/nexus-chrome';
 import type { NexusActionMenuItem, NexusActionMenuTone } from './nexus-card-types';
 
 function joinClasses(...classes: (string | undefined)[]): string {

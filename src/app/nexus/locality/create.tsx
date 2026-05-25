@@ -6,7 +6,7 @@
 import type { Href } from 'expo-router';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
 import {
@@ -27,8 +27,9 @@ import {
   NexusCard,
   NexusSectionHeader,
   useNexusAppearance,
-} from '@app/components/nexus/nexus-ui';
+} from '@app/components/nexus/ui';
 import { NexusTabRail, type NexusTabNode } from '@app/components/nexus/ui/tabs/nexus-tabs';
+import { NexusModalShell } from '@app/components/nexus/ui/overlays';
 import type {
   LocalityHierarchySystem,
   LocalityScopeDescriptor,
@@ -3170,18 +3171,14 @@ export default function NexusLocalityCreatePage() {
           </View>
         </View>
       </ScrollView>
-      <Modal
-        animationType="fade"
-        transparent
+      <NexusModalShell
+        backdropClassName="absolute inset-0"
+        cardClassName="w-full max-w-xl gap-4"
+        containerClassName="flex-1 items-center justify-center bg-black/50 px-4"
+        contentClassName={null}
+        onClose={() => setSelectedExistingResult(null)}
         visible={selectedExistingResult !== null}
-        onRequestClose={() => setSelectedExistingResult(null)}
       >
-        <View className="flex-1 items-center justify-center bg-black/50 px-4">
-          <Pressable
-            className="absolute inset-0"
-            onPress={() => setSelectedExistingResult(null)}
-          />
-          <NexusCard className="w-full max-w-xl gap-4">
             <Text className={appearance.surfaceTitleClass}>Use this locality?</Text>
             <View className={`gap-2 rounded-[18px] border px-4 py-3 ${appearance.cardInsetClass}`}>
               <View className="flex-row flex-wrap items-center gap-2">
@@ -3225,22 +3222,16 @@ export default function NexusLocalityCreatePage() {
                 onPress={() => setSelectedExistingResult(null)}
               />
             </View>
-          </NexusCard>
-        </View>
-      </Modal>
+      </NexusModalShell>
 
-      <Modal
-        animationType="fade"
-        transparent
+      <NexusModalShell
+        backdropClassName="absolute inset-0"
+        cardClassName="w-full max-w-xl gap-4"
+        containerClassName="flex-1 items-center justify-center bg-black/50 px-4"
+        contentClassName={null}
+        onClose={() => setRemoveConfirmModal(null)}
         visible={removeConfirmModal !== null}
-        onRequestClose={() => setRemoveConfirmModal(null)}
       >
-        <View className="flex-1 items-center justify-center bg-black/50 px-4">
-          <Pressable
-            className="absolute inset-0"
-            onPress={() => setRemoveConfirmModal(null)}
-          />
-          <NexusCard className="w-full max-w-xl gap-4">
             <View className="gap-2">
               <Text className={appearance.surfaceTitleClass}>Remove locality from draft?</Text>
               <Text className={appearance.itemBodyClass}>
@@ -3263,22 +3254,16 @@ export default function NexusLocalityCreatePage() {
                 onPress={() => setRemoveConfirmModal(null)}
               />
             </View>
-          </NexusCard>
-        </View>
-      </Modal>
+      </NexusModalShell>
 
-      <Modal
-        animationType="fade"
-        transparent
+      <NexusModalShell
+        backdropClassName="absolute inset-0"
+        cardClassName="max-h-[86%] w-full max-w-2xl gap-4"
+        containerClassName="flex-1 items-center justify-center bg-black/50 px-4"
+        contentClassName={null}
+        onClose={() => setParentPickerNodeId(null)}
         visible={parentPickerNode !== null}
-        onRequestClose={() => setParentPickerNodeId(null)}
       >
-        <View className="flex-1 items-center justify-center bg-black/50 px-4">
-          <Pressable
-            className="absolute inset-0"
-            onPress={() => setParentPickerNodeId(null)}
-          />
-          <NexusCard className="max-h-[86%] w-full max-w-2xl gap-4">
             <View className="gap-2">
               <Text className={appearance.surfaceTitleClass}>Choose parent scope</Text>
               <Text className={appearance.itemBodyClass}>
@@ -3403,22 +3388,16 @@ export default function NexusLocalityCreatePage() {
                 onPress={() => setParentPickerNodeId(null)}
               />
             </View>
-          </NexusCard>
-        </View>
-      </Modal>
+      </NexusModalShell>
 
-      <Modal
-        animationType="fade"
-        transparent
+      <NexusModalShell
+        backdropClassName="absolute inset-0"
+        cardClassName="max-h-[86%] w-full max-w-2xl gap-4"
+        containerClassName="flex-1 items-center justify-center bg-black/50 px-4"
+        contentClassName={null}
+        onClose={() => setTypePickerContext(null)}
         visible={typePickerContext !== null}
-        onRequestClose={() => setTypePickerContext(null)}
       >
-        <View className="flex-1 items-center justify-center bg-black/50 px-4">
-          <Pressable
-            className="absolute inset-0"
-            onPress={() => setTypePickerContext(null)}
-          />
-          <NexusCard className="max-h-[86%] w-full max-w-2xl gap-4">
             <View className="gap-2">
               <Text className={appearance.surfaceTitleClass}>Choose locality type</Text>
               <Text className={appearance.itemBodyClass}>
@@ -3460,22 +3439,16 @@ export default function NexusLocalityCreatePage() {
                 onPress={() => setTypePickerContext(null)}
               />
             </View>
-          </NexusCard>
-        </View>
-      </Modal>
+      </NexusModalShell>
 
-      <Modal
-        animationType="fade"
-        transparent
+      <NexusModalShell
+        backdropClassName="absolute inset-0"
+        cardClassName="max-h-[86%] w-full max-w-2xl gap-4"
+        containerClassName="flex-1 items-center justify-center bg-black/50 px-4"
+        contentClassName={null}
+        onClose={() => setCreateKindCandidate(null)}
         visible={createKindCandidate !== null}
-        onRequestClose={() => setCreateKindCandidate(null)}
       >
-        <View className="flex-1 items-center justify-center bg-black/50 px-4">
-          <Pressable
-            className="absolute inset-0"
-            onPress={() => setCreateKindCandidate(null)}
-          />
-          <NexusCard className="max-h-[86%] w-full max-w-2xl gap-4">
             <View className="gap-2">
               <Text className={appearance.surfaceTitleClass}>
                 Create new locality scope for “{createKindCandidate?.query.trim() ?? ''}”
@@ -3532,22 +3505,16 @@ export default function NexusLocalityCreatePage() {
                 onPress={() => setCreateKindCandidate(null)}
               />
             </View>
-          </NexusCard>
-        </View>
-      </Modal>
+      </NexusModalShell>
 
-      <Modal
-        animationType="fade"
-        transparent
+      <NexusModalShell
+        backdropClassName="absolute inset-0"
+        cardClassName="w-full max-w-xl gap-4"
+        containerClassName="flex-1 items-center justify-center bg-black/50 px-4"
+        contentClassName={null}
+        onClose={() => setSuccessModal(null)}
         visible={successModal !== null}
-        onRequestClose={() => setSuccessModal(null)}
       >
-        <View className="flex-1 items-center justify-center bg-black/50 px-4">
-          <Pressable
-            className="absolute inset-0"
-            onPress={() => setSuccessModal(null)}
-          />
-          <NexusCard className="w-full max-w-xl gap-4">
             <Text className={appearance.surfaceTitleClass}>{successModal?.title}</Text>
             <Text className={appearance.itemBodyClass}>{successModal?.message}</Text>
             <View className="flex-row flex-wrap gap-3">
@@ -3568,22 +3535,17 @@ export default function NexusLocalityCreatePage() {
                 onPress={() => setSuccessModal(null)}
               />
             </View>
-          </NexusCard>
-        </View>
-      </Modal>
+      </NexusModalShell>
 
-      <Modal
-        animationType="fade"
-        transparent
+      <NexusModalShell
+        backdropClassName="absolute inset-0"
+        cardClassName="w-full max-w-xl gap-4"
+        containerClassName="flex-1 items-center justify-center bg-black/50 px-4"
+        contentClassName={null}
+        onClose={() => setWorkflowErrorModal(null)}
+        tone="rose"
         visible={workflowErrorModal !== null}
-        onRequestClose={() => setWorkflowErrorModal(null)}
       >
-        <View className="flex-1 items-center justify-center bg-black/50 px-4">
-          <Pressable
-            className="absolute inset-0"
-            onPress={() => setWorkflowErrorModal(null)}
-          />
-          <NexusCard className="w-full max-w-xl gap-4" tone="rose">
             <Text className={appearance.surfaceTitleClass}>{workflowErrorModal?.title}</Text>
             <Text className={appearance.itemBodyClass}>{workflowErrorModal?.message}</Text>
             <View className="flex-row flex-wrap gap-3">
@@ -3593,9 +3555,7 @@ export default function NexusLocalityCreatePage() {
                 onPress={() => setWorkflowErrorModal(null)}
               />
             </View>
-          </NexusCard>
-        </View>
-      </Modal>
+      </NexusModalShell>
 
       {authGateModal}
     </View>

@@ -3,7 +3,7 @@ import { Text, View } from 'react-native';
 import {
   NexusActionButton,
   useNexusAppearance,
-} from '@app/components/nexus/nexus-ui';
+} from '@app/components/nexus/ui';
 
 type NexusPacketExplorerShellHeaderProps = {
   title: string;

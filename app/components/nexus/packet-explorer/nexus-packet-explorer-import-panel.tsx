@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Modal, Platform, Pressable, Text, TextInput, View } from 'react-native';
+import { Platform, Text, TextInput, View } from 'react-native';
 
 import type { NexusPacketValidationMode } from '@core/contracts';
 import {
@@ -8,7 +8,7 @@ import {
   NexusCard,
   NexusSegmentedPill,
   useNexusAppearance,
-} from '@app/components/nexus/nexus-ui';
+} from '@app/components/nexus/ui';
 import type {
   NexusPacketExplorerImportCommitPayload,
   NexusPacketExplorerImportHistoryEntry,
@@ -21,6 +21,7 @@ import {
   fetchNexusPacketExplorerImportHistory,
   previewNexusPacketExplorerImport,
 } from '@runtime/nexus/nexus-query-api';
+import { NexusOutcomeDialog } from '@app/components/nexus/ui/overlays';
 
 type NexusPacketExplorerImportPanelProps = {
   shortcutIntent?: 'packet' | 'bundle' | null;
@@ -927,40 +928,13 @@ export function NexusPacketExplorerImportPanel({
         )}
       </NexusCard>
 
-      <Modal
-        animationType="fade"
-        onRequestClose={() => setOutcomeModal(null)}
-        transparent
+      <NexusOutcomeDialog
+        body={outcomeModal?.body ?? ''}
+        onClose={() => setOutcomeModal(null)}
+        title={outcomeModal?.title ?? ''}
+        tone={outcomeModal?.tone ?? 'default'}
         visible={outcomeModal !== null}
-      >
-        <View className="flex-1">
-          <Pressable
-            accessibilityRole="button"
-            className="absolute inset-0 bg-black/55"
-            onPress={() => setOutcomeModal(null)}
-          />
-          <View className="flex-1 items-center justify-center px-4">
-            <NexusCard
-              className="w-full max-w-[520px] gap-4"
-              tone={outcomeModal?.tone ?? 'default'}
-            >
-              <Text className={appearance.surfaceTitleClass}>
-                {outcomeModal?.title ?? ''}
-              </Text>
-              <Text className={appearance.itemBodyClass}>
-                {outcomeModal?.body ?? ''}
-              </Text>
-              <View className="flex-row flex-wrap justify-end gap-3">
-                <NexusActionButton
-                  label="Close"
-                  variant="primary"
-                  onPress={() => setOutcomeModal(null)}
-                />
-              </View>
-            </NexusCard>
-          </View>
-        </View>
-      </Modal>
+      />
     </View>
   );
 }

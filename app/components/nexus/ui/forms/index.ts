@@ -1,5 +1,6 @@
 /**
  * File: index.ts
- * Description: Reserved exports for shared Nexus form UI.
+ * Description: Shared Nexus form UI exports.
  */
-export {};
+export { NexusInlineSelect, type NexusInlineSelectProps } from './nexus-inline-select';
+export { NexusSegmentedPill, type NexusSegmentedPillProps } from './nexus-segmented-pill';

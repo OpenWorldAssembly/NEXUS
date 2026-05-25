@@ -4,8 +4,8 @@
  */
 import { useState, type PropsWithChildren } from 'react';
 
-import { NexusCard } from '@app/components/nexus/nexus-ui';
 import type { NexusCardTone } from '@runtime/nexus/nexus-content';
+import { NexusCard } from '../nexus-card';
 import { NexusCardActionCluster, hasNexusCardActionClusterContent } from './nexus-card-action-cluster';
 import type { NexusActionMenuItem, NexusCardBadge } from './nexus-card-types';
 

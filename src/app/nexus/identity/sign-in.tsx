@@ -20,7 +20,7 @@ import {
   NexusActionButton,
   NexusCard,
   useNexusAppearance,
-} from '@app/components/nexus/nexus-ui';
+} from '@app/components/nexus/ui';
 import { NexusTabRail, type NexusTabNode } from '@app/components/nexus/ui/tabs/nexus-tabs';
 import type { NexusIdentitySearchResultPayload } from '@runtime/nexus/nexus-api-types';
 import { fetchNexusIdentitySearchPayload } from '@runtime/nexus/nexus-query-api';

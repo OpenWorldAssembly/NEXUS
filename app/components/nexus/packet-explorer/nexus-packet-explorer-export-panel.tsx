@@ -8,7 +8,7 @@ import {
   NexusInlineSelect,
   NexusSegmentedPill,
   useNexusAppearance,
-} from '@app/components/nexus/nexus-ui';
+} from '@app/components/nexus/ui';
 import type {
   NexusPacketExplorerBundleExportMode,
   NexusPacketExplorerExportPreviewPayload,

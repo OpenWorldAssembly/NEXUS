@@ -4,7 +4,7 @@
  */
 import { Text } from 'react-native';
 
-import { NexusCard, useNexusAppearance } from '@app/components/nexus/nexus-ui';
+import { NexusCard, useNexusAppearance } from '@app/components/nexus/ui';
 import type { NexusCardTone } from '@runtime/nexus/nexus-content';
 
 function joinClasses(...classes: (string | undefined)[]): string {

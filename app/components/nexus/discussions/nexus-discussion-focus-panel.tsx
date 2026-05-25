@@ -10,7 +10,7 @@ import {
   NexusBadge,
   NexusCard,
   useNexusAppearance,
-} from '@app/components/nexus/nexus-ui';
+} from '@app/components/nexus/ui';
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import type {
   NexusDiscussionFocus,

@@ -16,7 +16,7 @@ import {
 } from '@app/components/nexus/nexus-identity-ui';
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
-import { NexusActionButton, NexusCard } from '@app/components/nexus/nexus-ui';
+import { NexusActionButton, NexusCard } from '@app/components/nexus/ui';
 import {
   validateEncryptedBundleJson,
   validatePassphrase,

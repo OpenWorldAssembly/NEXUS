@@ -4,7 +4,7 @@ import {
   NexusBadge,
   NexusCard,
   useNexusAppearance,
-} from '@app/components/nexus/nexus-ui';
+} from '@app/components/nexus/ui';
 import type { NexusPacketExplorerPayload } from '@runtime/nexus/nexus-api-types';
 import type { PacketExplorerViewMode } from '@runtime/nexus/packet-explorer-session';
 

@@ -24,7 +24,7 @@ import {
   NexusSegmentedPill,
   NexusThemedBevelEdges,
   getNexusChromeClasses,
-} from '@app/components/nexus/nexus-ui';
+} from '@app/components/nexus/ui';
 import type { NexusSecurityMode } from '@runtime/nexus/nexus-api-types';
 import {
   NEXUS_SECTION_ORDER,

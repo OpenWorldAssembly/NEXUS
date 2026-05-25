@@ -13,7 +13,7 @@ import {
   NexusCard,
   useNexusAppearance,
   NexusSectionHeader,
-} from '@app/components/nexus/nexus-ui';
+} from '@app/components/nexus/ui';
 import {
   NEXUS_VOTE_MECHANICS,
 } from '@runtime/nexus/nexus-content';

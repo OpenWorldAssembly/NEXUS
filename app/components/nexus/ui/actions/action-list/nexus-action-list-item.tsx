@@ -5,10 +5,14 @@
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { NexusCardActionCluster, hasNexusCardActionClusterContent } from '@app/components/nexus/ui/cards/action-card';
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
-import { useNexusAppearance } from '@app/components/nexus/nexus-ui';
-import type { NexusActionMenuItem, NexusCardBadge } from '@app/components/nexus/ui/cards/action-card';
+import {
+  NexusCardActionCluster,
+  hasNexusCardActionClusterContent,
+  type NexusActionMenuItem,
+  type NexusCardBadge,
+} from '../../cards/action-card';
+import { useNexusAppearance } from '../../layout/nexus-chrome';
 
 function joinClasses(...classes: (string | undefined)[]): string {
   return classes.filter(Boolean).join(' ');

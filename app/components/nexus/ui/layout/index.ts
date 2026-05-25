@@ -1,5 +1,19 @@
 /**
  * File: index.ts
- * Description: Reserved exports for shared Nexus layout UI.
+ * Description: Shared Nexus layout UI exports.
  */
-export {};
+export {
+  NexusBevelEdges,
+  NexusThemedBevelEdges,
+  getNexusBadgeTextClasses,
+  getNexusBadgeWrapperClasses,
+  getNexusCardPaddingClass,
+  getNexusChromeClasses,
+  getNexusToneClasses,
+  joinClasses,
+  useNexusAppearance,
+  useNexusChrome,
+  type NexusAppearance,
+  type NexusChromeClasses,
+} from './nexus-chrome';
+export { NexusSectionHeader, type NexusSectionHeaderProps } from './nexus-section-header';

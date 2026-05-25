@@ -14,7 +14,7 @@ import {
   NexusCard,
   useNexusAppearance,
   NexusSectionHeader,
-} from '@app/components/nexus/nexus-ui';
+} from '@app/components/nexus/ui';
 import { PACKET_TYPES, type PacketType } from '@core/schema/packet-schema';
 import type { NexusLibraryPayload } from '@runtime/nexus/nexus-api-types';
 import { fetchNexusLibraryPayload } from '@runtime/nexus/nexus-query-api';

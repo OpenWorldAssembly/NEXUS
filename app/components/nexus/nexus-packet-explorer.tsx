@@ -12,7 +12,7 @@ import {
   NexusActionButton,
   NexusCard,
   NexusChevronIcon,
-} from '@app/components/nexus/nexus-ui';
+} from '@app/components/nexus/ui';
 import { NexusPacketExplorerContent } from '@app/components/nexus/packet-explorer/nexus-packet-explorer-content';
 import { NexusPacketExplorerPrimaryRail } from '@app/components/nexus/packet-explorer/nexus-packet-explorer-primary-rail';
 import type { NexusPacketExplorerSearchCategory } from '@app/components/nexus/packet-explorer/nexus-packet-explorer-search-panel';

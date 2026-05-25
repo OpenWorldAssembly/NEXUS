@@ -7,7 +7,7 @@ import {
   NexusCard,
   useNexusAppearance,
   useNexusChrome,
-} from '@app/components/nexus/nexus-ui';
+} from '@app/components/nexus/ui';
 import {
   NexusTabCloseButton,
   NexusTabFrame,

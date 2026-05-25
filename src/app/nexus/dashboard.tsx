@@ -3,7 +3,7 @@
  * Description: Renders the guest dashboard with scope totals and function preview sections.
  */
 import { useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import type { Href } from 'expo-router';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
@@ -15,6 +15,7 @@ import {
   useNexusPacketActions,
 } from '@app/components/nexus/packet-actions';
 import { NexusActionList, NexusActionListItem } from '@app/components/nexus/ui/actions/action-list';
+import { NexusModalShell } from '@app/components/nexus/ui/overlays';
 import {
   NexusPreviewPanel,
   NexusStatCard,
@@ -34,7 +35,7 @@ import {
   NexusActionButton,
   useNexusAppearance,
   NexusSectionHeader,
-} from '@app/components/nexus/nexus-ui';
+} from '@app/components/nexus/ui';
 import type { NexusPacketCardProjection } from '@core/contracts';
 import type {
   NexusDashboardPayload,
@@ -588,67 +589,54 @@ export default function NexusDashboardPage() {
         </View>
       </View>
     </ScrollView>
-    <Modal
-      animationType="fade"
-      onRequestClose={() => setVerificationModal(null)}
-      transparent
+    <NexusModalShell
+      onClose={() => setVerificationModal(null)}
       visible={verificationModal !== null}
     >
-      <View className="flex-1">
-        <Pressable
-          accessibilityRole="button"
-          className="absolute inset-0 bg-black/55"
+      <Text className={appearance.surfaceTitleClass}>
+        {verificationModal?.title ?? 'Packet validation'}
+      </Text>
+      <Text className={appearance.itemBodyClass}>
+        {verificationModal?.summary ?? ''}
+      </Text>
+      <Text className={appearance.itemMetaClass}>
+        Status: {formatVerificationStatus(verificationModal?.status)}
+      </Text>
+      <Text className={appearance.itemMetaClass}>
+        Validated at: {verificationModal?.validated_at ?? 'unknown'}
+      </Text>
+      {verificationModal?.warnings.length ? (
+        <View className="gap-1">
+          {verificationModal.warnings.map((warning) => (
+            <Text key={warning} className={appearance.itemBodyClass}>
+              {warning}
+            </Text>
+          ))}
+        </View>
+      ) : null}
+      <View className="flex-row flex-wrap justify-end gap-3">
+        <NexusActionButton
+          label="Dismiss"
+          variant="ghost"
           onPress={() => setVerificationModal(null)}
         />
-        <View className="flex-1 items-center justify-center px-4">
-          <NexusCard className="w-full max-w-[520px] gap-4">
-            <Text className={appearance.surfaceTitleClass}>
-              {verificationModal?.title ?? 'Packet validation'}
-            </Text>
-            <Text className={appearance.itemBodyClass}>
-              {verificationModal?.summary ?? ''}
-            </Text>
-            <Text className={appearance.itemMetaClass}>
-              Status: {formatVerificationStatus(verificationModal?.status)}
-            </Text>
-            <Text className={appearance.itemMetaClass}>
-              Validated at: {verificationModal?.validated_at ?? 'unknown'}
-            </Text>
-            {verificationModal?.warnings.length ? (
-              <View className="gap-1">
-                {verificationModal.warnings.map((warning) => (
-                  <Text key={warning} className={appearance.itemBodyClass}>
-                    {warning}
-                  </Text>
-                ))}
-              </View>
-            ) : null}
-            <View className="flex-row flex-wrap justify-end gap-3">
-              <NexusActionButton
-                label="Dismiss"
-                variant="ghost"
-                onPress={() => setVerificationModal(null)}
-              />
-              <NexusActionButton
-                label="Open validation report"
-                variant="primary"
-                onPress={() => {
-                  if (!verificationModal) {
-                    return;
-                  }
+        <NexusActionButton
+          label="Open validation report"
+          variant="primary"
+          onPress={() => {
+            if (!verificationModal) {
+              return;
+            }
 
-                  setVerificationModal(null);
-                  openPacketInExplorer({
-                    packetId: verificationModal.packet_id,
-                    activePrimaryTab: 'verification',
-                  });
-                }}
-              />
-            </View>
-          </NexusCard>
-        </View>
+            setVerificationModal(null);
+            openPacketInExplorer({
+              packetId: verificationModal.packet_id,
+              activePrimaryTab: 'verification',
+            });
+          }}
+        />
       </View>
-    </Modal>
+    </NexusModalShell>
     </>
   );
 }

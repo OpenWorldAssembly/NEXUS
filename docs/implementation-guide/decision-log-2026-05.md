@@ -47,6 +47,18 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - Nexus UI consolidation began with safe shared-module moves only: loading moved under `ui/feedback/loading`, action cards under `ui/cards/action-card`, action lists under `ui/actions/action-list`, and shared tab primitives under `ui/tabs`.
 - The move establishes the canonical `app/components/nexus/ui/*` home without splitting `nexus-ui.tsx`, changing visuals, or moving feature-specific Explorer, locality, discussion, dashboard, preview, or focus components.
 
+## 2026-05 Nexus overlay consolidation start
+
+- Nexus overlay consolidation began with reusable modal chrome under `app/components/nexus/ui/overlays/*`, including a modal shell plus outcome, confirmation, and popover primitives.
+- Dashboard packet validation, packet Explorer import outcomes, and locality create/reuse/picker dialogs now share the same modal shell while preserving their existing visual classes, close behavior, and route-local content.
+- Auth/session gates and feature-status overlays remain specialized for later migration so generic overlay UI does not absorb session or shell behavior.
+
+## 2026-05 Nexus UI primitive split
+
+- The broad `app/components/nexus/nexus-ui.tsx` primitive file is now a compatibility bridge over focused `app/components/nexus/ui/*` component-type modules.
+- Cards, actions, badges, forms, layout/chrome helpers, and attached tab rails now have canonical family homes while preserving their existing classes and behavior.
+- Nexus callers have moved to the canonical `@app/components/nexus/ui` import path; future work should not add new primitive imports from `nexus-ui.tsx`.
+
 ## 2026-05 feature-status explainers
 
 - Disabled and partial Nexus controls now route through a centralized feature-status registry instead of scattering one-off placeholder copy through route files.

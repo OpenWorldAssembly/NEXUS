@@ -11,7 +11,7 @@ import {
   type NexusCardBadge,
 } from '@app/components/nexus/ui/cards/action-card';
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
-import { useNexusAppearance } from '@app/components/nexus/nexus-ui';
+import { useNexusAppearance } from '@app/components/nexus/ui';
 
 function joinClasses(...classes: (string | undefined)[]): string {
   return classes.filter(Boolean).join(' ');

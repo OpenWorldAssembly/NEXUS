@@ -16,6 +16,10 @@ After this snapshot, the first safe folder foundation pass moved stable shared m
 - `app/components/nexus/nexus-tab-primitives.tsx` -> `app/components/nexus/ui/tabs/nexus-tab-primitives.tsx`
 - `app/components/nexus/nexus-tabs.tsx` -> `app/components/nexus/ui/tabs/nexus-tabs.tsx`
 
+The first consolidation pass after the folder foundation added `app/components/nexus/ui/overlays/*` and moved repeated modal chrome in dashboard validation, packet Explorer import outcomes, and locality create/reuse/picker dialogs onto `NexusModalShell` while preserving existing visual classes and handlers.
+
+The broad `app/components/nexus/nexus-ui.tsx` primitive file has since been split into focused `ui/actions`, `ui/cards`, `ui/feedback`, `ui/forms`, `ui/layout`, and `ui/tabs` modules. `nexus-ui.tsx` remains as a compatibility bridge only; new shared UI imports should use `@app/components/nexus/ui` or direct family paths.
+
 The counts below remain useful as the pre-move hard inventory. New shared UI should prefer the `ui/*` paths.
 
 ## Snapshot summary
@@ -188,9 +192,9 @@ These are not primary UI templates, but several contain providers, controllers, 
 
 Recommended order, based on duplication, risk, and likely payoff:
 
-1. **Overlays and modal shells**: `locality/create`, `dashboard`, `packet-explorer/import`, feature-status/auth gates, and badge tooltips all repeat backdrop/card/close/outcome patterns. Keep auth/session logic separate from modal chrome.
+1. **Overlays and modal shells**: initial shared modal shell and outcome/confirm primitives now exist under `ui/overlays`; remaining work should focus on auth/session gates, feature-status overlays, badge tooltips, and any modal content that deserves picker/outcome-specific composition. Keep auth/session logic separate from modal chrome.
 
-2. **Form field shells and searchable result lists**: locality search, identity lookup, Explorer search/export/import, trust/roles inputs, and discussion composers all repeat label/hint/error/input/list behavior.
+2. **Form field shells and searchable result lists**: base segmented and inline-select primitives now live under `ui/forms`; remaining work should target locality search, identity lookup, Explorer search/export/import, trust/roles inputs, and discussion composers that repeat label/hint/error/input/list behavior.
 
 3. **Layout frames and section scaffolds**: large routes repeat page scroll containers, section gutters, card grids, toolbar rows, rail sections, and panel frames.
 

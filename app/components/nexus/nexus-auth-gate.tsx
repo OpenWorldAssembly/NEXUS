@@ -23,7 +23,7 @@ import {
   NexusActionButton,
   NexusCard,
   useNexusAppearance,
-} from '@app/components/nexus/nexus-ui';
+} from '@app/components/nexus/ui';
 
 type NexusAuthGateState = {
   reason: NexusAuthGateReason;

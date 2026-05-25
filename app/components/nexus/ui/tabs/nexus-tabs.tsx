@@ -14,7 +14,7 @@ import {
   NexusTabLabel,
   type NexusTabSizeConfig,
   type NexusTabTruncateMode,
-} from '@app/components/nexus/ui/tabs/nexus-tab-primitives';
+} from './nexus-tab-primitives';
 
 /**
  * Tab model notes:

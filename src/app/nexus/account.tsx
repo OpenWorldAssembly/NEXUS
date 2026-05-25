@@ -15,7 +15,7 @@ import {
   NexusCard,
   NexusSectionHeader,
   useNexusAppearance,
-} from '@app/components/nexus/nexus-ui';
+} from '@app/components/nexus/ui';
 
 function getStorageLabel(
   storageMode: 'none' | 'session_only' | 'saved_on_device' | null

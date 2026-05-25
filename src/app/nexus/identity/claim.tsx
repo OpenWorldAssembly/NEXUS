@@ -20,7 +20,7 @@ import {
 } from '@app/components/nexus/nexus-identity-ui';
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
-import { NexusActionButton, NexusBadge, NexusCard, useNexusAppearance } from '@app/components/nexus/nexus-ui';
+import { NexusActionButton, NexusBadge, NexusCard, useNexusAppearance } from '@app/components/nexus/ui';
 import type { NexusSecurityMode } from '@runtime/nexus/nexus-api-types';
 import {
   normalizeDisplayAlias,

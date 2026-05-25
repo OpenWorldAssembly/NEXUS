@@ -5,7 +5,7 @@
 import type { ReactNode } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import { NexusCard, useNexusAppearance } from '@app/components/nexus/nexus-ui';
+import { NexusCard, useNexusAppearance } from '@app/components/nexus/ui';
 
 function joinClasses(...classes: (string | undefined)[]): string {
   return classes.filter(Boolean).join(' ');
