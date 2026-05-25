@@ -5,7 +5,7 @@
 
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, Text, TextInput, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
 import { useNexusAuthGate } from '@app/components/nexus/nexus-auth-gate';
@@ -15,7 +15,9 @@ import {
   NexusActionButton,
   NexusBadge,
   NexusCard,
+  NexusFieldActionRow,
   NexusSectionHeader,
+  NexusTextArea,
   useNexusAppearance,
 } from '@app/components/nexus/ui';
 import { NexusTabRail, type NexusTabNode } from '@app/components/nexus/ui/tabs/nexus-tabs';
@@ -550,7 +552,7 @@ export default function NexusRolesPage() {
 
                         {!participant.is_current_actor ? (
                           <>
-                            <TextInput
+                            <NexusTextArea
                               value={noteDrafts[evidenceKey] ?? ''}
                               onChangeText={(value) =>
                                 setNoteDrafts((currentDrafts) => ({
@@ -559,13 +561,12 @@ export default function NexusRolesPage() {
                                 }))
                               }
                               placeholder="Optional support comment, required for disputes"
-                              placeholderTextColor={appearance.textInputPlaceholderColor}
-                              className={`min-h-[52px] rounded-2xl border px-4 py-3 ${appearance.textInputClass}`}
+                              inputClassName="min-h-[52px] rounded-2xl"
                               multiline
                               textAlignVertical="top"
                             />
 
-                            <View className="flex-row flex-wrap gap-3">
+                            <NexusFieldActionRow>
                               <NexusActionButton
                                 label="Support"
                                 variant={
@@ -604,7 +605,7 @@ export default function NexusRolesPage() {
                                   })
                                 }
                               />
-                            </View>
+                            </NexusFieldActionRow>
                           </>
                         ) : (
                           <Text className={appearance.itemBodyClass}>

@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Text, TextInput, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import {
   NexusActionButton,
   NexusBadge,
   NexusCard,
+  NexusErrorState,
+  NexusFieldActionRow,
   NexusInlineSelect,
   NexusSearchErrorState,
   NexusSearchField,
@@ -13,6 +15,8 @@ import {
   NexusSearchResultsBoundary,
   NexusSearchStatusText,
   NexusSegmentedPill,
+  NexusTextArea,
+  NexusTextInput,
   useNexusAppearance,
   useNexusLoading,
 } from '@app/components/nexus/ui';
@@ -582,27 +586,25 @@ export function NexusPacketExplorerExportPanel({
                   }
                 />
 
-                <TextInput
-                  className={`rounded-[22px] border px-4 py-3 ${appearance.textInputClass}`}
+                <NexusTextInput
+                  inputClassName="rounded-[22px]"
                   onChangeText={setPacketTitle}
                   placeholder="Optional bundle title"
-                  placeholderTextColor={appearance.textInputPlaceholderColor}
                   value={packetTitle}
                 />
 
-                <TextInput
-                  className={`rounded-[22px] border px-4 py-3 ${appearance.textInputClass}`}
+                <NexusTextArea
+                  inputClassName="rounded-[22px]"
                   multiline
                   onChangeText={setPacketNote}
                   placeholder="Optional bundle note"
-                  placeholderTextColor={appearance.textInputPlaceholderColor}
                   style={{ minHeight: 108, textAlignVertical: 'top' }}
                   value={packetNote}
                 />
               </View>
             ) : null}
 
-            <View className="flex-row flex-wrap gap-3">
+            <NexusFieldActionRow>
               <NexusActionButton
                 label={
                   packetWorkflow.isLoadingPreview ? 'Previewing...' : 'Preview JSON'
@@ -631,7 +633,7 @@ export function NexusPacketExplorerExportPanel({
                 }}
                 disabled={packetWorkflow.isLoadingPreview || packetWorkflow.isDownloading}
               />
-            </View>
+            </NexusFieldActionRow>
           </>
         ) : (
           <View className="gap-4">
@@ -735,11 +737,7 @@ export function NexusPacketExplorerExportPanel({
         )}
 
         {packetWorkflow.error ? (
-          <NexusCard tone="rose">
-            <Text className={appearance.itemBodyClass}>
-              {packetWorkflow.error}
-            </Text>
-          </NexusCard>
+          <NexusErrorState>{packetWorkflow.error}</NexusErrorState>
         ) : null}
 
         {packetWorkflow.preview ? (
@@ -761,25 +759,23 @@ export function NexusPacketExplorerExportPanel({
           </Text>
         </View>
 
-        <TextInput
-          className={`rounded-[22px] border px-4 py-3 ${appearance.textInputClass}`}
+        <NexusTextInput
+          inputClassName="rounded-[22px]"
           onChangeText={setStoreTitle}
           placeholder="Optional bundle title"
-          placeholderTextColor={appearance.textInputPlaceholderColor}
           value={storeTitle}
         />
 
-        <TextInput
-          className={`rounded-[22px] border px-4 py-3 ${appearance.textInputClass}`}
+        <NexusTextArea
+          inputClassName="rounded-[22px]"
           multiline
           onChangeText={setStoreNote}
           placeholder="Optional bundle note"
-          placeholderTextColor={appearance.textInputPlaceholderColor}
           style={{ minHeight: 108, textAlignVertical: 'top' }}
           value={storeNote}
         />
 
-        <View className="flex-row flex-wrap gap-3">
+        <NexusFieldActionRow>
           <NexusActionButton
             label={storeWorkflow.isLoadingPreview ? 'Previewing...' : 'Preview JSON'}
             onPress={() => void handleStorePreview()}
@@ -791,14 +787,10 @@ export function NexusPacketExplorerExportPanel({
             onPress={() => void handleStoreDownload()}
             disabled={storeWorkflow.isLoadingPreview || storeWorkflow.isDownloading}
           />
-        </View>
+        </NexusFieldActionRow>
 
         {storeWorkflow.error ? (
-          <NexusCard tone="rose">
-            <Text className={appearance.itemBodyClass}>
-              {storeWorkflow.error}
-            </Text>
-          </NexusCard>
+          <NexusErrorState>{storeWorkflow.error}</NexusErrorState>
         ) : null}
 
         {storeWorkflow.preview ? (

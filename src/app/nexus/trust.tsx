@@ -6,7 +6,7 @@
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, Text, TextInput, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
 import { useNexusAuthGate } from '@app/components/nexus/nexus-auth-gate';
@@ -16,7 +16,9 @@ import {
   NexusActionButton,
   NexusBadge,
   NexusCard,
+  NexusFieldActionRow,
   NexusSectionHeader,
+  NexusTextInput,
   useNexusAppearance,
 } from '@app/components/nexus/ui';
 import type { NexusTrustPayload } from '@runtime/nexus/nexus-api-types';
@@ -461,14 +463,12 @@ export default function NexusTrustPage() {
               </View>
               {activeScope.level !== 'personal' ? (
                 <>
-                  <TextInput
+                  <NexusTextInput
                     value={associationNote}
                     onChangeText={setAssociationNote}
                     placeholder="Optional note for this association"
-                    placeholderTextColor={appearance.textInputPlaceholderColor}
-                    className={`rounded-[18px] border px-4 py-3 ${appearance.textInputClass}`}
                   />
-                  <View className="flex-row flex-wrap gap-3">
+                  <NexusFieldActionRow>
                     <NexusActionButton
                       label={activeAssociationRelation ? 'Refresh association' : 'Add association'}
                       onPress={() => void handleAssociationRelation(1)}
@@ -479,7 +479,7 @@ export default function NexusTrustPage() {
                       onPress={() => void handleAssociationRelation(0)}
                       disabled={!activeAssociationRelation}
                     />
-                  </View>
+                  </NexusFieldActionRow>
                 </>
               ) : (
                 <Text className={appearance.itemBodyClass}>

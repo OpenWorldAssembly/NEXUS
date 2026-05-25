@@ -5,11 +5,12 @@
 
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
-import { ScrollView, Text, TextInput, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 
 import {
   NexusActionButton,
   NexusCard,
+  NexusFieldShell,
   NexusSearchField,
   NexusSearchResultList,
   NexusSearchResultRow,
@@ -17,6 +18,7 @@ import {
   NexusSearchStatusText,
   NexusSegmentedPill,
   NexusSectionHeader,
+  NexusTextInput,
   useNexusAppearance,
   useNexusLoading,
 } from '@app/components/nexus/ui';
@@ -95,30 +97,15 @@ export function IdentityField({
   error?: string;
   children: ReactNode;
 }) {
-  const appearance = useNexusAppearance();
-
   return (
-    <View className="gap-2">
-      <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
-        {label}
-      </Text>
+    <NexusFieldShell error={error} hint={hint} label={label}>
       {children}
-      {hint ? <Text className={appearance.itemMetaClass}>{hint}</Text> : null}
-      {error ? <Text className="text-sm text-nexus-rose">{error}</Text> : null}
-    </View>
+    </NexusFieldShell>
   );
 }
 
-export function IdentityInput(props: React.ComponentProps<typeof TextInput>) {
-  const appearance = useNexusAppearance();
-
-  return (
-    <TextInput
-      {...props}
-      placeholderTextColor={appearance.textInputPlaceholderColor}
-      className={`rounded-[18px] border px-4 py-3 ${appearance.textInputClass}`}
-    />
-  );
+export function IdentityInput(props: React.ComponentProps<typeof NexusTextInput>) {
+  return <NexusTextInput {...props} />;
 }
 
 export function IdentityRouteLinks({

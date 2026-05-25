@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Platform, Text, TextInput, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 
 import type { NexusPacketValidationMode } from '@core/contracts';
 import {
   NexusActionButton,
   NexusBadge,
   NexusCard,
+  NexusErrorState,
+  NexusFieldActionRow,
   NexusSegmentedPill,
+  NexusTextArea,
+  NexusWarningState,
   useNexusAppearance,
 } from '@app/components/nexus/ui';
 import type {
@@ -820,18 +824,16 @@ export function NexusPacketExplorerImportPanel({
             </View>
 
             {!canUseBrowserFilePicker() ? (
-              <NexusCard tone="gold">
-                <Text className={appearance.itemBodyClass}>
-                  JSON file upload is only available in a browser session right
-                  now. Paste JSON directly on other platforms.
-                </Text>
-              </NexusCard>
+              <NexusWarningState>
+                JSON file upload is only available in a browser session right
+                now. Paste JSON directly on other platforms.
+              </NexusWarningState>
             ) : null}
           </View>
         ) : null}
 
-        <TextInput
-          className={`rounded-[22px] border px-4 py-3 ${appearance.textInputClass}`}
+        <NexusTextArea
+          inputClassName="rounded-[22px]"
           multiline
           onChangeText={setSourceText}
           placeholder={
@@ -839,12 +841,11 @@ export function NexusPacketExplorerImportPanel({
               ? 'Loaded JSON file contents will appear here and can still be edited.'
               : 'Paste raw packet JSON, bundle JSON, legacy revisions JSON, or a raw packet array.'
           }
-          placeholderTextColor={appearance.textInputPlaceholderColor}
           style={{ minHeight: 220, textAlignVertical: 'top' }}
           value={sourceText}
         />
 
-        <View className="flex-row flex-wrap gap-3">
+        <NexusFieldActionRow>
           <NexusActionButton
             label={workflow.isAnalyzing ? 'Analyzing...' : 'Analyze Import'}
             onPress={() => void handleAnalyze()}
@@ -867,12 +868,10 @@ export function NexusPacketExplorerImportPanel({
             onPress={handleClear}
             disabled={!hasSource && !workflow.result}
           />
-        </View>
+        </NexusFieldActionRow>
 
         {workflow.error ? (
-          <NexusCard tone="rose">
-            <Text className={appearance.itemBodyClass}>{workflow.error}</Text>
-          </NexusCard>
+          <NexusErrorState>{workflow.error}</NexusErrorState>
         ) : null}
       </NexusCard>
 

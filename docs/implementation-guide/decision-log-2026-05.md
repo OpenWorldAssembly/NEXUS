@@ -59,6 +59,12 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - The consolidation is UI-only: Packet Explorer, identity, and locality create keep their own debounce timing, API calls, ranking, filtering, selection, and create-candidate behavior.
 - Search loading scopes attach to the visual result surface, such as a dropdown or dedicated results panel, instead of packet types, route names, or search engine semantics.
 
+## 2026-05 Nexus forms and feedback alignment start
+
+- Nexus forms now have shared field shell, text input, text area, and field action-row primitives under `app/components/nexus/ui/forms/*`.
+- Nexus feedback now has shared inline loading plus empty, error, warning, status, and operation-card primitives under `app/components/nexus/ui/feedback/*`.
+- Identity fields, Packet Explorer import/export fields, trust association notes, and roles support comments began migrating to those primitives while preserving existing route behavior and keeping scoped loading caller-owned.
+
 ## 2026-05 Nexus UI primitive split
 
 - The broad `app/components/nexus/nexus-ui.tsx` primitive file is now a compatibility bridge over focused `app/components/nexus/ui/*` component-type modules.
