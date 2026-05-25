@@ -330,3 +330,11 @@ export function useNexusLoading(): NexusLoadingContextValue {
 
   return context;
 }
+
+/**
+ * Inputs: none.
+ * Output: the nearest Nexus loading controller, when one is available.
+ */
+export function useOptionalNexusLoading(): NexusLoadingContextValue | null {
+  return useContext(NexusLoadingContext);
+}

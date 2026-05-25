@@ -4,6 +4,7 @@
  */
 import { Pressable, Text, View } from 'react-native';
 
+import { useOptionalNexusLoading } from '@app/components/nexus/loading';
 import { NexusThemedBevelEdges, getNexusChromeClasses } from '@app/components/nexus/nexus-ui';
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import type { NexusActionMenuItem, NexusActionMenuTone } from './nexus-card-types';
@@ -54,8 +55,26 @@ export function NexusActionMenu({
   onClose,
 }: NexusActionMenuProps) {
   const { themeMode, uiDensity } = useNexusShell();
+  const loading = useOptionalNexusLoading();
   const chrome = getNexusChromeClasses(themeMode, uiDensity);
   const visibleActions = actions.filter((action) => !action.hidden);
+
+  const handleActionPress = (action: NexusActionMenuItem) => {
+    const runAction = () => action.onSelect?.();
+
+    onClose();
+
+    if (action.loadingScope && loading) {
+      void loading.runWithLoading(
+        action.loadingScope,
+        runAction,
+        action.loadingOptions
+      );
+      return;
+    }
+
+    void Promise.resolve(runAction());
+  };
 
   if (!isOpen || visibleActions.length === 0) {
     return null;
@@ -75,37 +94,45 @@ export function NexusActionMenu({
         backgroundColor: themeMode === 'dark' ? '#102133' : '#ffffff',
       }}
     >
-      {visibleActions.map((action) => (
-        <Pressable
-          key={action.id}
-          accessibilityLabel={action.accessibilityLabel ?? action.label}
-          accessibilityRole="button"
-          className={joinClasses(
-            chrome.compactButtonClass,
-            uiDensity === 'large' ? 'px-3 py-2.5' : 'px-2.5 py-2',
-            action.disabled ? 'opacity-50' : undefined,
-          )}
-          disabled={action.disabled}
-          onPress={(event) => {
-            event.stopPropagation();
-            if (action.disabled) {
-              return;
-            }
-            action.onSelect?.();
-            onClose();
-          }}
-        >
-          <Text
+      {visibleActions.map((action) => {
+        const isActionLoading = Boolean(
+          action.loadingScope && loading?.isLoading(action.loadingScope)
+        );
+        const isDisabled = Boolean(action.disabled || isActionLoading);
+
+        return (
+          <Pressable
+            key={action.id}
+            accessibilityLabel={action.accessibilityLabel ?? action.label}
+            accessibilityRole="button"
+            accessibilityState={isDisabled ? { disabled: true } : undefined}
             className={joinClasses(
-              uiDensity === 'large' ? 'text-sm font-semibold' : 'text-xs font-semibold',
-              getActionToneClass(action.tone ?? 'default', themeMode),
+              chrome.compactButtonClass,
+              uiDensity === 'large' ? 'px-3 py-2.5' : 'px-2.5 py-2',
+              isDisabled ? 'opacity-50' : undefined,
             )}
+            disabled={isDisabled}
+            onPress={(event) => {
+              event.stopPropagation();
+              if (isDisabled) {
+                return;
+              }
+
+              handleActionPress(action);
+            }}
           >
-            {action.label}
-          </Text>
-          <NexusThemedBevelEdges themeMode={themeMode} subtle />
-        </Pressable>
-      ))}
+            <Text
+              className={joinClasses(
+                uiDensity === 'large' ? 'text-sm font-semibold' : 'text-xs font-semibold',
+                getActionToneClass(action.tone ?? 'default', themeMode),
+              )}
+            >
+              {action.label}
+            </Text>
+            <NexusThemedBevelEdges themeMode={themeMode} subtle />
+          </Pressable>
+        );
+      })}
     </View>
   );
 }

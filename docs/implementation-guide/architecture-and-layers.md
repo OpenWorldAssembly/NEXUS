@@ -102,7 +102,9 @@ Nexus loading chrome is an app-layer concern. The scoped loading provider, bound
 
 The loading system must not depend on packet type, mutation intent, packet action registry entries, or runtime operation categories. Runtime and core code should remain unaware of blur overlays, spinners, and UI input blocking.
 
-The active state starts immediately so duplicate input inside the same boundary can be blocked before the delayed visual overlay appears. The visible state is delayed to prevent spinner flicker on fast operations, and visible overlays may remain briefly to satisfy the minimum visible duration. Shared buttons, menus, cards, and tabs may later accept optional loading scopes, but v1 integration is hook-driven.
+The active state starts immediately so duplicate input inside the same boundary can be blocked before the delayed visual overlay appears. The visible state is delayed to prevent spinner flicker on fast operations, and visible overlays may remain briefly to satisfy the minimum visible duration.
+
+Shared Nexus buttons and action-menu items can carry optional loading scopes, allowing common action chrome to start scoped loading without knowing packet types or runtime operation semantics. The UI site still owns the visual scope choice because it knows which page, panel, tab, card, menu, or action pane should be blocked.
 
 ## Navigation and shell model
 

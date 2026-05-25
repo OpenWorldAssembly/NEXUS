@@ -40,7 +40,7 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - Nexus loading now has a UI-owned provider, boundary, overlay, and hook for caller-selected visual scopes.
 - The loading layer intentionally ignores packet type, action registry identity, mutation intent, and runtime operation categories; UI boundaries decide what visual area is busy.
 - A scope becomes active immediately to block duplicate input, while the visual overlay is delayed and minimum-duration guarded to avoid spinner flicker.
-- Shared button and menu loading-scope integration is deferred until the infrastructure has real usage patterns.
+- Shared buttons and action-menu items can now opt into scoped loading with caller-supplied scope strings, while packet action registries and runtime operations remain loading-agnostic.
 
 ## 2026-05 feature-status explainers
 

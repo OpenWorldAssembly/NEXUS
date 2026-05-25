@@ -4,6 +4,7 @@
  */
 export {
   NexusLoadingProvider,
+  useOptionalNexusLoading,
   useNexusLoading,
   type NexusLoadingOptions,
   type NexusLoadingScope,

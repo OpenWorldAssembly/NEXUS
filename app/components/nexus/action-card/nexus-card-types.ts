@@ -4,6 +4,11 @@
  */
 import type { ReactNode } from 'react';
 
+import type {
+  NexusLoadingOptions,
+  NexusLoadingScope,
+} from '@app/components/nexus/loading';
+
 export type NexusActionMenuTone =
   | 'default'
   | 'accent'
@@ -38,8 +43,10 @@ export type NexusActionMenuItem = {
   accessibilityLabel?: string;
   disabled?: boolean;
   hidden?: boolean;
+  loadingOptions?: NexusLoadingOptions;
+  loadingScope?: NexusLoadingScope;
   tone?: NexusActionMenuTone;
-  onSelect?: () => void;
+  onSelect?: () => void | Promise<void>;
 };
 
 export type NexusCardBadge = {

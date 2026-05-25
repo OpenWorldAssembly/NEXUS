@@ -21,7 +21,11 @@ import {
 
 import type { NexusFeatureStatusId } from '@app/components/nexus/nexus-feature-status-registry';
 import { useNexusFeatureStatus } from '@app/components/nexus/nexus-feature-status-context';
-export { NexusCardMenuButton } from '@app/components/nexus/action-card/nexus-card-menu-button';
+import {
+  useOptionalNexusLoading,
+  type NexusLoadingOptions,
+  type NexusLoadingScope,
+} from '@app/components/nexus/loading';
 import { useNexusShellChrome } from '@app/components/nexus/nexus-shell-chrome-context';
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import {
@@ -35,6 +39,8 @@ import {
   type NexusThemeMode,
   type NexusUiDensity,
 } from '@runtime/nexus/nexus-shell';
+
+export { NexusCardMenuButton } from '@app/components/nexus/action-card/nexus-card-menu-button';
 
 type NexusCardProps = PropsWithChildren<{
   accessibilityLabel?: string;
@@ -74,10 +80,12 @@ type NexusChevronIconProps = {
 
 type NexusActionButtonProps = {
   label: string;
-  onPress?: () => void;
+  onPress?: () => void | Promise<void>;
   disabled?: boolean;
   variant?: 'primary' | 'secondary' | 'ghost';
   featureStatusId?: NexusFeatureStatusId;
+  loadingOptions?: NexusLoadingOptions;
+  loadingScope?: NexusLoadingScope;
 };
 
 type NexusSegmentedPillProps = {
@@ -882,12 +890,18 @@ export function NexusActionButton({
   disabled = false,
   variant = 'secondary',
   featureStatusId,
+  loadingOptions,
+  loadingScope,
 }: NexusActionButtonProps) {
   const { themeMode, uiDensity } = useNexusShell();
+  const loading = useOptionalNexusLoading();
   const chrome = getNexusChromeClasses(themeMode, uiDensity);
   const featureStatus = useNexusFeatureStatus();
   const [isHovered, setIsHovered] = useState(false);
   const pressableRef = useRef<View | null>(null);
+  const isLoadingScopeActive = Boolean(
+    loadingScope && loading?.isLoading(loadingScope)
+  );
   const variantClasses =
     variant === 'primary'
       ? chrome.primaryActionSurfaceClass
@@ -917,10 +931,19 @@ export function NexusActionButton({
       : isHovered
         ? 'text-rose-600'
         : 'text-rose-500';
-  const isExplainableDisabled = disabled && Boolean(featureStatusId) && Boolean(featureStatus);
-  const isActuallyDisabled = disabled && !isExplainableDisabled;
+  const isExplainableDisabled =
+    disabled &&
+    !isLoadingScopeActive &&
+    Boolean(featureStatusId) &&
+    Boolean(featureStatus);
+  const isActuallyDisabled =
+    isLoadingScopeActive || (disabled && !isExplainableDisabled);
 
   const handlePress = () => {
+    if (isLoadingScopeActive) {
+      return;
+    }
+
     if (
       isExplainableDisabled &&
       featureStatusId &&
@@ -938,18 +961,29 @@ export function NexusActionButton({
       return;
     }
 
-    onPress?.();
+    if (!onPress) {
+      return;
+    }
+
+    if (loadingScope && loading) {
+      void loading.runWithLoading(loadingScope, onPress, loadingOptions);
+      return;
+    }
+
+    void Promise.resolve(onPress());
   };
 
   return (
     <View ref={pressableRef} collapsable={false}>
       <Pressable
         accessibilityRole="button"
-        accessibilityState={disabled ? { disabled: true } : undefined}
+        accessibilityState={
+          disabled || isLoadingScopeActive ? { disabled: true } : undefined
+        }
         className={joinClasses(
           chrome.actionButtonFrameClass,
           variantClasses,
-          disabled ? 'opacity-45' : '',
+          disabled || isLoadingScopeActive ? 'opacity-45' : '',
         )}
         disabled={isActuallyDisabled}
         onHoverIn={
