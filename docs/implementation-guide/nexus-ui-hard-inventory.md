@@ -44,7 +44,7 @@ The counts below remain useful as the pre-move hard inventory. New shared UI sho
 
 | Lines | Zone | File | Primary component candidates | Raw primitives |
 | ---: | --- | --- | --- | --- |
-| 3141 after feature extraction | route | `src/app/nexus/locality/create.tsx` | LocalityLevelSearchRow, NexusLocalityCreatePage controller | Pressable 3, direct modal chrome moved to `features/locality/*`, TextInput refs retained, ScrollView 4 |
+| 2470 after feature extraction and cleanup | route | `src/app/nexus/locality/create.tsx` | NexusLocalityCreatePage controller | Pressable 0, direct modal chrome moved to `features/locality/*`, TextInput refs retained, ScrollView 4 |
 | 2447 | route | `src/app/nexus/discussions.tsx` | InlineReplyComposer, DiscussionVotePill, ReplyCountPill, ReplyNode, ReplyTree, NexusDiscussionsPage | Pressable 9, TextInput 4, ScrollView 7 |
 | 2056 | support | `app/components/nexus/identity-shell-context.tsx` | IdentityShellContext, IdentityShellProvider | — |
 | 1962 | mixed | `app/components/nexus/nexus-sidebar.tsx` | NexusGuestAvatar, NexusRailToggle, NexusPreferenceSwitch, NexusCurrentContextCard, NexusMenuSectionLabel, NexusPrimaryNavItem | Pressable 26, ScrollView 6, Switch 2 |
@@ -66,7 +66,7 @@ These are the files most likely to contain local button, modal, form, scroll, or
 
 | File | Pressable | Modal | TextInput | ScrollView | Other raw primitives |
 | --- | ---: | ---: | ---: | ---: | --- |
-| `src/app/nexus/locality/create.tsx` | 3 after feature extraction | 0 direct modal shells | 5 | 4 | legacy level-builder helpers remain route-local |
+| `src/app/nexus/locality/create.tsx` | 0 after feature extraction cleanup | 0 direct modal shells | 3 | 4 | legacy level-row builder removed |
 | `app/components/nexus/nexus-sidebar.tsx` | 26 | 0 | 0 | 6 | Switch 2 |
 | `app/components/nexus/nexus-ui.tsx` | 18 | 3 | 0 | 3 | — |
 | `src/app/nexus/discussions.tsx` | 9 | 0 | 4 | 7 | — |
@@ -171,7 +171,7 @@ Route-local components are the highest-risk extraction zone because they often b
 | `src/app/nexus/identity/sign-in.tsx` | 639 | NexusIdentitySignInPage | support | Pressable 3 | NexusActionButton 7, NexusCard 13, NexusTabRail 2 |
 | `src/app/nexus/index.tsx` | 14 | NexusIndexPage | support | — | — |
 | `src/app/nexus/library.tsx` | 317 | NexusLibraryPage | support | ScrollView 4 | NexusActionButton 5, NexusCard 9, NexusSectionHeader 2, NexusBadge 5 |
-| `src/app/nexus/locality/create.tsx` | 3141 after feature extraction | NexusLocalityCreatePage route/controller; search/build panels, picker dialogs, graph rows, and preview panels moved to `features/locality/*` | overlays, forms | route still contains legacy unused level-row helpers and outer scroll composition | NexusCard, NexusSectionHeader, NexusTabRail, NexusBadge |
+| `src/app/nexus/locality/create.tsx` | 2470 after feature extraction cleanup | NexusLocalityCreatePage route/controller; search/build panels, picker dialogs, graph rows, preview panels, and obsolete level-row UI moved or removed | overlays, forms | route owns graph state, loading, mutations, auth, and outer scroll composition | NexusCard, NexusSectionHeader, NexusTabRail, NexusBadge |
 | `src/app/nexus/roles.tsx` | 714 | NexusRolesPage | forms | TextInput 2, ScrollView 3 | NexusActionButton 7, NexusCard 23, NexusSectionHeader 2, NexusTabRail 2, NexusBadge 17 |
 | `src/app/nexus/trust.tsx` | 659 | NexusTrustPage | forms | TextInput 2, ScrollView 3 | NexusActionButton 9, NexusCard 31, NexusSectionHeader 2, NexusBadge 20 |
 | `src/app/nexus/votes.tsx` | 210 | NexusVotesPage | support | ScrollView 3 | NexusActionButton 4, NexusCard 13, NexusSectionHeader 2, NexusBadge 7 |

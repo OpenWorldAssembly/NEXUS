@@ -288,4 +288,4 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - Nexus locality create UI began moving into `app/components/nexus/features/locality/*` while `src/app/nexus/locality/create.tsx` remains the controller for params, auth gates, draft persistence, graph/path state, API calls, mutation handlers, and modal state.
 - Extracted locality feature components now cover the search panel, builder panel, parent/type/create-kind dialogs, selected-result and remove confirmation dialogs, outcome dialogs, graph rows, and preview panel.
 - Locality loading remains visual-scope owned: search results, parent picker results, graph row results, preview, create-path, and set-home actions use caller-owned loading scopes without coupling UI to packet/runtime semantics.
-- Remaining legacy level-builder helpers stay route-local for now; future cleanup can remove or extract them only after behavior ownership is verified.
+- The obsolete level-row ladder builder path was removed after extraction; the active create flow is the graph-based builder, with route/controller ownership preserved.

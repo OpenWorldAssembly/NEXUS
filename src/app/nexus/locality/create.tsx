@@ -6,7 +6,7 @@
 import type { Href } from 'expo-router';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ScrollView, Text, TextInput, View } from 'react-native';
 
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
 import {
@@ -38,10 +38,6 @@ import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import {
   NexusBadge,
   NexusCard,
-  NexusSearchField,
-  NexusSearchResultList,
-  NexusSearchResultRow,
-  NexusSearchResultsBoundary,
   NexusSectionHeader,
   useNexusAppearance,
   useNexusLoading,
@@ -69,12 +65,9 @@ import { NexusApiError } from '@runtime/nexus/nexus-query-api.shared';
 type LocalityCreateMode = 'build' | 'preview';
 
 type LocalityTypePickerContext = {
-  level: LocalityLevel;
-  isTarget: boolean;
-  nodeId?: string;
+  nodeId: string;
 } | null;
 
-const LOCALITY_LEVELS: LocalityLevel[] = ['nation', 'region', 'city', 'district'];
 const SEARCH_RESULT_LIMIT = 8;
 const LOCALITY_CREATE_SEARCH_LOADING_SCOPE = 'locality-create:search-results';
 const LOCALITY_CREATE_PARENT_PICKER_LOADING_SCOPE =
@@ -220,31 +213,6 @@ function getKindIdForSearchResult(result: NexusLocationSearchResult): string {
 
   return getDefaultKindIdForLevel(result.legacy_level ?? result.level);
 }
-
-function getKindOptionsForLevel(level: LocalityLevel, isTarget: boolean): CreateLocalityKindOption[] {
-  if (isTarget) {
-    return CREATE_LOCALITY_KIND_OPTIONS;
-  }
-
-  return CREATE_LOCALITY_KIND_OPTIONS.filter((option) => option.legacyLevel === level);
-}
-
-function getDefaultKindSelections(): Record<LocalityLevel, string> {
-  return {
-    nation: getDefaultKindIdForLevel('nation'),
-    region: getDefaultKindIdForLevel('region'),
-    city: getDefaultKindIdForLevel('city'),
-    district: getDefaultKindIdForLevel('district'),
-  };
-}
-
-type LocalityLevelEntry = {
-  query: string;
-  selectedResult: NexusLocationSearchResult | null;
-  isNew: boolean;
-};
-
-type LocalityLevelErrorMap = Partial<Record<LocalityLevel, string>>;
 
 type LocalityGraphNodeErrorMap = Partial<Record<string, string>>;
 
@@ -397,24 +365,6 @@ function toRouteScopeId(packetId: string): string {
 
   return packetId.replace(/[^a-zA-Z0-9_-]+/g, '-');
 }
-
-function createLevelEntry(query = ''): LocalityLevelEntry {
-  return {
-    query,
-    selectedResult: null,
-    isNew: false,
-  };
-}
-
-function createLevelEntries(): Record<LocalityLevel, LocalityLevelEntry> {
-  return {
-    nation: createLevelEntry(),
-    region: createLevelEntry(),
-    city: createLevelEntry(),
-    district: createLevelEntry(),
-  };
-}
-
 
 function createGraphNodeId(): string {
   return `locality-node-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -917,85 +867,6 @@ function getLevelLabel(level: LocalityLevel): string {
   return level.charAt(0).toUpperCase() + level.slice(1);
 }
 
-function getPreviousLevel(level: LocalityLevel): LocalityLevel | null {
-  const levelIndex = LOCALITY_LEVELS.indexOf(level);
-
-  if (levelIndex <= 0) {
-    return null;
-  }
-
-  return LOCALITY_LEVELS[levelIndex - 1];
-}
-
-function sortLocalityLevels(levels: LocalityLevel[]): LocalityLevel[] {
-  return [...new Set(levels)].sort(
-    (leftLevel, rightLevel) =>
-      LOCALITY_LEVELS.indexOf(leftLevel) - LOCALITY_LEVELS.indexOf(rightLevel)
-  );
-}
-
-function getParentLevelsForFinalLevel(finalLevel: LocalityLevel): LocalityLevel[] {
-  const finalLevelIndex = LOCALITY_LEVELS.indexOf(finalLevel);
-
-  if (finalLevelIndex <= 0) {
-    return [];
-  }
-
-  return LOCALITY_LEVELS.slice(0, finalLevelIndex);
-}
-
-function getNextConnectedParentLevel(input: {
-  finalLevel: LocalityLevel;
-  includedParentLevels: LocalityLevel[];
-}): LocalityLevel | null {
-  const availableParentLevels = getParentLevelsForFinalLevel(input.finalLevel).filter(
-    (level) => !input.includedParentLevels.includes(level)
-  );
-
-  return availableParentLevels[availableParentLevels.length - 1] ?? null;
-}
-
-function getVisibleLevels(input: {
-  finalLevel: LocalityLevel;
-  includedParentLevels: LocalityLevel[];
-}): LocalityLevel[] {
-  return sortLocalityLevels([...input.includedParentLevels, input.finalLevel]);
-}
-
-function clearDownstreamEntries(
-  entries: Record<LocalityLevel, LocalityLevelEntry>,
-  level: LocalityLevel,
-  options: { preserveLevel?: LocalityLevel | null } = {}
-): Record<LocalityLevel, LocalityLevelEntry> {
-  const levelIndex = LOCALITY_LEVELS.indexOf(level);
-
-  return Object.fromEntries(
-    LOCALITY_LEVELS.map((currentLevel, index) => {
-      const shouldPreserve = options.preserveLevel === currentLevel;
-
-      return [
-        currentLevel,
-        index > levelIndex && !shouldPreserve
-            ? createLevelEntry(entries[currentLevel]?.query ?? '')
-            : entries[currentLevel],
-      ];
-    })
-  ) as Record<LocalityLevel, LocalityLevelEntry>;
-}
-
-function getDownstreamPreserveLevel(
-  changedLevel: LocalityLevel,
-  seededTargetLevel: LocalityLevel | null
-): LocalityLevel | null {
-  if (!seededTargetLevel) {
-    return null;
-  }
-
-  return LOCALITY_LEVELS.indexOf(seededTargetLevel) > LOCALITY_LEVELS.indexOf(changedLevel)
-    ? seededTargetLevel
-    : null;
-}
-
 function normalizeCandidateLevel(
   level: NexusLocationCreateCandidate['level'] | null | undefined
 ): LocalityLevel {
@@ -1035,121 +906,6 @@ function createSearchFallbackCreateCandidate(input: {
   };
 }
 
-function buildVisiblePathEntries(input: {
-  entries: Record<LocalityLevel, LocalityLevelEntry>;
-  visibleLevels: LocalityLevel[];
-  levelKindSelections: Record<LocalityLevel, string>;
-}): NexusLocalityPathEntryPayload[] {
-  return input.visibleLevels.flatMap((level): NexusLocalityPathEntryPayload[] => {
-    const entry = input.entries[level];
-    const isIncluded = entry.selectedResult !== null || entry.isNew;
-
-    if (!isIncluded) {
-      return [];
-    }
-
-    return [
-      {
-        level,
-        name: entry.selectedResult?.name ?? entry.query.trim(),
-        existing_scope_id: entry.selectedResult?.scope_id ?? null,
-        alias_keys: [],
-        display_aliases: [],
-        scope_descriptor: createScopeDescriptorForKindOption(
-          getKindOptionById(
-            input.levelKindSelections[level] ?? getDefaultKindIdForLevel(level)
-          )
-        ),
-      },
-    ];
-  });
-}
-
-function findNearestSelectedParentResult(input: {
-  level: LocalityLevel;
-  entries: Record<LocalityLevel, LocalityLevelEntry>;
-}): NexusLocationSearchResult | null {
-  const levelIndex = LOCALITY_LEVELS.indexOf(input.level);
-
-  for (let index = levelIndex - 1; index >= 0; index -= 1) {
-    const candidateLevel = LOCALITY_LEVELS[index];
-    const candidateEntry = input.entries[candidateLevel];
-
-    if (candidateEntry?.selectedResult) {
-      return candidateEntry.selectedResult;
-    }
-  }
-
-  return null;
-}
-
-function hasPendingNewAncestor(input: {
-  level: LocalityLevel;
-  entries: Record<LocalityLevel, LocalityLevelEntry>;
-}): boolean {
-  const levelIndex = LOCALITY_LEVELS.indexOf(input.level);
-
-  for (let index = levelIndex - 1; index >= 0; index -= 1) {
-    const candidateLevel = LOCALITY_LEVELS[index];
-    const candidateEntry = input.entries[candidateLevel];
-
-    if (candidateEntry?.isNew) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-function autoAcceptDraftEntries(input: {
-  entries: Record<LocalityLevel, LocalityLevelEntry>;
-  visibleLevels: LocalityLevel[];
-}): Record<LocalityLevel, LocalityLevelEntry> {
-  return Object.fromEntries(
-    LOCALITY_LEVELS.map((level) => {
-      const entry = input.entries[level];
-
-      if (
-        input.visibleLevels.includes(level) &&
-        !entry.selectedResult &&
-        !entry.isNew &&
-        entry.query.trim().length >= 2
-      ) {
-        return [
-          level,
-          {
-            ...entry,
-            query: entry.query.trim(),
-            isNew: true,
-          },
-        ];
-      }
-
-      return [level, entry];
-    })
-  ) as Record<LocalityLevel, LocalityLevelEntry>;
-}
-
-function findIncompleteLevel(input: {
-  entries: Record<LocalityLevel, LocalityLevelEntry>;
-  visibleLevels: LocalityLevel[];
-}): LocalityLevel | null {
-  const targetLevel = input.visibleLevels[input.visibleLevels.length - 1] ?? null;
-
-  return (
-    input.visibleLevels.find((level) => {
-      const entry = input.entries[level];
-      const hasTypedValue = entry.query.trim().length > 0;
-
-      if (targetLevel === level) {
-        return !entry.selectedResult && !entry.isNew;
-      }
-
-      return hasTypedValue && !entry.selectedResult && !entry.isNew;
-    }) ?? null
-  );
-}
-
 function getWorkflowErrorMessage(input: unknown, fallback: string): string {
   const message = input instanceof Error ? input.message : fallback;
 
@@ -1169,153 +925,6 @@ function getReviewEntryTypeLabel(entry: NexusLocalityReviewEntryPayload): string
     entry.scope_descriptor?.local_type_label ??
     entry.existing_result?.scope_type_label ??
     getLevelLabel(entry.level)
-  );
-}
-
-function LocalityLevelSearchRow(input: {
-  level: LocalityLevel;
-  roleLabel: string;
-  hierarchyHint: string;
-  entry: LocalityLevelEntry;
-  isEnabled: boolean;
-  parentResult: NexusLocationSearchResult | null;
-  parentIsPendingNew: boolean;
-  selectedKind: CreateLocalityKindOption;
-  inputRef?: (node: TextInput | null) => void;
-  onOpenKindPicker: (level: LocalityLevel) => void;
-  onQueryChange: (level: LocalityLevel, query: string) => void;
-  onSelectResult: (level: LocalityLevel, result: NexusLocationSearchResult) => void;
-  onSubmitLevel: (level: LocalityLevel) => void;
-  errorMessage?: string | null;
-}) {
-  const appearance = useNexusAppearance();
-  const loading = useNexusLoading();
-  const searchLoadingScope = `locality-create:level-row-results:${input.level}`;
-  const [results, setResults] = useState<NexusLocationSearchResult[]>([]);
-  const query = input.entry.query.trim();
-  const parentScopeId = input.parentResult?.scope_id ?? null;
-  const shouldSearch =
-    input.isEnabled &&
-    !input.parentIsPendingNew &&
-    !input.entry.selectedResult &&
-    !input.entry.isNew &&
-    query.length >= 2;
-
-  useEffect(() => {
-    let isMounted = true;
-
-    if (!shouldSearch) {
-      setResults([]);
-      return () => {
-        isMounted = false;
-      };
-    }
-
-    const timeoutHandle = setTimeout(() => {
-      const operationId = loading.beginLoading(searchLoadingScope, {
-        label: 'Searching existing localities...',
-      });
-
-      void fetchNexusLocationSearchPayload(query, {
-        level: input.level,
-        parentScopeId,
-      })
-        .then((payload) => {
-          if (!isMounted) {
-            return;
-          }
-
-          setResults(payload.results.slice(0, SEARCH_RESULT_LIMIT));
-        })
-        .catch(() => {
-          if (!isMounted) {
-            return;
-          }
-
-          setResults([]);
-        })
-        .finally(() => {
-          loading.endLoading(operationId);
-        });
-    }, 220);
-
-    return () => {
-      isMounted = false;
-      clearTimeout(timeoutHandle);
-    };
-  }, [input.level, loading, parentScopeId, query, searchLoadingScope, shouldSearch]);
-
-  return (
-    <View className="gap-2">
-      <View className="flex-row flex-wrap items-center justify-between gap-3">
-        <View className="min-w-0 flex-1 gap-1">
-          <View className="flex-row flex-wrap items-center gap-2">
-            <Text className={appearance.itemMetaClass}>{input.roleLabel}</Text>
-            {input.entry.selectedResult ? (
-              <NexusBadge label="existing" tone="mint" />
-            ) : input.entry.isNew ? (
-              <NexusBadge label="new candidate" tone="gold" />
-            ) : null}
-          </View>
-          <Text className={appearance.itemBodyClass}>{input.hierarchyHint}</Text>
-        </View>
-        <Pressable
-          className={`rounded-[14px] border px-3 py-2 ${appearance.cardInsetClass}`}
-          onPress={() => input.onOpenKindPicker(input.level)}
-        >
-          <View className="flex-row flex-wrap items-center gap-2">
-            <Text className={appearance.itemMetaClass}>TYPE</Text>
-            <Text className={appearance.itemTitleClass}>{input.selectedKind.label}</Text>
-          </View>
-        </Pressable>
-      </View>
-      <NexusSearchField
-        ref={input.inputRef}
-        value={input.entry.query}
-        editable={input.isEnabled}
-        onChangeText={(nextQuery) => input.onQueryChange(input.level, nextQuery)}
-        onSubmitEditing={() => input.onSubmitLevel(input.level)}
-        returnKeyType="next"
-        placeholder={
-          input.isEnabled
-            ? `Search or enter ${input.selectedKind.label.toLowerCase()}`
-            : `Choose ${getLevelLabel(getPreviousLevel(input.level) ?? 'nation').toLowerCase()} first`
-        }
-        isInset={!input.isEnabled}
-      />
-
-      {input.errorMessage ? (
-        <Text className="text-sm text-nexus-rose">{input.errorMessage}</Text>
-      ) : null}
-
-      {results.length > 0 ? (
-        <NexusSearchResultsBoundary
-          loadingLabel="Searching existing localities..."
-          loadingScope={searchLoadingScope}
-        >
-        <NexusSearchResultList>
-          {results.map((result) => (
-            <NexusSearchResultRow
-              key={result.scope_id}
-              onPress={() => input.onSelectResult(input.level, result)}
-            >
-              <View className="flex-row flex-wrap items-center gap-2">
-                <Text className={appearance.itemTitleClass}>{result.name}</Text>
-                <NexusBadge label={getSearchResultTypeLabel(result)} tone="sky" />
-                <NexusBadge label={result.match_type.replace(/_/g, ' ')} />
-              </View>
-              <Text className={appearance.itemMetaClass}>
-                {result.path_label}
-                {result.scope_hierarchy_system
-                  ? ` · ${result.scope_hierarchy_system}`
-                  : ''}
-              </Text>
-            </NexusSearchResultRow>
-          ))}
-        </NexusSearchResultList>
-        </NexusSearchResultsBoundary>
-      ) : null}
-    </View>
   );
 }
 
@@ -1386,11 +995,6 @@ export default function NexusLocalityCreatePage() {
   const [removeConfirmModal, setRemoveConfirmModal] = useState<LocalityRemoveConfirmModalState>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [searchRefreshNonce, setSearchRefreshNonce] = useState(0);
-  const [finalLevel, setFinalLevel] = useState<LocalityLevel>('city');
-  const [includedParentLevels, setIncludedParentLevels] = useState<LocalityLevel[]>([]);
-  const [levelKindSelections, setLevelKindSelections] = useState<Record<LocalityLevel, string>>(
-    () => getDefaultKindSelections()
-  );
   const [graphNodes, setGraphNodes] = useState<LocalityGraphNode[]>(
     () => initialCreateDraft.graphNodes
   );
@@ -1403,10 +1007,6 @@ export default function NexusLocalityCreatePage() {
   const [parentSearchResults, setParentSearchResults] = useState<NexusLocationSearchResult[]>([]);
   const [isParentSearching, setIsParentSearching] = useState(false);
   const [typePickerContext, setTypePickerContext] = useState<LocalityTypePickerContext>(null);
-  const [levelEntries, setLevelEntries] = useState<Record<LocalityLevel, LocalityLevelEntry>>(
-    () => createLevelEntries()
-  );
-  const [seededTargetLevel, setSeededTargetLevel] = useState<LocalityLevel | null>(null);
   const [reviewPreview, setReviewPreview] = useState<NexusLocalityPathPreviewPayload | null>(
     null
   );
@@ -1419,19 +1019,10 @@ export default function NexusLocalityCreatePage() {
     initialCreateDraft.savedDraft?.applyAsHomeLocality ?? shouldSetHome
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [levelErrors, setLevelErrors] = useState<LocalityLevelErrorMap>({});
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isReviewing, setIsReviewing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isClaimedIdentity = currentMode === 'claimed' && isAuthenticated;
-  const visibleLevels = useMemo(
-    () => getVisibleLevels({ finalLevel, includedParentLevels }),
-    [finalLevel, includedParentLevels]
-  );
-  const nextConnectedParentLevel = useMemo(
-    () => getNextConnectedParentLevel({ finalLevel, includedParentLevels }),
-    [finalLevel, includedParentLevels]
-  );
   const returnToSelf = `/nexus/locality/create?${new URLSearchParams({
     query: searchQuery,
     return_to: returnTo,
@@ -1442,15 +1033,9 @@ export default function NexusLocalityCreatePage() {
     useNexusAuthGate({
       returnTo: returnToSelf,
       returnScopeId,
-    });
+  });
   const scrollViewRef = useRef<ScrollView>(null);
   const builderOffsetYRef = useRef(0);
-  const levelInputRefs = useRef<Record<LocalityLevel, TextInput | null>>({
-    nation: null,
-    region: null,
-    city: null,
-    district: null,
-  });
   const graphInputRefs = useRef<Record<string, TextInput | null>>({});
   const parentSearchInputRef = useRef<TextInput | null>(null);
 
@@ -1594,25 +1179,19 @@ export default function NexusLocalityCreatePage() {
     setCreateMode('build');
   };
 
-  const clearLevelErrors = () => {
-    setLevelErrors({});
+  const clearGraphNodeErrors = () => {
     setGraphNodeErrors({});
   };
 
   const resetCreateBuilderState = () => {
     clearLocalityCreateDraft();
     setCreateMode('build');
-    setFinalLevel('city');
-    setIncludedParentLevels([]);
-    setLevelKindSelections(getDefaultKindSelections());
     const resetGraphNode = createLocalityGraphNode({ kindId: getDefaultKindIdForLevel('city') });
     setGraphNodes([resetGraphNode]);
     setTargetGraphNodeId(resetGraphNode.id);
     setGraphNodeErrors({});
     setParentPickerNodeId(null);
     setRemoveConfirmModal(null);
-    setLevelEntries(createLevelEntries());
-    setSeededTargetLevel(null);
     setReviewPreview(null);
     setReviewPreviews([]);
     setHomeLocalityScopeKey(null);
@@ -1623,7 +1202,7 @@ export default function NexusLocalityCreatePage() {
     setCreateKindCandidate(null);
     setSelectedCreateKindId(getDefaultKindIdForLevel('city'));
     setApplyAsHomeLocality(shouldSetHome);
-    clearLevelErrors();
+    clearGraphNodeErrors();
     setErrorMessage(null);
     setStatusMessage(null);
   };
@@ -1866,7 +1445,7 @@ export default function NexusLocalityCreatePage() {
 
     setIsReviewing(true);
     setErrorMessage(null);
-    clearLevelErrors();
+    clearGraphNodeErrors();
     setStatusMessage(null);
 
     try {
@@ -1912,7 +1491,7 @@ export default function NexusLocalityCreatePage() {
 
   const handleGraphNodeQueryChange = (nodeId: string, query: string) => {
     setErrorMessage(null);
-    clearLevelErrors();
+    clearGraphNodeErrors();
     setStatusMessage(null);
     resetReviewState();
     setGraphNodes((currentNodes) =>
@@ -1957,7 +1536,7 @@ export default function NexusLocalityCreatePage() {
     );
 
     setGraphNodes(nextNodes);
-    clearLevelErrors();
+    clearGraphNodeErrors();
     resetReviewState();
 
     const nextBlankNode = getGraphDisplayRows(nextNodes)
@@ -2020,7 +1599,7 @@ export default function NexusLocalityCreatePage() {
     );
     setParentPickerNodeId(null);
     setRemoveConfirmModal(null);
-    clearLevelErrors();
+    clearGraphNodeErrors();
     resetReviewState();
   };
 
@@ -2062,7 +1641,7 @@ export default function NexusLocalityCreatePage() {
           : node
       )
     );
-    clearLevelErrors();
+    clearGraphNodeErrors();
     resetReviewState();
     setTimeout(() => graphInputRefs.current[nodeId]?.focus(), 40);
   };
@@ -2097,7 +1676,7 @@ export default function NexusLocalityCreatePage() {
       )
     );
     setParentPickerNodeId(null);
-    clearLevelErrors();
+    clearGraphNodeErrors();
     resetReviewState();
   };
 
@@ -2133,7 +1712,7 @@ export default function NexusLocalityCreatePage() {
       );
     });
     setParentPickerNodeId(null);
-    clearLevelErrors();
+    clearGraphNodeErrors();
     resetReviewState();
   };
 
@@ -2151,7 +1730,7 @@ export default function NexusLocalityCreatePage() {
           : node
       )
     );
-    clearLevelErrors();
+    clearGraphNodeErrors();
     resetReviewState();
   };
 
@@ -2169,111 +1748,8 @@ export default function NexusLocalityCreatePage() {
           : node
       )
     );
-    clearLevelErrors();
+    clearGraphNodeErrors();
     resetReviewState();
-  };
-
-  const handleLevelQueryChange = (level: LocalityLevel, query: string) => {
-    setErrorMessage(null);
-    clearLevelErrors();
-    setStatusMessage(null);
-    resetReviewState();
-    setSeededTargetLevel((currentSeededLevel) =>
-      level === finalLevel ? level : currentSeededLevel === level ? null : currentSeededLevel
-    );
-    setLevelEntries((currentEntries) =>
-      clearDownstreamEntries(
-        {
-          ...currentEntries,
-          [level]: {
-            query,
-            selectedResult: null,
-            isNew: false,
-          },
-        },
-        level,
-        { preserveLevel: getDownstreamPreserveLevel(level, seededTargetLevel) }
-      )
-    );
-  };
-
-  const handleSelectLevelResult = (
-    level: LocalityLevel,
-    result: NexusLocationSearchResult
-  ) => {
-    setSeededTargetLevel((currentSeededLevel) =>
-      level === finalLevel ? level : currentSeededLevel === level ? null : currentSeededLevel
-    );
-
-    setErrorMessage(null);
-    clearLevelErrors();
-    setStatusMessage(null);
-    resetReviewState();
-    setLevelEntries((currentEntries) =>
-      clearDownstreamEntries(
-        {
-          ...currentEntries,
-          [level]: {
-            query: result.name,
-            selectedResult: result,
-            isNew: false,
-          },
-        },
-        level,
-        { preserveLevel: getDownstreamPreserveLevel(level, seededTargetLevel) }
-      )
-    );
-  };
-
-  const handleSubmitLevel = (level: LocalityLevel) => {
-    const entry = levelEntries[level];
-    const trimmedQuery = entry.query.trim();
-
-    if (!entry.selectedResult && !entry.isNew) {
-      if (trimmedQuery.length < 2) {
-        setLevelErrors({
-          [level]: 'Enter at least two characters before accepting this locality.',
-        });
-        return;
-      }
-
-      const nextEntries = clearDownstreamEntries(
-        {
-          ...levelEntries,
-          [level]: {
-            ...entry,
-            query: trimmedQuery,
-            selectedResult: null,
-            isNew: true,
-          },
-        },
-        level,
-        { preserveLevel: getDownstreamPreserveLevel(level, seededTargetLevel) }
-      );
-
-      setLevelEntries(nextEntries);
-      setSeededTargetLevel((currentSeededLevel) =>
-        level === finalLevel ? level : currentSeededLevel === level ? null : currentSeededLevel
-      );
-      clearLevelErrors();
-      resetReviewState();
-
-      if (level === finalLevel) {
-        void runLocalityPreview({ createAnyway: false });
-        return;
-      }
-    }
-
-    const submitOrder = [finalLevel, ...visibleLevels.slice(0, -1).reverse()];
-    const currentLevelIndex = submitOrder.indexOf(level);
-    const nextLevel = submitOrder[currentLevelIndex + 1] ?? null;
-
-    if (nextLevel) {
-      setTimeout(() => levelInputRefs.current[nextLevel]?.focus(), 40);
-      return;
-    }
-
-    void runLocalityPreview({ createAnyway: false });
   };
 
   const handleSelectKindOption = (option: CreateLocalityKindOption) => {
@@ -2281,129 +1757,21 @@ export default function NexusLocalityCreatePage() {
       return;
     }
 
-    if (typePickerContext.nodeId) {
-      setGraphNodes((currentNodes) =>
-        currentNodes.map((node) =>
-          node.id === typePickerContext.nodeId
-            ? {
-                ...node,
-                kindId: option.id,
-              }
-            : node
-        )
-      );
-      setTypePickerContext(null);
-      resetReviewState();
-      setActiveWorkflowTab('create');
-      return;
-    }
-
-    const destinationLevel = option.legacyLevel;
-
-    setLevelKindSelections((currentSelections) => ({
-      ...currentSelections,
-      [destinationLevel]: option.id,
-    }));
-
-    if (typePickerContext.isTarget) {
-      const previousTargetLevel = finalLevel;
-
-      if (destinationLevel !== previousTargetLevel) {
-        setLevelEntries((currentEntries) => {
-          const previousTargetEntry = currentEntries[previousTargetLevel];
-          const shouldClearPreviousTarget = seededTargetLevel === previousTargetLevel;
-
-          return {
-            ...currentEntries,
-            [destinationLevel]: {
-              ...currentEntries[destinationLevel],
-              query: previousTargetEntry.query,
-              selectedResult: null,
-              isNew: previousTargetEntry.query.trim().length >= 2,
-            },
-            ...(shouldClearPreviousTarget
-              ? {
-                  [previousTargetLevel]: createLevelEntry(),
-                }
-              : {}),
-          };
-        });
-      }
-
-      setIncludedParentLevels((currentLevels) =>
-        sortLocalityLevels(
-          currentLevels.filter(
-            (level) =>
-              level !== destinationLevel &&
-              LOCALITY_LEVELS.indexOf(level) < LOCALITY_LEVELS.indexOf(destinationLevel)
-          )
-        )
-      );
-      setFinalLevel(destinationLevel);
-      setSeededTargetLevel(destinationLevel);
-    } else if (destinationLevel !== typePickerContext.level) {
-      const previousParentLevel = typePickerContext.level;
-
-      setLevelEntries((currentEntries) => {
-        const previousParentEntry = currentEntries[previousParentLevel];
-
-        return {
-          ...currentEntries,
-          [destinationLevel]: {
-            ...currentEntries[destinationLevel],
-            query: previousParentEntry.query,
-            selectedResult: null,
-            isNew: previousParentEntry.query.trim().length >= 2,
-          },
-          [previousParentLevel]: createLevelEntry(),
-        };
-      });
-      setIncludedParentLevels((currentLevels) =>
-        sortLocalityLevels(
-          currentLevels
-            .filter((level) => level !== previousParentLevel && level !== destinationLevel)
-            .concat(destinationLevel)
-        )
-      );
-    }
-
+    setGraphNodes((currentNodes) =>
+      currentNodes.map((node) =>
+        node.id === typePickerContext.nodeId
+          ? {
+              ...node,
+              kindId: option.id,
+            }
+          : node
+      )
+    );
     setTypePickerContext(null);
     resetReviewState();
     setActiveWorkflowTab('create');
   };
 
-
-  const handleAddConnectedParentScope = () => {
-    if (!nextConnectedParentLevel) {
-      return;
-    }
-
-    setIncludedParentLevels((currentLevels) =>
-      sortLocalityLevels([...currentLevels, nextConnectedParentLevel])
-    );
-    setLevelKindSelections((currentSelections) => ({
-      ...currentSelections,
-      [nextConnectedParentLevel]:
-        currentSelections[nextConnectedParentLevel] ??
-        getDefaultKindIdForLevel(nextConnectedParentLevel),
-    }));
-    setActiveWorkflowTab('create');
-    setCreateMode('build');
-    resetReviewState();
-    setTimeout(() => levelInputRefs.current[nextConnectedParentLevel]?.focus(), 60);
-  };
-
-  const handleRemoveConnectedParentScope = (level: LocalityLevel) => {
-    setIncludedParentLevels((currentLevels) =>
-      currentLevels.filter((currentLevel) => currentLevel !== level)
-    );
-    setLevelEntries((currentEntries) => ({
-      ...currentEntries,
-      [level]: createLevelEntry(),
-    }));
-    clearLevelErrors();
-    resetReviewState();
-  };
 
   const handleUseSearchCreateCandidate = (
     candidateOverride?: NexusLocationCreateCandidate | null,
@@ -2416,18 +1784,10 @@ export default function NexusLocalityCreatePage() {
     }
 
     const nextKindId = kindOptionOverride?.id ?? selectedCreateKindId;
-    const nextFinalLevel = kindOptionOverride?.legacyLevel ?? normalizeCandidateLevel(candidate.level);
-    const nextEntries = createLevelEntries();
     const nextGraphNode = createLocalityGraphNode({
       query: candidate.query.trim(),
       kindId: nextKindId,
     });
-
-    nextEntries[nextFinalLevel] = {
-      query: candidate.query.trim(),
-      selectedResult: null,
-      isNew: true,
-    };
 
     setErrorMessage(null);
     setStatusMessage(null);
@@ -2435,20 +1795,12 @@ export default function NexusLocalityCreatePage() {
     setAppliedSearchCandidateKey(getCreateCandidateKey(candidate));
     setCreateKindCandidate(null);
     setApplyAsHomeLocality(true);
-    setSeededTargetLevel(nextFinalLevel);
-    setFinalLevel(nextFinalLevel);
-    setIncludedParentLevels([]);
-    setLevelKindSelections((currentSelections) => ({
-      ...currentSelections,
-      [nextFinalLevel]: nextKindId,
-    }));
     setGraphNodes([nextGraphNode]);
     setTargetGraphNodeId(nextGraphNode.id);
     setGraphNodeErrors({});
     setParentPickerNodeId(null);
     setActiveWorkflowTab('create');
     setCreateMode('build');
-    setLevelEntries(nextEntries);
     scrollToBuilder();
   };
 
@@ -2785,38 +2137,17 @@ export default function NexusLocalityCreatePage() {
   const selectedCreateKind =
     CREATE_LOCALITY_KIND_OPTIONS.find((option) => option.id === selectedCreateKindId) ??
     getDefaultKindOption();
-  const typePickerOptions = typePickerContext?.nodeId
-    ? CREATE_LOCALITY_KIND_OPTIONS
-    : typePickerContext
-      ? typePickerContext.isTarget
-        ? getKindOptionsForLevel(typePickerContext.level, true)
-        : CREATE_LOCALITY_KIND_OPTIONS.filter((option) => {
-            const optionLevelIndex = LOCALITY_LEVELS.indexOf(option.legacyLevel);
-            const finalLevelIndex = LOCALITY_LEVELS.indexOf(finalLevel);
-            const isAlreadyUsed =
-              option.legacyLevel !== typePickerContext.level &&
-              includedParentLevels.includes(option.legacyLevel);
-
-            return optionLevelIndex < finalLevelIndex && !isAlreadyUsed;
-          })
-      : [];
+  const typePickerOptions = typePickerContext ? CREATE_LOCALITY_KIND_OPTIONS : [];
   const selectedTypePickerOption = typePickerContext
-    ? typePickerOptions.find((option) => {
-        if (typePickerContext.nodeId) {
-          return (
-            option.id ===
-            (graphNodes.find((node) => node.id === typePickerContext.nodeId)?.kindId ?? null)
-          );
-        }
-
-        return option.id === levelKindSelections[typePickerContext.level];
-      }) ?? typePickerOptions[0] ?? null
+    ? typePickerOptions.find(
+        (option) =>
+          option.id ===
+          (graphNodes.find((node) => node.id === typePickerContext.nodeId)?.kindId ?? null)
+      ) ?? typePickerOptions[0] ?? null
     : null;
   const activeTypePickerKindId = typePickerContext?.nodeId
     ? graphNodes.find((node) => node.id === typePickerContext.nodeId)?.kindId ?? null
-    : typePickerContext
-      ? levelKindSelections[typePickerContext.level]
-      : null;
+    : null;
   const getDraftParentDisabledReason = (
     childNode: LocalityGraphNode,
     parentNode: LocalityGraphNode
@@ -2983,7 +2314,7 @@ export default function NexusLocalityCreatePage() {
                   setAppliedSearchCandidateKey(null);
                   setErrorMessage(null);
                 }}
-                onClearLevelErrors={clearLevelErrors}
+                onClearGraphNodeErrors={clearGraphNodeErrors}
                 onSelectCreateCandidate={setCreateKindCandidate}
                 onSelectCreateKindId={setSelectedCreateKindId}
                 onSelectExistingResult={setSelectedExistingResult}
@@ -3020,8 +2351,6 @@ export default function NexusLocalityCreatePage() {
                     }
 
                     setTypePickerContext({
-                      level: getGraphNodeKind(graphNode).legacyLevel,
-                      isTarget: graphNode.id === targetGraphNodeId,
                       nodeId,
                     });
                   }}

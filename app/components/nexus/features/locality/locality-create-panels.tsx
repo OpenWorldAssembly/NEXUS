@@ -63,7 +63,7 @@ export function LocalityCreateSearchPanel({
   getResultTypeLabel,
   normalizeCandidateLevel,
   onChangeSearchQuery,
-  onClearLevelErrors,
+  onClearGraphNodeErrors,
   onSelectCreateCandidate,
   onSelectCreateKindId,
   onSelectExistingResult,
@@ -90,7 +90,7 @@ export function LocalityCreateSearchPanel({
             value={searchQuery}
             onChangeText={(nextValue) => {
               onChangeSearchQuery(nextValue);
-              onClearLevelErrors();
+              onClearGraphNodeErrors();
             }}
             onSubmitEditing={onSubmitSearch}
             placeholder="Search city, region, country, or path"

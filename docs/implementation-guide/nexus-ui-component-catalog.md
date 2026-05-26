@@ -60,7 +60,7 @@ The workspace panel shapes are intentionally feature-local but generic-friendly:
 
 The sidebar has also started feature-local extraction under `app/components/nexus/features/sidebar/*`. `nexus-sidebar.tsx` remains the shell controller for router, auth, preference, rail-state, and scope mutation handling, while rail toggles, preference switches, function menus, scope rows, grouped scope sections, and scope action menus now live in the sidebar feature module.
 
-Locality create has begun feature-local extraction under `app/components/nexus/features/locality/*`. The route still owns params, identity/auth gates, draft persistence, graph/path state, API calls, mutation handlers, and modal state, while search/build panels, picker dialogs, outcome dialogs, graph rows, and preview panels now live in locality feature components.
+Locality create has begun feature-local extraction under `app/components/nexus/features/locality/*`. The route still owns params, identity/auth gates, draft persistence, graph/path state, API calls, mutation handlers, and modal state, while search/build panels, picker dialogs, outcome dialogs, graph rows, and preview panels now live in locality feature components. The obsolete level-row ladder builder path was removed after extraction; the active create flow is graph-based.
 
 ## Component Type Catalog
 
@@ -81,7 +81,7 @@ Locality create has begun feature-local extraction under `app/components/nexus/f
 
 1. `src/app/nexus/locality/create.tsx`
    - Remains the controller for params, auth gates, draft state, graph/path derivation, API calls, mutations, and handler ownership.
-   - First feature extraction now lives in `features/locality/*`: search/build panels, picker dialogs, selected-result/remove/outcome dialogs, graph rows, preview panels, and shared locality-create types. Remaining cleanup should target obsolete legacy level-builder helpers and any repeated picker/list skeletons after another surface proves reuse.
+   - First feature extraction now lives in `features/locality/*`: search/build panels, picker dialogs, selected-result/remove/outcome dialogs, graph rows, preview panels, and shared locality-create types. The legacy level-row builder was removed; remaining cleanup should target repeated picker/list skeletons only after another surface proves reuse.
 
 2. `src/app/nexus/discussions.tsx`
    - Still owns feed/thread/post workspace state, routing, loading, mutations, auth gates, reply branch state, and pagination actions.

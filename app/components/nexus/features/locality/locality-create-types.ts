@@ -68,7 +68,7 @@ export type LocalitySearchPanelProps = {
     level: NexusLocationCreateCandidate['level'] | null | undefined
   ) => LocalityLevel;
   onChangeSearchQuery: (query: string) => void;
-  onClearLevelErrors: () => void;
+  onClearGraphNodeErrors: () => void;
   onSelectCreateKindId: (kindId: string) => void;
   onSelectCreateCandidate: (candidate: NexusLocationCreateCandidate) => void;
   onSelectExistingResult: (result: NexusLocationSearchResult) => void;
