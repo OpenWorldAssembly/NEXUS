@@ -269,3 +269,9 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - Extracted discussion feature components now cover feed post cards, root post cards, vote/reply-count pills, recursive reply trees, and post/reply composers.
 - Discussion loading adoption remains visual-scope owned: feed load-more, root replies, reply branches, vote pills, and composers can mount scoped loading boundaries without packet-action registry or runtime coupling.
 - Candidate universal pieces such as composer shells, vote/reaction skeletons, and tree rails remain feature-local until another Nexus surface proves the same reusable shape.
+
+## 2026-05 Nexus discussions workspace panel extraction
+
+- Discussion feed, thread, and post workspace sections now have feature-local panels under `app/components/nexus/features/discussions/*`, including a thread toolbar, while the route keeps router, auth, loading, mutation, and reply-state ownership.
+- The panel props are explicit callbacks and display state rather than runtime services or router hooks, keeping the feature components ready for later generic promotion if another surface needs the same workspace/feed/thread/composer skeletons.
+- Scoped loading boundaries remain attached to visual regions such as feed, root replies, reply branches, votes, and composers; operation semantics still stay outside UI.

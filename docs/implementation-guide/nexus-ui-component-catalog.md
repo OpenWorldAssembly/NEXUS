@@ -52,9 +52,11 @@ Nexus callers should import from `@app/components/nexus/ui` or a direct family p
 
 ## Feature extraction status
 
-The first large route decomposition pass created `app/components/nexus/features/discussions/*` for discussion-specific composed UI. The route still owns query normalization, data loading, mutations, auth gates, router navigation, and reply branch state, while extracted feature components render feed post cards, root post cards, reply trees, vote/reply-count pills, and post/reply composers.
+The first large route decomposition passes created `app/components/nexus/features/discussions/*` for discussion-specific composed UI. The route still owns query normalization, data loading, mutations, auth gates, router navigation, and reply branch state, while extracted feature components render feed/thread/post workspace panels, feed post cards, root post cards, reply trees, vote/reply-count pills, and post/reply composers.
 
 Discussion loading scopes are visual-boundary owned: feed load-more, root replies, reply branches, vote pills, and post/reply composers now have scoped loading seams without coupling loading to packet action registries or runtime mutation types.
+
+The workspace panel shapes are intentionally feature-local but generic-friendly: feed panels, thread toolbars, recursive tree sections, and composer panels can be promoted into `ui/*` later if another Nexus surface proves the same reusable skeleton.
 
 ## Component Type Catalog
 
@@ -79,7 +81,7 @@ Discussion loading scopes are visual-boundary owned: feed load-more, root replie
 
 2. `src/app/nexus/discussions.tsx`
    - Still owns feed/thread/post workspace state, routing, loading, mutations, auth gates, reply branch state, and pagination actions.
-   - First feature extraction now lives in `features/discussions/*`: feed cards, root post cards, vote/reply-count pills, reply tree controls, and post/reply composers. Future work can consider promoting composer shells, reaction/vote skeletons, and recursive tree rails only after non-discussion reuse appears.
+   - Feature extraction now lives in `features/discussions/*`: feed/thread/post panels, feed cards, root post cards, vote/reply-count pills, reply tree controls, and post/reply composers. Future work can consider promoting workspace panel shells, scrollable feed panels, thread toolbars, composer shells, reaction/vote skeletons, and recursive tree rails only after non-discussion reuse appears.
 
 3. `app/components/nexus/nexus-sidebar.tsx`
    - Contains rail layout, section rows, preference drawer, menu buttons, scope rows, and identity/session controls.
@@ -116,7 +118,7 @@ The existing folders can then become either adapters around the shared UI or fea
 
 - `packet-explorer/*` should keep Explorer state/workbench logic but use shared tabs, overlays, forms, feedback, and panel frames.
 - `locality/*` should keep locality graph/search semantics but use shared picker, form/search, modal, and warning/outcome components.
-- `features/discussions/*` keeps discussion-specific post/reply/vote composition while consuming shared UI primitives and caller-owned loading scopes.
+- `features/discussions/*` keeps discussion-specific workspace, post/reply/vote composition while consuming shared UI primitives and caller-owned loading scopes.
 - `ui/overlays/*`, `ui/cards/action-card/*`, `ui/actions/action-list/*`, `ui/feedback/loading/*`, and `ui/tabs/*` now form the initial shared UI foundation.
 - `ui/forms/search/*` now provides generic search field, result-list, result-row, status, empty/error, and loading-boundary wrappers. It intentionally does not own packet, identity, or locality search behavior.
 - `ui/forms/*` now also provides generic field shell, text input, text area, and field action row primitives. Identity-specific field wrappers remain as compatibility adapters around those generic forms.
