@@ -17,16 +17,16 @@ This guide can record current implementation rules and future-facing canon candi
 
 The active architecture is:
 
-- `core/*` = portable engine, schemas, packets, projections, and contracts
-- `runtime/*` = storage, runtime orchestration, and API-facing glue
-- `app/*` = application-layer UI, hooks, content, and shared state
+- `core/*` = Core Contracts Vault: portable packet law, definitions, builders, defaults, dependencies, policy requirement contracts, graph logic, and verification rules
+- `runtime/*` = Trusted Runtime Coordinators: dispatch, validation, regulation, planning, building, inspection, testing, certification, archival, verification, import, export, projection, storage, and API glue
+- `app/*` = Signal Cockpit: reusable UI, hooks, content, loading state, intent emission, and projection display
 - `src/app/*` = Expo Router route shell and API entrypoints
 
 The current product stack is still best understood as:
 
-- OWA App = public-facing civic surface
-- Nexus Browser = graph and inspection surface
-- Nexus Core = portable packet engine
+- OWA = geography-first civic application profile
+- Nexus = portable signed-packet substrate, graph engine, and runtime coordination model
+- FCF = principles and coordination physics behind the public experience
 
 ## Chapter workflow
 

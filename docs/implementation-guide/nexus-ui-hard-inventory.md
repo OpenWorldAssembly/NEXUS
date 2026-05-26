@@ -24,6 +24,8 @@ The discussions route has since started its feature extraction into `app/compone
 
 The sidebar has since started its feature extraction into `app/components/nexus/features/sidebar/*`. Rail toggles, guest avatar, preference switch, current context card, function menu content, scope section headers, grouped scope rows, scope action menus, and scope menu content now live there, while `app/components/nexus/nexus-sidebar.tsx` remains the shell controller for routing, auth gates, preference persistence, rail animation, and scope mutation handling.
 
+Packet Explorer has since moved into `app/components/nexus/features/explorer/*`, including the shell overlay, document tabs, toolbar, search, import/export, data, link, resize, and inspection panels. The import/export panels now expose visual-scope loading seams for packet export, store export, import analysis, import commit, and import history, while Explorer tab/session behavior remains feature-local.
+
 The counts below remain useful as the pre-move hard inventory. New shared UI should prefer the `ui/*` paths.
 
 ## Snapshot summary
@@ -49,11 +51,11 @@ The counts below remain useful as the pre-move hard inventory. New shared UI sho
 | 2056 | support | `app/components/nexus/identity-shell-context.tsx` | IdentityShellContext, IdentityShellProvider | — |
 | 1962 | mixed | `app/components/nexus/nexus-sidebar.tsx` | NexusGuestAvatar, NexusRailToggle, NexusPreferenceSwitch, NexusCurrentContextCard, NexusMenuSectionLabel, NexusPrimaryNavItem | Pressable 26, ScrollView 6, Switch 2 |
 | 1261 | shared | `app/components/nexus/nexus-ui.tsx` | NexusThemedBevelEdges, NexusBevelEdges, NexusCard, NexusSectionHeader, NexusBadge, NexusChevronIcon | Pressable 18, Modal 3, ScrollView 3 |
-| 967 | feature | `app/components/nexus/packet-explorer/nexus-packet-explorer-import-panel.tsx` | ImportResultCard, ImportHistoryCard, NexusPacketExplorerImportPanel | Pressable 2, Modal 3, TextInput 2 |
+| 967 | feature | `app/components/nexus/features/explorer/nexus-packet-explorer-import-panel.tsx` | ImportResultCard, ImportHistoryCard, NexusPacketExplorerImportPanel | Pressable 2, Modal 3, TextInput 2 |
 | 859 | support | `app/components/nexus/nexus-shell-context.tsx` | NexusShellContext, NexusShellProvider | — |
-| 795 | feature | `app/components/nexus/packet-explorer/nexus-packet-explorer-export-panel.tsx` | ExportPreviewCard, NexusPacketExplorerExportPanel | Pressable 3, TextInput 6 |
-| 772 | mixed | `app/components/nexus/nexus-packet-explorer.tsx` | NexusPacketExplorer | Pressable 9, Modal 3 |
-| 768 | feature | `app/components/nexus/packet-explorer/nexus-packet-explorer-content.tsx` | NexusPacketExplorerSeededSummary, NexusPacketExplorerLineagePanel, NexusPacketExplorerActionsPanel, NexusPacketExplorerValidationPanel, NexusPacketExplorerContent | ScrollView 3 |
+| 795 | feature | `app/components/nexus/features/explorer/nexus-packet-explorer-export-panel.tsx` | ExportPreviewCard, NexusPacketExplorerExportPanel | Pressable 3, TextInput 6 |
+| 772 | mixed | `app/components/nexus/features/explorer/nexus-packet-explorer.tsx` | NexusPacketExplorer | Pressable 9, Modal 3 |
+| 768 | feature | `app/components/nexus/features/explorer/nexus-packet-explorer-content.tsx` | NexusPacketExplorerSeededSummary, NexusPacketExplorerLineagePanel, NexusPacketExplorerActionsPanel, NexusPacketExplorerValidationPanel, NexusPacketExplorerContent | ScrollView 3 |
 | 714 | route | `src/app/nexus/roles.tsx` | NexusRolesPage | TextInput 2, ScrollView 3 |
 | 676 | shared | `app/components/nexus/nexus-tabs.tsx` | NexusTabButton, NexusTabRail, NexusTabStack | ScrollView 5 |
 | 659 | route | `src/app/nexus/trust.tsx` | NexusTrustPage | TextInput 2, ScrollView 3 |
@@ -70,13 +72,13 @@ These are the files most likely to contain local button, modal, form, scroll, or
 | `app/components/nexus/nexus-sidebar.tsx` | 26 | 0 | 0 | 6 | Switch 2 |
 | `app/components/nexus/nexus-ui.tsx` | 18 | 3 | 0 | 3 | — |
 | `src/app/nexus/discussions.tsx` | 9 | 0 | 4 | 7 | — |
-| `app/components/nexus/nexus-packet-explorer.tsx` | 9 | 3 | 0 | 0 | — |
+| `app/components/nexus/features/explorer/nexus-packet-explorer.tsx` | 9 | 3 | 0 | 0 | — |
 | `app/components/nexus/features/locality/locality-create-graph-row.tsx` | 9 | 0 | 3 | 0 | — |
 | `app/components/nexus/action-card/nexus-card-badge-strip.tsx` | 8 | 3 | 0 | 0 | — |
-| `app/components/nexus/packet-explorer/nexus-packet-explorer-export-panel.tsx` | 3 | 0 | 6 | 0 | — |
+| `app/components/nexus/features/explorer/nexus-packet-explorer-export-panel.tsx` | 3 | 0 | 6 | 0 | — |
 | `app/components/nexus/nexus-identity-ui.tsx` | 3 | 0 | 3 | 3 | — |
 | `src/app/nexus/dashboard.tsx` | 2 | 3 | 0 | 3 | — |
-| `app/components/nexus/packet-explorer/nexus-packet-explorer-import-panel.tsx` | 2 | 3 | 2 | 0 | — |
+| `app/components/nexus/features/explorer/nexus-packet-explorer-import-panel.tsx` | 2 | 3 | 2 | 0 | — |
 | `app/components/nexus/nexus-tab-primitives.tsx` | 7 | 0 | 0 | 0 | — |
 | `app/components/nexus/preview/nexus-preview-panel.tsx` | 3 | 0 | 0 | 3 | — |
 | `src/app/nexus/roles.tsx` | 0 | 0 | 2 | 3 | — |
@@ -85,17 +87,17 @@ These are the files most likely to contain local button, modal, form, scroll, or
 | `app/components/nexus/nexus-auth-gate.tsx` | 4 | 0 | 0 | 0 | — |
 | `src/app/nexus/library.tsx` | 0 | 0 | 0 | 4 | — |
 | `src/app/nexus/account.tsx` | 0 | 0 | 0 | 3 | Switch 1 |
-| `app/components/nexus/packet-explorer/nexus-packet-explorer-content.tsx` | 0 | 0 | 0 | 3 | — |
+| `app/components/nexus/features/explorer/nexus-packet-explorer-content.tsx` | 0 | 0 | 0 | 3 | — |
 | `src/app/nexus/identity/sign-in.tsx` | 3 | 0 | 0 | 0 | — |
 | `app/components/nexus/features/locality/locality-create-preview-panel.tsx` | 3 | 0 | 0 | 0 | — |
-| `app/components/nexus/packet-explorer/nexus-packet-explorer-tab-deck.tsx` | 0 | 0 | 0 | 3 | — |
+| `app/components/nexus/features/explorer/nexus-packet-explorer-tab-deck.tsx` | 0 | 0 | 0 | 3 | — |
 | `src/app/nexus/votes.tsx` | 0 | 0 | 0 | 3 | — |
 | `app/components/nexus/action-card/nexus-action-menu.tsx` | 3 | 0 | 0 | 0 | — |
 | `app/components/nexus/discussions/nexus-discussion-focus-panel.tsx` | 3 | 0 | 0 | 0 | — |
 | `app/components/nexus/action-list/nexus-action-list-item.tsx` | 3 | 0 | 0 | 0 | — |
 | `app/components/nexus/focus/nexus-focused-packet-section.tsx` | 3 | 0 | 0 | 0 | — |
 | `app/components/nexus/action-card/nexus-card-menu-button.tsx` | 3 | 0 | 0 | 0 | — |
-| `app/components/nexus/packet-explorer/nexus-packet-explorer-search-panel.tsx` | 0 | 0 | 2 | 0 | — |
+| `app/components/nexus/features/explorer/nexus-packet-explorer-search-panel.tsx` | 0 | 0 | 2 | 0 | — |
 | `app/components/nexus/nexus-shell.tsx` | 2 | 0 | 0 | 0 | — |
 | `app/components/nexus/nexus-feature-status-context.tsx` | 2 | 0 | 0 | 0 | — |
 | `app/components/nexus/nexus-shell-entry-gate.tsx` | 2 | 0 | 0 | 0 | — |
@@ -136,21 +138,21 @@ These files are feature-specific compositions. Most should keep their domain/con
 | `app/components/nexus/features/locality/*` | post-inventory extraction | LocalityCreateSearchPanel, LocalityCreateBuilderPanel, LocalityParentPickerDialog, LocalityKindPickerDialog, LocalityCreateKindDialog, LocalitySelectedResultDialog, LocalityRemoveConfirmDialog, LocalityOutcomeDialogs, LocalityCreateGraphRow, LocalityCreatePreviewPanel | overlays, forms, cards, layout, feedback | Pressable/TextInput/ScrollView retained inside feature controls | NexusActionButton, NexusBadge, NexusCard, NexusLoadingBoundary, NexusModalShell, NexusSearchField, NexusSearchResultList |
 | `app/components/nexus/nexus-auth-gate.tsx` | 566 | NexusAuthGateModal | overlays | Pressable 4 | NexusActionButton 3, NexusCard 3 |
 | `app/components/nexus/nexus-identity-ui.tsx` | 377 | IdentityPageShell, IdentityField, IdentityInput, IdentityRouteLinks, IdentityPreferenceCard, LocationLookupField | cards, forms, layout | Pressable 3, TextInput 3, ScrollView 3 | NexusActionButton 6, NexusCard 7, NexusSectionHeader 2, NexusSegmentedPill 3 |
-| `app/components/nexus/nexus-packet-explorer.tsx` | 772 | NexusPacketExplorer | overlays | Pressable 9, Modal 3 | NexusActionButton 2, NexusCard 3 |
+| `app/components/nexus/features/explorer/nexus-packet-explorer.tsx` | 772 | NexusPacketExplorer | overlays | Pressable 9, Modal 3 | NexusActionButton 2, NexusCard 3 |
 | `app/components/nexus/nexus-shell-entry-gate.tsx` | 113 | NexusShellEntryGate | overlays, layout | Pressable 2 | NexusActionButton 2, NexusCard 3, NexusBadge 2 |
 | `app/components/nexus/nexus-shell.tsx` | 243 | NexusShell | layout | Pressable 2 | — |
 | `app/components/nexus/nexus-sidebar.tsx` | 881 after feature extraction | NexusSidebar controller; rail/menu/scope/preference components moved to `features/sidebar/*` | actions, cards, forms, layout, feedback | route still owns profile/prefs drawer shell Pressables and rail ScrollViews | NexusCard, NexusSegmentedPill, NexusThemedBevelEdges |
-| `app/components/nexus/packet-explorer/nexus-packet-explorer-content.tsx` | 768 | NexusPacketExplorerSeededSummary, NexusPacketExplorerLineagePanel, NexusPacketExplorerActionsPanel, NexusPacketExplorerValidationPanel, NexusPacketExplorerContent | actions, layout | ScrollView 3 | NexusActionButton 6, NexusCard 29, NexusBadge 11 |
-| `app/components/nexus/packet-explorer/nexus-packet-explorer-data-panel.tsx` | 210 | NexusPacketExplorerDataPanel | layout | — | NexusCard 11, NexusBadge 7 |
-| `app/components/nexus/packet-explorer/nexus-packet-explorer-export-panel.tsx` | 795 | ExportPreviewCard, NexusPacketExplorerExportPanel | cards, forms, layout | Pressable 3, TextInput 6 | NexusActionButton 6, NexusCard 19, NexusInlineSelect 2, NexusSegmentedPill 2, NexusBadge 6 |
-| `app/components/nexus/packet-explorer/nexus-packet-explorer-home-panel.tsx` | 96 | NexusPacketExplorerHomePanel | layout | — | — |
-| `app/components/nexus/packet-explorer/nexus-packet-explorer-import-panel.tsx` | 967 | ImportResultCard, ImportHistoryCard, NexusPacketExplorerImportPanel | cards, overlays, forms, layout | Pressable 2, Modal 3, TextInput 2 | NexusActionButton 13, NexusCard 23, NexusSegmentedPill 3, NexusBadge 31 |
-| `app/components/nexus/packet-explorer/nexus-packet-explorer-links-panel.tsx` | 303 | NexusPacketExplorerLinkDirectionSection, NexusPacketExplorerLinksPanel | layout | — | NexusActionButton 8, NexusCard 5, NexusBadge 9 |
-| `app/components/nexus/packet-explorer/nexus-packet-explorer-primary-rail.tsx` | 51 | NexusPacketExplorerPrimaryRail | layout | — | NexusTabRail 2 |
-| `app/components/nexus/packet-explorer/nexus-packet-explorer-search-panel.tsx` | 401 | SearchResultCard, SearchGroupSection, NexusPacketExplorerSearchPanel | cards, forms, layout | TextInput 2 | NexusActionButton 8, NexusCard 15, NexusSegmentedPill 2, NexusBadge 6 |
-| `app/components/nexus/packet-explorer/nexus-packet-explorer-shell-header.tsx` | 53 | NexusPacketExplorerShellHeader | layout | — | NexusActionButton 5 |
-| `app/components/nexus/packet-explorer/nexus-packet-explorer-tab-deck.tsx` | 258 | NexusPacketExplorerTabDeck | tabs | ScrollView 3 | NexusActionButton 3, NexusCard 3, NexusTabFrame 5, NexusTabLabel 3, NexusBadge 2 |
-| `app/components/nexus/packet-explorer/nexus-packet-explorer-toolbar.tsx` | 109 | NexusPacketExplorerToolbar | layout | — | NexusActionButton 3, NexusInlineSelect 2, NexusTabRail 2 |
+| `app/components/nexus/features/explorer/nexus-packet-explorer-content.tsx` | 768 | NexusPacketExplorerSeededSummary, NexusPacketExplorerLineagePanel, NexusPacketExplorerActionsPanel, NexusPacketExplorerValidationPanel, NexusPacketExplorerContent | actions, layout | ScrollView 3 | NexusActionButton 6, NexusCard 29, NexusBadge 11 |
+| `app/components/nexus/features/explorer/nexus-packet-explorer-data-panel.tsx` | 210 | NexusPacketExplorerDataPanel | layout | — | NexusCard 11, NexusBadge 7 |
+| `app/components/nexus/features/explorer/nexus-packet-explorer-export-panel.tsx` | 795 | ExportPreviewCard, NexusPacketExplorerExportPanel | cards, forms, layout | Pressable 3, TextInput 6 | NexusActionButton 6, NexusCard 19, NexusInlineSelect 2, NexusSegmentedPill 2, NexusBadge 6 |
+| `app/components/nexus/features/explorer/nexus-packet-explorer-home-panel.tsx` | 96 | NexusPacketExplorerHomePanel | layout | — | — |
+| `app/components/nexus/features/explorer/nexus-packet-explorer-import-panel.tsx` | 967 | ImportResultCard, ImportHistoryCard, NexusPacketExplorerImportPanel | cards, overlays, forms, layout | Pressable 2, Modal 3, TextInput 2 | NexusActionButton 13, NexusCard 23, NexusSegmentedPill 3, NexusBadge 31 |
+| `app/components/nexus/features/explorer/nexus-packet-explorer-links-panel.tsx` | 303 | NexusPacketExplorerLinkDirectionSection, NexusPacketExplorerLinksPanel | layout | — | NexusActionButton 8, NexusCard 5, NexusBadge 9 |
+| `app/components/nexus/features/explorer/nexus-packet-explorer-primary-rail.tsx` | 51 | NexusPacketExplorerPrimaryRail | layout | — | NexusTabRail 2 |
+| `app/components/nexus/features/explorer/nexus-packet-explorer-search-panel.tsx` | 401 | SearchResultCard, SearchGroupSection, NexusPacketExplorerSearchPanel | cards, forms, layout | TextInput 2 | NexusActionButton 8, NexusCard 15, NexusSegmentedPill 2, NexusBadge 6 |
+| `app/components/nexus/features/explorer/nexus-packet-explorer-shell-header.tsx` | 53 | NexusPacketExplorerShellHeader | layout | — | NexusActionButton 5 |
+| `app/components/nexus/features/explorer/nexus-packet-explorer-tab-deck.tsx` | 258 | NexusPacketExplorerTabDeck | tabs | ScrollView 3 | NexusActionButton 3, NexusCard 3, NexusTabFrame 5, NexusTabLabel 3, NexusBadge 2 |
+| `app/components/nexus/features/explorer/nexus-packet-explorer-toolbar.tsx` | 109 | NexusPacketExplorerToolbar | layout | — | NexusActionButton 3, NexusInlineSelect 2, NexusTabRail 2 |
 | `app/components/nexus/preview/nexus-preview-panel.tsx` | 79 | NexusPreviewPanel | cards, layout | Pressable 3, ScrollView 3 | NexusCard 3, NexusPreviewPanel 1 |
 | `app/components/nexus/preview/nexus-stat-card.tsx` | 46 | NexusStatCard | cards | — | NexusCard 3 |
 
@@ -201,7 +203,7 @@ Recommended order, based on duplication, risk, and likely payoff:
 
 2. **Form field shells and searchable result lists**: base segmented, inline-select, field shell, text input, text area, action row, and search-result primitives now live under `ui/forms`; Explorer search/export/import fields, identity lookup, locality create search dropdowns, trust notes, roles comments, and discussion composers now have shared presentation seams. Remaining work should target preference rows and broader route-local form sections.
 
-3. **Layout frames and section scaffolds**: page/scroll frames, panel/workbench wrappers, panel headers, section bands, toolbar rows, and metric grids now live under `ui/layout`; identity page shell, dashboard/trust/roles metric rows, and a Packet Explorer workbench panel have begun adopting them. Remaining work should target repeated route page wrappers, packet explorer panel shells, sidebar rail sections, and dashboard card rows.
+3. **Layout frames and section scaffolds**: page/scroll frames, panel/workbench wrappers, panel headers, section bands, toolbar rows, and metric grids now live under `ui/layout`; identity page shell, dashboard/trust/roles metric rows, and a Explorer workbench panel have begun adopting them. Remaining work should target repeated route page wrappers, packet explorer panel shells, sidebar rail sections, and dashboard card rows.
 
 4. **Feedback states**: scoped loading and basic empty/error/warning/status/operation cards now live under `ui/feedback`; remaining work should replace route-local loading, refreshing, empty, and outcome copy only where the shared card can preserve the existing layout.
 

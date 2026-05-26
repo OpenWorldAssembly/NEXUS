@@ -3,7 +3,7 @@
 ## Active source split
 
 - `core/*` holds portable packet logic, schemas, builders, interpreters, contracts, and pure projections
-- `runtime/*` holds storage adapters, runtime services, query services, auth/trust/discussion orchestration, and API-facing glue
+- `runtime/*` holds trusted runtime coordination, storage adapters, runtime services, query services, auth/trust/discussion orchestration, and API-facing glue
 - `app/*` holds application-layer components, hooks, constants, public content, and shared shell state
 - `src/app/*` holds the Expo Router route shell and API entrypoints
 
@@ -60,7 +60,7 @@ Current scope consumer direction in code includes:
 - shared packet-card projection and action-menu behavior now spans dashboard previews and related Nexus surfaces
 - focused packet state is currently a surface-local UI layer over packet-backed preview lists rather than a separate routed or core packet concept
 - the first verification chapter now treats report packets as the signed source of truth for local packet verification and import reporting, with a runtime-owned verification cache layered on top for fast UI reads
-- the local runtime now owns a normal signed validator identity and uses it to sign `verification_report` and `import_report` packets without routing those writes through user-authored fortress mutations
+- the local runtime now owns a normal signed validator identity and uses it to sign `verification_report` and `import_report` packets without routing those writes through user-authored mutation tickets
 - OWA-specific initiative-anchor relation-policy lookup now lives in a narrower adapter layer instead of being embedded directly inside the generic scope-graph projection core
 
 ## Public docs build system

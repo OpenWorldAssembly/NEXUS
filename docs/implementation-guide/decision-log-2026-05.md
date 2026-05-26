@@ -289,3 +289,9 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - Extracted locality feature components now cover the search panel, builder panel, parent/type/create-kind dialogs, selected-result and remove confirmation dialogs, outcome dialogs, graph rows, and preview panel.
 - Locality loading remains visual-scope owned: search results, parent picker results, graph row results, preview, create-path, and set-home actions use caller-owned loading scopes without coupling UI to packet/runtime semantics.
 - The obsolete level-row ladder builder path was removed after extraction; the active create flow is the graph-based builder, with route/controller ownership preserved.
+
+## 2026-05 Nexus Explorer feature extraction
+
+- Packet Explorer moved into `app/components/nexus/features/explorer/*`, including its shell overlay, document tabs, toolbar, search, import/export, data, links, resize, and inspection panels.
+- Explorer import/export work now uses caller-owned visual loading scopes for packet export, store export, import analysis, import commit, and import history, while preserving existing disabled labels and panel behavior.
+- Explorer document tabs remain feature-local and compose shared tab primitives only where they already did; generic document-tab promotion is deferred until a dedicated tab-extension pass.

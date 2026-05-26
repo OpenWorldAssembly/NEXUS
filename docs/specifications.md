@@ -19,7 +19,7 @@ The app is an Expo Router application with a public OWA site and a dedicated Nex
 
 Current live Nexus areas include:
 
-- packet-backed discussions with shared fortress write preparation and finalize paths
+- packet-backed discussions with shared signed write preparation and finalize paths
 - packet-backed trust and roles surfaces
 - a read-only votes workspace
 - a scoped Library browse surface
@@ -28,7 +28,7 @@ Current live Nexus areas include:
 Current source split:
 
 - `core/*` = portable packet logic, schemas, builders, contracts, and pure projections
-- `runtime/*` = persistence, runtime services, and API glue
+- `runtime/*` = trusted runtime coordination, persistence, runtime services, and API glue
 - `app/*` = application-layer components, hooks, constants, public content, and shared UI/state
 - `src/app/*` = Expo Router route shell and API entrypoints
 

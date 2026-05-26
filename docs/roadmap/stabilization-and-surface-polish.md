@@ -31,7 +31,7 @@ The next planning focus is still catch-up and semantic stabilization.
 - `Fork`, `Adapt`, and `Follow` semantics
 - diff views and revision compare
 - richer link grouping and filtering
-- eventual action execution through the fortress corridor rather than route-local writes
+- eventual action execution through the trusted mutation pipeline rather than route-local writes
 - first-class `Bundle` packets after verification and locality UX hardening, with legacy bundle JSON remaining a runtime transport format rather than becoming a schema-compatibility type
 
 ## Working order

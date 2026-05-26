@@ -9,10 +9,14 @@
 - What exact local trust state should be attached to imported or re-verified packets?
 - Which packet relationships should a future first-class `Bundle` packet record directly: carried packet refs, root refs, lineage refs, verification refs, or all of the above?
 - Which remaining shell/interface preferences should join `main` visibility and section-display options under the new packet-backed `Preference.element` model?
+- Should defaults remain inside `Definition` parts, or should a future first-class Default packet exist once the current definition system proves the need?
 
 ## Deeper design questions
 
-- Should reactions remain separate from higher-meaning vouch or objection signals?
+- How expressive should the policy language become before it risks becoming a full rule engine?
+- How much projection behavior belongs in packet definitions versus runtime projection profiles?
+- What exact artifact gets signed in the final flow: user intent, packet candidate, finished packet bundle, runtime certification report, or some combination?
+- How should imported definition/profile packets be trusted, ignored, sandboxed, or adapted?
 - Which future relationship workflows should remain claim-mediated, and which should be written directly as plain relations?
 - What exact authority model should govern multi-key assemblies and custody transition?
 - What exact event turns a decision from a signal into an effect-bearing authority artifact?

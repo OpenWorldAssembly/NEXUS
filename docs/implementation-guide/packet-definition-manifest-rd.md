@@ -2,7 +2,7 @@
 
 ## Status
 
-Active design with canonical Definition/Bundle packet material and fortress-enrolled Preference writes. `Definition`, `Bundle`, and `Preference` are now first-class `PacketEnvelope` types. Active definition parts produce valid `Definition` packet envelopes, those envelopes are grouped into a seeded `Bundle.packet_set` profile, and `Preference.element` writes for claimed actors enter the signed prepare/finalize corridor while the legacy runtime table remains a compatibility cache.
+Active design with canonical Definition/Bundle packet material and trusted signed Preference writes. `Definition`, `Bundle`, and `Preference` are now first-class `PacketEnvelope` types. Active definition parts produce valid `Definition` packet envelopes, those envelopes are grouped into a seeded `Bundle.packet_set` profile, and `Preference.element` writes for claimed actors enter the signed prepare/finalize corridor while the legacy runtime table remains a compatibility cache.
 
 Stored Definition and Bundle packets are portable semantic material, not executable plugins. The bootstrap kernel validates Definition/Bundle envelopes, verifies the active definition profile, and keeps executable builders, planners, resolvers, signing, policy checks, and persistence owned by trusted local runtime code.
 
@@ -11,6 +11,43 @@ Stored Definition and Bundle packets are portable semantic material, not executa
 Nexus needs a single exported packet-definition surface so future packet schema changes do not require edits across builders, policy gates, mutation dispatch, projection code, and UI assumptions.
 
 The forward-facing language is **packet type** and **packet subtype**. The live envelope uses `header.type`, and packet bodies use `body.subtype` for packet specialization.
+
+
+## Shared declaration direction
+
+Packet definitions are the shared declaration language for Nexus. They should describe packet creation and, later, packet projection without becoming executable code.
+
+Creation-facing definition material includes:
+
+- body schema references
+- builder definitions
+- defaults definitions
+- dependencies definitions
+- policy requirement descriptors
+- operation/action descriptors
+- workflow planner descriptors
+
+Projection-facing definition material may later include:
+
+- safe component keys
+- safe action keys
+- preferred display fields
+- badge/status hints
+- surface hints
+- relationship highlights
+
+Both sides should use the same style of typed declaration language, but they resolve through different Trusted Runtime Coordinators. Planning resolves creation. Regulation resolves policy. Projection resolves UI-ready view models. Imported definitions can request known operation semantics or component keys, but only trusted local runtime code may execute operations or render approved components.
+
+## Defaults, dependencies, and policies
+
+Definitions should keep three meanings distinct:
+
+- builders define packet anatomy
+- defaults definitions fill normal starting values and may describe normal default generated packets
+- dependencies definitions describe required structural refs or supporting requirements
+- policies regulate whether an actor, scope, or workflow may use those definitions
+
+Defaults create healthy starting shape. Dependencies prevent orphan packets. OWA may select defaults, policies, and projection profiles as an application overlay, but it should not mutate Nexus builders.
 
 ## Manifest shape
 
@@ -97,7 +134,7 @@ The long-term model is graph-discoverable definition parts resolved into a pinne
 - followed parent-chain display
 - `interface.shell_chrome` defaults for navigation mode, theme mode, and UI density
 
-Preference is now a canonical packet type and a signed-corridor exemplar. Claimed actor scope-display and shell-chrome preferences write `Preference.element` packets through `preference.element.set` and keep the legacy runtime preference table as a compatibility cache. Guest preferences remain cookie/session compatibility state. Claimed shell preference reads are bound to the authenticated session actor before private `Preference.element` state is projected; mismatched actor query params fall back to guest preference projection.
+Preference is now a canonical packet type and a signed trusted-write exemplar. Claimed actor scope-display and shell-chrome preferences write `Preference.element` packets through `preference.element.set` and keep the legacy runtime preference table as a compatibility cache. Guest preferences remain cookie/session compatibility state. Claimed shell preference reads are bound to the authenticated session actor before private `Preference.element` state is projected; mismatched actor query params fall back to guest preference projection.
 
 Preference packets are actor-owned configuration. They do not create relationships and should not make scopes eligible for the main graph. They only configure display of scopes already eligible through home, association, follow, or relation types.
 
@@ -154,7 +191,7 @@ The first completed packet-type example is `Preference.element`. It now has help
 - upcasting the old one-toggle shape into current associated/followed parent-chain toggles
 - downcasting with loss notes when current state cannot fit the older shape exactly
 
-This is now live for claimed actor interface preferences through the fortress-enrolled preference workflow. Runtime reads prefer the latest active `Preference.element` packet and fall back to the legacy table when no packet exists. The table remains a compatibility cache for scope-display state so the alpha demo keeps its current behavior while the packet path proves itself.
+This is now live for claimed actor interface preferences through the trusted signed preference workflow. Runtime reads prefer the latest active `Preference.element` packet and fall back to the legacy table when no packet exists. The table remains a compatibility cache for scope-display state so the alpha demo keeps its current behavior while the packet path proves itself.
 
 
 ## Definition action bridge
@@ -175,11 +212,11 @@ For `Preference.element`, the bridge can resolve `preference.element.set` into:
 - the `preference.element.write` policy action ID
 - a readiness flag for descriptor/runtime planning
 
-This is the first seam between the packet definition manifest and the fortress corridor. `Preference` is now inside the canonical packet ontology and claimed interface writes enter a fortress-enrolled mutation path, but the route still executes trusted local workflow code. Manifest descriptors describe the operation; imported definition packets do not execute server behavior.
+This is the first seam between the packet definition manifest and the signed mutation corridor. `Preference` is now inside the canonical packet ontology and claimed interface writes enter a trusted signed mutation path, but the route still executes trusted local workflow code. Manifest descriptors describe the operation; imported definition packets do not execute server behavior.
 
 The runtime comparison planner can build a manifest-backed `Preference.element` plan from the existing runtime preference payload. The plan includes the deterministic packet ID, normalized body, projected runtime preference shape, resolved action plan, storage class, revision behavior, and an explicit non-executable comparison marker.
 
-That marker is intentional. It distinguishes descriptor/audit planning from the external definition execution-enrolled preference workflow and keeps imported definition behavior non-executable.
+That marker is intentional. It distinguishes descriptor/audit planning from the trusted signed preference workflow and keeps imported definition behavior non-executable.
 
 ## Audit and seed readiness
 
@@ -200,11 +237,11 @@ Active packet definitions now have the same packetization treatment at profile s
 
 The definition comparison helpers still exist for audit and descriptor comparison, but the claimed-actor interface preference path now persists a live `Preference.element` packet through the signed corridor in parallel with the runtime compatibility cache.
 
-## Descriptor Fortress Bridge
+## Descriptor Runtime Bridge
 
 The manifest work still has a runtime descriptor bridge at `runtime/nexus/server/manifest-fortress-bridge.ts`.
 
-The bridge translates packet-definition descriptors into fortress-shaped prepare metadata without entering the trusted mutation corridor. It resolves:
+The bridge translates packet-definition descriptors into trusted-coordinator-shaped prepare metadata without entering the trusted mutation corridor. It resolves:
 
 - packet type and subtype support;
 - mutation descriptor support;
@@ -217,4 +254,4 @@ This bridge returns `external_definition_execution_enabled: false` because impor
 
 For `Preference.element`, the bridge can produce a prepare-shaped candidate from current runtime element preferences, project that candidate back into runtime preference shape, and report which generic builder/planner/policy descriptors are used by the trusted local preference workflow.
 
-The live route and writer audits remain the boundary: manifest-defined actions should enter the live mutation intent registry only when the generic policy and planner seams are intentionally promoted. `Preference.element.set` is now promoted through the fortress service path. It resolves manifest descriptors but still executes trusted runtime code rather than imported definition behavior.
+The live route and writer audits remain the boundary: manifest-defined actions should enter the live mutation intent registry only when the generic policy and planner seams are intentionally promoted. `Preference.element.set` is now promoted through the trusted mutation service path. It resolves manifest descriptors but still executes trusted runtime code rather than imported definition behavior.

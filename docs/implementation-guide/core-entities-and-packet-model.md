@@ -186,7 +186,7 @@ Current scope-graph direction:
 A reaction can carry independent channels for signal aggregation, support/dispute posture, and emotional response:
 
 - `vote_value`: basic up/down signal used for visibility and formal vote-like aggregation
-- `reaction_value`: support or dispute only
+- `attestation_value`: support or dispute only
 - `emoji_keys`: small emoji-key set for how people feel about a target
 
 Relations, roles, proposals, discussion packets, and future action packets can all be reaction targets without the reaction needing packet-type-specific semantics.

@@ -8,6 +8,7 @@ import {
   NexusErrorState,
   NexusFieldActionRow,
   NexusInlineSelect,
+  NexusLoadingBoundary,
   NexusSearchErrorState,
   NexusSearchField,
   NexusSearchResultList,
@@ -58,6 +59,10 @@ type ExportWorkflowState = {
 
 const PACKET_EXPLORER_EXPORT_LOOKUP_LOADING_SCOPE =
   'packet-explorer:export-lookup-results';
+const PACKET_EXPLORER_EXPORT_PACKET_LOADING_SCOPE =
+  'packet-explorer:export-packet';
+const PACKET_EXPLORER_EXPORT_STORE_LOADING_SCOPE =
+  'packet-explorer:export-store';
 
 const BUNDLE_SCOPE_OPTIONS: {
   id: NexusPacketExplorerBundleExportMode;
@@ -228,7 +233,7 @@ export function NexusPacketExplorerExportPanel({
   onClearPacketExportTarget,
 }: NexusPacketExplorerExportPanelProps) {
   const appearance = useNexusAppearance();
-  const loading = useNexusLoading();
+  const { beginLoading, endLoading } = useNexusLoading();
   const [packetArtifactMode, setPacketArtifactMode] = useState<
     'raw_packet' | 'bundle'
   >('raw_packet');
@@ -303,7 +308,7 @@ export function NexusPacketExplorerExportPanel({
     const timeoutHandle = setTimeout(() => {
       setIsLookupLoading(true);
       setLookupError(null);
-      const operationId = loading.beginLoading(
+      const operationId = beginLoading(
         PACKET_EXPLORER_EXPORT_LOOKUP_LOADING_SCOPE,
         { label: 'Searching packets...' }
       );
@@ -338,7 +343,7 @@ export function NexusPacketExplorerExportPanel({
           if (isMounted) {
             setIsLookupLoading(false);
           }
-          loading.endLoading(operationId);
+          endLoading(operationId);
         });
     }, 180);
 
@@ -346,7 +351,7 @@ export function NexusPacketExplorerExportPanel({
       isMounted = false;
       clearTimeout(timeoutHandle);
     };
-  }, [loading, lookupQuery, selectedPacketId]);
+  }, [beginLoading, endLoading, lookupQuery, selectedPacketId]);
 
   const lookupSelection = useMemo(() => {
     if (lookupResults.length === 0) {
@@ -604,36 +609,43 @@ export function NexusPacketExplorerExportPanel({
               </View>
             ) : null}
 
-            <NexusFieldActionRow>
-              <NexusActionButton
-                label={
-                  packetWorkflow.isLoadingPreview ? 'Previewing...' : 'Preview JSON'
-                }
-                onPress={() => void handlePacketPreview()}
-                disabled={packetWorkflow.isLoadingPreview || packetWorkflow.isDownloading}
-              />
-              <NexusActionButton
-                label={
-                  packetWorkflow.isDownloading ? 'Downloading...' : 'Download JSON'
-                }
-                variant="primary"
-                onPress={() => void handlePacketDownload()}
-                disabled={packetWorkflow.isLoadingPreview || packetWorkflow.isDownloading}
-              />
-              <NexusActionButton
-                label="Cancel"
-                variant="ghost"
-                onPress={() => {
-                  setPacketArtifactMode('raw_packet');
-                  setPacketBundleMode('packet_history');
-                  setPacketTitle('');
-                  setPacketNote('');
-                  setPacketWorkflow(createIdleWorkflowState());
-                  onClearPacketExportTarget();
-                }}
-                disabled={packetWorkflow.isLoadingPreview || packetWorkflow.isDownloading}
-              />
-            </NexusFieldActionRow>
+            <NexusLoadingBoundary
+              label="Exporting packet..."
+              scope={PACKET_EXPLORER_EXPORT_PACKET_LOADING_SCOPE}
+            >
+              <NexusFieldActionRow>
+                <NexusActionButton
+                  label={
+                    packetWorkflow.isLoadingPreview ? 'Previewing...' : 'Preview JSON'
+                  }
+                  loadingScope={PACKET_EXPLORER_EXPORT_PACKET_LOADING_SCOPE}
+                  onPress={() => handlePacketPreview()}
+                  disabled={packetWorkflow.isLoadingPreview || packetWorkflow.isDownloading}
+                />
+                <NexusActionButton
+                  label={
+                    packetWorkflow.isDownloading ? 'Downloading...' : 'Download JSON'
+                  }
+                  loadingScope={PACKET_EXPLORER_EXPORT_PACKET_LOADING_SCOPE}
+                  variant="primary"
+                  onPress={() => handlePacketDownload()}
+                  disabled={packetWorkflow.isLoadingPreview || packetWorkflow.isDownloading}
+                />
+                <NexusActionButton
+                  label="Cancel"
+                  variant="ghost"
+                  onPress={() => {
+                    setPacketArtifactMode('raw_packet');
+                    setPacketBundleMode('packet_history');
+                    setPacketTitle('');
+                    setPacketNote('');
+                    setPacketWorkflow(createIdleWorkflowState());
+                    onClearPacketExportTarget();
+                  }}
+                  disabled={packetWorkflow.isLoadingPreview || packetWorkflow.isDownloading}
+                />
+              </NexusFieldActionRow>
+            </NexusLoadingBoundary>
           </>
         ) : (
           <View className="gap-4">
@@ -775,19 +787,26 @@ export function NexusPacketExplorerExportPanel({
           value={storeNote}
         />
 
-        <NexusFieldActionRow>
-          <NexusActionButton
-            label={storeWorkflow.isLoadingPreview ? 'Previewing...' : 'Preview JSON'}
-            onPress={() => void handleStorePreview()}
-            disabled={storeWorkflow.isLoadingPreview || storeWorkflow.isDownloading}
-          />
-          <NexusActionButton
-            label={storeWorkflow.isDownloading ? 'Downloading...' : 'Download JSON'}
-            variant="primary"
-            onPress={() => void handleStoreDownload()}
-            disabled={storeWorkflow.isLoadingPreview || storeWorkflow.isDownloading}
-          />
-        </NexusFieldActionRow>
+        <NexusLoadingBoundary
+          label="Exporting store..."
+          scope={PACKET_EXPLORER_EXPORT_STORE_LOADING_SCOPE}
+        >
+          <NexusFieldActionRow>
+            <NexusActionButton
+              label={storeWorkflow.isLoadingPreview ? 'Previewing...' : 'Preview JSON'}
+              loadingScope={PACKET_EXPLORER_EXPORT_STORE_LOADING_SCOPE}
+              onPress={() => handleStorePreview()}
+              disabled={storeWorkflow.isLoadingPreview || storeWorkflow.isDownloading}
+            />
+            <NexusActionButton
+              label={storeWorkflow.isDownloading ? 'Downloading...' : 'Download JSON'}
+              loadingScope={PACKET_EXPLORER_EXPORT_STORE_LOADING_SCOPE}
+              variant="primary"
+              onPress={() => handleStoreDownload()}
+              disabled={storeWorkflow.isLoadingPreview || storeWorkflow.isDownloading}
+            />
+          </NexusFieldActionRow>
+        </NexusLoadingBoundary>
 
         {storeWorkflow.error ? (
           <NexusErrorState>{storeWorkflow.error}</NexusErrorState>

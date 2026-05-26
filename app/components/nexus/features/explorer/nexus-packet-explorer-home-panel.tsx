@@ -1,11 +1,11 @@
 import { View } from 'react-native';
 
-import { NexusPacketExplorerExportPanel } from '@app/components/nexus/packet-explorer/nexus-packet-explorer-export-panel';
-import { NexusPacketExplorerImportPanel } from '@app/components/nexus/packet-explorer/nexus-packet-explorer-import-panel';
+import { NexusPacketExplorerExportPanel } from './nexus-packet-explorer-export-panel';
+import { NexusPacketExplorerImportPanel } from './nexus-packet-explorer-import-panel';
 import {
   NexusPacketExplorerSearchPanel,
   type NexusPacketExplorerSearchCategory,
-} from '@app/components/nexus/packet-explorer/nexus-packet-explorer-search-panel';
+} from './nexus-packet-explorer-search-panel';
 import type { NexusPacketExplorerSearchPayload } from '@runtime/nexus/nexus-api-types';
 import type { PacketExplorerHomeSubtab } from '@runtime/nexus/packet-explorer-session';
 

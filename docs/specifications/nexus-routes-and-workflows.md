@@ -48,7 +48,7 @@
 
 1. The route loads packet-backed discussion state.
 2. The actor is a real `Element(kind: "person")`, including temporary guests.
-3. The browser prepares a canonical mutation through the shared fortress corridor.
+3. The browser prepares a canonical mutation through the shared prepare/sign/finalize mutation corridor.
 4. The active web identity shell signs the prepared packets locally.
 5. Finalize re-verifies digest, signature, proof level, authority, and policy before persistence.
 
@@ -97,7 +97,7 @@
 ### Packet validation
 
 1. A packet action menu can expose `Validate`, `Revalidate`, or `View verification` depending on current local and imported evidence.
-2. Validation runs through a runtime verification service rather than the fortress mutation corridor.
+2. Validation runs through a runtime verification service rather than the user-authored mutation corridor.
 3. The local runtime signs `verification_report` and `import_report` packets with its own validator identity and also updates a local fast-read verification index.
 4. Imported external verification reports are readable in Explorer, but local trusted status still comes only from the local node's own validation reports in this phase.
 5. The Explorer `Verification` rail now exposes a direct `Verify` / `Reverify` control that refreshes the current packet payload after a local validation pass.

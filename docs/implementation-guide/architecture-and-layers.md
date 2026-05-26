@@ -1,48 +1,62 @@
 # Architecture And Layers
 
-## Product layers
+## Architecture shape
 
-The long-term architecture remains a three-layer stack with strict boundaries:
+The long-term architecture is a three-layer stack with strict boundaries:
 
-### OWA App
+### Core Nexus / Core Contracts Vault
 
-The public-facing civic surface.
+The portable packet law and machinery.
 
-- OWA-native framing and navigation
-- geography-first assembly experience
-- place -> assembly -> deliberation -> proposals or votes -> actions -> record -> learning
+- packet schemas, definitions, builders, compatibility, and validation
+- defaults definitions and dependencies definitions
+- policy requirement contracts and deterministic graph logic
+- canonicalization, signing, verification, import/export/merge rules
+- no database ownership, private-key custody, route assumptions, UI state, or platform-specific behavior
 
-### Nexus Browser
+### Runtime / Trusted Runtime Coordinators
 
-The packet and graph surface.
+The trusted execution environment around Core.
 
-- inspect packets
-- follow links
-- inspect provenance
-- search and filter
-- browse incoming and outgoing references
+- session and actor context
+- request dispatch and validation
+- policy/regulation resolution against live packet state
+- packet planning, building, inspection, testing, certification, archival, verification, import, export, and projection
+- storage adapters and API-facing glue
+- signing-ticket flow and mutation finalization
 
-### Nexus Core
+Runtime coordinators feed live context through the Core Contracts Vault and execute trusted local code. Packet definitions can describe allowed behavior, but imported definitions do not execute runtime behavior.
 
-The portable engine with no UI assumptions.
+### Interface / Signal Cockpit
 
-- packet typing and validation
-- graph building
-- read and write operations
-- import/export bundles
-- merge strategy
-- trust hooks
-- policy evaluation
+The reusable user-facing cockpit.
+
+- surfaces, page layout builders, cards, menus, tabs, badges, forms, modals, and loading overlays
+- lightweight input validation and intent emission
+- ticket/signing prompts, confirmations, errors, success states, and refresh requests
+- projection consumption through view models
+
+The interface should not decide packet validity, policy authority, or graph truth. It submits user intent and renders trusted projections.
 
 The load-bearing rule stays the same: data is the system; platforms are adapters.
+
+## Product framing
+
+The current product stack remains:
+
+- `FCF` = principles and coordination physics
+- `Nexus` = portable signed-packet substrate and graph engine
+- `OWA` = geography-first civic application profile on Nexus
+
+OWA may provide default policies, default packets, projection preferences, governance presets, and seed choices. OWA should not mutate Nexus packet builders or redefine core packet anatomy.
 
 ## Repository boundaries
 
 The active repo split is:
 
-- `core/*` for portable packet logic, schemas, builders, interpreters, projections, and contracts
-- `runtime/*` for persistence, runtime services, query services, auth/trust/discussion orchestration, and API glue
-- `app/*` for application-layer components, hooks, constants, public content, and shared state
+- `core/*` for portable packet logic, schemas, builders, interpreters, definition contracts, pure projections, and graph rules
+- `runtime/*` for trusted coordinators, persistence, runtime services, query services, auth/trust/discussion orchestration, and API glue
+- `app/*` for Signal Cockpit components, hooks, constants, public content, reusable UI, and shared state
 - `src/app/*` for the Expo Router route shell and API entrypoints
 
 ## Documentation system
@@ -81,20 +95,32 @@ Expected workflow:
 ### Core owns
 
 - packet schemas and validation
+- packet definitions, builders, defaults definitions, and dependencies definitions
 - graph relationships and traversal
 - import/export/merge rules
 - signing and verification law
-- policy evaluation hooks and deterministic business logic
+- policy requirement hooks and deterministic business logic
 
-### Adapters own
+### Runtime owns
+
+- trusted coordinator workflows
+- live packet lookup and storage writes
+- actor/session context
+- signing-ticket flow
+- policy resolution against current state
+- verification reports and runtime-owned indexes
+- API-facing orchestration
+
+### Adapters and interface own
 
 - routing and navigation
 - rendering and layout
 - input UX
+- loading, confirmation, and error chrome
 - device or browser integration
-- orchestration around core-owned operations
+- projection display
 
-Adapters should not invent parallel business logic for trust, validation, compatibility, or merge behavior.
+Adapters should not invent parallel business logic for trust, validation, compatibility, policy, or merge behavior.
 
 ### Nexus scoped loading
 

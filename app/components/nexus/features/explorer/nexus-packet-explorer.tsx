@@ -14,31 +14,31 @@ import {
   NexusChevronIcon,
   useNexusLoading,
 } from '@app/components/nexus/ui';
-import { NexusPacketExplorerContent } from '@app/components/nexus/packet-explorer/nexus-packet-explorer-content';
-import { NexusPacketExplorerPrimaryRail } from '@app/components/nexus/packet-explorer/nexus-packet-explorer-primary-rail';
+import { NexusPacketExplorerContent } from './nexus-packet-explorer-content';
+import { NexusPacketExplorerPrimaryRail } from './nexus-packet-explorer-primary-rail';
 import {
   PACKET_EXPLORER_SEARCH_RESULTS_LOADING_SCOPE,
   type NexusPacketExplorerSearchCategory,
-} from '@app/components/nexus/packet-explorer/nexus-packet-explorer-search-panel';
-import { NexusPacketExplorerShellHeader } from '@app/components/nexus/packet-explorer/nexus-packet-explorer-shell-header';
-import { NexusPacketExplorerTabDeck } from '@app/components/nexus/packet-explorer/nexus-packet-explorer-tab-deck';
-import { NexusPacketExplorerToolbar } from '@app/components/nexus/packet-explorer/nexus-packet-explorer-toolbar';
+} from './nexus-packet-explorer-search-panel';
+import { NexusPacketExplorerShellHeader } from './nexus-packet-explorer-shell-header';
+import { NexusPacketExplorerTabDeck } from './nexus-packet-explorer-tab-deck';
+import { NexusPacketExplorerToolbar } from './nexus-packet-explorer-toolbar';
 import type {
   ExplorerPacketLoadState,
   ExplorerPacketStateMap,
-} from '@app/components/nexus/packet-explorer/nexus-packet-explorer-types';
+} from './nexus-packet-explorer-types';
 import type {
   NexusPacketExplorerSearchPayload,
   NexusPacketVerificationActionPayload,
 } from '@runtime/nexus/nexus-api-types';
 import {
   EXPLORER_DESKTOP_BREAKPOINT,
-} from '@app/components/nexus/packet-explorer/nexus-packet-explorer-resize-math';
-import { useNexusPacketExplorerResize } from '@app/components/nexus/packet-explorer/use-nexus-packet-explorer-resize';
+} from './nexus-packet-explorer-resize-math';
+import { useNexusPacketExplorerResize } from './use-nexus-packet-explorer-resize';
 import {
   PACKET_FETCH_TIMEOUT_MS,
   logExplorerClientEvent,
-} from '@app/components/nexus/packet-explorer/nexus-packet-explorer-utils';
+} from './nexus-packet-explorer-utils';
 import {
   fetchNexusPacketExplorerPayload,
   runNexusPacketVerification,

@@ -14,7 +14,7 @@ import {
 import { NexusFeatureStatusProvider } from '@app/components/nexus/nexus-feature-status-context';
 import { NexusShellChromeProvider } from '@app/components/nexus/nexus-shell-chrome-context';
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
-import NexusPacketExplorer from '@app/components/nexus/nexus-packet-explorer';
+import NexusPacketExplorer from '@app/components/nexus/features/explorer/nexus-packet-explorer';
 import NexusShellEntryGate from '@app/components/nexus/nexus-shell-entry-gate';
 import NexusSidebar from '@app/components/nexus/nexus-sidebar';
 import {

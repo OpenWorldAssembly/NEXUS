@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, Text, View } from 'react-native';
 
 import type { NexusPacketValidationMode } from '@core/contracts';
@@ -8,10 +8,12 @@ import {
   NexusCard,
   NexusErrorState,
   NexusFieldActionRow,
+  NexusLoadingBoundary,
   NexusSegmentedPill,
   NexusTextArea,
   NexusWarningState,
   useNexusAppearance,
+  useNexusLoading,
 } from '@app/components/nexus/ui';
 import type {
   NexusPacketExplorerImportCommitPayload,
@@ -65,6 +67,13 @@ type ImportHistoryState = {
   error: string | null;
   isLoading: boolean;
 };
+
+const PACKET_EXPLORER_IMPORT_ANALYZE_LOADING_SCOPE =
+  'packet-explorer:import-analyze';
+const PACKET_EXPLORER_IMPORT_COMMIT_LOADING_SCOPE =
+  'packet-explorer:import-commit';
+const PACKET_EXPLORER_IMPORT_HISTORY_LOADING_SCOPE =
+  'packet-explorer:import-history';
 
 function createIdleWorkflowState(): ImportWorkflowState {
   return {
@@ -561,6 +570,7 @@ export function NexusPacketExplorerImportPanel({
   onOpenPacketInExplorer,
 }: NexusPacketExplorerImportPanelProps) {
   const appearance = useNexusAppearance();
+  const { runWithLoading } = useNexusLoading();
   const [sourceMode, setSourceMode] = useState<ImportSourceMode>('paste');
   const [validationMode, setValidationMode] =
     useState<NexusPacketValidationMode>('validate_before_commit');
@@ -574,37 +584,43 @@ export function NexusPacketExplorerImportPanel({
   );
   const [outcomeModal, setOutcomeModal] = useState<ImportOutcomeModalState>(null);
 
-  const loadImportHistory = async () => {
-    setImportHistory((currentState) => ({
-      ...currentState,
-      error: null,
-      isLoading: true,
-    }));
+  const loadImportHistory = useCallback(async () => {
+    await runWithLoading(
+      PACKET_EXPLORER_IMPORT_HISTORY_LOADING_SCOPE,
+      async () => {
+        setImportHistory((currentState) => ({
+          ...currentState,
+          error: null,
+          isLoading: true,
+        }));
 
-    try {
-      const payload: NexusPacketExplorerImportHistoryPayload =
-        await fetchNexusPacketExplorerImportHistory({ limit: 8 });
+        try {
+          const payload: NexusPacketExplorerImportHistoryPayload =
+            await fetchNexusPacketExplorerImportHistory({ limit: 8 });
 
-      setImportHistory({
-        entries: payload.entries,
-        error: null,
-        isLoading: false,
-      });
-    } catch (error) {
-      setImportHistory({
-        entries: [],
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Unable to load import history.',
-        isLoading: false,
-      });
-    }
-  };
+          setImportHistory({
+            entries: payload.entries,
+            error: null,
+            isLoading: false,
+          });
+        } catch (error) {
+          setImportHistory({
+            entries: [],
+            error:
+              error instanceof Error
+                ? error.message
+                : 'Unable to load import history.',
+            isLoading: false,
+          });
+        }
+      },
+      { label: 'Loading import history...' }
+    );
+  }, [runWithLoading]);
 
   useEffect(() => {
     void loadImportHistory();
-  }, []);
+  }, [loadImportHistory]);
 
   useEffect(() => {
     setWorkflow(createIdleWorkflowState());
@@ -845,30 +861,42 @@ export function NexusPacketExplorerImportPanel({
           value={sourceText}
         />
 
-        <NexusFieldActionRow>
-          <NexusActionButton
-            label={workflow.isAnalyzing ? 'Analyzing...' : 'Analyze Import'}
-            onPress={() => void handleAnalyze()}
-            disabled={!hasSource || workflow.isAnalyzing || workflow.isCommitting}
-          />
-          <NexusActionButton
-            label={workflow.isCommitting ? 'Committing...' : 'Commit Import'}
-            variant="primary"
-            onPress={() => void handleCommit()}
-            disabled={
-              !hasSource ||
-              workflow.isAnalyzing ||
-              workflow.isCommitting ||
-              !canCommitResult(workflow.result)
-            }
-          />
-          <NexusActionButton
-            label="Clear"
-            variant="ghost"
-            onPress={handleClear}
-            disabled={!hasSource && !workflow.result}
-          />
-        </NexusFieldActionRow>
+        <NexusLoadingBoundary
+          label="Analyzing import..."
+          scope={PACKET_EXPLORER_IMPORT_ANALYZE_LOADING_SCOPE}
+        >
+          <NexusLoadingBoundary
+            label="Committing import..."
+            scope={PACKET_EXPLORER_IMPORT_COMMIT_LOADING_SCOPE}
+          >
+            <NexusFieldActionRow>
+              <NexusActionButton
+                label={workflow.isAnalyzing ? 'Analyzing...' : 'Analyze Import'}
+                loadingScope={PACKET_EXPLORER_IMPORT_ANALYZE_LOADING_SCOPE}
+                onPress={() => handleAnalyze()}
+                disabled={!hasSource || workflow.isAnalyzing || workflow.isCommitting}
+              />
+              <NexusActionButton
+                label={workflow.isCommitting ? 'Committing...' : 'Commit Import'}
+                loadingScope={PACKET_EXPLORER_IMPORT_COMMIT_LOADING_SCOPE}
+                variant="primary"
+                onPress={() => handleCommit()}
+                disabled={
+                  !hasSource ||
+                  workflow.isAnalyzing ||
+                  workflow.isCommitting ||
+                  !canCommitResult(workflow.result)
+                }
+              />
+              <NexusActionButton
+                label="Clear"
+                variant="ghost"
+                onPress={handleClear}
+                disabled={!hasSource && !workflow.result}
+              />
+            </NexusFieldActionRow>
+          </NexusLoadingBoundary>
+        </NexusLoadingBoundary>
 
         {workflow.error ? (
           <NexusErrorState>{workflow.error}</NexusErrorState>
@@ -897,7 +925,7 @@ export function NexusPacketExplorerImportPanel({
           <NexusActionButton
             label={importHistory.isLoading ? 'Refreshing...' : 'Refresh'}
             variant="ghost"
-            onPress={() => void loadImportHistory()}
+            onPress={() => loadImportHistory()}
             disabled={importHistory.isLoading}
           />
         </View>
@@ -908,23 +936,28 @@ export function NexusPacketExplorerImportPanel({
           </NexusCard>
         ) : null}
 
-        {importHistory.isLoading && importHistory.entries.length === 0 ? (
-          <Text className={appearance.itemBodyClass}>Loading import history...</Text>
-        ) : importHistory.entries.length === 0 ? (
-          <Text className={appearance.itemBodyClass}>
-            No import reports yet.
-          </Text>
-        ) : (
-          <View className="gap-3">
-            {importHistory.entries.map((entry) => (
-              <ImportHistoryCard
-                key={entry.report_revision_id}
-                entry={entry}
-                onOpenPacketInExplorer={onOpenPacketInExplorer}
-              />
-            ))}
-          </View>
-        )}
+        <NexusLoadingBoundary
+          label="Loading import history..."
+          scope={PACKET_EXPLORER_IMPORT_HISTORY_LOADING_SCOPE}
+        >
+          {importHistory.isLoading && importHistory.entries.length === 0 ? (
+            <Text className={appearance.itemBodyClass}>Loading import history...</Text>
+          ) : importHistory.entries.length === 0 ? (
+            <Text className={appearance.itemBodyClass}>
+              No import reports yet.
+            </Text>
+          ) : (
+            <View className="gap-3">
+              {importHistory.entries.map((entry) => (
+                <ImportHistoryCard
+                  key={entry.report_revision_id}
+                  entry={entry}
+                  onOpenPacketInExplorer={onOpenPacketInExplorer}
+                />
+              ))}
+            </View>
+          )}
+        </NexusLoadingBoundary>
       </NexusCard>
 
       <NexusOutcomeDialog

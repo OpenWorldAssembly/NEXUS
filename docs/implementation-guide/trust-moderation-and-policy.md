@@ -39,7 +39,7 @@ Status: canon candidate
 - which interactions should remain soft projection versus hard runtime enforcement
 - how much moderation preference state should be actor-level policy versus client-level shell preference
 
-## Reactions, reactions, and claims
+## Reactions, attestations, and claims
 
 Status: canon candidate
 
@@ -80,6 +80,25 @@ Current dependency authority note:
 - Definition `dependencies_definition` parts describe packet requirements and local engine contracts; runtime registries only validate and interpret those refs
 - workflow dependency IDs must resolve to a Definition dependency part, Policy semantic, operation ontology entry, workflow resolver allowlist, or trusted local engine contract
 - trusted runtime capability metadata is allowed only when it points back to packet meaning or an explicit local engine contract
+
+
+## Regulation and policy resolver direction
+
+Status: planned foundation for voting and richer governance.
+
+Policy packets exist today, but Nexus still needs a dedicated regulation language and resolver before governance can become interactive. The Trusted Regulation Coordinator should resolve policy requirements against live packet state rather than leaving proposal, voting, moderation, and role gates as route-local checks.
+
+The regulation resolver should eventually answer:
+
+- who can create or mutate each packet type in a scope
+- who can propose, vote, attest, review, or moderate
+- which trust stage, role, or association gates apply
+- which quorum, threshold, and vote method applies
+- which defaults are enabled by policy
+- whether proposal discussions, decisions, or decision reports should be created
+- which packet types are allowed in a given scope
+
+This resolver should stay separate from builders. Builders shape packets. Regulation decides whether the actor and scope may use that shape under current policy.
 
 ## Longer-term civic review framing
 

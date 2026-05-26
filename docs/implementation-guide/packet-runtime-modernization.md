@@ -2,28 +2,28 @@
 
 ## Status
 
-Pre-reseed modernization chapter status. The early sections preserve the chapter history; the current state has seeded Definition/Bundle packet material, closed in-scope runtime genericization, packet-based policy/dependency semantics, retired legacy bridge write intents, and fortress-enrolled `Preference.element` writes.
+Pre-reseed modernization chapter status. The early sections preserve the chapter history; the current state has seeded Definition/Bundle packet material, closed in-scope runtime genericization, packet-based policy/dependency semantics, retired legacy bridge write intents, and trusted signed `Preference.element` writes.
 
 ## Summary
 
-This chapter brings the packet system, generic fortress, runtime connectors, and mutation orchestration up to the Preference-as-template direction. `Definition`, `Bundle`, and `Preference` are now canonical packet types; Preference remains the working runtime example with a fortress-enrolled write path and runtime connector coverage for comparison. The broader goal is to keep every live packet type visible through the same coverage map while moving mutations into standardized trusted-local runtime paths.
+This chapter brings the packet system, trusted runtime coordination, runtime connectors, and mutation orchestration up to the Preference-as-template direction. `Definition`, `Bundle`, and `Preference` are now canonical packet types; Preference remains the working runtime example with a signed trusted write path and runtime connector coverage for comparison. The broader goal is to keep every live packet type visible through the same coverage map while moving mutations into standardized Trusted Runtime Coordinator paths.
 
 The work should preserve current behavior while replacing hidden assumptions with typed registries, explicit missing coverage items, and tests that fail when the modernization map drifts.
 
 ## Modernization Targets
 
 - packet types should have body schemas, compatibility entries, builder support, manifest definitions, definition parts, and runtime connector status recorded in one audit surface
-- runtime mutations should map to prepare handlers, finalize handlers, policy action IDs, signed corridor use, and master-handler connector enrollment status
+- runtime mutations should map to coordinator responsibilities, prepare/finalize behavior, policy action IDs, signed corridor use, and Signal Conductor enrollment status
 - Definition, Bundle, and Preference are canonical packet types with body schemas, compatibility entries, builder support, definition parts, and seed/profile coverage
 - imported Definition and Bundle packets describe semantics but never introduce executable server behavior
-- the generic fortress and master handler should become the standard runtime orchestration path after coverage is complete
+- Trusted Runtime Coordinators and the Signal Conductor should become the standard orchestration path after coverage is complete
 
 ## Phase Plan
 
 1. Save the broad plan and add coverage audits.
 2. Use the audit output to prioritize packet-type definition work.
 3. Expand manifest definitions and definition parts type by type, preserving existing schemas and compatibility behavior unless a type-specific schema evolution is explicitly approved.
-4. Adapt runtime mutation paths into runtime connectors behind the master handler, keeping signed corridor behavior intact until each mutation has a tested replacement boundary.
+4. Adapt runtime mutation paths into Trusted Runtime Coordinator seams behind the Signal Conductor, keeping signed corridor behavior intact until each mutation has a tested replacement boundary.
 5. Enroll completed types and connectors only when their docs, tests, policies, and runtime behavior are all aligned.
 6. Retire planned-gap records only when the implementation and tests prove the gap is actually closed.
 
@@ -43,7 +43,7 @@ The first pass is intentionally non-behavioral:
 - historical baseline: Definition and Bundle were initially kept out of `PACKET_TYPES`; the current promotion pass enrolls them as canonical packet types
 - do not change `MutationIntent`, route payloads, packet schemas, or compatibility registry behavior during the audit pass
 - do not migrate legacy scope-display caches until a dedicated compatibility pass
-- the initial audit baseline kept `Preference.element` out of signed fortress enrollment; the current corridor now enrolls `preference.element.set` through prepare/finalize
+- the initial audit baseline kept `Preference.element` out of signed mutation enrollment; the current corridor now enrolls `preference.element.set` through prepare/finalize
 - do not rebuild generated public docs artifacts as part of this first pass
 
 ## Test Plan
@@ -51,18 +51,55 @@ The first pass is intentionally non-behavioral:
 - run packet modernization coverage tests
 - run runtime mutation modernization coverage tests
 - keep packet-definition manifest and audit tests green
-- keep fortress route and service-writer audit tests green
+- keep signed route and service-writer audit tests green
 - validate docs with `npm run docs:validate`
 
 ## Decision Notes
 
 The audit modules are the working checklist for the next implementation passes. Broken current invariants should fail tests. Expected gaps should remain visible as planned modernization work until they are closed by a later pass.
 
+
+## Trusted Runtime Coordinator Architecture
+
+Current modernization direction is to organize secure runtime work around enrolled Trusted Runtime Coordinators rather than route-local write code.
+
+Target coordinator families:
+
+- Trusted Dispatch Coordinator for user/API intent routing
+- Trusted Validation Coordinator for request normalization and fail-closed preflight
+- Trusted Regulation Coordinator for policy and governance resolution
+- Trusted Planning Coordinator for definition, defaults, dependency, and bundle-plan resolution
+- Trusted Building Coordinator for producing packet candidates through the generic builder pipeline
+- Trusted Inspection Coordinator for structural refs, dependency satisfaction, and bundle coherence
+- Trusted Testing Coordinator for schema, compatibility, and policy assertions
+- Trusted Certification Coordinator for signatures, tickets, digests, and final integrity
+- Trusted Archival Coordinator for packet-store writes and archive indexes
+- Trusted Verification Coordinator for local packet verification and verification reports
+- Trusted Import Coordinator and Trusted Export Coordinator for bundle ingress/egress
+- Trusted Projection Coordinator for UI-ready graph projections and available actions
+
+These coordinators are runtime concerns. They execute trusted local code and feed live context through the Core Contracts Vault. Packet definitions may describe allowed operations, defaults, dependencies, policy requirements, actions, and projection hints, but imported packet definitions must never execute local runtime behavior.
+
+## Definition-Driven Build And Projection Direction
+
+The same declaration language should guide both packet creation and packet projection.
+
+Creation uses definitions, builders, defaults definitions, dependencies definitions, policy requirements, and runtime variables to produce packet build plans. Projection should eventually use definitions, projection hints, component keys, action keys, display fields, and graph relationships to produce safe UI-ready view models.
+
+Resolver ownership is split by domain:
+
+- planning resolves build plans and default packet cascades
+- regulation resolves policy requirements, governance rules, trust gates, and voting eligibility
+- building creates packet candidates through the generic builder pipeline
+- projection resolves surfaces, display models, badges, and available actions
+
+Builders remain packet anatomy. Defaults describe normal starting shape. Dependencies describe required structural refs. Policies regulate permission and process. Projection definitions describe safe display and interaction hints.
+
 ## Manifest Core Pass
 
 The first chunky implementation pass expanded the packet manifest from the Preference template to the active packet types with generic builder-pipeline support: Element, Location, Role, Claim, Relation, Report, Proposal, Reaction, Decision, Action, Discussion, and Policy.
 
-This pass remains runtime-ready. The new definitions describe existing body schemas, compatibility registry posture, generic builder support, action descriptors, planner descriptors, projection/index descriptors, and Definition parts. They do not change route payloads, packet schemas, runtime mutation behavior, or master-handler connector enrollment.
+This pass remains runtime-ready. The new definitions describe existing body schemas, compatibility registry posture, generic builder support, action descriptors, planner descriptors, projection/index descriptors, and Definition parts. They do not change route payloads, packet schemas, runtime mutation behavior, or Signal Conductor connector enrollment.
 
 Builder-missing types remain explicit missing coverage items in the modernization audit. Preference later received canonical builder support and signed-corridor write enrollment.
 
@@ -80,13 +117,13 @@ The compatibility standardization pass makes compatibility a required, auditable
 
 Generic type definitions derive definition compatibility descriptors from the canonical compatibility registry. Current-only types expose identity compatibility, while legacy-aware types expose adjacent upcast/downcast ladder edges where the registry has adapter functions. Multi-step ladders use the `full_chain_bundle` strategy so future bundles can carry discoverable adapter metadata without pretending every adapter must touch the current schema directly.
 
-The manifest audit now fails when compatibility posture and descriptors disagree, when downcast edges lack loss awareness, when duplicate adapter edges exist, or when a claimed full-chain graph is disconnected from the current version. This keeps reseed and import/export planning honest before runtime handler extraction or generic fortress promotion begins.
+The manifest audit now fails when compatibility posture and descriptors disagree, when downcast edges lack loss awareness, when duplicate adapter edges exist, or when a claimed full-chain graph is disconnected from the current version. This keeps reseed and import/export planning honest before runtime handler extraction or Trusted Runtime Coordinator pipeline promotion begins.
 
-## Fortress Handler Extraction Pass
+## Mutation Handler Extraction Pass
 
-The signed fortress corridor remains the live authority for prepare, proof, finalize, and persistence decisions. The packet-runtime master handler remains the client/API-to-runtime connector bridge; it does not own signed fortress internals yet.
+The signed mutation corridor remains the live authority for prepare, proof, finalize, and persistence decisions. The packet-runtime Signal Conductor remains the client/API-to-runtime connector bridge; it does not own signed mutation internals yet.
 
-The extraction pass introduces domain-composed fortress handler maps for locality, discussion, reaction, assembly, relation, role, and actor policy. `MutationPrepareHandlers` and `MutationFinalizeHandlers` remain compatibility facades for the current implementation, while the composed maps give the runtime a clearer stepping-stone toward generic packet planners.
+The extraction pass introduces domain-composed mutation handler maps for locality, discussion, reaction, assembly, relation, role, and actor policy. `MutationPrepareHandlers` and `MutationFinalizeHandlers` remain compatibility facades for the current implementation, while the composed maps give the runtime a clearer stepping-stone toward generic packet planners.
 
 Each live mutation intent now has a genericization classification:
 
@@ -95,7 +132,7 @@ Each live mutation intent now has a genericization classification:
 - `workflow_specific` means runtime orchestration still coordinates multiple packet operations or projections.
 - `legacy_bridge` means the intent is a compatibility alias that should collapse into a canonical intent.
 
-This pass intentionally preserves behavior. It records which fortress code should be retired, which should become reusable planners, and which orchestration remains runtime-owned before any live generic fortress promotion.
+This pass intentionally preserves behavior. It records which mutation-service code should be retired, which should become reusable planners, and which orchestration remains runtime-owned before any live Trusted Runtime Coordinator pipeline promotion.
 
 ## Packet Operation Ontology Pass
 
@@ -105,14 +142,14 @@ This ontology is an allowlist, not executable packet-defined code. Each operatio
 
 The manifest audit now fails closed when a mutation descriptor cannot map to a known operation kind. The forward-looking packet operation modernization coverage lists every manifest mutation, the operation kinds it resolves to, the trusted local engine requested, and whether the gap is already mapped or still planned.
 
-The signed fortress genericization audit also records operation mappings for every live mutation intent:
+The signed mutation genericization audit also records operation mappings for every live mutation intent:
 
 - `generic_ready` intents map directly to concrete operation kinds, but still wait for the later live promotion pass.
 - `planner_extraction_needed` intents map to their target operation kind and keep an explicit planner extraction gap.
 - `workflow_specific` intents map to `workflow.compose` or a composed operation set and remain runtime-owned until their component operations can be split safely.
 - `legacy_bridge` intents point at the canonical operation direction they should collapse into.
 
-This keeps the moat/drawbridge boundary intact. The runtime master handler can normalize client/API ingress requests and eventually choose operation descriptors, while the fortress still owns trusted prepare/finalize/proof/persistence until a later pass promotes selected operation kinds through the generic path.
+This keeps ingress normalization separate from mutation authority. The Signal Conductor can normalize client/API ingress requests and eventually choose operation descriptors, while the trusted mutation pipeline still owns prepare/finalize/proof/persistence until a later pass promotes selected operation kinds through the generic path.
 
 ## Generic Workflow Planner Contract Pass
 
@@ -120,22 +157,22 @@ The workflow planner contract pass adds the declarative layer above individual o
 
 Workflow plans are data, not code. Definitions can say "resolve actor and target, then run `relation.set`" or "if the input value is present run `reaction.set`, otherwise run `reaction.clear`." They cannot introduce arbitrary functions, dynamic imports, persistence behavior, route payloads, or proof rules. The runtime interpreter validates every operation, resolver, dependency, condition operator, policy action, and step reference against local allowlists before producing a dry-run plan.
 
-The first definition workflow plans cover the generic-ready fortress candidates:
+The first definition workflow plans cover the generic-ready mutation candidates:
 
 - `relation.follow.add`
 - `relation.follow.clear`
 - `role_association.claim.set`
 - `reaction.vote.set`
 
-These plans do not enroll live execution. They prove the manifest can describe packet-specific variables and ordered generic work while preserving the signed fortress as the only live prepare/finalize/proof/persistence authority.
+These plans do not enroll live execution. They prove the manifest can describe packet-specific variables and ordered generic work while preserving the signed mutation corridor as the only live prepare/finalize/proof/persistence authority.
 
 Policy and dependency descriptors now matter as referenced workflow metadata, but their full semantics remain a dedicated pre-reseed pass. Unused legacy packet types remain explicit missing coverage items and do not block the generic workflow contract or switch-over planning.
 
 ## Workflow Alignment Pass
 
-The workflow alignment pass connects the manifest workflow contract to the extracted fortress planner map. It adds a runtime-side audit that lists every live mutation intent, its genericization status, operation mapping, workflow-plan coverage, policy action IDs, trusted resolver/capability IDs, and remaining packet-specific assumptions.
+The workflow alignment pass connects the manifest workflow contract to the extracted mutation planner map. It adds a runtime-side audit that lists every live mutation intent, its genericization status, operation mapping, workflow-plan coverage, policy action IDs, trusted resolver/capability IDs, and remaining packet-specific assumptions.
 
-The alignment map is the working checklist for retiring packet-specific fortress code. Generic-ready intents must have clean workflow dry-runs and trusted local capability coverage. Planner-extraction intents may either have a definition workflow plan or an explicit missing coverage item. Workflow-specific intents remain runtime-owned orchestration until their component operations can be split safely. Legacy bridge intents point at canonical workflow directions rather than receiving independent workflows.
+The alignment map is the working checklist for retiring packet-specific mutation-service code. Generic-ready intents must have clean workflow dry-runs and trusted local capability coverage. Planner-extraction intents may either have a definition workflow plan or an explicit missing coverage item. Workflow-specific intents remain runtime-owned orchestration until their component operations can be split safely. Legacy bridge intents point at canonical workflow directions rather than receiving independent workflows.
 
 This pass expands definition workflow coverage for knowable planner-extraction candidates:
 
@@ -146,15 +183,15 @@ This pass expands definition workflow coverage for knowable planner-extraction c
 
 The alignment remains runtime-ready. Existing runtime planner modules are registered as trusted local capabilities by descriptor, but their implementation is not moved, rewritten, or invoked through generic execution yet. Unused removed packet types remain visible missing coverage items and do not block switch-over planning.
 
-## Runtime Crossing Guard and Fortress Handoff Pass
+## Runtime Ingress And Mutation Handoff Pass
 
-The crossing guard and fortress corridor remain separate layers. The runtime crossing guard owns client/API ingress normalization, manifest/workflow lookup, connector selection, definition handoff metadata, and response/refresh hints. The fortress corridor owns policy/proof authority, prepare/finalize lifecycle, mutation tickets, signed packet validation, persistence, and canonical mutation effects.
+Ingress preflight and mutation authority remain separate layers. Ingress preflight owns client/API normalization, manifest/workflow lookup, connector selection, definition handoff metadata, and response/refresh hints. The signed mutation corridor owns policy/proof authority, prepare/finalize lifecycle, mutation tickets, signed packet validation, persistence, and canonical mutation effects.
 
-The handoff pass adds a definition `PacketRuntimeFortressHandoff` contract. A handoff records the normalized mutation direction, workflow alignment status, operation kinds, workflow plan IDs, trusted capability IDs, policy action IDs, dependency IDs, resolver IDs, fortress prepare/finalize handler names, and return refresh hints. It carries `external_definition_execution_enabled: false` to record that imported definitions describe behavior while trusted local runtime code executes it.
+The handoff pass adds a definition `PacketRuntimeMutationHandoff` contract. A handoff records the normalized mutation direction, workflow alignment status, operation kinds, workflow plan IDs, trusted capability IDs, policy action IDs, dependency IDs, resolver IDs, prepare/finalize coordinator names, and return refresh hints. It carries `external_definition_execution_enabled: false` to record that imported definitions describe behavior while trusted local runtime code executes it.
 
-Generic-ready and workflow-aligned planner-extraction intents can now produce `definition_ready` handoffs. Runtime-owned workflow intents produce explicit non-ready handoffs with orchestration reason codes. Legacy bridge intents point at canonical handoff directions. Unknown mutation intents fail closed before any fortress handoff.
+Generic-ready and workflow-aligned planner-extraction intents can now produce `definition_ready` handoffs. Runtime-owned workflow intents produce explicit non-ready handoffs with orchestration reason codes. Legacy bridge intents point at canonical handoff directions. Unknown mutation intents fail closed before any mutation handoff.
 
-At the time of this pass, this did not change the live mutation routes. The current state is stricter: `NexusMutationService` remains the live signed fortress authority, and authenticated `Preference.element` writes now enter that fortress service path rather than the old direct packet-runtime connector.
+At the time of this pass, this did not change the live mutation routes. The current state is stricter: `NexusMutationService` remains the live signed mutation authority, and authenticated `Preference.element` writes now enter that trusted mutation service path rather than the old direct packet-runtime connector.
 
 ## Packet-Based Policy, Dependency, and Client Ingress Enrollment Pass
 
@@ -162,37 +199,37 @@ Policy and dependency requirements are now audited as packet-backed semantics ra
 
 `Policy` packets remain the semantic authority for live write-lock policy. `MutationPolicyGate` remains the live resolver for scope policy refs, actor security mode, proof level, and accepted proof methods. Definition workflow policy descriptors record how policy action IDs map back to that packet-based enforcement model, while manifest-only actions remain definition metadata until a later live write-policy enrollment pass.
 
-The runtime crossing guard now has a client/API ingress enrollment registry. The registry is an internal allowlist of adapter-originated transport routes and portable client intent IDs:
+Runtime ingress now has a client/API enrollment registry. The registry is an internal allowlist of adapter-originated transport routes and portable client intent IDs:
 
-- `/api/nexus/mutations/prepare` enrolls the current signed fortress mutation intents.
+- `/api/nexus/mutations/prepare` enrolls the current signed mutation intents.
 - `/api/nexus/mutations/prepare` enrolls the `Preference.element` client intent; authenticated shell preference writes now use the same prepare/finalize corridor as other claimed mutations, while `/api/nexus/shell-preferences` remains guest compatibility state only.
 - each enrollment records route or transport source, client intent ID, mutation intent, operation kinds, workflow plans, policy actions, dependency refs, and current live mode.
 
-Unknown or custom route/intent pairings fail crossing-guard preflight. The preflight may resolve handoff metadata and packet-backed policy/dependency descriptors, but it does not authorize, ticket, sign, persist, finalize, or bypass the signed fortress. This keeps the future generic corridor aligned with enrolled client/API ingress from web, device, automation, or other adapters instead of accepting arbitrary injected operation requests.
+Unknown or custom route/intent pairings fail ingress preflight. The preflight may resolve handoff metadata and packet-backed policy/dependency descriptors, but it does not authorize, ticket, sign, persist, finalize, or bypass the signed mutation corridor. This keeps the future generic corridor aligned with enrolled client/API ingress from web, device, automation, or other adapters instead of accepting arbitrary injected operation requests.
 
-## Interface-Neutral API Crossing Guard Pass
+## Interface-Neutral API Ingress Pass
 
 The enrollment layer is interface-neutral. Web shell, Raspberry Pi controls, local automation, and future adapters should all map their local events into the same portable client intent IDs, such as `scope.follow.set`, `scope.association.clear`, `discussion.reply.create`, and `preference.interface.set`. Runtime registries should not encode web UI concepts as packet meaning.
 
-The live API routes now consult crossing-guard preflight before delegating to the live corridor:
+The live API routes now consult ingress preflight before delegating to the live corridor:
 
 - prepare parses the request intent, validates client/API ingress enrollment, then delegates to `NexusMutationService`;
 - finalize reads the stored ticket, validates the ticket's original mutation intent against enrolled prepare ingress, then delegates to `NexusMutationService`;
 - authenticated shell preferences use the standard prepare/finalize mutation routes with `preference.element.set`;
 - `/api/nexus/shell-preferences` remains a guest compatibility route and is outside packet-runtime connector enrollment.
 
-This pass is still not generic execution. Preflight validates allowlist and metadata alignment only; fortress policy/proof/ticketing/persistence remains authoritative.
+This pass is still not generic execution. Preflight validates allowlist and metadata alignment only; mutation policy/proof/ticketing/persistence remains authoritative.
 
 ## No-Deferral Pre-Reseed Closure Program
 
-Reseed design is now gated on full closure of in-scope live runtime modernization work. The chapter can still be split across multiple implementation passes, but the remaining live runtime work is no longer tracked as open-ended missing coverage items. The pre-reseed closure ledger classifies every live mutation intent, runtime connector path, workflow plan, policy/dependency requirement, client/API ingress enrollment, fortress handoff, and active packet type as `closed`, `closing_now`, `queued_pre_reseed`, or `blocked`.
+Reseed design is now gated on full closure of in-scope live runtime modernization work. The chapter can still be split across multiple implementation passes, but the remaining live runtime work is no longer tracked as open-ended missing coverage items. The pre-reseed closure ledger classifies every live mutation intent, runtime connector path, workflow plan, policy/dependency requirement, client/API ingress enrollment, mutation handoff, and active packet type as `closed`, `closing_now`, `queued_pre_reseed`, or `blocked`.
 
 The first proving promotion is follow relation set/clear:
 
 - `relation.follow.add`
 - `relation.follow.clear`
 
-These intents now prepare through trusted generic workflow planning while `NexusMutationService` remains the signed fortress authority. API routes, route payloads, response shapes, policy action IDs, packet schemas, proof behavior, tickets, signatures, persistence, and projections remain unchanged. The promoted path uses manifest workflow metadata and trusted local relation planning to produce the same packet candidates and policy metadata as the previous fortress-specific follow planner path.
+These intents now prepare through trusted generic workflow planning while `NexusMutationService` remains the signed mutation authority. API routes, route payloads, response shapes, policy action IDs, packet schemas, proof behavior, tickets, signatures, persistence, and projections remain unchanged. The promoted path uses manifest workflow metadata and trusted local relation planning to produce the same packet candidates and policy metadata as the previous mutation-service-specific follow planner path.
 
 The remaining pre-reseed queue is explicit:
 
@@ -215,7 +252,7 @@ Two additional graph-style shapes are recorded for reuse:
 - `composite.default_packet_set.ensure` for idempotent default packet-set creation, first represented by `discussion.surfaces.ensure`.
 - `composite.entity_create.with_followups` for a primary entity packet plus optional follow-up operations, first represented by `assembly.element.create`.
 
-This pass remains runtime-ready. Live API routes, payloads, fortress ticketing, signing, persistence, projections, and response shapes remain unchanged. Complex workflows stay queued for live promotion until adapter parity tests prove prepare/finalize behavior against the current fortress oracle.
+This pass remains runtime-ready. Live API routes, payloads, mutation ticketing, signing, persistence, projections, and response shapes remain unchanged. Complex workflows stay queued for live promotion until adapter parity tests prove prepare/finalize behavior against the current mutation oracle.
 
 ## Remaining Runtime Genericization Closure Pass
 
@@ -229,7 +266,7 @@ The second live generic promotion expands the trusted workflow seam beyond follo
 - `role_association.claim.set`
 - `reaction.vote.set`
 
-The live behavior contract is unchanged: API payloads, policy action IDs, ticketing, signatures, packet schemas, persistence, projections, and finalize handlers remain the current fortress authority. The prepare side now resolves these direct operations through trusted local generic planners for scoped Relation, role Claim, and packet-signal Reaction writes, using the current fortress planners/builders as the behavior oracle.
+The live behavior contract is unchanged: API payloads, policy action IDs, ticketing, signatures, packet schemas, persistence, projections, and finalize handlers remain the current mutation authority. The prepare side now resolves these direct operations through trusted local generic planners for scoped Relation, role Claim, and packet-signal Reaction writes, using the current mutation planners/builders as the behavior oracle.
 
 The remaining composed workflows now have named adapter shapes instead of open-ended gaps:
 
@@ -255,7 +292,7 @@ The runtime genericization lane is now closed for in-scope live prepare handling
 - `composite.role_reaction.set.v0`
 - `composite.actor_write_policy.update.v0`
 
-These resolvers execute trusted local runtime code only. Adapter descriptors describe the reusable workflow shape and audit metadata; packet definitions still cannot inject executable behavior. `MutationPrepareHandlers` remains the compatibility facade, `NexusMutationService` remains the signed fortress authority, and finalize handlers remain unchanged.
+These resolvers execute trusted local runtime code only. Adapter descriptors describe the reusable workflow shape and audit metadata; packet definitions still cannot inject executable behavior. `MutationPrepareHandlers` remains the compatibility facade, `NexusMutationService` remains the signed mutation authority, and finalize handlers remain unchanged.
 
 Actor write-policy update is mechanically promoted through the composite seam, and Policy packets plus Definition dependency parts are authoritative enough for the fresh genesis contract. Discussion canonicalization to top-level `Discussion(subtype: post)` plus reply `Discussion(subtype: message)` and OWA `Action(subtype: initiative)` are now part of the active reseed contract.
 
@@ -292,7 +329,7 @@ The final wrap-up retires the remaining live legacy bridge mutation intents from
 - `association.claim.set`
 - `residence.claim.set`
 
-Canonical writes now enter through `relation.association.add`, `relation.association.clear`, and `relation.residence.add`. Historical legacy claim material remains readable/importable/projectable through compatibility surfaces, but the signed fortress prepare corridor, client ingress registry, handoff coverage, and live write-policy action list no longer enroll the legacy bridge intents.
+Canonical writes now enter through `relation.association.add`, `relation.association.clear`, and `relation.residence.add`. Historical legacy claim material remains readable/importable/projectable through compatibility surfaces, but the signed mutation prepare corridor, client ingress registry, handoff coverage, and live write-policy action list no longer enroll the legacy bridge intents.
 
 The final readiness handoff lives in runtime audit code as `createFinalPreReseedReadinessReport()`. It records canonical write intents, compatibility-only legacy surfaces, OWA seed/default anchors, required default policies, discussion default packets, canonical definition packet types, and out-of-scope never-live packet types. Reseed design should start from that report rather than rediscovering chapter state from scattered modernization audits.
 
@@ -304,7 +341,7 @@ Active manifest definitions now have canonical packet material. `buildDefinition
 
 This is packetized seed truth, not imported-code execution. Stored Definition and Bundle packets may describe schemas, operations, policies, dependencies, planners, and builders; trusted local runtime registries remain the only executable authority.
 
-Claimed `Preference.element` writes now use the signed fortress prepare/finalize path as `preference.element.set`. The client prepares through `/api/nexus/mutations/prepare`, signs the prepared Preference packet candidate, finalizes through `/api/nexus/mutations/finalize`, and then receives the same projected Preference result shape from the mutation result. `/api/nexus/shell-preferences` is now guest compatibility state only. The old direct `preference.element.interface.set` connector is retained as a definition/internal comparison bridge rather than the live claimed-write path.
+Claimed `Preference.element` writes now use the signed mutation prepare/finalize path as `preference.element.set`. The client prepares through `/api/nexus/mutations/prepare`, signs the prepared Preference packet candidate, finalizes through `/api/nexus/mutations/finalize`, and then receives the same projected Preference result shape from the mutation result. `/api/nexus/shell-preferences` is now guest compatibility state only. The old direct `preference.element.interface.set` connector is retained as a definition/internal comparison bridge rather than the live claimed-write path.
 
 ## Reaction packet convergence pass
 
@@ -313,7 +350,7 @@ Current pre-reseed canon collapses lightweight votes, packet signals, support/di
 `Reaction` packets are replaceable per actor/target/context. A revision can carry any combination of:
 
 - `vote_value`: `'up'`, `'down'`, or `null`
-- `reaction_value`: `support`, `dispute`, or `null`
+- `attestation_value`: `support`, `dispute`, or `null`
 - `emoji_keys`: a bounded list of basic emoji keys
 
 `Reaction` does not encode target packet type or target-specific purpose. Proposal voting, discussion up/down signaling, role support/dispute posture, and later emoji/reaction UI should all route through the same packet type and projection layer. The old standalone `Vote` and `Attestation` packet types are removed from fresh canon for the clean pre-reseed path.
