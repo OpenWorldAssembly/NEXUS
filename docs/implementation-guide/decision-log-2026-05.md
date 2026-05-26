@@ -275,3 +275,10 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - Discussion feed, thread, and post workspace sections now have feature-local panels under `app/components/nexus/features/discussions/*`, including a thread toolbar, while the route keeps router, auth, loading, mutation, and reply-state ownership.
 - The panel props are explicit callbacks and display state rather than runtime services or router hooks, keeping the feature components ready for later generic promotion if another surface needs the same workspace/feed/thread/composer skeletons.
 - Scoped loading boundaries remain attached to visual regions such as feed, root replies, reply branches, votes, and composers; operation semantics still stay outside UI.
+
+## 2026-05 Nexus sidebar feature extraction
+
+- Nexus sidebar rail/menu UI began moving into `app/components/nexus/features/sidebar/*` while `nexus-sidebar.tsx` remains the shell controller for router, auth, preference persistence, rail animation, and scope mutation state.
+- Extracted sidebar feature components now cover rail toggles, guest avatar, preference switches, current context card, function menu content, scope section headers, grouped scope rows, scope action menus, and scope menu content.
+- Scope follow, association, and main-tree visibility actions now use caller-owned loading scopes such as `sidebar:scope-follow:<scopeId>` and block the affected scope row/menu region without coupling loading to packet/runtime semantics.
+- Candidate universal pieces such as rail toggles, compact nav rows, preference switches, grouped sections, scope/action rows, and anchored compact menus remain feature-local until another Nexus surface proves the same reusable shape.

@@ -22,6 +22,8 @@ The broad `app/components/nexus/nexus-ui.tsx` primitive file has since been spli
 
 The discussions route has since started its feature extraction into `app/components/nexus/features/discussions/*`. Feed/thread/post panels, feed/root post cards, vote/reply-count pills, recursive reply tree controls, and post/reply composers now live there, while `src/app/nexus/discussions.tsx` remains the route controller for query state, loading, mutations, auth gates, and reply branch state.
 
+The sidebar has since started its feature extraction into `app/components/nexus/features/sidebar/*`. Rail toggles, guest avatar, preference switch, current context card, function menu content, scope section headers, grouped scope rows, scope action menus, and scope menu content now live there, while `app/components/nexus/nexus-sidebar.tsx` remains the shell controller for routing, auth gates, preference persistence, rail animation, and scope mutation handling.
+
 The counts below remain useful as the pre-move hard inventory. New shared UI should prefer the `ui/*` paths.
 
 ## Snapshot summary
@@ -130,6 +132,7 @@ These files are feature-specific compositions. Most should keep their domain/con
 | `app/components/nexus/features/discussions/*` | post-inventory extraction | DiscussionFeedPanel, DiscussionThreadPanel, DiscussionPostPanel, DiscussionThreadToolbar, DiscussionFeedPostCard, DiscussionRootPostCard, DiscussionReplyTree, DiscussionVotePill, DiscussionReplyCountPill, DiscussionPostComposer, DiscussionReplyComposer | cards, actions, forms, feedback, layout | Pressable retained only inside feature controls | NexusActionButton, NexusCard, NexusBadge, NexusLoadingBoundary, NexusTextInput, NexusTextArea |
 | `app/components/nexus/discussions/nexus-discussion-focus-panel.tsx` | 127 | NexusDiscussionFocusPanel | cards, layout | Pressable 3 | NexusActionButton 2, NexusCard 3, NexusBadge 3 |
 | `app/components/nexus/focus/nexus-focused-packet-section.tsx` | 105 | NexusFocusedPacketSection | cards, layout | Pressable 3 | NexusFocusedPacketSection 1 |
+| `app/components/nexus/features/sidebar/*` | post-inventory extraction | NexusRailToggle, NexusGuestAvatar, NexusPreferenceSwitch, NexusCurrentContextCard, NexusFunctionMenuContent, NexusScopeActionMenu, NexusScopeListRow, NexusGroupedScopeRows, NexusScopeMenuContent | actions, cards, forms, layout, feedback | Pressable and ScrollView retained inside feature controls | NexusCard, NexusCardMenuButton, NexusChevronIcon, NexusLoadingBoundary, NexusThemedBevelEdges |
 | `app/components/nexus/locality/locality-create-graph-row.tsx` | 336 | LocalityCreateGraphRow | forms | Pressable 9, TextInput 3 | NexusActionButton 4, NexusBadge 6 |
 | `app/components/nexus/locality/locality-create-preview-panel.tsx` | 401 | CheckboxControl, LocalityCreatePreviewPanel | cards, layout, feedback | Pressable 3 | NexusActionButton 6, NexusCard 5, NexusBadge 11 |
 | `app/components/nexus/nexus-auth-gate.tsx` | 566 | NexusAuthGateModal | overlays | Pressable 4 | NexusActionButton 3, NexusCard 3 |
@@ -137,7 +140,7 @@ These files are feature-specific compositions. Most should keep their domain/con
 | `app/components/nexus/nexus-packet-explorer.tsx` | 772 | NexusPacketExplorer | overlays | Pressable 9, Modal 3 | NexusActionButton 2, NexusCard 3 |
 | `app/components/nexus/nexus-shell-entry-gate.tsx` | 113 | NexusShellEntryGate | overlays, layout | Pressable 2 | NexusActionButton 2, NexusCard 3, NexusBadge 2 |
 | `app/components/nexus/nexus-shell.tsx` | 243 | NexusShell | layout | Pressable 2 | — |
-| `app/components/nexus/nexus-sidebar.tsx` | 1962 | NexusGuestAvatar, NexusRailToggle, NexusPreferenceSwitch, NexusCurrentContextCard, NexusMenuSectionLabel, NexusPrimaryNavItem, NexusFunctionMenuContent, NexusScopeSectionHeader, NexusScopeActionMenu, NexusScopeListRow, NexusGroupedScopeRows, Wrapper, NexusScopeMenuContent, NexusSidebar | actions, cards, forms, layout | Pressable 26, ScrollView 6, Switch 2 | NexusCard 11, NexusSegmentedPill 3 |
+| `app/components/nexus/nexus-sidebar.tsx` | 881 after feature extraction | NexusSidebar controller; rail/menu/scope/preference components moved to `features/sidebar/*` | actions, cards, forms, layout, feedback | route still owns profile/prefs drawer shell Pressables and rail ScrollViews | NexusCard, NexusSegmentedPill, NexusThemedBevelEdges |
 | `app/components/nexus/packet-explorer/nexus-packet-explorer-content.tsx` | 768 | NexusPacketExplorerSeededSummary, NexusPacketExplorerLineagePanel, NexusPacketExplorerActionsPanel, NexusPacketExplorerValidationPanel, NexusPacketExplorerContent | actions, layout | ScrollView 3 | NexusActionButton 6, NexusCard 29, NexusBadge 11 |
 | `app/components/nexus/packet-explorer/nexus-packet-explorer-data-panel.tsx` | 210 | NexusPacketExplorerDataPanel | layout | — | NexusCard 11, NexusBadge 7 |
 | `app/components/nexus/packet-explorer/nexus-packet-explorer-export-panel.tsx` | 795 | ExportPreviewCard, NexusPacketExplorerExportPanel | cards, forms, layout | Pressable 3, TextInput 6 | NexusActionButton 6, NexusCard 19, NexusInlineSelect 2, NexusSegmentedPill 2, NexusBadge 6 |
@@ -208,6 +211,8 @@ Recommended order, based on duplication, risk, and likely payoff:
 6. **Packet inspection/focus panels**: focus, preview, dashboard, library, and Explorer all present packet summaries with related action/badge/provenance slots. Extract only after action/menu behavior stays stable.
 
 7. **Discussion feature promotion candidates**: workspace panel shells, scrollable feed panels, thread toolbars, composers, vote/reaction pills, and recursive tree rails are now isolated under `features/discussions`; promote them into `ui/*` only after another surface needs the same skeleton.
+
+8. **Sidebar feature promotion candidates**: rail toggles, compact nav rows, preference switch rows, grouped collapsible sections, scope/action row shells, and anchored compact action menus are now isolated under `features/sidebar`; promote them into `ui/*` only after another surface needs the same skeleton.
 
 
 ## Suggested future folder map
