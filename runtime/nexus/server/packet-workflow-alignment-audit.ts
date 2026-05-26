@@ -23,7 +23,7 @@ import {
 import { listMutationIntentDescriptors } from '@runtime/nexus/server/mutation-intent-registry';
 import {
   listTrustedCompositeWorkflowAdapters,
-} from '@runtime/nexus/server/trusted-composite-workflow-adapters';
+} from '@runtime/trusted_coordinators/trusted_composite_workflow_adapters';
 
 export type PacketWorkflowAlignmentStatus =
   | 'workflow_aligned'

@@ -17,6 +17,7 @@ import type {
   NexusPacketActionsBatchRequest,
 } from '@runtime/nexus/nexus-api-types';
 import { NexusPacketVerificationService } from '@runtime/nexus/server/verification-service';
+import { resolvePreferredProjectionSurface } from '@runtime/trusted_coordinators/trusted_projection_coordinator';
 
 const PACKET_ACTION_SURFACES: NexusPacketActionSurface[] = [
   'dashboard',
@@ -27,23 +28,6 @@ const PACKET_ACTION_SURFACES: NexusPacketActionSurface[] = [
   'library',
   'explorer',
 ];
-
-const DISCUSSION_FAMILIES = new Set<PacketType>([
-  'Discussion',
-  'Discussion',
-  'Discussion',
-  'Discussion',
-  'Discussion',
-  'Discussion',
-]);
-const VOTE_FAMILIES = new Set<PacketType>(['Proposal', 'Reaction', 'Decision']);
-const ROLE_FAMILIES = new Set<PacketType>(['Role']);
-const TRUST_FAMILIES = new Set<PacketType>([
-  'Claim',
-  'Relation',
-  'Reaction',
-  'Policy',
-]);
 
 function normalizeSurface(
   surface: unknown,
@@ -62,23 +46,7 @@ function getBestSurfaceForType(
     return 'library';
   }
 
-  if (DISCUSSION_FAMILIES.has(type)) {
-    return 'discussions';
-  }
-
-  if (VOTE_FAMILIES.has(type)) {
-    return 'votes';
-  }
-
-  if (ROLE_FAMILIES.has(type)) {
-    return 'roles';
-  }
-
-  if (TRUST_FAMILIES.has(type)) {
-    return 'trust';
-  }
-
-  return 'library';
+  return normalizeSurface(resolvePreferredProjectionSurface(type), 'library');
 }
 
 function createBaseActionMap(input: {

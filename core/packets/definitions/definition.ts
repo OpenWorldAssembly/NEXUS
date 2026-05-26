@@ -34,6 +34,8 @@ export const DefinitionPartRefSchema = z
   })
   .strict();
 
+const DescriptorRecordSchema = z.record(z.string(), z.unknown());
+
 const DefinitionBaseBodySchema = z
   .object({
     subtype: z.enum(DEFINITION_PACKET_SUBTYPES),
@@ -63,27 +65,33 @@ export const PacketSchemaDefinitionBodySchema = DefinitionBaseBodySchema.extend(
 export const PacketActionRegistryDefinitionBodySchema = DefinitionBaseBodySchema.extend({
   subtype: z.literal('packet_action_registry'),
   action_ids: z.array(z.string().min(1)).default([]),
+  action_descriptors: z.array(DescriptorRecordSchema).default([]),
 }).strict();
 
 export const PacketBuilderDescriptorDefinitionBodySchema = DefinitionBaseBodySchema.extend({
   subtype: z.literal('packet_builder_descriptor'),
   builder_ids: z.array(z.string().min(1)).default([]),
+  builder_descriptors: z.array(DescriptorRecordSchema).default([]),
 }).strict();
 
 export const PacketPlannerDescriptorDefinitionBodySchema = DefinitionBaseBodySchema.extend({
   subtype: z.literal('packet_planner_descriptor'),
   planner_ids: z.array(z.string().min(1)).default([]),
+  planner_descriptors: z.array(DescriptorRecordSchema).default([]),
+  workflow_plan_descriptors: z.array(DescriptorRecordSchema).default([]),
 }).strict();
 
 export const PacketProjectionDescriptorDefinitionBodySchema = DefinitionBaseBodySchema.extend({
   subtype: z.literal('packet_projection_descriptor'),
   projection_keys: z.array(z.string().min(1)).default([]),
+  projection_descriptors: z.array(DescriptorRecordSchema).default([]),
 }).strict();
 
 export const PacketCompatibilityDefinitionBodySchema = DefinitionBaseBodySchema.extend({
   subtype: z.literal('packet_compatibility'),
   current_schema_version: z.string().min(1),
   adapter_ids: z.array(z.string().min(1)).default([]),
+  adapter_descriptors: z.array(DescriptorRecordSchema).default([]),
   supports_upcast: z.boolean().default(false),
   supports_downcast: z.boolean().default(false),
   loss_awareness: z.enum(['none', 'loss_annotated', 'loss_ack_required']).default('none'),
@@ -116,6 +124,7 @@ export const DependenciesDefinitionBodySchema = DefinitionBaseBodySchema.extend(
   required_packet_types: z.array(z.string().min(1)).default([]),
   required_definition_parts: z.array(z.string().min(1)).default([]),
   required_runtime_capabilities: z.array(z.string().min(1)).default([]),
+  dependency_descriptors: z.array(DescriptorRecordSchema).default([]),
   optional_runtime_capabilities: z.array(z.string().min(1)).default([]),
 }).strict();
 

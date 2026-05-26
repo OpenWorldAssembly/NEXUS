@@ -3,6 +3,7 @@
  * Description: Shared packet type manifest contracts for canonical and staged packet definitions.
  */
 
+import type { ResolutionValueBinding } from '@core/packets/resolution-dsl.ts';
 import type { z } from 'zod';
 import type { PacketWorkflowPlanDescriptor } from '@core/packets/packet-workflow-planner.ts';
 
@@ -61,7 +62,6 @@ export type PacketManifestSectionKey =
 export type PacketManifestSectionStatus =
   | 'supported'
   | 'unsupported'
-  | 'unsupported'
   | 'custom';
 
 export type PacketManifestSectionDescriptor = {
@@ -80,10 +80,48 @@ export type PacketCompatibilityPosture = {
   notes: string;
 };
 
+export type PacketProjectionMode = 'direct' | 'derived' | 'compatibility' | 'aggregate' | 'cache_only';
+
+export type PacketProjectionFieldDescriptor = {
+  field_key: string;
+  label?: string;
+  binding: ResolutionValueBinding;
+  display_role:
+    | 'title'
+    | 'label'
+    | 'summary'
+    | 'status'
+    | 'badge'
+    | 'meta'
+    | 'body'
+    | 'action_target';
+  required?: boolean;
+};
+
+export type PacketProjectionLayoutDescriptor = {
+  layout_key: string;
+  component_key:
+    | 'packet.summary_card'
+    | 'packet.focus_card'
+    | 'packet.detail_panel'
+    | 'packet.list_row'
+    | 'packet.raw_panel';
+  density: 'compact' | 'standard' | 'expanded';
+  slots: readonly string[];
+  notes: string;
+};
+
 export type PacketProjectionDescriptor = {
   projection_key: string;
   target_surface: string;
-  mode: 'direct' | 'derived' | 'cache_only';
+  mode: PacketProjectionMode;
+  resolver_preset_ids?: readonly string[];
+  field_descriptors?: readonly PacketProjectionFieldDescriptor[];
+  layout?: PacketProjectionLayoutDescriptor;
+  preferred_surface?: string;
+  action_registry_keys?: readonly string[];
+  policy_action_ids?: readonly string[];
+  dependency_ids?: readonly string[];
   notes: string;
 };
 
@@ -262,6 +300,7 @@ export type PacketDefinitionManifestItem = {
   action_count: number;
   builder_count: number;
   planner_count: number;
+  projection_count: number;
 };
 
 export type PacketDefinitionManifest = {

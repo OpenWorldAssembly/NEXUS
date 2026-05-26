@@ -16,7 +16,7 @@ import type { MutationFinalizeHandlers } from './mutation-finalize-handlers.ts';
 
 test('actor write-policy preparation resolves current policy before building the future policy', () => {
   const mutationSource = readFileSync(
-    join(process.cwd(), 'runtime', 'nexus', 'server', 'trusted-composite-workflow-runtime.ts'),
+    join(process.cwd(), 'runtime', 'trusted_coordinators', 'trusted_composite_workflow_coordinator.ts'),
     'utf8'
   );
   const policyGateSource = readFileSync(

@@ -1,0 +1,14 @@
+/**
+ * File: index.ts
+ * Description: Barrel exports for trusted runtime coordinators.
+ */
+
+export * from './trusted_runtime_coordinator.ts';
+export * from './trusted_resolution_coordinator.ts';
+export * from './trusted_projection_coordinator.ts';
+export * from './trusted_packet_workflow_coordinator.ts';
+export * from './trusted_composite_workflow_coordinator.ts';
+export * from './trusted_composite_workflow_adapters.ts';
+export * from './trusted_building_coordinator.ts';
+export * from './trusted_regulation_coordinator.ts';
+export * from './trusted_definition_coordinator/index.ts';

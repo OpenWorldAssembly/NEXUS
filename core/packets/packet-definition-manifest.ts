@@ -75,6 +75,7 @@ export const PACKET_DEFINITION_MANIFEST = {
       action_count: definition.actions.length,
       builder_count: definition.builders.length,
       planner_count: definition.planners.length,
+      projection_count: definition.projections.length,
       manifest_role:
         definition.packet_type === 'Bundle'
           ? 'bundle_definition'
@@ -153,6 +154,33 @@ export function listPacketDefinitionPlanners(packetType?: string) {
       packet_type: definition.packet_type,
       ...planner,
     }))
+  );
+}
+
+
+export function listPacketDefinitionProjections(packetType?: string) {
+  const definitions = packetType
+    ? [getDefinedPacketTypeDefinition(packetType)].filter(
+        (definition): definition is PacketTypeDefinition => definition !== null
+      )
+    : listDefinedPacketTypeDefinitions();
+
+  return definitions.flatMap((definition) =>
+    definition.projections.map((projection) => ({
+      packet_type: definition.packet_type,
+      ...projection,
+    }))
+  );
+}
+
+export function getPacketDefinitionProjection(
+  packetType: string,
+  projectionKey: string
+) {
+  return (
+    getDefinedPacketTypeDefinition(packetType)?.projections.find(
+      (projection) => projection.projection_key === projectionKey
+    ) ?? null
   );
 }
 
@@ -236,6 +264,7 @@ export * from '@core/packets/packet-operation-ontology.ts';
 export * from '@core/packets/packet-workflow-planner.ts';
 export * from '@core/packets/packet-policy-dependency.ts';
 export * from '@core/packets/packet-defaults.ts';
+export * from '@core/packets/resolution-dsl.ts';
 export {
   auditPacketPolicySemanticAuthority,
   listPacketPolicySemanticDescriptors,

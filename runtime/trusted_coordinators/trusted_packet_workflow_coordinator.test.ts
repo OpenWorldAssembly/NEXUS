@@ -14,15 +14,15 @@ import {
   planAssociationRelationPackets,
   planFollowRelationPackets,
   planResidenceRelationPackets,
-} from './elemental-scope-relation-planner.ts';
-import type { MutationPolicyGate } from './mutation-policy-gate.ts';
+} from '@runtime/nexus/server/elemental-scope-relation-planner';
+import type { MutationPolicyGate } from '@runtime/nexus/server/mutation-policy-gate';
 import {
   auditLiveGenericWorkflowEnrollments,
   listLiveGenericWorkflowEnrollments,
   resolveTrustedRoleParticipationRelationOperationPlan,
   resolveTrustedRelationOperationPlan,
   runTrustedPacketWorkflowMutation,
-} from './trusted-packet-workflow-runtime.ts';
+} from './trusted_packet_workflow_coordinator.ts';
 
 async function createClaimedActor() {
   return createPersonIdentityPacket({

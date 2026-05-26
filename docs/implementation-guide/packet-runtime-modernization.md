@@ -67,8 +67,9 @@ Target coordinator families:
 
 - Trusted Dispatch Coordinator for user/API intent routing
 - Trusted Validation Coordinator for request normalization and fail-closed preflight
+- Trusted Definition Coordinator for active definition context, node definition preferences, definition part selection, compatibility-only definitions, and reseed readiness views
 - Trusted Regulation Coordinator for policy and governance resolution
-- Trusted Planning Coordinator for definition, defaults, dependency, and bundle-plan resolution
+- Trusted Planning Coordinator for defaults, dependency, and bundle-plan resolution
 - Trusted Building Coordinator for producing packet candidates through the generic builder pipeline
 - Trusted Inspection Coordinator for structural refs, dependency satisfaction, and bundle coherence
 - Trusted Testing Coordinator for schema, compatibility, and policy assertions
@@ -78,7 +79,7 @@ Target coordinator families:
 - Trusted Import Coordinator and Trusted Export Coordinator for bundle ingress/egress
 - Trusted Projection Coordinator for UI-ready graph projections and available actions
 
-These coordinators are runtime concerns. They execute trusted local code and feed live context through the Core Contracts Vault. Packet definitions may describe allowed operations, defaults, dependencies, policy requirements, actions, and projection hints, but imported packet definitions must never execute local runtime behavior.
+These coordinators are runtime concerns. They execute trusted local code and feed live context through the Core Contracts Vault. Packet definitions may describe allowed operations, defaults, dependencies, policy requirements, actions, and projection hints, but imported packet definitions must never execute local runtime behavior. The Trusted Definition Coordinator is the gate for definition lookup: internal candidate listing, ranking, conflict audit, compatibility selection, and runtime-view compilation functions are routed through its public coordinator surface instead of being imported as loose helper functions.
 
 ## Definition-Driven Build And Projection Direction
 
@@ -88,6 +89,7 @@ Creation uses definitions, builders, defaults definitions, dependencies definiti
 
 Resolver ownership is split by domain:
 
+- definition resolves active definition context, definition parts, node runtime preferences, compatibility-only definitions, and runtime definition views
 - planning resolves build plans and default packet cascades
 - regulation resolves policy requirements, governance rules, trust gates, and voting eligibility
 - building creates packet candidates through the generic builder pipeline
@@ -354,3 +356,15 @@ Current pre-reseed canon collapses lightweight votes, packet signals, support/di
 - `emoji_keys`: a bounded list of basic emoji keys
 
 `Reaction` does not encode target packet type or target-specific purpose. Proposal voting, discussion up/down signaling, role support/dispute posture, and later emoji/reaction UI should all route through the same packet type and projection layer. The old standalone `Vote` and `Attestation` packet types are removed from fresh canon for the clean pre-reseed path.
+
+## Trusted Resolution Coordinator and Projection Definition Pass
+
+The trusted runtime coordinator family now has a shared home under `runtime/trusted_coordinators/*`. Direct generic workflow promotion, composite workflow promotion, composite adapters, resolution, and projection share this layer instead of living as one-off files under the Nexus server adapter folder.
+
+A portable resolution DSL now lives in core as declaration language, not executable behavior. It defines shared binding shapes, resolution steps, and preset descriptors such as primitive bindings, packet refs, policy gates, dependency gates, relation lookup, discussion thread context, role scope context, compatibility projection, and UI card projection. Packet definitions and workflow descriptors may point at preset IDs, while trusted runtime coordinators decide how those presets are actually resolved locally.
+
+Packet projection descriptors are now richer definition data. They can declare field bindings, layout/component keys, preferred surfaces, action registry keys, dependency IDs, policy action IDs, and resolver preset IDs. The generic packet definitions now seed default summary-card and detail-panel projections for each active packet type, giving the UI a definition-driven shape without embedding UI-specific packet law into core logic.
+
+Definition part body building now carries descriptor payloads for action registries, builders, planners, workflow plans, projections, compatibility adapters, and dependency descriptors. This makes Definition packets more useful for reseed instead of merely listing IDs.
+
+This pass is still conservative at the product edge. The shared packet action service now asks projection definitions for the preferred packet surface, but route-level UI layouts are not yet fully generated from projection descriptors. The next useful pass is to wire projection view models into universal packet card/detail components and reseed Definition packets with these richer descriptor bodies.

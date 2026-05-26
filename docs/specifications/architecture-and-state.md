@@ -91,3 +91,10 @@ Current runtime contracts worth keeping visible here:
 - shared Nexus components live under `app/components/nexus`
 
 The current repo is no longer using the older `domain` or `storage` root names. The active architecture is the `core / runtime / app / src/app` split described above.
+
+## Trusted coordinator structure
+
+Trusted runtime coordinator code now lives under `runtime/trusted_coordinators/*`. The folder contains shared coordinator result helpers, the portable-resolution coordinator, the packet-projection coordinator, the Trusted Definition Coordinator, direct packet workflow promotion, composite workflow promotion, and composite workflow adapter descriptors. Nexus server routes and mutation services may call these coordinators, but executable trusted behavior remains runtime-owned rather than imported from packet definitions. The Trusted Definition Coordinator is foldered as a gated coordinator with internal function modules; external callers use its public coordinator surface rather than importing candidate-ranking or definition-part resolution helpers directly.
+
+The core packet-definition surface now includes richer projection descriptors: field bindings, layout/component keys, preferred surfaces, action registry keys, dependency IDs, policy action IDs, and resolver preset IDs. Generic packet definitions currently provide summary-card and detail-panel projection descriptors for active packet types. The packet action service uses preferred projection surfaces for focus/open routing. Full UI layout generation from projection descriptors is not yet complete.
+

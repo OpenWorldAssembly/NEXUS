@@ -141,6 +141,21 @@ function partReferences(part: PacketDefinitionPartDescriptor): string[] {
   return [...(part.references ?? [])];
 }
 
+function referencesOrAll<TDescriptor>(input: {
+  references: readonly string[];
+  descriptors: readonly TDescriptor[];
+  getId: (descriptor: TDescriptor) => string;
+}): TDescriptor[] {
+  if (input.references.length === 0) {
+    return [...input.descriptors];
+  }
+
+  const referenceSet = new Set(input.references);
+  return input.descriptors.filter((descriptor) =>
+    referenceSet.has(input.getId(descriptor))
+  );
+}
+
 function buildDefinitionPartBody(
   input: DefinitionPartBodyBuilderInput
 ): PacketTypeBodyCandidate<DefinitionBody> {
@@ -193,18 +208,56 @@ function buildDefinitionPartBody(
             schema_language: 'zod_local_binding',
           }
         : part.part_subtype === 'packet_action_registry'
-          ? { ...base, action_ids: references }
+          ? {
+              ...base,
+              action_ids: references,
+              action_descriptors: referencesOrAll({
+                references,
+                descriptors: definition.actions,
+                getId: (descriptor) => descriptor.action_id,
+              }),
+            }
           : part.part_subtype === 'packet_builder_descriptor'
-            ? { ...base, builder_ids: references }
+            ? {
+                ...base,
+                builder_ids: references,
+                builder_descriptors: referencesOrAll({
+                  references,
+                  descriptors: definition.builders,
+                  getId: (descriptor) => descriptor.builder_id,
+                }),
+              }
             : part.part_subtype === 'packet_planner_descriptor'
-              ? { ...base, planner_ids: references }
+              ? {
+                  ...base,
+                  planner_ids: references,
+                  planner_descriptors: referencesOrAll({
+                    references,
+                    descriptors: definition.planners,
+                    getId: (descriptor) => descriptor.planner_id,
+                  }),
+                  workflow_plan_descriptors: definition.workflow_plans ?? [],
+                }
               : part.part_subtype === 'packet_projection_descriptor'
-                ? { ...base, projection_keys: references }
+                ? {
+                    ...base,
+                    projection_keys: references,
+                    projection_descriptors: referencesOrAll({
+                      references,
+                      descriptors: definition.projections,
+                      getId: (descriptor) => descriptor.projection_key,
+                    }),
+                  }
                 : part.part_subtype === 'packet_compatibility'
                   ? {
                       ...base,
                       current_schema_version: definition.current_schema_version,
                       adapter_ids: references,
+                      adapter_descriptors: referencesOrAll({
+                        references,
+                        descriptors: definition.compatibility_adapters,
+                        getId: (descriptor) => descriptor.adapter_id,
+                      }),
                       supports_upcast: definition.compatibility.supports_upcast,
                       supports_downcast: definition.compatibility.supports_downcast,
                       loss_awareness: definition.compatibility.loss_awareness,
@@ -234,6 +287,14 @@ function buildDefinitionPartBody(
                         (reference) =>
                           reference.startsWith('generic.') || reference.startsWith('core.')
                       ),
+                      dependency_descriptors: references.map((reference) => ({
+                        dependency_id: reference,
+                        dependency_kind: reference.startsWith('runtime.')
+                          ? 'runtime_capability'
+                          : reference.startsWith('generic.') || reference.startsWith('core.')
+                            ? 'core_capability'
+                            : 'packet_or_definition_ref',
+                      })),
                       optional_runtime_capabilities: references.filter((reference) =>
                         reference.startsWith('runtime.')
                       ),

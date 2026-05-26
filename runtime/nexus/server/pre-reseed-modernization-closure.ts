@@ -22,15 +22,15 @@ import {
 import {
   auditLiveGenericWorkflowEnrollments,
   listLiveGenericWorkflowEnrollments,
-} from '@runtime/nexus/server/trusted-packet-workflow-runtime';
+} from '@runtime/trusted_coordinators/trusted_packet_workflow_coordinator';
 import {
   auditTrustedCompositeWorkflowAdapters,
   listTrustedCompositeWorkflowAdapters,
-} from '@runtime/nexus/server/trusted-composite-workflow-adapters';
+} from '@runtime/trusted_coordinators/trusted_composite_workflow_adapters';
 import {
   auditLiveCompositeWorkflowEnrollments,
   listLiveCompositeWorkflowEnrollments,
-} from '@runtime/nexus/server/trusted-composite-workflow-runtime';
+} from '@runtime/trusted_coordinators/trusted_composite_workflow_coordinator';
 
 export type PreReseedClosureStatus =
   | 'closed'

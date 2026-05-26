@@ -6,12 +6,12 @@ import {
   getTrustedCompositeWorkflowAdapter,
   listTrustedCompositeWorkflowAdapters,
   resolveCompositeWorkflowDryRun,
-} from './trusted-composite-workflow-adapters.ts';
+} from './trusted_composite_workflow_adapters.ts';
 import {
   auditLiveCompositeWorkflowEnrollments,
   listLiveCompositeWorkflowEnrollments,
   runTrustedCompositeWorkflowMutation,
-} from './trusted-composite-workflow-runtime.ts';
+} from './trusted_composite_workflow_coordinator.ts';
 
 test('trusted composite workflow adapter audit passes', () => {
   const report = auditTrustedCompositeWorkflowAdapters();

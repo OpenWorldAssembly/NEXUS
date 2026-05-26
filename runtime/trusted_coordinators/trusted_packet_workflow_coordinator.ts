@@ -1,6 +1,6 @@
 /**
- * File: trusted-packet-workflow-runtime.ts
- * Description: Trusted local execution seam for live generic packet workflow promotion.
+ * File: trusted_packet_workflow_coordinator.ts
+ * Description: Trusted runtime coordinator for live generic packet workflow promotion.
  */
 
 import { getPacketUnsignedDigestCandidates } from '@core/auth/mutation-digests';

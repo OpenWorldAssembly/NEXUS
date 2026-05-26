@@ -8,38 +8,17 @@ import {
   type PacketOperationKind,
 } from '@core/packets/packet-operation-ontology.ts';
 import type { PacketTypeDefinition } from '@core/packets/definitions/packet-definition-types.ts';
+import { listResolutionDslPresets } from '@core/packets/resolution-dsl.ts';
+import type {
+  ResolutionConditionDescriptor,
+  ResolutionValueBinding,
+} from '@core/packets/resolution-dsl.ts';
 
-export type PacketWorkflowAvailability =
-  | 'runtime_ready'
-  | 'runtime_ready'
-  | 'canonical';
+export type PacketWorkflowAvailability = 'runtime_ready' | 'canonical';
 
-export type PacketWorkflowValueBinding =
-  | {
-      binding_kind: 'input_path';
-      path: string;
-      required: boolean;
-    }
-  | {
-      binding_kind: 'actor_ref';
-      required: true;
-    }
-  | {
-      binding_kind: 'static_value';
-      value: unknown;
-    }
-  | {
-      binding_kind: 'step_output';
-      step_id: string;
-      output_key: string;
-      required: boolean;
-    };
+export type PacketWorkflowValueBinding = ResolutionValueBinding;
 
-export type PacketWorkflowConditionDescriptor = {
-  condition_kind: 'equals' | 'not_equals' | 'present' | 'absent';
-  left: PacketWorkflowValueBinding;
-  right?: PacketWorkflowValueBinding;
-};
+export type PacketWorkflowConditionDescriptor = ResolutionConditionDescriptor;
 
 export type PacketWorkflowOperationStepDescriptor = {
   step_id: string;
@@ -48,6 +27,7 @@ export type PacketWorkflowOperationStepDescriptor = {
   packet_type: string;
   packet_subtype: string | null;
   resolver_ids: readonly string[];
+  resolver_preset_ids?: readonly string[];
   input_bindings: Readonly<Record<string, PacketWorkflowValueBinding>>;
   policy_action_ids: readonly string[];
   dependency_ids: readonly string[];
@@ -83,7 +63,8 @@ export type PacketWorkflowResolverDescriptor = {
     | 'role_scope_lookup'
     | 'compatibility_projection_lookup'
     | 'input_value'
-    | 'static_value';
+    | 'static_value'
+    | 'preset';
   availability: PacketWorkflowAvailability;
   notes: string;
 };
@@ -109,6 +90,7 @@ export type PacketWorkflowPlanDescriptor = {
   mutation_intents: readonly string[];
   operation_kinds: readonly PacketOperationKind[];
   resolver_ids: readonly string[];
+  resolver_preset_ids?: readonly string[];
   policy_action_ids: readonly string[];
   dependency_ids: readonly string[];
   steps: readonly PacketWorkflowStepDescriptor[];
@@ -142,6 +124,7 @@ export type PacketWorkflowDryRunStep = {
   policy_action_ids: string[];
   dependency_ids: string[];
   resolver_ids: string[];
+  resolver_preset_ids: string[];
   output_key: string | null;
 };
 
@@ -156,6 +139,7 @@ export type PacketWorkflowDryRunPlan = {
   policy_action_ids: string[];
   dependency_ids: string[];
   resolver_ids: string[];
+  resolver_preset_ids: string[];
   ready_for_interpretation: boolean;
   findings: PacketWorkflowAuditFinding[];
 };
@@ -184,6 +168,12 @@ export const PACKET_WORKFLOW_PLANNER_CAPABILITIES = [
     resolver_kind: 'static_value',
     availability: 'runtime_ready',
     notes: 'Binds definition-declared constants into a workflow input.',
+  },
+  {
+    resolver_id: 'resolution.preset',
+    resolver_kind: 'preset',
+    availability: 'runtime_ready',
+    notes: 'Binds standard resolution DSL presets into a trusted coordinator workflow.',
   },
   {
     resolver_id: 'relation.active_lookup',
@@ -302,6 +292,7 @@ export const TRUSTED_PACKET_PLANNER_CAPABILITIES = [
 ] as const satisfies readonly TrustedPlannerCapabilityDescriptor[];
 
 export const PACKET_WORKFLOW_DEPENDENCY_IDS = [
+  'runtime.trusted_coordinator.resolution',
   'runtime.packet_store.read',
   'runtime.policy_gate',
   'generic.operation.relation',
@@ -318,6 +309,7 @@ export const PACKET_WORKFLOW_DEPENDENCY_IDS = [
   'generic.resolver.discussion_thread',
   'generic.resolver.role_scope',
   'generic.resolver.projection',
+  'generic.resolver.resolution_preset',
   'generic.compatibility_projection',
   'generic.preference.builder',
   'generic.preference.latest_active_planner',
@@ -356,6 +348,9 @@ export const PACKET_WORKFLOW_POLICY_ACTION_IDS = [
 
 const RESOLVER_IDS = new Set<string>(
   PACKET_WORKFLOW_PLANNER_CAPABILITIES.map((capability) => capability.resolver_id)
+);
+const RESOLVER_PRESET_IDS = new Set<string>(
+  listResolutionDslPresets().map((preset) => preset.preset_id)
 );
 const DEPENDENCY_IDS = new Set<string>(PACKET_WORKFLOW_DEPENDENCY_IDS);
 const POLICY_ACTION_IDS = new Set<string>(PACKET_WORKFLOW_POLICY_ACTION_IDS);
@@ -545,6 +540,21 @@ function auditSteps(input: {
         });
       }
 
+      for (const presetId of step.resolver_preset_ids ?? []) {
+        if (RESOLVER_PRESET_IDS.has(presetId)) {
+          continue;
+        }
+
+        pushFinding({
+          findings: input.findings,
+          definition: input.definition,
+          workflowPlan: input.workflowPlan,
+          code: 'unknown_workflow_resolver_preset_id',
+          path: `${stepPath}.resolver_preset_ids`,
+          message: `Workflow step ${step.step_id} references unknown resolver preset ${presetId}.`,
+        });
+      }
+
       for (const dependencyId of step.dependency_ids) {
         if (DEPENDENCY_IDS.has(dependencyId)) {
           continue;
@@ -678,6 +688,21 @@ export function auditPacketWorkflowPlanDescriptor(
     });
   }
 
+  for (const presetId of workflowPlan.resolver_preset_ids ?? []) {
+    if (RESOLVER_PRESET_IDS.has(presetId)) {
+      continue;
+    }
+
+    pushFinding({
+      findings,
+      definition,
+      workflowPlan,
+      code: 'unknown_workflow_resolver_preset_id',
+      path: 'resolver_preset_ids',
+      message: `Workflow plan references unknown resolver preset ${presetId}.`,
+    });
+  }
+
   for (const dependencyId of workflowPlan.dependency_ids) {
     if (DEPENDENCY_IDS.has(dependencyId)) {
       continue;
@@ -743,6 +768,7 @@ function flattenSteps(steps: readonly PacketWorkflowStepDescriptor[]): PacketWor
           policy_action_ids: [...step.policy_action_ids],
           dependency_ids: [...step.dependency_ids],
           resolver_ids: [...step.resolver_ids],
+          resolver_preset_ids: [...(step.resolver_preset_ids ?? [])],
           output_key: step.output_key,
         },
       ];
@@ -758,6 +784,7 @@ function flattenSteps(steps: readonly PacketWorkflowStepDescriptor[]): PacketWor
         policy_action_ids: [],
         dependency_ids: [],
         resolver_ids: [],
+        resolver_preset_ids: [],
         output_key: step.output_key ?? null,
       },
       ...flattenSteps(step.then_steps),
@@ -788,6 +815,7 @@ export function resolvePacketWorkflowDryRunPlan(input: {
       dependency_ids: [],
       resolver_ids: [],
       ready_for_interpretation: false,
+      resolver_preset_ids: [],
       findings: [
         {
           severity: 'error',
@@ -823,6 +851,10 @@ export function resolvePacketWorkflowDryRunPlan(input: {
     resolver_ids: uniqueSorted([
       ...workflowPlan.resolver_ids,
       ...steps.flatMap((step) => step.resolver_ids),
+    ]),
+    resolver_preset_ids: uniqueSorted([
+      ...(workflowPlan.resolver_preset_ids ?? []),
+      ...steps.flatMap((step) => step.resolver_preset_ids),
     ]),
     ready_for_interpretation: audit.status === 'pass',
     findings: audit.findings,

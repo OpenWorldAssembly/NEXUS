@@ -182,6 +182,8 @@ function createDependencyReferences(type: GenericBuilderType): string[] {
   const references = new Set([
     'generic.packet.builder_pipeline',
     'generic.packet.definition_action_bridge',
+    'generic.resolver.resolution_preset',
+    'runtime.trusted_coordinator.resolution',
   ]);
 
   if (type === 'Action') references.add('generic.operation.action');
@@ -273,6 +275,164 @@ function createDefaultDefinitionParts(input: {
   }));
 }
 
+const PACKET_PREFERRED_SURFACES: Record<GenericBuilderType, string> = {
+  Element: 'library',
+  Location: 'library',
+  Role: 'roles',
+  Claim: 'trust',
+  Relation: 'trust',
+  Report: 'library',
+  Proposal: 'votes',
+  Reaction: 'votes',
+  Decision: 'votes',
+  Action: 'library',
+  Discussion: 'discussions',
+  Policy: 'trust',
+};
+
+function titleBindingForType(type: GenericBuilderType) {
+  const pathByType: Partial<Record<GenericBuilderType, string>> = {
+    Element: 'body.name',
+    Location: 'body.title',
+    Role: 'body.title',
+    Proposal: 'body.title',
+    Action: 'body.title',
+    Discussion: 'body.title',
+  };
+
+  return {
+    binding_kind: 'current_packet' as const,
+    path: pathByType[type] ?? 'header.packet_id',
+    required: false,
+  };
+}
+
+function summaryBindingForType(type: GenericBuilderType) {
+  const pathByType: Partial<Record<GenericBuilderType, string>> = {
+    Element: 'body.summary',
+    Location: 'body.summary',
+    Role: 'body.summary',
+    Report: 'body.summary_markdown',
+    Proposal: 'body.summary',
+    Action: 'body.summary',
+    Discussion: 'body.summary',
+    Policy: 'body.summary',
+    Claim: 'body.claim_markdown',
+  };
+
+  return {
+    binding_kind: 'current_packet' as const,
+    path: pathByType[type] ?? 'body.note',
+    required: false,
+  };
+}
+
+function statusBindingForType(type: GenericBuilderType) {
+  const pathByType: Partial<Record<GenericBuilderType, string>> = {
+    Element: 'body.status',
+    Location: 'body.status',
+    Relation: 'body.status',
+    Report: 'body.status',
+    Claim: 'body.status',
+    Reaction: 'body.status',
+    Policy: 'body.status',
+  };
+
+  return {
+    binding_kind: 'current_packet' as const,
+    path: pathByType[type] ?? 'body.status',
+    required: false,
+  };
+}
+
+function createDefaultProjectionDescriptors(input: {
+  type: GenericBuilderType;
+  baseId: string;
+}): PacketProjectionDescriptor[] {
+  const preferredSurface = PACKET_PREFERRED_SURFACES[input.type];
+  const fields = [
+    {
+      field_key: 'title',
+      label: 'Title',
+      binding: titleBindingForType(input.type),
+      display_role: 'title' as const,
+      required: false,
+    },
+    {
+      field_key: 'label',
+      label: 'Label',
+      binding: {
+        binding_kind: 'current_packet' as const,
+        path: 'header.type',
+        required: true,
+      },
+      display_role: 'label' as const,
+      required: true,
+    },
+    {
+      field_key: 'summary',
+      label: 'Summary',
+      binding: summaryBindingForType(input.type),
+      display_role: 'summary' as const,
+      required: false,
+    },
+    {
+      field_key: 'status',
+      label: 'Status',
+      binding: statusBindingForType(input.type),
+      display_role: 'status' as const,
+      required: false,
+    },
+  ];
+
+  return [
+    {
+      projection_key: `${input.baseId}.generic_card.v0`,
+      target_surface: 'nexus.packet.card',
+      mode: 'derived',
+      resolver_preset_ids: ['resolution.ui.card_projection.v0'],
+      field_descriptors: fields,
+      layout: {
+        layout_key: 'packet.summary_card.v0',
+        component_key: 'packet.summary_card',
+        density: 'standard',
+        slots: ['title', 'label', 'summary', 'status', 'actions'],
+        notes: 'Universal packet summary-card layout consumed by packet-agnostic UI surfaces.',
+      },
+      preferred_surface: preferredSurface,
+      action_registry_keys: ['packet.default_actions.v0'],
+      dependency_ids: [
+        'runtime.packet_store.read',
+        'generic.resolver.projection',
+        'runtime.trusted_coordinator.resolution',
+      ],
+      notes: `Default UI card projection descriptor for ${input.type} packets.`,
+    },
+    {
+      projection_key: `${input.baseId}.generic_detail.v0`,
+      target_surface: 'nexus.packet.detail',
+      mode: 'derived',
+      resolver_preset_ids: ['resolution.ui.card_projection.v0'],
+      field_descriptors: fields,
+      layout: {
+        layout_key: 'packet.detail_panel.v0',
+        component_key: 'packet.detail_panel',
+        density: 'expanded',
+        slots: ['title', 'label', 'summary', 'status', 'body', 'actions'],
+        notes: 'Universal packet detail-panel layout for explorer and focused packet surfaces.',
+      },
+      preferred_surface: preferredSurface,
+      action_registry_keys: ['packet.default_actions.v0'],
+      dependency_ids: [
+        'runtime.packet_store.read',
+        'generic.resolver.projection',
+        'runtime.trusted_coordinator.resolution',
+      ],
+      notes: `Default UI detail projection descriptor for ${input.type} packets.`,
+    },
+  ];
+}
+
 function createDefinitionParts(input: {
   type: GenericBuilderType;
   defaultSubtype: string;
@@ -280,7 +440,7 @@ function createDefinitionParts(input: {
   actionIds: readonly string[];
   builderId: string;
   plannerIds: readonly string[];
-  projectionKey: string;
+  projectionKeys: readonly string[];
   indexKey: string;
   compatibilityAdapterIds: readonly string[];
   declaredSubtypes: readonly string[];
@@ -360,7 +520,7 @@ function createDefinitionParts(input: {
       schema_version: input.schemaVersion,
       availability: 'runtime_ready',
       required: true,
-      references: [input.projectionKey],
+      references: input.projectionKeys,
       notes: `Projection descriptor part for generic ${input.type} read models.`,
     },
     {
@@ -416,6 +576,46 @@ function staticValue(value: unknown) {
   } as const;
 }
 
+function resolverPresetIdsForResolvers(resolverIds: readonly string[]): string[] {
+  const presetIds = new Set<string>();
+
+  for (const resolverId of resolverIds) {
+    if (
+      resolverId === 'actor.ref' ||
+      resolverId === 'input.value' ||
+      resolverId === 'static.value'
+    ) {
+      presetIds.add('resolution.primitive_bindings.v0');
+    }
+
+    if (resolverId === 'input.packet_ref') {
+      presetIds.add('resolution.packet_ref.v0');
+    }
+
+    if (resolverId === 'projection.current') {
+      presetIds.add('resolution.current_projection.v0');
+    }
+
+    if (resolverId === 'compatibility.projection') {
+      presetIds.add('resolution.compatibility_projection.v0');
+    }
+
+    if (resolverId === 'relation.active_lookup') {
+      presetIds.add('resolution.relation.active_lookup.v0');
+    }
+
+    if (resolverId === 'discussion.parent_thread') {
+      presetIds.add('resolution.discussion.thread_context.v0');
+    }
+
+    if (resolverId === 'role.scope') {
+      presetIds.add('resolution.role.scope_context.v0');
+    }
+  }
+
+  return [...presetIds].sort();
+}
+
 function operationStep(input: {
   step_id: string;
   operation_kind: PacketOperationKind;
@@ -436,6 +636,7 @@ function operationStep(input: {
   return {
     step_kind: 'operation',
     on_failure: 'abort_workflow',
+    resolver_preset_ids: resolverPresetIdsForResolvers(input.resolver_ids),
     ...input,
   };
 }
@@ -1058,8 +1259,9 @@ export function createGenericTypePacketDefinition<
     writePlannerId,
   });
   const workflowPlanIds = workflowPlans.map((plan) => plan.workflow_plan_id);
-  const projectionKey = `${baseId}.generic_projection`;
   const indexKey = `${baseId}.generic_index`;
+  const projections =
+    config.projections ?? createDefaultProjectionDescriptors({ type, baseId });
   const compatibilityAdapters = createRegistryCompatibilityAdapterDescriptors({
     packetType: type,
     type,
@@ -1178,14 +1380,7 @@ export function createGenericTypePacketDefinition<
     ],
     workflow_plans: workflowPlans,
     compatibility_adapters: compatibilityAdapters,
-    projections: config.projections ?? [
-      {
-        projection_key: projectionKey,
-        target_surface: 'generic_packet_runtime',
-        mode: 'derived',
-        notes: `Generic projection descriptor for ${type} packet read surfaces.`,
-      },
-    ],
+    projections,
     indexes: [
       {
         index_key: indexKey,
@@ -1200,7 +1395,7 @@ export function createGenericTypePacketDefinition<
       actionIds: [createActionId, reviseActionId, projectActionId, indexActionId],
       builderId,
       plannerIds: [writePlannerId, projectionPlannerId],
-      projectionKey,
+      projectionKeys: projections.map((projection) => projection.projection_key),
       indexKey,
       compatibilityAdapterIds: compatibilityAdapters.map((adapter) => adapter.adapter_id),
       declaredSubtypes: config.declared_subtypes,

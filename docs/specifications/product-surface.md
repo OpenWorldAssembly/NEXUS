@@ -153,7 +153,7 @@ The following behaviors are not active product truth yet:
 - initiative filtering in feeds, Library, or Explorer
 - official versus unofficial packet visibility modes
 - automoderation or visibility projection beyond current placeholders and packet-backed evidence reads
-- projection definitions are not yet driving generic surfaces
+- projection definitions now drive preferred packet-action surface routing, but they do not yet fully generate generic UI layouts
 - available actions are partly runtime-projected, not fully definition-driven
 - policy-driven voting and decision execution are still not active
 - universal UI component extraction and loading-overlay integration are ongoing

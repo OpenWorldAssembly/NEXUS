@@ -1,6 +1,6 @@
 /**
- * File: trusted-composite-workflow-adapters.ts
- * Description: Definition registry for reusable trusted composite workflow adapter shapes.
+ * File: trusted_composite_workflow_adapters.ts
+ * Description: Trusted composite workflow adapter descriptors for enrolled runtime coordinators.
  */
 
 import {
@@ -51,7 +51,7 @@ export type TrustedCompositeWorkflowAdapterDescriptor = {
   dependency_ids: string[];
   phase_order: string[];
   phases: CompositeWorkflowPhaseDescriptor[];
-  availability: 'runtime_ready' | 'runtime_ready';
+  availability: 'runtime_ready';
   notes: string;
 };
 

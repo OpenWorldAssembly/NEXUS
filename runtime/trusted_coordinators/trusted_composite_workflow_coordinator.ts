@@ -1,6 +1,6 @@
 /**
- * File: trusted-composite-workflow-runtime.ts
- * Description: Trusted local execution seam for live generic-composite workflow promotion.
+ * File: trusted_composite_workflow_coordinator.ts
+ * Description: Trusted runtime coordinator for live generic-composite workflow promotion.
  */
 
 import { randomUUID } from 'node:crypto';
@@ -50,7 +50,7 @@ import {
   getTrustedCompositeWorkflowAdapter,
   listTrustedCompositeWorkflowAdapters,
   type TrustedCompositeWorkflowAdapterDescriptor,
-} from '@runtime/nexus/server/trusted-composite-workflow-adapters';
+} from '@runtime/trusted_coordinators/trusted_composite_workflow_adapters';
 import {
   buildWritePolicyBodyMarkdown,
   createActorWritePolicyPacketId,

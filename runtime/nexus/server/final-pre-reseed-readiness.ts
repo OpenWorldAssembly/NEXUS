@@ -28,8 +28,8 @@ import {
 import { auditPacketClientIntentEnrollments } from '@runtime/nexus/server/packet-client-intent-enrollment';
 import { auditPacketRuntimeFortressHandoffs } from '@runtime/nexus/server/packet-runtime-fortress-handoff';
 import { auditPacketWorkflowAlignmentCoverage } from '@runtime/nexus/server/packet-workflow-alignment-audit';
-import { auditLiveGenericWorkflowEnrollments } from '@runtime/nexus/server/trusted-packet-workflow-runtime';
-import { auditLiveCompositeWorkflowEnrollments } from '@runtime/nexus/server/trusted-composite-workflow-runtime';
+import { auditLiveGenericWorkflowEnrollments } from '@runtime/trusted_coordinators/trusted_packet_workflow_coordinator';
+import { auditLiveCompositeWorkflowEnrollments } from '@runtime/trusted_coordinators/trusted_composite_workflow_coordinator';
 import { listMutationIntentDescriptors } from '@runtime/nexus/server/mutation-intent-registry';
 
 export type FinalPreReseedReadinessStatus = 'pass' | 'fail';

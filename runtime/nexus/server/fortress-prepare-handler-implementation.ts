@@ -9,8 +9,8 @@ import type {
   PreparedMutation,
 } from '@core/auth/mutation-corridor';
 import type { PacketEnvelopeByType } from '@core/schema/packet-schema';
-import { runTrustedCompositeWorkflowMutation } from '@runtime/nexus/server/trusted-composite-workflow-runtime';
-import { runTrustedPacketWorkflowMutation } from '@runtime/nexus/server/trusted-packet-workflow-runtime';
+import { runTrustedCompositeWorkflowMutation } from '@runtime/trusted_coordinators/trusted_composite_workflow_coordinator';
+import { runTrustedPacketWorkflowMutation } from '@runtime/trusted_coordinators/trusted_packet_workflow_coordinator';
 import { MutationPolicyGate } from '@runtime/nexus/server/mutation-policy-gate';
 import { MutationTicketService } from '@runtime/nexus/server/mutation-ticket-service';
 import type { MutationPrepareHandlerKey } from '@runtime/nexus/server/mutation-intent-registry';
