@@ -1,6 +1,6 @@
 /**
- * File: preference-packet-shadow.ts
- * Description: Conversion and shadow-planning helpers between runtime scope-display preferences and Preference.element packets.
+ * File: preference-packet-definition.ts
+ * Description: Conversion and definition-planning helpers between runtime scope-display preferences and Preference.element packets.
  */
 
 import {
@@ -21,11 +21,7 @@ import {
 import type { PacketRevisionRef } from '@core/schema/packet-schema';
 import type { NexusScopeDisplayPreferencesPayload } from '@runtime/nexus/nexus-api-types';
 
-export type ShadowPacketDefinitionMutationActionPlan = PacketDefinitionMutationActionPlan & {
-  ready_for_shadow_runtime: boolean;
-};
-
-export type ElementPreferenceShadowPlan = {
+export type ElementPreferenceDefinitionPlan = {
   packet_type: 'Preference';
   packet_subtype: 'element';
   mutation_intent: 'preference.element.set' | 'preference.element.withdraw';
@@ -33,8 +29,8 @@ export type ElementPreferenceShadowPlan = {
   schema_version: string;
   storage_class: string;
   revision_behavior: string;
-  live_fortress_ready: false;
-  action_plan: ShadowPacketDefinitionMutationActionPlan;
+  external_definition_execution_enabled: false;
+  action_plan: PacketDefinitionMutationActionPlan;
   body: ElementPreferenceBody;
   projected_runtime_preferences: NexusScopeDisplayPreferencesPayload;
   notes: string[];
@@ -63,30 +59,26 @@ export function preferenceBodyToRuntimeScopeDisplayPreferences(
   return normalizeScopeDisplayPreferenceValue(body.value.interface.scope_display);
 }
 
-export function createElementPreferenceShadowSetPlan(input: {
+export function createElementPreferenceDefinitionSetPlan(input: {
   actorPacketId: string;
   preferences: NexusScopeDisplayPreferencesPayload;
   context?: Partial<ScopeDisplayPreferenceContext> | null;
   supersedes_ref?: PacketRevisionRef | null;
   note?: string | null;
-}): ElementPreferenceShadowPlan {
+}): ElementPreferenceDefinitionPlan {
   const definitionResult = trustedDefinitionCoordinator.resolvePacketDefinition({
     packet_type: 'Preference',
   });
   const definition = definitionResult.value;
 
   if (definition === null) {
-    throw new Error('Trusted Preference packet definition is not registered for shadow compatibility planning.');
+    throw new Error('Trusted Preference packet definition is not registered.');
   }
 
-  const actionPlan = {
-    ...resolvePacketDefinitionMutationActionPlan({
-      definition,
-      mutation_intent: 'preference.element.set',
-    }),
-    ready_for_shadow_runtime: false,
-  };
-  actionPlan.ready_for_shadow_runtime = actionPlan.ready_for_runtime;
+  const actionPlan = resolvePacketDefinitionMutationActionPlan({
+    definition,
+    mutation_intent: 'preference.element.set',
+  });
   assertPacketDefinitionMutationActionPlanReady(actionPlan);
 
   const body = runtimeScopeDisplayPreferencesToPreferenceBody(input);
@@ -103,19 +95,19 @@ export function createElementPreferenceShadowSetPlan(input: {
     schema_version: definition.current_schema_version,
     storage_class: definition.storage_class,
     revision_behavior: definition.revision_behavior,
-    live_fortress_ready: false,
+    external_definition_execution_enabled: false,
     action_plan: actionPlan,
     body,
     projected_runtime_preferences: preferenceBodyToRuntimeScopeDisplayPreferences(body),
     notes: [
-      'Shadow plan only: Preference.element is envelope-capable and claimed writes are fortress-enrolled, but this manifest-derived plan does not create tickets or persist packets.',
+      'Definition plan only: Preference.element is envelope-capable and claimed writes are fortress-enrolled, but this manifest-derived plan does not create tickets or persist packets.',
       'This plan proves the manifest can resolve actions, builders, planners, policy action ids, and packet ids without executing imported definition behavior.',
     ],
   };
 }
 
-export type ElementPreferenceShadowSeed = {
-  seed_kind: 'preference.element.shadow_seed';
+export type ElementPreferenceDefinitionSeed = {
+  seed_kind: 'preference.element.definition_seed';
   actor_packet_id: string;
   packet_id: string;
   context_key: string;
@@ -123,10 +115,10 @@ export type ElementPreferenceShadowSeed = {
   body: ElementPreferenceBody;
   projected_runtime_preferences: NexusScopeDisplayPreferencesPayload;
   projection_equivalent: boolean;
-  action_plan: ShadowPacketDefinitionMutationActionPlan;
+  action_plan: PacketDefinitionMutationActionPlan;
   packet_definition_audit_status: 'pass' | 'warn' | 'fail';
-  safe_to_seed_shadow: boolean;
-  live_fortress_ready: false;
+  safe_to_seed_definition: boolean;
+  external_definition_execution_enabled: false;
   notes: string[];
 };
 
@@ -134,23 +126,23 @@ function stableJson(value: unknown): string {
   return JSON.stringify(value, Object.keys(value as object).sort());
 }
 
-export function createElementPreferenceShadowSeed(input: {
+export function createElementPreferenceDefinitionSeed(input: {
   actorPacketId: string;
   preferences: NexusScopeDisplayPreferencesPayload;
   context?: Partial<ScopeDisplayPreferenceContext> | null;
   supersedes_ref?: PacketRevisionRef | null;
   note?: string | null;
-}): ElementPreferenceShadowSeed {
+}): ElementPreferenceDefinitionSeed {
   const definitionResult = trustedDefinitionCoordinator.resolvePacketDefinition({
     packet_type: 'Preference',
   });
   const definition = definitionResult.value;
 
   if (definition === null) {
-    throw new Error('Trusted Preference packet definition is not registered for shadow compatibility planning.');
+    throw new Error('Trusted Preference packet definition is not registered.');
   }
 
-  const plan = createElementPreferenceShadowSetPlan(input);
+  const plan = createElementPreferenceDefinitionSetPlan(input);
   const normalizedSourcePreferences = normalizeScopeDisplayPreferenceValue(input.preferences);
   const projectedPreferences = preferenceBodyToRuntimeScopeDisplayPreferences(plan.body);
   const projectionEquivalent =
@@ -161,7 +153,7 @@ export function createElementPreferenceShadowSeed(input: {
   });
 
   return {
-    seed_kind: 'preference.element.shadow_seed',
+    seed_kind: 'preference.element.definition_seed',
     actor_packet_id: input.actorPacketId,
     packet_id: plan.packet_id,
     context_key: createElementPreferenceContextKey(plan.body.context),
@@ -171,20 +163,20 @@ export function createElementPreferenceShadowSeed(input: {
     projection_equivalent: projectionEquivalent,
     action_plan: plan.action_plan,
     packet_definition_audit_status: auditReport.status,
-    safe_to_seed_shadow:
+    safe_to_seed_definition:
       projectionEquivalent &&
-      plan.action_plan.ready_for_shadow_runtime &&
+      plan.action_plan.ready_for_runtime &&
       auditReport.finding_counts.error === 0,
-    live_fortress_ready: false,
+    external_definition_execution_enabled: false,
     notes: [
-      'Shadow seed only: this object is not written by the manifest bridge; live claimed writes use the fortress-enrolled Preference.element workflow.',
+      'Definition seed only: this object is not written by the manifest bridge; live claimed writes use the fortress-enrolled Preference.element workflow.',
       'Use this to compare runtime preference state against the Preference.element packet projection while manifest-driven execution remains trusted-local.',
     ],
   };
 }
 
-export function createElementPreferenceShadowSeedBatch(
-  inputs: readonly Parameters<typeof createElementPreferenceShadowSeed>[0][]
-): ElementPreferenceShadowSeed[] {
-  return inputs.map((input) => createElementPreferenceShadowSeed(input));
+export function createElementPreferenceDefinitionSeedBatch(
+  inputs: readonly Parameters<typeof createElementPreferenceDefinitionSeed>[0][]
+): ElementPreferenceDefinitionSeed[] {
+  return inputs.map((input) => createElementPreferenceDefinitionSeed(input));
 }

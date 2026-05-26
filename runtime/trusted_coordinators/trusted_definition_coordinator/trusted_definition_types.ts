@@ -172,6 +172,7 @@ export type TrustedDefinitionReadinessReport = {
 export type TrustedDefinitionOperation =
   | 'resolve_context'
   | 'resolve_packet_definition'
+  | 'list_packet_definitions'
   | 'resolve_definition_part'
   | 'list_candidates'
   | 'rank_candidates'
@@ -189,6 +190,10 @@ export type TrustedDefinitionCoordinatorRequest =
   | {
       operation: 'resolve_packet_definition';
       input: ResolveTrustedPacketDefinitionInput;
+    }
+  | {
+      operation: 'list_packet_definitions';
+      input?: ListTrustedPacketDefinitionsInput;
     }
   | {
       operation: 'resolve_definition_part';
@@ -239,6 +244,10 @@ export type ResolveTrustedDefinitionContextInput = BaseTrustedDefinitionInput & 
 export type ResolveTrustedPacketDefinitionInput = BaseTrustedDefinitionInput & {
   packet_type: string;
   packet_subtype?: string | null;
+};
+
+export type ListTrustedPacketDefinitionsInput = BaseTrustedDefinitionInput & {
+  packet_type_filters?: readonly string[];
 };
 
 export type ResolveTrustedDefinitionPartInput = BaseTrustedDefinitionInput & {

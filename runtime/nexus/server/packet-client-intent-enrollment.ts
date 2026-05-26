@@ -3,11 +3,12 @@
  * Description: Interface-neutral client/API ingress allowlist and definition crossing-guard preflight.
  */
 
+import type { PacketTypeDefinition } from '@core/packets/definitions/packet-definition-types.ts';
 import {
-  auditPacketPolicyDependencyCoverage,
-  listPacketDependencyRequirementDescriptors,
-  listPacketPolicyRequirementDescriptors,
-} from '@core/packets/packet-definition-manifest';
+  auditPacketPolicyDependencyCoverageFromDefinitions,
+  listPacketDependencyRequirementDescriptorsFromDefinitions,
+  listPacketPolicyRequirementDescriptorsFromDefinitions,
+} from '@core/packets/packet-policy-dependency.ts';
 import { PACKET_RUNTIME_CONNECTORS } from '@runtime/nexus/server/packet-runtime-connectors';
 import {
   listMutationIntentDescriptors,
@@ -20,6 +21,9 @@ import {
   type PacketRuntimeFortressHandoff,
   type PacketRuntimeFortressHandoffStatus,
 } from '@runtime/nexus/server/packet-runtime-fortress-handoff';
+import {
+  trustedDefinitionCoordinator,
+} from '@runtime/trusted_coordinators/trusted_definition_coordinator';
 
 export type PacketClientIntentEnrollmentMode =
   | 'signed_fortress_prepare'
@@ -86,6 +90,23 @@ const CLIENT_INTENT_BY_MUTATION_INTENT: Record<string, string> = {
   'actor.write_policy.update': 'actor.write_policy.update',
   'preference.element.set': 'preference.interface.set',
 };
+
+
+function getTrustedDefinitions(): PacketTypeDefinition[] {
+  return trustedDefinitionCoordinator.listPacketDefinitions().value ?? [];
+}
+
+function listTrustedPolicyRequirements() {
+  return listPacketPolicyRequirementDescriptorsFromDefinitions({
+    definitions: getTrustedDefinitions(),
+  });
+}
+
+function listTrustedDependencyRequirements() {
+  return listPacketDependencyRequirementDescriptorsFromDefinitions({
+    definitions: getTrustedDefinitions(),
+  });
+}
 
 function uniqueSorted(values: readonly string[]): string[] {
   return Array.from(new Set(values)).sort((left, right) => left.localeCompare(right));
@@ -184,10 +205,10 @@ export function resolvePacketClientIntentPreflight(input: {
     };
   }
 
-  const policyRequirements = listPacketPolicyRequirementDescriptors().filter(
+  const policyRequirements = listTrustedPolicyRequirements().filter(
     (descriptor) => enrollment.policy_action_ids.includes(descriptor.policy_action_id)
   );
-  const dependencyRequirements = listPacketDependencyRequirementDescriptors().filter(
+  const dependencyRequirements = listTrustedDependencyRequirements().filter(
     (descriptor) => enrollment.dependencies_definition_ids.includes(descriptor.dependency_id)
   );
   const handoff =
@@ -275,14 +296,14 @@ export function auditPacketClientIntentEnrollments(): PacketClientIntentEnrollme
       coverage,
     ])
   );
-  const policyDependencyReport = auditPacketPolicyDependencyCoverage();
+  const policyDependencyReport = auditPacketPolicyDependencyCoverageFromDefinitions({ definitions: getTrustedDefinitions() });
   const policyIds = new Set(
-    listPacketPolicyRequirementDescriptors().map(
+    listTrustedPolicyRequirements().map(
       (descriptor) => descriptor.policy_action_id
     )
   );
   const dependencyIds = new Set(
-    listPacketDependencyRequirementDescriptors().map(
+    listTrustedDependencyRequirements().map(
       (descriptor) => descriptor.dependency_id
     )
   );

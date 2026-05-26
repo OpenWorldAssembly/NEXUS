@@ -4,12 +4,14 @@
  */
 
 import {
-  getDefinedPacketTypeDefinition,
   resolvePacketDefinitionMutationActionPlan,
   type PacketDefinitionMutationActionPlan,
   type PacketDefinitionRuntimeCapabilities,
   type PacketTypeDefinition,
 } from '@core/packets/packet-definition-manifest';
+import {
+  trustedDefinitionCoordinator,
+} from '@runtime/trusted_coordinators/trusted_definition_coordinator';
 import type {
   PacketEnvelopeByType,
 } from '@core/schema/packet-schema';
@@ -128,11 +130,14 @@ export async function runPacketRuntimeMutation<TResult = unknown>(
     connectorId: input.connectorId,
     mutationIntent: input.mutationIntent,
   });
-  const definition = getDefinedPacketTypeDefinition(connector.packet_type);
+  const definitionResult = trustedDefinitionCoordinator.resolvePacketDefinition({
+    packet_type: connector.packet_type,
+  });
+  const definition = definitionResult.value;
 
   if (!definition) {
     throw new Error(
-      `No packet definition registered for runtime connector packet type: ${connector.packet_type}`
+      `No trusted packet definition resolved for runtime connector packet type: ${connector.packet_type}`
     );
   }
 

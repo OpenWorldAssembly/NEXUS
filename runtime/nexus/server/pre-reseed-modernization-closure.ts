@@ -4,13 +4,14 @@
  */
 
 import { PACKET_TYPES, type PacketType } from '@core/schema/packet-schema';
+import type { PacketTypeDefinition } from '@core/packets/definitions/packet-definition-types.ts';
 import {
-  auditPacketPolicyDependencyCoverage,
-  auditPacketDependencySemanticAuthority,
-  listPacketDependencyRequirementDescriptors,
-  listPacketPolicyRequirementDescriptors,
-  listPacketWorkflowPlanDescriptors,
-} from '@core/packets/packet-definition-manifest';
+  auditPacketPolicyDependencyCoverageFromDefinitions,
+  listPacketDependencyRequirementDescriptorsFromDefinitions,
+  listPacketPolicyRequirementDescriptorsFromDefinitions,
+} from '@core/packets/packet-policy-dependency.ts';
+import { auditPacketDependencySemanticAuthority } from '@core/packets/packet-policy-semantics.ts';
+import { listPacketWorkflowPlanDescriptorsFromDefinitions } from '@core/packets/packet-workflow-planner.ts';
 import {
   listFortressHandlerGenericizationEntries,
   type FortressHandlerGenericizationEntry,
@@ -31,6 +32,7 @@ import {
   auditLiveCompositeWorkflowEnrollments,
   listLiveCompositeWorkflowEnrollments,
 } from '@runtime/trusted_coordinators/trusted_composite_workflow_coordinator';
+import { trustedDefinitionCoordinator } from '@runtime/trusted_coordinators/trusted_definition_coordinator';
 
 export type PreReseedClosureStatus =
   | 'closed'
@@ -97,6 +99,41 @@ const CLOSED_RUNTIME_MUTATION_INTENTS = new Set<string>([
 
 const LIVE_RUNTIME_PACKET_TYPES = new Set<PacketType>(PACKET_TYPES);
 
+
+function getTrustedDefinitions(): PacketTypeDefinition[] {
+  return trustedDefinitionCoordinator.listPacketDefinitions().value ?? [];
+}
+
+function listTrustedWorkflowPlans() {
+  return listPacketWorkflowPlanDescriptorsFromDefinitions({
+    definitions: getTrustedDefinitions(),
+  });
+}
+
+function listTrustedPolicyRequirements() {
+  return listPacketPolicyRequirementDescriptorsFromDefinitions({
+    definitions: getTrustedDefinitions(),
+  });
+}
+
+function listTrustedDependencyRequirements() {
+  return listPacketDependencyRequirementDescriptorsFromDefinitions({
+    definitions: getTrustedDefinitions(),
+  });
+}
+
+function auditTrustedPolicyDependencyCoverage() {
+  return auditPacketPolicyDependencyCoverageFromDefinitions({
+    definitions: getTrustedDefinitions(),
+  });
+}
+
+function auditTrustedDependencySemanticAuthority() {
+  return auditPacketDependencySemanticAuthority({
+    definitions: getTrustedDefinitions(),
+  });
+}
+
 function queueForEntry(
   entry: FortressHandlerGenericizationEntry
 ): PreReseedClosureLedgerEntry['queue'] {
@@ -147,7 +184,7 @@ function createMutationEntries(): PreReseedClosureLedgerEntry[] {
 }
 
 function createWorkflowPlanEntries(): PreReseedClosureLedgerEntry[] {
-  return listPacketWorkflowPlanDescriptors().map((plan) => {
+  return listTrustedWorkflowPlans().map((plan) => {
     const closesLiveIntent = plan.mutation_intents.some((intent) =>
       CLOSED_RUNTIME_MUTATION_INTENTS.has(intent)
     );
@@ -170,7 +207,7 @@ function createWorkflowPlanEntries(): PreReseedClosureLedgerEntry[] {
 }
 
 function createPolicyRequirementEntries(): PreReseedClosureLedgerEntry[] {
-  return listPacketPolicyRequirementDescriptors().map((descriptor) => ({
+  return listTrustedPolicyRequirements().map((descriptor) => ({
     subject_kind: 'policy_requirement',
     subject_id: descriptor.policy_requirement_id,
     status: 'closed',
@@ -187,9 +224,9 @@ function createPolicyRequirementEntries(): PreReseedClosureLedgerEntry[] {
 }
 
 function createDependencyRequirementEntries(): PreReseedClosureLedgerEntry[] {
-  const dependencySemanticAudit = auditPacketDependencySemanticAuthority();
+  const dependencySemanticAudit = auditTrustedDependencySemanticAuthority();
 
-  return listPacketDependencyRequirementDescriptors().map((descriptor) => ({
+  return listTrustedDependencyRequirements().map((descriptor) => ({
     subject_kind: 'dependency_requirement',
     subject_id: descriptor.dependency_id,
     status: dependencySemanticAudit.status === 'pass' ? 'closed' : 'blocked',
@@ -284,8 +321,8 @@ function createCompositeWorkflowAdapterEntries(): PreReseedClosureLedgerEntry[] 
 export function createPreReseedModernizationClosureReport(): PreReseedModernizationClosureReport {
   const liveGenericAudit = auditLiveGenericWorkflowEnrollments();
   const liveCompositeAudit = auditLiveCompositeWorkflowEnrollments();
-  const policyDependencyAudit = auditPacketPolicyDependencyCoverage();
-  const dependencySemanticAudit = auditPacketDependencySemanticAuthority();
+  const policyDependencyAudit = auditTrustedPolicyDependencyCoverage();
+  const dependencySemanticAudit = auditTrustedDependencySemanticAuthority();
   const clientIngressAudit = auditPacketClientIntentEnrollments();
   const compositeAdapterAudit = auditTrustedCompositeWorkflowAdapters();
   const live_mutation_intents = createMutationEntries();

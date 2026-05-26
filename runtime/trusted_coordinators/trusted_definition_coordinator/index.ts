@@ -10,6 +10,7 @@ export type {
   TrustedDefinitionContextMode,
   TrustedDefinitionReadinessReport,
   TrustedDefinitionRuntimePreference,
+  ListTrustedPacketDefinitionsInput,
   TrustedDefinitionRuntimeView,
   TrustedDefinitionRuntimeViewSet,
   TrustedDefinitionSource,

@@ -6,13 +6,15 @@
 import { createHash } from 'node:crypto';
 
 import {
-  getExperimentalPacketTypeDefinition,
   resolvePacketDefinitionMutationActionPlan,
   type PacketDefinitionMutationActionPlan,
   type PacketDefinitionRuntimeCapabilities,
   type ElementPreferenceBody,
   type ScopeDisplayPreferenceContext,
 } from '@core/packets/packet-definition-manifest';
+import {
+  trustedDefinitionCoordinator,
+} from '@runtime/trusted_coordinators/trusted_definition_coordinator';
 import type { PacketRevisionRef } from '@core/schema/packet-schema';
 import {
   createElementPreferenceShadowSetPlan,
@@ -109,7 +111,10 @@ export function resolveManifestShadowFortressActionPlan(input: {
   mutation_intent: string;
   capabilities?: PacketDefinitionRuntimeCapabilities;
 }): ManifestShadowFortressActionPlan {
-  const definition = getExperimentalPacketTypeDefinition(input.packet_type);
+  const definitionResult = trustedDefinitionCoordinator.resolvePacketDefinition({
+    packet_type: input.packet_type,
+  });
+  const definition = definitionResult.value;
 
   if (definition === null) {
     return {
@@ -128,7 +133,7 @@ export function resolveManifestShadowFortressActionPlan(input: {
       policy_action_ids: [],
       reason_codes: ['unknown_packet_type'],
       notes: [
-        'No experimental packet definition is registered for this packet type.',
+        'No trusted packet definition resolved for this packet type.',
         'The live fortress mutation corridor is untouched by shadow manifest resolution.',
       ],
     };
@@ -153,7 +158,7 @@ export function resolveManifestShadowFortressActionPlan(input: {
     mutation_intent: input.mutation_intent,
     definition_found: true,
     subtype_supported: subtypeSupported,
-    supported: subtypeSupported && actionPlan.ready_for_shadow_runtime,
+    supported: subtypeSupported && actionPlan.ready_for_runtime,
     live_fortress_ready: false,
     action_plan: actionPlan,
     planner_id: actionPlan.planner?.planner_id ?? null,

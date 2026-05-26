@@ -3,17 +3,14 @@
  * Description: Compiles coordinator-facing trusted definition runtime views for reseed and runtime readiness checks.
  */
 
-import {
-  listDefinedPacketTypeDefinitions,
-} from '@core/packets/packet-definition-manifest';
 import type { PacketTypeDefinition } from '@core/packets/definitions/packet-definition-types.ts';
 import type { PacketTypeBodyCandidate } from '@core/packets/packet-type-body-builders.ts';
 import {
   buildTrustedDefinitionPartCandidates,
 } from '@runtime/trusted_coordinators/trusted_building_coordinator';
 import {
-  resolveTrustedRegulationProfile,
-} from '@runtime/trusted_coordinators/trusted_regulation_coordinator';
+  resolveTrustedRegulationProfileFromDefinition,
+} from '@runtime/trusted_coordinators/trusted_regulation_core';
 import {
   createTrustedRuntimeCoordinatorResult,
   trustedIssue,
@@ -30,6 +27,7 @@ import {
 } from '../trusted_definition_types.ts';
 import { definitionTrace } from '../trusted_definition_internal.ts';
 import { resolveTrustedPacketDefinition } from './resolve_trusted_packet_definition.ts';
+import { listTrustedPacketDefinitions } from './list_trusted_packet_definitions.ts';
 
 function candidateHasErrors(candidateResultIssues: readonly TrustedRuntimeCoordinatorIssue[]): boolean {
   return candidateResultIssues.some((issue) => issue.severity === 'error');
@@ -50,13 +48,15 @@ function requiredPartCountForDefinition(definition: PacketTypeDefinition): numbe
 
 function compileForDefinition(input: {
   definition: PacketTypeDefinition;
+  allDefinitions?: readonly PacketTypeDefinition[];
   inheritedIssues: readonly TrustedRuntimeCoordinatorIssue[];
   inheritedTrace: readonly TrustedRuntimeCoordinatorTraceEntry[];
 }): TrustedRuntimeCoordinatorResult<TrustedDefinitionRuntimeView> {
   const issues: TrustedRuntimeCoordinatorIssue[] = [...input.inheritedIssues];
   const traceEntries: TrustedRuntimeCoordinatorTraceEntry[] = [...input.inheritedTrace];
-  const regulationResult = resolveTrustedRegulationProfile({
-    packet_type: input.definition.packet_type,
+  const regulationResult = resolveTrustedRegulationProfileFromDefinition({
+    definition: input.definition,
+    definitions: input.allDefinitions ?? [input.definition],
     packet_subtype: input.definition.default_subtype,
   });
   const buildResult = buildTrustedDefinitionPartCandidates({ definition: input.definition });
@@ -169,10 +169,26 @@ export function compileTrustedDefinitionRuntimeViews(
   const traceEntries: TrustedRuntimeCoordinatorTraceEntry[] = [];
   const views: TrustedDefinitionRuntimeView[] = [];
 
-  for (const definition of listDefinedPacketTypeDefinitions()) {
-    const result = compileTrustedDefinitionRuntimeView({
-      ...input,
-      packet_type: definition.packet_type,
+  const definitionsResult = listTrustedPacketDefinitions(input);
+  issues.push(...definitionsResult.issues);
+  traceEntries.push(...definitionsResult.trace);
+
+  if (!definitionsResult.value) {
+    return createTrustedRuntimeCoordinatorResult({
+      coordinator_id: TRUSTED_DEFINITION_COORDINATOR_ID,
+      coordinator_kind: 'workflow',
+      value: null,
+      issues,
+      trace: traceEntries,
+    });
+  }
+
+  for (const definition of definitionsResult.value) {
+    const result = compileForDefinition({
+      definition,
+      allDefinitions: definitionsResult.value,
+      inheritedIssues: [],
+      inheritedTrace: [],
     });
 
     issues.push(...result.issues);
@@ -188,7 +204,7 @@ export function compileTrustedDefinitionRuntimeViews(
     coordinator_kind: 'workflow',
     value: {
       view_set_kind: 'trusted.definition_runtime_view_set',
-      manifest_version: '0.1.0',
+      manifest_version: 'trusted_definition_context.v0',
       view_count: views.length,
       ready_view_count: views.filter((view) => view.ready_for_reseed).length,
       views,

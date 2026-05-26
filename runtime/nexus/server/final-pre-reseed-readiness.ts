@@ -5,14 +5,13 @@
 
 import {
   auditPacketDefinitionManifest,
-  auditPacketDependencySemanticAuthority,
-  auditPacketPolicyDependencyCoverage,
   auditPacketPolicySemanticAuthority,
   auditSeededPacketDefinitionProfile,
-  listDefinedPacketTypeDefinitions,
   PACKET_DEFINITION_MANIFEST,
   resolveSeededPacketDefinitionProfile,
 } from '@core/packets/packet-definition-manifest';
+import { auditPacketPolicyDependencyCoverageFromDefinitions } from '@core/packets/packet-policy-dependency.ts';
+import { auditPacketDependencySemanticAuthority } from '@core/packets/packet-policy-semantics.ts';
 import {
   CANONICAL_SEED_PACKETS,
   DEFINITION_PROFILE_SEED_PACKETS,
@@ -31,6 +30,7 @@ import { auditPacketWorkflowAlignmentCoverage } from '@runtime/nexus/server/pack
 import { auditLiveGenericWorkflowEnrollments } from '@runtime/trusted_coordinators/trusted_packet_workflow_coordinator';
 import { auditLiveCompositeWorkflowEnrollments } from '@runtime/trusted_coordinators/trusted_composite_workflow_coordinator';
 import { listMutationIntentDescriptors } from '@runtime/nexus/server/mutation-intent-registry';
+import { trustedDefinitionCoordinator } from '@runtime/trusted_coordinators/trusted_definition_coordinator';
 
 export type FinalPreReseedReadinessStatus = 'pass' | 'fail';
 
@@ -88,7 +88,8 @@ const PRUNED_PACKET_TYPES = [
 
 export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessReport {
   const closureReport = createPreReseedModernizationClosureReport();
-  const definitions = listDefinedPacketTypeDefinitions();
+  const definitionsResult = trustedDefinitionCoordinator.listPacketDefinitions();
+  const definitions = definitionsResult.value ?? [];
   const seededDefinitionProfile = resolveSeededPacketDefinitionProfile({ definitions });
   const seededDefinitionAudit = auditSeededPacketDefinitionProfile({
     definitions,
@@ -99,8 +100,8 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
     definitions,
     requireDefinitionRuntimeReady: false,
   });
-  const policyDependencyAudit = auditPacketPolicyDependencyCoverage();
-  const dependencySemanticAudit = auditPacketDependencySemanticAuthority();
+  const policyDependencyAudit = auditPacketPolicyDependencyCoverageFromDefinitions({ definitions });
+  const dependencySemanticAudit = auditPacketDependencySemanticAuthority({ definitions });
   const policySemanticAudit = auditPacketPolicySemanticAuthority({
     policyPackets: PERSONAL_SEED_PACKETS.filter(
       (packet): packet is PacketEnvelopeByType['Policy'] =>
@@ -145,6 +146,7 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
   );
   const findings = [
     ...closureReport.findings,
+    ...definitionsResult.issues.map((issue) => issue.message),
     ...manifestAudit.findings
       .filter((finding) => finding.severity === 'error')
       .map((finding) => finding.message),

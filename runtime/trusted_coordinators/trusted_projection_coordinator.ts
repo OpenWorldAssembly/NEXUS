@@ -3,17 +3,19 @@
  * Description: Trusted runtime coordinator for packet-definition driven UI projection hints.
  */
 
-import {
-  getDefinedPacketTypeDefinition,
-  type PacketProjectionDescriptor,
-  type PacketTypeDefinition,
-} from '@core/packets/packet-definition-manifest';
+import type {
+  PacketProjectionDescriptor,
+  PacketTypeDefinition,
+} from '@core/packets/definitions/packet-definition-types.ts';
 import {
   getPacketDisplayLabel,
   getPacketSummary,
   getPacketTitle,
 } from '@core/projections/labels';
 import type { PacketEnvelope } from '@core/schema/packet-schema';
+import {
+  trustedDefinitionCoordinator,
+} from '@runtime/trusted_coordinators/trusted_definition_coordinator';
 import {
   createTrustedRuntimeCoordinatorResult,
   trustedIssue,
@@ -87,25 +89,30 @@ export function resolveTrustedPacketProjection(input: {
   targetSurface?: string | null;
   context?: Omit<TrustedResolutionCoordinatorContext, 'current_packet' | 'definition'>;
 }): TrustedRuntimeCoordinatorResult<TrustedPacketProjectionViewModel> {
-  const definition = getDefinedPacketTypeDefinition(input.packet.header.type);
-  const issues: TrustedRuntimeCoordinatorIssue[] = [];
+  const definitionResult = trustedDefinitionCoordinator.resolvePacketDefinition({
+    packet_type: input.packet.header.type,
+  });
+  const issues: TrustedRuntimeCoordinatorIssue[] = [...definitionResult.issues];
 
-  if (!definition) {
+  if (!definitionResult.value) {
     return createTrustedRuntimeCoordinatorResult({
       coordinator_id: 'trusted_projection_coordinator.v0',
       coordinator_kind: 'projection',
       value: null,
       issues: [
+        ...issues,
         trustedIssue({
           severity: 'error',
           code: 'unknown_projection_packet_type',
           path: 'packet.header.type',
-          message: `No packet definition is registered for ${input.packet.header.type}.`,
+          message: `No trusted packet definition resolved for ${input.packet.header.type}.`,
         }),
       ],
+      trace: definitionResult.trace,
     });
   }
 
+  const definition = definitionResult.value;
   const projection = chooseProjection({
     definition,
     projectionKey: input.projectionKey,
@@ -118,6 +125,7 @@ export function resolveTrustedPacketProjection(input: {
       coordinator_kind: 'projection',
       value: null,
       issues: [
+        ...issues,
         trustedIssue({
           severity: 'error',
           code: 'unknown_projection_descriptor',
@@ -125,6 +133,7 @@ export function resolveTrustedPacketProjection(input: {
           message: `No projection descriptor is registered for ${definition.packet_type}.`,
         }),
       ],
+      trace: definitionResult.trace,
     });
   }
 
@@ -169,11 +178,15 @@ export function resolveTrustedPacketProjection(input: {
       fields,
     },
     issues,
+    trace: definitionResult.trace,
   });
 }
 
 export function resolvePreferredProjectionSurface(packetType: string): string | null {
-  const definition = getDefinedPacketTypeDefinition(packetType);
-  return definition?.projections.find((projection) => projection.preferred_surface)
+  const definitionResult = trustedDefinitionCoordinator.resolvePacketDefinition({
+    packet_type: packetType,
+  });
+
+  return definitionResult.value?.projections.find((projection) => projection.preferred_surface)
     ?.preferred_surface ?? null;
 }

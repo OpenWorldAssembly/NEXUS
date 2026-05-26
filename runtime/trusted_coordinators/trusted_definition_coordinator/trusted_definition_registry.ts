@@ -7,6 +7,7 @@ import type { TrustedDefinitionCoordinatorRequest, TrustedDefinitionOperation } 
 import type { TrustedRuntimeCoordinatorResult } from '@runtime/trusted_coordinators/trusted_runtime_coordinator';
 import { resolveTrustedDefinitionContext } from './functions/resolve_trusted_definition_context.ts';
 import { resolveTrustedPacketDefinition } from './functions/resolve_trusted_packet_definition.ts';
+import { listTrustedPacketDefinitions } from './functions/list_trusted_packet_definitions.ts';
 import { resolveTrustedDefinitionPart } from './functions/resolve_trusted_definition_part.ts';
 import { listTrustedDefinitionCandidates } from './functions/list_trusted_definition_candidates.ts';
 import { rankTrustedDefinitionCandidates } from './functions/rank_trusted_definition_candidates.ts';
@@ -34,6 +35,13 @@ function executeResolvePacketDefinition(request: TrustedDefinitionCoordinatorReq
     throw new Error('Invalid Trusted Definition Coordinator request for resolve_packet_definition.');
   }
   return resolveTrustedPacketDefinition(request.input);
+}
+
+function executeListPacketDefinitions(request: TrustedDefinitionCoordinatorRequest): TrustedRuntimeCoordinatorResult<unknown> {
+  if (request.operation !== 'list_packet_definitions') {
+    throw new Error('Invalid Trusted Definition Coordinator request for list_packet_definitions.');
+  }
+  return listTrustedPacketDefinitions(request.input ?? {});
 }
 
 function executeResolveDefinitionPart(request: TrustedDefinitionCoordinatorRequest): TrustedRuntimeCoordinatorResult<unknown> {
@@ -95,6 +103,7 @@ function executeAuditReadiness(request: TrustedDefinitionCoordinatorRequest): Tr
 const TRUSTED_DEFINITION_OPERATION_REGISTRY: Record<TrustedDefinitionOperation, TrustedDefinitionOperationExecutor> = {
   resolve_context: executeResolveContext,
   resolve_packet_definition: executeResolvePacketDefinition,
+  list_packet_definitions: executeListPacketDefinitions,
   resolve_definition_part: executeResolveDefinitionPart,
   list_candidates: executeListCandidates,
   rank_candidates: executeRankCandidates,

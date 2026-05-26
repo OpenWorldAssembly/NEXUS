@@ -4,15 +4,15 @@
  */
 
 import type { MutationIntent } from '@core/auth/mutation-corridor';
+import type { PacketTypeDefinition } from '@core/packets/definitions/packet-definition-types.ts';
 import {
-  getDefinedPacketTypeDefinition,
-  listPacketWorkflowPlanDescriptors,
   listTrustedPacketPlannerCapabilities,
   resolvePacketWorkflowDryRunPlan,
+  listPacketWorkflowPlanDescriptorsFromDefinitions,
   type PacketWorkflowDryRunPlan,
   type PacketWorkflowPlanDescriptor,
   type TrustedPlannerCapabilityDescriptor,
-} from '@core/packets/packet-definition-manifest';
+} from '@core/packets/packet-workflow-planner.ts';
 import type {
   FortressGenericizationStatus,
   FortressOperationMappingStatus,
@@ -24,6 +24,9 @@ import { listMutationIntentDescriptors } from '@runtime/nexus/server/mutation-in
 import {
   listTrustedCompositeWorkflowAdapters,
 } from '@runtime/trusted_coordinators/trusted_composite_workflow_adapters';
+import {
+  trustedDefinitionCoordinator,
+} from '@runtime/trusted_coordinators/trusted_definition_coordinator';
 
 export type PacketWorkflowAlignmentStatus =
   | 'workflow_aligned'
@@ -88,10 +91,12 @@ function plannedGap(
   };
 }
 
-function getWorkflowPlansByIntent(): Map<string, PacketWorkflowPlanDescriptor[]> {
+function getWorkflowPlansByIntent(
+  definitions: readonly PacketTypeDefinition[]
+): Map<string, PacketWorkflowPlanDescriptor[]> {
   const plansByIntent = new Map<string, PacketWorkflowPlanDescriptor[]>();
 
-  for (const plan of listPacketWorkflowPlanDescriptors()) {
+  for (const plan of listPacketWorkflowPlanDescriptorsFromDefinitions({ definitions })) {
     for (const mutationIntent of plan.mutation_intents) {
       plansByIntent.set(mutationIntent, [
         ...(plansByIntent.get(mutationIntent) ?? []),
@@ -104,10 +109,15 @@ function getWorkflowPlansByIntent(): Map<string, PacketWorkflowPlanDescriptor[]>
 }
 
 function resolveDryRuns(
-  plans: readonly PacketWorkflowPlanDescriptor[]
+  plans: readonly PacketWorkflowPlanDescriptor[],
+  definitions: readonly PacketTypeDefinition[]
 ): PacketWorkflowDryRunPlan[] {
+  const definitionsByType = new Map(
+    definitions.map((definition) => [definition.packet_type, definition])
+  );
+
   return plans.map((plan) => {
-    const definition = getDefinedPacketTypeDefinition(plan.packet_type);
+    const definition = definitionsByType.get(plan.packet_type) ?? null;
 
     if (!definition) {
       return {
@@ -187,7 +197,9 @@ function resolveAlignmentStatus(input: {
 }
 
 export function listPacketWorkflowAlignmentCoverage(): PacketWorkflowAlignmentCoverage[] {
-  const plansByIntent = getWorkflowPlansByIntent();
+  const definitionsResult = trustedDefinitionCoordinator.listPacketDefinitions();
+  const definitions = definitionsResult.value ?? [];
+  const plansByIntent = getWorkflowPlansByIntent(definitions);
   const compositeAdapterIdsByIntent = getCompositeAdapterIdsByIntent();
 
   return listFortressHandlerGenericizationEntries().map((entry) => {
@@ -196,7 +208,7 @@ export function listPacketWorkflowAlignmentCoverage(): PacketWorkflowAlignmentCo
     const compositionAdapterIds = uniqueSorted(
       compositeAdapterIdsByIntent.get(lookupIntent) ?? []
     );
-    const dryRuns = resolveDryRuns(workflowPlans);
+    const dryRuns = resolveDryRuns(workflowPlans, definitions);
     const resolverIds = uniqueSorted(dryRuns.flatMap((dryRun) => dryRun.resolver_ids));
     const dependencyIds = uniqueSorted(dryRuns.flatMap((dryRun) => dryRun.dependency_ids));
     const capabilityIds = uniqueSorted(

@@ -6,13 +6,15 @@
 import { createHash } from 'node:crypto';
 
 import {
-  getDefinedPacketTypeDefinition,
   resolvePacketDefinitionMutationActionPlan,
   type PacketDefinitionMutationActionPlan,
   type PacketDefinitionRuntimeCapabilities,
   type ElementPreferenceBody,
   type ScopeDisplayPreferenceContext,
 } from '@core/packets/packet-definition-manifest';
+import {
+  trustedDefinitionCoordinator,
+} from '@runtime/trusted_coordinators/trusted_definition_coordinator';
 import type { PacketRevisionRef } from '@core/schema/packet-schema';
 import {
   createElementPreferenceDefinitionSetPlan,
@@ -109,7 +111,10 @@ export function resolveManifestDefinitionFortressActionPlan(input: {
   mutation_intent: string;
   capabilities?: PacketDefinitionRuntimeCapabilities;
 }): ManifestDefinitionFortressActionPlan {
-  const definition = getDefinedPacketTypeDefinition(input.packet_type);
+  const definitionResult = trustedDefinitionCoordinator.resolvePacketDefinition({
+    packet_type: input.packet_type,
+  });
+  const definition = definitionResult.value;
 
   if (definition === null) {
     return {
@@ -128,7 +133,7 @@ export function resolveManifestDefinitionFortressActionPlan(input: {
       policy_action_ids: [],
       reason_codes: ['unknown_packet_type'],
       notes: [
-        'No canonical packet definition is registered for this packet type.',
+        'No trusted packet definition resolved for this packet type.',
         'The external definition execution mutation corridor is untouched by definition manifest resolution.',
       ],
     };

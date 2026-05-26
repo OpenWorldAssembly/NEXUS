@@ -19,6 +19,7 @@ import type {
   CompileTrustedDefinitionRuntimeViewInput,
   CompileTrustedDefinitionRuntimeViewsInput,
   ListTrustedDefinitionCandidatesInput,
+  ListTrustedPacketDefinitionsInput,
   RankTrustedDefinitionCandidatesInput,
   ResolveTrustedCompatibilityDefinitionInput,
   ResolveTrustedDefinitionContextInput,
@@ -51,6 +52,14 @@ export const trustedDefinitionCoordinator = {
   ): TrustedRuntimeCoordinatorResult<PacketTypeDefinition> {
     return castResult<PacketTypeDefinition>(
       executeTrustedDefinitionOperation({ operation: 'resolve_packet_definition', input })
+    );
+  },
+
+  listPacketDefinitions(
+    input: ListTrustedPacketDefinitionsInput = {}
+  ): TrustedRuntimeCoordinatorResult<PacketTypeDefinition[]> {
+    return castResult<PacketTypeDefinition[]>(
+      executeTrustedDefinitionOperation({ operation: 'list_packet_definitions', input })
     );
   },
 
