@@ -44,7 +44,7 @@ The counts below remain useful as the pre-move hard inventory. New shared UI sho
 
 | Lines | Zone | File | Primary component candidates | Raw primitives |
 | ---: | --- | --- | --- | --- |
-| 3604 | route | `src/app/nexus/locality/create.tsx` | LocalityLevelSearchRow, NexusLocalityCreatePage | Pressable 26, Modal 15, TextInput 8, ScrollView 10 |
+| 3141 after feature extraction | route | `src/app/nexus/locality/create.tsx` | LocalityLevelSearchRow, NexusLocalityCreatePage controller | Pressable 3, direct modal chrome moved to `features/locality/*`, TextInput refs retained, ScrollView 4 |
 | 2447 | route | `src/app/nexus/discussions.tsx` | InlineReplyComposer, DiscussionVotePill, ReplyCountPill, ReplyNode, ReplyTree, NexusDiscussionsPage | Pressable 9, TextInput 4, ScrollView 7 |
 | 2056 | support | `app/components/nexus/identity-shell-context.tsx` | IdentityShellContext, IdentityShellProvider | — |
 | 1962 | mixed | `app/components/nexus/nexus-sidebar.tsx` | NexusGuestAvatar, NexusRailToggle, NexusPreferenceSwitch, NexusCurrentContextCard, NexusMenuSectionLabel, NexusPrimaryNavItem | Pressable 26, ScrollView 6, Switch 2 |
@@ -66,12 +66,12 @@ These are the files most likely to contain local button, modal, form, scroll, or
 
 | File | Pressable | Modal | TextInput | ScrollView | Other raw primitives |
 | --- | ---: | ---: | ---: | ---: | --- |
-| `src/app/nexus/locality/create.tsx` | 26 | 15 | 8 | 10 | — |
+| `src/app/nexus/locality/create.tsx` | 3 after feature extraction | 0 direct modal shells | 5 | 4 | legacy level-builder helpers remain route-local |
 | `app/components/nexus/nexus-sidebar.tsx` | 26 | 0 | 0 | 6 | Switch 2 |
 | `app/components/nexus/nexus-ui.tsx` | 18 | 3 | 0 | 3 | — |
 | `src/app/nexus/discussions.tsx` | 9 | 0 | 4 | 7 | — |
 | `app/components/nexus/nexus-packet-explorer.tsx` | 9 | 3 | 0 | 0 | — |
-| `app/components/nexus/locality/locality-create-graph-row.tsx` | 9 | 0 | 3 | 0 | — |
+| `app/components/nexus/features/locality/locality-create-graph-row.tsx` | 9 | 0 | 3 | 0 | — |
 | `app/components/nexus/action-card/nexus-card-badge-strip.tsx` | 8 | 3 | 0 | 0 | — |
 | `app/components/nexus/packet-explorer/nexus-packet-explorer-export-panel.tsx` | 3 | 0 | 6 | 0 | — |
 | `app/components/nexus/nexus-identity-ui.tsx` | 3 | 0 | 3 | 3 | — |
@@ -87,7 +87,7 @@ These are the files most likely to contain local button, modal, form, scroll, or
 | `src/app/nexus/account.tsx` | 0 | 0 | 0 | 3 | Switch 1 |
 | `app/components/nexus/packet-explorer/nexus-packet-explorer-content.tsx` | 0 | 0 | 0 | 3 | — |
 | `src/app/nexus/identity/sign-in.tsx` | 3 | 0 | 0 | 0 | — |
-| `app/components/nexus/locality/locality-create-preview-panel.tsx` | 3 | 0 | 0 | 0 | — |
+| `app/components/nexus/features/locality/locality-create-preview-panel.tsx` | 3 | 0 | 0 | 0 | — |
 | `app/components/nexus/packet-explorer/nexus-packet-explorer-tab-deck.tsx` | 0 | 0 | 0 | 3 | — |
 | `src/app/nexus/votes.tsx` | 0 | 0 | 0 | 3 | — |
 | `app/components/nexus/action-card/nexus-action-menu.tsx` | 3 | 0 | 0 | 0 | — |
@@ -133,8 +133,7 @@ These files are feature-specific compositions. Most should keep their domain/con
 | `app/components/nexus/discussions/nexus-discussion-focus-panel.tsx` | 127 | NexusDiscussionFocusPanel | cards, layout | Pressable 3 | NexusActionButton 2, NexusCard 3, NexusBadge 3 |
 | `app/components/nexus/focus/nexus-focused-packet-section.tsx` | 105 | NexusFocusedPacketSection | cards, layout | Pressable 3 | NexusFocusedPacketSection 1 |
 | `app/components/nexus/features/sidebar/*` | post-inventory extraction | NexusRailToggle, NexusGuestAvatar, NexusPreferenceSwitch, NexusCurrentContextCard, NexusFunctionMenuContent, NexusScopeActionMenu, NexusScopeListRow, NexusGroupedScopeRows, NexusScopeMenuContent | actions, cards, forms, layout, feedback | Pressable and ScrollView retained inside feature controls | NexusCard, NexusCardMenuButton, NexusChevronIcon, NexusLoadingBoundary, NexusThemedBevelEdges |
-| `app/components/nexus/locality/locality-create-graph-row.tsx` | 336 | LocalityCreateGraphRow | forms | Pressable 9, TextInput 3 | NexusActionButton 4, NexusBadge 6 |
-| `app/components/nexus/locality/locality-create-preview-panel.tsx` | 401 | CheckboxControl, LocalityCreatePreviewPanel | cards, layout, feedback | Pressable 3 | NexusActionButton 6, NexusCard 5, NexusBadge 11 |
+| `app/components/nexus/features/locality/*` | post-inventory extraction | LocalityCreateSearchPanel, LocalityCreateBuilderPanel, LocalityParentPickerDialog, LocalityKindPickerDialog, LocalityCreateKindDialog, LocalitySelectedResultDialog, LocalityRemoveConfirmDialog, LocalityOutcomeDialogs, LocalityCreateGraphRow, LocalityCreatePreviewPanel | overlays, forms, cards, layout, feedback | Pressable/TextInput/ScrollView retained inside feature controls | NexusActionButton, NexusBadge, NexusCard, NexusLoadingBoundary, NexusModalShell, NexusSearchField, NexusSearchResultList |
 | `app/components/nexus/nexus-auth-gate.tsx` | 566 | NexusAuthGateModal | overlays | Pressable 4 | NexusActionButton 3, NexusCard 3 |
 | `app/components/nexus/nexus-identity-ui.tsx` | 377 | IdentityPageShell, IdentityField, IdentityInput, IdentityRouteLinks, IdentityPreferenceCard, LocationLookupField | cards, forms, layout | Pressable 3, TextInput 3, ScrollView 3 | NexusActionButton 6, NexusCard 7, NexusSectionHeader 2, NexusSegmentedPill 3 |
 | `app/components/nexus/nexus-packet-explorer.tsx` | 772 | NexusPacketExplorer | overlays | Pressable 9, Modal 3 | NexusActionButton 2, NexusCard 3 |
@@ -172,7 +171,7 @@ Route-local components are the highest-risk extraction zone because they often b
 | `src/app/nexus/identity/sign-in.tsx` | 639 | NexusIdentitySignInPage | support | Pressable 3 | NexusActionButton 7, NexusCard 13, NexusTabRail 2 |
 | `src/app/nexus/index.tsx` | 14 | NexusIndexPage | support | — | — |
 | `src/app/nexus/library.tsx` | 317 | NexusLibraryPage | support | ScrollView 4 | NexusActionButton 5, NexusCard 9, NexusSectionHeader 2, NexusBadge 5 |
-| `src/app/nexus/locality/create.tsx` | 3604 | LocalityLevelSearchRow, NexusLocalityCreatePage | overlays, forms | Pressable 26, Modal 15, TextInput 8, ScrollView 10 | NexusActionButton 19, NexusCard 25, NexusSectionHeader 2, NexusTabRail 2, NexusBadge 19 |
+| `src/app/nexus/locality/create.tsx` | 3141 after feature extraction | NexusLocalityCreatePage route/controller; search/build panels, picker dialogs, graph rows, and preview panels moved to `features/locality/*` | overlays, forms | route still contains legacy unused level-row helpers and outer scroll composition | NexusCard, NexusSectionHeader, NexusTabRail, NexusBadge |
 | `src/app/nexus/roles.tsx` | 714 | NexusRolesPage | forms | TextInput 2, ScrollView 3 | NexusActionButton 7, NexusCard 23, NexusSectionHeader 2, NexusTabRail 2, NexusBadge 17 |
 | `src/app/nexus/trust.tsx` | 659 | NexusTrustPage | forms | TextInput 2, ScrollView 3 | NexusActionButton 9, NexusCard 31, NexusSectionHeader 2, NexusBadge 20 |
 | `src/app/nexus/votes.tsx` | 210 | NexusVotesPage | support | ScrollView 3 | NexusActionButton 4, NexusCard 13, NexusSectionHeader 2, NexusBadge 7 |

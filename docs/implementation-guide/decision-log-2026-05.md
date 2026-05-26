@@ -282,3 +282,10 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - Extracted sidebar feature components now cover rail toggles, guest avatar, preference switches, current context card, function menu content, scope section headers, grouped scope rows, scope action menus, and scope menu content.
 - Scope follow, association, and main-tree visibility actions now use caller-owned loading scopes such as `sidebar:scope-follow:<scopeId>` and block the affected scope row/menu region without coupling loading to packet/runtime semantics.
 - Candidate universal pieces such as rail toggles, compact nav rows, preference switches, grouped sections, scope/action rows, and anchored compact menus remain feature-local until another Nexus surface proves the same reusable shape.
+
+## 2026-05 Nexus locality create UI decomposition
+
+- Nexus locality create UI began moving into `app/components/nexus/features/locality/*` while `src/app/nexus/locality/create.tsx` remains the controller for params, auth gates, draft persistence, graph/path state, API calls, mutation handlers, and modal state.
+- Extracted locality feature components now cover the search panel, builder panel, parent/type/create-kind dialogs, selected-result and remove confirmation dialogs, outcome dialogs, graph rows, and preview panel.
+- Locality loading remains visual-scope owned: search results, parent picker results, graph row results, preview, create-path, and set-home actions use caller-owned loading scopes without coupling UI to packet/runtime semantics.
+- Remaining legacy level-builder helpers stay route-local for now; future cleanup can remove or extract them only after behavior ownership is verified.

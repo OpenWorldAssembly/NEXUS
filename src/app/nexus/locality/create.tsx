@@ -10,32 +10,43 @@ import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
 import {
-  LocalityCreateGraphRow,
-  type LocalityCreateGraphRowNode,
-} from '@app/components/nexus/locality/locality-create-graph-row';
-import {
+  LocalityCreateBuilderPanel,
+  LocalityCreateKindDialog,
+  LocalityCreateSearchPanel,
+  LocalityIdentityRequiredCard,
+  LocalityKindPickerDialog,
+  LocalityOutcomeDialogs,
+  LocalityParentPickerDialog,
   LocalityCreatePreviewPanel,
+  LocalityRemoveConfirmDialog,
+  LocalitySelectedResultDialog,
   getLocalityPreviewAncestorKeys,
+  type CreateLocalityKindOption,
   type LocalityCreatePreviewDuplicateWarning,
   type LocalityCreatePreviewScopeRow,
-} from '@app/components/nexus/locality/locality-create-preview-panel';
+  type LocalityGraphDisplayRow,
+  type LocalityGraphDisplaySection,
+  type LocalityGraphNode,
+  type LocalityLevel,
+  type LocalityMessageModalState,
+  type LocalityRemoveConfirmModalState,
+  type LocalitySuccessModalState,
+  type LocalityWorkflowTab,
+} from '@app/components/nexus/features/locality';
 import { useNexusAuthGate } from '@app/components/nexus/nexus-auth-gate';
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import {
-  NexusActionButton,
   NexusBadge,
   NexusCard,
   NexusSearchField,
   NexusSearchResultList,
   NexusSearchResultRow,
   NexusSearchResultsBoundary,
-  NexusSearchStatusText,
   NexusSectionHeader,
   useNexusAppearance,
   useNexusLoading,
 } from '@app/components/nexus/ui';
 import { NexusTabRail, type NexusTabNode } from '@app/components/nexus/ui/tabs/nexus-tabs';
-import { NexusModalShell } from '@app/components/nexus/ui/overlays';
 import type {
   LocalityHierarchySystem,
   LocalityScopeDescriptor,
@@ -55,8 +66,6 @@ import {
 } from '@runtime/nexus/nexus-query-api';
 import { NexusApiError } from '@runtime/nexus/nexus-query-api.shared';
 
-type LocalityLevel = 'nation' | 'region' | 'city' | 'district';
-type LocalityWorkflowTab = 'search' | 'create';
 type LocalityCreateMode = 'build' | 'preview';
 
 type LocalityTypePickerContext = {
@@ -70,19 +79,14 @@ const SEARCH_RESULT_LIMIT = 8;
 const LOCALITY_CREATE_SEARCH_LOADING_SCOPE = 'locality-create:search-results';
 const LOCALITY_CREATE_PARENT_PICKER_LOADING_SCOPE =
   'locality-create:parent-picker-results';
+const LOCALITY_CREATE_PREVIEW_LOADING_SCOPE = 'locality-create:preview';
+const LOCALITY_CREATE_PATH_LOADING_SCOPE = 'locality-create:create-path';
+const LOCALITY_SET_HOME_LOADING_SCOPE = 'locality-create:set-home';
 
 const LOCALITY_WORKFLOW_TAB_NODES: NexusTabNode[] = [
   { id: 'search', label: 'Search', shortLabel: 'Search' },
   { id: 'create', label: 'Create', shortLabel: 'Create' },
 ];
-
-type CreateLocalityKindOption = {
-  id: string;
-  label: string;
-  description: string;
-  legacyLevel: LocalityLevel;
-  scaleRank: number | null;
-};
 
 const CREATE_LOCALITY_KIND_OPTIONS: CreateLocalityKindOption[] = [
   { id: 'nation', label: 'Nation / Country', description: 'A country, nation, or equivalent top-level locality.', legacyLevel: 'nation', scaleRank: 10 },
@@ -234,24 +238,6 @@ function getDefaultKindSelections(): Record<LocalityLevel, string> {
   };
 }
 
-type LocalitySuccessModalState = {
-  title: string;
-  message: string;
-  locality: NexusLocationSearchResult;
-  showDashboardAction: boolean;
-} | null;
-
-type LocalityMessageModalState = {
-  title: string;
-  message: string;
-} | null;
-
-type LocalityRemoveConfirmModalState = {
-  nodeId: string;
-  nodeName: string;
-  childCount: number;
-} | null;
-
 type LocalityLevelEntry = {
   query: string;
   selectedResult: NexusLocationSearchResult | null;
@@ -259,19 +245,6 @@ type LocalityLevelEntry = {
 };
 
 type LocalityLevelErrorMap = Partial<Record<LocalityLevel, string>>;
-
-
-type LocalityGraphNode = LocalityCreateGraphRowNode;
-
-type LocalityGraphDisplayRow = {
-  node: LocalityGraphNode;
-  depth: number;
-};
-
-type LocalityGraphDisplaySection = {
-  id: 'connected' | 'unconnected';
-  rows: LocalityGraphDisplayRow[];
-};
 
 type LocalityGraphNodeErrorMap = Partial<Record<string, string>>;
 
@@ -1897,27 +1870,33 @@ export default function NexusLocalityCreatePage() {
     setStatusMessage(null);
 
     try {
-      const previewResults = await Promise.all(
-        previewRequests.map(async (request) => ({
-          previewId: request.previewId,
-          leafNodeId: request.leafNodeId,
-          path: request.path,
-          payload: await previewNexusLocalityPath({
-            actor_packet_id: currentActorPacketId,
-            path: request.path,
-            create_anyway: createAnyway,
-          }),
-        }))
-      );
-      const primaryPreview =
-        previewResults.find((result) => result.leafNodeId === targetGraphNodeId) ??
-        previewResults[0] ??
-        null;
+      await loading.runWithLoading(
+        LOCALITY_CREATE_PREVIEW_LOADING_SCOPE,
+        async () => {
+          const previewResults = await Promise.all(
+            previewRequests.map(async (request) => ({
+              previewId: request.previewId,
+              leafNodeId: request.leafNodeId,
+              path: request.path,
+              payload: await previewNexusLocalityPath({
+                actor_packet_id: currentActorPacketId,
+                path: request.path,
+                create_anyway: createAnyway,
+              }),
+            }))
+          );
+          const primaryPreview =
+            previewResults.find((result) => result.leafNodeId === targetGraphNodeId) ??
+            previewResults[0] ??
+            null;
 
-      setReviewPreviews(previewResults);
-      setReviewPreview(primaryPreview?.payload ?? null);
-      setActiveWorkflowTab('create');
-      setCreateMode('preview');
+          setReviewPreviews(previewResults);
+          setReviewPreview(primaryPreview?.payload ?? null);
+          setActiveWorkflowTab('create');
+          setCreateMode('preview');
+        },
+        { label: 'Previewing locality path...' }
+      );
     } catch (error) {
       setReviewPreview(null);
       setReviewPreviews([]);
@@ -2511,7 +2490,11 @@ export default function NexusLocalityCreatePage() {
 
     const guardedApplyHomeLocalitySelection = async () => {
       try {
-        await applyHomeLocalitySelection(locality);
+        await loading.runWithLoading(
+          LOCALITY_SET_HOME_LOADING_SCOPE,
+          () => applyHomeLocalitySelection(locality),
+          { label: 'Setting home locality...' }
+        );
       } catch (error) {
         if (openNexusAuthGateForError(error, guardedApplyHomeLocalitySelection)) {
           return;
@@ -2701,65 +2684,71 @@ export default function NexusLocalityCreatePage() {
       setStatusMessage(null);
 
       try {
-        const finalizedMutation =
-          await runFortressMutation<NexusLocalityGraphApplyPayload>({
-            intent: {
-              kind: 'locality.graph.apply',
-              paths,
-              create_anyway: createAnyway,
-              residence_scope_packet_id: selectedHomePreviewRow?.scopeId ?? null,
-              associated_scope_packet_ids: associatedScopePacketIds,
-              followed_scope_packet_ids: followedScopePacketIds,
-              main_visible_scope_packet_ids: mainVisibleScopePacketIds,
-              show_associated_parent_chains: true,
-              show_followed_parent_chains: true,
-            },
-          });
-        const primaryPayload = finalizedMutation.result;
-        const primaryResult =
-          primaryPayload.final_result ?? primaryPayload.path_results[0]?.final_result ?? null;
-        const createdNewPackets = primaryPayload.path_results.some(
-          (pathResult) => pathResult.created_packets.length > 0
+        await loading.runWithLoading(
+          LOCALITY_CREATE_PATH_LOADING_SCOPE,
+          async () => {
+            const finalizedMutation =
+              await runFortressMutation<NexusLocalityGraphApplyPayload>({
+                intent: {
+                  kind: 'locality.graph.apply',
+                  paths,
+                  create_anyway: createAnyway,
+                  residence_scope_packet_id: selectedHomePreviewRow?.scopeId ?? null,
+                  associated_scope_packet_ids: associatedScopePacketIds,
+                  followed_scope_packet_ids: followedScopePacketIds,
+                  main_visible_scope_packet_ids: mainVisibleScopePacketIds,
+                  show_associated_parent_chains: true,
+                  show_followed_parent_chains: true,
+                },
+              });
+            const primaryPayload = finalizedMutation.result;
+            const primaryResult =
+              primaryPayload.final_result ?? primaryPayload.path_results[0]?.final_result ?? null;
+            const createdNewPackets = primaryPayload.path_results.some(
+              (pathResult) => pathResult.created_packets.length > 0
+            );
+
+            if (!primaryResult) {
+              throw new Error('No locality path was created.');
+            }
+
+            setStatusMessage(null);
+            await refreshShellData();
+
+            if (selectedHomePreviewRow) {
+              const selectedHomeLocality =
+                createLocalityResultFromPreviewRow(selectedHomePreviewRow);
+              resetCreateBuilderState();
+              setActiveScopeId(toRouteScopeId(selectedHomeLocality.scope_id));
+              setSelectedExistingResult(null);
+              setSuccessModal({
+                title: createdNewPackets ? 'Locality created' : 'Home locality updated',
+                message: createdNewPackets
+                  ? `${selectedHomeLocality.name} has been created and set as your home locality.`
+                  : `${selectedHomeLocality.name} is now your home locality.`,
+                locality: selectedHomeLocality,
+                showDashboardAction: true,
+              });
+              return;
+            }
+
+            if (hasReturnTarget) {
+              returnWithLocality(primaryResult);
+              return;
+            }
+
+            resetCreateBuilderState();
+            setSuccessModal({
+              title: createdNewPackets ? 'Locality graph created' : 'Locality graph reused',
+              message: createdNewPackets
+                ? `${primaryResult.name} and related localities are ready to use.`
+                : `${primaryResult.name} already exists and is ready to use.`,
+              locality: primaryResult,
+              showDashboardAction: true,
+            });
+          },
+          { label: 'Creating locality graph...' }
         );
-
-        if (!primaryResult) {
-          throw new Error('No locality path was created.');
-        }
-
-        setStatusMessage(null);
-        await refreshShellData();
-
-        if (selectedHomePreviewRow) {
-          const selectedHomeLocality =
-            createLocalityResultFromPreviewRow(selectedHomePreviewRow);
-          resetCreateBuilderState();
-          setActiveScopeId(toRouteScopeId(selectedHomeLocality.scope_id));
-          setSelectedExistingResult(null);
-          setSuccessModal({
-            title: createdNewPackets ? 'Locality created' : 'Home locality updated',
-            message: createdNewPackets
-              ? `${selectedHomeLocality.name} has been created and set as your home locality.`
-              : `${selectedHomeLocality.name} is now your home locality.`,
-            locality: selectedHomeLocality,
-            showDashboardAction: true,
-          });
-          return;
-        }
-
-        if (hasReturnTarget) {
-          returnWithLocality(primaryResult);
-          return;
-        }
-
-        resetCreateBuilderState();
-        setSuccessModal({
-          title: createdNewPackets ? 'Locality graph created' : 'Locality graph reused',
-          message: createdNewPackets
-            ? `${primaryResult.name} and related localities are ready to use.`
-            : `${primaryResult.name} already exists and is ready to use.`,
-          locality: primaryResult,
-          showDashboardAction: true,
-        });
       } catch (error) {
         if (openNexusAuthGateForError(error, applyCreatePath)) {
           return;
@@ -2823,6 +2812,23 @@ export default function NexusLocalityCreatePage() {
         return option.id === levelKindSelections[typePickerContext.level];
       }) ?? typePickerOptions[0] ?? null
     : null;
+  const activeTypePickerKindId = typePickerContext?.nodeId
+    ? graphNodes.find((node) => node.id === typePickerContext.nodeId)?.kindId ?? null
+    : typePickerContext
+      ? levelKindSelections[typePickerContext.level]
+      : null;
+  const getDraftParentDisabledReason = (
+    childNode: LocalityGraphNode,
+    parentNode: LocalityGraphNode
+  ) => {
+    const isDescendant = getGraphDescendantIds(graphNodes, childNode.id).has(parentNode.id);
+    const hierarchyIssue = getParentHierarchyIssue({
+      childKindId: childNode.kindId,
+      parentKindId: parentNode.kindId,
+    });
+
+    return isDescendant || hierarchyIssue ? 'Beneath selected scope' : null;
+  };
 
   const confirmCreateKindSelection = () => {
     if (!createKindCandidate || !selectedCreateKind) {
@@ -2919,41 +2925,26 @@ export default function NexusLocalityCreatePage() {
           ) : null}
 
           {!isClaimedIdentity ? (
-            <NexusCard className="gap-4" tone="gold">
-              <Text className={appearance.itemTitleClass}>Claimed identity required</Text>
-              <Text className={appearance.itemBodyClass}>
-                Browsing and previewing localities is available here, but minting a
-                public locality Element or setting home locality requires a signed
-                claimed identity.
-              </Text>
-              <View className="flex-row flex-wrap gap-3">
-                <NexusActionButton
-                  label="Sign in"
-                  variant="primary"
-                  onPress={() =>
-                    router.push({
-                      pathname: '/nexus/identity/sign-in',
-                      params: {
-                        return_to: returnToSelf,
-                        ...(returnScopeId ? { return_scope_id: returnScopeId } : {}),
-                      },
-                    } as Href)
-                  }
-                />
-                <NexusActionButton
-                  label="Claim current guest"
-                  onPress={() =>
-                    router.push({
-                      pathname: '/nexus/identity/claim',
-                      params: {
-                        return_to: returnToSelf,
-                        ...(returnScopeId ? { return_scope_id: returnScopeId } : {}),
-                      },
-                    } as Href)
-                  }
-                />
-              </View>
-            </NexusCard>
+            <LocalityIdentityRequiredCard
+              onSignIn={() =>
+                router.push({
+                  pathname: '/nexus/identity/sign-in',
+                  params: {
+                    return_to: returnToSelf,
+                    ...(returnScopeId ? { return_scope_id: returnScopeId } : {}),
+                  },
+                } as Href)
+              }
+              onClaimCurrentGuest={() =>
+                router.push({
+                  pathname: '/nexus/identity/claim',
+                  params: {
+                    return_to: returnToSelf,
+                    ...(returnScopeId ? { return_scope_id: returnScopeId } : {}),
+                  },
+                } as Href)
+              }
+            />
           ) : null}
 
           <View className="gap-0">
@@ -2972,210 +2963,77 @@ export default function NexusLocalityCreatePage() {
             />
 
             {activeWorkflowTab === 'search' ? (
-            <NexusCard className="gap-4 rounded-t-none border-t-0">
-              <View className="gap-2">
-                <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
-                  Search localities
-                </Text>
-                <View className="gap-1">
-                  <Text className={appearance.itemBodyClass}>
-                    Enter the locality you would like to set as your home.
-                  </Text>
-                  <Text className={appearance.itemBodyClass}>
-                    You may only have one home locality at a time.
-                  </Text>
-                </View>
-                <View className="gap-0">
-                  <NexusSearchField
-                    value={searchQuery}
-                    onChangeText={(nextValue) => {
-                      setSearchQuery(nextValue);
-                      setAppliedSearchCandidateKey(null);
-                      setErrorMessage(null);
-                      clearLevelErrors();
-                    }}
-                    onSubmitEditing={handleTopSearchSubmit}
-                    placeholder="Search city, region, country, or path"
-                    hasAttachedResults={hasSearchDropdown}
-                  />
-
-                  <NexusSearchResultsBoundary
-                    loadingLabel="Searching Nexus directory..."
-                    loadingScope={LOCALITY_CREATE_SEARCH_LOADING_SCOPE}
-                  >
-                    {hasSearchDropdown ? (
-                    <NexusSearchResultList attached>
-                      {visibleSearchResults.map((result) => (
-                        <NexusSearchResultRow
-                          key={result.scope_id}
-                          attached
-                          onPress={() => setSelectedExistingResult(result)}
-                        >
-                          <View className="flex-row flex-wrap items-center gap-2">
-                            <Text className={appearance.itemTitleClass}>{result.name}</Text>
-                            <NexusBadge label={getSearchResultTypeLabel(result)} tone="sky" />
-                            <NexusBadge label={result.match_type.replace(/_/g, ' ')} />
-                          </View>
-                          <Text className={appearance.itemMetaClass}>
-                            {result.path_label}
-                            {result.scope_hierarchy_system
-                              ? ` · ${result.scope_hierarchy_system}`
-                              : ''}
-                          </Text>
-                        </NexusSearchResultRow>
-                      ))}
-                      {showSearchCreateRow && effectiveSearchCreateCandidate ? (
-                        <NexusSearchResultRow
-                          attached
-                          onPress={() => {
-                            setCreateKindCandidate(effectiveSearchCreateCandidate);
-                            setSelectedCreateKindId(
-                              getDefaultKindIdForLevel(
-                                normalizeCandidateLevel(effectiveSearchCreateCandidate.level)
-                              )
-                            );
-                          }}
-                        >
-                          <View className="flex-row flex-wrap items-center gap-2">
-                            <Text className={appearance.itemTitleClass}>
-                              Create “{effectiveSearchCreateCandidate.query.trim()}” as a new locality scope
-                            </Text>
-                            <NexusBadge label="new locality" tone="gold" />
-                          </View>
-                        </NexusSearchResultRow>
-                      ) : null}
-                      {hiddenSearchResultCount > 0 ? (
-                        <Text className={`border-t border-nexus-line/60 px-4 py-3 ${appearance.itemMetaClass}`}>
-                          Showing first {SEARCH_RESULT_LIMIT} of {results.length}. Refine your search to narrow results.
-                        </Text>
-                      ) : null}
-                    </NexusSearchResultList>
-                    ) : null}
-                  </NexusSearchResultsBoundary>
-                </View>
-
-                {isSearching ? (
-                  <NexusSearchStatusText>Searching Nexus directory...</NexusSearchStatusText>
-                ) : null}
-              </View>
-
-            </NexusCard>
-          ) : null}
-
+              <LocalityCreateSearchPanel
+                appliedSearchCandidateKey={appliedSearchCandidateKey}
+                effectiveSearchCreateCandidate={effectiveSearchCreateCandidate}
+                hasSearchDropdown={hasSearchDropdown}
+                hiddenSearchResultCount={hiddenSearchResultCount}
+                isSearching={isSearching}
+                loadingScope={LOCALITY_CREATE_SEARCH_LOADING_SCOPE}
+                resultLimit={SEARCH_RESULT_LIMIT}
+                resultsCount={results.length}
+                searchQuery={searchQuery}
+                showSearchCreateRow={showSearchCreateRow}
+                visibleSearchResults={visibleSearchResults}
+                getDefaultKindIdForLevel={getDefaultKindIdForLevel}
+                getResultTypeLabel={getSearchResultTypeLabel}
+                normalizeCandidateLevel={normalizeCandidateLevel}
+                onChangeSearchQuery={(nextValue) => {
+                  setSearchQuery(nextValue);
+                  setAppliedSearchCandidateKey(null);
+                  setErrorMessage(null);
+                }}
+                onClearLevelErrors={clearLevelErrors}
+                onSelectCreateCandidate={setCreateKindCandidate}
+                onSelectCreateKindId={setSelectedCreateKindId}
+                onSelectExistingResult={setSelectedExistingResult}
+                onSubmitSearch={handleTopSearchSubmit}
+              />
+            ) : null}
           {activeWorkflowTab === 'create' ? (
             <View onLayout={(event) => { builderOffsetYRef.current = event.nativeEvent.layout.y; }}>
               {createMode === 'build' ? (
-                <NexusCard className="gap-4 rounded-t-none border-t-0">
-                  <View className="gap-2">
-                    <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
-                      Create locality
-                    </Text>
-                    <Text className={appearance.itemBodyClass}>
-                      Add locality scopes, then connect parents only when the relationship is useful.
-                    </Text>
-                  </View>
+                <LocalityCreateBuilderPanel
+                  canPreviewGraph={canPreviewGraph}
+                  graphDisplaySections={graphDisplaySections}
+                  graphNodeErrors={graphNodeErrors}
+                  graphNodes={graphNodes}
+                  hasInvalidGraphHierarchy={hasInvalidGraphHierarchy}
+                  inputRefs={graphInputRefs}
+                  isGraphReadyForPreview={isGraphReadyForPreview(graphNodes)}
+                  isReviewing={isReviewing}
+                  isSubmitting={isSubmitting}
+                  loadingScope={LOCALITY_CREATE_PREVIEW_LOADING_SCOPE}
+                  resultLimit={SEARCH_RESULT_LIMIT}
+                  targetGraphNodeId={targetGraphNodeId}
+                  getGraphNodeKind={getGraphNodeKind}
+                  getGraphNodeName={getGraphNodeName}
+                  getGraphNodeParentHierarchyIssue={getGraphNodeParentHierarchyIssue}
+                  getResultTypeLabel={getSearchResultTypeLabel}
+                  onAddConnectedScope={handleAddConnectedScope}
+                  onBackToSearch={() => setActiveWorkflowTab('search')}
+                  onClearExistingNode={handleClearExistingGraphNode}
+                  onOpenKindPicker={(nodeId) => {
+                    const graphNode = graphNodes.find((candidateNode) => candidateNode.id === nodeId);
+                    if (!graphNode) {
+                      return;
+                    }
 
-                  <View className="gap-4">
-                    {graphDisplaySections.map((section) => (
-                      <View key={section.id} className="gap-3">
-                        {section.id === 'unconnected' ? (
-                          <View className="gap-1 pt-1">
-                            <Text className={appearance.itemMetaClass}>UNPLACED LOCALITIES</Text>
-                            <Text className={appearance.itemBodyClass}>
-                              Choose a parent when you want to place these in the draft tree.
-                            </Text>
-                          </View>
-                        ) : null}
-                        {section.rows.map(({ node, depth }) => {
-                          const parentNode = node.parentId
-                            ? graphNodes.find((candidateNode) => candidateNode.id === node.parentId) ?? null
-                            : null;
-                          const existingParentResult =
-                            node.parentResult ?? parentNode?.selectedResult ?? null;
-                          const parentLabel = node.parentResult
-                            ? `${node.parentResult.name} (existing)`
-                            : parentNode
-                              ? getGraphNodeName(parentNode)
-                              : node.selectedResult && !node.hasParentSelection
-                                ? 'Existing path'
-                                : node.hasParentSelection
-                                  ? 'Global Commons'
-                                  : 'Choose parent';
-
-                          return (
-                            <LocalityCreateGraphRow
-                              key={node.id}
-                              node={node}
-                              depth={depth}
-                              isTarget={node.id === targetGraphNodeId}
-                              kindLabel={getGraphNodeKind(node).label}
-                              parentLabel={parentLabel}
-                              existingParentResult={existingParentResult}
-                              canRemove={graphNodes.length > 1}
-                              errorMessage={
-                                graphNodeErrors[node.id] ??
-                                getGraphNodeParentHierarchyIssue(graphNodes, node) ??
-                                null
-                              }
-                              inputRef={(inputNode) => {
-                                graphInputRefs.current[node.id] = inputNode;
-                              }}
-                              getResultTypeLabel={getSearchResultTypeLabel}
-                              searchResultLimit={SEARCH_RESULT_LIMIT}
-                              onQueryChange={handleGraphNodeQueryChange}
-                              onSubmitNode={handleSubmitGraphNode}
-                              onSelectResult={handleSelectGraphNodeResult}
-                              onSelectExistingChild={handleSelectExistingChildResult}
-                              onOpenKindPicker={(nodeId) => {
-                                const graphNode = graphNodes.find((candidateNode) => candidateNode.id === nodeId);
-                                if (!graphNode) {
-                                  return;
-                                }
-
-                                setTypePickerContext({
-                                  level: getGraphNodeKind(graphNode).legacyLevel,
-                                  isTarget: graphNode.id === targetGraphNodeId,
-                                  nodeId,
-                                });
-                              }}
-                              onOpenParentPicker={setParentPickerNodeId}
-                              onRemoveNode={handleRemoveGraphNode}
-                              onClearExistingNode={handleClearExistingGraphNode}
-                            />
-                          );
-                        })}
-                      </View>
-                    ))}
-                  </View>
-
-                  <View className="flex-row flex-wrap gap-3">
-                    <NexusActionButton
-                      label="Add locality scope"
-                      onPress={handleAddConnectedScope}
-                    />
-                    <NexusActionButton
-                      label={isReviewing ? 'Previewing...' : 'Next: Preview'}
-                      variant="primary"
-                      disabled={isReviewing || isSubmitting || !canPreviewGraph}
-                      onPress={() => void runLocalityPreview({ createAnyway: false })}
-                    />
-                    <NexusActionButton
-                      label="Back to search"
-                      onPress={() => setActiveWorkflowTab('search')}
-                    />
-                  </View>
-                  {!isGraphReadyForPreview(graphNodes) ? (
-                    <Text className={appearance.itemMetaClass}>
-                      Add a name, type, and parent choice for every scope before preview. Parent may be set to none.
-                    </Text>
-                  ) : hasInvalidGraphHierarchy ? (
-                    <Text className="text-sm text-nexus-rose">
-                      One or more parent choices conflict with the selected locality types.
-                    </Text>
-                  ) : null}
-                </NexusCard>
+                    setTypePickerContext({
+                      level: getGraphNodeKind(graphNode).legacyLevel,
+                      isTarget: graphNode.id === targetGraphNodeId,
+                      nodeId,
+                    });
+                  }}
+                  onOpenParentPicker={setParentPickerNodeId}
+                  onPreview={() => void runLocalityPreview({ createAnyway: false })}
+                  onQueryChange={handleGraphNodeQueryChange}
+                  onRemoveNode={handleRemoveGraphNode}
+                  onSelectExistingChild={handleSelectExistingChildResult}
+                  onSelectResult={handleSelectGraphNodeResult}
+                  onSubmitNode={handleSubmitGraphNode}
+                />
               ) : null}
-
               {createMode === 'preview' && reviewPreview ? (
                 <LocalityCreatePreviewPanel
                   rows={previewScopeRows}
@@ -3203,392 +3061,80 @@ export default function NexusLocalityCreatePage() {
           </View>
         </View>
       </ScrollView>
-      <NexusModalShell
-        backdropClassName="absolute inset-0"
-        cardClassName="w-full max-w-xl gap-4"
-        containerClassName="flex-1 items-center justify-center bg-black/50 px-4"
-        contentClassName={null}
+      <LocalitySelectedResultDialog
+        hasReturnTarget={hasReturnTarget}
+        result={selectedExistingResult}
+        getResultTypeLabel={getSearchResultTypeLabel}
         onClose={() => setSelectedExistingResult(null)}
-        visible={selectedExistingResult !== null}
-      >
-            <Text className={appearance.surfaceTitleClass}>Use this locality?</Text>
-            <View className={`gap-2 rounded-[18px] border px-4 py-3 ${appearance.cardInsetClass}`}>
-              <View className="flex-row flex-wrap items-center gap-2">
-                <Text className={appearance.itemTitleClass}>{selectedExistingResult?.name}</Text>
-                {selectedExistingResult ? (
-                  <NexusBadge
-                    label={getSearchResultTypeLabel(selectedExistingResult)}
-                    tone="sky"
-                  />
-                ) : null}
-              </View>
-              <Text className={appearance.itemMetaClass}>
-                {selectedExistingResult?.path_label}
-              </Text>
-            </View>
-            <View className="flex-row flex-wrap gap-3">
-              {selectedExistingResult ? (
-                <NexusActionButton
-                  label="Set as home locality"
-                  variant="primary"
-                  onPress={() => void handleSetHomeLocality(selectedExistingResult)}
-                />
-              ) : null}
-              {selectedExistingResult ? (
-                <NexusActionButton
-                  label="Open scope"
-                  variant="ghost"
-                  onPress={() => openLocalityDashboard(selectedExistingResult)}
-                />
-              ) : null}
-              {selectedExistingResult && hasReturnTarget ? (
-                <NexusActionButton
-                  label="Use this locality and return"
-                  variant="ghost"
-                  onPress={() => returnWithLocality(selectedExistingResult)}
-                />
-              ) : null}
-              <NexusActionButton
-                label="Dismiss"
-                variant="ghost"
-                onPress={() => setSelectedExistingResult(null)}
-              />
-            </View>
-      </NexusModalShell>
+        onOpenDashboard={openLocalityDashboard}
+        onReturnWithLocality={returnWithLocality}
+        onSetHomeLocality={(locality) => void handleSetHomeLocality(locality)}
+      />
 
-      <NexusModalShell
-        backdropClassName="absolute inset-0"
-        cardClassName="w-full max-w-xl gap-4"
-        containerClassName="flex-1 items-center justify-center bg-black/50 px-4"
-        contentClassName={null}
-        onClose={() => setRemoveConfirmModal(null)}
-        visible={removeConfirmModal !== null}
-      >
-            <View className="gap-2">
-              <Text className={appearance.surfaceTitleClass}>Remove locality from draft?</Text>
-              <Text className={appearance.itemBodyClass}>
-                Are you sure you want to remove {removeConfirmModal?.nodeName ?? 'this locality'}? Doing so will disconnect the connected children.
-              </Text>
-            </View>
-            <View className="flex-row flex-wrap gap-3">
-              <NexusActionButton
-                label="Remove and disconnect"
-                variant="primary"
-                onPress={() => {
-                  if (removeConfirmModal) {
-                    performRemoveGraphNode(removeConfirmModal.nodeId);
-                  }
-                }}
-              />
-              <NexusActionButton
-                label="Cancel"
-                variant="ghost"
-                onPress={() => setRemoveConfirmModal(null)}
-              />
-            </View>
-      </NexusModalShell>
+      <LocalityRemoveConfirmDialog
+        state={removeConfirmModal}
+        onCancel={() => setRemoveConfirmModal(null)}
+        onConfirm={performRemoveGraphNode}
+      />
 
-      <NexusModalShell
-        backdropClassName="absolute inset-0"
-        cardClassName="max-h-[86%] w-full max-w-2xl gap-4"
-        containerClassName="flex-1 items-center justify-center bg-black/50 px-4"
-        contentClassName={null}
+      <LocalityParentPickerDialog
+        graphNodes={graphNodes}
+        isParentSearching={isParentSearching}
+        loadingScope={LOCALITY_CREATE_PARENT_PICKER_LOADING_SCOPE}
+        parentPickerNode={parentPickerNode}
+        parentSearchInputRef={parentSearchInputRef}
+        parentSearchQuery={parentSearchQuery}
+        parentSearchResults={parentSearchResults}
+        getDraftParentDisabledReason={getDraftParentDisabledReason}
+        getGraphNodeKind={getGraphNodeKind}
+        getGraphNodeName={getGraphNodeName}
+        getResultTypeLabel={getSearchResultTypeLabel}
         onClose={() => setParentPickerNodeId(null)}
-        visible={parentPickerNode !== null}
-      >
-            <View className="gap-2">
-              <Text className={appearance.surfaceTitleClass}>Choose parent scope</Text>
-              <Text className={appearance.itemBodyClass}>
-                Select an on-screen scope, search existing localities, or use Global Commons as the root parent.
-              </Text>
-            </View>
-            {parentPickerNode ? (
-              <ScrollView className="max-h-96" showsVerticalScrollIndicator>
-                <View className="gap-4 pr-1">
-                  <View className="gap-2">
-                    <Text className={appearance.itemMetaClass}>Draft options</Text>
-                    <Pressable
-                      className={`rounded-[18px] border px-4 py-3 ${appearance.cardInsetClass}`}
-                      onPress={() => handleSelectGraphParent(parentPickerNode.id, null)}
-                    >
-                      <View className="gap-1">
-                        <View className="flex-row flex-wrap items-center gap-2">
-                          <Text className={appearance.itemTitleClass}>Global Commons</Text>
-                          <NexusBadge label="root parent" tone="sky" />
-                          {parentPickerNode.hasParentSelection && !parentPickerNode.parentId && !parentPickerNode.parentResult ? (
-                            <NexusBadge label="current" tone="mint" />
-                          ) : null}
-                        </View>
-                        <Text className={appearance.itemMetaClass}>
-                          Use the global root when this locality has no narrower known parent yet.
-                        </Text>
-                      </View>
-                    </Pressable>
-                    {graphNodes
-                      .filter((candidateNode) => candidateNode.id !== parentPickerNode.id)
-                      .map((candidateNode) => {
-                        const isDescendant = getGraphDescendantIds(
-                          graphNodes,
-                          parentPickerNode.id
-                        ).has(candidateNode.id);
-                        const hierarchyIssue = getParentHierarchyIssue({
-                          childKindId: parentPickerNode.kindId,
-                          parentKindId: candidateNode.kindId,
-                        });
-                        const disabledReason = isDescendant || hierarchyIssue
-                          ? 'Beneath selected scope'
-                          : null;
+        onSearchQueryChange={setParentSearchQuery}
+        onSearchSubmit={() => {
+          const firstResult = parentSearchResults[0] ?? null;
 
-                        return (
-                          <Pressable
-                            key={candidateNode.id}
-                            disabled={Boolean(disabledReason)}
-                            className={`rounded-[18px] border px-4 py-3 ${appearance.cardInsetClass} ${
-                              disabledReason ? 'opacity-50' : ''
-                            }`}
-                            onPress={() => handleSelectGraphParent(parentPickerNode.id, candidateNode.id)}
-                          >
-                            <View className="flex-row flex-wrap items-center gap-2">
-                              <Text className={appearance.itemTitleClass}>{getGraphNodeName(candidateNode)}</Text>
-                              <NexusBadge label={getGraphNodeKind(candidateNode).label} tone="sky" />
-                              {candidateNode.selectedResult ? <NexusBadge label="existing" tone="mint" /> : null}
-                              {parentPickerNode.parentId === candidateNode.id ? (
-                                <NexusBadge label="current" tone="mint" />
-                              ) : null}
-                            </View>
-                            {disabledReason ? (
-                              <Text className="mt-2 text-sm text-nexus-rose">{disabledReason}</Text>
-                            ) : null}
-                          </Pressable>
-                        );
-                      })}
-                  </View>
+          if (firstResult && parentPickerNode) {
+            handleSelectExistingGraphParent(parentPickerNode.id, firstResult);
+          }
+        }}
+        onSelectDraftParent={handleSelectGraphParent}
+        onSelectExistingParent={handleSelectExistingGraphParent}
+      />
 
-                  <View className="gap-2">
-                    <Text className={appearance.itemMetaClass}>Search existing localities</Text>
-                    <NexusSearchField
-                      ref={parentSearchInputRef}
-                      autoFocus={parentPickerNode !== null}
-                      value={parentSearchQuery}
-                      onChangeText={setParentSearchQuery}
-                      onSubmitEditing={() => {
-                        const firstResult = parentSearchResults[0] ?? null;
-
-                        if (firstResult && parentPickerNode) {
-                          handleSelectExistingGraphParent(parentPickerNode.id, firstResult);
-                        }
-                      }}
-                      placeholder="Search existing parent scope"
-                      hasAttachedResults={parentSearchResults.length > 0}
-                    />
-                    <NexusSearchResultsBoundary
-                      loadingLabel="Searching existing localities..."
-                      loadingScope={LOCALITY_CREATE_PARENT_PICKER_LOADING_SCOPE}
-                    >
-                      {parentSearchResults.length > 0 ? (
-                      <NexusSearchResultList attached>
-                        {parentSearchResults.map((result) => (
-                          <NexusSearchResultRow
-                            key={result.scope_id}
-                            attached
-                            onPress={() => handleSelectExistingGraphParent(parentPickerNode.id, result)}
-                          >
-                            <View className="flex-row flex-wrap items-center gap-2">
-                              <Text className={appearance.itemTitleClass}>{result.name}</Text>
-                              <NexusBadge label={getSearchResultTypeLabel(result)} tone="sky" />
-                              {parentPickerNode.parentResult?.scope_id === result.scope_id ? (
-                                <NexusBadge label="current" tone="mint" />
-                              ) : null}
-                            </View>
-                            <Text className={appearance.itemMetaClass}>{result.path_label}</Text>
-                          </NexusSearchResultRow>
-                        ))}
-                      </NexusSearchResultList>
-                      ) : null}
-                    </NexusSearchResultsBoundary>
-                    {isParentSearching ? (
-                      <NexusSearchStatusText>Searching existing localities...</NexusSearchStatusText>
-                    ) : null}
-                  </View>
-                </View>
-              </ScrollView>
-            ) : null}
-            <View className="flex-row flex-wrap gap-3">
-              <NexusActionButton
-                label="Dismiss"
-                variant="ghost"
-                onPress={() => setParentPickerNodeId(null)}
-              />
-            </View>
-      </NexusModalShell>
-
-      <NexusModalShell
-        backdropClassName="absolute inset-0"
-        cardClassName="max-h-[86%] w-full max-w-2xl gap-4"
-        containerClassName="flex-1 items-center justify-center bg-black/50 px-4"
-        contentClassName={null}
-        onClose={() => setTypePickerContext(null)}
+      <LocalityKindPickerDialog
+        activeKindId={activeTypePickerKindId}
+        options={typePickerOptions}
         visible={typePickerContext !== null}
-      >
-            <View className="gap-2">
-              <Text className={appearance.surfaceTitleClass}>Choose locality type</Text>
-              <Text className={appearance.itemBodyClass}>
-                Choose the closest current type for this locality row.
-              </Text>
-            </View>
-            <ScrollView className="max-h-96" showsVerticalScrollIndicator>
-              <View className="gap-2 pr-1">
-                {typePickerOptions.map((option) => {
-                  const activeKindId = typePickerContext?.nodeId
-                    ? graphNodes.find((node) => node.id === typePickerContext.nodeId)?.kindId ?? null
-                    : typePickerContext
-                      ? levelKindSelections[typePickerContext.level]
-                      : null;
-                  const isSelected = option.id === activeKindId;
+        onClose={() => setTypePickerContext(null)}
+        onSelectOption={handleSelectKindOption}
+      />
 
-                  return (
-                    <Pressable
-                      key={option.id}
-                      className={`rounded-[18px] border px-4 py-2 ${
-                        isSelected ? 'border-nexus-sky bg-nexus-sky/10' : appearance.cardInsetClass
-                      }`}
-                      onPress={() => handleSelectKindOption(option)}
-                    >
-                      <View className="flex-row flex-wrap items-center gap-2">
-                        <Text className={appearance.itemTitleClass}>{option.label}</Text>
-                        <NexusBadge label={option.legacyLevel} tone={isSelected ? 'mint' : 'sky'} />
-                      </View>
-                      <Text className={appearance.itemMetaClass}>{option.description}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </ScrollView>
-            <View className="flex-row flex-wrap gap-3">
-              <NexusActionButton
-                label="Dismiss"
-                variant="ghost"
-                onPress={() => setTypePickerContext(null)}
-              />
-            </View>
-      </NexusModalShell>
-
-      <NexusModalShell
-        backdropClassName="absolute inset-0"
-        cardClassName="max-h-[86%] w-full max-w-2xl gap-4"
-        containerClassName="flex-1 items-center justify-center bg-black/50 px-4"
-        contentClassName={null}
+      <LocalityCreateKindDialog
+        candidate={createKindCandidate}
+        options={CREATE_LOCALITY_KIND_OPTIONS}
+        selectedKindId={selectedCreateKindId}
         onClose={() => setCreateKindCandidate(null)}
-        visible={createKindCandidate !== null}
-      >
-            <View className="gap-2">
-              <Text className={appearance.surfaceTitleClass}>
-                Create new locality scope for “{createKindCandidate?.query.trim() ?? ''}”
-              </Text>
-              <Text className={appearance.itemBodyClass}>
-                Choose the closest current type to continue.
-              </Text>
-            </View>
-            <ScrollView className="max-h-96" showsVerticalScrollIndicator>
-              <View className="gap-2 pr-1">
-                {CREATE_LOCALITY_KIND_OPTIONS.map((option) => {
-                  const isSelected = option.id === selectedCreateKindId;
+        onConfirm={confirmCreateKindSelection}
+        onSelectOption={(candidate, option) => {
+          setSelectedCreateKindId(option.id);
+          handleUseSearchCreateCandidate(
+            {
+              ...candidate,
+              level: option.legacyLevel,
+            },
+            option
+          );
+        }}
+      />
 
-                  return (
-                    <Pressable
-                      key={option.id}
-                      className={`rounded-[18px] border px-4 py-2 ${
-                        isSelected ? 'border-nexus-sky bg-nexus-sky/10' : appearance.cardInsetClass
-                      }`}
-                      onPress={() => {
-                        if (!createKindCandidate) {
-                          return;
-                        }
-
-                        setSelectedCreateKindId(option.id);
-                        handleUseSearchCreateCandidate(
-                          {
-                            ...createKindCandidate,
-                            level: option.legacyLevel,
-                          },
-                          option
-                        );
-                      }}
-                    >
-                      <View className="flex-row flex-wrap items-center gap-2">
-                        <Text className={appearance.itemTitleClass}>{option.label}</Text>
-                        <NexusBadge label={option.legacyLevel} tone={isSelected ? 'mint' : 'sky'} />
-                      </View>
-                      <Text className={appearance.itemMetaClass}>{option.description}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </ScrollView>
-            <View className="flex-row flex-wrap gap-3">
-              <NexusActionButton
-                label="Continue"
-                variant="primary"
-                onPress={confirmCreateKindSelection}
-              />
-              <NexusActionButton
-                label="Dismiss"
-                variant="ghost"
-                onPress={() => setCreateKindCandidate(null)}
-              />
-            </View>
-      </NexusModalShell>
-
-      <NexusModalShell
-        backdropClassName="absolute inset-0"
-        cardClassName="w-full max-w-xl gap-4"
-        containerClassName="flex-1 items-center justify-center bg-black/50 px-4"
-        contentClassName={null}
-        onClose={() => setSuccessModal(null)}
-        visible={successModal !== null}
-      >
-            <Text className={appearance.surfaceTitleClass}>{successModal?.title}</Text>
-            <Text className={appearance.itemBodyClass}>{successModal?.message}</Text>
-            <View className="flex-row flex-wrap gap-3">
-              {successModal?.showDashboardAction ? (
-                <NexusActionButton
-                  label="Open dashboard"
-                  variant="primary"
-                  onPress={() => {
-                    if (successModal) {
-                      openLocalityDashboard(successModal.locality);
-                    }
-                  }}
-                />
-              ) : null}
-              <NexusActionButton
-                label="Dismiss"
-                variant="ghost"
-                onPress={() => setSuccessModal(null)}
-              />
-            </View>
-      </NexusModalShell>
-
-      <NexusModalShell
-        backdropClassName="absolute inset-0"
-        cardClassName="w-full max-w-xl gap-4"
-        containerClassName="flex-1 items-center justify-center bg-black/50 px-4"
-        contentClassName={null}
-        onClose={() => setWorkflowErrorModal(null)}
-        tone="rose"
-        visible={workflowErrorModal !== null}
-      >
-            <Text className={appearance.surfaceTitleClass}>{workflowErrorModal?.title}</Text>
-            <Text className={appearance.itemBodyClass}>{workflowErrorModal?.message}</Text>
-            <View className="flex-row flex-wrap gap-3">
-              <NexusActionButton
-                label="Dismiss"
-                variant="primary"
-                onPress={() => setWorkflowErrorModal(null)}
-              />
-            </View>
-      </NexusModalShell>
-
+      <LocalityOutcomeDialogs
+        successModal={successModal}
+        workflowErrorModal={workflowErrorModal}
+        onCloseSuccess={() => setSuccessModal(null)}
+        onCloseWorkflowError={() => setWorkflowErrorModal(null)}
+        onOpenDashboard={openLocalityDashboard}
+      />
       {authGateModal}
     </View>
   );
