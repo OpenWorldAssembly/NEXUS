@@ -16,6 +16,7 @@ import {
   NexusBadge,
   NexusCard,
   NexusFieldActionRow,
+  NexusMetricGrid,
   NexusSectionHeader,
   NexusTextArea,
   useNexusAppearance,
@@ -344,7 +345,7 @@ export default function NexusRolesPage() {
           </NexusCard>
         ) : null}
 
-        <View className="flex-row flex-wrap gap-4">
+        <NexusMetricGrid>
           <NexusCard className="min-w-[220px] flex-1" tone="sky">
             <Text className={appearance.metricLabelClass}>Current scope</Text>
             <Text className={appearance.metricValueClass}>
@@ -376,7 +377,7 @@ export default function NexusRolesPage() {
               />
             </View>
           </NexusCard>
-        </View>
+        </NexusMetricGrid>
 
         {roleTabs.length > 0 ? (
           <View className="gap-0">

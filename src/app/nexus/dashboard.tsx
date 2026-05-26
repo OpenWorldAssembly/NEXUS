@@ -34,6 +34,7 @@ import {
   NexusCard,
   NexusActionButton,
   useNexusAppearance,
+  NexusMetricGrid,
   NexusSectionHeader,
 } from '@app/components/nexus/ui';
 import type { NexusPacketCardProjection } from '@core/contracts';
@@ -509,7 +510,7 @@ export default function NexusDashboardPage() {
             </View>
           </View>
 
-          <View className="flex-row flex-wrap gap-2.5">
+          <NexusMetricGrid className="gap-2.5">
             {visibleMetrics.map((metric) => (
               <NexusStatCard
                 key={metric.id}
@@ -518,7 +519,7 @@ export default function NexusDashboardPage() {
                 value={metric.value}
               />
             ))}
-          </View>
+          </NexusMetricGrid>
         </NexusCard>
 
         <View className="flex-row flex-wrap gap-4">

@@ -65,6 +65,12 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - Nexus feedback now has shared inline loading plus empty, error, warning, status, and operation-card primitives under `app/components/nexus/ui/feedback/*`.
 - Identity fields, Packet Explorer import/export fields, trust association notes, and roles support comments began migrating to those primitives while preserving existing route behavior and keeping scoped loading caller-owned.
 
+## 2026-05 Nexus layout and panel foundation start
+
+- Nexus layout now has shared page/scroll frames, panel/workbench wrappers, panel headers, section bands, toolbar rows, and metric grids under `app/components/nexus/ui/layout/*`.
+- Identity page chrome, dashboard/trust/roles metric rows, and a Packet Explorer search workbench panel began adopting these wrappers while preserving current visuals.
+- Panel loading remains caller-owned by visual scope; layout components only provide a clean boundary mount point.
+
 ## 2026-05 Nexus UI primitive split
 
 - The broad `app/components/nexus/nexus-ui.tsx` primitive file is now a compatibility bridge over focused `app/components/nexus/ui/*` component-type modules.
@@ -256,3 +262,10 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - `Definition`, `Bundle`, and `Preference` are now canonical packet types with body schemas, compatibility entries, builder support, pipeline inventory coverage, and packet-store validation like other active packet types.
 - Claimed shell preference writes now run through the standard signed mutation prepare/finalize corridor as `preference.element.set`, preserving projected responses, actor proof/session checks, same-value no-op behavior, and legacy cache sync. `/api/nexus/shell-preferences` remains guest compatibility state only.
 - The direct `preference.element.interface.set` runtime connector is retained as a definition/internal comparison bridge rather than the live claimed-write corridor.
+
+## 2026-05 Nexus discussions UI decomposition
+
+- Nexus discussions began moving route-local UI into `app/components/nexus/features/discussions/*` while preserving `src/app/nexus/discussions.tsx` as the route/controller owner for query state, loading, mutations, auth gates, and reply branch state.
+- Extracted discussion feature components now cover feed post cards, root post cards, vote/reply-count pills, recursive reply trees, and post/reply composers.
+- Discussion loading adoption remains visual-scope owned: feed load-more, root replies, reply branches, vote pills, and composers can mount scoped loading boundaries without packet-action registry or runtime coupling.
+- Candidate universal pieces such as composer shells, vote/reaction skeletons, and tree rails remain feature-local until another Nexus surface proves the same reusable shape.

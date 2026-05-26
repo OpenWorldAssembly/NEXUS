@@ -5,17 +5,19 @@
 
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import {
   NexusActionButton,
   NexusCard,
   NexusFieldShell,
+  NexusPageFrame,
   NexusSearchField,
   NexusSearchResultList,
   NexusSearchResultRow,
   NexusSearchResultsBoundary,
   NexusSearchStatusText,
+  NexusScrollFrame,
   NexusSegmentedPill,
   NexusSectionHeader,
   NexusTextInput,
@@ -70,19 +72,17 @@ export function IdentityPageShell({
   description: string;
   children: ReactNode;
 }) {
-  const appearance = useNexusAppearance();
-
   return (
-    <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-      <View className={appearance.pageContainerClass}>
+    <NexusScrollFrame>
+      <NexusPageFrame>
         <NexusSectionHeader
           eyebrow={eyebrow}
           title={title}
           description={description}
         />
         {children}
-      </View>
-    </ScrollView>
+      </NexusPageFrame>
+    </NexusScrollFrame>
   );
 }
 

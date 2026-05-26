@@ -9,6 +9,7 @@ import {
   NexusSearchField,
   NexusSearchResultsBoundary,
   NexusSegmentedPill,
+  NexusWorkbenchPanel,
   useNexusAppearance,
 } from '@app/components/nexus/ui';
 import type {
@@ -297,20 +298,11 @@ export function NexusPacketExplorerSearchPanel({
 
   return (
     <View className="gap-4">
-      <NexusCard className="gap-4">
-        <View className="gap-2">
-          <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
-            Packet Explorer
-          </Text>
-          <Text className={appearance.surfaceTitleClass}>
-            Global Packet Workspace
-          </Text>
-          <Text className={appearance.sectionBodyClass}>
-            Search the current preferred packet index by ID, title, label,
-            summary, tag, or type, then open or export what you find.
-          </Text>
-        </View>
-
+      <NexusWorkbenchPanel
+        description="Search the current preferred packet index by ID, title, label, summary, tag, or type, then open or export what you find."
+        eyebrow="Packet Explorer"
+        title="Global Packet Workspace"
+      >
         <NexusSearchField
           inputClassName="rounded-[22px]"
           onChangeText={onChangeSearchValue}
@@ -337,7 +329,7 @@ export function NexusPacketExplorerSearchPanel({
         {searchError ? (
           <NexusSearchErrorState>{searchError}</NexusSearchErrorState>
         ) : null}
-      </NexusCard>
+      </NexusWorkbenchPanel>
 
       <NexusSearchResultsBoundary
         loadingLabel="Searching packets..."

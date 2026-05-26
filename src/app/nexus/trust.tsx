@@ -17,6 +17,7 @@ import {
   NexusBadge,
   NexusCard,
   NexusFieldActionRow,
+  NexusMetricGrid,
   NexusSectionHeader,
   NexusTextInput,
   useNexusAppearance,
@@ -310,7 +311,7 @@ export default function NexusTrustPage() {
           </NexusCard>
         ) : null}
 
-        <View className="flex-row flex-wrap gap-4">
+        <NexusMetricGrid>
           <NexusCard className="min-w-[220px] flex-1" tone="mint">
             <Text className={appearance.metricLabelClass}>Trust stage</Text>
             <Text className={appearance.metricValueClass}>
@@ -338,7 +339,7 @@ export default function NexusTrustPage() {
               Voting is currently {trustPayload?.can_vote ? 'available' : 'restricted'} for this scope lens.
             </Text>
           </NexusCard>
-        </View>
+        </NexusMetricGrid>
 
         <NexusCard className="gap-4 overflow-visible">
           <View className="gap-2">

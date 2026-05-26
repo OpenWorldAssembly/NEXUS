@@ -50,6 +50,12 @@ The broad `nexus-ui.tsx` primitive file has been split into focused component-ty
 
 Nexus callers should import from `@app/components/nexus/ui` or a direct family path. `app/components/nexus/nexus-ui.tsx` remains only as a temporary bridge for compatibility and should not be the source for new imports.
 
+## Feature extraction status
+
+The first large route decomposition pass created `app/components/nexus/features/discussions/*` for discussion-specific composed UI. The route still owns query normalization, data loading, mutations, auth gates, router navigation, and reply branch state, while extracted feature components render feed post cards, root post cards, reply trees, vote/reply-count pills, and post/reply composers.
+
+Discussion loading scopes are visual-boundary owned: feed load-more, root replies, reply branches, vote pills, and post/reply composers now have scoped loading seams without coupling loading to packet action registries or runtime mutation types.
+
 ## Component Type Catalog
 
 | Component type | Current files and usages | Current status | Duplication notes | Future template target | Migration risk |
@@ -59,9 +65,9 @@ Nexus callers should import from `@app/components/nexus/ui` or a direct family p
 | Tabs and tab decks | `ui/tabs/nexus-tabs.tsx`, `ui/tabs/nexus-tab-primitives.tsx`, route uses in `roles`, `identity/sign-in`, `locality/create`, packet explorer toolbar and primary rail; Explorer document tabs in `packet-explorer/nexus-packet-explorer-tab-deck.tsx` | Shared navigation tabs plus separate Explorer document tabs | Function-surface tabs and Explorer tabs both use `NexusTabFrame` / `NexusTabLabel`, but differ in close controls, tooltip behavior, wrapping, and session/document semantics | `ui/tabs` with shared frame/label/close primitives, navigation rail/stack, segmented tabs, and Explorer document-tab extension | Medium |
 | Modals, gates, confirmations, and overlays | `ui/overlays/*`, `nexus-auth-gate.tsx`, `nexus-shell-entry-gate.tsx`, `nexus-feature-status-context.tsx`, packet explorer shell overlay, remaining route-local overlay variants | Shared modal shell now exists; gates remain specialized | Dashboard validation, packet import outcome, and locality create/reuse/picker dialogs now use shared modal chrome; auth/entry gates and feature-status overlays still need careful migration because they carry session or shell-specific behavior | `ui/overlays` with modal shell, confirmation dialog, outcome dialog, anchored popover, blocking gate, and shell overlay host | Medium |
 | Dropdowns, selects, pickers, and menus | `NexusInlineSelect` in `ui/forms/*`; `ui/forms/search/*`; `NexusActionMenu`; locality kind/parent/result pickers; identity location search; packet explorer search/export lookup lists; sidebar menus | Mixed shared and route-local | Action menus and inline selects are shared; search dropdown/result chrome now has shared field/list/row primitives, while picker-specific side effects remain local | `ui/menus` or `ui/forms` with inline select, anchored menu, searchable result list, picker modal, and selectable row | Medium |
-| Text inputs, composers, search fields, and form rows | `ui/forms/nexus-field-shell.tsx`, `ui/forms/nexus-text-input.tsx`, `ui/forms/nexus-text-area.tsx`, `ui/forms/nexus-field-action-row.tsx`, `ui/forms/search/*`; raw `TextInput` remains in larger route-local composers and specialized controls | Shared field/input/search chrome is now available | Identity fields now wrap the generic shell/input primitives; Packet Explorer import/export fields, trust notes, and roles support comments use shared input/action-row primitives. Discussion composers and broader route-local form sections still need careful migration | `ui/forms` with field shell, text input, textarea/composer, search box, result list, error text, hint text, and field action row | Medium |
-| Loading and feedback states | `ui/feedback/loading/*`; `ui/feedback/nexus-feedback-states.tsx`; local `isLoading*` flags in route pages; text-only loading states in discussions and packet explorer; warnings/errors with `NexusCard` tones | Shared loading and basic feedback cards now exist | Scoped loading provider/boundary exists, and basic empty/error/warning/status/operation cards are available. Most routes still render custom loading, refreshing, empty, and error copy locally where the surrounding layout is route-specific | `ui/feedback` with loading boundary, inline loading row, empty state, error state, warning state, status badge, and operation outcome card | Medium |
-| Shell, sidebars, rails, and page layout | `nexus-shell.tsx`, `nexus-shell-context.tsx`, `nexus-shell-chrome-context.tsx`, `nexus-sidebar.tsx`, route-level `NexusSectionHeader`, page `ScrollView` containers, packet explorer panel layout | Shared shell with large route-local page composition | Route pages repeat scroll containers, page gutters, card grids, metric rows, and section groupings; sidebar is large and contains several embedded control patterns | `ui/layout` with page frame, section header, section band, metric grid, rail section, shell drawer primitives, panel split, and responsive content frame | High |
+| Text inputs, composers, search fields, and form rows | `ui/forms/nexus-field-shell.tsx`, `ui/forms/nexus-text-input.tsx`, `ui/forms/nexus-text-area.tsx`, `ui/forms/nexus-field-action-row.tsx`, `ui/forms/search/*`, `features/discussions/*`; raw `TextInput` remains in larger route-local specialized controls | Shared field/input/search chrome is now available | Identity fields now wrap the generic shell/input primitives; Packet Explorer import/export fields, trust notes, roles support comments, and discussion post/reply composers use shared input/textarea seams. Broader route-local form sections still need careful migration | `ui/forms` with field shell, text input, textarea/composer, search box, result list, error text, hint text, and field action row | Medium |
+| Loading and feedback states | `ui/feedback/loading/*`; `ui/feedback/nexus-feedback-states.tsx`; discussion feature loading scopes; local `isLoading*` flags in route pages; warnings/errors with `NexusCard` tones | Shared loading and basic feedback cards now exist | Scoped loading provider/boundary exists, and discussions now mounts visual-boundary scopes for feed, root replies, reply branches, vote pills, and composers. Most routes still render custom loading, refreshing, empty, and error copy locally where the surrounding layout is route-specific | `ui/feedback` with loading boundary, inline loading row, empty state, error state, warning state, status badge, and operation outcome card | Medium |
+| Shell, sidebars, rails, and page layout | `ui/layout/nexus-page-frame.tsx`, `ui/layout/nexus-scroll-frame.tsx`, `ui/layout/nexus-panel*.tsx`, `ui/layout/nexus-metric-grid.tsx`, `ui/layout/nexus-section-band.tsx`, `ui/layout/nexus-toolbar-row.tsx`, `nexus-shell.tsx`, `nexus-sidebar.tsx`, route-level `NexusSectionHeader`, packet explorer panel layout | Shared layout primitives are now available; shell/sidebar composition remains route-specific | Identity page shell, dashboard/trust/roles metric rows, and a Packet Explorer search workbench panel now use shared layout wrappers. Route pages still repeat deeper card grids, sidebars, panel splits, and section grouping logic | `ui/layout` with page frame, section header, section band, metric grid, rail section, shell drawer primitives, panel split, and responsive content frame | Medium |
 | Preview, focus, and inspection panels | `preview/*`, `focus/*`, dashboard focused panels, packet explorer inspector panels, library packet cards | Feature-specific with reusable pieces | Preview/focus/Explorer all present selected packet context with actions, badges, summary, provenance, and navigation; the visual grammar is related but not unified | `ui/inspection` or `ui/cards` extension with packet summary panel, focus panel, preview rail, inspector section, and packet action slot | Medium |
 | Segmented controls and toggles | `NexusSegmentedPill` in `ui/forms/*`; identity security preferences; import source/validation mode; sidebar preference toggles | Shared segmented primitive plus route/sidebar variants | Segmented controls exist, but preference switches and binary toggles are still custom in sidebar/security contexts | `ui/forms` with segmented control, binary toggle, preference row, and compact option group | Low |
 
@@ -72,8 +78,8 @@ Nexus callers should import from `@app/components/nexus/ui` or a direct family p
    - Best first extraction targets: modal shell, picker shell, search result list, form field shell.
 
 2. `src/app/nexus/discussions.tsx`
-   - Contains feed/thread/post workspace composition, vote pill, reply tree controls, composers, inline loading states, focus/highlight badges, and pagination actions.
-   - Best first extraction targets: composer shell, reaction/vote pane, recursive reply card, inline loading/empty state.
+   - Still owns feed/thread/post workspace state, routing, loading, mutations, auth gates, reply branch state, and pagination actions.
+   - First feature extraction now lives in `features/discussions/*`: feed cards, root post cards, vote/reply-count pills, reply tree controls, and post/reply composers. Future work can consider promoting composer shells, reaction/vote skeletons, and recursive tree rails only after non-discussion reuse appears.
 
 3. `app/components/nexus/nexus-sidebar.tsx`
    - Contains rail layout, section rows, preference drawer, menu buttons, scope rows, and identity/session controls.
@@ -102,7 +108,7 @@ Future consolidation should create a Nexus-native shared UI home without moving 
 - `app/components/nexus/ui/forms`
   - field shell, text input, textarea/composer, action row, `search/*`, picker shell, toggles
 - `app/components/nexus/ui/layout`
-  - page frame, section header, metric grid, rail section, panel split, responsive content frame
+  - page frame, scroll frame, section header, panel/workbench panel, section band, toolbar row, metric grid, rail section, panel split, responsive content frame
 - `app/components/nexus/ui/feedback`
   - loading boundary/overlay exports, empty state, error state, warning state, status rows
 
@@ -110,10 +116,12 @@ The existing folders can then become either adapters around the shared UI or fea
 
 - `packet-explorer/*` should keep Explorer state/workbench logic but use shared tabs, overlays, forms, feedback, and panel frames.
 - `locality/*` should keep locality graph/search semantics but use shared picker, form/search, modal, and warning/outcome components.
+- `features/discussions/*` keeps discussion-specific post/reply/vote composition while consuming shared UI primitives and caller-owned loading scopes.
 - `ui/overlays/*`, `ui/cards/action-card/*`, `ui/actions/action-list/*`, `ui/feedback/loading/*`, and `ui/tabs/*` now form the initial shared UI foundation.
 - `ui/forms/search/*` now provides generic search field, result-list, result-row, status, empty/error, and loading-boundary wrappers. It intentionally does not own packet, identity, or locality search behavior.
 - `ui/forms/*` now also provides generic field shell, text input, text area, and field action row primitives. Identity-specific field wrappers remain as compatibility adapters around those generic forms.
 - `ui/feedback/*` now provides basic inline loading plus empty, error, warning, status, and operation card primitives. Scoped loading remains visual-scope owned by callers.
+- `ui/layout/*` now provides page/scroll frames, panel/workbench wrappers, panel headers, section bands, toolbar rows, and metric grids. Panel loading remains caller-owned by visual scope.
 
 ## Migration guidance
 

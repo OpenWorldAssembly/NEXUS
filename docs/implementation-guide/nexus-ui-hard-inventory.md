@@ -20,6 +20,8 @@ The first consolidation pass after the folder foundation added `app/components/n
 
 The broad `app/components/nexus/nexus-ui.tsx` primitive file has since been split into focused `ui/actions`, `ui/cards`, `ui/feedback`, `ui/forms`, `ui/layout`, and `ui/tabs` modules. `nexus-ui.tsx` remains as a compatibility bridge only; new shared UI imports should use `@app/components/nexus/ui` or direct family paths.
 
+The discussions route has since started its feature extraction into `app/components/nexus/features/discussions/*`. Feed/root post cards, vote/reply-count pills, recursive reply tree controls, and post/reply composers now live there, while `src/app/nexus/discussions.tsx` remains the route controller for query state, loading, mutations, auth gates, and reply branch state.
+
 The counts below remain useful as the pre-move hard inventory. New shared UI should prefer the `ui/*` paths.
 
 ## Snapshot summary
@@ -125,6 +127,7 @@ These files are feature-specific compositions. Most should keep their domain/con
 
 | File | Lines | Component candidates | Families | Raw primitives | Shared primitives referenced |
 | --- | ---: | --- | --- | --- | --- |
+| `app/components/nexus/features/discussions/*` | post-inventory extraction | DiscussionFeedPostCard, DiscussionRootPostCard, DiscussionReplyTree, DiscussionVotePill, DiscussionReplyCountPill, DiscussionPostComposer, DiscussionReplyComposer | cards, actions, forms, feedback | Pressable retained only inside feature controls | NexusActionButton, NexusCard, NexusBadge, NexusLoadingBoundary, NexusTextInput, NexusTextArea |
 | `app/components/nexus/discussions/nexus-discussion-focus-panel.tsx` | 127 | NexusDiscussionFocusPanel | cards, layout | Pressable 3 | NexusActionButton 2, NexusCard 3, NexusBadge 3 |
 | `app/components/nexus/focus/nexus-focused-packet-section.tsx` | 105 | NexusFocusedPacketSection | cards, layout | Pressable 3 | NexusFocusedPacketSection 1 |
 | `app/components/nexus/locality/locality-create-graph-row.tsx` | 336 | LocalityCreateGraphRow | forms | Pressable 9, TextInput 3 | NexusActionButton 4, NexusBadge 6 |
@@ -158,7 +161,7 @@ Route-local components are the highest-risk extraction zone because they often b
 | `src/app/nexus/_layout.tsx` | 71 | NexusLayoutContent, NexusLayout | layout | — | — |
 | `src/app/nexus/account.tsx` | 203 | NexusAccountPage | forms | ScrollView 3, Switch 1 | NexusActionButton 7, NexusCard 9, NexusSectionHeader 2, NexusBadge 9 |
 | `src/app/nexus/dashboard.tsx` | 655 | NexusDashboardPage | overlays | Pressable 2, Modal 3, ScrollView 3 | NexusActionButton 3, NexusCard 11, NexusSectionHeader 2, NexusFocusedPacketSection 2, NexusPreviewPanel 11, NexusActionList 5, NexusActionListItem 3, NexusBadge 5 |
-| `src/app/nexus/discussions.tsx` | 2447 | InlineReplyComposer, DiscussionVotePill, ReplyCountPill, ReplyNode, ReplyTree, NexusDiscussionsPage | forms | Pressable 9, TextInput 4, ScrollView 7 | NexusActionButton 18, NexusCard 33, NexusSectionHeader 2, NexusTabStack 2, NexusBadge 10 |
+| `src/app/nexus/discussions.tsx` | 2447 pre-extraction | NexusDiscussionsPage route/controller; post/reply/vote feature components moved to `features/discussions/*` | forms, cards, feedback | reduced after extraction; route still owns ScrollView composition | NexusActionButton, NexusCard, NexusSectionHeader, NexusTabStack, NexusBadge, NexusLoadingBoundary |
 | `src/app/nexus/identity/claim.tsx` | 425 | NexusIdentityClaimPage | support | — | NexusActionButton 8, NexusCard 9, NexusBadge 3 |
 | `src/app/nexus/identity/create.tsx` | 328 | NexusIdentityCreatePage | support | — | NexusActionButton 5, NexusCard 3 |
 | `src/app/nexus/identity/restore.tsx` | 152 | NexusIdentityRestorePage | support | — | NexusActionButton 5, NexusCard 3 |
@@ -194,15 +197,17 @@ Recommended order, based on duplication, risk, and likely payoff:
 
 1. **Overlays and modal shells**: initial shared modal shell and outcome/confirm primitives now exist under `ui/overlays`; remaining work should focus on auth/session gates, feature-status overlays, badge tooltips, and any modal content that deserves picker/outcome-specific composition. Keep auth/session logic separate from modal chrome.
 
-2. **Form field shells and searchable result lists**: base segmented, inline-select, field shell, text input, text area, action row, and search-result primitives now live under `ui/forms`; Explorer search/export/import fields, identity lookup, locality create search dropdowns, trust notes, and roles comments now have shared presentation seams. Remaining work should target discussion composers, preference rows, and broader route-local form sections.
+2. **Form field shells and searchable result lists**: base segmented, inline-select, field shell, text input, text area, action row, and search-result primitives now live under `ui/forms`; Explorer search/export/import fields, identity lookup, locality create search dropdowns, trust notes, roles comments, and discussion composers now have shared presentation seams. Remaining work should target preference rows and broader route-local form sections.
 
-3. **Layout frames and section scaffolds**: large routes repeat page scroll containers, section gutters, card grids, toolbar rows, rail sections, and panel frames.
+3. **Layout frames and section scaffolds**: page/scroll frames, panel/workbench wrappers, panel headers, section bands, toolbar rows, and metric grids now live under `ui/layout`; identity page shell, dashboard/trust/roles metric rows, and a Packet Explorer workbench panel have begun adopting them. Remaining work should target repeated route page wrappers, packet explorer panel shells, sidebar rail sections, and dashboard card rows.
 
 4. **Feedback states**: scoped loading and basic empty/error/warning/status/operation cards now live under `ui/feedback`; remaining work should replace route-local loading, refreshing, empty, and outcome copy only where the shared card can preserve the existing layout.
 
 5. **Tab unification**: keep Explorer document tabs as an extension of shared tab primitives. Do this after overlays/forms/layout so tab work does not become a broad behavioral rewrite.
 
 6. **Packet inspection/focus panels**: focus, preview, dashboard, library, and Explorer all present packet summaries with related action/badge/provenance slots. Extract only after action/menu behavior stays stable.
+
+7. **Discussion feature promotion candidates**: discussion composers, vote/reaction pills, and recursive tree rails are now isolated under `features/discussions`; promote them into `ui/*` only after another surface needs the same skeleton.
 
 
 ## Suggested future folder map
@@ -214,7 +219,7 @@ app/components/nexus/ui/
   tabs/        # shared tab frame/label/rail/stack plus Explorer document-tab extensions
   overlays/    # modal shell, confirmation, outcome dialog, popover, gates, tooltip hosts
   forms/       # field shell, text input, text area, composer, search box/result list, picker shell, toggles
-  layout/      # page frame, section band/header, panel split, rail section, toolbar frame
+  layout/      # page/scroll frame, section band/header, panel/workbench panel, panel split, rail section, toolbar frame, metric grid
   feedback/    # loading, empty, error, warning, operation result/status rows
 ```
 
