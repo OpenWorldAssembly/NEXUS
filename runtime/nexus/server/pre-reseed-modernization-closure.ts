@@ -29,6 +29,7 @@ import { trustedDefinitionCoordinator } from '@runtime/trusted_coordinators/trus
 import { trustedRegulationCoordinator } from '@runtime/trusted_coordinators/trusted_regulation_coordinator/index.ts';
 import { trustedPlanningCoordinator } from '@runtime/trusted_coordinators/trusted_planning_coordinator/index.ts';
 import { trustedBuildingCoordinator } from '@runtime/trusted_coordinators/trusted_building_coordinator/index.ts';
+import { trustedInspectionCoordinator } from '@runtime/trusted_coordinators/trusted_inspection_coordinator/index.ts';
 
 export type PreReseedClosureStatus =
   | 'closed'
@@ -136,12 +137,22 @@ function auditTrustedBuildingReadiness() {
   }).value;
 }
 
+function auditTrustedInspectionReadiness() {
+  return trustedInspectionCoordinator.auditReadiness({
+    context_mode: 'reseed',
+  }).value;
+}
+
 function regulationReadinessPasses(): boolean {
   return auditTrustedRegulationReadiness()?.ready !== false;
 }
 
 function buildingReadinessPasses(): boolean {
   return auditTrustedBuildingReadiness()?.ready !== false;
+}
+
+function inspectionReadinessPasses(): boolean {
+  return auditTrustedInspectionReadiness()?.ready !== false;
 }
 
 function queueForEntry(
@@ -237,20 +248,21 @@ function createDependencyRequirementEntries(): PreReseedClosureLedgerEntry[] {
   const regulationReady = regulationReadinessPasses();
   const planningReady = auditTrustedPlanningReadiness()?.ready !== false;
   const buildingReady = buildingReadinessPasses();
+  const inspectionReady = inspectionReadinessPasses();
 
   return listTrustedDependencyRequirements().map((descriptor) => ({
     subject_kind: 'dependency_requirement',
     subject_id: descriptor.dependency_id,
-    status: regulationReady && planningReady && buildingReady ? 'closed' : 'blocked',
+    status: regulationReady && planningReady && buildingReady && inspectionReady ? 'closed' : 'blocked',
     queue: 'policy_dependency_semantic_authority',
     reason:
-      regulationReady && planningReady && buildingReady
-        ? 'Dependency resolves through packet Definition dependency parts, Policy semantics, operation ontology, workflow resolver allowlists, or trusted local engine contracts via Trusted Planning Coordinator and materializes through Trusted Building Coordinator.'
-        : 'Trusted policy, planning, or building authority audit has blockers.',
+      regulationReady && planningReady && buildingReady && inspectionReady
+        ? 'Dependency resolves through packet Definition dependency parts, Policy semantics, operation ontology, workflow resolver allowlists, or trusted local engine contracts via Trusted Planning Coordinator, materializes through Trusted Building Coordinator, and inspects through Trusted Inspection Coordinator.'
+        : 'Trusted policy, planning, building, or inspection authority audit has blockers.',
     next_step:
-      regulationReady && planningReady && buildingReady
-        ? 'Keep Definition dependency parts synchronized with workflow plans and trusted local capability descriptors.'
-        : 'Resolve trusted planning/building and dependency semantic authority findings before reseed closure.',
+      regulationReady && planningReady && buildingReady && inspectionReady
+        ? 'Keep Definition dependency parts synchronized with workflow plans, candidate materialization, and inspection gates.'
+        : 'Resolve trusted planning/building/inspection and dependency semantic authority findings before reseed closure.',
   }));
 }
 
@@ -334,6 +346,7 @@ export function createPreReseedModernizationClosureReport(): PreReseedModernizat
   const liveGenericAudit = auditLiveGenericWorkflowEnrollments();
   const liveCompositeAudit = auditLiveCompositeWorkflowEnrollments();
   const regulationReadiness = auditTrustedRegulationReadiness();
+  const inspectionReadiness = auditTrustedInspectionReadiness();
   const clientIngressAudit = auditPacketClientIntentEnrollments();
   const compositeAdapterAudit = auditTrustedCompositeWorkflowAdapters();
   const live_mutation_intents = createMutationEntries();
@@ -382,6 +395,11 @@ export function createPreReseedModernizationClosureReport(): PreReseedModernizat
     ...liveGenericAudit.findings.map((finding) => finding.message),
     ...liveCompositeAudit.findings.map((finding) => finding.message),
     ...(regulationReadiness?.contexts ?? []).flatMap((context) => context.issues.map((issue) => issue.message)),
+    ...(inspectionReadiness?.reports ?? []).flatMap((report) => [
+      ...report.blockers,
+      ...report.warnings,
+      ...report.issues.map((issue) => issue.message),
+    ]),
     ...clientIngressAudit.findings.map((finding) => finding.message),
     ...compositeAdapterAudit.findings.map((finding) => finding.message),
   ];

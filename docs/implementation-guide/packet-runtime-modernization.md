@@ -79,7 +79,7 @@ Target coordinator families:
 - Trusted Import Coordinator and Trusted Export Coordinator for bundle ingress/egress
 - Trusted Projection Coordinator for UI-ready graph projections and available actions
 
-These coordinators are runtime concerns. They execute trusted local code and feed live context through the Core Contracts Vault. Packet definitions may describe allowed operations, defaults, dependencies, policy requirements, actions, and projection hints, but imported packet definitions must never execute local runtime behavior. The Interface Signal Conductor is the client-side signal former; it has no trusted authority. The Trusted Request Coordinator is the runtime front desk: it normalizes requests, preflights registered client/API intents, and hands accepted runtime requests to downstream coordinators. The Trusted Definition Coordinator is the gate for definition lookup: internal candidate listing, ranking, conflict audit, compatibility selection, and runtime-view compilation functions are routed through its public coordinator surface instead of being imported as loose helper functions. The Trusted Regulation Coordinator follows the same gated coordinator pattern for policy contexts, write-policy gates, requirement listing, and readiness audits. The Trusted Planning Coordinator owns packet operation plans, builder selection, defaults, dependencies, child-plan seams, body-input plans, and planning readiness so default/dependency work does not masquerade as policy enforcement. The Trusted Building Coordinator is now the gated candidate materialization seam: it consumes trusted operation plans, builds packet candidate graphs, preserves Definition-part body candidate construction, and does not re-resolve policy/default/dependency DSL.
+These coordinators are runtime concerns. They execute trusted local code and feed live context through the Core Contracts Vault. Packet definitions may describe allowed operations, defaults, dependencies, policy requirements, actions, and projection hints, but imported packet definitions must never execute local runtime behavior. The Interface Signal Conductor is the client-side signal former; it has no trusted authority. The Trusted Request Coordinator is the runtime front desk: it normalizes requests, preflights registered client/API intents, and hands accepted runtime requests to downstream coordinators. The Trusted Definition Coordinator is the gate for definition lookup: internal candidate listing, ranking, conflict audit, compatibility selection, and runtime-view compilation functions are routed through its public coordinator surface instead of being imported as loose helper functions. The Trusted Regulation Coordinator follows the same gated coordinator pattern for policy contexts, write-policy gates, requirement listing, and readiness audits. The Trusted Planning Coordinator owns packet operation plans, builder selection, defaults, dependencies, child-plan seams, body-input plans, and planning readiness so default/dependency work does not masquerade as policy enforcement. The Trusted Building Coordinator is now the gated candidate materialization seam: it consumes trusted operation plans, builds packet candidate graphs, preserves Definition-part body candidate construction, and does not re-resolve policy/default/dependency DSL. The Trusted Inspection Coordinator is now the quality gate after Building: it inspects build results against frozen operation plan snapshots, validates candidate bodies against packet body schemas, checks plan/candidate graph alignment, and does not re-plan, sign, certify, or archive in normal mode.
 
 ## Definition-Driven Build And Projection Direction
 
@@ -93,6 +93,7 @@ Resolver ownership is split by domain:
 - planning resolves operation plans, builder selection, default packet cascades, dependency satisfaction, workflow dry-runs, and child packet/component seams
 - regulation resolves policy requirements, write-policy gates, governance rules, trust gates, moderation rules, voting eligibility, and other policy checks that may be needed inside or outside packet creation
 - building creates packet candidates through the generic builder pipeline
+- inspection validates candidate graphs and body candidates against the frozen operation plan snapshot
 - projection resolves surfaces, display models, badges, and available actions
 
 Builders remain packet anatomy. Defaults describe normal starting shape. Dependencies describe required structural refs. Planning assembles those pieces into a concrete operation plan and asks Regulation for the active policy envelope when policy meaning matters. Regulation does not build packets or apply defaults; it classifies policy requirements and write gates for creation, projection, import/export review, moderation, runtime reads, and governance checks. Projection definitions describe safe display and interaction hints.
@@ -103,7 +104,7 @@ Builders remain packet anatomy. Defaults describe normal starting shape. Depende
 
 Trusted coordinators now share a scaffold contract: public coordinator object, stable coordinator id, typed result envelope, issues, trace entries, optional request/operation ids, and a manifest entry describing expected methods. Foldered trusted coordinators expose only their public coordinator and public types from `index.ts`; internal function modules and registries stay private behind the coordinator surface.
 
-`npm run audit:trusted-coordinators` checks the scaffold manifest. The audit currently treats Definition, Regulation, Planning, and Request as foldered gated coordinators. Building, Projection, and Resolution remain legacy-flat with warnings until they are promoted.
+`npm run audit:trusted-coordinators` checks the scaffold manifest. The audit currently treats Request, Definition, Regulation, Planning, Building, and Inspection as foldered gated coordinators. Projection and Resolution remain legacy-flat with warnings until they are promoted.
 
 ## Trusted Planning Coordinator Pass
 
@@ -122,6 +123,13 @@ The current implementation is intentionally pre-reseed practical:
 - operation plans call Regulation for policy contexts and optional write-policy gates, rather than duplicating policy logic
 
 Regulation is now policy-only. It still works outside packet creation, including projection, import/export review, moderation, runtime reads, and governance checks. Planning may call Regulation during packet creation, but Regulation does not own defaults, dependencies, or builder selection.
+
+
+## Trusted Inspection Coordinator Pass
+
+The Trusted Inspection Coordinator is now foldered and gated. Its public surface inspects build results, candidate graphs, individual packet body candidates, and plan alignment. Normal inspection receives the original Trusted Operation Plan snapshot plus the Trusted Build Result and asks whether Building faithfully materialized that plan. It validates candidate packet types, subtypes, builder IDs, planned body input values, body `subtype`, child candidate alignment, and packet body schemas. It does not resolve definitions, policies, defaults, dependencies, or operation plans again during normal inspection.
+
+Inspection readiness intentionally runs the full Planning -> Building -> Inspection chain as an audit flow. That is different from judging an already-built candidate against a moving live context. Certification, signing, hash finalization, and archival remain later coordinator seams.
 
 ## Manifest Core Pass
 

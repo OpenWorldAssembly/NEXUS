@@ -32,6 +32,7 @@ import { trustedDefinitionCoordinator } from '@runtime/trusted_coordinators/trus
 import { trustedRegulationCoordinator } from '@runtime/trusted_coordinators/trusted_regulation_coordinator/index.ts';
 import { trustedPlanningCoordinator } from '@runtime/trusted_coordinators/trusted_planning_coordinator/index.ts';
 import { trustedBuildingCoordinator } from '@runtime/trusted_coordinators/trusted_building_coordinator/index.ts';
+import { trustedInspectionCoordinator } from '@runtime/trusted_coordinators/trusted_inspection_coordinator/index.ts';
 
 export type FinalPreReseedReadinessStatus = 'pass' | 'fail';
 
@@ -112,6 +113,9 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
   const buildingReadiness = trustedBuildingCoordinator.auditReadiness({
     context_mode: 'reseed',
   }).value;
+  const inspectionReadiness = trustedInspectionCoordinator.auditReadiness({
+    context_mode: 'reseed',
+  }).value;
   const policySemanticAudit = auditPacketPolicySemanticAuthority({
     policyPackets: PERSONAL_SEED_PACKETS.filter(
       (packet): packet is PacketEnvelopeByType['Policy'] =>
@@ -169,6 +173,11 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
     ...(buildingReadiness?.build_results ?? []).flatMap((result) => [
       ...result.blockers,
       ...result.warnings,
+    ]),
+    ...(inspectionReadiness?.reports ?? []).flatMap((report) => [
+      ...report.blockers,
+      ...report.warnings,
+      ...report.issues.map((issue) => issue.message),
     ]),
     ...policySemanticAudit.findings.map((finding) => finding.message),
     ...clientIngressAudit.findings.map((finding) => finding.message),

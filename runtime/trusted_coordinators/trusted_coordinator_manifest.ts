@@ -87,6 +87,22 @@ export const TRUSTED_COORDINATOR_SCAFFOLD_MANIFEST = [
     notes: 'Candidate materialization coordinator. It consumes Planning output and does not resolve policy/default/dependency DSL directly.',
   },
   {
+    coordinator_id: 'trusted_inspection_coordinator.v0',
+    coordinator_kind: 'inspection',
+    public_object_name: 'trustedInspectionCoordinator',
+    public_import_path: '@runtime/trusted_coordinators/trusted_inspection_coordinator/index.ts',
+    runtime_path: 'runtime/trusted_coordinators/trusted_inspection_coordinator',
+    structure: 'foldered_gated',
+    expected_methods: [
+      { method_name: 'inspectBuildResult', notes: 'Inspects a trusted build result against its frozen operation plan snapshot.' },
+      { method_name: 'inspectCandidateGraph', notes: 'Inspects graph shape, candidate references, and body candidates.' },
+      { method_name: 'inspectPacketBodyCandidate', notes: 'Validates one candidate body against schema and planned body input values.' },
+      { method_name: 'inspectPlanAlignment', notes: 'Checks that candidate nodes align to the plan tree without re-planning.' },
+      { method_name: 'auditReadiness', notes: 'Audits planning -> building -> inspection readiness.' },
+    ],
+    notes: 'Quality gate coordinator. It measures built candidates against the plan snapshot and does not sign, store, or re-resolve the plan in normal mode.',
+  },
+  {
     coordinator_id: 'trusted_projection_coordinator.v0',
     coordinator_kind: 'projection',
     public_object_name: 'trustedProjectionCoordinator',
