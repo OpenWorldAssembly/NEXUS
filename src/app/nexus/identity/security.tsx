@@ -13,7 +13,7 @@ import {
   IdentityField,
   IdentityInput,
   IdentityPageShell,
-} from '@app/components/nexus/nexus-identity-ui';
+} from '@app/components/nexus/features/identity';
 import {
   NexusActionButton,
   NexusBadge,

@@ -4,7 +4,7 @@
  */
 
 import { useRouter } from 'expo-router';
-import { ScrollView, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
 import { useNexusAuthGate } from '@app/components/nexus/nexus-auth-gate';
@@ -13,6 +13,7 @@ import {
   NexusActionButton,
   NexusBadge,
   NexusCard,
+  NexusScrollFrame,
   NexusSectionHeader,
   useNexusAppearance,
 } from '@app/components/nexus/ui';
@@ -64,7 +65,7 @@ export default function NexusAccountPage() {
     currentIdentityMode === 'claimed' ? 'Switch identity' : 'Create fresh identity';
 
   return (
-    <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+    <NexusScrollFrame>
       <View className={appearance.pageContainerClass}>
         <NexusSectionHeader
           eyebrow="Account"
@@ -197,6 +198,6 @@ export default function NexusAccountPage() {
         </View>
       </View>
       {authGateModal}
-    </ScrollView>
+    </NexusScrollFrame>
   );
 }

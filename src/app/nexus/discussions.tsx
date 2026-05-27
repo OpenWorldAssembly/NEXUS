@@ -10,7 +10,7 @@ import type {
   NativeScrollEvent,
   NativeSyntheticEvent,
 } from 'react-native';
-import { ScrollView, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import {
   DiscussionFeedPanel,
@@ -30,6 +30,7 @@ import {
   NexusActionButton,
   NexusBadge,
   NexusCard,
+  NexusScrollFrame,
   NexusSectionHeader,
   useNexusLoading,
   useNexusAppearance,
@@ -1441,7 +1442,7 @@ export default function NexusDiscussionsPage() {
 
   return (
     <View className="flex-1">
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+      <NexusScrollFrame>
         <View className={appearance.pageContainerClass}>
         <View className="mx-auto w-full max-w-[1500px] gap-5">
           <NexusSectionHeader
@@ -1683,7 +1684,7 @@ export default function NexusDiscussionsPage() {
           )}
         </View>
         </View>
-      </ScrollView>
+      </NexusScrollFrame>
 
       {authGateModal}
     </View>

@@ -5,7 +5,7 @@
 
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
 import { useNexusAuthGate } from '@app/components/nexus/nexus-auth-gate';
@@ -17,6 +17,7 @@ import {
   NexusCard,
   NexusFieldActionRow,
   NexusMetricGrid,
+  NexusScrollFrame,
   NexusSectionHeader,
   NexusTextArea,
   useNexusAppearance,
@@ -304,7 +305,7 @@ export default function NexusRolesPage() {
 
   return (
     <View className="flex-1">
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+      <NexusScrollFrame>
         <View className={appearance.pageContainerClass}>
         <NexusSectionHeader
           eyebrow="Roles"
@@ -707,7 +708,7 @@ export default function NexusRolesPage() {
           </NexusCard>
         ) : null}
         </View>
-      </ScrollView>
+      </NexusScrollFrame>
 
       {authGateModal}
     </View>

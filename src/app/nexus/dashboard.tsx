@@ -3,7 +3,7 @@
  * Description: Renders the guest dashboard with scope totals and function preview sections.
  */
 import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import type { Href } from 'expo-router';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
@@ -35,6 +35,7 @@ import {
   NexusActionButton,
   useNexusAppearance,
   NexusMetricGrid,
+  NexusScrollFrame,
   NexusSectionHeader,
 } from '@app/components/nexus/ui';
 import type { NexusPacketCardProjection } from '@core/contracts';
@@ -467,7 +468,7 @@ export default function NexusDashboardPage() {
 
   return (
     <>
-    <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+    <NexusScrollFrame>
       <View className={appearance.pageContainerClass}>
         <NexusSectionHeader title={`${activeScope.name} Dashboard`} />
 
@@ -589,7 +590,7 @@ export default function NexusDashboardPage() {
           </NexusPreviewPanel>
         </View>
       </View>
-    </ScrollView>
+    </NexusScrollFrame>
     <NexusModalShell
       onClose={() => setVerificationModal(null)}
       visible={verificationModal !== null}

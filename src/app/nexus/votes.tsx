@@ -3,7 +3,7 @@
  * Description: Renders the vote floor surface with pipeline stages and proposal previews.
  */
 import { useEffect, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import { useNexusPreviewTargetParams } from '@app/components/nexus/preview';
@@ -11,6 +11,7 @@ import {
   NexusActionButton,
   NexusBadge,
   NexusCard,
+  NexusScrollFrame,
   useNexusAppearance,
   NexusSectionHeader,
 } from '@app/components/nexus/ui';
@@ -83,7 +84,7 @@ export default function NexusVotesPage() {
   const voteMechanics = votesPayload?.mechanics ?? NEXUS_VOTE_MECHANICS;
 
   return (
-    <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+    <NexusScrollFrame>
       <View className={appearance.pageContainerClass}>
         <NexusSectionHeader
           eyebrow="Votes"
@@ -204,6 +205,6 @@ export default function NexusVotesPage() {
           </View>
         </View>
       </View>
-    </ScrollView>
+    </NexusScrollFrame>
   );
 }

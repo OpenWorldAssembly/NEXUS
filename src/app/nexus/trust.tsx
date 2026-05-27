@@ -6,7 +6,7 @@
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
 import { useNexusAuthGate } from '@app/components/nexus/nexus-auth-gate';
@@ -18,6 +18,7 @@ import {
   NexusCard,
   NexusFieldActionRow,
   NexusMetricGrid,
+  NexusScrollFrame,
   NexusSectionHeader,
   NexusTextInput,
   useNexusAppearance,
@@ -270,7 +271,7 @@ export default function NexusTrustPage() {
 
   return (
     <View className="flex-1">
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+      <NexusScrollFrame>
         <View className={appearance.pageContainerClass}>
         <NexusSectionHeader
           eyebrow="Trust"
@@ -652,7 +653,7 @@ export default function NexusTrustPage() {
           </View>
         </View>
         </View>
-      </ScrollView>
+      </NexusScrollFrame>
       {authGateModal}
     </View>
   );

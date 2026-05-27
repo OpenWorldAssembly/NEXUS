@@ -301,3 +301,15 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - Explorer import cards, export preview/request helpers, packet inspection panels, and the validation dialog were split into focused feature-local files under `app/components/nexus/features/explorer/*`.
 - Packet validation now has a caller-owned visual loading scope, `packet-explorer:validation:<packetId>`, mounted around the validation panel without coupling loading to packet/runtime semantics.
 - The main Explorer shell still owns tabs, search state, packet loading, validation handlers, resize behavior, router calls, and session coordination; generic promotion remains deferred until repeated component types appear elsewhere.
+
+## 2026-05 Nexus primitive adoption checkpoint
+
+- Nexus entered a primitive-adoption checkpoint phase after the main `ui/*` foundations and feature extractions, classifying remaining raw React Native usage as official primitive internals, acceptable feature-local controls, route/controller usage to migrate, or behavior-sensitive deferred usage.
+- The first low-risk cleanup converted only trivial outer route scroll shells in account, dashboard, discussions, roles, trust, and votes to `NexusScrollFrame`; scroll containers with refs, handlers, bounded modal regions, graph focus, Explorer resize/session behavior, or sidebar shell animation remain local.
+- Stale `@app/components/nexus/nexus-ui` imports are treated as retired outside the compatibility bridge. Loading adoption remains visual-scope owned, with future route adoption limited to places where the async owner and blocked visual boundary are obvious.
+
+## 2026-05 Nexus UI pre-audit wrap-up
+
+- Identity route UI helpers moved into `app/components/nexus/features/identity/*`, completing the main feature-folder map alongside discussions, Explorer, locality, and sidebar.
+- `app/components/nexus/nexus-identity-ui.tsx` remains a temporary bridge only; identity routes now import from the feature folder while keeping router, auth/session, passkey, storage, mutation, and error behavior route-owned.
+- The wrap-up stayed organizational and audit-oriented: deeper trust/roles extraction, sidebar second split, dashboard/library/account/votes polish, and Interface Signal Conductor work remain post-audit follow-ups.

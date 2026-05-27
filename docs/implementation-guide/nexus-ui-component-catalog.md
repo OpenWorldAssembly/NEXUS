@@ -50,6 +50,33 @@ The broad `nexus-ui.tsx` primitive file has been split into focused component-ty
 
 Nexus callers should import from `@app/components/nexus/ui` or a direct family path. `app/components/nexus/nexus-ui.tsx` remains only as a temporary bridge for compatibility and should not be the source for new imports.
 
+## Primitive adoption checkpoint
+
+The whole-Nexus primitive checkpoint classifies raw React Native usage into four buckets:
+
+- official primitive internals, such as `ui/*` controls that still need `Pressable`, `ScrollView`, `TextInput`, `Modal`, `Switch`, or `ActivityIndicator` internally;
+- acceptable feature-local controls, such as Explorer document tabs, sidebar rails, locality graph rows, discussion panels, and bounded modal result areas where behavior remains specialized;
+- route/controller usage to migrate, where a route owns simple repeated shell chrome rather than behavior-specific controls;
+- deferred behavior-sensitive usage, where scroll refs, keyboard focus, auto-load handlers, resize behavior, animation state, or shell state make a mechanical conversion unsafe.
+
+As the first low-risk adoption cleanup, the trivial route-level `ScrollView className="flex-1" showsVerticalScrollIndicator={false}` shells in account, dashboard, discussions, roles, trust, and votes now use `NexusScrollFrame`. Scroll containers with refs, custom handlers, bounded modal bodies, graph focus behavior, Explorer workbench behavior, or sidebar shell animation remain intentionally local.
+
+Current stale-import status: Nexus routes and feature components should not import primitives from `@app/components/nexus/nexus-ui`; that file remains only as the temporary compatibility bridge.
+
+## Pre-audit wrap-up status
+
+Nexus now has the main feature-component homes expected by the consolidation roadmap:
+
+- `features/discussions/*` for discussion workspace panels, cards, composers, vote controls, and reply trees.
+- `features/explorer/*` for Packet Explorer shell, document tabs, search, import/export, validation, inspection, resize, and workbench composition.
+- `features/locality/*` for locality create panels, graph rows, picker dialogs, outcome dialogs, and preview panels.
+- `features/sidebar/*` for sidebar rail, menu, preference, scope row, and scope action composition.
+- `features/identity/*` for identity route shells, fields, preference cards, route links, and location lookup UI.
+
+Official reusable primitives live under `ui/actions`, `ui/cards`, `ui/feedback`, `ui/forms`, `ui/forms/search`, `ui/layout`, `ui/overlays`, and `ui/tabs`. Accepted exceptions remain where behavior is still specialized: Explorer document tabs, sidebar shell animation/drawer state, locality graph focus and picker orchestration, discussion auto-load scroll regions, auth gates, and identity route controller flows.
+
+The remaining large post-audit targets are trust/roles feature extraction, a sidebar second split, dashboard/library/account/votes route polish, and any locality controller cleanup that does not disturb graph/search behavior. Interface Signal Conductor work is intentionally outside this UI consolidation chapter.
+
 ## Feature extraction status
 
 The first large route decomposition passes created `app/components/nexus/features/discussions/*` for discussion-specific composed UI. The route still owns query normalization, data loading, mutations, auth gates, router navigation, and reply branch state, while extracted feature components render feed/thread/post workspace panels, feed post cards, root post cards, reply trees, vote/reply-count pills, and post/reply composers.
@@ -64,6 +91,8 @@ Locality create has begun feature-local extraction under `app/components/nexus/f
 
 Packet Explorer now lives under `app/components/nexus/features/explorer/*`. The feature folder owns Explorer-specific shell, tab, toolbar, search, import, export, data, link, resize, and inspection panels, while shared `ui/*` primitives remain the source for generic cards, forms, search result chrome, feedback, loading, tabs, and workbench panel pieces. Export and import actions have caller-owned loading scopes for packet export, store export, import analysis, import commit, and import history. A later internal decomposition split import cards, export preview helpers, inspection subpanels, and the validation dialog into sibling Explorer feature files; packet validation also gained the visual scope `packet-explorer:validation:<packetId>`. Explorer document tabs remain feature-specific until a future tab-extension pass.
 
+Identity route UI helpers now live under `app/components/nexus/features/identity/*`. Identity routes remain the controllers for router returns, auth/session state, passkey flows, storage decisions, mutations, and error state, while the feature folder owns route shells, field wrappers, preference cards, route links, and location lookup presentation/loading. `app/components/nexus/nexus-identity-ui.tsx` remains only as a temporary compatibility bridge.
+
 ## Component Type Catalog
 
 | Component type | Current files and usages | Current status | Duplication notes | Future template target | Migration risk |
@@ -73,9 +102,9 @@ Packet Explorer now lives under `app/components/nexus/features/explorer/*`. The 
 | Tabs and tab decks | `ui/tabs/nexus-tabs.tsx`, `ui/tabs/nexus-tab-primitives.tsx`, route uses in `roles`, `identity/sign-in`, `locality/create`, packet explorer toolbar and primary rail; Explorer document tabs in `features/explorer/nexus-packet-explorer-tab-deck.tsx` | Shared navigation tabs plus separate Explorer document tabs | Function-surface tabs and Explorer tabs both use `NexusTabFrame` / `NexusTabLabel`, but differ in close controls, tooltip behavior, wrapping, and session/document semantics | `ui/tabs` with shared frame/label/close primitives, navigation rail/stack, segmented tabs, and Explorer document-tab extension | Medium |
 | Modals, gates, confirmations, and overlays | `ui/overlays/*`, `features/locality/*`, `nexus-auth-gate.tsx`, `nexus-shell-entry-gate.tsx`, `nexus-feature-status-context.tsx`, packet explorer shell overlay, remaining route-local overlay variants | Shared modal shell now exists; gates remain specialized | Dashboard validation, packet import outcome, and locality create/reuse/picker dialogs now use shared modal chrome; locality dialog content is feature-local while auth/entry gates and feature-status overlays still need careful migration because they carry session or shell-specific behavior | `ui/overlays` with modal shell, confirmation dialog, outcome dialog, anchored popover, blocking gate, and shell overlay host | Medium |
 | Dropdowns, selects, pickers, and menus | `NexusInlineSelect` in `ui/forms/*`; `ui/forms/search/*`; `NexusActionMenu`; locality kind/parent/result pickers; identity location search; packet explorer search/export lookup lists; sidebar menus | Mixed shared and route-local | Action menus and inline selects are shared; search dropdown/result chrome now has shared field/list/row primitives, while picker-specific side effects remain local | `ui/menus` or `ui/forms` with inline select, anchored menu, searchable result list, picker modal, and selectable row | Medium |
-| Text inputs, composers, search fields, and form rows | `ui/forms/nexus-field-shell.tsx`, `ui/forms/nexus-text-input.tsx`, `ui/forms/nexus-text-area.tsx`, `ui/forms/nexus-field-action-row.tsx`, `ui/forms/search/*`, `features/discussions/*`; raw `TextInput` remains in larger route-local specialized controls | Shared field/input/search chrome is now available | Identity fields now wrap the generic shell/input primitives; Packet Explorer import/export fields, trust notes, roles support comments, and discussion post/reply composers use shared input/textarea seams. Broader route-local form sections still need careful migration | `ui/forms` with field shell, text input, textarea/composer, search box, result list, error text, hint text, and field action row | Medium |
+| Text inputs, composers, search fields, and form rows | `ui/forms/nexus-field-shell.tsx`, `ui/forms/nexus-text-input.tsx`, `ui/forms/nexus-text-area.tsx`, `ui/forms/nexus-field-action-row.tsx`, `ui/forms/search/*`, `features/discussions/*`, `features/identity/*`; raw `TextInput` remains in larger route-local specialized controls | Shared field/input/search chrome is now available | Identity fields now live in the identity feature folder and wrap generic shell/input primitives; Packet Explorer import/export fields, trust notes, roles support comments, and discussion post/reply composers use shared input/textarea seams. Broader route-local form sections still need careful migration | `ui/forms` with field shell, text input, textarea/composer, search box, result list, error text, hint text, and field action row | Medium |
 | Loading and feedback states | `ui/feedback/loading/*`; `ui/feedback/nexus-feedback-states.tsx`; discussion and locality feature loading scopes; local `isLoading*` flags in route pages; warnings/errors with `NexusCard` tones | Shared loading and basic feedback cards now exist | Scoped loading provider/boundary exists; discussions mount visual-boundary scopes for feed/reply/vote/composer work, and locality create now uses result, preview, create-path, and set-home loading scopes. Most routes still render custom loading, refreshing, empty, and error copy locally where the surrounding layout is route-specific | `ui/feedback` with loading boundary, inline loading row, empty state, error state, warning state, status badge, and operation outcome card | Medium |
-| Shell, sidebars, rails, and page layout | `ui/layout/nexus-page-frame.tsx`, `ui/layout/nexus-scroll-frame.tsx`, `ui/layout/nexus-panel*.tsx`, `ui/layout/nexus-metric-grid.tsx`, `ui/layout/nexus-section-band.tsx`, `ui/layout/nexus-toolbar-row.tsx`, `features/sidebar/*`, `nexus-shell.tsx`, `nexus-sidebar.tsx`, route-level `NexusSectionHeader`, packet explorer panel layout | Shared layout primitives are available; sidebar feature components now exist | Identity page shell, dashboard/trust/roles metric rows, a Packet Explorer search workbench panel, and sidebar rail/scope/menu components now use shared or feature-local wrappers. Shell/sidebar state remains controller-owned | `ui/layout` with page frame, section header, section band, metric grid, rail section, shell drawer primitives, panel split, and responsive content frame | Medium |
+| Shell, sidebars, rails, and page layout | `ui/layout/nexus-page-frame.tsx`, `ui/layout/nexus-scroll-frame.tsx`, `ui/layout/nexus-panel*.tsx`, `ui/layout/nexus-metric-grid.tsx`, `ui/layout/nexus-section-band.tsx`, `ui/layout/nexus-toolbar-row.tsx`, `features/sidebar/*`, `nexus-shell.tsx`, `nexus-sidebar.tsx`, route-level `NexusSectionHeader`, packet explorer panel layout | Shared layout primitives are available; sidebar feature components now exist | Identity page shell, dashboard/trust/roles metric rows, account/dashboard/discussions/roles/trust/votes route scroll shells, a Packet Explorer search workbench panel, and sidebar rail/scope/menu components now use shared or feature-local wrappers. Shell/sidebar state remains controller-owned | `ui/layout` with page frame, section header, section band, metric grid, rail section, shell drawer primitives, panel split, and responsive content frame | Medium |
 | Preview, focus, and inspection panels | `preview/*`, `focus/*`, dashboard focused panels, packet explorer inspector panels, library packet cards | Feature-specific with reusable pieces | Preview/focus/Explorer all present selected packet context with actions, badges, summary, provenance, and navigation; the visual grammar is related but not unified | `ui/inspection` or `ui/cards` extension with packet summary panel, focus panel, preview rail, inspector section, and packet action slot | Medium |
 | Segmented controls and toggles | `NexusSegmentedPill` in `ui/forms/*`; identity security preferences; import source/validation mode; sidebar preference toggles | Shared segmented primitive plus route/sidebar variants | Segmented controls exist, but preference switches and binary toggles are still custom in sidebar/security contexts | `ui/forms` with segmented control, binary toggle, preference row, and compact option group | Low |
 
@@ -97,9 +126,13 @@ Packet Explorer now lives under `app/components/nexus/features/explorer/*`. The 
    - Contains Explorer-specific tabs, toolbars, import/export/search panels, data panels, link groups, validation dialog, import/export cards, and packet inspection panels.
    - Next extraction targets: document-tab extension, shared workbench result/feed shell, lookup/result list promotion, and packet inspection card patterns if another surface proves reuse.
 
-5. Identity routes and `nexus-identity-ui.tsx`
-   - Already have identity field primitives, but route-local selection cards, search results, passphrase forms, and security controls overlap with broader Nexus form needs.
-   - Best first extraction targets: field shell generalization, selectable row/card, security preference row.
+5. Identity routes and `features/identity/*`
+   - Identity route shells, field wrappers, preference cards, route links, and location lookup UI now live in the identity feature folder, while auth/session/passkey/storage behavior remains route-owned.
+   - Remaining post-audit targets are selectable identity rows/cards, security passkey/session cards, and preference panels if another surface proves the same reusable skeleton.
+
+6. Primitive-adoption cleanup queue
+   - Remaining large extraction targets are locality create controller cleanup and possible follow-up feature splitting, identity sign-in/security/create/claim wrappers, trust and roles route-local form/panel sections, sidebar second split, and dashboard/library/votes/account route-shell cleanup.
+   - Loading adoption should continue only where the route or feature component owns both the async work and the visual boundary. The scoped foundation is already in place for discussions, locality, sidebar scope actions, search result regions, and Explorer import/export/validation surfaces.
 
 ## Recommended target organization
 
@@ -126,6 +159,7 @@ The existing folders can then become either adapters around the shared UI or fea
 - `features/locality/*` keeps locality graph/search semantics but uses shared picker, form/search, modal, loading, and warning/outcome components.
 - `features/discussions/*` keeps discussion-specific workspace, post/reply/vote composition while consuming shared UI primitives and caller-owned loading scopes.
 - `features/sidebar/*` keeps sidebar-specific rail, preference, function-menu, scope-list, and scope-action composition while consuming shared UI primitives and caller-owned loading scopes for async scope actions.
+- `features/identity/*` keeps identity-specific route shells, form wrappers, location lookup presentation, preference cards, and route links while routes keep auth/session/passkey/storage behavior.
 - `ui/overlays/*`, `ui/cards/action-card/*`, `ui/actions/action-list/*`, `ui/feedback/loading/*`, and `ui/tabs/*` now form the initial shared UI foundation.
 - `ui/forms/search/*` now provides generic search field, result-list, result-row, status, empty/error, and loading-boundary wrappers. It intentionally does not own packet, identity, or locality search behavior.
 - `ui/forms/*` now also provides generic field shell, text input, text area, and field action row primitives. Identity-specific field wrappers remain as compatibility adapters around those generic forms.

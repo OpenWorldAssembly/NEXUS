@@ -1,8 +1,3 @@
-/**
- * File: nexus-identity-ui.tsx
- * Description: Temporary compatibility bridge for Nexus identity feature UI helpers.
- */
-
 export {
   buildLocationDisclosure,
   IdentityField,
@@ -12,4 +7,4 @@ export {
   IdentityRouteLinks,
   LocationLookupField,
   type IdentityLocationSelection,
-} from './features/identity';
+} from './nexus-identity-ui';

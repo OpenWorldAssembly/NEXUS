@@ -17,7 +17,7 @@ import {
   IdentityPreferenceCard,
   type IdentityLocationSelection,
   LocationLookupField,
-} from '@app/components/nexus/nexus-identity-ui';
+} from '@app/components/nexus/features/identity';
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import { NexusActionButton, NexusBadge, NexusCard, useNexusAppearance } from '@app/components/nexus/ui';

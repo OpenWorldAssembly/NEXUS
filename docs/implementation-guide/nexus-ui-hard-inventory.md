@@ -28,6 +28,10 @@ Packet Explorer has since moved into `app/components/nexus/features/explorer/*`,
 
 The Explorer feature folder has also had its first internal decomposition pass: import result/history cards, export preview/request helpers, packet inspection subpanels, and the validation dialog now live in sibling Explorer feature files. Packet validation uses the caller-owned visual scope `packet-explorer:validation:<packetId>`. The file-level counts below remain the original hard-inventory baseline rather than freshly recomputed post-decomposition counts.
 
+The primitive-adoption checkpoint after that decomposition classified remaining raw primitive usage as official primitive internals, acceptable feature-local controls, route/controller usage to migrate, or deferred behavior-sensitive usage. The only mechanical route-shell conversions in that checkpoint were account, dashboard, discussions, roles, trust, and votes moving their trivial outer scroll wrappers to `NexusScrollFrame`. Library, locality create, Explorer, sidebar, and nested discussion panel scrolls remain deferred because they depend on refs, handlers, bounded regions, resize/session behavior, graph focus behavior, or shell animation.
+
+The pre-audit wrap-up moved identity route UI helpers into `app/components/nexus/features/identity/*`. The feature folder owns identity page shells, field/input wrappers, preference cards, route-link cards, and location lookup presentation/loading. `app/components/nexus/nexus-identity-ui.tsx` remains a bridge only, and identity routes keep router, auth/session, passkey, storage, mutation, and error ownership.
+
 The counts below remain useful as the pre-move hard inventory. New shared UI should prefer the `ui/*` paths.
 
 ## Snapshot summary
@@ -139,7 +143,7 @@ These files are feature-specific compositions. Most should keep their domain/con
 | `app/components/nexus/features/sidebar/*` | post-inventory extraction | NexusRailToggle, NexusGuestAvatar, NexusPreferenceSwitch, NexusCurrentContextCard, NexusFunctionMenuContent, NexusScopeActionMenu, NexusScopeListRow, NexusGroupedScopeRows, NexusScopeMenuContent | actions, cards, forms, layout, feedback | Pressable and ScrollView retained inside feature controls | NexusCard, NexusCardMenuButton, NexusChevronIcon, NexusLoadingBoundary, NexusThemedBevelEdges |
 | `app/components/nexus/features/locality/*` | post-inventory extraction | LocalityCreateSearchPanel, LocalityCreateBuilderPanel, LocalityParentPickerDialog, LocalityKindPickerDialog, LocalityCreateKindDialog, LocalitySelectedResultDialog, LocalityRemoveConfirmDialog, LocalityOutcomeDialogs, LocalityCreateGraphRow, LocalityCreatePreviewPanel | overlays, forms, cards, layout, feedback | Pressable/TextInput/ScrollView retained inside feature controls | NexusActionButton, NexusBadge, NexusCard, NexusLoadingBoundary, NexusModalShell, NexusSearchField, NexusSearchResultList |
 | `app/components/nexus/nexus-auth-gate.tsx` | 566 | NexusAuthGateModal | overlays | Pressable 4 | NexusActionButton 3, NexusCard 3 |
-| `app/components/nexus/nexus-identity-ui.tsx` | 377 | IdentityPageShell, IdentityField, IdentityInput, IdentityRouteLinks, IdentityPreferenceCard, LocationLookupField | cards, forms, layout | Pressable 3, TextInput 3, ScrollView 3 | NexusActionButton 6, NexusCard 7, NexusSectionHeader 2, NexusSegmentedPill 3 |
+| `app/components/nexus/features/identity/*` | post-inventory extraction | IdentityPageShell, IdentityField, IdentityInput, IdentityRouteLinks, IdentityPreferenceCard, LocationLookupField | cards, forms, layout, feedback | Search/result loading is feature-local; route auth/session controls remain route-owned | NexusActionButton, NexusCard, NexusSectionHeader, NexusSegmentedPill, NexusSearchField |
 | `app/components/nexus/features/explorer/nexus-packet-explorer.tsx` | 772 | NexusPacketExplorer | overlays | Pressable 9, Modal 3 | NexusActionButton 2, NexusCard 3 |
 | `app/components/nexus/nexus-shell-entry-gate.tsx` | 113 | NexusShellEntryGate | overlays, layout | Pressable 2 | NexusActionButton 2, NexusCard 3, NexusBadge 2 |
 | `app/components/nexus/nexus-shell.tsx` | 243 | NexusShell | layout | Pressable 2 | — |
@@ -165,20 +169,20 @@ Route-local components are the highest-risk extraction zone because they often b
 | Route file | Lines | Local component candidates | Families | Raw primitives | Shared primitives referenced |
 | --- | ---: | --- | --- | --- | --- |
 | `src/app/nexus/_layout.tsx` | 71 | NexusLayoutContent, NexusLayout | layout | — | — |
-| `src/app/nexus/account.tsx` | 203 | NexusAccountPage | forms | ScrollView 3, Switch 1 | NexusActionButton 7, NexusCard 9, NexusSectionHeader 2, NexusBadge 9 |
-| `src/app/nexus/dashboard.tsx` | 655 | NexusDashboardPage | overlays | Pressable 2, Modal 3, ScrollView 3 | NexusActionButton 3, NexusCard 11, NexusSectionHeader 2, NexusFocusedPacketSection 2, NexusPreviewPanel 11, NexusActionList 5, NexusActionListItem 3, NexusBadge 5 |
-| `src/app/nexus/discussions.tsx` | 1691 after panel extraction | NexusDiscussionsPage route/controller; workspace panels and post/reply/vote feature components moved to `features/discussions/*` | forms, cards, feedback, layout | route still owns outer page ScrollView composition | NexusActionButton, NexusCard, NexusSectionHeader, NexusTabStack, NexusBadge |
-| `src/app/nexus/identity/claim.tsx` | 425 | NexusIdentityClaimPage | support | — | NexusActionButton 8, NexusCard 9, NexusBadge 3 |
-| `src/app/nexus/identity/create.tsx` | 328 | NexusIdentityCreatePage | support | — | NexusActionButton 5, NexusCard 3 |
-| `src/app/nexus/identity/restore.tsx` | 152 | NexusIdentityRestorePage | support | — | NexusActionButton 5, NexusCard 3 |
-| `src/app/nexus/identity/security.tsx` | 588 | NexusIdentitySecurityPage | support | — | NexusActionButton 12, NexusCard 25, NexusSegmentedPill 3, NexusBadge 11 |
-| `src/app/nexus/identity/sign-in.tsx` | 639 | NexusIdentitySignInPage | support | Pressable 3 | NexusActionButton 7, NexusCard 13, NexusTabRail 2 |
+| `src/app/nexus/account.tsx` | 203 | NexusAccountPage | forms | Outer route shell now uses `NexusScrollFrame`, Switch 1 | NexusActionButton 7, NexusCard 9, NexusSectionHeader 2, NexusBadge 9 |
+| `src/app/nexus/dashboard.tsx` | 655 | NexusDashboardPage | overlays | Pressable 2, Modal 3, outer route shell now uses `NexusScrollFrame` | NexusActionButton 3, NexusCard 11, NexusSectionHeader 2, NexusFocusedPacketSection 2, NexusPreviewPanel 11, NexusActionList 5, NexusActionListItem 3, NexusBadge 5 |
+| `src/app/nexus/discussions.tsx` | 1691 after panel extraction | NexusDiscussionsPage route/controller; workspace panels and post/reply/vote feature components moved to `features/discussions/*` | forms, cards, feedback, layout | outer route shell now uses `NexusScrollFrame`; behavior-specific panel scrolls remain feature-local | NexusActionButton, NexusCard, NexusSectionHeader, NexusTabStack, NexusBadge |
+| `src/app/nexus/identity/claim.tsx` | 425 | NexusIdentityClaimPage route/controller | support | imports identity feature UI; route keeps auth/session/storage/mutation state | NexusActionButton 8, NexusCard 9, NexusBadge 3 |
+| `src/app/nexus/identity/create.tsx` | 328 | NexusIdentityCreatePage route/controller | support | imports identity feature UI; route keeps auth/session/storage/mutation state | NexusActionButton 5, NexusCard 3 |
+| `src/app/nexus/identity/restore.tsx` | 152 | NexusIdentityRestorePage route/controller | support | imports identity feature UI; route keeps restore/import handlers | NexusActionButton 5, NexusCard 3 |
+| `src/app/nexus/identity/security.tsx` | 588 | NexusIdentitySecurityPage route/controller | support | imports identity feature UI; route keeps passkey/session/security handlers | NexusActionButton 12, NexusCard 25, NexusSegmentedPill 3, NexusBadge 11 |
+| `src/app/nexus/identity/sign-in.tsx` | 639 | NexusIdentitySignInPage route/controller | support | imports identity feature UI; route keeps search/sign-in/passkey/import handlers | NexusActionButton 7, NexusCard 13, NexusTabRail 2 |
 | `src/app/nexus/index.tsx` | 14 | NexusIndexPage | support | — | — |
 | `src/app/nexus/library.tsx` | 317 | NexusLibraryPage | support | ScrollView 4 | NexusActionButton 5, NexusCard 9, NexusSectionHeader 2, NexusBadge 5 |
 | `src/app/nexus/locality/create.tsx` | 2470 after feature extraction cleanup | NexusLocalityCreatePage route/controller; search/build panels, picker dialogs, graph rows, preview panels, and obsolete level-row UI moved or removed | overlays, forms | route owns graph state, loading, mutations, auth, and outer scroll composition | NexusCard, NexusSectionHeader, NexusTabRail, NexusBadge |
-| `src/app/nexus/roles.tsx` | 714 | NexusRolesPage | forms | TextInput 2, ScrollView 3 | NexusActionButton 7, NexusCard 23, NexusSectionHeader 2, NexusTabRail 2, NexusBadge 17 |
-| `src/app/nexus/trust.tsx` | 659 | NexusTrustPage | forms | TextInput 2, ScrollView 3 | NexusActionButton 9, NexusCard 31, NexusSectionHeader 2, NexusBadge 20 |
-| `src/app/nexus/votes.tsx` | 210 | NexusVotesPage | support | ScrollView 3 | NexusActionButton 4, NexusCard 13, NexusSectionHeader 2, NexusBadge 7 |
+| `src/app/nexus/roles.tsx` | 714 | NexusRolesPage | forms | TextInput 2, outer route shell now uses `NexusScrollFrame` | NexusActionButton 7, NexusCard 23, NexusSectionHeader 2, NexusTabRail 2, NexusBadge 17 |
+| `src/app/nexus/trust.tsx` | 659 | NexusTrustPage | forms | TextInput 2, outer route shell now uses `NexusScrollFrame` | NexusActionButton 9, NexusCard 31, NexusSectionHeader 2, NexusBadge 20 |
+| `src/app/nexus/votes.tsx` | 210 | NexusVotesPage | support | Outer route shell now uses `NexusScrollFrame` | NexusActionButton 4, NexusCard 13, NexusSectionHeader 2, NexusBadge 7 |
 
 ## Support and context files with UI adjacency
 
@@ -216,6 +220,8 @@ Recommended order, based on duplication, risk, and likely payoff:
 7. **Discussion feature promotion candidates**: workspace panel shells, scrollable feed panels, thread toolbars, composers, vote/reaction pills, and recursive tree rails are now isolated under `features/discussions`; promote them into `ui/*` only after another surface needs the same skeleton.
 
 8. **Sidebar feature promotion candidates**: rail toggles, compact nav rows, preference switch rows, grouped collapsible sections, scope/action row shells, and anchored compact action menus are now isolated under `features/sidebar`; promote them into `ui/*` only after another surface needs the same skeleton.
+
+9. **Identity feature promotion candidates**: selectable identity rows/cards, passkey/session cards, and preference panels are now downstream candidates after the identity helpers moved into `features/identity`; promote only if another Nexus surface proves the same skeleton.
 
 
 ## Suggested future folder map
