@@ -24,6 +24,7 @@ import {
 import {
   TRUSTED_PLANNING_COORDINATOR_ID,
   type ResolveTrustedOperationPlanInput,
+  type TrustedBodyInputPlan,
   type TrustedOperationPlan,
 } from '../trusted_planning_types.ts';
 import { selectTrustedBuilderDescriptor } from './select_trusted_builder_descriptor.ts';
@@ -79,6 +80,39 @@ function isMutationActionId(actionId: string): actionId is MutationActionId {
   return actionId.includes('.');
 }
 
+
+function resolveBodyInputPlan(input: {
+  packet_type: string;
+  packet_subtype: string | null;
+  operation_kind: ResolveTrustedOperationPlanInput['operation_kind'];
+  builder_id: string | null;
+  request_values?: Readonly<Record<string, unknown>>;
+  default_values?: Readonly<Record<string, unknown>>;
+}): TrustedBodyInputPlan {
+  const requestValues = { ...(input.request_values ?? {}) };
+  const defaultValues = { ...(input.default_values ?? {}) };
+  const resolvedInputValues = {
+    ...defaultValues,
+    ...requestValues,
+  };
+
+  return {
+    plan_kind: 'trusted.body_input_plan',
+    packet_type: input.packet_type,
+    packet_subtype: input.packet_subtype,
+    operation_kind: input.operation_kind ?? 'reseed',
+    builder_id: input.builder_id,
+    resolved_input_values: resolvedInputValues,
+    default_value_keys: Object.keys(defaultValues).sort((left, right) => left.localeCompare(right)),
+    request_value_keys: Object.keys(requestValues).sort((left, right) => left.localeCompare(right)),
+    unresolved_input_paths: [],
+    blockers: [],
+    warnings: input.builder_id
+      ? []
+      : ['No builder id was selected before body input planning.'],
+  };
+}
+
 export function resolveTrustedOperationPlan(
   input: ResolveTrustedOperationPlanInput
 ): TrustedRuntimeCoordinatorResult<TrustedOperationPlan> {
@@ -109,6 +143,7 @@ export function resolveTrustedOperationPlan(
       builder_selection: null,
       default_plan: null,
       dependency_plan: null,
+      body_input_plan: null,
       policy_context: null,
       write_policy_gate: null,
       child_packet_plans: null,
@@ -199,6 +234,17 @@ export function resolveTrustedOperationPlan(
     warnings.push(...(dependencyResult.value?.warnings ?? []));
   }
 
+  const bodyInputPlan = resolveBodyInputPlan({
+    packet_type: packetType,
+    packet_subtype: packetSubtype,
+    operation_kind: operationKind,
+    builder_id: builderResult.value?.builder?.builder_id ?? null,
+    request_values: input.body_input_values,
+    default_values: defaultResult?.value?.profile.resolved_values,
+  });
+  blockers.push(...bodyInputPlan.blockers);
+  warnings.push(...bodyInputPlan.warnings);
+
   const policyResult = input.include_regulation === false
     ? null
     : trustedRegulationCoordinator.resolvePolicyContext({
@@ -267,6 +313,7 @@ export function resolveTrustedOperationPlan(
     builder_selection: builderResult.value,
     default_plan: defaultResult?.value ?? null,
     dependency_plan: dependencyResult?.value ?? null,
+    body_input_plan: bodyInputPlan,
     policy_context: policyResult?.value ?? null,
     write_policy_gate: writePolicyGateResult?.value ?? null,
     child_packet_plans: childResult.value,

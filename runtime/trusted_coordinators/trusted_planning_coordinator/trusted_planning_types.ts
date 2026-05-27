@@ -17,14 +17,14 @@ import type { PacketEnvelopeByType } from '@core/schema/packet-schema';
 import type {
   TrustedDefinitionContextMode,
   TrustedDefinitionRuntimePreference,
-} from '@runtime/trusted_coordinators/trusted_definition_coordinator';
+} from '@runtime/trusted_coordinators/trusted_definition_coordinator/index.ts';
 import type {
   ResolveTrustedPolicyContextInput,
   ResolveTrustedWritePolicyGateInput,
   TrustedPolicyContext,
   TrustedRegulationOperationKind,
   TrustedWritePolicyGate,
-} from '@runtime/trusted_coordinators/trusted_regulation_coordinator';
+} from '@runtime/trusted_coordinators/trusted_regulation_coordinator/index.ts';
 import type {
   TrustedRuntimeCoordinatorIssue,
   TrustedRuntimeCoordinatorTraceEntry,
@@ -105,6 +105,20 @@ export type TrustedBuilderSelection = {
   warnings: string[];
 };
 
+export type TrustedBodyInputPlan = {
+  plan_kind: 'trusted.body_input_plan';
+  packet_type: string;
+  packet_subtype: string | null;
+  operation_kind: TrustedPlanningOperationKind;
+  builder_id: string | null;
+  resolved_input_values: Record<string, unknown>;
+  default_value_keys: string[];
+  request_value_keys: string[];
+  unresolved_input_paths: string[];
+  blockers: string[];
+  warnings: string[];
+};
+
 export type TrustedChildPacketPlanSet = {
   plan_kind: 'trusted.child_packet_plan_set';
   packet_type: string | null;
@@ -131,6 +145,7 @@ export type TrustedOperationPlan = {
   builder_selection: TrustedBuilderSelection | null;
   default_plan: TrustedDefaultPlan | null;
   dependency_plan: TrustedDependencyPlan | null;
+  body_input_plan: TrustedBodyInputPlan | null;
   policy_context: TrustedPolicyContext | null;
   write_policy_gate: TrustedWritePolicyGate | null;
   child_packet_plans: TrustedChildPacketPlanSet | null;
@@ -167,6 +182,7 @@ export type BaseTrustedPlanningInput = {
   preferences?: readonly TrustedDefinitionRuntimePreference[];
   policy_packets?: readonly PacketEnvelopeByType['Policy'][];
   local_overrides?: readonly PacketDefaultOverrideDescriptor[];
+  body_input_values?: Readonly<Record<string, unknown>>;
 };
 
 export type ResolveTrustedDefaultPlanInput = BaseTrustedPlanningInput & {

@@ -145,7 +145,7 @@ endobj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 9 0 R >>
 endobj
 11 0 obj
-<< /Length 5061 >>
+<< /Length 5544 >>
 stream
 0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
 BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Implementation Guide - 4) Tj ET
@@ -163,33 +163,36 @@ BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 577.50 Tm (functions are route
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 562.25 Tm (loose helper functions. The Trusted Regulation Coordinator follows the same gated) Tj ET
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 547.00 Tm (coordinator pattern for policy contexts, write-policy gates, requirement listing, and) Tj ET
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 531.75 Tm (readiness audits. The Trusted Planning Coordinator owns packet operation plans, builder) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 516.50 Tm (selection, defaults, dependencies, child-plan seams, and planning readiness so) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 501.25 Tm (default/dependency work does not masquerade as policy enforcement.) Tj ET
-0.720 0.820 0.900 RG 0.80 w 54.00 469.00 m 558.00 469.00 l S
-BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 460.00 Tm (Definition-Driven Build And Projection Direction) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 428.00 Tm (The same declaration language should guide both packet creation and packet projection.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 404.75 Tm (Creation uses definitions, builders, defaults definitions, dependencies definitions, policy) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 389.50 Tm (requirements, and runtime variables to produce trusted operation plans before packet) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 374.25 Tm (candidates are built. Projection should eventually use definitions, projection hints,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 359.00 Tm (component keys, action keys, display fields, and graph relationships to produce safe) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 343.75 Tm (UI-ready view models.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 320.50 Tm (Resolver ownership is split by domain:) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 297.25 Tm (- definition resolves active definition context, definition parts, node runtime preferences,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 282.00 Tm (compatibility-only definitions, and runtime definition views) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 262.75 Tm (- planning resolves operation plans, builder selection, default packet cascades, dependency) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 247.50 Tm (satisfaction, workflow dry-runs, and child packet/component seams) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 228.25 Tm (- regulation resolves policy requirements, write-policy gates, governance rules, trust) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 213.00 Tm (gates, moderation rules, voting eligibility, and other policy checks that may be needed) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 197.75 Tm (inside or outside packet creation) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 178.50 Tm (- building creates packet candidates through the generic builder pipeline) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 159.25 Tm (- projection resolves surfaces, display models, badges, and available actions) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 516.50 Tm (selection, defaults, dependencies, child-plan seams, body-input plans, and planning) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 501.25 Tm (readiness so default/dependency work does not masquerade as policy enforcement. The Trusted) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 486.00 Tm (Building Coordinator is now the gated candidate materialization seam: it consumes trusted) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 470.75 Tm (operation plans, builds packet candidate graphs, preserves Definition-part body candidate) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 455.50 Tm (construction, and does not re-resolve policy/default/dependency DSL.) Tj ET
+0.720 0.820 0.900 RG 0.80 w 54.00 423.25 m 558.00 423.25 l S
+BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 414.25 Tm (Definition-Driven Build And Projection Direction) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 382.25 Tm (The same declaration language should guide both packet creation and packet projection.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 359.00 Tm (Creation uses definitions, builders, defaults definitions, dependencies definitions, policy) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 343.75 Tm (requirements, and runtime variables to produce trusted operation plans before packet) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 328.50 Tm (candidates are built. Projection should eventually use definitions, projection hints,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 313.25 Tm (component keys, action keys, display fields, and graph relationships to produce safe) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 298.00 Tm (UI-ready view models.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 274.75 Tm (Resolver ownership is split by domain:) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 251.50 Tm (- definition resolves active definition context, definition parts, node runtime preferences,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 236.25 Tm (compatibility-only definitions, and runtime definition views) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 217.00 Tm (- planning resolves operation plans, builder selection, default packet cascades, dependency) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 201.75 Tm (satisfaction, workflow dry-runs, and child packet/component seams) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 182.50 Tm (- regulation resolves policy requirements, write-policy gates, governance rules, trust) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 167.25 Tm (gates, moderation rules, voting eligibility, and other policy checks that may be needed) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 152.00 Tm (inside or outside packet creation) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 132.75 Tm (- building creates packet candidates through the generic builder pipeline) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 113.50 Tm (- projection resolves surfaces, display models, badges, and available actions) Tj ET
 endstream
 endobj
 12 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 11 0 R >>
 endobj
 13 0 obj
-<< /Length 4931 >>
+<< /Length 5011 >>
 stream
 0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
 BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Implementation Guide - 5) Tj ET
@@ -216,239 +219,248 @@ BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 381.25 Tm (exposes gated metho
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 366.00 Tm (builder descriptor selection, child packet plan seams, and planning readiness audits.) Tj ET
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 350.75 Tm (Defaults and dependencies moved out of the Trusted Regulation Coordinator because they are) Tj ET
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 335.50 Tm (construction-planning inputs, not policy enforcement by themselves.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 312.25 Tm (The current implementation is intentionally pre-reseed practical:) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 289.00 Tm (- default plans wrap definition defaults, policy-selected default refs, and local overrides) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 273.75 Tm (without building packet bodies directly) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 254.50 Tm (- dependency plans gather Definition dependency parts, workflow dependency IDs, semantic) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 239.25 Tm (descriptors, runtime capability refs, and optional workflow dry-run findings) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 220.00 Tm (- builder selection picks the best runtime-ready builder descriptor for the packet type,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 204.75 Tm (subtype, and action IDs) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 185.50 Tm (- child packet plans are a typed seam, currently empty until defaults, bundles, and) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 170.25 Tm (projection/component layout semantics are declared enough to recurse safely) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 151.00 Tm (- operation plans call Regulation for policy contexts and optional write-policy gates,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 135.75 Tm (rather than duplicating policy logic) Tj ET
+0.720 0.820 0.900 RG 0.80 w 54.00 303.25 m 558.00 303.25 l S
+BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 294.25 Tm (Trusted Building Coordinator Pass) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 262.25 Tm (The Trusted Building Coordinator is now foldered and gated. Its public surface builds from) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 247.00 Tm (trusted operation plans, materializes generic packet body candidate nodes, builds candidate) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 231.75 Tm (graphs from plan trees, preserves typed Definition-part body candidate construction for) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 216.50 Tm (reseed readiness, and audits whether planned operations can produce packet candidates.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 201.25 Tm (Building consumes the body-input plan prepared by Planning and does not parse) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 186.00 Tm (policy/default/dependency DSL directly. Signing, certification, inspection, and archival) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 170.75 Tm (remain outside Building.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 147.50 Tm (The current implementation is intentionally pre-reseed practical:) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 124.25 Tm (- default plans wrap definition defaults, policy-selected default refs, and local overrides) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 109.00 Tm (without building packet bodies directly) Tj ET
 endstream
 endobj
 14 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 13 0 R >>
 endobj
 15 0 obj
-<< /Length 4767 >>
+<< /Length 4683 >>
 stream
 0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
 BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Implementation Guide - 6) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 734.00 Tm (Regulation is now policy-only. It still works outside packet creation, including projection,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 718.75 Tm (import/export review, moderation, runtime reads, and governance checks. Planning may call) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 703.50 Tm (Regulation during packet creation, but Regulation does not own defaults, dependencies, or) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 688.25 Tm (builder selection.) Tj ET
-0.720 0.820 0.900 RG 0.80 w 54.00 656.00 m 558.00 656.00 l S
-BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 647.00 Tm (Manifest Core Pass) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 615.00 Tm (The first chunky implementation pass expanded the packet manifest from the Preference) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 599.75 Tm (template to the active packet types with generic builder-pipeline support: Element,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 584.50 Tm (Location, Role, Claim, Relation, Report, Proposal, Reaction, Decision, Action, Discussion,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 569.25 Tm (and Policy.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 546.00 Tm (This pass remains runtime-ready. The new definitions describe existing body schemas,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 530.75 Tm (compatibility registry posture, generic builder support, action descriptors, planner) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 515.50 Tm (descriptors, projection/index descriptors, and Definition parts. They do not change route) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 500.25 Tm (payloads, packet schemas, runtime mutation behavior, or Signal Conductor connector) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 485.00 Tm (enrollment.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 461.75 Tm (Builder-missing types remain explicit missing coverage items in the modernization audit.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 446.50 Tm (Preference later received canonical builder support and signed-corridor write enrollment.) Tj ET
-0.720 0.820 0.900 RG 0.80 w 54.00 414.25 m 558.00 414.25 l S
-BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 405.25 Tm (Packet-Type Authority Pass) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 373.25 Tm (The next implementation pass shifted the forward-looking checklist from legacy type) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 358.00 Tm (enrollment toward manifest packettype authority. The later promotion pass enrolled) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 342.75 Tm (Definition and Bundle as canonical packet types while preserving packettype language as the) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 327.50 Tm (forward-facing semantic layer.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 304.25 Tm (The pass added body builders for Definition, Bundle, and Preference. Those builders now feed) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 289.00 Tm (canonical seed-profile helpers that create real Definition packet envelopes and a Bundle) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 273.75 Tm (packet inventory for reseed material.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 250.50 Tm (Packet-type modernization coverage is now the forward-looking audit surface for manifest) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 235.25 Tm (definitions. The legacy type coverage remains as a migration bridge for live packet types) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 220.00 Tm (and should keep missing coverage items visible until those types are converted into) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 204.75 Tm (packet-type definitions and runtime connectors.) Tj ET
-0.720 0.820 0.900 RG 0.80 w 54.00 172.50 m 558.00 172.50 l S
-BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 163.50 Tm (Compatibility Definition Standard Pass) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 131.50 Tm (The compatibility standardization pass makes compatibility a required, auditable definition) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 116.25 Tm (contract. Every manifest packet type now needs a required packet_compatibility Definition) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 101.00 Tm (part and a current-version identity adapter descriptor.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- dependency plans gather Definition dependency parts, workflow dependency IDs, semantic) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 718.75 Tm (descriptors, runtime capability refs, and optional workflow dry-run findings) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 699.50 Tm (- builder selection picks the best runtime-ready builder descriptor for the packet type,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 684.25 Tm (subtype, and action IDs) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 665.00 Tm (- child packet plans are a typed seam, currently empty until defaults, bundles, and) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 649.75 Tm (projection/component layout semantics are declared enough to recurse safely) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 630.50 Tm (- operation plans call Regulation for policy contexts and optional write-policy gates,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 615.25 Tm (rather than duplicating policy logic) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 596.00 Tm (Regulation is now policy-only. It still works outside packet creation, including projection,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 580.75 Tm (import/export review, moderation, runtime reads, and governance checks. Planning may call) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 565.50 Tm (Regulation during packet creation, but Regulation does not own defaults, dependencies, or) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 550.25 Tm (builder selection.) Tj ET
+0.720 0.820 0.900 RG 0.80 w 54.00 518.00 m 558.00 518.00 l S
+BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 509.00 Tm (Manifest Core Pass) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 477.00 Tm (The first chunky implementation pass expanded the packet manifest from the Preference) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 461.75 Tm (template to the active packet types with generic builder-pipeline support: Element,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 446.50 Tm (Location, Role, Claim, Relation, Report, Proposal, Reaction, Decision, Action, Discussion,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 431.25 Tm (and Policy.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 408.00 Tm (This pass remains runtime-ready. The new definitions describe existing body schemas,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 392.75 Tm (compatibility registry posture, generic builder support, action descriptors, planner) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 377.50 Tm (descriptors, projection/index descriptors, and Definition parts. They do not change route) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 362.25 Tm (payloads, packet schemas, runtime mutation behavior, or Signal Conductor connector) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 347.00 Tm (enrollment.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 323.75 Tm (Builder-missing types remain explicit missing coverage items in the modernization audit.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 308.50 Tm (Preference later received canonical builder support and signed-corridor write enrollment.) Tj ET
+0.720 0.820 0.900 RG 0.80 w 54.00 276.25 m 558.00 276.25 l S
+BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 267.25 Tm (Packet-Type Authority Pass) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 235.25 Tm (The next implementation pass shifted the forward-looking checklist from legacy type) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 220.00 Tm (enrollment toward manifest packettype authority. The later promotion pass enrolled) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 204.75 Tm (Definition and Bundle as canonical packet types while preserving packettype language as the) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 189.50 Tm (forward-facing semantic layer.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 166.25 Tm (The pass added body builders for Definition, Bundle, and Preference. Those builders now feed) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 151.00 Tm (canonical seed-profile helpers that create real Definition packet envelopes and a Bundle) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 135.75 Tm (packet inventory for reseed material.) Tj ET
 endstream
 endobj
 16 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 15 0 R >>
 endobj
 17 0 obj
-<< /Length 4729 >>
+<< /Length 5066 >>
 stream
 0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
 BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Implementation Guide - 7) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 734.00 Tm (Generic type definitions derive definition compatibility descriptors from the canonical) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 718.75 Tm (compatibility registry. Current-only types expose identity compatibility, while legacy-aware) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 703.50 Tm (types expose adjacent upcast/downcast ladder edges where the registry has adapter functions.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 688.25 Tm (Multi-step ladders use the fullchainbundle strategy so future bundles can carry discoverable) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 673.00 Tm (adapter metadata without pretending every adapter must touch the current schema directly.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 649.75 Tm (The manifest audit now fails when compatibility posture and descriptors disagree, when) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 634.50 Tm (downcast edges lack loss awareness, when duplicate adapter edges exist, or when a claimed) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 619.25 Tm (full-chain graph is disconnected from the current version. This keeps reseed and) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 604.00 Tm (import/export planning honest before runtime handler extraction or Trusted Runtime) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 588.75 Tm (Coordinator pipeline promotion begins.) Tj ET
-0.720 0.820 0.900 RG 0.80 w 54.00 556.50 m 558.00 556.50 l S
-BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 547.50 Tm (Mutation Handler Extraction Pass) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 515.50 Tm (The signed mutation corridor remains the live authority for prepare, proof, finalize, and) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 500.25 Tm (persistence decisions. The packet-runtime Signal Conductor remains the client/API-to-runtime) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 485.00 Tm (connector bridge; it does not own signed mutation internals yet.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 461.75 Tm (The extraction pass introduces domain-composed mutation handler maps for locality,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 446.50 Tm (discussion, reaction, assembly, relation, role, and actor policy. MutationPrepareHandlers) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 431.25 Tm (and MutationFinalizeHandlers remain compatibility facades for the current implementation,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 416.00 Tm (while the composed maps give the runtime a clearer stepping-stone toward generic packet) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 400.75 Tm (planners.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 377.50 Tm (Each live mutation intent now has a genericization classification:) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 354.25 Tm (- generic_ready means the intent is close to manifest/action/planner routing once its local) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 339.00 Tm (read dependencies are isolated.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 319.75 Tm (- plannerextractionneeded means reusable packet planning must be extracted before generic) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 304.50 Tm (routing.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 285.25 Tm (- workflow_specific means runtime orchestration still coordinates multiple packet operations) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 270.00 Tm (or projections.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 250.75 Tm (- legacy_bridge means the intent is a compatibility alias that should collapse into a) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 235.50 Tm (canonical intent.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 216.25 Tm (This pass intentionally preserves behavior. It records which mutation-service code should be) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 201.00 Tm (retired, which should become reusable planners, and which orchestration remains) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 185.75 Tm (runtime-owned before any live Trusted Runtime Coordinator pipeline promotion.) Tj ET
-0.720 0.820 0.900 RG 0.80 w 54.00 153.50 m 558.00 153.50 l S
-BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 144.50 Tm (Packet Operation Ontology Pass) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 734.00 Tm (Packet-type modernization coverage is now the forward-looking audit surface for manifest) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 718.75 Tm (definitions. The legacy type coverage remains as a migration bridge for live packet types) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 703.50 Tm (and should keep missing coverage items visible until those types are converted into) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 688.25 Tm (packet-type definitions and runtime connectors.) Tj ET
+0.720 0.820 0.900 RG 0.80 w 54.00 656.00 m 558.00 656.00 l S
+BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 647.00 Tm (Compatibility Definition Standard Pass) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 615.00 Tm (The compatibility standardization pass makes compatibility a required, auditable definition) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 599.75 Tm (contract. Every manifest packet type now needs a required packet_compatibility Definition) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 584.50 Tm (part and a current-version identity adapter descriptor.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 561.25 Tm (Generic type definitions derive definition compatibility descriptors from the canonical) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 546.00 Tm (compatibility registry. Current-only types expose identity compatibility, while legacy-aware) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 530.75 Tm (types expose adjacent upcast/downcast ladder edges where the registry has adapter functions.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 515.50 Tm (Multi-step ladders use the fullchainbundle strategy so future bundles can carry discoverable) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 500.25 Tm (adapter metadata without pretending every adapter must touch the current schema directly.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 477.00 Tm (The manifest audit now fails when compatibility posture and descriptors disagree, when) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 461.75 Tm (downcast edges lack loss awareness, when duplicate adapter edges exist, or when a claimed) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 446.50 Tm (full-chain graph is disconnected from the current version. This keeps reseed and) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 431.25 Tm (import/export planning honest before runtime handler extraction or Trusted Runtime) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 416.00 Tm (Coordinator pipeline promotion begins.) Tj ET
+0.720 0.820 0.900 RG 0.80 w 54.00 383.75 m 558.00 383.75 l S
+BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 374.75 Tm (Mutation Handler Extraction Pass) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 342.75 Tm (The signed mutation corridor remains the live authority for prepare, proof, finalize, and) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 327.50 Tm (persistence decisions. The packet-runtime Signal Conductor remains the client/API-to-runtime) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 312.25 Tm (connector bridge; it does not own signed mutation internals yet.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 289.00 Tm (The extraction pass introduces domain-composed mutation handler maps for locality,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 273.75 Tm (discussion, reaction, assembly, relation, role, and actor policy. MutationPrepareHandlers) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 258.50 Tm (and MutationFinalizeHandlers remain compatibility facades for the current implementation,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 243.25 Tm (while the composed maps give the runtime a clearer stepping-stone toward generic packet) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 228.00 Tm (planners.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 204.75 Tm (Each live mutation intent now has a genericization classification:) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 181.50 Tm (- generic_ready means the intent is close to manifest/action/planner routing once its local) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 166.25 Tm (read dependencies are isolated.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 147.00 Tm (- plannerextractionneeded means reusable packet planning must be extracted before generic) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 131.75 Tm (routing.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 112.50 Tm (- workflow_specific means runtime orchestration still coordinates multiple packet operations) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 97.25 Tm (or projections.) Tj ET
 endstream
 endobj
 18 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 17 0 R >>
 endobj
 19 0 obj
-<< /Length 4862 >>
+<< /Length 5132 >>
 stream
 0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
 BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Implementation Guide - 8) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 734.00 Tm (The operation ontology pass adds the missing contract between packet definitions and trusted) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 718.75 Tm (runtime execution. Packet definitions may now describe allowed mutation semantics by mapping) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 703.50 Tm (their manifest mutation descriptors to known operation kinds such as singlepacket.create,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 688.25 Tm (singlepacket.revise, relation.set, claim.assert, reaction.set, bundle.import,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 673.00 Tm (projection.refresh, compatibility.adapt, and workflow.compose.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 649.75 Tm (This ontology is an allowlist, not executable packet-defined code. Each operation records) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 634.50 Tm (its expected planner kind, builder kind, result type, trusted local runtime engine, generic) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 619.25 Tm (capability posture, and safety notes. Packet definitions can request known operation) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 604.00 Tm (semantics, but only local trusted engines may execute builders, planners, adapters,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 588.75 Tm (workflows, or persistence.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 565.50 Tm (The manifest audit now fails closed when a mutation descriptor cannot map to a known) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 550.25 Tm (operation kind. The forward-looking packet operation modernization coverage lists every) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 535.00 Tm (manifest mutation, the operation kinds it resolves to, the trusted local engine requested,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 519.75 Tm (and whether the gap is already mapped or still planned.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 496.50 Tm (The signed mutation genericization audit also records operation mappings for every live) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 481.25 Tm (mutation intent:) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 458.00 Tm (- generic_ready intents map directly to concrete operation kinds, but still wait for the) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 442.75 Tm (later live promotion pass.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 423.50 Tm (- plannerextractionneeded intents map to their target operation kind and keep an explicit) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 408.25 Tm (planner extraction gap.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 389.00 Tm (- workflow_specific intents map to workflow.compose or a composed operation set and remain) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 373.75 Tm (runtime-owned until their component operations can be split safely.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 354.50 Tm (- legacy_bridge intents point at the canonical operation direction they should collapse) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 339.25 Tm (into.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 320.00 Tm (This keeps ingress normalization separate from mutation authority. The Signal Conductor can) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 304.75 Tm (normalize client/API ingress requests and eventually choose operation descriptors, while the) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 289.50 Tm (trusted mutation pipeline still owns prepare/finalize/proof/persistence until a later pass) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 274.25 Tm (promotes selected operation kinds through the generic path.) Tj ET
-0.720 0.820 0.900 RG 0.80 w 54.00 242.00 m 558.00 242.00 l S
-BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 233.00 Tm (Generic Workflow Planner Contract Pass) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 201.00 Tm (The workflow planner contract pass adds the declarative layer above individual operation) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 185.75 Tm (kinds. Packet definitions may now describe definition workflow plans as ordered steps over) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 170.50 Tm (known generic operations, trusted resolver IDs, value bindings, simple conditions, policy) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 155.25 Tm (action IDs, and runtime dependency IDs.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- legacy_bridge means the intent is a compatibility alias that should collapse into a) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 718.75 Tm (canonical intent.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 699.50 Tm (This pass intentionally preserves behavior. It records which mutation-service code should be) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 684.25 Tm (retired, which should become reusable planners, and which orchestration remains) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 669.00 Tm (runtime-owned before any live Trusted Runtime Coordinator pipeline promotion.) Tj ET
+0.720 0.820 0.900 RG 0.80 w 54.00 636.75 m 558.00 636.75 l S
+BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 627.75 Tm (Packet Operation Ontology Pass) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 595.75 Tm (The operation ontology pass adds the missing contract between packet definitions and trusted) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 580.50 Tm (runtime execution. Packet definitions may now describe allowed mutation semantics by mapping) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 565.25 Tm (their manifest mutation descriptors to known operation kinds such as singlepacket.create,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 550.00 Tm (singlepacket.revise, relation.set, claim.assert, reaction.set, bundle.import,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 534.75 Tm (projection.refresh, compatibility.adapt, and workflow.compose.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 511.50 Tm (This ontology is an allowlist, not executable packet-defined code. Each operation records) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 496.25 Tm (its expected planner kind, builder kind, result type, trusted local runtime engine, generic) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 481.00 Tm (capability posture, and safety notes. Packet definitions can request known operation) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 465.75 Tm (semantics, but only local trusted engines may execute builders, planners, adapters,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 450.50 Tm (workflows, or persistence.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 427.25 Tm (The manifest audit now fails closed when a mutation descriptor cannot map to a known) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 412.00 Tm (operation kind. The forward-looking packet operation modernization coverage lists every) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 396.75 Tm (manifest mutation, the operation kinds it resolves to, the trusted local engine requested,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 381.50 Tm (and whether the gap is already mapped or still planned.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 358.25 Tm (The signed mutation genericization audit also records operation mappings for every live) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 343.00 Tm (mutation intent:) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 319.75 Tm (- generic_ready intents map directly to concrete operation kinds, but still wait for the) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 304.50 Tm (later live promotion pass.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 285.25 Tm (- plannerextractionneeded intents map to their target operation kind and keep an explicit) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 270.00 Tm (planner extraction gap.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 250.75 Tm (- workflow_specific intents map to workflow.compose or a composed operation set and remain) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 235.50 Tm (runtime-owned until their component operations can be split safely.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 216.25 Tm (- legacy_bridge intents point at the canonical operation direction they should collapse) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 201.00 Tm (into.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 181.75 Tm (This keeps ingress normalization separate from mutation authority. The Signal Conductor can) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 166.50 Tm (normalize client/API ingress requests and eventually choose operation descriptors, while the) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 151.25 Tm (trusted mutation pipeline still owns prepare/finalize/proof/persistence until a later pass) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 136.00 Tm (promotes selected operation kinds through the generic path.) Tj ET
+0.720 0.820 0.900 RG 0.80 w 54.00 103.75 m 558.00 103.75 l S
+BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 94.75 Tm (Generic Workflow Planner Contract Pass) Tj ET
 endstream
 endobj
 20 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 19 0 R >>
 endobj
 21 0 obj
-<< /Length 4802 >>
+<< /Length 5196 >>
 stream
 0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
 BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Implementation Guide - 9) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 734.00 Tm (Workflow plans are data, not code. Definitions can say "resolve actor and target, then run) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 718.75 Tm (relation.set" or "if the input value is present run reaction.set, otherwise run) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 703.50 Tm (reaction.clear." They cannot introduce arbitrary functions, dynamic imports, persistence) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 688.25 Tm (behavior, route payloads, or proof rules. The runtime interpreter validates every operation,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 673.00 Tm (resolver, dependency, condition operator, policy action, and step reference against local) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 657.75 Tm (allowlists before producing a dry-run plan.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 634.50 Tm (The first definition workflow plans cover the generic-ready mutation candidates:) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 611.25 Tm (- relation.follow.add) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 592.00 Tm (- relation.follow.clear) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 572.75 Tm (- role_association.claim.set) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 553.50 Tm (- reaction.vote.set) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 534.25 Tm (These plans do not enroll live execution. They prove the manifest can describe) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 519.00 Tm (packet-specific variables and ordered generic work while preserving the signed mutation) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 503.75 Tm (corridor as the only live prepare/finalize/proof/persistence authority.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 480.50 Tm (Policy and dependency descriptors now matter as referenced workflow metadata, but their full) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 465.25 Tm (semantics remain a dedicated pre-reseed pass. Unused legacy packet types remain explicit) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 450.00 Tm (missing coverage items and do not block the generic workflow contract or switch-over) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 434.75 Tm (planning.) Tj ET
-0.720 0.820 0.900 RG 0.80 w 54.00 402.50 m 558.00 402.50 l S
-BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 393.50 Tm (Workflow Alignment Pass) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 361.50 Tm (The workflow alignment pass connects the manifest workflow contract to the extracted) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 346.25 Tm (mutation planner map. It adds a runtime-side audit that lists every live mutation intent,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 331.00 Tm (its genericization status, operation mapping, workflow-plan coverage, policy action IDs,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 315.75 Tm (trusted resolver/capability IDs, and remaining packet-specific assumptions.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 292.50 Tm (The alignment map is the working checklist for retiring packet-specific mutation-service) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 277.25 Tm (code. Generic-ready intents must have clean workflow dry-runs and trusted local capability) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 262.00 Tm (coverage. Planner-extraction intents may either have a definition workflow plan or an) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 246.75 Tm (explicit missing coverage item. Workflow-specific intents remain runtime-owned orchestration) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 231.50 Tm (until their component operations can be split safely. Legacy bridge intents point at) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 216.25 Tm (canonical workflow directions rather than receiving independent workflows.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 193.00 Tm (This pass expands definition workflow coverage for knowable planner-extraction candidates:) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 169.75 Tm (- relation.association.add) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 150.50 Tm (- relation.association.clear) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 131.25 Tm (- relation.residence.add) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 112.00 Tm (- discussion.reply.create) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 734.00 Tm (The workflow planner contract pass adds the declarative layer above individual operation) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 718.75 Tm (kinds. Packet definitions may now describe definition workflow plans as ordered steps over) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 703.50 Tm (known generic operations, trusted resolver IDs, value bindings, simple conditions, policy) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 688.25 Tm (action IDs, and runtime dependency IDs.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 665.00 Tm (Workflow plans are data, not code. Definitions can say "resolve actor and target, then run) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 649.75 Tm (relation.set" or "if the input value is present run reaction.set, otherwise run) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 634.50 Tm (reaction.clear." They cannot introduce arbitrary functions, dynamic imports, persistence) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 619.25 Tm (behavior, route payloads, or proof rules. The runtime interpreter validates every operation,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 604.00 Tm (resolver, dependency, condition operator, policy action, and step reference against local) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 588.75 Tm (allowlists before producing a dry-run plan.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 565.50 Tm (The first definition workflow plans cover the generic-ready mutation candidates:) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 542.25 Tm (- relation.follow.add) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 523.00 Tm (- relation.follow.clear) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 503.75 Tm (- role_association.claim.set) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 484.50 Tm (- reaction.vote.set) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 465.25 Tm (These plans do not enroll live execution. They prove the manifest can describe) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 450.00 Tm (packet-specific variables and ordered generic work while preserving the signed mutation) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 434.75 Tm (corridor as the only live prepare/finalize/proof/persistence authority.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 411.50 Tm (Policy and dependency descriptors now matter as referenced workflow metadata, but their full) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 396.25 Tm (semantics remain a dedicated pre-reseed pass. Unused legacy packet types remain explicit) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 381.00 Tm (missing coverage items and do not block the generic workflow contract or switch-over) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 365.75 Tm (planning.) Tj ET
+0.720 0.820 0.900 RG 0.80 w 54.00 333.50 m 558.00 333.50 l S
+BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 324.50 Tm (Workflow Alignment Pass) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 292.50 Tm (The workflow alignment pass connects the manifest workflow contract to the extracted) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 277.25 Tm (mutation planner map. It adds a runtime-side audit that lists every live mutation intent,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 262.00 Tm (its genericization status, operation mapping, workflow-plan coverage, policy action IDs,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 246.75 Tm (trusted resolver/capability IDs, and remaining packet-specific assumptions.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 223.50 Tm (The alignment map is the working checklist for retiring packet-specific mutation-service) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 208.25 Tm (code. Generic-ready intents must have clean workflow dry-runs and trusted local capability) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 193.00 Tm (coverage. Planner-extraction intents may either have a definition workflow plan or an) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 177.75 Tm (explicit missing coverage item. Workflow-specific intents remain runtime-owned orchestration) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 162.50 Tm (until their component operations can be split safely. Legacy bridge intents point at) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 147.25 Tm (canonical workflow directions rather than receiving independent workflows.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 124.00 Tm (This pass expands definition workflow coverage for knowable planner-extraction candidates:) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 100.75 Tm (- relation.association.add) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 81.50 Tm (- relation.association.clear) Tj ET
 endstream
 endobj
 22 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 21 0 R >>
 endobj
 23 0 obj
-<< /Length 4905 >>
+<< /Length 5092 >>
 stream
 0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
 BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Implementation Guide - 10) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 734.00 Tm (The alignment remains runtime-ready. Existing runtime planner modules are registered as) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 718.75 Tm (trusted local capabilities by descriptor, but their implementation is not moved, rewritten,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 703.50 Tm (or invoked through generic execution yet. Unused removed packet types remain visible missing) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 688.25 Tm (coverage items and do not block switch-over planning.) Tj ET
-0.720 0.820 0.900 RG 0.80 w 54.00 656.00 m 558.00 656.00 l S
-BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 647.00 Tm (Runtime Ingress And Mutation Handoff Pass) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 615.00 Tm (Ingress preflight and mutation authority remain separate layers. Ingress preflight owns) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 599.75 Tm (client/API normalization, manifest/workflow lookup, connector selection, definition handoff) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 584.50 Tm (metadata, and response/refresh hints. The signed mutation corridor owns policy/proof) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 569.25 Tm (authority, prepare/finalize lifecycle, mutation tickets, signed packet validation,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 554.00 Tm (persistence, and canonical mutation effects.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 530.75 Tm (The handoff pass adds a definition PacketRuntimeMutationHandoff contract. A handoff records) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 515.50 Tm (the normalized mutation direction, workflow alignment status, operation kinds, workflow plan) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 500.25 Tm (IDs, trusted capability IDs, policy action IDs, dependency IDs, resolver IDs,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 485.00 Tm (prepare/finalize coordinator names, and return refresh hints. It carries) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 469.75 Tm (externaldefinitionexecution_enabled: false to record that imported definitions describe) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 454.50 Tm (behavior while trusted local runtime code executes it.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 431.25 Tm (Generic-ready and workflow-aligned planner-extraction intents can now produce) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 416.00 Tm (definition_ready handoffs. Runtime-owned workflow intents produce explicit non-ready) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 400.75 Tm (handoffs with orchestration reason codes. Legacy bridge intents point at canonical handoff) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 385.50 Tm (directions. Unknown mutation intents fail closed before any mutation handoff.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 362.25 Tm (At the time of this pass, this did not change the live mutation routes. The current state is) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 347.00 Tm (stricter: NexusMutationService remains the live signed mutation authority, and authenticated) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 331.75 Tm (Preference.element writes now enter that trusted mutation service path rather than the old) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 316.50 Tm (direct packet-runtime connector.) Tj ET
-0.720 0.820 0.900 RG 0.80 w 54.00 284.25 m 558.00 284.25 l S
-BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 275.25 Tm (Packet-Based Policy, Dependency, and Client Ingress) Tj ET
-BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 253.25 Tm (Enrollment Pass) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 221.25 Tm (Policy and dependency requirements are now audited as packet-backed semantics rather than a) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 206.00 Tm (second runtime-only dependency system. Workflow plans can reference policy action IDs and) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 190.75 Tm (dependency IDs, but those references must resolve to packet policy semantics, packet) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 175.50 Tm (Definition dependency parts, operation ontology entries, trusted workflow resolvers, or) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 160.25 Tm (trusted local capability metadata. Runtime descriptors may index and validate those) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 145.00 Tm (references, but they do not define packet meaning.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- relation.residence.add) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 714.75 Tm (- discussion.reply.create) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 695.50 Tm (The alignment remains runtime-ready. Existing runtime planner modules are registered as) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 680.25 Tm (trusted local capabilities by descriptor, but their implementation is not moved, rewritten,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 665.00 Tm (or invoked through generic execution yet. Unused removed packet types remain visible missing) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 649.75 Tm (coverage items and do not block switch-over planning.) Tj ET
+0.720 0.820 0.900 RG 0.80 w 54.00 617.50 m 558.00 617.50 l S
+BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 608.50 Tm (Runtime Ingress And Mutation Handoff Pass) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 576.50 Tm (Ingress preflight and mutation authority remain separate layers. Ingress preflight owns) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 561.25 Tm (client/API normalization, manifest/workflow lookup, connector selection, definition handoff) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 546.00 Tm (metadata, and response/refresh hints. The signed mutation corridor owns policy/proof) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 530.75 Tm (authority, prepare/finalize lifecycle, mutation tickets, signed packet validation,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 515.50 Tm (persistence, and canonical mutation effects.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 492.25 Tm (The handoff pass adds a definition PacketRuntimeMutationHandoff contract. A handoff records) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 477.00 Tm (the normalized mutation direction, workflow alignment status, operation kinds, workflow plan) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 461.75 Tm (IDs, trusted capability IDs, policy action IDs, dependency IDs, resolver IDs,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 446.50 Tm (prepare/finalize coordinator names, and return refresh hints. It carries) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 431.25 Tm (externaldefinitionexecution_enabled: false to record that imported definitions describe) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 416.00 Tm (behavior while trusted local runtime code executes it.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 392.75 Tm (Generic-ready and workflow-aligned planner-extraction intents can now produce) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 377.50 Tm (definition_ready handoffs. Runtime-owned workflow intents produce explicit non-ready) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 362.25 Tm (handoffs with orchestration reason codes. Legacy bridge intents point at canonical handoff) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 347.00 Tm (directions. Unknown mutation intents fail closed before any mutation handoff.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 323.75 Tm (At the time of this pass, this did not change the live mutation routes. The current state is) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 308.50 Tm (stricter: NexusMutationService remains the live signed mutation authority, and authenticated) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 293.25 Tm (Preference.element writes now enter that trusted mutation service path rather than the old) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 278.00 Tm (direct packet-runtime connector.) Tj ET
+0.720 0.820 0.900 RG 0.80 w 54.00 245.75 m 558.00 245.75 l S
+BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 236.75 Tm (Packet-Based Policy, Dependency, and Client Ingress) Tj ET
+BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 214.75 Tm (Enrollment Pass) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 182.75 Tm (Policy and dependency requirements are now audited as packet-backed semantics rather than a) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 167.50 Tm (second runtime-only dependency system. Workflow plans can reference policy action IDs and) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 152.25 Tm (dependency IDs, but those references must resolve to packet policy semantics, packet) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 137.00 Tm (Definition dependency parts, operation ontology entries, trusted workflow resolvers, or) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 121.75 Tm (trusted local capability metadata. Runtime descriptors may index and validate those) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 106.50 Tm (references, but they do not define packet meaning.) Tj ET
 endstream
 endobj
 24 0 obj
@@ -3002,135 +3014,135 @@ xref
 0000009877 00000 n 
 0000014267 00000 n 
 0000014404 00000 n 
-0000019518 00000 n 
-0000019656 00000 n 
-0000024640 00000 n 
-0000024778 00000 n 
-0000029598 00000 n 
-0000029736 00000 n 
-0000034518 00000 n 
-0000034656 00000 n 
-0000039571 00000 n 
-0000039709 00000 n 
-0000044564 00000 n 
-0000044702 00000 n 
-0000049660 00000 n 
-0000049798 00000 n 
-0000055181 00000 n 
-0000055319 00000 n 
-0000060455 00000 n 
-0000060593 00000 n 
-0000065342 00000 n 
-0000065480 00000 n 
-0000070174 00000 n 
-0000070312 00000 n 
-0000075440 00000 n 
-0000075578 00000 n 
-0000079963 00000 n 
-0000080101 00000 n 
-0000085276 00000 n 
-0000085414 00000 n 
-0000090240 00000 n 
-0000090378 00000 n 
-0000094346 00000 n 
-0000094484 00000 n 
-0000098429 00000 n 
-0000098567 00000 n 
-0000102254 00000 n 
-0000102392 00000 n 
-0000106340 00000 n 
-0000106478 00000 n 
-0000111015 00000 n 
-0000111153 00000 n 
-0000115965 00000 n 
-0000116103 00000 n 
-0000118019 00000 n 
-0000118157 00000 n 
-0000129915 00000 n 
-0000130053 00000 n 
-0000134985 00000 n 
-0000135123 00000 n 
-0000139955 00000 n 
-0000140093 00000 n 
-0000144637 00000 n 
-0000144775 00000 n 
-0000149797 00000 n 
-0000149935 00000 n 
-0000155135 00000 n 
-0000155273 00000 n 
-0000160975 00000 n 
-0000161113 00000 n 
-0000166373 00000 n 
-0000166511 00000 n 
-0000177643 00000 n 
-0000177781 00000 n 
-0000183652 00000 n 
-0000183790 00000 n 
-0000189460 00000 n 
-0000189598 00000 n 
-0000194646 00000 n 
-0000194784 00000 n 
-0000198210 00000 n 
-0000198348 00000 n 
-0000202412 00000 n 
-0000202550 00000 n 
-0000206282 00000 n 
-0000206420 00000 n 
-0000211025 00000 n 
-0000211163 00000 n 
-0000215450 00000 n 
-0000215588 00000 n 
-0000220206 00000 n 
-0000220344 00000 n 
-0000224118 00000 n 
-0000224256 00000 n 
-0000229239 00000 n 
-0000229377 00000 n 
-0000234402 00000 n 
-0000234540 00000 n 
-0000238835 00000 n 
-0000238973 00000 n 
-0000242955 00000 n 
-0000243094 00000 n 
-0000246730 00000 n 
-0000246870 00000 n 
-0000251216 00000 n 
-0000251356 00000 n 
-0000255296 00000 n 
-0000255436 00000 n 
-0000259591 00000 n 
-0000259731 00000 n 
-0000263946 00000 n 
-0000264086 00000 n 
-0000268751 00000 n 
-0000268891 00000 n 
-0000273646 00000 n 
-0000273786 00000 n 
-0000279068 00000 n 
-0000279208 00000 n 
-0000284472 00000 n 
-0000284612 00000 n 
-0000290047 00000 n 
-0000290187 00000 n 
-0000295263 00000 n 
-0000295403 00000 n 
-0000300142 00000 n 
-0000300282 00000 n 
-0000305297 00000 n 
-0000305437 00000 n 
-0000310439 00000 n 
-0000310579 00000 n 
-0000315930 00000 n 
-0000316070 00000 n 
-0000321216 00000 n 
-0000321356 00000 n 
-0000326616 00000 n 
-0000326756 00000 n 
-0000332179 00000 n 
-0000332319 00000 n 
-0000333282 00000 n 
+0000020001 00000 n 
+0000020139 00000 n 
+0000025203 00000 n 
+0000025341 00000 n 
+0000030077 00000 n 
+0000030215 00000 n 
+0000035334 00000 n 
+0000035472 00000 n 
+0000040657 00000 n 
+0000040795 00000 n 
+0000046044 00000 n 
+0000046182 00000 n 
+0000051327 00000 n 
+0000051465 00000 n 
+0000056848 00000 n 
+0000056986 00000 n 
+0000062122 00000 n 
+0000062260 00000 n 
+0000067009 00000 n 
+0000067147 00000 n 
+0000071841 00000 n 
+0000071979 00000 n 
+0000077107 00000 n 
+0000077245 00000 n 
+0000081630 00000 n 
+0000081768 00000 n 
+0000086943 00000 n 
+0000087081 00000 n 
+0000091907 00000 n 
+0000092045 00000 n 
+0000096013 00000 n 
+0000096151 00000 n 
+0000100096 00000 n 
+0000100234 00000 n 
+0000103921 00000 n 
+0000104059 00000 n 
+0000108007 00000 n 
+0000108145 00000 n 
+0000112682 00000 n 
+0000112820 00000 n 
+0000117632 00000 n 
+0000117770 00000 n 
+0000119686 00000 n 
+0000119824 00000 n 
+0000131582 00000 n 
+0000131720 00000 n 
+0000136652 00000 n 
+0000136790 00000 n 
+0000141622 00000 n 
+0000141760 00000 n 
+0000146304 00000 n 
+0000146442 00000 n 
+0000151464 00000 n 
+0000151602 00000 n 
+0000156802 00000 n 
+0000156940 00000 n 
+0000162642 00000 n 
+0000162780 00000 n 
+0000168040 00000 n 
+0000168178 00000 n 
+0000179310 00000 n 
+0000179448 00000 n 
+0000185319 00000 n 
+0000185457 00000 n 
+0000191127 00000 n 
+0000191265 00000 n 
+0000196313 00000 n 
+0000196451 00000 n 
+0000199877 00000 n 
+0000200015 00000 n 
+0000204079 00000 n 
+0000204217 00000 n 
+0000207949 00000 n 
+0000208087 00000 n 
+0000212692 00000 n 
+0000212830 00000 n 
+0000217117 00000 n 
+0000217255 00000 n 
+0000221873 00000 n 
+0000222011 00000 n 
+0000225785 00000 n 
+0000225923 00000 n 
+0000230906 00000 n 
+0000231044 00000 n 
+0000236069 00000 n 
+0000236207 00000 n 
+0000240502 00000 n 
+0000240640 00000 n 
+0000244622 00000 n 
+0000244761 00000 n 
+0000248397 00000 n 
+0000248537 00000 n 
+0000252883 00000 n 
+0000253023 00000 n 
+0000256963 00000 n 
+0000257103 00000 n 
+0000261258 00000 n 
+0000261398 00000 n 
+0000265613 00000 n 
+0000265753 00000 n 
+0000270418 00000 n 
+0000270558 00000 n 
+0000275313 00000 n 
+0000275453 00000 n 
+0000280735 00000 n 
+0000280875 00000 n 
+0000286139 00000 n 
+0000286279 00000 n 
+0000291714 00000 n 
+0000291854 00000 n 
+0000296930 00000 n 
+0000297070 00000 n 
+0000301809 00000 n 
+0000301949 00000 n 
+0000306964 00000 n 
+0000307104 00000 n 
+0000312106 00000 n 
+0000312246 00000 n 
+0000317597 00000 n 
+0000317737 00000 n 
+0000322883 00000 n 
+0000323023 00000 n 
+0000328283 00000 n 
+0000328423 00000 n 
+0000333846 00000 n 
+0000333986 00000 n 
+0000334949 00000 n 
 trailer
 << /Size 139 /Root 1 0 R >>
 startxref
-333422
+335089
 %%EOF

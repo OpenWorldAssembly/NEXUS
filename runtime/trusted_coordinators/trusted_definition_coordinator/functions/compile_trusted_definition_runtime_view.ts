@@ -6,14 +6,14 @@
 import type { PacketTypeDefinition } from '@core/packets/definitions/packet-definition-types.ts';
 import type { PacketTypeBodyCandidate } from '@core/packets/packet-type-body-builders.ts';
 import {
-  buildTrustedDefinitionPartCandidates,
-} from '@runtime/trusted_coordinators/trusted_building_coordinator';
+  trustedBuildingCoordinator,
+} from '@runtime/trusted_coordinators/trusted_building_coordinator/index.ts';
 import {
   trustedRegulationCoordinator,
-} from '@runtime/trusted_coordinators/trusted_regulation_coordinator';
+} from '@runtime/trusted_coordinators/trusted_regulation_coordinator/index.ts';
 import {
   trustedPlanningCoordinator,
-} from '@runtime/trusted_coordinators/trusted_planning_coordinator';
+} from '@runtime/trusted_coordinators/trusted_planning_coordinator/index.ts';
 import {
   createTrustedRuntimeCoordinatorResult,
   trustedIssue,
@@ -74,7 +74,7 @@ function compileForDefinition(input: {
     context_mode: 'reseed',
     include_write_policy_gate: false,
   });
-  const buildResult = buildTrustedDefinitionPartCandidates({ definition: input.definition });
+  const buildResult = trustedBuildingCoordinator.buildDefinitionPartCandidates({ definition: input.definition });
 
   issues.push(...regulationResult.issues, ...planningResult.issues, ...buildResult.issues);
   traceEntries.push(...regulationResult.trace, ...planningResult.trace, ...buildResult.trace);

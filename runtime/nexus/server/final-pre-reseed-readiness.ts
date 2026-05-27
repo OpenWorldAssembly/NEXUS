@@ -28,9 +28,10 @@ import { auditPacketWorkflowAlignmentCoverage } from '@runtime/nexus/server/pack
 import { auditLiveGenericWorkflowEnrollments } from '@runtime/trusted_coordinators/trusted_packet_workflow_coordinator';
 import { auditLiveCompositeWorkflowEnrollments } from '@runtime/trusted_coordinators/trusted_composite_workflow_coordinator';
 import { listMutationIntentDescriptors } from '@runtime/nexus/server/mutation-intent-registry';
-import { trustedDefinitionCoordinator } from '@runtime/trusted_coordinators/trusted_definition_coordinator';
-import { trustedRegulationCoordinator } from '@runtime/trusted_coordinators/trusted_regulation_coordinator';
-import { trustedPlanningCoordinator } from '@runtime/trusted_coordinators/trusted_planning_coordinator';
+import { trustedDefinitionCoordinator } from '@runtime/trusted_coordinators/trusted_definition_coordinator/index.ts';
+import { trustedRegulationCoordinator } from '@runtime/trusted_coordinators/trusted_regulation_coordinator/index.ts';
+import { trustedPlanningCoordinator } from '@runtime/trusted_coordinators/trusted_planning_coordinator/index.ts';
+import { trustedBuildingCoordinator } from '@runtime/trusted_coordinators/trusted_building_coordinator/index.ts';
 
 export type FinalPreReseedReadinessStatus = 'pass' | 'fail';
 
@@ -108,6 +109,9 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
     context_mode: 'reseed',
     operation_kind: 'debug_audit',
   }).value;
+  const buildingReadiness = trustedBuildingCoordinator.auditReadiness({
+    context_mode: 'reseed',
+  }).value;
   const policySemanticAudit = auditPacketPolicySemanticAuthority({
     policyPackets: PERSONAL_SEED_PACKETS.filter(
       (packet): packet is PacketEnvelopeByType['Policy'] =>
@@ -161,6 +165,10 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
     ...(planningReadiness?.plans ?? []).flatMap((plan) => [
       ...plan.issues.map((issue) => issue.message),
       ...plan.blockers,
+    ]),
+    ...(buildingReadiness?.build_results ?? []).flatMap((result) => [
+      ...result.blockers,
+      ...result.warnings,
     ]),
     ...policySemanticAudit.findings.map((finding) => finding.message),
     ...clientIngressAudit.findings.map((finding) => finding.message),

@@ -25,9 +25,10 @@ import {
   auditLiveCompositeWorkflowEnrollments,
   listLiveCompositeWorkflowEnrollments,
 } from '@runtime/trusted_coordinators/trusted_composite_workflow_coordinator';
-import { trustedDefinitionCoordinator } from '@runtime/trusted_coordinators/trusted_definition_coordinator';
-import { trustedRegulationCoordinator } from '@runtime/trusted_coordinators/trusted_regulation_coordinator';
-import { trustedPlanningCoordinator } from '@runtime/trusted_coordinators/trusted_planning_coordinator';
+import { trustedDefinitionCoordinator } from '@runtime/trusted_coordinators/trusted_definition_coordinator/index.ts';
+import { trustedRegulationCoordinator } from '@runtime/trusted_coordinators/trusted_regulation_coordinator/index.ts';
+import { trustedPlanningCoordinator } from '@runtime/trusted_coordinators/trusted_planning_coordinator/index.ts';
+import { trustedBuildingCoordinator } from '@runtime/trusted_coordinators/trusted_building_coordinator/index.ts';
 
 export type PreReseedClosureStatus =
   | 'closed'
@@ -129,8 +130,18 @@ function auditTrustedPlanningReadiness() {
   }).value;
 }
 
+function auditTrustedBuildingReadiness() {
+  return trustedBuildingCoordinator.auditReadiness({
+    context_mode: 'reseed',
+  }).value;
+}
+
 function regulationReadinessPasses(): boolean {
   return auditTrustedRegulationReadiness()?.ready !== false;
+}
+
+function buildingReadinessPasses(): boolean {
+  return auditTrustedBuildingReadiness()?.ready !== false;
 }
 
 function queueForEntry(
@@ -225,20 +236,21 @@ function createPolicyRequirementEntries(): PreReseedClosureLedgerEntry[] {
 function createDependencyRequirementEntries(): PreReseedClosureLedgerEntry[] {
   const regulationReady = regulationReadinessPasses();
   const planningReady = auditTrustedPlanningReadiness()?.ready !== false;
+  const buildingReady = buildingReadinessPasses();
 
   return listTrustedDependencyRequirements().map((descriptor) => ({
     subject_kind: 'dependency_requirement',
     subject_id: descriptor.dependency_id,
-    status: regulationReady && planningReady ? 'closed' : 'blocked',
+    status: regulationReady && planningReady && buildingReady ? 'closed' : 'blocked',
     queue: 'policy_dependency_semantic_authority',
     reason:
-      regulationReady && planningReady
-        ? 'Dependency resolves through packet Definition dependency parts, Policy semantics, operation ontology, workflow resolver allowlists, or trusted local engine contracts via Trusted Planning Coordinator.'
-        : 'Trusted policy or planning dependency authority audit has blockers.',
+      regulationReady && planningReady && buildingReady
+        ? 'Dependency resolves through packet Definition dependency parts, Policy semantics, operation ontology, workflow resolver allowlists, or trusted local engine contracts via Trusted Planning Coordinator and materializes through Trusted Building Coordinator.'
+        : 'Trusted policy, planning, or building authority audit has blockers.',
     next_step:
-      regulationReady && planningReady
+      regulationReady && planningReady && buildingReady
         ? 'Keep Definition dependency parts synchronized with workflow plans and trusted local capability descriptors.'
-        : 'Resolve trusted planning and dependency semantic authority findings before reseed closure.',
+        : 'Resolve trusted planning/building and dependency semantic authority findings before reseed closure.',
   }));
 }
 
