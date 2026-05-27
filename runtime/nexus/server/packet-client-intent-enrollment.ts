@@ -16,6 +16,7 @@ import {
   type PacketRuntimeFortressHandoffStatus,
 } from "@runtime/nexus/server/packet-runtime-fortress-handoff";
 import { trustedRegulationCoordinator } from "@runtime/trusted_coordinators/trusted_regulation_coordinator";
+import { trustedPlanningCoordinator } from "@runtime/trusted_coordinators/trusted_planning_coordinator";
 
 export type PacketClientIntentEnrollmentMode =
   | "signed_fortress_prepare"
@@ -94,7 +95,7 @@ function resolveTrustedPolicyRequirements() {
 
 function resolveTrustedDependencyRequirements() {
   return (
-    trustedRegulationCoordinator.resolveDependencyContext({
+    trustedPlanningCoordinator.resolveDependencyPlan({
       context_mode: "reseed",
       operation_kind: "debug_audit",
     }).value?.requirements ?? []
@@ -103,6 +104,13 @@ function resolveTrustedDependencyRequirements() {
 
 function auditTrustedRegulationReadiness() {
   return trustedRegulationCoordinator.auditReadiness({
+    context_mode: "reseed",
+    operation_kind: "debug_audit",
+  }).value;
+}
+
+function auditTrustedPlanningReadiness() {
+  return trustedPlanningCoordinator.auditReadiness({
     context_mode: "reseed",
     operation_kind: "debug_audit",
   }).value;
@@ -303,6 +311,7 @@ export function auditPacketClientIntentEnrollments(): PacketClientIntentEnrollme
     ]),
   );
   const regulationReadiness = auditTrustedRegulationReadiness();
+  const planningReadiness = auditTrustedPlanningReadiness();
   const policyIds = new Set(
     resolveTrustedPolicyRequirements().map(
       (descriptor) => descriptor.policy_action_id,
@@ -417,10 +426,20 @@ export function auditPacketClientIntentEnrollments(): PacketClientIntentEnrollme
   if (regulationReadiness?.ready === false) {
     findings.push({
       severity: "error",
-      code: "policy_dependency_audit_failed",
-      enrollment_id: "packet.policy_dependency",
+      code: "policy_audit_failed",
+      enrollment_id: "packet.policy",
       message:
-        "Client ingress enrollment cannot pass while trusted regulation readiness has audit findings.",
+        "Client ingress enrollment cannot pass while trusted regulation readiness has policy findings.",
+    });
+  }
+
+  if (planningReadiness?.ready === false) {
+    findings.push({
+      severity: "error",
+      code: "planning_audit_failed",
+      enrollment_id: "packet.planning",
+      message:
+        "Client ingress enrollment cannot pass while trusted planning readiness has default, dependency, builder, or plan findings.",
     });
   }
 

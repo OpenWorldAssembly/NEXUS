@@ -5,8 +5,10 @@
 
 export { trustedRegulationCoordinator } from './trusted_regulation_coordinator.ts';
 export type {
-  TrustedDefaultContext,
-  TrustedDependencyContext,
+  AuditTrustedRegulationReadinessInput,
+  ResolveTrustedPolicyContextInput,
+  ResolveTrustedRegulationContextInput,
+  ResolveTrustedWritePolicyGateInput,
   TrustedPolicyContext,
   TrustedRegulationContext,
   TrustedRegulationContextMode,
@@ -15,10 +17,4 @@ export type {
   TrustedRegulationReadinessReport,
   TrustedRegulationRequirement,
   TrustedWritePolicyGate,
-  ResolveTrustedRegulationContextInput,
-  ResolveTrustedDefaultContextInput,
-  ResolveTrustedDependencyContextInput,
-  ResolveTrustedPolicyContextInput,
-  ResolveTrustedWritePolicyGateInput,
-  AuditTrustedRegulationReadinessInput,
 } from './trusted_regulation_types.ts';

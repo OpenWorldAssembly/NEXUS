@@ -12,6 +12,7 @@ import type {
 import type { PacketTypeBodyCandidate } from '@core/packets/packet-type-body-builders.ts';
 import type { TrustedDefinitionPartBuildPlan } from '@runtime/trusted_coordinators/trusted_building_coordinator';
 import type { TrustedRegulationProfile } from '@runtime/trusted_coordinators/trusted_regulation_coordinator';
+import type { TrustedOperationPlan } from '@runtime/trusted_coordinators/trusted_planning_coordinator';
 import type {
   TrustedRuntimeCoordinatorIssue,
   TrustedRuntimeCoordinatorTraceEntry,
@@ -147,6 +148,7 @@ export type TrustedDefinitionRuntimeView = {
   definition_part_count: number;
   required_definition_part_count: number;
   regulation_profile: TrustedRegulationProfile;
+  planning_profile: TrustedOperationPlan;
   definition_part_build_plan: TrustedDefinitionPartBuildPlan;
   ready_for_reseed: boolean;
 };

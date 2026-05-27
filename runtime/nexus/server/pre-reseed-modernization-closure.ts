@@ -27,6 +27,7 @@ import {
 } from '@runtime/trusted_coordinators/trusted_composite_workflow_coordinator';
 import { trustedDefinitionCoordinator } from '@runtime/trusted_coordinators/trusted_definition_coordinator';
 import { trustedRegulationCoordinator } from '@runtime/trusted_coordinators/trusted_regulation_coordinator';
+import { trustedPlanningCoordinator } from '@runtime/trusted_coordinators/trusted_planning_coordinator';
 
 export type PreReseedClosureStatus =
   | 'closed'
@@ -108,7 +109,7 @@ function listTrustedPolicyRequirements() {
 }
 
 function listTrustedDependencyRequirements() {
-  return trustedRegulationCoordinator.resolveDependencyContext({
+  return trustedPlanningCoordinator.resolveDependencyPlan({
     context_mode: 'reseed',
     operation_kind: 'debug_audit',
   }).value?.requirements ?? [];
@@ -116,6 +117,13 @@ function listTrustedDependencyRequirements() {
 
 function auditTrustedRegulationReadiness() {
   return trustedRegulationCoordinator.auditReadiness({
+    context_mode: 'reseed',
+    operation_kind: 'debug_audit',
+  }).value;
+}
+
+function auditTrustedPlanningReadiness() {
+  return trustedPlanningCoordinator.auditReadiness({
     context_mode: 'reseed',
     operation_kind: 'debug_audit',
   }).value;
@@ -216,20 +224,21 @@ function createPolicyRequirementEntries(): PreReseedClosureLedgerEntry[] {
 
 function createDependencyRequirementEntries(): PreReseedClosureLedgerEntry[] {
   const regulationReady = regulationReadinessPasses();
+  const planningReady = auditTrustedPlanningReadiness()?.ready !== false;
 
   return listTrustedDependencyRequirements().map((descriptor) => ({
     subject_kind: 'dependency_requirement',
     subject_id: descriptor.dependency_id,
-    status: regulationReady ? 'closed' : 'blocked',
+    status: regulationReady && planningReady ? 'closed' : 'blocked',
     queue: 'policy_dependency_semantic_authority',
     reason:
-      regulationReady
-        ? 'Dependency resolves through packet Definition dependency parts, Policy semantics, operation ontology, workflow resolver allowlists, or trusted local engine contracts.'
-        : 'Packet dependency semantic authority audit has blockers.',
+      regulationReady && planningReady
+        ? 'Dependency resolves through packet Definition dependency parts, Policy semantics, operation ontology, workflow resolver allowlists, or trusted local engine contracts via Trusted Planning Coordinator.'
+        : 'Trusted policy or planning dependency authority audit has blockers.',
     next_step:
-      regulationReady
+      regulationReady && planningReady
         ? 'Keep Definition dependency parts synchronized with workflow plans and trusted local capability descriptors.'
-        : 'Resolve dependency semantic authority findings before reseed closure.',
+        : 'Resolve trusted planning and dependency semantic authority findings before reseed closure.',
   }));
 }
 

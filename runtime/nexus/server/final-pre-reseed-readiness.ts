@@ -30,6 +30,7 @@ import { auditLiveCompositeWorkflowEnrollments } from '@runtime/trusted_coordina
 import { listMutationIntentDescriptors } from '@runtime/nexus/server/mutation-intent-registry';
 import { trustedDefinitionCoordinator } from '@runtime/trusted_coordinators/trusted_definition_coordinator';
 import { trustedRegulationCoordinator } from '@runtime/trusted_coordinators/trusted_regulation_coordinator';
+import { trustedPlanningCoordinator } from '@runtime/trusted_coordinators/trusted_planning_coordinator';
 
 export type FinalPreReseedReadinessStatus = 'pass' | 'fail';
 
@@ -103,6 +104,10 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
     context_mode: 'reseed',
     operation_kind: 'debug_audit',
   }).value;
+  const planningReadiness = trustedPlanningCoordinator.auditReadiness({
+    context_mode: 'reseed',
+    operation_kind: 'debug_audit',
+  }).value;
   const policySemanticAudit = auditPacketPolicySemanticAuthority({
     policyPackets: PERSONAL_SEED_PACKETS.filter(
       (packet): packet is PacketEnvelopeByType['Policy'] =>
@@ -153,6 +158,10 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
       .map((finding) => finding.message),
     ...seededDefinitionAudit.findings,
     ...(regulationReadiness?.contexts ?? []).flatMap((context) => context.issues.map((issue) => issue.message)),
+    ...(planningReadiness?.plans ?? []).flatMap((plan) => [
+      ...plan.issues.map((issue) => issue.message),
+      ...plan.blockers,
+    ]),
     ...policySemanticAudit.findings.map((finding) => finding.message),
     ...clientIngressAudit.findings.map((finding) => finding.message),
     ...fortressHandoffAudit.findings.map((finding) => finding.message),

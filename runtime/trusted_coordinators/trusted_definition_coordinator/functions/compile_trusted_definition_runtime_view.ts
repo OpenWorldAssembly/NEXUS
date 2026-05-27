@@ -12,6 +12,9 @@ import {
   trustedRegulationCoordinator,
 } from '@runtime/trusted_coordinators/trusted_regulation_coordinator';
 import {
+  trustedPlanningCoordinator,
+} from '@runtime/trusted_coordinators/trusted_planning_coordinator';
+import {
   createTrustedRuntimeCoordinatorResult,
   trustedIssue,
   type TrustedRuntimeCoordinatorIssue,
@@ -62,12 +65,21 @@ function compileForDefinition(input: {
     operation_kind: 'reseed',
     context_mode: 'reseed',
   });
+  const planningResult = trustedPlanningCoordinator.resolveOperationPlan({
+    definition: input.definition,
+    definitions: input.allDefinitions ?? [input.definition],
+    packet_type: input.definition.packet_type,
+    packet_subtype: input.definition.default_subtype,
+    operation_kind: 'reseed',
+    context_mode: 'reseed',
+    include_write_policy_gate: false,
+  });
   const buildResult = buildTrustedDefinitionPartCandidates({ definition: input.definition });
 
-  issues.push(...regulationResult.issues, ...buildResult.issues);
-  traceEntries.push(...regulationResult.trace, ...buildResult.trace);
+  issues.push(...regulationResult.issues, ...planningResult.issues, ...buildResult.issues);
+  traceEntries.push(...regulationResult.trace, ...planningResult.trace, ...buildResult.trace);
 
-  if (!regulationResult.value || !buildResult.value) {
+  if (!regulationResult.value || !planningResult.value || !buildResult.value) {
     return createTrustedRuntimeCoordinatorResult({
       coordinator_id: TRUSTED_DEFINITION_COORDINATOR_ID,
       coordinator_kind: 'workflow',
@@ -109,7 +121,8 @@ function compileForDefinition(input: {
     hasBuilderCandidate &&
     hasDefaultsCandidate &&
     hasDependenciesCandidate &&
-    hasProjectionCandidate;
+    hasProjectionCandidate &&
+    planningResult.value.blockers.length === 0;
 
   traceEntries.push(
     definitionTrace({
@@ -135,6 +148,7 @@ function compileForDefinition(input: {
       definition_part_count: input.definition.packet_definition_parts?.length ?? 0,
       required_definition_part_count: requiredPartCountForDefinition(input.definition),
       regulation_profile: regulationResult.value,
+      planning_profile: planningResult.value,
       definition_part_build_plan: buildResult.value,
       ready_for_reseed: readyForReseed,
     },

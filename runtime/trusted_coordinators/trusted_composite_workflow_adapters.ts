@@ -8,6 +8,7 @@ import {
   type PacketOperationKind,
 } from '@core/packets/packet-operation-ontology';
 import { trustedRegulationCoordinator } from '@runtime/trusted_coordinators/trusted_regulation_coordinator';
+import { trustedPlanningCoordinator } from '@runtime/trusted_coordinators/trusted_planning_coordinator';
 import type { MutationIntent } from '@core/auth/mutation-corridor';
 import type { MutationActionId } from '@core/auth/write-policy';
 
@@ -892,7 +893,7 @@ function allKnownPolicyActionIds(): Set<string> {
 
 function allKnownDependencyIds(): Set<string> {
   return new Set(
-    (trustedRegulationCoordinator.resolveDependencyContext({
+    (trustedPlanningCoordinator.resolveDependencyPlan({
       context_mode: 'reseed',
       operation_kind: 'debug_audit',
     }).value?.requirements ?? []).map((descriptor) => descriptor.dependency_id)

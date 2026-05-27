@@ -1,20 +1,16 @@
 /**
  * File: trusted_regulation_types.ts
- * Description: Local contracts for trusted runtime regulation contexts, policy gates, defaults, and dependency requirements.
+ * Description: Local contracts for trusted runtime regulation contexts, policy gates, and governance requirements.
  */
 
 import type { MutationActionId, ResolvedWritePolicyDecision } from '@core/auth/write-policy.ts';
 import type {
-  PacketDefaultOverrideDescriptor,
   PacketTypeDefinition,
 } from '@core/packets/definitions/packet-definition-types.ts';
-import type { PacketDefaultProfile } from '@core/packets/packet-defaults.ts';
 import type {
-  PacketDependencyRequirementDescriptor,
   PacketPolicyRequirementDescriptor,
 } from '@core/packets/packet-policy-dependency.ts';
 import type {
-  PacketDependencySemanticDescriptor,
   PacketPolicySemanticDescriptor,
   ResolvedPolicyPacketSemantics,
 } from '@core/packets/packet-policy-semantics.ts';
@@ -49,7 +45,8 @@ export type TrustedRegulationOperationKind =
   | 'write_gate'
   | 'runtime_read'
   | 'reseed'
-  | 'debug_audit';
+  | 'debug_audit'
+  | 'builder_selection';
 
 export type TrustedRegulationRequirementStrength =
   | 'blocking'
@@ -58,48 +55,20 @@ export type TrustedRegulationRequirementStrength =
   | 'future_hook';
 
 export type TrustedRegulationRequirementSource =
-  | 'definition_part'
   | 'policy_packet'
   | 'write_policy'
   | 'semantic_descriptor'
-  | 'trusted_runtime_capability'
-  | 'local_override';
+  | 'definition_registry';
 
 export type TrustedRegulationRequirement = {
   requirement_id: string;
-  requirement_kind: 'default' | 'dependency' | 'policy' | 'write_gate';
+  requirement_kind: 'policy' | 'write_gate';
   strength: TrustedRegulationRequirementStrength;
   source: TrustedRegulationRequirementSource;
   packet_type: string | null;
   packet_subtype: string | null;
   operation_kind: TrustedRegulationOperationKind;
   notes: string;
-};
-
-export type TrustedDefaultContext = {
-  context_kind: 'trusted.default_context';
-  packet_type: string;
-  packet_subtype: string | null;
-  operation_kind: TrustedRegulationOperationKind;
-  profile: PacketDefaultProfile;
-  requirements: TrustedRegulationRequirement[];
-  overrides_allowed: boolean;
-  inherited_policy_ref_count: number;
-  blocking_issue_count: number;
-};
-
-export type TrustedDependencyContext = {
-  context_kind: 'trusted.dependency_context';
-  packet_type: string | null;
-  packet_subtype: string | null;
-  operation_kind: TrustedRegulationOperationKind;
-  requirements: PacketDependencyRequirementDescriptor[];
-  semantic_descriptors: PacketDependencySemanticDescriptor[];
-  blocking_requirements: TrustedRegulationRequirement[];
-  advisory_requirements: TrustedRegulationRequirement[];
-  runtime_metadata_dependency_ids: string[];
-  packet_backed_dependency_ids: string[];
-  missing_required_definition_parts: string[];
 };
 
 export type TrustedPolicyContext = {
@@ -136,8 +105,6 @@ export type TrustedRegulationContext = {
   packet_subtype: string | null;
   operation_kind: TrustedRegulationOperationKind;
   definition: PacketTypeDefinition | null;
-  default_context: TrustedDefaultContext | null;
-  dependency_context: TrustedDependencyContext | null;
   policy_context: TrustedPolicyContext;
   write_policy_gate: TrustedWritePolicyGate | null;
   missing_required_definition_parts: string[];
@@ -171,23 +138,14 @@ export type BaseTrustedRegulationInput = {
   definitions?: readonly PacketTypeDefinition[];
   preferences?: readonly TrustedDefinitionRuntimePreference[];
   policy_packets?: readonly PacketEnvelopeByType['Policy'][];
-  local_overrides?: readonly PacketDefaultOverrideDescriptor[];
 };
 
 export type ResolveTrustedRegulationContextInput = BaseTrustedRegulationInput & {
-  include_defaults?: boolean;
-  include_dependencies?: boolean;
   include_policies?: boolean;
   include_write_policy_gate?: boolean;
   governing_scope_packet?: PacketEnvelopeByType['Element'] | null;
   action_ids?: readonly MutationActionId[];
 };
-
-export type ResolveTrustedDefaultContextInput = BaseTrustedRegulationInput & {
-  definition: PacketTypeDefinition;
-};
-
-export type ResolveTrustedDependencyContextInput = BaseTrustedRegulationInput;
 
 export type ResolveTrustedPolicyContextInput = BaseTrustedRegulationInput;
 
@@ -204,8 +162,6 @@ export type AuditTrustedRegulationReadinessInput = BaseTrustedRegulationInput & 
 
 export type TrustedRegulationOperation =
   | 'resolve_context'
-  | 'resolve_default_context'
-  | 'resolve_dependency_context'
   | 'resolve_policy_context'
   | 'resolve_write_policy_gate'
   | 'list_requirements'
@@ -215,14 +171,6 @@ export type TrustedRegulationCoordinatorRequest =
   | {
       operation: 'resolve_context';
       input: ResolveTrustedRegulationContextInput;
-    }
-  | {
-      operation: 'resolve_default_context';
-      input: ResolveTrustedDefaultContextInput;
-    }
-  | {
-      operation: 'resolve_dependency_context';
-      input: ResolveTrustedDependencyContextInput;
     }
   | {
       operation: 'resolve_policy_context';

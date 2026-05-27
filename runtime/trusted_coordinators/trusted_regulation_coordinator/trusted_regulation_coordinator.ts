@@ -8,13 +8,9 @@ import { executeTrustedRegulationOperation } from './trusted_regulation_registry
 import type {
   AuditTrustedRegulationReadinessInput,
   ListTrustedRegulationRequirementsInput,
-  ResolveTrustedDefaultContextInput,
-  ResolveTrustedDependencyContextInput,
   ResolveTrustedPolicyContextInput,
   ResolveTrustedRegulationContextInput,
   ResolveTrustedWritePolicyGateInput,
-  TrustedDefaultContext,
-  TrustedDependencyContext,
   TrustedPolicyContext,
   TrustedRegulationContext,
   TrustedRegulationReadinessReport,
@@ -32,18 +28,6 @@ export const trustedRegulationCoordinator = {
   resolveContext(input: ResolveTrustedRegulationContextInput): TrustedRuntimeCoordinatorResult<TrustedRegulationContext> {
     return castResult<TrustedRegulationContext>(
       executeTrustedRegulationOperation({ operation: 'resolve_context', input })
-    );
-  },
-
-  resolveDefaultContext(input: ResolveTrustedDefaultContextInput): TrustedRuntimeCoordinatorResult<TrustedDefaultContext> {
-    return castResult<TrustedDefaultContext>(
-      executeTrustedRegulationOperation({ operation: 'resolve_default_context', input })
-    );
-  },
-
-  resolveDependencyContext(input: ResolveTrustedDependencyContextInput): TrustedRuntimeCoordinatorResult<TrustedDependencyContext> {
-    return castResult<TrustedDependencyContext>(
-      executeTrustedRegulationOperation({ operation: 'resolve_dependency_context', input })
     );
   },
 

@@ -79,23 +79,38 @@ Target coordinator families:
 - Trusted Import Coordinator and Trusted Export Coordinator for bundle ingress/egress
 - Trusted Projection Coordinator for UI-ready graph projections and available actions
 
-These coordinators are runtime concerns. They execute trusted local code and feed live context through the Core Contracts Vault. Packet definitions may describe allowed operations, defaults, dependencies, policy requirements, actions, and projection hints, but imported packet definitions must never execute local runtime behavior. The Trusted Definition Coordinator is the gate for definition lookup: internal candidate listing, ranking, conflict audit, compatibility selection, and runtime-view compilation functions are routed through its public coordinator surface instead of being imported as loose helper functions. The Trusted Regulation Coordinator now follows the same gated coordinator pattern for defaults, dependencies, policy contexts, write-policy gates, requirement listing, and readiness audits.
+These coordinators are runtime concerns. They execute trusted local code and feed live context through the Core Contracts Vault. Packet definitions may describe allowed operations, defaults, dependencies, policy requirements, actions, and projection hints, but imported packet definitions must never execute local runtime behavior. The Trusted Definition Coordinator is the gate for definition lookup: internal candidate listing, ranking, conflict audit, compatibility selection, and runtime-view compilation functions are routed through its public coordinator surface instead of being imported as loose helper functions. The Trusted Regulation Coordinator now follows the same gated coordinator pattern for policy contexts, write-policy gates, requirement listing, and readiness audits. The Trusted Planning Coordinator owns packet operation plans, builder selection, defaults, dependencies, child-plan seams, and planning readiness so default/dependency work does not masquerade as policy enforcement.
 
 ## Definition-Driven Build And Projection Direction
 
 The same declaration language should guide both packet creation and packet projection.
 
-Creation uses definitions, builders, defaults definitions, dependencies definitions, policy requirements, and runtime variables to produce packet build plans. Projection should eventually use definitions, projection hints, component keys, action keys, display fields, and graph relationships to produce safe UI-ready view models.
+Creation uses definitions, builders, defaults definitions, dependencies definitions, policy requirements, and runtime variables to produce trusted operation plans before packet candidates are built. Projection should eventually use definitions, projection hints, component keys, action keys, display fields, and graph relationships to produce safe UI-ready view models.
 
 Resolver ownership is split by domain:
 
 - definition resolves active definition context, definition parts, node runtime preferences, compatibility-only definitions, and runtime definition views
-- planning resolves build plans and default packet cascades
-- regulation resolves the rule envelope around defaults, dependencies, policy requirements, write-policy gates, governance rules, trust gates, and voting eligibility
+- planning resolves operation plans, builder selection, default packet cascades, dependency satisfaction, workflow dry-runs, and child packet/component seams
+- regulation resolves policy requirements, write-policy gates, governance rules, trust gates, moderation rules, voting eligibility, and other policy checks that may be needed inside or outside packet creation
 - building creates packet candidates through the generic builder pipeline
 - projection resolves surfaces, display models, badges, and available actions
 
-Builders remain packet anatomy. Defaults describe normal starting shape. Dependencies describe required structural refs. Policies regulate permission and process. Regulation does not build packets; it classifies which defaults, dependencies, and policies are active, advisory, blocking, inherited, or future-hook material for a given operation. Projection definitions describe safe display and interaction hints.
+Builders remain packet anatomy. Defaults describe normal starting shape. Dependencies describe required structural refs. Planning assembles those pieces into a concrete operation plan and asks Regulation for the active policy envelope when policy meaning matters. Regulation does not build packets or apply defaults; it classifies policy requirements and write gates for creation, projection, import/export review, moderation, runtime reads, and governance checks. Projection definitions describe safe display and interaction hints.
+
+
+## Trusted Planning Coordinator Pass
+
+The Trusted Planning Coordinator is now the runtime middleman for operation planning. It exposes gated methods for resolving operation plans, default plans, dependency plans, builder descriptor selection, child packet plan seams, and planning readiness audits. Defaults and dependencies moved out of the Trusted Regulation Coordinator because they are construction-planning inputs, not policy enforcement by themselves.
+
+The current implementation is intentionally pre-reseed practical:
+
+- default plans wrap definition defaults, policy-selected default refs, and local overrides without building packet bodies directly
+- dependency plans gather Definition dependency parts, workflow dependency IDs, semantic descriptors, runtime capability refs, and optional workflow dry-run findings
+- builder selection picks the best runtime-ready builder descriptor for the packet type, subtype, and action IDs
+- child packet plans are a typed seam, currently empty until defaults, bundles, and projection/component layout semantics are declared enough to recurse safely
+- operation plans call Regulation for policy contexts and optional write-policy gates, rather than duplicating policy logic
+
+Regulation is now policy-only. It still works outside packet creation, including projection, import/export review, moderation, runtime reads, and governance checks. Planning may call Regulation during packet creation, but Regulation does not own defaults, dependencies, or builder selection.
 
 ## Manifest Core Pass
 

@@ -1,6 +1,6 @@
 /**
  * File: resolve_trusted_regulation_context.ts
- * Description: Resolves a full trusted regulation context by coordinating defaults, dependencies, policies, and write gates.
+ * Description: Resolves a full trusted regulation context by coordinating policy and write-gate semantics.
  */
 
 import { trustedDefinitionCoordinator } from '@runtime/trusted_coordinators/trusted_definition_coordinator';
@@ -20,21 +20,18 @@ import {
   TRUSTED_REGULATION_COORDINATOR_ID,
   type ResolveTrustedRegulationContextInput,
   type TrustedRegulationContext,
+  type TrustedRegulationRequirement,
 } from '../trusted_regulation_types.ts';
-import { resolveTrustedDefaultContext } from './resolve_trusted_default_context.ts';
-import { resolveTrustedDependencyContext } from './resolve_trusted_dependency_context.ts';
 import { resolveTrustedPolicyContext } from './resolve_trusted_policy_context.ts';
 import { resolveTrustedWritePolicyGate } from './resolve_trusted_write_policy_gate.ts';
 
 export function resolveTrustedRegulationContext(
   input: ResolveTrustedRegulationContextInput
 ): TrustedRuntimeCoordinatorResult<TrustedRegulationContext> {
-  const operationKind = input.operation_kind ?? 'reseed';
+  const operationKind = input.operation_kind ?? 'policy_resolution';
   const contextMode = input.context_mode ?? 'reseed';
   const issues: TrustedRuntimeCoordinatorIssue[] = [];
   const traceEntries: TrustedRuntimeCoordinatorTraceEntry[] = [];
-  const includeDefaults = input.include_defaults ?? true;
-  const includeDependencies = input.include_dependencies ?? true;
   const includePolicies = input.include_policies ?? true;
   const includeWritePolicyGate = input.include_write_policy_gate ?? false;
   let definition = input.definition ?? null;
@@ -74,7 +71,7 @@ export function resolveTrustedRegulationContext(
   const resolvedPacketSubtype = input.packet_subtype ?? definition?.default_subtype ?? null;
   const missingParts = definition ? missingDefinitionParts(definition) : [];
 
-  if (!definition && (includeDefaults || includeDependencies || resolvedPacketType)) {
+  if (!definition && resolvedPacketType) {
     issues.push(issueForMissingDefinition({ packet_type: resolvedPacketType, operation_kind: operationKind }));
   }
 
@@ -82,43 +79,14 @@ export function resolveTrustedRegulationContext(
     issues.push(issueForMissingParts({ packet_type: definition.packet_type, missing_parts: missingParts }));
   }
 
-  const defaultResult = includeDefaults && definition
-    ? resolveTrustedDefaultContext({
-        ...input,
-        definition,
-        definitions,
-        packet_type: resolvedPacketType,
-        packet_subtype: resolvedPacketSubtype,
-        operation_kind: operationKind,
-      })
-    : null;
-  const dependencyResult = includeDependencies
-    ? resolveTrustedDependencyContext({
-        ...input,
-        definition,
-        definitions,
-        packet_type: resolvedPacketType,
-        packet_subtype: resolvedPacketSubtype,
-        operation_kind: operationKind,
-      })
-    : null;
-  const policyResult = includePolicies
-    ? resolveTrustedPolicyContext({
-        ...input,
-        definition,
-        definitions,
-        packet_type: resolvedPacketType,
-        packet_subtype: resolvedPacketSubtype,
-        operation_kind: operationKind,
-      })
-    : resolveTrustedPolicyContext({
-        ...input,
-        definition,
-        definitions,
-        packet_type: resolvedPacketType,
-        packet_subtype: resolvedPacketSubtype,
-        operation_kind: operationKind,
-      });
+  const policyResult = resolveTrustedPolicyContext({
+    ...input,
+    definition,
+    definitions,
+    packet_type: resolvedPacketType,
+    packet_subtype: resolvedPacketSubtype,
+    operation_kind: operationKind,
+  });
   const writePolicyResult = includeWritePolicyGate && input.action_ids && input.action_ids.length > 0
     ? resolveTrustedWritePolicyGate({
         ...input,
@@ -131,22 +99,41 @@ export function resolveTrustedRegulationContext(
       })
     : null;
 
-  for (const result of [defaultResult, dependencyResult, policyResult, writePolicyResult]) {
+  for (const result of [includePolicies ? policyResult : null, writePolicyResult]) {
     if (!result) continue;
     issues.push(...result.issues);
     traceEntries.push(...result.trace);
   }
 
-  const requirements = [
-    ...(defaultResult?.value?.requirements ?? []),
-    ...(dependencyResult?.value?.blocking_requirements ?? []),
-    ...(dependencyResult?.value?.advisory_requirements ?? []),
+  const requirements: TrustedRegulationRequirement[] = [
+    ...(includePolicies ? policyResult.value?.requirements.map((requirement) => ({
+      requirement_id: requirement.policy_requirement_id,
+      requirement_kind: 'policy' as const,
+      strength: requirement.live_write_policy_action ? 'blocking' as const : 'definition_audit' as const,
+      source: requirement.live_write_policy_action ? 'write_policy' as const : 'definition_registry' as const,
+      packet_type: requirement.packet_type,
+      packet_subtype: resolvedPacketSubtype,
+      operation_kind: operationKind,
+      notes: requirement.notes,
+    })) ?? [] : []),
+    ...(writePolicyResult?.value
+      ? [{
+          requirement_id: `write_gate.${writePolicyResult.value.action_ids.join('.')}`,
+          requirement_kind: 'write_gate' as const,
+          strength: writePolicyResult.value.satisfied === false ? 'blocking' as const : 'advisory' as const,
+          source: 'write_policy' as const,
+          packet_type: resolvedPacketType,
+          packet_subtype: resolvedPacketSubtype,
+          operation_kind: operationKind,
+          notes: writePolicyResult.value.notes,
+        }]
+      : []),
   ];
 
   traceEntries.push(regulationTrace({
     step_id: 'regulation.context.resolve',
     status: issues.some((issue) => issue.severity === 'error') ? 'error' : issues.length > 0 ? 'partial' : 'ok',
-    notes: `Resolved trusted regulation context for ${resolvedPacketType ?? operationKind}.`,
+    notes: `Resolved trusted policy regulation context for ${resolvedPacketType ?? operationKind}.`,
   }));
 
   return createTrustedRuntimeCoordinatorResult({
@@ -161,8 +148,6 @@ export function resolveTrustedRegulationContext(
       packet_subtype: resolvedPacketSubtype,
       operation_kind: operationKind,
       definition,
-      default_context: defaultResult?.value ?? null,
-      dependency_context: dependencyResult?.value ?? null,
       policy_context: policyResult.value!,
       write_policy_gate: writePolicyResult?.value ?? null,
       missing_required_definition_parts: missingParts,

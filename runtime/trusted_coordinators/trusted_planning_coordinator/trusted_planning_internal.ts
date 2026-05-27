@@ -1,6 +1,6 @@
 /**
- * File: trusted_regulation_internal.ts
- * Description: Internal helpers shared by Trusted Regulation Coordinator operation functions.
+ * File: trusted_planning_internal.ts
+ * Description: Internal helpers shared by Trusted Planning Coordinator operation functions.
  */
 
 import type { PacketTypeDefinition } from '@core/packets/definitions/packet-definition-types.ts';
@@ -10,14 +10,14 @@ import {
   type TrustedRuntimeCoordinatorTraceEntry,
 } from '@runtime/trusted_coordinators/trusted_runtime_coordinator';
 import {
-  TRUSTED_REGULATION_COORDINATOR_ID,
-  type TrustedRegulationOperationKind,
-  type TrustedRegulationRequirement,
-  type TrustedRegulationRequirementSource,
-  type TrustedRegulationRequirementStrength,
-} from './trusted_regulation_types.ts';
+  TRUSTED_PLANNING_COORDINATOR_ID,
+  type TrustedPlanningOperationKind,
+  type TrustedPlanningRequirement,
+  type TrustedPlanningRequirementSource,
+  type TrustedPlanningRequirementStrength,
+} from './trusted_planning_types.ts';
 
-export function regulationTrace(input: {
+export function planningTrace(input: {
   step_id: string;
   status: 'ok' | 'partial' | 'blocked' | 'error';
   notes: string;
@@ -25,11 +25,15 @@ export function regulationTrace(input: {
 }): TrustedRuntimeCoordinatorTraceEntry {
   return {
     step_id: input.step_id,
-    coordinator_id: TRUSTED_REGULATION_COORDINATOR_ID,
-    preset_ids: [...(input.preset_ids ?? ['resolution.policy_gate.v0'])],
+    coordinator_id: TRUSTED_PLANNING_COORDINATOR_ID,
+    preset_ids: [...(input.preset_ids ?? ['resolution.default_profile.v0', 'resolution.dependency_gate.v0'])],
     status: input.status,
     notes: input.notes,
   };
+}
+
+export function uniqueSorted(values: readonly string[]): string[] {
+  return Array.from(new Set(values)).sort((left, right) => left.localeCompare(right));
 }
 
 export function requiredPartIds(definition: PacketTypeDefinition): string[] {
@@ -43,16 +47,16 @@ export function missingDefinitionParts(definition: PacketTypeDefinition): string
   return requiredPartIds(definition).filter((partId) => !present.has(partId));
 }
 
-export function createRequirement(input: {
+export function createPlanningRequirement(input: {
   requirement_id: string;
-  requirement_kind: TrustedRegulationRequirement['requirement_kind'];
-  strength?: TrustedRegulationRequirementStrength;
-  source: TrustedRegulationRequirementSource;
+  requirement_kind: TrustedPlanningRequirement['requirement_kind'];
+  strength?: TrustedPlanningRequirementStrength;
+  source: TrustedPlanningRequirementSource;
   packet_type?: string | null;
   packet_subtype?: string | null;
-  operation_kind: TrustedRegulationOperationKind;
+  operation_kind: TrustedPlanningOperationKind;
   notes: string;
-}): TrustedRegulationRequirement {
+}): TrustedPlanningRequirement {
   return {
     requirement_id: input.requirement_id,
     requirement_kind: input.requirement_kind,
@@ -65,19 +69,35 @@ export function createRequirement(input: {
   };
 }
 
-export function uniqueSorted(values: readonly string[]): string[] {
-  return Array.from(new Set(values)).sort((left, right) => left.localeCompare(right));
+export function inferActionIds(input: {
+  definition?: PacketTypeDefinition | null;
+  operation_kind: TrustedPlanningOperationKind;
+  explicit_action_ids?: readonly string[];
+}): string[] {
+  if (input.explicit_action_ids && input.explicit_action_ids.length > 0) {
+    return uniqueSorted([...input.explicit_action_ids]);
+  }
+
+  if (!input.definition) {
+    return [];
+  }
+
+  return uniqueSorted(
+    input.definition.actions
+      .filter((action) => action.action_kind === input.operation_kind)
+      .map((action) => action.action_id)
+  );
 }
 
 export function issueForMissingDefinition(input: {
   packet_type?: string | null;
-  operation_kind: TrustedRegulationOperationKind;
+  operation_kind: TrustedPlanningOperationKind;
 }): TrustedRuntimeCoordinatorIssue {
   return trustedIssue({
     severity: 'error',
-    code: 'trusted_regulation_definition_missing',
+    code: 'trusted_planning_definition_missing',
     path: 'definition',
-    message: `Trusted Regulation Coordinator could not resolve a packet definition for ${input.packet_type ?? input.operation_kind}.`,
+    message: `Trusted Planning Coordinator could not resolve a packet definition for ${input.packet_type ?? input.operation_kind}.`,
   });
 }
 

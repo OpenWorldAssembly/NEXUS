@@ -86,7 +86,7 @@ Current dependency authority note:
 
 Status: initial trusted coordinator foundation exists; full governance language remains future work.
 
-Policy packets exist today, and the Trusted Regulation Coordinator now provides the gated runtime surface for policy-oriented resolution. It can resolve regulation contexts, default contexts, dependency contexts, policy contexts, write-policy gates, requirement lists, and readiness audits. Full proposal, voting, moderation, and role-gate semantics still need richer policy descriptors before governance becomes interactive.
+Policy packets exist today, and the Trusted Regulation Coordinator now provides the gated runtime surface for policy-oriented resolution. It resolves regulation contexts, policy contexts, write-policy gates, requirement lists, and readiness audits. Defaults and dependencies are now owned by the Trusted Planning Coordinator because they shape construction plans rather than enforce policy by themselves. Full proposal, voting, moderation, and role-gate semantics still need richer policy descriptors before governance becomes interactive.
 
 The regulation resolver is designed to answer, progressively:
 
@@ -94,11 +94,11 @@ The regulation resolver is designed to answer, progressively:
 - who can propose, vote, attest, review, or moderate
 - which trust stage, role, or association gates apply
 - which quorum, threshold, and vote method applies
-- which defaults are enabled by policy
+- which policy-backed defaults are allowed or required when Planning asks
 - whether proposal discussions, decisions, or decision reports should be created
 - which packet types are allowed in a given scope
 
-This resolver stays separate from builders. Builders shape packets. Planning will decide how to apply defaults and satisfy structural dependencies. Regulation classifies the active rule envelope around an operation: allowed, required, blocking, advisory, definition-audit-only, or future-hook. Policy resolution is intentionally usable outside packet creation, including projection, import/export review, moderation, runtime reads, and governance checks.
+This resolver stays separate from builders and planners. Builders shape packets. Planning applies defaults, checks structural dependencies, selects builders, and composes operation plans. Regulation classifies the active policy envelope around an operation: allowed, required, blocking, advisory, definition-audit-only, or future-hook. Policy resolution is intentionally usable outside packet creation, including projection, import/export review, moderation, runtime reads, and governance checks.
 
 ## Longer-term civic review framing
 
