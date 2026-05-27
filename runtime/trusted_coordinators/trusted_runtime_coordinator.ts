@@ -21,6 +21,7 @@ export type TrustedRuntimeCoordinatorKind =
   | 'import'
   | 'export'
   | 'compatibility'
+  | 'exchange'
   | 'workflow'
   | 'composite_workflow'
   // Transitional aliases used by older coordinator files until they are foldered.

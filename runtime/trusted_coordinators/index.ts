@@ -18,6 +18,7 @@ export * from './trusted_certification_coordinator/index.ts';
 export * from './trusted_archive_coordinator/index.ts';
 export * from './trusted_compatibility_coordinator/index.ts';
 export * from './trusted_verification_coordinator/index.ts';
+export * from './trusted_exchange_coordinator/index.ts';
 export * from './trusted_regulation_coordinator/index.ts';
 export * from './trusted_planning_coordinator/index.ts';
 export * from './trusted_definition_coordinator/index.ts';

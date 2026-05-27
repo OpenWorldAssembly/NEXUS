@@ -150,7 +150,7 @@ export const TRUSTED_COORDINATOR_SCAFFOLD_MANIFEST = [
       { method_name: 'exportBundle', notes: 'Exports archive bundle payloads as a low-level storage primitive.' },
       { method_name: 'auditReadiness', notes: 'Audits packet-store and index access.' },
     ],
-    notes: 'Archive seam for packet-store writes, reads, refs, edges, and query indexes. Import/Export and Projection should ask Archive rather than reaching directly into storage.',
+    notes: 'Archive seam for packet-store writes, reads, refs, edges, and query indexes. Exchange, Projection, Verification, and Compatibility should ask Archive rather than reaching directly into storage.',
   },
 
   {
@@ -190,6 +190,24 @@ export const TRUSTED_COORDINATOR_SCAFFOLD_MANIFEST = [
       { method_name: 'auditReadiness', notes: 'Audits verification parser, signature, archive, and certification seams.' },
     ],
     notes: 'Verification seam for structural parsing, compatibility reads, digest/signature verification, signer lookup context, ref/lineage checks, and certification handoff verification. It reads storage through Archive rather than SQLite.',
+  },
+
+  {
+    coordinator_id: 'trusted_exchange_coordinator.v0',
+    coordinator_kind: 'exchange',
+    public_object_name: 'trustedExchangeCoordinator',
+    public_import_path: '@runtime/trusted_coordinators/trusted_exchange_coordinator/index.ts',
+    runtime_path: 'runtime/trusted_coordinators/trusted_exchange_coordinator',
+    structure: 'foldered_gated',
+    expected_methods: [
+      { method_name: 'previewImport', notes: 'Normalizes incoming bundle material and combines compatibility, verification, and local archive comparison without writing storage.' },
+      { method_name: 'planImportCommit', notes: 'Turns an import preview into a non-mutating commit plan with skip/import/manual-resolution classifications.' },
+      { method_name: 'exportPacketSet', notes: 'Wraps Archive bundle export in an Exchange manifest and records requested expansion options.' },
+      { method_name: 'planMerge', notes: 'Compares incoming packet revisions to local archive state and classifies shallow merge actions.' },
+      { method_name: 'previewRebundle', notes: 'Normalizes packet material into a rebundle preview and manifest without storage mutation.' },
+      { method_name: 'auditReadiness', notes: 'Audits Compatibility, Verification, Archive, normalization, and merge-planning seams.' },
+    ],
+    notes: 'Exchange seam for packet movement. It orchestrates Archive, Verification, and Compatibility for import/export/merge/rebundle previews, but Pass A does not commit imported bundles or mutate storage.',
   },
   {
     coordinator_id: 'trusted_projection_coordinator.v0',
