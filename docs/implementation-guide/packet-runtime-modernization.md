@@ -13,17 +13,17 @@ The work should preserve current behavior while replacing hidden assumptions wit
 ## Modernization Targets
 
 - packet types should have body schemas, compatibility entries, builder support, manifest definitions, definition parts, and runtime connector status recorded in one audit surface
-- runtime mutations should map to coordinator responsibilities, prepare/finalize behavior, policy action IDs, signed corridor use, and Signal Conductor enrollment status
+- runtime mutations should map to coordinator responsibilities, prepare/finalize behavior, policy action IDs, signed corridor use, and interface event enrollment status
 - Definition, Bundle, and Preference are canonical packet types with body schemas, compatibility entries, builder support, definition parts, and seed/profile coverage
 - imported Definition and Bundle packets describe semantics but never introduce executable server behavior
-- Trusted Runtime Coordinators and the Interface Signal Conductor should become the standard orchestration path after coverage is complete
+- Trusted Runtime Coordinators and the Interface Event Coordinator should become the standard orchestration path after coverage is complete
 
 ## Phase Plan
 
 1. Save the broad plan and add coverage audits.
 2. Use the audit output to prioritize packet-type definition work.
 3. Expand manifest definitions and definition parts type by type, preserving existing schemas and compatibility behavior unless a type-specific schema evolution is explicitly approved.
-4. Adapt runtime mutation paths into Trusted Runtime Coordinator seams behind the Interface Signal Conductor, keeping signed corridor behavior intact until each mutation has a tested replacement boundary.
+4. Adapt runtime mutation paths into Trusted Runtime Coordinator seams behind the Interface Event Coordinator, keeping signed corridor behavior intact until each mutation has a tested replacement boundary.
 5. Enroll completed types and connectors only when their docs, tests, policies, and runtime behavior are all aligned.
 6. Retire planned-gap records only when the implementation and tests prove the gap is actually closed.
 
@@ -65,8 +65,8 @@ Current modernization direction is to organize secure runtime work around enroll
 
 Target coordinator families:
 
-- Interface Signal Conductor for client-side UI signal shaping before requests leave the interface
-- Trusted Request Coordinator for user/API intent routing, request normalization, and fail-closed preflight
+- Interface Event Coordinator for client-side UI event shaping before requests leave the interface
+- Trusted Dispatch Coordinator for user/API intent routing, request normalization, and fail-closed preflight
 - Trusted Definition Coordinator for active definition context, node definition preferences, definition part selection, compatibility-only definitions, and reseed readiness views
 - Trusted Regulation Coordinator for policy and governance resolution
 - Trusted Planning Coordinator for defaults, dependency, and bundle-plan resolution
@@ -79,7 +79,15 @@ Target coordinator families:
 - Trusted Import Coordinator and Trusted Export Coordinator for bundle ingress/egress
 - Trusted Projection Coordinator for UI-ready graph projections and available actions
 
-These coordinators are runtime concerns. They execute trusted local code and feed live context through the Core Contracts Vault. Packet definitions may describe allowed operations, defaults, dependencies, policy requirements, actions, and projection hints, but imported packet definitions must never execute local runtime behavior. The Interface Signal Conductor is the client-side signal former; it has no trusted authority. The Trusted Request Coordinator is the runtime front desk: it normalizes requests, preflights registered client/API intents, and hands accepted runtime requests to downstream coordinators. The Trusted Definition Coordinator is the gate for definition lookup: internal candidate listing, ranking, conflict audit, compatibility selection, and runtime-view compilation functions are routed through its public coordinator surface instead of being imported as loose helper functions. The Trusted Regulation Coordinator follows the same gated coordinator pattern for policy contexts, write-policy gates, requirement listing, and readiness audits. The Trusted Planning Coordinator owns packet operation plans, builder selection, defaults, dependencies, child-plan seams, body-input plans, and planning readiness so default/dependency work does not masquerade as policy enforcement. The Trusted Building Coordinator is now the gated candidate materialization seam: it consumes trusted operation plans, builds packet candidate graphs, preserves Definition-part body candidate construction, and does not re-resolve policy/default/dependency DSL. The Trusted Inspection Coordinator is now the quality gate after Building: it inspects build results against frozen operation plan snapshots, validates candidate bodies against packet body schemas, checks plan/candidate graph alignment, and does not re-plan, sign, certify, or archive in normal mode.
+These coordinators are runtime concerns. They execute trusted local code and feed live context through the Core Contracts Vault. Packet definitions may describe allowed operations, defaults, dependencies, policy requirements, actions, and projection hints, but imported packet definitions must never execute local runtime behavior. The Interface Event Coordinator is the client-side event former; it has no trusted authority. The Trusted Dispatch Coordinator is the runtime front desk: it normalizes requests, preflights registered client/API intents, and hands accepted runtime requests to downstream coordinators. The older Interface Signal Conductor and Trusted Request Coordinator names remain compatibility bridges only. The Trusted Definition Coordinator is the gate for definition lookup: internal candidate listing, ranking, conflict audit, compatibility selection, and runtime-view compilation functions are routed through its public coordinator surface instead of being imported as loose helper functions. The Trusted Regulation Coordinator follows the same gated coordinator pattern for policy contexts, write-policy gates, requirement listing, and readiness audits. The Trusted Planning Coordinator owns packet operation plans, builder selection, defaults, dependencies, child-plan seams, body-input plans, and planning readiness so default/dependency work does not masquerade as policy enforcement. The Trusted Building Coordinator is now the gated candidate materialization seam: it consumes trusted operation plans, builds packet candidate graphs, preserves Definition-part body candidate construction, and does not re-resolve policy/default/dependency DSL. The Trusted Inspection Coordinator is now the quality gate after Building: it inspects build results against frozen operation plan snapshots, validates candidate bodies against packet body schemas, checks plan/candidate graph alignment, and does not re-plan, sign, certify, or archive in normal mode.
+
+## Interface Event Coordinator and Dispatch Intake
+
+The first interface-to-runtime orchestration pass adds a Nexus app-layer `InterfaceEventCoordinatorProvider` and `useInterfaceEventCoordinator()` hook. UI handlers can now describe an event source, client intent, optional mutation intent, visual loading scope, local validation, dispatch callback, and refresh callback as one lifecycle. The coordinator creates an `interface.event` envelope, runs caller-owned validation, activates scoped loading, dispatches the work, normalizes success/failure results, and records recent event state for debugging.
+
+Client validation is intentionally advisory. The Interface Event Coordinator supports required values, length checks, regex checks, and caller predicates, but runtime policy, proof, tickets, signing, persistence, and mutation effects remain authoritative downstream.
+
+Runtime intake now exposes `trustedDispatchCoordinator` as the canonical front desk. It currently delegates to the existing foldered Trusted Request Coordinator implementation, preserving request compatibility while establishing dispatch naming. Mutation prepare/finalize routes normalize dispatch context through this coordinator; prepare also runs registered client-intent preflight before the existing fortress mutation service path continues. Optional interface event metadata travels in headers so signed mutation payload schemas stay unchanged.
 
 ## Definition-Driven Build And Projection Direction
 
@@ -135,7 +143,7 @@ Inspection readiness intentionally runs the full Planning -> Building -> Inspect
 
 The first chunky implementation pass expanded the packet manifest from the Preference template to the active packet types with generic builder-pipeline support: Element, Location, Role, Claim, Relation, Report, Proposal, Reaction, Decision, Action, Discussion, and Policy.
 
-This pass remains runtime-ready. The new definitions describe existing body schemas, compatibility registry posture, generic builder support, action descriptors, planner descriptors, projection/index descriptors, and Definition parts. They do not change route payloads, packet schemas, runtime mutation behavior, or Signal Conductor connector enrollment.
+This pass remains runtime-ready. The new definitions describe existing body schemas, compatibility registry posture, generic builder support, action descriptors, planner descriptors, projection/index descriptors, and Definition parts. They do not change route payloads, packet schemas, runtime mutation behavior, or interface event connector enrollment.
 
 Builder-missing types remain explicit missing coverage items in the modernization audit. Preference later received canonical builder support and signed-corridor write enrollment.
 
@@ -157,7 +165,7 @@ The manifest audit now fails when compatibility posture and descriptors disagree
 
 ## Mutation Handler Extraction Pass
 
-The signed mutation corridor remains the live authority for prepare, proof, finalize, and persistence decisions. The packet-runtime Signal Conductor remains the client/API-to-runtime connector bridge; it does not own signed mutation internals yet.
+The signed mutation corridor remains the live authority for prepare, proof, finalize, and persistence decisions. The Interface Event Coordinator remains the client/API-to-runtime event bridge; it does not own signed mutation internals yet.
 
 The extraction pass introduces domain-composed mutation handler maps for locality, discussion, reaction, assembly, relation, role, and actor policy. `MutationPrepareHandlers` and `MutationFinalizeHandlers` remain compatibility facades for the current implementation, while the composed maps give the runtime a clearer stepping-stone toward generic packet planners.
 
@@ -185,7 +193,7 @@ The signed mutation genericization audit also records operation mappings for eve
 - `workflow_specific` intents map to `workflow.compose` or a composed operation set and remain runtime-owned until their component operations can be split safely.
 - `legacy_bridge` intents point at the canonical operation direction they should collapse into.
 
-This keeps ingress normalization separate from mutation authority. The Signal Conductor can normalize client/API ingress requests and eventually choose operation descriptors, while the trusted mutation pipeline still owns prepare/finalize/proof/persistence until a later pass promotes selected operation kinds through the generic path.
+This keeps ingress normalization separate from mutation authority. The Interface Event Coordinator can normalize client/API ingress requests and eventually choose operation descriptors, while the trusted mutation pipeline still owns prepare/finalize/proof/persistence until a later pass promotes selected operation kinds through the generic path.
 
 ## Generic Workflow Planner Contract Pass
 

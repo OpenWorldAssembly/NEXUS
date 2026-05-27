@@ -312,4 +312,10 @@ This monthly log condenses the May 2026 decisions that remain most important for
 
 - Identity route UI helpers moved into `app/components/nexus/features/identity/*`, completing the main feature-folder map alongside discussions, Explorer, locality, and sidebar.
 - `app/components/nexus/nexus-identity-ui.tsx` remains a temporary bridge only; identity routes now import from the feature folder while keeping router, auth/session, passkey, storage, mutation, and error behavior route-owned.
-- The wrap-up stayed organizational and audit-oriented: deeper trust/roles extraction, sidebar second split, dashboard/library/account/votes polish, and Interface Signal Conductor work remain post-audit follow-ups.
+- The wrap-up stayed organizational and audit-oriented: deeper trust/roles extraction, sidebar second split, dashboard/library/account/votes polish, and interface event coordination work remain post-audit follow-ups.
+
+## 2026-05 Interface Event Coordinator and Trusted Dispatch foundation
+
+- The client-side Interface Signal Conductor direction was renamed to Interface Event Coordinator, reflecting its role as the master interface event lifecycle controller rather than a trusted runtime actor.
+- Trusted Dispatch Coordinator is now the canonical runtime front desk name for request normalization and client-intent preflight; the existing Trusted Request Coordinator remains as the compatibility implementation bridge.
+- Mutation prepare now passes through dispatch normalization and fail-closed client-intent preflight before the existing fortress corridor continues. Mutation finalize records dispatch normalization while preserving ticket-based finalize preflight and signed payload schemas.

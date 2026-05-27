@@ -75,7 +75,7 @@ Nexus now has the main feature-component homes expected by the consolidation roa
 
 Official reusable primitives live under `ui/actions`, `ui/cards`, `ui/feedback`, `ui/forms`, `ui/forms/search`, `ui/layout`, `ui/overlays`, and `ui/tabs`. Accepted exceptions remain where behavior is still specialized: Explorer document tabs, sidebar shell animation/drawer state, locality graph focus and picker orchestration, discussion auto-load scroll regions, auth gates, and identity route controller flows.
 
-The remaining large post-audit targets are trust/roles feature extraction, a sidebar second split, dashboard/library/account/votes route polish, and any locality controller cleanup that does not disturb graph/search behavior. Interface Signal Conductor work is intentionally outside this UI consolidation chapter.
+The remaining large post-audit targets are trust/roles feature extraction, a sidebar second split, dashboard/library/account/votes route polish, and any locality controller cleanup that does not disturb graph/search behavior. Interface Event Coordinator work is intentionally tracked in the runtime/interface orchestration chapter rather than this UI consolidation chapter.
 
 ## Feature extraction status
 

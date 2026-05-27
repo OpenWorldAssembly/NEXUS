@@ -159,6 +159,7 @@ type IdentityShellContextValue = {
   runFortressMutation: <TResult = unknown>(input: {
     intent: MutationIntent;
     writeRisk?: 'standard' | 'high_impact';
+    interfaceEventHeaders?: Record<string, string>;
   }) => Promise<NexusFinalizedMutationPayload & { result: TResult }>;
   revokePasskey: (credentialId: string) => Promise<void>;
   revokeSession: (sessionId: string) => Promise<void>;

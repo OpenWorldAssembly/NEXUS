@@ -246,6 +246,7 @@ export function createIdentityShellFortressAdapter(
   const runFortressMutation = async <TResult = unknown>(inputForMutation: {
     intent: MutationIntent;
     writeRisk?: MutationWriteRisk;
+    interfaceEventHeaders?: Record<string, string>;
   }): Promise<NexusFinalizedMutationPayload & { result: TResult }> => {
     const unlockedIdentity = input.requireUnlockedCurrentIdentity();
     const prepareRequestBody = await createVerifiedRequestBody(
@@ -262,6 +263,7 @@ export function createIdentityShellFortressAdapter(
     const preparedMutation = await prepareNexusMutation({
       requestBody: prepareRequestBody,
       headers: createClientIdentityHeaders(unlockedIdentity),
+      interfaceEventHeaders: inputForMutation.interfaceEventHeaders,
     });
     let reauthToken: string | null = null;
     const requiredProofLevel = preparedMutation.prepared_mutation
@@ -304,6 +306,7 @@ export function createIdentityShellFortressAdapter(
     const finalizedMutation = await finalizeNexusMutation({
       requestBody: finalizeRequestBody,
       headers: createClientIdentityHeaders(unlockedIdentity),
+      interfaceEventHeaders: inputForMutation.interfaceEventHeaders,
     });
 
     await input.refreshAuthSession();
@@ -318,6 +321,7 @@ export function createIdentityShellFortressAdapter(
     session: NexusAuthSessionPayload;
     intent: MutationIntent;
     writeRisk?: MutationWriteRisk;
+    interfaceEventHeaders?: Record<string, string>;
   }): Promise<NexusFinalizedMutationPayload & { result: TResult }> => {
     const prepareRequestBody = await createVerifiedRequestBodyForIdentity({
       identity: inputForIdentity.identity,
@@ -331,6 +335,7 @@ export function createIdentityShellFortressAdapter(
     const preparedMutation = await prepareNexusMutation({
       requestBody: prepareRequestBody,
       headers: createClientIdentityHeaders(inputForIdentity.identity),
+      interfaceEventHeaders: inputForIdentity.interfaceEventHeaders,
     });
     const signedPackets = await Promise.all(
       preparedMutation.prepared_mutation.prepared_packets.map((candidate) =>
@@ -354,6 +359,7 @@ export function createIdentityShellFortressAdapter(
     return (await finalizeNexusMutation({
       requestBody: finalizeRequestBody,
       headers: createClientIdentityHeaders(inputForIdentity.identity),
+      interfaceEventHeaders: inputForIdentity.interfaceEventHeaders,
     })) as NexusFinalizedMutationPayload & { result: TResult };
   };
 

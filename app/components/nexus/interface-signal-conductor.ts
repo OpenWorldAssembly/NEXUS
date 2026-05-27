@@ -1,26 +1,19 @@
 /**
  * File: interface-signal-conductor.ts
- * Description: Client-side signal normalizer for Nexus UI actions before runtime request intake.
+ * Description: Compatibility bridge for the renamed Nexus Interface Event Coordinator.
  */
 
-export type InterfaceSignalSourceKind = 'nexus_surface' | 'packet_card' | 'action_menu' | 'form' | 'debug_panel';
+import {
+  createInterfaceEvent,
+  updateInterfaceEventStatus,
+  type InterfaceEventEnvelope,
+  type InterfaceEventSourceKind,
+  type InterfaceEventStatus,
+} from './interface-event-coordinator';
 
-export type InterfaceSignalStatus = 'ready' | 'pending' | 'sent' | 'failed';
-
-export type InterfaceSignal = {
-  signal_kind: 'interface.signal';
-  signal_id: string;
-  source_kind: InterfaceSignalSourceKind;
-  source_surface: string;
-  client_intent_id: string;
-  mutation_intent: string | null;
-  connector_id: string | null;
-  target_route: string;
-  actor_packet_id: string | null;
-  payload: unknown;
-  status: InterfaceSignalStatus;
-  created_at: string;
-};
+export type InterfaceSignalSourceKind = InterfaceEventSourceKind;
+export type InterfaceSignalStatus = InterfaceEventStatus;
+export type InterfaceSignal = InterfaceEventEnvelope;
 
 export type CreateInterfaceSignalInput = {
   source_kind: InterfaceSignalSourceKind;
@@ -31,44 +24,49 @@ export type CreateInterfaceSignalInput = {
   connector_id?: string | null;
   actor_packet_id?: string | null;
   payload?: unknown;
-  signal_id?: string | null;
-  created_at?: string | null;
 };
 
-function createClientSignalId(): string {
-  const randomPart = Math.random().toString(36).slice(2, 10);
-  return `interface.signal.${Date.now().toString(36)}.${randomPart}`;
-}
-
 export function createInterfaceSignal(input: CreateInterfaceSignalInput): InterfaceSignal {
-  return {
-    signal_kind: 'interface.signal',
-    signal_id: input.signal_id ?? createClientSignalId(),
-    source_kind: input.source_kind,
-    source_surface: input.source_surface,
-    client_intent_id: input.client_intent_id,
-    mutation_intent: input.mutation_intent ?? null,
-    connector_id: input.connector_id ?? null,
-    target_route: input.target_route,
-    actor_packet_id: input.actor_packet_id ?? null,
-    payload: input.payload ?? null,
-    status: 'ready',
-    created_at: input.created_at ?? new Date().toISOString(),
-  };
+  return createInterfaceEvent({
+    source: {
+      kind: input.source_kind,
+      surface: input.source_surface,
+    },
+    intent: {
+      clientIntentId: input.client_intent_id,
+      targetRoute: input.target_route,
+      mutationIntent: input.mutation_intent,
+      connectorId: input.connector_id,
+      actorPacketId: input.actor_packet_id,
+      payload: input.payload,
+    },
+  });
 }
 
 export function markInterfaceSignalStatus(
   signal: InterfaceSignal,
   status: InterfaceSignalStatus
 ): InterfaceSignal {
-  return {
-    ...signal,
-    status,
-  };
+  return updateInterfaceEventStatus(signal, status);
 }
 
+export {
+  InterfaceEventCoordinatorProvider,
+  useInterfaceEventCoordinator,
+} from './interface-event-coordinator';
+export type {
+  InterfaceEventEnvelope,
+  InterfaceEventResultStatus,
+  InterfaceEventRunInput,
+  InterfaceEventRunResult,
+  InterfaceEventSourceKind,
+  InterfaceEventStatus,
+  InterfaceEventValidationIssue,
+  InterfaceEventValidationResult,
+} from './interface-event-coordinator';
+
 export const interfaceSignalConductor = {
-  id: 'interface_signal_conductor.v0',
+  id: 'interface_event_coordinator.v0',
   createSignal: createInterfaceSignal,
   markStatus: markInterfaceSignalStatus,
 };

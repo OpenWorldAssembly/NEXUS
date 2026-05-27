@@ -13,6 +13,7 @@ import {
   toNexusAuthGatePayload,
 } from '@runtime/nexus/server/auth-service.utils';
 import { resolveFinalizeMutationApiPreflight } from '@runtime/nexus/server/packet-api-crossing-guard';
+import { trustedDispatchCoordinator } from '@runtime/trusted_coordinators/trusted_dispatch_coordinator/index.ts';
 
 const ActorAssertionSchema = z
   .object({
@@ -46,6 +47,19 @@ function createJsonResponse(body: unknown, status = 200): Response {
   });
 }
 
+function getInterfaceEventHeader(request: Request, name: string): string | null {
+  const value = request.headers.get(name);
+  return value && value.trim().length > 0 ? value : null;
+}
+
+function assertDispatchResult(result: { status: string; value: unknown; issues: { message: string }[] }) {
+  if (result.status === 'error' || result.value === null) {
+    throw new Error(
+      result.issues[0]?.message ?? 'Trusted dispatch coordinator blocked this request.'
+    );
+  }
+}
+
 export const POST: RequestHandler = async (request) => {
   try {
     const rawBody = await request.json();
@@ -59,6 +73,34 @@ export const POST: RequestHandler = async (request) => {
       throw new Error('Unknown mutation ticket.');
     }
 
+    const interfaceEventId = getInterfaceEventHeader(
+      request,
+      'x-nexus-interface-event-id'
+    );
+    const normalizedDispatch = trustedDispatchCoordinator.normalizeRequest({
+      source_kind: interfaceEventId ? 'interface_signal' : 'api_route',
+      source_route: '/api/nexus/mutations/finalize',
+      operation_kind: 'mutation_finalize',
+      request_id: interfaceEventId,
+      client_intent_id: getInterfaceEventHeader(
+        request,
+        'x-nexus-interface-event-client-intent-id'
+      ),
+      mutation_intent: storedTicket.intent.kind,
+      actor_packet_id: parsedBody.actor_assertion.actor_packet_id,
+      payload: {
+        ticket_id: parsedBody.ticket_id,
+        interface_event_source_kind: getInterfaceEventHeader(
+          request,
+          'x-nexus-interface-event-source-kind'
+        ),
+        interface_event_source_surface: getInterfaceEventHeader(
+          request,
+          'x-nexus-interface-event-source-surface'
+        ),
+      },
+    });
+    assertDispatchResult(normalizedDispatch);
     resolveFinalizeMutationApiPreflight(storedTicket.intent);
 
     const actorContext = await services.authService.verifyActorMutation({

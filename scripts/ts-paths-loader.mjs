@@ -14,7 +14,7 @@ const ALIASES = [
   ['@runtime/', 'runtime/'],
   ['@/', ''],
 ];
-const EXTENSIONS = ['', '.ts', '.tsx', '.js', '.mjs', '/index.ts', '/index.tsx'];
+const EXTENSIONS = ['.ts', '.tsx', '.js', '.mjs', '/index.ts', '/index.tsx', ''];
 
 function resolveAlias(specifier) {
   const alias = ALIASES.find(([prefix]) => specifier.startsWith(prefix));

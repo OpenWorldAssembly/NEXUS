@@ -7,6 +7,21 @@ import type { TrustedRuntimeCoordinatorScaffoldDescriptor } from './trusted_runt
 
 export const TRUSTED_COORDINATOR_SCAFFOLD_MANIFEST = [
   {
+    coordinator_id: 'trusted_dispatch_coordinator.v0',
+    coordinator_kind: 'dispatch',
+    public_object_name: 'trustedDispatchCoordinator',
+    public_import_path: '@runtime/trusted_coordinators/trusted_dispatch_coordinator',
+    runtime_path: 'runtime/trusted_coordinators/trusted_dispatch_coordinator',
+    structure: 'foldered_gated',
+    expected_methods: [
+      { method_name: 'normalizeRequest', notes: 'Validates and normalizes interface/API events into trusted runtime requests.' },
+      { method_name: 'preflightClientIntent', notes: 'Checks route/intent enrollment before mutation preparation.' },
+      { method_name: 'listEnrollments', notes: 'Lists registered client/API ingress enrollments.' },
+      { method_name: 'auditReadiness', notes: 'Audits dispatch intake enrollment coverage.' },
+    ],
+    notes: 'Canonical runtime front desk for dispatch intake. Currently delegates to the compatibility Trusted Request Coordinator implementation.',
+  },
+  {
     coordinator_id: 'trusted_request_coordinator.v0',
     coordinator_kind: 'request',
     public_object_name: 'trustedRequestCoordinator',
@@ -19,7 +34,7 @@ export const TRUSTED_COORDINATOR_SCAFFOLD_MANIFEST = [
       { method_name: 'listEnrollments', notes: 'Lists registered client/API ingress enrollments.' },
       { method_name: 'auditReadiness', notes: 'Audits request intake enrollment coverage.' },
     ],
-    notes: 'Runtime front desk for request intake. It does not plan or build packets.',
+    notes: 'Compatibility name for the runtime dispatch front desk. New code should prefer Trusted Dispatch Coordinator.',
   },
   {
     coordinator_id: 'trusted_definition_coordinator.v0',

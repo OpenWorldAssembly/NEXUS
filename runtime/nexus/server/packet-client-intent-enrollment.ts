@@ -15,8 +15,8 @@ import {
   type PacketRuntimeFortressHandoff,
   type PacketRuntimeFortressHandoffStatus,
 } from "@runtime/nexus/server/packet-runtime-fortress-handoff";
-import { trustedRegulationCoordinator } from "@runtime/trusted_coordinators/trusted_regulation_coordinator";
-import { trustedPlanningCoordinator } from "@runtime/trusted_coordinators/trusted_planning_coordinator";
+import { trustedRegulationCoordinator } from "@runtime/trusted_coordinators/trusted_regulation_coordinator/index.ts";
+import { trustedPlanningCoordinator } from "@runtime/trusted_coordinators/trusted_planning_coordinator/index.ts";
 
 export type PacketClientIntentEnrollmentMode =
   | "signed_fortress_prepare"

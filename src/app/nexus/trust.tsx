@@ -9,6 +9,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
+import {
+  requiredInterfaceValue,
+  useInterfaceEventCoordinator,
+} from '@app/components/nexus/interface-event-coordinator';
 import { useNexusAuthGate } from '@app/components/nexus/nexus-auth-gate';
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import { useNexusPreviewTargetParams } from '@app/components/nexus/preview';
@@ -37,6 +41,7 @@ function formatHomeChain(scopeNames: string[]): string {
 export default function NexusTrustPage() {
   const router = useRouter();
   const appearance = useNexusAppearance();
+  const interfaceEvents = useInterfaceEventCoordinator();
   const {
     activeScope,
     currentActorPacketId,
@@ -138,46 +143,84 @@ export default function NexusTrustPage() {
     }
 
     const applyAssociationRelation = async () => {
-      try {
-        await runFortressMutation({
-          intent: {
-            kind:
-              value === 1
-                ? 'relation.association.add'
-                : 'relation.association.clear',
-            target_packet_id: activeScope.packetId,
-            scope_id: activeScope.id,
-            ...(value === 1
-              ? {
-                  note:
-                    associationNote.trim().length > 0 ? associationNote : null,
-                }
-              : {}),
-          },
-        });
-        const nextTrustPayload = await fetchNexusTrustPayload({
-          scopeId: activeScope.id,
+      const mutationIntent =
+        value === 1 ? 'relation.association.add' : 'relation.association.clear';
+      const eventResult = await interfaceEvents.runEvent({
+        source: {
+          kind: 'form',
+          surface: 'trust',
+        },
+        intent: {
+          clientIntentId:
+            value === 1 ? 'scope.association.set' : 'scope.association.clear',
+          targetRoute: '/api/nexus/mutations/prepare',
+          mutationIntent,
           actorPacketId: currentActorPacketId,
-        });
-        setTrustPayload(nextTrustPayload);
+          payload: {
+            scope_id: activeScope.id,
+            target_packet_id: activeScope.packetId,
+          },
+        },
+        loading: {
+          scope: `trust:association:${activeScope.id}`,
+          label: 'Updating association...',
+        },
+        validate: [
+          requiredInterfaceValue(
+            'activeScope.packetId',
+            activeScope.packetId,
+            'Open a scope to update an association relation.'
+          ),
+        ],
+        dispatch: ({ headers }) =>
+          runFortressMutation({
+            intent: {
+              kind: mutationIntent,
+              target_packet_id: activeScope.packetId,
+              scope_id: activeScope.id,
+              ...(value === 1
+                ? {
+                    note:
+                      associationNote.trim().length > 0
+                        ? associationNote
+                        : null,
+                  }
+                : {}),
+            },
+            interfaceEventHeaders: headers,
+          }),
+        refresh: async () => {
+          const nextTrustPayload = await fetchNexusTrustPayload({
+            scopeId: activeScope.id,
+            actorPacketId: currentActorPacketId,
+          });
+          setTrustPayload(nextTrustPayload);
+        },
+      });
+
+      if (eventResult.status === 'succeeded') {
         setStatusMessage(
           value === 1
             ? `Added association with ${activeScope.name}.`
             : `Cleared association with ${activeScope.name}.`
         );
         setErrorMessage(null);
-      } catch (error) {
-        if (openNexusAuthGateForError(error, applyAssociationRelation)) {
-          return;
-        }
-
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : 'Unable to update the association.'
-        );
-        setStatusMessage(null);
+        return;
       }
+
+      const eventError = eventResult.error;
+
+      if (eventError && openNexusAuthGateForError(eventError, applyAssociationRelation)) {
+        return;
+      }
+
+      setErrorMessage(
+        eventResult.validation?.issues[0]?.message ??
+          (eventError instanceof Error
+            ? eventError.message
+            : 'Unable to update the association.')
+      );
+      setStatusMessage(null);
     };
 
     await guardNexusWrite(

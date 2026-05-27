@@ -5,6 +5,7 @@
 
 export type TrustedRuntimeCoordinatorKind =
   | 'request'
+  | 'dispatch'
   | 'definition'
   | 'regulation'
   | 'planning'

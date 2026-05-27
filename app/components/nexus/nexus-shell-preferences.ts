@@ -26,6 +26,7 @@ export type PersistNexusElementPreferenceInput = {
       shell_chrome?: Partial<ShellChromePreferenceValue>;
       note?: string | null;
     };
+    interfaceEventHeaders?: Record<string, string>;
   }) => Promise<{ result: TResult }>;
   updateCompatibilityPreferences: (requestBody: Record<string, unknown>) => Promise<{
     preferences: NexusScopeDisplayPreferencesPayload;

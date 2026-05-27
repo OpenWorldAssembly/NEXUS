@@ -6,6 +6,7 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { Stack } from 'expo-router';
 
 import { NexusActionMenuControllerProvider } from '@app/components/nexus/ui/cards/action-card/nexus-action-menu-controller';
+import { InterfaceEventCoordinatorProvider } from '@app/components/nexus/interface-event-coordinator';
 import { NexusLoadingProvider } from '@app/components/nexus/ui/feedback/loading';
 import NexusShell from '@app/components/nexus/nexus-shell';
 import {
@@ -61,9 +62,11 @@ export default function NexusLayout() {
   return (
     <NexusShellProvider>
       <NexusLoadingProvider>
-        <NexusActionMenuControllerProvider>
-          <NexusLayoutContent />
-        </NexusActionMenuControllerProvider>
+        <InterfaceEventCoordinatorProvider>
+          <NexusActionMenuControllerProvider>
+            <NexusLayoutContent />
+          </NexusActionMenuControllerProvider>
+        </InterfaceEventCoordinatorProvider>
       </NexusLoadingProvider>
     </NexusShellProvider>
   );

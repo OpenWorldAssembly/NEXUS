@@ -5,6 +5,7 @@
 
 export * from './trusted_runtime_coordinator.ts';
 export * from './trusted_coordinator_manifest.ts';
+export * from './trusted_dispatch_coordinator/index.ts';
 export * from './trusted_request_coordinator/index.ts';
 export * from './trusted_resolution_coordinator.ts';
 export * from './trusted_projection_coordinator.ts';

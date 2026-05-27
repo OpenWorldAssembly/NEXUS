@@ -27,7 +27,7 @@ The trusted execution environment around Core.
 
 Runtime coordinators feed live context through the Core Contracts Vault and execute trusted local code. Packet definitions can describe allowed behavior, but imported definitions do not execute runtime behavior.
 
-### Interface / Signal Cockpit
+### Interface / Event Cockpit
 
 The reusable user-facing cockpit.
 
@@ -36,7 +36,7 @@ The reusable user-facing cockpit.
 - ticket/signing prompts, confirmations, errors, success states, and refresh requests
 - projection consumption through view models
 
-The interface should not decide packet validity, policy authority, or graph truth. It submits user intent and renders trusted projections.
+The interface should not decide packet validity, policy authority, or graph truth. The Interface Event Coordinator shapes user events, manages client-side validation/loading/refresh lifecycle, and submits intent toward the Trusted Dispatch Coordinator.
 
 The load-bearing rule stays the same: data is the system; platforms are adapters.
 
@@ -56,7 +56,7 @@ The active repo split is:
 
 - `core/*` for portable packet logic, schemas, builders, interpreters, definition contracts, pure projections, and graph rules
 - `runtime/*` for trusted coordinators, persistence, runtime services, query services, auth/trust/discussion orchestration, and API glue
-- `app/*` for Signal Cockpit components, hooks, constants, public content, reusable UI, and shared state
+- `app/*` for Event Cockpit components, hooks, constants, public content, reusable UI, and shared state
 - `src/app/*` for the Expo Router route shell and API entrypoints
 
 ## Documentation system
