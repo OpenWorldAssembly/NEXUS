@@ -16,14 +16,14 @@ The work should preserve current behavior while replacing hidden assumptions wit
 - runtime mutations should map to coordinator responsibilities, prepare/finalize behavior, policy action IDs, signed corridor use, and Signal Conductor enrollment status
 - Definition, Bundle, and Preference are canonical packet types with body schemas, compatibility entries, builder support, definition parts, and seed/profile coverage
 - imported Definition and Bundle packets describe semantics but never introduce executable server behavior
-- Trusted Runtime Coordinators and the Signal Conductor should become the standard orchestration path after coverage is complete
+- Trusted Runtime Coordinators and the Interface Signal Conductor should become the standard orchestration path after coverage is complete
 
 ## Phase Plan
 
 1. Save the broad plan and add coverage audits.
 2. Use the audit output to prioritize packet-type definition work.
 3. Expand manifest definitions and definition parts type by type, preserving existing schemas and compatibility behavior unless a type-specific schema evolution is explicitly approved.
-4. Adapt runtime mutation paths into Trusted Runtime Coordinator seams behind the Signal Conductor, keeping signed corridor behavior intact until each mutation has a tested replacement boundary.
+4. Adapt runtime mutation paths into Trusted Runtime Coordinator seams behind the Interface Signal Conductor, keeping signed corridor behavior intact until each mutation has a tested replacement boundary.
 5. Enroll completed types and connectors only when their docs, tests, policies, and runtime behavior are all aligned.
 6. Retire planned-gap records only when the implementation and tests prove the gap is actually closed.
 
@@ -65,8 +65,8 @@ Current modernization direction is to organize secure runtime work around enroll
 
 Target coordinator families:
 
-- Trusted Dispatch Coordinator for user/API intent routing
-- Trusted Validation Coordinator for request normalization and fail-closed preflight
+- Interface Signal Conductor for client-side UI signal shaping before requests leave the interface
+- Trusted Request Coordinator for user/API intent routing, request normalization, and fail-closed preflight
 - Trusted Definition Coordinator for active definition context, node definition preferences, definition part selection, compatibility-only definitions, and reseed readiness views
 - Trusted Regulation Coordinator for policy and governance resolution
 - Trusted Planning Coordinator for defaults, dependency, and bundle-plan resolution
@@ -79,7 +79,7 @@ Target coordinator families:
 - Trusted Import Coordinator and Trusted Export Coordinator for bundle ingress/egress
 - Trusted Projection Coordinator for UI-ready graph projections and available actions
 
-These coordinators are runtime concerns. They execute trusted local code and feed live context through the Core Contracts Vault. Packet definitions may describe allowed operations, defaults, dependencies, policy requirements, actions, and projection hints, but imported packet definitions must never execute local runtime behavior. The Trusted Definition Coordinator is the gate for definition lookup: internal candidate listing, ranking, conflict audit, compatibility selection, and runtime-view compilation functions are routed through its public coordinator surface instead of being imported as loose helper functions. The Trusted Regulation Coordinator now follows the same gated coordinator pattern for policy contexts, write-policy gates, requirement listing, and readiness audits. The Trusted Planning Coordinator owns packet operation plans, builder selection, defaults, dependencies, child-plan seams, and planning readiness so default/dependency work does not masquerade as policy enforcement.
+These coordinators are runtime concerns. They execute trusted local code and feed live context through the Core Contracts Vault. Packet definitions may describe allowed operations, defaults, dependencies, policy requirements, actions, and projection hints, but imported packet definitions must never execute local runtime behavior. The Interface Signal Conductor is the client-side signal former; it has no trusted authority. The Trusted Request Coordinator is the runtime front desk: it normalizes requests, preflights registered client/API intents, and hands accepted runtime requests to downstream coordinators. The Trusted Definition Coordinator is the gate for definition lookup: internal candidate listing, ranking, conflict audit, compatibility selection, and runtime-view compilation functions are routed through its public coordinator surface instead of being imported as loose helper functions. The Trusted Regulation Coordinator follows the same gated coordinator pattern for policy contexts, write-policy gates, requirement listing, and readiness audits. The Trusted Planning Coordinator owns packet operation plans, builder selection, defaults, dependencies, child-plan seams, and planning readiness so default/dependency work does not masquerade as policy enforcement.
 
 ## Definition-Driven Build And Projection Direction
 
@@ -97,6 +97,13 @@ Resolver ownership is split by domain:
 
 Builders remain packet anatomy. Defaults describe normal starting shape. Dependencies describe required structural refs. Planning assembles those pieces into a concrete operation plan and asks Regulation for the active policy envelope when policy meaning matters. Regulation does not build packets or apply defaults; it classifies policy requirements and write gates for creation, projection, import/export review, moderation, runtime reads, and governance checks. Projection definitions describe safe display and interaction hints.
 
+
+
+## Trusted Coordinator Scaffold Standard
+
+Trusted coordinators now share a scaffold contract: public coordinator object, stable coordinator id, typed result envelope, issues, trace entries, optional request/operation ids, and a manifest entry describing expected methods. Foldered trusted coordinators expose only their public coordinator and public types from `index.ts`; internal function modules and registries stay private behind the coordinator surface.
+
+`npm run audit:trusted-coordinators` checks the scaffold manifest. The audit currently treats Definition, Regulation, Planning, and Request as foldered gated coordinators. Building, Projection, and Resolution remain legacy-flat with warnings until they are promoted.
 
 ## Trusted Planning Coordinator Pass
 

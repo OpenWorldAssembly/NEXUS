@@ -27,6 +27,8 @@ function castResult<TValue>(
 }
 
 export const trustedPlanningCoordinator = {
+  id: 'trusted_planning_coordinator.v0',
+
   resolveOperationPlan(input: ResolveTrustedOperationPlanInput): TrustedRuntimeCoordinatorResult<TrustedOperationPlan> {
     return castResult<TrustedOperationPlan>(
       executeTrustedPlanningOperation({ operation: 'resolve_operation_plan', input })

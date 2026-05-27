@@ -19,7 +19,8 @@
     "prestart": "node ./scripts/assert-no-app-tests.mjs",
     "preweb": "node ./scripts/assert-no-app-tests.mjs",
     "preexport:web": "node ./scripts/assert-no-app-tests.mjs",
-    "check:app-boundaries": "node ./scripts/assert-no-app-tests.mjs"
+    "check:app-boundaries": "node ./scripts/assert-no-app-tests.mjs",
+    "audit:trusted-coordinators": "node --experimental-strip-types --experimental-specifier-resolution=node --loader ./scripts/ts-paths-loader.mjs scripts/audit-trusted-coordinators.ts"
   },
   "engines": {
     "node": "24.x"

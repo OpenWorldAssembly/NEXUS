@@ -4,7 +4,7 @@
 << /Type /Catalog /Pages 2 0 R >>
 endobj
 2 0 obj
-<< /Type /Pages /Kids [6 0 R 8 0 R 10 0 R 12 0 R 14 0 R 16 0 R 18 0 R] /Count 7 >>
+<< /Type /Pages /Kids [6 0 R 8 0 R 10 0 R 12 0 R 14 0 R 16 0 R 18 0 R 20 0 R] /Count 8 >>
 endobj
 3 0 obj
 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
@@ -54,7 +54,7 @@ endobj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 5 0 R >>
 endobj
 7 0 obj
-<< /Length 4374 >>
+<< /Length 4450 >>
 stream
 0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
 BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Roadmap - 2) Tj ET
@@ -66,39 +66,40 @@ BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 665.00 Tm (- broader report se
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 645.75 Tm (- Fork, Adapt, and Follow semantics) Tj ET
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 626.50 Tm (- diff views and revision compare) Tj ET
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 607.25 Tm (- richer link grouping and filtering) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 588.00 Tm (- eventual action execution through the fortress corridor rather than route-local writes) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 568.75 Tm (- first-class Bundle packets after verification and locality UX hardening, with legacy) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 553.50 Tm (bundle JSON remaining a runtime transport format rather than becoming a) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 538.25 Tm (schema-compatibility type) Tj ET
-0.720 0.820 0.900 RG 0.80 w 54.00 510.00 m 558.00 510.00 l S
-BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 501.00 Tm (Working order) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 469.00 Tm (1. harden import verification and truthful packet-status reporting 2. improve locality) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 453.75 Tm (creation UX on top of the new writer path 3. add provider-neutral locality standardization) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 438.50 Tm (and duplicate or equivalence handling 4. tighten trust, role, and relationship modeling 5.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 423.25 Tm (only then widen into deeper policy-heavy and governance-heavy workflows) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 400.00 Tm (The dedicated validation workflow screen remains intentionally unsupported. The next major) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 384.75 Tm (implementation chapter after the current verification tidy work is still locality UX, not) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 369.50 Tm (first-class Bundle implementation.) Tj ET
-0.720 0.820 0.900 RG 0.80 w 54.00 337.25 m 558.00 337.25 l S
-BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 328.25 Tm (Bundle direction already locked in) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 296.25 Tm (- Bundle should become a first-class packet type later rather than staying permanently as a) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 281.00 Tm (runtime-only JSON wrapper.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 261.75 Tm (- Rebundling or forwarding someone else's bundle should create a new bundle packet, not a) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 246.50 Tm (revision of the original bundle packet.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 227.25 Tm (- Bundle history should therefore behave as a lineage graph of related bundle packets rather) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 212.00 Tm (than one shared revision chain.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 192.75 Tm (- Runtime importreport, exportreport, and verification_report packets should remain the) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 177.50 Tm (portable record surface around bundle movement and validation.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 158.25 Tm (- Local trust should stay node-local even when those reports travel with exported artifacts.) Tj ET
-0.720 0.820 0.900 RG 0.80 w 54.00 130.00 m 558.00 130.00 l S
-BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 121.00 Tm (Initiatives, Locality, And Subscriptions) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 588.00 Tm (- eventual action execution through the trusted mutation pipeline rather than route-local) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 572.75 Tm (writes) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 553.50 Tm (- first-class Bundle packets after verification and locality UX hardening, with legacy) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 538.25 Tm (bundle JSON remaining a runtime transport format rather than becoming a) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 523.00 Tm (schema-compatibility type) Tj ET
+0.720 0.820 0.900 RG 0.80 w 54.00 494.75 m 558.00 494.75 l S
+BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 485.75 Tm (Working order) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 453.75 Tm (1. harden import verification and truthful packet-status reporting 2. improve locality) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 438.50 Tm (creation UX on top of the new writer path 3. add provider-neutral locality standardization) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 423.25 Tm (and duplicate or equivalence handling 4. tighten trust, role, and relationship modeling 5.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 408.00 Tm (only then widen into deeper policy-heavy and governance-heavy workflows) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 384.75 Tm (The dedicated validation workflow screen remains intentionally unsupported. The next major) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 369.50 Tm (implementation chapter after the current verification tidy work is still locality UX, not) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 354.25 Tm (first-class Bundle implementation.) Tj ET
+0.720 0.820 0.900 RG 0.80 w 54.00 322.00 m 558.00 322.00 l S
+BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 313.00 Tm (Bundle direction already locked in) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 281.00 Tm (- Bundle should become a first-class packet type later rather than staying permanently as a) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 265.75 Tm (runtime-only JSON wrapper.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 246.50 Tm (- Rebundling or forwarding someone else's bundle should create a new bundle packet, not a) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 231.25 Tm (revision of the original bundle packet.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 212.00 Tm (- Bundle history should therefore behave as a lineage graph of related bundle packets rather) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 196.75 Tm (than one shared revision chain.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 177.50 Tm (- Runtime importreport, exportreport, and verification_report packets should remain the) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 162.25 Tm (portable record surface around bundle movement and validation.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 143.00 Tm (- Local trust should stay node-local even when those reports travel with exported artifacts.) Tj ET
+0.720 0.820 0.900 RG 0.80 w 54.00 114.75 m 558.00 114.75 l S
+BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 105.75 Tm (Initiatives, Locality, And Subscriptions) Tj ET
 endstream
 endobj
 8 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 7 0 R >>
 endobj
 9 0 obj
-<< /Length 4269 >>
+<< /Length 4263 >>
 stream
 0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
 BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Roadmap - 3) Tj ET
@@ -112,7 +113,7 @@ BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 597.75 Tm (sets while remainin
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 578.50 Tm (- official versus unofficial initiative lineage should be inspectable, not mystical) Tj ET
 BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 545.25 Tm (Initiative backlog) Tj ET
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 519.25 Tm (- initiative versions and subscription or update behavior, using Relation\(subtype:) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 504.00 Tm (subscribes_to\) as the canonical adoption/sync edge) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 504.00 Tm (subscription\) as the canonical adoption/sync edge) Tj ET
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 484.75 Tm (- current official versus older official version support) Tj ET
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 465.50 Tm (- subscription alignment projection that compares inherited policy/dependency requirements) Tj ET
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 450.25 Tm (against deselected or locally overridden refs) Tj ET
@@ -121,10 +122,10 @@ BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 411.75 Tm (- feed, search, Lib
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 392.50 Tm (- actor-level or client-level preferences for what initiative visibility modes to show) Tj ET
 BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 359.25 Tm (Locality and scope backlog) Tj ET
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 333.25 Tm (- continue refining the Global + You baseline) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 314.00 Tm (- keep home_locality distinct from association) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 314.00 Tm (- keep residence distinct from association) Tj ET
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 294.75 Tm (- keep canonical packet-native home locality relation writes and explicit compatibility) Tj ET
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 279.50 Tm (projections as the base for later shell UI graph work) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 260.25 Tm (- keep packet-native follows and association relations as the base for the later shell graph) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 260.25 Tm (- keep packet-native follow and association relations as the base for the later shell graph) Tj ET
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 245.00 Tm (UI pass) Tj ET
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 225.75 Tm (- treat the current ancestry and provisional Location\(region\) writer path as the new) Tj ET
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 210.50 Tm (locality substrate rather than as pending exploratory work) Tj ET
@@ -183,15 +184,15 @@ endobj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 11 0 R >>
 endobj
 13 0 obj
-<< /Length 3881 >>
+<< /Length 4067 >>
 stream
 0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
 BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Roadmap - 5) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- whether reactions should remain lightweight attestation-like signals or become a distinct) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- whether reactions should remain lightweight reaction-like signals or become a distinct) Tj ET
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 718.75 Tm (type) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 699.50 Tm (- whether vouch and flag should become explicit attestation subtypes) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 680.25 Tm (- whether Claim and Attestation should stay split forever or eventually converge) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 661.00 Tm (- how recursive attestation graphs should be summarized safely in UI) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 699.50 Tm (- whether vouch and flag should become explicit reaction subtypes) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 680.25 Tm (- whether Claim and Reaction should stay split forever or eventually converge) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 661.00 Tm (- how recursive reaction graphs should be summarized safely in UI) Tj ET
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 641.75 Tm (These are active modeling questions, not current implementation commitments.) Tj ET
 0.720 0.820 0.900 RG 0.80 w 54.00 609.50 m 558.00 609.50 l S
 BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 600.50 Tm (Governance And Execution) Tj ET
@@ -206,125 +207,160 @@ BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 413.00 Tm (possible) Tj ET
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 393.75 Tm (- some proposal shapes may later become effect-bearing through policy) Tj ET
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 374.50 Tm (- future resolutions and decisions should read as process-backed outcome artifacts rather) Tj ET
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 359.25 Tm (than as magical authority events) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 326.00 Tm (Governance backlog) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 300.00 Tm (- real proposal drafting, editing, review, and publication flows) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 280.75 Tm (- real vote participation and result flows) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 261.50 Tm (- decision publication and linkage) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 242.25 Tm (- governance writes through the shared fortress corridor) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 223.00 Tm (- role-aware review checkpoints and trust-aware participation gates) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 203.75 Tm (- canonical approval packets or signed execution artifacts) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 184.50 Tm (- multi-key assemblies, custody transition, and decision-to-effect authority) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 151.25 Tm (Proposal and decision shape questions) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 125.25 Tm (- policy adoption proposals) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 106.00 Tm (- mission or coordination plan proposals) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 86.75 Tm (- resolutions) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 340.00 Tm (- governance should resolve through the Trusted Regulation Coordinator and trusted) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 324.75 Tm (planning/building pipeline rather than route-local vote logic) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 291.50 Tm (Policy resolver and voting foundation) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 265.50 Tm (Near-term governance work should establish the policy language and resolver before enabling) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 250.25 Tm (live voting.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 227.00 Tm (Milestones:) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 203.75 Tm (- formalize policy requirements for proposing, voting, attesting, reviewing, and moderating) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 184.50 Tm (- extend the initial Trusted Regulation Coordinator into the full policy resolver owner) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 165.25 Tm (- connect proposal creation to active governance policy) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 146.00 Tm (- connect vote eligibility to trust, role, association, and scope gates) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 126.75 Tm (- define quorum, threshold, vote method, and voting window semantics) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 107.50 Tm (- define decision creation rules and decision-report conditions) Tj ET
 endstream
 endobj
 14 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 13 0 R >>
 endobj
 15 0 obj
-<< /Length 4640 >>
+<< /Length 4063 >>
 stream
 0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
 BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Roadmap - 6) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- signals or polls) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 714.75 Tm (- other explicit action packages) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 695.50 Tm (Automatic execution should remain future work and should be limited to explicitly supported) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 680.25 Tm (built-in handlers or equivalent canonical approval artifacts.) Tj ET
-0.720 0.820 0.900 RG 0.80 w 54.00 648.00 m 558.00 648.00 l S
-BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 639.00 Tm (Open Questions And Deferred Decisions) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 593.00 Tm (Near-term open questions) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 567.00 Tm (- How should initiative conformance and version recognition be represented?) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 547.75 Tm (- Which visibility modes should arrive first for official, unofficial, current-version, and) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 532.50 Tm (older-version packets?) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 513.25 Tm (- How should Packet Explorer expose Fork, Adapt, Diff, Export, and Follow first?) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 494.00 Tm (- Where should moderation preferences live: actor policy, client preference, or both?) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 474.75 Tm (- What exact local trust state should be attached to imported or re-verified packets?) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 455.50 Tm (- Which packet relationships should a future first-class Bundle packet record directly:) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 440.25 Tm (carried packet refs, root refs, lineage refs, verification refs, or all of the above?) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 421.00 Tm (- Which remaining shell/interface preferences should join main visibility and) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 405.75 Tm (section-display options under the new packet-backed Preference.element model?) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 372.50 Tm (Deeper design questions) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 346.50 Tm (- Should reactions remain separate from higher-meaning vouch or objection signals?) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 327.25 Tm (- Which future relationship workflows should remain claim-mediated, and which should be) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 312.00 Tm (written directly as plain relations?) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 292.75 Tm (- What exact authority model should govern multi-key assemblies and custody transition?) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 273.50 Tm (- What exact event turns a decision from a signal into an effect-bearing authority artifact?) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 254.25 Tm (- Which built-in action handlers, if any, should Nexus eventually support for automatic) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 239.00 Tm (execution?) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 219.75 Tm (- How broad should the new Report type become beyond verificationreport and importreport?) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 200.50 Tm (- How should recorded verification or import reports, local verification caches, and later) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 185.25 Tm (live read-model verification results relate over time?) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 166.00 Tm (- Should future node-to-node trust let one node weigh validation reports signed by another) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 150.75 Tm (node, and if so through what policy seam?) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 131.50 Tm (- When, if ever, should packet-based compatibility manifests complement the current) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 116.25 Tm (code-based adapter registry?) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 97.00 Tm (- How much default flattening should future rebundling do when one bundle carries packets) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 81.75 Tm (that already arrived through an older bundle lineage?) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- keep automatic execution deferred until explicit built-in action handlers or canonical) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 718.75 Tm (approval artifacts exist) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 685.50 Tm (Governance backlog) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 659.50 Tm (- real proposal drafting, editing, review, and publication flows) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 640.25 Tm (- real vote participation and result flows) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 621.00 Tm (- decision publication and linkage) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 601.75 Tm (- full policy resolver semantics on top of the initial Trusted Regulation Coordinator) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 586.50 Tm (structure) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 567.25 Tm (- role-aware review checkpoints and trust-aware participation gates) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 548.00 Tm (- canonical approval packets or signed execution artifacts) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 528.75 Tm (- multi-key assemblies, custody transition, and decision-to-effect authority) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 495.50 Tm (Proposal and decision shape questions) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 469.50 Tm (- policy adoption proposals) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 450.25 Tm (- mission or coordination plan proposals) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 431.00 Tm (- resolutions) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 411.75 Tm (- signals or polls) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 392.50 Tm (- other explicit action packages) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 373.25 Tm (Automatic execution should remain future work and should be limited to explicitly supported) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 358.00 Tm (built-in handlers or equivalent canonical approval artifacts.) Tj ET
+0.720 0.820 0.900 RG 0.80 w 54.00 325.75 m 558.00 325.75 l S
+BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 316.75 Tm (Open Questions And Deferred Decisions) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 270.75 Tm (Near-term open questions) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 244.75 Tm (- How should initiative conformance and version recognition be represented?) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 225.50 Tm (- Which visibility modes should arrive first for official, unofficial, current-version, and) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 210.25 Tm (older-version packets?) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 191.00 Tm (- How should Packet Explorer expose Fork, Adapt, Diff, Export, and Follow first?) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 171.75 Tm (- Where should moderation preferences live: actor policy, client preference, or both?) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 152.50 Tm (- What exact local trust state should be attached to imported or re-verified packets?) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 133.25 Tm (- Which packet relationships should a future first-class Bundle packet record directly:) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 118.00 Tm (carried packet refs, root refs, lineage refs, verification refs, or all of the above?) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 98.75 Tm (- Which remaining shell/interface preferences should join main visibility and) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 83.50 Tm (section-display options under the new packet-backed Preference.element model?) Tj ET
 endstream
 endobj
 16 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 15 0 R >>
 endobj
 17 0 obj
-<< /Length 3246 >>
+<< /Length 4462 >>
 stream
 0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
 BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Roadmap - 7) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 720.00 Tm (Explicitly unsupported) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 694.00 Tm (- another broad architecture rewrite) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 674.75 Tm (- Discord adapter revival) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 655.50 Tm (- mesh transport and federation work) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 636.25 Tm (- real-time chat) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 617.00 Tm (- advanced reputation math) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 597.75 Tm (- deep governance automation before the trust and policy seams are clearer) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 578.50 Tm (- a dedicated validation workflow screen before locality UX and geo standardization are) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 563.25 Tm (settled) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 544.00 Tm (- packet-based compatibility manifests as active implementation rather than future design) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 528.75 Tm (direction) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 509.50 Tm (- first-class Bundle implementation before locality UX and geo standardization are settled) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 490.25 Tm (- authoritative selective home-tree storage and projection semantics before the current) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 475.00 Tm (locality descriptor, Unicode, and sparse-path foundations are settled) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 455.75 Tm (- provider-backed locality candidate ingestion, geometry, and external locality APIs before) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 440.50 Tm (the current descriptor and Unicode foundation pass is absorbed) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 421.25 Tm (- expanding the legacy runtime preference cache for new behavior instead of extending the) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 406.00 Tm (signed packet-backed Preference.element corridor) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 372.75 Tm (Bundle direction now decided) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 346.75 Tm (- Bundle should become a first-class packet type later.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 327.50 Tm (- Rebundling or forwarding another node's bundle should create a new bundle packet rather) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 312.25 Tm (than revising the older bundle packet.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 293.00 Tm (- Bundle history should be modeled as a lineage graph, not one shared revision chain.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 273.75 Tm (- Legacy bundle JSON artifacts should remain runtime import/export adapters until that) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 258.50 Tm (packet type exists.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- Should defaults remain inside Definition parts, or should a future first-class Default) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 718.75 Tm (packet exist once the current definition system proves the need?) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 685.50 Tm (Deeper design questions) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 659.50 Tm (- How expressive should the policy language become before it risks becoming a full rule) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 644.25 Tm (engine?) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 625.00 Tm (- How much projection behavior belongs in packet definitions versus runtime projection) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 609.75 Tm (profiles?) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 590.50 Tm (- What exact artifact gets signed in the final flow: user intent, packet candidate, finished) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 575.25 Tm (packet bundle, runtime certification report, or some combination?) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 556.00 Tm (- How should imported definition/profile packets be trusted, ignored, sandboxed, or adapted?) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 536.75 Tm (- Which future relationship workflows should remain claim-mediated, and which should be) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 521.50 Tm (written directly as plain relations?) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 502.25 Tm (- What exact authority model should govern multi-key assemblies and custody transition?) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 483.00 Tm (- What exact event turns a decision from a signal into an effect-bearing authority artifact?) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 463.75 Tm (- Which built-in action handlers, if any, should Nexus eventually support for automatic) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 448.50 Tm (execution?) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 429.25 Tm (- How broad should the new Report type become beyond verificationreport and importreport?) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 410.00 Tm (- How should recorded verification or import reports, local verification caches, and later) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 394.75 Tm (live read-model verification results relate over time?) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 375.50 Tm (- Should future node-to-node trust let one node weigh validation reports signed by another) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 360.25 Tm (node, and if so through what policy seam?) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 341.00 Tm (- When, if ever, should packet-based compatibility manifests complement the current) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 325.75 Tm (code-based adapter registry?) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 306.50 Tm (- How much default flattening should future rebundling do when one bundle carries packets) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 291.25 Tm (that already arrived through an older bundle lineage?) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 258.00 Tm (Explicitly unsupported) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 232.00 Tm (- another broad architecture rewrite) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 212.75 Tm (- Discord adapter revival) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 193.50 Tm (- mesh transport and federation work) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 174.25 Tm (- real-time chat) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 155.00 Tm (- advanced reputation math) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 135.75 Tm (- deep governance automation before the trust and policy seams are clearer) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 116.50 Tm (- a dedicated validation workflow screen before locality UX and geo standardization are) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 101.25 Tm (settled) Tj ET
 endstream
 endobj
 18 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 17 0 R >>
 endobj
+19 0 obj
+<< /Length 2296 >>
+stream
+0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
+BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Roadmap - 8) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- packet-based compatibility manifests as active implementation rather than future design) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 718.75 Tm (direction) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 699.50 Tm (- first-class Bundle implementation before locality UX and geo standardization are settled) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 680.25 Tm (- authoritative selective home-tree storage and projection semantics before the current) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 665.00 Tm (locality descriptor, Unicode, and sparse-path foundations are settled) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 645.75 Tm (- provider-backed locality candidate ingestion, geometry, and external locality APIs before) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 630.50 Tm (the current descriptor and Unicode foundation pass is absorbed) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 611.25 Tm (- expanding the legacy runtime preference cache for new behavior instead of extending the) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 596.00 Tm (signed packet-backed Preference.element corridor) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 562.75 Tm (Bundle direction now decided) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 536.75 Tm (- Bundle should become a first-class packet type later.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 517.50 Tm (- Rebundling or forwarding another node's bundle should create a new bundle packet rather) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 502.25 Tm (than revising the older bundle packet.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 483.00 Tm (- Bundle history should be modeled as a lineage graph, not one shared revision chain.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 463.75 Tm (- Legacy bundle JSON artifacts should remain runtime import/export adapters until that) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 448.50 Tm (packet type exists.) Tj ET
+endstream
+endobj
+20 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 19 0 R >>
+endobj
 xref
-0 19
+0 21
 0000000000 65535 f 
 0000000015 00000 n 
 0000000064 00000 n 
-0000000162 00000 n 
-0000000232 00000 n 
-0000000307 00000 n 
-0000003895 00000 n 
-0000004031 00000 n 
-0000008457 00000 n 
-0000008593 00000 n 
-0000012914 00000 n 
-0000013051 00000 n 
-0000017479 00000 n 
-0000017617 00000 n 
-0000021551 00000 n 
-0000021689 00000 n 
-0000026382 00000 n 
-0000026520 00000 n 
-0000029819 00000 n 
+0000000169 00000 n 
+0000000239 00000 n 
+0000000314 00000 n 
+0000003902 00000 n 
+0000004038 00000 n 
+0000008540 00000 n 
+0000008676 00000 n 
+0000012991 00000 n 
+0000013128 00000 n 
+0000017556 00000 n 
+0000017694 00000 n 
+0000021814 00000 n 
+0000021952 00000 n 
+0000026068 00000 n 
+0000026206 00000 n 
+0000030721 00000 n 
+0000030859 00000 n 
+0000033208 00000 n 
 trailer
-<< /Size 19 /Root 1 0 R >>
+<< /Size 21 /Root 1 0 R >>
 startxref
-29957
+33346
 %%EOF
