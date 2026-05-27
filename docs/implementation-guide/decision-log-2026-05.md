@@ -295,3 +295,9 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - Packet Explorer moved into `app/components/nexus/features/explorer/*`, including its shell overlay, document tabs, toolbar, search, import/export, data, links, resize, and inspection panels.
 - Explorer import/export work now uses caller-owned visual loading scopes for packet export, store export, import analysis, import commit, and import history, while preserving existing disabled labels and panel behavior.
 - Explorer document tabs remain feature-local and compose shared tab primitives only where they already did; generic document-tab promotion is deferred until a dedicated tab-extension pass.
+
+## 2026-05 Nexus Explorer internal decomposition
+
+- Explorer import cards, export preview/request helpers, packet inspection panels, and the validation dialog were split into focused feature-local files under `app/components/nexus/features/explorer/*`.
+- Packet validation now has a caller-owned visual loading scope, `packet-explorer:validation:<packetId>`, mounted around the validation panel without coupling loading to packet/runtime semantics.
+- The main Explorer shell still owns tabs, search state, packet loading, validation handlers, resize behavior, router calls, and session coordination; generic promotion remains deferred until repeated component types appear elsewhere.

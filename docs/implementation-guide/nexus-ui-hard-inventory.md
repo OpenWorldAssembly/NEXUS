@@ -26,6 +26,8 @@ The sidebar has since started its feature extraction into `app/components/nexus/
 
 Packet Explorer has since moved into `app/components/nexus/features/explorer/*`, including the shell overlay, document tabs, toolbar, search, import/export, data, link, resize, and inspection panels. The import/export panels now expose visual-scope loading seams for packet export, store export, import analysis, import commit, and import history, while Explorer tab/session behavior remains feature-local.
 
+The Explorer feature folder has also had its first internal decomposition pass: import result/history cards, export preview/request helpers, packet inspection subpanels, and the validation dialog now live in sibling Explorer feature files. Packet validation uses the caller-owned visual scope `packet-explorer:validation:<packetId>`. The file-level counts below remain the original hard-inventory baseline rather than freshly recomputed post-decomposition counts.
+
 The counts below remain useful as the pre-move hard inventory. New shared UI should prefer the `ui/*` paths.
 
 ## Snapshot summary

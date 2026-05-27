@@ -24,8 +24,6 @@ import {
 import type {
   NexusPacketExplorerBundleExportMode,
   NexusPacketExplorerExportPreviewPayload,
-  NexusPacketExplorerExportRequest,
-  NexusPacketExplorerSearchPayload,
   NexusPacketExplorerSearchResultRow,
 } from '@runtime/nexus/nexus-api-types';
 import {
@@ -33,6 +31,14 @@ import {
   previewNexusPacketExplorerExport,
   searchNexusPacketExplorerPackets,
 } from '@runtime/nexus/nexus-query-api';
+import { ExportPreviewCard } from './nexus-packet-explorer-export-preview-card';
+import {
+  buildPacketExportRequest,
+  buildStoreExportRequest,
+  flattenSearchResults,
+  getVerificationLookupBadge,
+  normalizeLookupQuery,
+} from './nexus-packet-explorer-export-utils';
 
 type NexusPacketExplorerExportPanelProps = {
   selectedPacketId: string | null;
@@ -78,39 +84,6 @@ const BUNDLE_SCOPE_OPTIONS: {
   },
 ];
 
-function getVerificationLookupBadge(
-  verification: NexusPacketExplorerSearchResultRow['verification']
-): { label: string; tone?: 'default' | 'sky' | 'gold' | 'rose' | 'mint' } | null {
-  if (!verification) {
-    return null;
-  }
-
-  if (
-    verification.status === 'signature_invalid' ||
-    verification.status === 'canonicalization_mismatch'
-  ) {
-    return { label: 'Validation failed', tone: 'rose' };
-  }
-
-  if (verification.status === 'trusted_signer') {
-    return { label: 'Validated locally', tone: 'mint' };
-  }
-
-  if (verification.status === 'unsigned') {
-    return { label: 'Unsigned', tone: 'gold' };
-  }
-
-  if (verification.status === 'unknown_signer') {
-    return { label: 'Signer unavailable locally', tone: 'gold' };
-  }
-
-  if (verification.status === 'external_report_only') {
-    return { label: 'External report only', tone: 'gold' };
-  }
-
-  return { label: verification.status.replace(/_/g, ' ') };
-}
-
 function createIdleWorkflowState(): ExportWorkflowState {
   return {
     preview: null,
@@ -118,112 +91,6 @@ function createIdleWorkflowState(): ExportWorkflowState {
     isLoadingPreview: false,
     isDownloading: false,
   };
-}
-
-function normalizeLookupQuery(value: string): string {
-  return value.trim().toLowerCase();
-}
-
-function flattenSearchResults(
-  searchPayload: NexusPacketExplorerSearchPayload | null
-): NexusPacketExplorerSearchResultRow[] {
-  if (!searchPayload) {
-    return [];
-  }
-
-  return searchPayload.groups
-    .flatMap((group) => group.results)
-    .sort((left, right) => {
-      if (left.score !== right.score) {
-        return right.score - left.score;
-      }
-
-      return right.created_at.localeCompare(left.created_at);
-    });
-}
-
-function buildPacketExportRequest(input: {
-  selectedPacketId: string;
-  artifactMode: 'raw_packet' | 'bundle';
-  bundleMode: NexusPacketExplorerBundleExportMode;
-  title: string;
-  note: string;
-}): NexusPacketExplorerExportRequest {
-  return {
-    artifact_mode: input.artifactMode,
-    root_packet_id: input.selectedPacketId,
-    bundle_mode: input.artifactMode === 'bundle' ? input.bundleMode : null,
-    title: input.artifactMode === 'bundle' ? input.title : null,
-    note: input.artifactMode === 'bundle' ? input.note : null,
-  };
-}
-
-function buildStoreExportRequest(input: {
-  title: string;
-  note: string;
-}): NexusPacketExplorerExportRequest {
-  return {
-    artifact_mode: 'bundle',
-    bundle_mode: 'full_store',
-    root_packet_id: null,
-    title: input.title,
-    note: input.note,
-  };
-}
-
-function ExportPreviewCard({
-  preview,
-}: {
-  preview: NexusPacketExplorerExportPreviewPayload;
-}) {
-  const appearance = useNexusAppearance();
-
-  return (
-    <NexusCard className="gap-4">
-      <View className="flex-row flex-wrap gap-2">
-        <NexusBadge
-          label={preview.artifact_mode === 'raw_packet' ? 'Raw packet' : 'Bundle'}
-          tone="sky"
-        />
-        <NexusBadge label={`${preview.packet_count} packets`} />
-        <NexusBadge label={`${preview.revision_count} revisions`} />
-        <NexusBadge label={`${preview.byte_count} bytes`} tone="gold" />
-      </View>
-
-      <View className="gap-2">
-        <Text className={appearance.itemMetaClass}>Export mode</Text>
-        <Text className={appearance.itemBodyClass}>{preview.export_mode}</Text>
-      </View>
-
-      {preview.root_packet_refs.length > 0 ? (
-        <View className="gap-2">
-          <Text className={appearance.itemMetaClass}>Root packet refs</Text>
-          {preview.root_packet_refs.map((packetRef) => (
-            <Text key={packetRef.packet_id} className={appearance.itemBodyClass}>
-              {packetRef.packet_id}
-            </Text>
-          ))}
-        </View>
-      ) : null}
-
-      {preview.preview_suppressed ? (
-        <NexusCard tone="gold" className="gap-2">
-          <Text className={appearance.itemBodyClass}>
-            This export is too large to preview inline. Download the JSON instead.
-          </Text>
-        </NexusCard>
-      ) : preview.preview_json ? (
-        <NexusCard className="gap-3">
-          <Text className="text-xs font-semibold uppercase tracking-[3px] text-nexus-sky">
-            Export JSON
-          </Text>
-          <Text className={`text-xs leading-6 ${appearance.itemMetaClass}`} selectable>
-            {preview.preview_json}
-          </Text>
-        </NexusCard>
-      ) : null}
-    </NexusCard>
-  );
 }
 
 export function NexusPacketExplorerExportPanel({

@@ -62,7 +62,7 @@ The sidebar has also started feature-local extraction under `app/components/nexu
 
 Locality create has begun feature-local extraction under `app/components/nexus/features/locality/*`. The route still owns params, identity/auth gates, draft persistence, graph/path state, API calls, mutation handlers, and modal state, while search/build panels, picker dialogs, outcome dialogs, graph rows, and preview panels now live in locality feature components. The obsolete level-row ladder builder path was removed after extraction; the active create flow is graph-based.
 
-Packet Explorer now lives under `app/components/nexus/features/explorer/*`. The feature folder owns Explorer-specific shell, tab, toolbar, search, import, export, data, link, resize, and inspection panels, while shared `ui/*` primitives remain the source for generic cards, forms, search result chrome, feedback, loading, tabs, and workbench panel pieces. Export and import actions now have caller-owned loading scopes for packet export, store export, import analysis, import commit, and import history; Explorer document tabs remain feature-specific until a future tab-extension pass.
+Packet Explorer now lives under `app/components/nexus/features/explorer/*`. The feature folder owns Explorer-specific shell, tab, toolbar, search, import, export, data, link, resize, and inspection panels, while shared `ui/*` primitives remain the source for generic cards, forms, search result chrome, feedback, loading, tabs, and workbench panel pieces. Export and import actions have caller-owned loading scopes for packet export, store export, import analysis, import commit, and import history. A later internal decomposition split import cards, export preview helpers, inspection subpanels, and the validation dialog into sibling Explorer feature files; packet validation also gained the visual scope `packet-explorer:validation:<packetId>`. Explorer document tabs remain feature-specific until a future tab-extension pass.
 
 ## Component Type Catalog
 
@@ -94,8 +94,8 @@ Packet Explorer now lives under `app/components/nexus/features/explorer/*`. The 
    - First feature extraction now lives in `features/sidebar/*`: rail toggles, guest avatar, preference switch, current context card, function menu rows, scope section headers, grouped scope rows, scope action menus, and scope menu content. Future work can promote rail toggles, compact nav rows, grouped collapsible sections, and anchored compact action menus only after other surfaces need the same shape.
 
 4. `app/components/nexus/features/explorer/*`
-   - Contains Explorer-specific tabs, toolbars, import/export/search panels, data panels, link groups, and modal outcomes.
-   - Best first extraction targets: document-tab extension, workbench panel frame, lookup/result list, import/export outcome dialog.
+   - Contains Explorer-specific tabs, toolbars, import/export/search panels, data panels, link groups, validation dialog, import/export cards, and packet inspection panels.
+   - Next extraction targets: document-tab extension, shared workbench result/feed shell, lookup/result list promotion, and packet inspection card patterns if another surface proves reuse.
 
 5. Identity routes and `nexus-identity-ui.tsx`
    - Already have identity field primitives, but route-local selection cards, search results, passphrase forms, and security controls overlap with broader Nexus form needs.

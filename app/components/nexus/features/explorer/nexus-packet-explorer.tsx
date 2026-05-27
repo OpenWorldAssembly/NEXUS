@@ -5,12 +5,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Modal, Pressable, Text, View, useWindowDimensions } from 'react-native';
+import { Pressable, View, useWindowDimensions } from 'react-native';
 
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import {
-  NexusActionButton,
-  NexusCard,
   NexusChevronIcon,
   useNexusLoading,
 } from '@app/components/nexus/ui';
@@ -39,6 +37,7 @@ import {
   PACKET_FETCH_TIMEOUT_MS,
   logExplorerClientEvent,
 } from './nexus-packet-explorer-utils';
+import { NexusPacketExplorerValidationDialog } from './nexus-packet-explorer-validation-dialog';
 import {
   fetchNexusPacketExplorerPayload,
   runNexusPacketVerification,
@@ -732,60 +731,16 @@ export default function NexusPacketExplorer() {
         </View>
       </View>
     </View>
-    <Modal
-      animationType="fade"
-      onRequestClose={() => {
+    <NexusPacketExplorerValidationDialog
+      error={validationError}
+      headingTextClass={headingTextClass}
+      mutedTextClass={mutedTextClass}
+      notice={validationNotice}
+      onClose={() => {
         setValidationNotice(null);
         setValidationError(null);
       }}
-      transparent
-      visible={validationNotice !== null || validationError !== null}
-    >
-      <View className="flex-1">
-        <Pressable
-          accessibilityRole="button"
-          className="absolute inset-0 bg-black/55"
-          onPress={() => {
-            setValidationNotice(null);
-            setValidationError(null);
-          }}
-        />
-        <View className="flex-1 items-center justify-center px-4">
-          <NexusCard className="w-full max-w-[520px] gap-4">
-            <Text className={headingTextClass}>
-              {validationNotice?.title ?? 'Validation failed'}
-            </Text>
-            <Text className={mutedTextClass}>
-              {validationNotice?.summary ?? validationError ?? ''}
-            </Text>
-            {validationNotice ? (
-              <Text className={mutedTextClass}>
-                Validated at: {validationNotice.validated_at}
-              </Text>
-            ) : null}
-            {validationNotice?.warnings.length ? (
-              <View className="gap-1">
-                {validationNotice.warnings.map((warning) => (
-                  <Text key={warning} className={mutedTextClass}>
-                    {warning}
-                  </Text>
-                ))}
-              </View>
-            ) : null}
-            <View className="flex-row justify-end">
-              <NexusActionButton
-                label="Dismiss"
-                variant="ghost"
-                onPress={() => {
-                  setValidationNotice(null);
-                  setValidationError(null);
-                }}
-              />
-            </View>
-          </NexusCard>
-        </View>
-      </View>
-    </Modal>
+    />
     </>
   );
 }
