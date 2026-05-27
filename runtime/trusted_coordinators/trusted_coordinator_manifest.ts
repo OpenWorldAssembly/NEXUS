@@ -152,6 +152,26 @@ export const TRUSTED_COORDINATOR_SCAFFOLD_MANIFEST = [
     ],
     notes: 'Archive seam for packet-store writes, reads, refs, edges, and query indexes. Import/Export and Projection should ask Archive rather than reaching directly into storage.',
   },
+
+  {
+    coordinator_id: 'trusted_verification_coordinator.v0',
+    coordinator_kind: 'verification',
+    public_object_name: 'trustedVerificationCoordinator',
+    public_import_path: '@runtime/trusted_coordinators/trusted_verification_coordinator/index.ts',
+    runtime_path: 'runtime/trusted_coordinators/trusted_verification_coordinator',
+    structure: 'foldered_gated',
+    expected_methods: [
+      { method_name: 'verifyPacket', notes: 'Verifies one packet for structure, compatibility, digest, signature, and signer availability.' },
+      { method_name: 'verifyPacketBatch', notes: 'Verifies a packet batch with shared signer context.' },
+      { method_name: 'verifyBundle', notes: 'Verifies packet material inside a transport bundle or revision array.' },
+      { method_name: 'verifyArchivePacketSet', notes: 'Reads packets through Archive and verifies the resulting packet set.' },
+      { method_name: 'verifyPacketLineage', notes: 'Checks parent revision coherence across supplied packet material.' },
+      { method_name: 'verifyPacketRefs', notes: 'Checks packet reference closure across supplied packet material.' },
+      { method_name: 'verifyCertificationResult', notes: 'Verifies Certification handoff hashes and archive-readiness before storage/import use.' },
+      { method_name: 'auditReadiness', notes: 'Audits verification parser, signature, archive, and certification seams.' },
+    ],
+    notes: 'Verification seam for structural parsing, compatibility reads, digest/signature verification, signer lookup context, ref/lineage checks, and certification handoff verification. It reads storage through Archive rather than SQLite.',
+  },
   {
     coordinator_id: 'trusted_projection_coordinator.v0',
     coordinator_kind: 'projection',
