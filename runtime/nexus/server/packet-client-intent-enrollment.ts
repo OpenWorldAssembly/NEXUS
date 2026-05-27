@@ -3,38 +3,30 @@
  * Description: Interface-neutral client/API ingress allowlist and definition crossing-guard preflight.
  */
 
-import type { PacketTypeDefinition } from '@core/packets/definitions/packet-definition-types.ts';
-import {
-  auditPacketPolicyDependencyCoverageFromDefinitions,
-  listPacketDependencyRequirementDescriptorsFromDefinitions,
-  listPacketPolicyRequirementDescriptorsFromDefinitions,
-} from '@core/packets/packet-policy-dependency.ts';
-import { PACKET_RUNTIME_CONNECTORS } from '@runtime/nexus/server/packet-runtime-connectors';
+import { PACKET_RUNTIME_CONNECTORS } from "@runtime/nexus/server/packet-runtime-connectors";
 import {
   listMutationIntentDescriptors,
   type MutationIntentDescriptor,
-} from '@runtime/nexus/server/mutation-intent-registry';
-import type { MutationIntent } from '@core/auth/mutation-corridor';
+} from "@runtime/nexus/server/mutation-intent-registry";
+import type { MutationIntent } from "@core/auth/mutation-corridor";
 import {
   listPacketRuntimeFortressHandoffCoverage,
   resolvePacketRuntimeFortressHandoff,
   type PacketRuntimeFortressHandoff,
   type PacketRuntimeFortressHandoffStatus,
-} from '@runtime/nexus/server/packet-runtime-fortress-handoff';
-import {
-  trustedDefinitionCoordinator,
-} from '@runtime/trusted_coordinators/trusted_definition_coordinator';
+} from "@runtime/nexus/server/packet-runtime-fortress-handoff";
+import { trustedRegulationCoordinator } from "@runtime/trusted_coordinators/trusted_regulation_coordinator";
 
 export type PacketClientIntentEnrollmentMode =
-  | 'signed_fortress_prepare'
-  | 'live_connector'
-  | 'runtime_ready';
+  | "signed_fortress_prepare"
+  | "live_connector"
+  | "runtime_ready";
 
 export type PacketClientIntentEnrollment = {
   enrollment_id: string;
   source_route: string;
   client_intent_id: string;
-  mutation_intent: MutationIntent['kind'];
+  mutation_intent: MutationIntent["kind"];
   connector_id: string | null;
   packet_type: string | null;
   packet_subtype: string | null;
@@ -43,13 +35,13 @@ export type PacketClientIntentEnrollment = {
   policy_action_ids: string[];
   dependencies_definition_ids: string[];
   live_mode: PacketClientIntentEnrollmentMode;
-  handoff_status: PacketRuntimeFortressHandoffStatus | 'connector_live';
+  handoff_status: PacketRuntimeFortressHandoffStatus | "connector_live";
   notes: string;
 };
 
 export type PacketClientIntentPreflight = {
-  preflight_kind: 'packet.client_intent.preflight';
-  status: 'allowed_definition' | 'allowed_live_connector' | 'blocked';
+  preflight_kind: "packet.client_intent.preflight";
+  status: "allowed_definition" | "allowed_live_connector" | "blocked";
   enrollment: PacketClientIntentEnrollment | null;
   handoff: PacketRuntimeFortressHandoff | null;
   policy_requirement_ids: string[];
@@ -59,61 +51,71 @@ export type PacketClientIntentPreflight = {
 };
 
 export type PacketClientIntentEnrollmentAuditFinding = {
-  severity: 'error';
+  severity: "error";
   code: string;
   enrollment_id: string;
   message: string;
 };
 
 export type PacketClientIntentEnrollmentAuditReport = {
-  status: 'pass' | 'fail';
+  status: "pass" | "fail";
   checked_enrollment_ids: string[];
   findings: PacketClientIntentEnrollmentAuditFinding[];
 };
 
 const CLIENT_INTENT_BY_MUTATION_INTENT: Record<string, string> = {
-  'locality.path.create': 'locality.path.create',
-  'locality.graph.apply': 'locality.graph.apply',
-  'discussion.thread_post.create': 'discussion.thread_post.create',
-  'discussion.reply.create': 'discussion.reply.create',
-  'discussion.surfaces.ensure': 'discussion.surfaces.ensure',
-  'reaction.vote.set': 'reaction.vote.set',
-  'assembly.element.create': 'assembly.element.create',
-  'relation.association.add': 'scope.association.set',
-  'relation.association.clear': 'scope.association.clear',
-  'relation.residence.add': 'scope.home.set',
-  'relation.follow.add': 'scope.follow.set',
-  'relation.follow.clear': 'scope.follow.clear',
-  'relation.participation.add': 'relation.participation.add',
-  'relation.participation.clear': 'relation.participation.clear',
-  'reaction.attestation.set': 'reaction.attestation.set',
-  'actor.write_policy.update': 'actor.write_policy.update',
-  'preference.element.set': 'preference.interface.set',
+  "locality.path.create": "locality.path.create",
+  "locality.graph.apply": "locality.graph.apply",
+  "discussion.thread_post.create": "discussion.thread_post.create",
+  "discussion.reply.create": "discussion.reply.create",
+  "discussion.surfaces.ensure": "discussion.surfaces.ensure",
+  "reaction.vote.set": "reaction.vote.set",
+  "assembly.element.create": "assembly.element.create",
+  "relation.association.add": "scope.association.set",
+  "relation.association.clear": "scope.association.clear",
+  "relation.residence.add": "scope.home.set",
+  "relation.follow.add": "scope.follow.set",
+  "relation.follow.clear": "scope.follow.clear",
+  "relation.participation.add": "relation.participation.add",
+  "relation.participation.clear": "relation.participation.clear",
+  "reaction.attestation.set": "reaction.attestation.set",
+  "actor.write_policy.update": "actor.write_policy.update",
+  "preference.element.set": "preference.interface.set",
 };
 
-
-function getTrustedDefinitions(): PacketTypeDefinition[] {
-  return trustedDefinitionCoordinator.listPacketDefinitions().value ?? [];
+function resolveTrustedPolicyRequirements() {
+  return (
+    trustedRegulationCoordinator.resolvePolicyContext({
+      context_mode: "reseed",
+      operation_kind: "debug_audit",
+    }).value?.requirements ?? []
+  );
 }
 
-function listTrustedPolicyRequirements() {
-  return listPacketPolicyRequirementDescriptorsFromDefinitions({
-    definitions: getTrustedDefinitions(),
-  });
+function resolveTrustedDependencyRequirements() {
+  return (
+    trustedRegulationCoordinator.resolveDependencyContext({
+      context_mode: "reseed",
+      operation_kind: "debug_audit",
+    }).value?.requirements ?? []
+  );
 }
 
-function listTrustedDependencyRequirements() {
-  return listPacketDependencyRequirementDescriptorsFromDefinitions({
-    definitions: getTrustedDefinitions(),
-  });
+function auditTrustedRegulationReadiness() {
+  return trustedRegulationCoordinator.auditReadiness({
+    context_mode: "reseed",
+    operation_kind: "debug_audit",
+  }).value;
 }
 
 function uniqueSorted(values: readonly string[]): string[] {
-  return Array.from(new Set(values)).sort((left, right) => left.localeCompare(right));
+  return Array.from(new Set(values)).sort((left, right) =>
+    left.localeCompare(right),
+  );
 }
 
 function createPrepareEnrollment(
-  descriptor: MutationIntentDescriptor
+  descriptor: MutationIntentDescriptor,
 ): PacketClientIntentEnrollment {
   const handoff = resolvePacketRuntimeFortressHandoff({
     mutationIntent: descriptor.kind,
@@ -121,7 +123,7 @@ function createPrepareEnrollment(
 
   return {
     enrollment_id: `client.prepare.${descriptor.kind}`,
-    source_route: '/api/nexus/mutations/prepare',
+    source_route: "/api/nexus/mutations/prepare",
     client_intent_id:
       CLIENT_INTENT_BY_MUTATION_INTENT[descriptor.kind] ??
       `${descriptor.domain}.${descriptor.kind}`,
@@ -133,10 +135,10 @@ function createPrepareEnrollment(
     workflow_plan_ids: handoff.workflow_plan_ids,
     policy_action_ids: handoff.policy_action_ids,
     dependencies_definition_ids: handoff.dependency_ids,
-    live_mode: 'signed_fortress_prepare',
+    live_mode: "signed_fortress_prepare",
     handoff_status: handoff.status,
     notes:
-      'Client/API ingress signed fortress prepare intent. The registry is descriptive and does not replace NexusMutationService.',
+      "Client/API ingress signed fortress prepare intent. The registry is descriptive and does not replace NexusMutationService.",
   };
 }
 
@@ -145,11 +147,11 @@ export function listPacketClientIntentEnrollments(): PacketClientIntentEnrollmen
 }
 
 export function getPacketClientIntentEnrollment(
-  enrollmentId: string
+  enrollmentId: string,
 ): PacketClientIntentEnrollment | null {
   return (
     listPacketClientIntentEnrollments().find(
-      (enrollment) => enrollment.enrollment_id === enrollmentId
+      (enrollment) => enrollment.enrollment_id === enrollmentId,
     ) ?? null
   );
 }
@@ -173,10 +175,7 @@ export function resolvePacketClientIntentPreflight(input: {
         return false;
       }
 
-      if (
-        input.connectorId &&
-        candidate.connector_id !== input.connectorId
-      ) {
+      if (input.connectorId && candidate.connector_id !== input.connectorId) {
         return false;
       }
 
@@ -187,32 +186,36 @@ export function resolvePacketClientIntentPreflight(input: {
         return false;
       }
 
-      return Boolean(input.connectorId ?? input.mutationIntent ?? input.clientIntentId);
+      return Boolean(
+        input.connectorId ?? input.mutationIntent ?? input.clientIntentId,
+      );
     }) ?? null;
 
   if (!enrollment) {
     return {
-      preflight_kind: 'packet.client_intent.preflight',
-      status: 'blocked',
+      preflight_kind: "packet.client_intent.preflight",
+      status: "blocked",
       enrollment: null,
       handoff: null,
       policy_requirement_ids: [],
       dependency_requirement_ids: [],
-      reason_codes: ['unknown_client_intent_enrollment'],
+      reason_codes: ["unknown_client_intent_enrollment"],
       notes: [
-        'The crossing guard refuses route/intent pairings that are not registered as client/API ingress enrollments.',
+        "The crossing guard refuses route/intent pairings that are not registered as client/API ingress enrollments.",
       ],
     };
   }
 
-  const policyRequirements = listTrustedPolicyRequirements().filter(
-    (descriptor) => enrollment.policy_action_ids.includes(descriptor.policy_action_id)
+  const policyRequirements = resolveTrustedPolicyRequirements().filter(
+    (descriptor) =>
+      enrollment.policy_action_ids.includes(descriptor.policy_action_id),
   );
-  const dependencyRequirements = listTrustedDependencyRequirements().filter(
-    (descriptor) => enrollment.dependencies_definition_ids.includes(descriptor.dependency_id)
+  const dependencyRequirements = resolveTrustedDependencyRequirements().filter(
+    (descriptor) =>
+      enrollment.dependencies_definition_ids.includes(descriptor.dependency_id),
   );
   const handoff =
-    enrollment.live_mode === 'signed_fortress_prepare'
+    enrollment.live_mode === "signed_fortress_prepare"
       ? resolvePacketRuntimeFortressHandoff({
           mutationIntent: enrollment.mutation_intent,
         })
@@ -220,65 +223,66 @@ export function resolvePacketClientIntentPreflight(input: {
   const missingPolicyRequirements = enrollment.policy_action_ids.filter(
     (policyActionId) =>
       !policyRequirements.some(
-        (descriptor) => descriptor.policy_action_id === policyActionId
-      )
+        (descriptor) => descriptor.policy_action_id === policyActionId,
+      ),
   );
-  const missingDependencyRequirements = enrollment.dependencies_definition_ids.filter(
-    (dependencyId) =>
-      !dependencyRequirements.some(
-        (descriptor) => descriptor.dependency_id === dependencyId
-      ) && !dependencyId.endsWith('.dependencies_definition.v0')
-  );
+  const missingDependencyRequirements =
+    enrollment.dependencies_definition_ids.filter(
+      (dependencyId) =>
+        !dependencyRequirements.some(
+          (descriptor) => descriptor.dependency_id === dependencyId,
+        ) && !dependencyId.endsWith(".dependencies_definition.v0"),
+    );
   const reasonCodes = [
     ...missingPolicyRequirements.map(
-      (policyActionId) => `missing_policy_requirement:${policyActionId}`
+      (policyActionId) => `missing_policy_requirement:${policyActionId}`,
     ),
     ...missingDependencyRequirements.map(
-      (dependencyId) => `missing_dependency_requirement:${dependencyId}`
+      (dependencyId) => `missing_dependency_requirement:${dependencyId}`,
     ),
-    handoff?.status === 'blocked' ? 'blocked_fortress_handoff' : null,
+    handoff?.status === "blocked" ? "blocked_fortress_handoff" : null,
   ].filter((reasonCode): reasonCode is string => reasonCode !== null);
 
   if (reasonCodes.length > 0) {
     return {
-      preflight_kind: 'packet.client_intent.preflight',
-      status: 'blocked',
+      preflight_kind: "packet.client_intent.preflight",
+      status: "blocked",
       enrollment,
       handoff,
       policy_requirement_ids: policyRequirements.map(
-        (descriptor) => descriptor.policy_requirement_id
+        (descriptor) => descriptor.policy_requirement_id,
       ),
       dependency_requirement_ids: dependencyRequirements.map(
-        (descriptor) => descriptor.dependency_id
+        (descriptor) => descriptor.dependency_id,
       ),
       reason_codes: reasonCodes,
       notes: [
-        'Enrollment exists, but packet-backed policy/dependency or handoff metadata is incomplete.',
+        "Enrollment exists, but packet-backed policy/dependency or handoff metadata is incomplete.",
       ],
     };
   }
 
   return {
-    preflight_kind: 'packet.client_intent.preflight',
+    preflight_kind: "packet.client_intent.preflight",
     status:
-      enrollment.live_mode === 'live_connector'
-        ? 'allowed_live_connector'
-        : 'allowed_definition',
+      enrollment.live_mode === "live_connector"
+        ? "allowed_live_connector"
+        : "allowed_definition",
     enrollment,
     handoff,
     policy_requirement_ids: policyRequirements.map(
-      (descriptor) => descriptor.policy_requirement_id
+      (descriptor) => descriptor.policy_requirement_id,
     ),
     dependency_requirement_ids: dependencyRequirements.map(
-      (descriptor) => descriptor.dependency_id
+      (descriptor) => descriptor.dependency_id,
     ),
     reason_codes: [
-      enrollment.live_mode === 'live_connector'
-        ? 'registered_live_connector'
-        : 'registered_signed_fortress_prepare',
+      enrollment.live_mode === "live_connector"
+        ? "registered_live_connector"
+        : "registered_signed_fortress_prepare",
     ],
     notes: [
-      'Preflight validates enrollment metadata only; fortress remains the live authority for proof, policy, tickets, signing, persistence, and mutation effects.',
+      "Preflight validates enrollment metadata only; fortress remains the live authority for proof, policy, tickets, signing, persistence, and mutation effects.",
     ],
   };
 }
@@ -286,39 +290,41 @@ export function resolvePacketClientIntentPreflight(input: {
 export function auditPacketClientIntentEnrollments(): PacketClientIntentEnrollmentAuditReport {
   const findings: PacketClientIntentEnrollmentAuditFinding[] = [];
   const enrollments = listPacketClientIntentEnrollments();
-  const enrollmentIds = enrollments.map((enrollment) => enrollment.enrollment_id);
+  const enrollmentIds = enrollments.map(
+    (enrollment) => enrollment.enrollment_id,
+  );
   const knownMutationIntents = new Set(
-    listMutationIntentDescriptors().map((descriptor) => descriptor.kind)
+    listMutationIntentDescriptors().map((descriptor) => descriptor.kind),
   );
   const handoffCoverage = new Map(
     listPacketRuntimeFortressHandoffCoverage().map((coverage) => [
       coverage.mutation_intent,
       coverage,
-    ])
+    ]),
   );
-  const policyDependencyReport = auditPacketPolicyDependencyCoverageFromDefinitions({ definitions: getTrustedDefinitions() });
+  const regulationReadiness = auditTrustedRegulationReadiness();
   const policyIds = new Set(
-    listTrustedPolicyRequirements().map(
-      (descriptor) => descriptor.policy_action_id
-    )
+    resolveTrustedPolicyRequirements().map(
+      (descriptor) => descriptor.policy_action_id,
+    ),
   );
   const dependencyIds = new Set(
-    listTrustedDependencyRequirements().map(
-      (descriptor) => descriptor.dependency_id
-    )
+    resolveTrustedDependencyRequirements().map(
+      (descriptor) => descriptor.dependency_id,
+    ),
   );
 
   for (const descriptor of listMutationIntentDescriptors()) {
     const prepareEnrollment = enrollments.find(
       (enrollment) =>
-        enrollment.source_route === '/api/nexus/mutations/prepare' &&
-        enrollment.mutation_intent === descriptor.kind
+        enrollment.source_route === "/api/nexus/mutations/prepare" &&
+        enrollment.mutation_intent === descriptor.kind,
     );
 
     if (!prepareEnrollment) {
       findings.push({
-        severity: 'error',
-        code: 'missing_prepare_intent_enrollment',
+        severity: "error",
+        code: "missing_prepare_intent_enrollment",
         enrollment_id: `client.prepare.${descriptor.kind}`,
         message: `${descriptor.kind} has no client/API prepare enrollment record.`,
       });
@@ -327,26 +333,26 @@ export function auditPacketClientIntentEnrollments(): PacketClientIntentEnrollme
 
   for (const enrollment of enrollments) {
     if (
-      enrollment.live_mode === 'signed_fortress_prepare' &&
+      enrollment.live_mode === "signed_fortress_prepare" &&
       !knownMutationIntents.has(enrollment.mutation_intent)
     ) {
       findings.push({
-        severity: 'error',
-        code: 'unknown_enrolled_mutation_intent',
+        severity: "error",
+        code: "unknown_enrolled_mutation_intent",
         enrollment_id: enrollment.enrollment_id,
         message: `${enrollment.enrollment_id} points at unknown mutation intent ${enrollment.mutation_intent}.`,
       });
     }
 
-    if (enrollment.live_mode === 'live_connector') {
+    if (enrollment.live_mode === "live_connector") {
       const connector = PACKET_RUNTIME_CONNECTORS.find(
-        (candidate) => candidate.connector_id === enrollment.connector_id
+        (candidate) => candidate.connector_id === enrollment.connector_id,
       );
 
       if (!connector) {
         findings.push({
-          severity: 'error',
-          code: 'unknown_live_connector_enrollment',
+          severity: "error",
+          code: "unknown_live_connector_enrollment",
           enrollment_id: enrollment.enrollment_id,
           message: `${enrollment.enrollment_id} points at an unknown live connector.`,
         });
@@ -355,13 +361,10 @@ export function auditPacketClientIntentEnrollments(): PacketClientIntentEnrollme
 
     const handoff = handoffCoverage.get(enrollment.mutation_intent);
 
-    if (
-      enrollment.live_mode === 'signed_fortress_prepare' &&
-      !handoff
-    ) {
+    if (enrollment.live_mode === "signed_fortress_prepare" && !handoff) {
       findings.push({
-        severity: 'error',
-        code: 'missing_handoff_enrollment',
+        severity: "error",
+        code: "missing_handoff_enrollment",
         enrollment_id: enrollment.enrollment_id,
         message: `${enrollment.enrollment_id} has no fortress handoff coverage.`,
       });
@@ -370,8 +373,8 @@ export function auditPacketClientIntentEnrollments(): PacketClientIntentEnrollme
     for (const policyActionId of enrollment.policy_action_ids) {
       if (!policyIds.has(policyActionId)) {
         findings.push({
-          severity: 'error',
-          code: 'unanchored_enrollment_policy',
+          severity: "error",
+          code: "unanchored_enrollment_policy",
           enrollment_id: enrollment.enrollment_id,
           message: `${enrollment.enrollment_id} references unanchored policy action ${policyActionId}.`,
         });
@@ -379,13 +382,16 @@ export function auditPacketClientIntentEnrollments(): PacketClientIntentEnrollme
     }
 
     for (const dependencyId of enrollment.dependencies_definition_ids) {
-      if (dependencyIds.has(dependencyId) || dependencyId.endsWith('.dependencies_definition.v0')) {
+      if (
+        dependencyIds.has(dependencyId) ||
+        dependencyId.endsWith(".dependencies_definition.v0")
+      ) {
         continue;
       }
 
       findings.push({
-        severity: 'error',
-        code: 'unanchored_enrollment_dependency',
+        severity: "error",
+        code: "unanchored_enrollment_dependency",
         enrollment_id: enrollment.enrollment_id,
         message: `${enrollment.enrollment_id} references unanchored dependency ${dependencyId}.`,
       });
@@ -398,27 +404,28 @@ export function auditPacketClientIntentEnrollments(): PacketClientIntentEnrollme
       clientIntentId: enrollment.client_intent_id,
     });
 
-    if (preflight.status === 'blocked') {
+    if (preflight.status === "blocked") {
       findings.push({
-        severity: 'error',
-        code: 'enrollment_preflight_blocked',
+        severity: "error",
+        code: "enrollment_preflight_blocked",
         enrollment_id: enrollment.enrollment_id,
-        message: `${enrollment.enrollment_id} is enrolled but its preflight is blocked: ${preflight.reason_codes.join(', ')}.`,
+        message: `${enrollment.enrollment_id} is enrolled but its preflight is blocked: ${preflight.reason_codes.join(", ")}.`,
       });
     }
   }
 
-  if (policyDependencyReport.status !== 'pass') {
+  if (regulationReadiness?.ready === false) {
     findings.push({
-      severity: 'error',
-      code: 'policy_dependency_audit_failed',
-      enrollment_id: 'packet.policy_dependency',
-      message: 'Client ingress enrollment cannot pass while packet policy/dependency coverage has audit findings.',
+      severity: "error",
+      code: "policy_dependency_audit_failed",
+      enrollment_id: "packet.policy_dependency",
+      message:
+        "Client ingress enrollment cannot pass while trusted regulation readiness has audit findings.",
     });
   }
 
   return {
-    status: findings.length > 0 ? 'fail' : 'pass',
+    status: findings.length > 0 ? "fail" : "pass",
     checked_enrollment_ids: uniqueSorted(enrollmentIds),
     findings,
   };

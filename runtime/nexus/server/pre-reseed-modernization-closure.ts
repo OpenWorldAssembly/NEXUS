@@ -4,13 +4,6 @@
  */
 
 import { PACKET_TYPES, type PacketType } from '@core/schema/packet-schema';
-import type { PacketTypeDefinition } from '@core/packets/definitions/packet-definition-types.ts';
-import {
-  auditPacketPolicyDependencyCoverageFromDefinitions,
-  listPacketDependencyRequirementDescriptorsFromDefinitions,
-  listPacketPolicyRequirementDescriptorsFromDefinitions,
-} from '@core/packets/packet-policy-dependency.ts';
-import { auditPacketDependencySemanticAuthority } from '@core/packets/packet-policy-semantics.ts';
 import { listPacketWorkflowPlanDescriptorsFromDefinitions } from '@core/packets/packet-workflow-planner.ts';
 import {
   listFortressHandlerGenericizationEntries,
@@ -33,6 +26,7 @@ import {
   listLiveCompositeWorkflowEnrollments,
 } from '@runtime/trusted_coordinators/trusted_composite_workflow_coordinator';
 import { trustedDefinitionCoordinator } from '@runtime/trusted_coordinators/trusted_definition_coordinator';
+import { trustedRegulationCoordinator } from '@runtime/trusted_coordinators/trusted_regulation_coordinator';
 
 export type PreReseedClosureStatus =
   | 'closed'
@@ -100,38 +94,35 @@ const CLOSED_RUNTIME_MUTATION_INTENTS = new Set<string>([
 const LIVE_RUNTIME_PACKET_TYPES = new Set<PacketType>(PACKET_TYPES);
 
 
-function getTrustedDefinitions(): PacketTypeDefinition[] {
-  return trustedDefinitionCoordinator.listPacketDefinitions().value ?? [];
-}
-
 function listTrustedWorkflowPlans() {
   return listPacketWorkflowPlanDescriptorsFromDefinitions({
-    definitions: getTrustedDefinitions(),
+    definitions: trustedDefinitionCoordinator.listPacketDefinitions().value ?? [],
   });
 }
 
 function listTrustedPolicyRequirements() {
-  return listPacketPolicyRequirementDescriptorsFromDefinitions({
-    definitions: getTrustedDefinitions(),
-  });
+  return trustedRegulationCoordinator.resolvePolicyContext({
+    context_mode: 'reseed',
+    operation_kind: 'debug_audit',
+  }).value?.requirements ?? [];
 }
 
 function listTrustedDependencyRequirements() {
-  return listPacketDependencyRequirementDescriptorsFromDefinitions({
-    definitions: getTrustedDefinitions(),
-  });
+  return trustedRegulationCoordinator.resolveDependencyContext({
+    context_mode: 'reseed',
+    operation_kind: 'debug_audit',
+  }).value?.requirements ?? [];
 }
 
-function auditTrustedPolicyDependencyCoverage() {
-  return auditPacketPolicyDependencyCoverageFromDefinitions({
-    definitions: getTrustedDefinitions(),
-  });
+function auditTrustedRegulationReadiness() {
+  return trustedRegulationCoordinator.auditReadiness({
+    context_mode: 'reseed',
+    operation_kind: 'debug_audit',
+  }).value;
 }
 
-function auditTrustedDependencySemanticAuthority() {
-  return auditPacketDependencySemanticAuthority({
-    definitions: getTrustedDefinitions(),
-  });
+function regulationReadinessPasses(): boolean {
+  return auditTrustedRegulationReadiness()?.ready !== false;
 }
 
 function queueForEntry(
@@ -224,19 +215,19 @@ function createPolicyRequirementEntries(): PreReseedClosureLedgerEntry[] {
 }
 
 function createDependencyRequirementEntries(): PreReseedClosureLedgerEntry[] {
-  const dependencySemanticAudit = auditTrustedDependencySemanticAuthority();
+  const regulationReady = regulationReadinessPasses();
 
   return listTrustedDependencyRequirements().map((descriptor) => ({
     subject_kind: 'dependency_requirement',
     subject_id: descriptor.dependency_id,
-    status: dependencySemanticAudit.status === 'pass' ? 'closed' : 'blocked',
+    status: regulationReady ? 'closed' : 'blocked',
     queue: 'policy_dependency_semantic_authority',
     reason:
-      dependencySemanticAudit.status === 'pass'
+      regulationReady
         ? 'Dependency resolves through packet Definition dependency parts, Policy semantics, operation ontology, workflow resolver allowlists, or trusted local engine contracts.'
         : 'Packet dependency semantic authority audit has blockers.',
     next_step:
-      dependencySemanticAudit.status === 'pass'
+      regulationReady
         ? 'Keep Definition dependency parts synchronized with workflow plans and trusted local capability descriptors.'
         : 'Resolve dependency semantic authority findings before reseed closure.',
   }));
@@ -321,8 +312,7 @@ function createCompositeWorkflowAdapterEntries(): PreReseedClosureLedgerEntry[] 
 export function createPreReseedModernizationClosureReport(): PreReseedModernizationClosureReport {
   const liveGenericAudit = auditLiveGenericWorkflowEnrollments();
   const liveCompositeAudit = auditLiveCompositeWorkflowEnrollments();
-  const policyDependencyAudit = auditTrustedPolicyDependencyCoverage();
-  const dependencySemanticAudit = auditTrustedDependencySemanticAuthority();
+  const regulationReadiness = auditTrustedRegulationReadiness();
   const clientIngressAudit = auditPacketClientIntentEnrollments();
   const compositeAdapterAudit = auditTrustedCompositeWorkflowAdapters();
   const live_mutation_intents = createMutationEntries();
@@ -370,8 +360,7 @@ export function createPreReseedModernizationClosureReport(): PreReseedModernizat
   const findings = [
     ...liveGenericAudit.findings.map((finding) => finding.message),
     ...liveCompositeAudit.findings.map((finding) => finding.message),
-    ...policyDependencyAudit.findings.map((finding) => finding.message),
-    ...dependencySemanticAudit.findings.map((finding) => finding.message),
+    ...(regulationReadiness?.contexts ?? []).flatMap((context) => context.issues.map((issue) => issue.message)),
     ...clientIngressAudit.findings.map((finding) => finding.message),
     ...compositeAdapterAudit.findings.map((finding) => finding.message),
   ];

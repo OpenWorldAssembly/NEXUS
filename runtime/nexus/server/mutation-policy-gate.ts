@@ -5,7 +5,6 @@
 
 import {
   mergeWritePolicyDecisions,
-  resolveWritePolicyForActions,
   type MutationActionId,
   type ResolvedWritePolicyDecision,
 } from '@core/auth/write-policy';
@@ -17,6 +16,7 @@ import {
   resolveSecurityModePolicyDecision,
 } from '@runtime/nexus/server/write-security-mode';
 import type { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store';
+import { trustedRegulationCoordinator } from '@runtime/trusted_coordinators/trusted_regulation_coordinator';
 
 type PolicyPacketCache = Map<
   string,
@@ -84,7 +84,7 @@ export class MutationPolicyGate {
     const currentSecurityMode = await this.authService.resolveEffectiveSecurityMode(
       input.actorPacket.header.packet_id
     );
-    const scopePolicyDecision = resolveWritePolicyForActions({
+    const scopePolicyDecision = this.resolveTrustedScopeWritePolicyDecision({
       governingScopePacket: input.governingScopePacket,
       policyPackets,
       actionIds: input.actionIds,
@@ -120,7 +120,7 @@ export class MutationPolicyGate {
             )
           : [];
 
-        return resolveWritePolicyForActions({
+        return this.resolveTrustedScopeWritePolicyDecision({
           governingScopePacket: scopePacket,
           policyPackets,
           actionIds,
@@ -148,10 +148,20 @@ export class MutationPolicyGate {
         (policyPacket) => policyPacket.body.subtype === 'write_lock'
       ) ?? null;
     const currentPolicyDecision = existingWritePolicyPacket
-      ? resolveSecurityModePolicyDecision({
-          securityMode: currentSecurityMode,
+      ? mergeWritePolicyDecisions({
           actionIds: ['actor.write_policy.update'],
-          sourcePolicyPacketIds: [existingWritePolicyPacket.header.packet_id],
+          decisions: [
+            this.resolveTrustedScopeWritePolicyDecision({
+              governingScopePacket: input.actorPacket,
+              policyPackets: existingPolicyPackets,
+              actionIds: ['actor.write_policy.update'],
+            }),
+            resolveSecurityModePolicyDecision({
+              securityMode: currentSecurityMode,
+              actionIds: ['actor.write_policy.update'],
+              sourcePolicyPacketIds: [existingWritePolicyPacket.header.packet_id],
+            }),
+          ],
         })
       : buildBootstrapWritePolicyDecision({
           actionIds: ['actor.write_policy.update'],
@@ -162,6 +172,27 @@ export class MutationPolicyGate {
       existingPolicyPackets,
       existingWritePolicyPacket,
     };
+  }
+
+
+  private resolveTrustedScopeWritePolicyDecision(input: {
+    governingScopePacket: PacketEnvelopeByType['Element'] | null;
+    policyPackets: PacketEnvelopeByType['Policy'][];
+    actionIds: MutationActionId[];
+  }): ResolvedWritePolicyDecision {
+    const gate = trustedRegulationCoordinator.resolveWritePolicyGate({
+      context_mode: 'normal_runtime',
+      operation_kind: 'write_gate',
+      governing_scope_packet: input.governingScopePacket,
+      policy_packets: input.policyPackets,
+      action_ids: input.actionIds,
+    });
+
+    if (gate.value?.decision) {
+      return gate.value.decision;
+    }
+
+    return buildBootstrapWritePolicyDecision({ actionIds: input.actionIds });
   }
 
   private loadPolicyPacket(

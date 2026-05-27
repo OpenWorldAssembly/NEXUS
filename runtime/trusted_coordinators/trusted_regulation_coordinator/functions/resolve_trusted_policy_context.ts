@@ -11,6 +11,7 @@ import {
   listPacketPolicySemanticDescriptors,
   resolvePolicyPacketSemantics,
 } from '@core/packets/packet-policy-semantics.ts';
+import { trustedDefinitionCoordinator } from '@runtime/trusted_coordinators/trusted_definition_coordinator';
 import {
   createTrustedRuntimeCoordinatorResult,
   type TrustedRuntimeCoordinatorResult,
@@ -38,8 +39,13 @@ export function resolveTrustedPolicyContext(
   input: ResolveTrustedPolicyContextInput
 ): TrustedRuntimeCoordinatorResult<TrustedPolicyContext> {
   const operationKind = input.operation_kind ?? 'policy_resolution';
-  const definitions = input.definitions ?? (input.definition ? [input.definition] : []);
   const packetType = input.packet_type ?? input.definition?.packet_type ?? null;
+  const definitions = input.definitions ?? (input.definition ? [input.definition] : trustedDefinitionCoordinator.listPacketDefinitions({
+    context_mode: input.context_mode ?? 'reseed',
+    node_element_id: input.node_element_id,
+    preferences: input.preferences,
+    packet_type_filters: packetType ? [packetType] : undefined,
+  }).value ?? []);
   const packetSubtype = input.packet_subtype ?? input.definition?.default_subtype ?? null;
   const requirements = filterPolicyRequirements({
     requirements: listPacketPolicyRequirementDescriptorsFromDefinitions({ definitions }),

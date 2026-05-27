@@ -7,11 +7,7 @@ import {
   getPacketOperationDefinition,
   type PacketOperationKind,
 } from '@core/packets/packet-operation-ontology';
-import {
-  listPacketDependencyRequirementDescriptorsFromDefinitions,
-  listPacketPolicyRequirementDescriptorsFromDefinitions,
-} from '@core/packets/packet-policy-dependency.ts';
-import { trustedDefinitionCoordinator } from '@runtime/trusted_coordinators/trusted_definition_coordinator';
+import { trustedRegulationCoordinator } from '@runtime/trusted_coordinators/trusted_regulation_coordinator';
 import type { MutationIntent } from '@core/auth/mutation-corridor';
 import type { MutationActionId } from '@core/auth/write-policy';
 
@@ -886,20 +882,20 @@ function uniqueSorted<TValue extends string>(values: readonly TValue[]): TValue[
 }
 
 function allKnownPolicyActionIds(): Set<string> {
-  const definitions = trustedDefinitionCoordinator.listPacketDefinitions().value ?? [];
   return new Set(
-    listPacketPolicyRequirementDescriptorsFromDefinitions({ definitions }).map(
-      (descriptor) => descriptor.policy_action_id
-    )
+    (trustedRegulationCoordinator.resolvePolicyContext({
+      context_mode: 'reseed',
+      operation_kind: 'debug_audit',
+    }).value?.requirements ?? []).map((descriptor) => descriptor.policy_action_id)
   );
 }
 
 function allKnownDependencyIds(): Set<string> {
-  const definitions = trustedDefinitionCoordinator.listPacketDefinitions().value ?? [];
   return new Set(
-    listPacketDependencyRequirementDescriptorsFromDefinitions({ definitions }).map(
-      (descriptor) => descriptor.dependency_id
-    )
+    (trustedRegulationCoordinator.resolveDependencyContext({
+      context_mode: 'reseed',
+      operation_kind: 'debug_audit',
+    }).value?.requirements ?? []).map((descriptor) => descriptor.dependency_id)
   );
 }
 
