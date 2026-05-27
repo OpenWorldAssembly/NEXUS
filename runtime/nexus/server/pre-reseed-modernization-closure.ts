@@ -31,6 +31,7 @@ import { trustedPlanningCoordinator } from '@runtime/trusted_coordinators/truste
 import { trustedBuildingCoordinator } from '@runtime/trusted_coordinators/trusted_building_coordinator/index.ts';
 import { trustedInspectionCoordinator } from '@runtime/trusted_coordinators/trusted_inspection_coordinator/index.ts';
 import { trustedCertificationCoordinator } from '@runtime/trusted_coordinators/trusted_certification_coordinator/index.ts';
+import { trustedProjectionCoordinator } from '@runtime/trusted_coordinators/trusted_projection_coordinator/index.ts';
 
 export type PreReseedClosureStatus =
   | 'closed'
@@ -146,6 +147,12 @@ function auditTrustedInspectionReadiness() {
 
 function auditTrustedCertificationReadiness() {
   return trustedCertificationCoordinator.auditReadiness({
+    context_mode: 'reseed',
+  }).value;
+}
+
+function auditTrustedProjectionReadiness() {
+  return trustedProjectionCoordinator.auditReadiness({
     context_mode: 'reseed',
   }).value;
 }
@@ -360,6 +367,7 @@ export function createPreReseedModernizationClosureReport(): PreReseedModernizat
   const regulationReadiness = auditTrustedRegulationReadiness();
   const inspectionReadiness = auditTrustedInspectionReadiness();
   const certificationReadiness = auditTrustedCertificationReadiness();
+  const projectionReadiness = auditTrustedProjectionReadiness();
   const clientIngressAudit = auditPacketClientIntentEnrollments();
   const compositeAdapterAudit = auditTrustedCompositeWorkflowAdapters();
   const live_mutation_intents = createMutationEntries();
@@ -417,6 +425,9 @@ export function createPreReseedModernizationClosureReport(): PreReseedModernizat
       ...certificationPackage.blockers,
       ...certificationPackage.warnings,
     ]),
+    ...(projectionReadiness?.ready === false
+      ? ['Trusted Projection Coordinator readiness audit has blockers.']
+      : []),
     ...clientIngressAudit.findings.map((finding) => finding.message),
     ...compositeAdapterAudit.findings.map((finding) => finding.message),
   ];

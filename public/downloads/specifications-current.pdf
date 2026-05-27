@@ -568,7 +568,7 @@ endobj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 29 0 R >>
 endobj
 31 0 obj
-<< /Length 4578 >>
+<< /Length 5163 >>
 stream
 0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
 BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Specifications - 14) Tj ET
@@ -588,21 +588,25 @@ BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 451.50 Tm (Trusted coordinator
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 425.50 Tm (Trusted runtime coordinator code now lives under runtime/trusted_coordinators/*. The folder) Tj ET
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 410.25 Tm (contains shared coordinator result helpers, the scaffold manifest, the Trusted Dispatch) Tj ET
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 395.00 Tm (Coordinator front desk, the compatibility Trusted Request Coordinator implementation, the) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 379.75 Tm (portable-resolution coordinator, the packet-projection coordinator, the Trusted Definition) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 379.75 Tm (portable-resolution coordinator, the Trusted Projection Coordinator, the Trusted Definition) Tj ET
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 364.50 Tm (Coordinator, the Trusted Regulation Coordinator, the Trusted Planning Coordinator, the) Tj ET
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 349.25 Tm (Trusted Building Coordinator, the Trusted Inspection Coordinator, the Trusted Certification) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 334.00 Tm (Coordinator, direct packet workflow promotion, composite workflow promotion, and composite) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 318.75 Tm (workflow adapter descriptors. Nexus server routes and mutation services may call these) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 303.50 Tm (coordinators, but executable trusted behavior remains runtime-owned rather than imported) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 288.25 Tm (from packet definitions. Foldered trusted coordinators are gated: external callers use) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 273.00 Tm (public coordinator surfaces while internal function modules and registries stay private. The) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 257.75 Tm (scaffold audit records which coordinators are fully foldered and which remain legacy-flat.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 242.50 Tm (Building is now foldered/gated and consumes trusted operation plans to emit candidate packet) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 227.25 Tm (graphs; it does not own definition lookup, policy resolution, default resolution, dependency) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 212.00 Tm (resolution, certification, or archival. Inspection is now foldered/gated and validates build) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 196.75 Tm (results against frozen operation plan snapshots. Certification is now foldered/gated and) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 181.50 Tm (owns the ticket/signature/hash handoff after Inspection, while Archive remains responsible) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 166.25 Tm (for packet-store writes later.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 334.00 Tm (Coordinator, the Trusted Archive Coordinator, direct packet workflow promotion, composite) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 318.75 Tm (workflow promotion, and composite workflow adapter descriptors. Nexus server routes and) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 303.50 Tm (mutation services may call these coordinators, but executable trusted behavior remains) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 288.25 Tm (runtime-owned rather than imported from packet definitions. Foldered trusted coordinators) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 273.00 Tm (are gated: external callers use public coordinator surfaces while internal function modules) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 257.75 Tm (and registries stay private. The scaffold audit records which coordinators are fully) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 242.50 Tm (foldered and which remain legacy-flat. Building is now foldered/gated and consumes trusted) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 227.25 Tm (operation plans to emit candidate packet graphs; it does not own definition lookup, policy) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 212.00 Tm (resolution, default resolution, dependency resolution, certification, or archival.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 196.75 Tm (Inspection is now foldered/gated and validates build results against frozen operation plan) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 181.50 Tm (snapshots. Certification is now foldered/gated and owns the ticket/signature/hash handoff) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 166.25 Tm (after Inspection. Archive is now foldered/gated and owns packet-store writes, archived) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 151.00 Tm (reads, revision resolution, edge queries, archive search rows, and low-level bundle export) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 135.75 Tm (primitives. Projection is now foldered/gated and owns archive-backed UI read models for) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 120.50 Tm (packets, lists, and graph neighborhoods while relying on Definition for projection) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 105.25 Tm (descriptors.) Tj ET
 endstream
 endobj
 32 0 obj
@@ -761,15 +765,15 @@ xref
 0000055259 00000 n 
 0000060180 00000 n 
 0000060318 00000 n 
-0000064949 00000 n 
-0000065087 00000 n 
-0000069636 00000 n 
-0000069774 00000 n 
-0000074940 00000 n 
-0000075078 00000 n 
-0000077986 00000 n 
+0000065534 00000 n 
+0000065672 00000 n 
+0000070221 00000 n 
+0000070359 00000 n 
+0000075525 00000 n 
+0000075663 00000 n 
+0000078571 00000 n 
 trailer
 << /Size 39 /Root 1 0 R >>
 startxref
-78124
+78709
 %%EOF

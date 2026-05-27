@@ -17,7 +17,7 @@ import type {
   NexusPacketActionsBatchRequest,
 } from '@runtime/nexus/nexus-api-types';
 import { NexusPacketVerificationService } from '@runtime/nexus/server/verification-service';
-import { resolvePreferredProjectionSurface } from '@runtime/trusted_coordinators/trusted_projection_coordinator';
+import { trustedProjectionCoordinator } from '@runtime/trusted_coordinators/trusted_projection_coordinator';
 
 const PACKET_ACTION_SURFACES: NexusPacketActionSurface[] = [
   'dashboard',
@@ -46,7 +46,11 @@ function getBestSurfaceForType(
     return 'library';
   }
 
-  return normalizeSurface(resolvePreferredProjectionSurface(type), 'library');
+  const preferredSurface = trustedProjectionCoordinator.resolvePreferredSurface({
+    packet_type: type,
+  }).value?.preferred_surface;
+
+  return normalizeSurface(preferredSurface, 'library');
 }
 
 function createBaseActionMap(input: {

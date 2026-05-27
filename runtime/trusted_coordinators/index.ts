@@ -8,7 +8,7 @@ export * from './trusted_coordinator_manifest.ts';
 export * from './trusted_dispatch_coordinator/index.ts';
 export * from './trusted_request_coordinator/index.ts';
 export * from './trusted_resolution_coordinator.ts';
-export * from './trusted_projection_coordinator.ts';
+export * from './trusted_projection_coordinator/index.ts';
 export * from './trusted_packet_workflow_coordinator.ts';
 export * from './trusted_composite_workflow_coordinator.ts';
 export * from './trusted_composite_workflow_adapters.ts';
