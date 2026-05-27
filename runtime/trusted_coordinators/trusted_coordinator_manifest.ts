@@ -133,6 +133,25 @@ export const TRUSTED_COORDINATOR_SCAFFOLD_MANIFEST = [
     ],
     notes: 'Certification handoff coordinator. It owns tickets, signature request payloads, stable hashes, and archive-ready certified packet sets, but does not write to storage.',
   },
+
+  {
+    coordinator_id: 'trusted_archive_coordinator.v0',
+    coordinator_kind: 'archive',
+    public_object_name: 'trustedArchiveCoordinator',
+    public_import_path: '@runtime/trusted_coordinators/trusted_archive_coordinator/index.ts',
+    runtime_path: 'runtime/trusted_coordinators/trusted_archive_coordinator',
+    structure: 'foldered_gated',
+    expected_methods: [
+      { method_name: 'storeCertifiedPacketSet', notes: 'Writes archive-ready certified packet sets through the packet store.' },
+      { method_name: 'readPacket', notes: 'Reads archived packets or revisions in adapted/raw modes.' },
+      { method_name: 'queryPackets', notes: 'Queries archived packet search rows and indexes.' },
+      { method_name: 'resolveRevision', notes: 'Resolves preferred/head/requested archived revision refs.' },
+      { method_name: 'queryEdges', notes: 'Queries archived packet graph edges.' },
+      { method_name: 'exportBundle', notes: 'Exports archive bundle payloads as a low-level storage primitive.' },
+      { method_name: 'auditReadiness', notes: 'Audits packet-store and index access.' },
+    ],
+    notes: 'Archive seam for packet-store writes, reads, refs, edges, and query indexes. Import/Export and Projection should ask Archive rather than reaching directly into storage.',
+  },
   {
     coordinator_id: 'trusted_projection_coordinator.v0',
     coordinator_kind: 'projection',

@@ -18,7 +18,7 @@ This guide can record current implementation rules and future-facing canon candi
 The active architecture is:
 
 - `core/*` = Core Contracts Vault: portable packet law, definitions, builders, defaults, dependencies, policy requirement contracts, graph logic, and verification rules
-- `runtime/*` = Trusted Runtime Coordinators: request intake, validation, regulation, planning, building, inspection, testing, certification, archival, verification, import, export, projection, storage, and API glue
+- `runtime/*` = Trusted Runtime Coordinators: request intake, validation, regulation, planning, building, inspection, testing, certification, archive, verification, import, export, projection, storage, and API glue
 - `app/*` = Signal Cockpit: reusable UI, hooks, content, loading state, intent emission, and projection display
 - `src/app/*` = Expo Router route shell and API entrypoints
 

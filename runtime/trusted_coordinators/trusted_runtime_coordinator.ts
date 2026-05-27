@@ -15,6 +15,7 @@ export type TrustedRuntimeCoordinatorKind =
   | 'inspection'
   | 'testing'
   | 'certification'
+  | 'archive'
   | 'archival'
   | 'import'
   | 'export'
