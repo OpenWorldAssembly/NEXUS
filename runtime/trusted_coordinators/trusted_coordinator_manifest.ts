@@ -154,6 +154,25 @@ export const TRUSTED_COORDINATOR_SCAFFOLD_MANIFEST = [
   },
 
   {
+    coordinator_id: 'trusted_compatibility_coordinator.v0',
+    coordinator_kind: 'compatibility',
+    public_object_name: 'trustedCompatibilityCoordinator',
+    public_import_path: '@runtime/trusted_coordinators/trusted_compatibility_coordinator/index.ts',
+    runtime_path: 'runtime/trusted_coordinators/trusted_compatibility_coordinator',
+    structure: 'foldered_gated',
+    expected_methods: [
+      { method_name: 'resolvePacketCompatibility', notes: 'Resolves whether one packet envelope can be interpreted by the requested/current schema version.' },
+      { method_name: 'adaptPacketForRead', notes: 'Adapts one packet envelope for trusted runtime reads and returns compatibility metadata.' },
+      { method_name: 'preparePacketForWrite', notes: 'Prepares one packet envelope for versioned writes without signing or storing it.' },
+      { method_name: 'resolveAdapterPath', notes: 'Resolves non-executable adapter path metadata between schema versions.' },
+      { method_name: 'resolveCompatibilityProfile', notes: 'Combines core registry truth with Definition packet_compatibility descriptor truth.' },
+      { method_name: 'auditCompatibilityCoverage', notes: 'Audits registry, Definition part, and adapter coverage across packet types.' },
+      { method_name: 'auditReadiness', notes: 'Audits core compatibility helper, Definition lookup, read, write, and adapter-path readiness.' },
+    ],
+    notes: 'Compatibility seam for runtime schema-version posture. Core owns adapter logic; this coordinator reports runtime read/write/migration posture and Definition descriptor coverage without storage mutation.',
+  },
+
+  {
     coordinator_id: 'trusted_verification_coordinator.v0',
     coordinator_kind: 'verification',
     public_object_name: 'trustedVerificationCoordinator',
