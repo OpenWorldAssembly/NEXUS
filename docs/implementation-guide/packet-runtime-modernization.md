@@ -79,7 +79,7 @@ Target coordinator families:
 - Trusted Import Coordinator and Trusted Export Coordinator for bundle ingress/egress
 - Trusted Projection Coordinator for UI-ready graph projections and available actions
 
-These coordinators are runtime concerns. They execute trusted local code and feed live context through the Core Contracts Vault. Packet definitions may describe allowed operations, defaults, dependencies, policy requirements, actions, and projection hints, but imported packet definitions must never execute local runtime behavior. The Trusted Definition Coordinator is the gate for definition lookup: internal candidate listing, ranking, conflict audit, compatibility selection, and runtime-view compilation functions are routed through its public coordinator surface instead of being imported as loose helper functions.
+These coordinators are runtime concerns. They execute trusted local code and feed live context through the Core Contracts Vault. Packet definitions may describe allowed operations, defaults, dependencies, policy requirements, actions, and projection hints, but imported packet definitions must never execute local runtime behavior. The Trusted Definition Coordinator is the gate for definition lookup: internal candidate listing, ranking, conflict audit, compatibility selection, and runtime-view compilation functions are routed through its public coordinator surface instead of being imported as loose helper functions. The Trusted Regulation Coordinator now follows the same gated coordinator pattern for defaults, dependencies, policy contexts, write-policy gates, requirement listing, and readiness audits.
 
 ## Definition-Driven Build And Projection Direction
 
@@ -91,11 +91,11 @@ Resolver ownership is split by domain:
 
 - definition resolves active definition context, definition parts, node runtime preferences, compatibility-only definitions, and runtime definition views
 - planning resolves build plans and default packet cascades
-- regulation resolves policy requirements, governance rules, trust gates, and voting eligibility
+- regulation resolves the rule envelope around defaults, dependencies, policy requirements, write-policy gates, governance rules, trust gates, and voting eligibility
 - building creates packet candidates through the generic builder pipeline
 - projection resolves surfaces, display models, badges, and available actions
 
-Builders remain packet anatomy. Defaults describe normal starting shape. Dependencies describe required structural refs. Policies regulate permission and process. Projection definitions describe safe display and interaction hints.
+Builders remain packet anatomy. Defaults describe normal starting shape. Dependencies describe required structural refs. Policies regulate permission and process. Regulation does not build packets; it classifies which defaults, dependencies, and policies are active, advisory, blocking, inherited, or future-hook material for a given operation. Projection definitions describe safe display and interaction hints.
 
 ## Manifest Core Pass
 

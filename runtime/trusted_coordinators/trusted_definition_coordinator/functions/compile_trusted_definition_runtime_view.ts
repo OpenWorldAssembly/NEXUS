@@ -9,8 +9,8 @@ import {
   buildTrustedDefinitionPartCandidates,
 } from '@runtime/trusted_coordinators/trusted_building_coordinator';
 import {
-  resolveTrustedRegulationProfileFromDefinition,
-} from '@runtime/trusted_coordinators/trusted_regulation_core';
+  trustedRegulationCoordinator,
+} from '@runtime/trusted_coordinators/trusted_regulation_coordinator';
 import {
   createTrustedRuntimeCoordinatorResult,
   trustedIssue,
@@ -54,10 +54,13 @@ function compileForDefinition(input: {
 }): TrustedRuntimeCoordinatorResult<TrustedDefinitionRuntimeView> {
   const issues: TrustedRuntimeCoordinatorIssue[] = [...input.inheritedIssues];
   const traceEntries: TrustedRuntimeCoordinatorTraceEntry[] = [...input.inheritedTrace];
-  const regulationResult = resolveTrustedRegulationProfileFromDefinition({
+  const regulationResult = trustedRegulationCoordinator.resolveContext({
     definition: input.definition,
     definitions: input.allDefinitions ?? [input.definition],
+    packet_type: input.definition.packet_type,
     packet_subtype: input.definition.default_subtype,
+    operation_kind: 'reseed',
+    context_mode: 'reseed',
   });
   const buildResult = buildTrustedDefinitionPartCandidates({ definition: input.definition });
 

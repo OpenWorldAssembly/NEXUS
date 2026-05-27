@@ -10,5 +10,5 @@ export * from './trusted_packet_workflow_coordinator.ts';
 export * from './trusted_composite_workflow_coordinator.ts';
 export * from './trusted_composite_workflow_adapters.ts';
 export * from './trusted_building_coordinator.ts';
-export * from './trusted_regulation_coordinator.ts';
+export * from './trusted_regulation_coordinator/index.ts';
 export * from './trusted_definition_coordinator/index.ts';

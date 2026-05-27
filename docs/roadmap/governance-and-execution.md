@@ -20,7 +20,7 @@ Near-term governance work should establish the policy language and resolver befo
 Milestones:
 
 - formalize policy requirements for proposing, voting, attesting, reviewing, and moderating
-- build the Trusted Regulation Coordinator as the policy resolver owner
+- extend the initial Trusted Regulation Coordinator into the full policy resolver owner
 - connect proposal creation to active governance policy
 - connect vote eligibility to trust, role, association, and scope gates
 - define quorum, threshold, vote method, and voting window semantics
@@ -32,7 +32,7 @@ Milestones:
 - real proposal drafting, editing, review, and publication flows
 - real vote participation and result flows
 - decision publication and linkage
-- Trusted Regulation Coordinator and policy resolver implementation
+- full policy resolver semantics on top of the initial Trusted Regulation Coordinator structure
 - role-aware review checkpoints and trust-aware participation gates
 - canonical approval packets or signed execution artifacts
 - multi-key assemblies, custody transition, and decision-to-effect authority

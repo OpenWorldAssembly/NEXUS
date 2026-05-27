@@ -67,7 +67,6 @@ import {
 import {
   filterRelationPackets,
   listRelationPackets,
-  type AssociationRelationProjection,
 } from '@runtime/nexus/server/relation-utils';
 import {
   buildNexusScopeGraphProjection,
