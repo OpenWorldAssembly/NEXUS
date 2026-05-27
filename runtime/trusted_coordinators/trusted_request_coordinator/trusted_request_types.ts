@@ -15,6 +15,8 @@ export type TrustedRequestSourceKind = 'interface_signal' | 'api_route' | 'runti
 export type TrustedRequestOperationKind =
   | 'mutation_prepare'
   | 'mutation_finalize'
+  | 'certification_ticket_prepare'
+  | 'certification_ticket_signed_return'
   | 'projection_read'
   | 'definition_read'
   | 'debug_audit';

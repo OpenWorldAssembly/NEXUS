@@ -118,6 +118,22 @@ export const TRUSTED_COORDINATOR_SCAFFOLD_MANIFEST = [
     notes: 'Quality gate coordinator. It measures built candidates against the plan snapshot and does not sign, store, or re-resolve the plan in normal mode.',
   },
   {
+    coordinator_id: 'trusted_certification_coordinator.v0',
+    coordinator_kind: 'certification',
+    public_object_name: 'trustedCertificationCoordinator',
+    public_import_path: '@runtime/trusted_coordinators/trusted_certification_coordinator/index.ts',
+    runtime_path: 'runtime/trusted_coordinators/trusted_certification_coordinator',
+    structure: 'foldered_gated',
+    expected_methods: [
+      { method_name: 'prepareCertificationTicket', notes: 'Creates a short-lived certification ticket from an inspected build result.' },
+      { method_name: 'prepareSignatureRequests', notes: 'Converts open certification tickets into dispatchable signature request payloads.' },
+      { method_name: 'verifySignedTicket', notes: 'Verifies a signed certification ticket return against the stored ticket hash.' },
+      { method_name: 'certifySignedTicket', notes: 'Produces an archive-ready certified packet set after signature verification.' },
+      { method_name: 'auditReadiness', notes: 'Audits Planning -> Building -> Inspection -> Certification readiness.' },
+    ],
+    notes: 'Certification handoff coordinator. It owns tickets, signature request payloads, stable hashes, and archive-ready certified packet sets, but does not write to storage.',
+  },
+  {
     coordinator_id: 'trusted_projection_coordinator.v0',
     coordinator_kind: 'projection',
     public_object_name: 'trustedProjectionCoordinator',

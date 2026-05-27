@@ -30,6 +30,7 @@ import { trustedRegulationCoordinator } from '@runtime/trusted_coordinators/trus
 import { trustedPlanningCoordinator } from '@runtime/trusted_coordinators/trusted_planning_coordinator/index.ts';
 import { trustedBuildingCoordinator } from '@runtime/trusted_coordinators/trusted_building_coordinator/index.ts';
 import { trustedInspectionCoordinator } from '@runtime/trusted_coordinators/trusted_inspection_coordinator/index.ts';
+import { trustedCertificationCoordinator } from '@runtime/trusted_coordinators/trusted_certification_coordinator/index.ts';
 
 export type PreReseedClosureStatus =
   | 'closed'
@@ -143,6 +144,12 @@ function auditTrustedInspectionReadiness() {
   }).value;
 }
 
+function auditTrustedCertificationReadiness() {
+  return trustedCertificationCoordinator.auditReadiness({
+    context_mode: 'reseed',
+  }).value;
+}
+
 function regulationReadinessPasses(): boolean {
   return auditTrustedRegulationReadiness()?.ready !== false;
 }
@@ -153,6 +160,10 @@ function buildingReadinessPasses(): boolean {
 
 function inspectionReadinessPasses(): boolean {
   return auditTrustedInspectionReadiness()?.ready !== false;
+}
+
+function certificationReadinessPasses(): boolean {
+  return auditTrustedCertificationReadiness()?.ready !== false;
 }
 
 function queueForEntry(
@@ -249,20 +260,21 @@ function createDependencyRequirementEntries(): PreReseedClosureLedgerEntry[] {
   const planningReady = auditTrustedPlanningReadiness()?.ready !== false;
   const buildingReady = buildingReadinessPasses();
   const inspectionReady = inspectionReadinessPasses();
+  const certificationReady = certificationReadinessPasses();
 
   return listTrustedDependencyRequirements().map((descriptor) => ({
     subject_kind: 'dependency_requirement',
     subject_id: descriptor.dependency_id,
-    status: regulationReady && planningReady && buildingReady && inspectionReady ? 'closed' : 'blocked',
+    status: regulationReady && planningReady && buildingReady && inspectionReady && certificationReady ? 'closed' : 'blocked',
     queue: 'policy_dependency_semantic_authority',
     reason:
-      regulationReady && planningReady && buildingReady && inspectionReady
-        ? 'Dependency resolves through packet Definition dependency parts, Policy semantics, operation ontology, workflow resolver allowlists, or trusted local engine contracts via Trusted Planning Coordinator, materializes through Trusted Building Coordinator, and inspects through Trusted Inspection Coordinator.'
-        : 'Trusted policy, planning, building, or inspection authority audit has blockers.',
+      regulationReady && planningReady && buildingReady && inspectionReady && certificationReady
+        ? 'Dependency resolves through packet Definition dependency parts, Policy semantics, operation ontology, workflow resolver allowlists, or trusted local engine contracts via Trusted Planning Coordinator, materializes through Trusted Building Coordinator, inspects through Trusted Inspection Coordinator, and opens certification tickets through Trusted Certification Coordinator.'
+        : 'Trusted policy, planning, building, inspection, or certification authority audit has blockers.',
     next_step:
-      regulationReady && planningReady && buildingReady && inspectionReady
-        ? 'Keep Definition dependency parts synchronized with workflow plans, candidate materialization, and inspection gates.'
-        : 'Resolve trusted planning/building/inspection and dependency semantic authority findings before reseed closure.',
+      regulationReady && planningReady && buildingReady && inspectionReady && certificationReady
+        ? 'Keep Definition dependency parts synchronized with workflow plans, candidate materialization, inspection gates, and certification ticket handoff.'
+        : 'Resolve trusted planning/building/inspection/certification and dependency semantic authority findings before reseed closure.',
   }));
 }
 
@@ -347,6 +359,7 @@ export function createPreReseedModernizationClosureReport(): PreReseedModernizat
   const liveCompositeAudit = auditLiveCompositeWorkflowEnrollments();
   const regulationReadiness = auditTrustedRegulationReadiness();
   const inspectionReadiness = auditTrustedInspectionReadiness();
+  const certificationReadiness = auditTrustedCertificationReadiness();
   const clientIngressAudit = auditPacketClientIntentEnrollments();
   const compositeAdapterAudit = auditTrustedCompositeWorkflowAdapters();
   const live_mutation_intents = createMutationEntries();
@@ -399,6 +412,10 @@ export function createPreReseedModernizationClosureReport(): PreReseedModernizat
       ...report.blockers,
       ...report.warnings,
       ...report.issues.map((issue) => issue.message),
+    ]),
+    ...(certificationReadiness?.packages ?? []).flatMap((certificationPackage) => [
+      ...certificationPackage.blockers,
+      ...certificationPackage.warnings,
     ]),
     ...clientIngressAudit.findings.map((finding) => finding.message),
     ...compositeAdapterAudit.findings.map((finding) => finding.message),

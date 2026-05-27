@@ -4,3 +4,15 @@
  */
 
 export { trustedDispatchCoordinator } from './trusted_dispatch_coordinator.ts';
+export type {
+  AuditTrustedDispatchReadinessInput,
+  ListTrustedDispatchEnrollmentsInput,
+  NormalizeTrustedDispatchRequestInput,
+  PreflightTrustedDispatchClientIntentInput,
+  TrustedDispatchEnrollmentList,
+  TrustedDispatchOperationKind,
+  TrustedDispatchPreflight,
+  TrustedDispatchReadinessReport,
+  TrustedDispatchSourceKind,
+  TrustedRuntimeDispatchRequest,
+} from './trusted_dispatch_types.ts';

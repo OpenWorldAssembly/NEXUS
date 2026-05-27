@@ -568,7 +568,7 @@ endobj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 29 0 R >>
 endobj
 31 0 obj
-<< /Length 5128 >>
+<< /Length 4578 >>
 stream
 0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
 BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Specifications - 14) Tj ET
@@ -586,140 +586,142 @@ BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 504.00 Tm (The current repo is
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 488.75 Tm (architecture is the core / runtime / app / src/app split described above.) Tj ET
 BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 451.50 Tm (Trusted coordinator structure) Tj ET
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 425.50 Tm (Trusted runtime coordinator code now lives under runtime/trusted_coordinators/*. The folder) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 410.25 Tm (contains shared coordinator result helpers, the scaffold manifest, the Trusted Request) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 395.00 Tm (Coordinator, the portable-resolution coordinator, the packet-projection coordinator, the) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 379.75 Tm (Trusted Definition Coordinator, the Trusted Regulation Coordinator, the Trusted Planning) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 364.50 Tm (Coordinator, the Trusted Building Coordinator, the Trusted Inspection Coordinator, direct) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 349.25 Tm (packet workflow promotion, composite workflow promotion, and composite workflow adapter) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 334.00 Tm (descriptors. Nexus server routes and mutation services may call these coordinators, but) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 318.75 Tm (executable trusted behavior remains runtime-owned rather than imported from packet) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 303.50 Tm (definitions. Foldered trusted coordinators are gated: external callers use public) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 288.25 Tm (coordinator surfaces while internal function modules and registries stay private. The) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 273.00 Tm (scaffold audit records which coordinators are fully foldered and which remain legacy-flat.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 257.75 Tm (Building is now foldered/gated and consumes trusted operation plans to emit candidate packet) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 242.50 Tm (graphs; it does not own definition lookup, policy resolution, default resolution, dependency) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 227.25 Tm (resolution, certification, or archival. Inspection is now foldered/gated and validates build) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 212.00 Tm (results against frozen operation plan snapshots before later certification or archival seams) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 196.75 Tm (exist.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 173.50 Tm (The core packet-definition surface now includes richer projection descriptors: field) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 158.25 Tm (bindings, layout/component keys, preferred surfaces, action registry keys, dependency IDs,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 143.00 Tm (policy action IDs, and resolver preset IDs. Generic packet definitions currently provide) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 127.75 Tm (summary-card and detail-panel projection descriptors for active packet types. The packet) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 112.50 Tm (action service uses preferred projection surfaces for focus/open routing. Full UI layout) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 97.25 Tm (generation from projection descriptors is not yet complete.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 410.25 Tm (contains shared coordinator result helpers, the scaffold manifest, the Trusted Dispatch) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 395.00 Tm (Coordinator front desk, the compatibility Trusted Request Coordinator implementation, the) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 379.75 Tm (portable-resolution coordinator, the packet-projection coordinator, the Trusted Definition) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 364.50 Tm (Coordinator, the Trusted Regulation Coordinator, the Trusted Planning Coordinator, the) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 349.25 Tm (Trusted Building Coordinator, the Trusted Inspection Coordinator, the Trusted Certification) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 334.00 Tm (Coordinator, direct packet workflow promotion, composite workflow promotion, and composite) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 318.75 Tm (workflow adapter descriptors. Nexus server routes and mutation services may call these) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 303.50 Tm (coordinators, but executable trusted behavior remains runtime-owned rather than imported) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 288.25 Tm (from packet definitions. Foldered trusted coordinators are gated: external callers use) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 273.00 Tm (public coordinator surfaces while internal function modules and registries stay private. The) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 257.75 Tm (scaffold audit records which coordinators are fully foldered and which remain legacy-flat.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 242.50 Tm (Building is now foldered/gated and consumes trusted operation plans to emit candidate packet) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 227.25 Tm (graphs; it does not own definition lookup, policy resolution, default resolution, dependency) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 212.00 Tm (resolution, certification, or archival. Inspection is now foldered/gated and validates build) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 196.75 Tm (results against frozen operation plan snapshots. Certification is now foldered/gated and) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 181.50 Tm (owns the ticket/signature/hash handoff after Inspection, while Archive remains responsible) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 166.25 Tm (for packet-store writes later.) Tj ET
 endstream
 endobj
 32 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 31 0 R >>
 endobj
 33 0 obj
-<< /Length 4529 >>
+<< /Length 4496 >>
 stream
 0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
 BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Specifications - 15) Tj ET
-0.720 0.820 0.900 RG 0.80 w 54.00 725.00 m 558.00 725.00 l S
-BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 716.00 Tm (Known Gaps And Provisional Notes) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 670.00 Tm (Current known gaps) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 644.00 Tm (- identity/auth and discussions remain the two strongest end-to-end verticals) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 624.75 Tm (- votes, trust, roles, and Library are packet-backed, but are still comparatively) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 609.50 Tm (provisional) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 590.25 Tm (- dashboard is live and packet-backed, but deeper verification, trust, and governance) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 575.00 Tm (meaning on its preview surfaces remains provisional) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 555.75 Tm (- role creation and editing remain unsupported) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 536.50 Tm (- broader moderation, trust weighting, and governance execution remain unsupported) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 503.25 Tm (Location and relationship caveats) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 477.25 Tm (- residence is now the packet-backed source of mounted geographic ancestry, with canonical) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 462.00 Tm (writes producing a relation without automatic claim wrapping) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 442.75 Tm (- identity.location_disclosure remains optional profile metadata rather than mounted-scope) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 427.50 Tm (truth) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 408.25 Tm (- association remains distinct from residence) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 389.00 Tm (- followed scopes are now packet-native on the write path, but legacy shell-preference) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 373.75 Tm (follow remain readable through an explicit compatibility bridge during transition) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 354.50 Tm (- Location is now part of locality creation through provisional region packets, and those) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 339.25 Tm (packets now carry descriptor metadata in spatialpayload.scopedescriptor, but) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 324.00 Tm (provider-backed normalization, richer external refs, and broader equivalence handling) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 308.75 Tm (remain later work) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 289.50 Tm (- legacy nation | region | city | district locality levels remain current compatibility) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 274.25 Tm (buckets rather than the full future locality model) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 255.00 Tm (- locality ancestry is now planned from ordered broad-to-narrow path entries, and sparse) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 239.75 Tm (paths are valid current behavior; absolute depth is still projection-only and is not) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 224.50 Tm (stored on packets) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 205.25 Tm (- locality creation now has a real non-mutating review seam, but the home-branch inclusion) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 190.00 Tm (checklist shown during review is still preview-only and does not yet alter stored) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 174.75 Tm (residence relation semantics) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 155.50 Tm (- locality confirm now applies home, association, follow, and main visibility choices) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 140.25 Tm (through one composite runtime write seam; claimed main scope-display state now persists) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 125.00 Tm (through Preference.element packets while guest/session behavior remains compatibility) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 109.75 Tm (state) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 734.00 Tm (The core packet-definition surface now includes richer projection descriptors: field) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 718.75 Tm (bindings, layout/component keys, preferred surfaces, action registry keys, dependency IDs,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 703.50 Tm (policy action IDs, and resolver preset IDs. Generic packet definitions currently provide) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 688.25 Tm (summary-card and detail-panel projection descriptors for active packet types. The packet) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 673.00 Tm (action service uses preferred projection surfaces for focus/open routing. Full UI layout) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 657.75 Tm (generation from projection descriptors is not yet complete.) Tj ET
+0.720 0.820 0.900 RG 0.80 w 54.00 625.50 m 558.00 625.50 l S
+BT 0.040 0.380 0.620 rg /F2 17 Tf 1 0 0 1 54.00 616.50 Tm (Known Gaps And Provisional Notes) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 570.50 Tm (Current known gaps) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 544.50 Tm (- identity/auth and discussions remain the two strongest end-to-end verticals) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 525.25 Tm (- votes, trust, roles, and Library are packet-backed, but are still comparatively) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 510.00 Tm (provisional) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 490.75 Tm (- dashboard is live and packet-backed, but deeper verification, trust, and governance) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 475.50 Tm (meaning on its preview surfaces remains provisional) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 456.25 Tm (- role creation and editing remain unsupported) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 437.00 Tm (- broader moderation, trust weighting, and governance execution remain unsupported) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 403.75 Tm (Location and relationship caveats) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 377.75 Tm (- residence is now the packet-backed source of mounted geographic ancestry, with canonical) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 362.50 Tm (writes producing a relation without automatic claim wrapping) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 343.25 Tm (- identity.location_disclosure remains optional profile metadata rather than mounted-scope) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 328.00 Tm (truth) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 308.75 Tm (- association remains distinct from residence) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 289.50 Tm (- followed scopes are now packet-native on the write path, but legacy shell-preference) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 274.25 Tm (follow remain readable through an explicit compatibility bridge during transition) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 255.00 Tm (- Location is now part of locality creation through provisional region packets, and those) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 239.75 Tm (packets now carry descriptor metadata in spatialpayload.scopedescriptor, but) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 224.50 Tm (provider-backed normalization, richer external refs, and broader equivalence handling) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 209.25 Tm (remain later work) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 190.00 Tm (- legacy nation | region | city | district locality levels remain current compatibility) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 174.75 Tm (buckets rather than the full future locality model) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 155.50 Tm (- locality ancestry is now planned from ordered broad-to-narrow path entries, and sparse) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 140.25 Tm (paths are valid current behavior; absolute depth is still projection-only and is not) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 125.00 Tm (stored on packets) Tj ET
 endstream
 endobj
 34 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 33 0 R >>
 endobj
 35 0 obj
-<< /Length 5068 >>
+<< /Length 5113 >>
 stream
 0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
 BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Specifications - 16) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- associated and followed parent-context display now persists through the same claimed-actor) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 718.75 Tm (signed Preference.element path, with guest compatibility fallback still) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 703.50 Tm (session/cookie-based) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 684.25 Tm (- same-name locality matches in other parent branches no longer need to suppress the) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 669.00 Tm (create-path handoff, but orphan existing-scope remounting is still intentionally) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 653.75 Tm (unresolved rather than silently repaired in this phase) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 634.50 Tm (- generic abstract assembly creation and richer locality governance are still later work) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 601.25 Tm (Explorer caveats) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 575.25 Tm (- Packet Explorer is read-only for packet mutation) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 556.00 Tm (- Packet Explorer Search, Import, and Export are live) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 536.75 Tm (- Packet Explorer verification is now live for local validation, imported report reading,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 521.50 Tm (and truthful layered status display) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 502.25 Tm (- Packet Explorer verification is now revision-aware and stale-aware for the currently) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 487.00 Tm (preferred revision, but richer revalidation workflows remain unsupported) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 467.75 Tm (- Packet Explorer Import now keeps recent import-report history visible inside the Import) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 452.50 Tm (workspace, but that history currently reflects the latest local report per imported) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 437.25 Tm (artifact identity rather than a full event-by-event ledger; richer filtering, artifact) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 422.00 Tm (lineage browsing, and bundle-native history are still later work) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 402.75 Tm (- fork or adapt execution, diff, and compare are not live yet) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 383.50 Tm (- validation now distinguishes validate first, validate after, and don't validate, but local) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 368.25 Tm (trust still remains node-local rather than peer-weighted) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 349.00 Tm (- packet verification reports and import reports now exist, but richer provenance surfacing,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 333.75 Tm (peer-trust weighting, and broader report semantics remain next seams) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 314.50 Tm (- a dedicated validation workflow screen is intentionally unsupported) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 295.25 Tm (- official versus unofficial initiative filtering is not active product behavior) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 276.00 Tm (- initiative-version subscription behavior is not active product behavior) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 256.75 Tm (- the generic scope graph is now decoupled from OWA-specific initiative-anchor policy) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 241.50 Tm (lookup, but broader initiative and locality projection cleanup is still incomplete) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 208.25 Tm (Moderation and governance caveats) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 182.25 Tm (- moderation workflows are not yet implemented as live user-facing policy systems) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 163.00 Tm (- current disabled controls should be read as placeholders, not as hidden active features) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 143.75 Tm (- the first high-friction Nexus surfaces now attach compact inline explainers to disabled or) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 128.50 Tm (partial controls so users can see whether a seam is coming soon, read-only, or partial) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 109.25 Tm (- proposals, votes, and decisions are present in packets and read surfaces, but governance) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 94.00 Tm (is not yet a fully interactive trusted workflow) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- locality creation now has a real non-mutating review seam, but the home-branch inclusion) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 718.75 Tm (checklist shown during review is still preview-only and does not yet alter stored) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 703.50 Tm (residence relation semantics) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 684.25 Tm (- locality confirm now applies home, association, follow, and main visibility choices) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 669.00 Tm (through one composite runtime write seam; claimed main scope-display state now persists) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 653.75 Tm (through Preference.element packets while guest/session behavior remains compatibility) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 638.50 Tm (state) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 619.25 Tm (- associated and followed parent-context display now persists through the same claimed-actor) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 604.00 Tm (signed Preference.element path, with guest compatibility fallback still) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 588.75 Tm (session/cookie-based) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 569.50 Tm (- same-name locality matches in other parent branches no longer need to suppress the) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 554.25 Tm (create-path handoff, but orphan existing-scope remounting is still intentionally) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 539.00 Tm (unresolved rather than silently repaired in this phase) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 519.75 Tm (- generic abstract assembly creation and richer locality governance are still later work) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 486.50 Tm (Explorer caveats) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 460.50 Tm (- Packet Explorer is read-only for packet mutation) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 441.25 Tm (- Packet Explorer Search, Import, and Export are live) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 422.00 Tm (- Packet Explorer verification is now live for local validation, imported report reading,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 406.75 Tm (and truthful layered status display) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 387.50 Tm (- Packet Explorer verification is now revision-aware and stale-aware for the currently) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 372.25 Tm (preferred revision, but richer revalidation workflows remain unsupported) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 353.00 Tm (- Packet Explorer Import now keeps recent import-report history visible inside the Import) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 337.75 Tm (workspace, but that history currently reflects the latest local report per imported) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 322.50 Tm (artifact identity rather than a full event-by-event ledger; richer filtering, artifact) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 307.25 Tm (lineage browsing, and bundle-native history are still later work) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 288.00 Tm (- fork or adapt execution, diff, and compare are not live yet) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 268.75 Tm (- validation now distinguishes validate first, validate after, and don't validate, but local) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 253.50 Tm (trust still remains node-local rather than peer-weighted) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 234.25 Tm (- packet verification reports and import reports now exist, but richer provenance surfacing,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 219.00 Tm (peer-trust weighting, and broader report semantics remain next seams) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 199.75 Tm (- a dedicated validation workflow screen is intentionally unsupported) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 180.50 Tm (- official versus unofficial initiative filtering is not active product behavior) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 161.25 Tm (- initiative-version subscription behavior is not active product behavior) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 142.00 Tm (- the generic scope graph is now decoupled from OWA-specific initiative-anchor policy) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 126.75 Tm (lookup, but broader initiative and locality projection cleanup is still incomplete) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 93.50 Tm (Moderation and governance caveats) Tj ET
 endstream
 endobj
 36 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 35 0 R >>
 endobj
 37 0 obj
-<< /Length 1956 >>
+<< /Length 2855 >>
 stream
 0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
 BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Specifications - 17) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 720.00 Tm (Provisional guidance) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 694.00 Tm (The following areas should still be treated as provisional:) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 670.75 Tm (- the shell-level early-access gate is now an honest entry warning, but it is not yet a) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 655.50 Tm (tutorial, release-note system, or scope-aware onboarding flow) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 636.25 Tm (- the new feature-status registry and popover system currently covers Explorer, Votes, and) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 621.00 Tm (Library first; broader surface rollout is still pending) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 601.75 Tm (- deeper trust weighting and moderation consequences) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 582.50 Tm (- vote execution, delegation, and propagation semantics) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 563.25 Tm (- long-term initiative filtering and visibility modes) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 544.00 Tm (- packet actions that currently appear as disabled placeholders) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 524.75 Tm (- hardening the remaining Preference trusted runtime connector path before applying the same) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 509.50 Tm (procedure to other packet types) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 490.25 Tm (- any architecture or theory in the implementation guide that is not already represented in) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 475.00 Tm (executable code) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- moderation workflows are not yet implemented as live user-facing policy systems) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 714.75 Tm (- current disabled controls should be read as placeholders, not as hidden active features) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 695.50 Tm (- the first high-friction Nexus surfaces now attach compact inline explainers to disabled or) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 680.25 Tm (partial controls so users can see whether a seam is coming soon, read-only, or partial) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 661.00 Tm (- proposals, votes, and decisions are present in packets and read surfaces, but governance) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 645.75 Tm (is not yet a fully interactive trusted workflow) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 612.50 Tm (Provisional guidance) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 54.00 586.50 Tm (The following areas should still be treated as provisional:) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 563.25 Tm (- the shell-level early-access gate is now an honest entry warning, but it is not yet a) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 548.00 Tm (tutorial, release-note system, or scope-aware onboarding flow) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 528.75 Tm (- the new feature-status registry and popover system currently covers Explorer, Votes, and) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 513.50 Tm (Library first; broader surface rollout is still pending) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 494.25 Tm (- deeper trust weighting and moderation consequences) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 475.00 Tm (- vote execution, delegation, and propagation semantics) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 455.75 Tm (- long-term initiative filtering and visibility modes) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 436.50 Tm (- packet actions that currently appear as disabled placeholders) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 417.25 Tm (- hardening the remaining Preference trusted runtime connector path before applying the same) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 402.00 Tm (procedure to other packet types) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 382.75 Tm (- any architecture or theory in the implementation guide that is not already represented in) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 367.50 Tm (executable code) Tj ET
 endstream
 endobj
 38 0 obj
@@ -759,15 +761,15 @@ xref
 0000055259 00000 n 
 0000060180 00000 n 
 0000060318 00000 n 
-0000065499 00000 n 
-0000065637 00000 n 
-0000070219 00000 n 
-0000070357 00000 n 
-0000075478 00000 n 
-0000075616 00000 n 
-0000077625 00000 n 
+0000064949 00000 n 
+0000065087 00000 n 
+0000069636 00000 n 
+0000069774 00000 n 
+0000074940 00000 n 
+0000075078 00000 n 
+0000077986 00000 n 
 trailer
 << /Size 39 /Root 1 0 R >>
 startxref
-77763
+78124
 %%EOF
