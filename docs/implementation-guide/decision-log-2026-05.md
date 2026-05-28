@@ -354,3 +354,20 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - `/api/nexus/mutations/prepare` and `/api/nexus/mutations/finalize` now call Dispatch-owned write lifecycle methods and do not call `NexusMutationService` as route-facing authority.
 - `relation.follow.add` is the first live write to complete the corrected Dispatch-owned chain: Planning, Building, Inspection, Certification ticketing, signed-packet bundle certification, Verification, and Archive storage.
 - Other mutation intents remain coordinator capability gaps until they receive equivalent packet-envelope materialization, Certification signed-bundle checks, Verification handoff, Archive storage, and result projection. They must not fall back to the legacy signed corridor.
+
+## 2026-05 Trusted runtime audit guardrail housekeeping
+
+- Added package-level trusted coordinator test scripts: `test:trusted-coordinators` for the runtime coordinator tests and `check:trusted-coordinators` for audit plus tests.
+- Hardened the trusted coordinator audit to catch unmanifested `trusted_*_coordinator` folders, missing trusted test scripts, manifest/barrel/method/result-kind drift, and unregistered trusted issue codes.
+- Runtime crossing notes now recursively scan real implementation folders under `runtime/nexus/server/*` and `src/app/api/nexus/*` instead of only top-level compatibility bridge files. Direct storage touches, signature verification, packet interpretation, bundle import/export, API packet parsing, and legacy fortress corridor references remain non-failing migration notes.
+- Removed the empty `trusted_write_coordinator` remnant. Writes remain Dispatch-owned lifecycle orchestration, not a separate coordinator.
+- Corrected the Exchange manifest note: Exchange can orchestrate accepted import commits through Archive, but Archive remains the storage owner and Exchange should not bypass Compatibility or Verification ownership.
+
+
+## 2026-05 Trusted Exchange import commit hardening
+
+- Exchange import preview now normalizes JSON string inputs and archive byte payloads into a consistent packet bundle before asking Verification and Compatibility for posture.
+- Exchange import commit now narrows Archive writes to accepted plan entries only; skipped duplicates and blocked/manual entries are no longer passed through to Archive as part of the commit bundle.
+- Verification and compatibility risk acknowledgements are explicit commit inputs. Packet Explorer currently treats an approved commit from its preview flow as acknowledgement so existing UI behavior is preserved.
+- Exchange commit receipts now expose planned, archived, skipped, imported, missing, and unexpected revision-key counts/lists so Archive import results can be compared against the Exchange plan.
+- The trusted issue taxonomy gained Exchange archive-import mismatch/failure aliases so coordinator audits fail if future code invents unregistered runtime issue codes.

@@ -18,6 +18,7 @@ import {
   startTrustedProcessStage,
 } from '@runtime/trusted_coordinators/trusted_process.ts';
 import {
+  acknowledgementForAction,
   actionReason,
   exchangeIssue,
   exchangeTrace,
@@ -78,19 +79,24 @@ export async function planTrustedImportCommit(
 
   const items = (preview?.packet_previews ?? []).map((packetPreview) => {
     const action = previewActionToCommitAction(packetPreview.recommended_action);
+    const requiredAcknowledgement = acknowledgementForAction(action);
     return {
       entry_index: packetPreview.entry_index,
       entry_id: packetPreview.entry_id,
       packet_ref: packetPreview.packet_ref,
       revision_ref: packetPreview.revision_ref,
+      normalized_key: packetPreview.normalized_key,
       action,
+      accepted_for_commit: action === 'import_revision',
+      required_acknowledgements: requiredAcknowledgement ? [requiredAcknowledgement] : [],
+      blockers: [...packetPreview.blockers],
+      warnings: [...packetPreview.warnings],
       reason: actionReason(action),
     };
   });
 
   const requiredAcknowledgements = Array.from(new Set(items
-    .filter((item) => item.action === 'needs_compatibility_acknowledgement' || item.action === 'needs_verification_acknowledgement')
-    .map((item) => item.action)));
+    .flatMap((item) => item.required_acknowledgements)));
 
   const blockedCount = (preview?.packet_previews ?? []).filter(packetPreviewHasBlocker).length;
   const manualResolutionCount = (preview?.packet_previews ?? []).filter(packetPreviewHasConflict).length;

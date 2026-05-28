@@ -118,8 +118,34 @@ function createMockStore(packets: PacketEnvelope[] = []): PacketStore {
     async writePreparedRevision(preparation: PacketVersionedWritePreparation) {
       return this.writeRevision(preparation.prepared_packet ?? preparation.adapted_packet);
     },
-    async importBundle() {
-      return { packet_count: 0, revision_count: 0, edge_count: 0 };
+    async importBundle(bundle: Uint8Array | ArrayBuffer | string) {
+      const text = typeof bundle === 'string'
+        ? bundle
+        : new TextDecoder().decode(bundle instanceof Uint8Array ? bundle : new Uint8Array(bundle));
+      const parsed = JSON.parse(text) as { packets?: PacketEnvelope[]; revisions?: PacketEnvelope[] } | PacketEnvelope[];
+      const revisions = Array.isArray(parsed)
+        ? parsed
+        : Array.isArray(parsed.packets)
+          ? parsed.packets
+          : Array.isArray(parsed.revisions)
+            ? parsed.revisions
+            : [];
+      let revisionCount = 0;
+      let edgeCount = 0;
+      const packetIds = new Set<string>();
+
+      for (const packet of revisions) {
+        if (revisionMap.has(packet.header.revision_id)) {
+          continue;
+        }
+        packetMap.set(packet.header.packet_id, packet);
+        revisionMap.set(packet.header.revision_id, packet);
+        packetIds.add(packet.header.packet_id);
+        revisionCount += 1;
+        edgeCount += packet.header.edges.length;
+      }
+
+      return { packet_count: packetIds.size, revision_count: revisionCount, edge_count: edgeCount };
     },
     async exportBundle(packetRefs: PacketRef[]) {
       const packets = packetRefs
@@ -181,6 +207,60 @@ test('trusted exchange coordinator plans import commit from preview without writ
   );
 });
 
+test('trusted exchange coordinator previews raw JSON string bundles', async () => {
+  const packet = createPacket('nexus:element/exchange-json-string');
+  const result = await trustedExchangeCoordinator.previewImport({
+    bundle: JSON.stringify({ packets: [packet] }),
+  });
+
+  assert.equal(result.status, 'partial');
+  assert.equal(result.value?.source_shape, 'json_string');
+  assert.equal(result.value?.packet_count, 1);
+  assert.equal(result.value?.packet_previews[0]?.normalized_key, `${packet.header.packet_id}::${packet.header.revision_id}`);
+});
+
+test('trusted exchange coordinator commit imports only acknowledged accepted revisions', async () => {
+  const duplicate = createPacket('nexus:element/exchange-commit-duplicate', 'rev-duplicate');
+  const incoming = createPacket('nexus:element/exchange-commit-new', 'rev-new');
+  const packetStore = createMockStore([duplicate]);
+  const result = await trustedExchangeCoordinator.commitImport({
+    packet_store: packetStore,
+    bundle: JSON.stringify({ packets: [duplicate, incoming] }),
+    accepted_acknowledgements: ['needs_verification_acknowledgement'],
+  });
+
+  assert.equal(result.status, 'partial');
+  assert.equal(result.value?.planned_import_count, 1);
+  assert.equal(result.value?.archived_import_count, 1);
+  assert.equal(result.value?.skipped_duplicate_count, 1);
+  assert.deepEqual(result.value?.imported_revision_keys, [
+    `${incoming.header.packet_id}::${incoming.header.revision_id}`,
+  ]);
+  assert.equal(await packetStore.fetchByRevision({
+    packet_id: incoming.header.packet_id,
+    revision_id: incoming.header.revision_id,
+  }) !== null, true);
+});
+
+test('trusted exchange coordinator commit refuses missing import acknowledgements', async () => {
+  const incoming = createPacket('nexus:element/exchange-commit-needs-ack', 'rev-needs-ack');
+  const packetStore = createMockStore();
+  const result = await trustedExchangeCoordinator.commitImport({
+    packet_store: packetStore,
+    bundle: JSON.stringify({ packets: [incoming] }),
+  });
+
+  assert.equal(result.status, 'error');
+  assert.equal(
+    result.issues.some((issue) => issue.code === 'trusted_exchange_import_acknowledgement_missing'),
+    true
+  );
+  assert.equal(await packetStore.fetchByRevision({
+    packet_id: incoming.header.packet_id,
+    revision_id: incoming.header.revision_id,
+  }) === null, true);
+});
+
 test('trusted exchange coordinator exports packet set through archive seam', async () => {
   const packet = createPacket('nexus:element/exchange-export');
   const packetStore = createMockStore([packet]);
@@ -223,6 +303,8 @@ test('trusted exchange coordinator blocked import commit records blocked downstr
         revision_ref: null,
         packet_type: 'Element',
         declared_schema_version: null,
+        packet_subtype: null,
+        normalized_key: null,
         readable: false,
         verified: false,
         local_status: 'not_checked',

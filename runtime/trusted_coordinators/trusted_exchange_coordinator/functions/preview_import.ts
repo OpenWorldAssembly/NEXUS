@@ -21,6 +21,7 @@ import { trustedCompatibilityCoordinator } from '@runtime/trusted_coordinators/t
 import { trustedVerificationCoordinator } from '@runtime/trusted_coordinators/trusted_verification_coordinator/index.ts';
 import {
   chooseTrustedExchangeAction,
+  createTrustedExchangeArchiveBundle,
   exchangeIssue,
   exchangeTrace,
   normalizeTrustedExchangeBundle,
@@ -52,6 +53,7 @@ export async function previewTrustedImport(
     mode: contextMode,
   });
   const normalized = normalizeTrustedExchangeBundle(input.bundle);
+  const normalizedArchiveBundle = createTrustedExchangeArchiveBundle(normalized.entries);
 
   for (const blocker of normalized.blockers) {
     issues.push(exchangeIssue({
@@ -77,7 +79,7 @@ export async function previewTrustedImport(
   const verificationResult = await trustedVerificationCoordinator.verifyBundle({
     packet_store: input.packet_store,
     database_path: input.database_path,
-    bundle: input.bundle,
+    bundle: normalizedArchiveBundle,
     target_schema_version: input.options?.target_schema_version,
     verification_mode: verificationMode,
     context_mode: contextMode,
@@ -155,6 +157,8 @@ export async function previewTrustedImport(
       revision_ref: entry.revision_ref,
       packet_type: entry.packet_type,
       declared_schema_version: entry.declared_schema_version,
+      packet_subtype: entry.packet_subtype,
+      normalized_key: entry.normalized_key,
       readable,
       verified,
       local_status: local.localStatus,

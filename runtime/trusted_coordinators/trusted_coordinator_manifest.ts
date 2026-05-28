@@ -212,7 +212,7 @@ export const TRUSTED_COORDINATOR_SCAFFOLD_MANIFEST = [
       { method_name: 'previewRebundle', notes: 'Normalizes packet material into a rebundle preview and manifest without storage mutation.' },
       { method_name: 'auditReadiness', notes: 'Audits Compatibility, Verification, Archive, normalization, and merge-planning seams.' },
     ],
-    notes: 'Exchange seam for packet movement. It orchestrates Archive, Verification, and Compatibility for import/export/merge/rebundle previews, but Pass A does not commit imported bundles or mutate storage.',
+    notes: 'Exchange seam for packet movement. It orchestrates Archive, Verification, and Compatibility for import/export/merge/rebundle planning and import commit handoff; Archive remains the storage owner and Exchange must not bypass compatibility or verification gates.',
   },
   {
     coordinator_id: 'trusted_projection_coordinator.v0',

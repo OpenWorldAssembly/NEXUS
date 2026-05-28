@@ -64,12 +64,101 @@ function hasPacketEnvelopeShape(value: unknown): boolean {
   return isRecord(value) && isRecord(value.header) && isRecord(value.body);
 }
 
-function collectPacketCandidates(input: unknown): {
+function decodeBytesToText(input: Uint8Array | ArrayBuffer): string {
+  return new TextDecoder().decode(input instanceof Uint8Array ? input : new Uint8Array(input));
+}
+
+function parseJsonText(input: string): { value: unknown | null; error: string | null } {
+  try {
+    return { value: JSON.parse(input) as unknown, error: null };
+  } catch (error) {
+    return {
+      value: null,
+      error: error instanceof Error ? error.message : 'JSON text could not be parsed.',
+    };
+  }
+}
+
+function decodeRecordBytes(input: Record<string, unknown>): Uint8Array | ArrayBuffer | null {
+  const bytes = input.bytes;
+
+  if (bytes instanceof Uint8Array || bytes instanceof ArrayBuffer) {
+    return bytes;
+  }
+
+  if (Array.isArray(bytes) && bytes.every((entry) => typeof entry === 'number')) {
+    return Uint8Array.from(bytes);
+  }
+
+  return null;
+}
+
+function collectPacketCandidates(input: unknown, depth = 0): {
   sourceShape: TrustedExchangeBundleShape;
   packets: unknown[];
   warnings: string[];
   blockers: string[];
 } {
+  if (depth > 6) {
+    return {
+      sourceShape: 'unknown',
+      packets: [],
+      warnings: [],
+      blockers: ['Exchange bundle nesting exceeded the supported depth.'],
+    };
+  }
+
+  if (typeof input === 'string') {
+    const trimmed = input.trim();
+    if (trimmed.length === 0) {
+      return {
+        sourceShape: 'json_string',
+        packets: [],
+        warnings: [],
+        blockers: ['Exchange input string is empty.'],
+      };
+    }
+
+    const parsed = parseJsonText(trimmed);
+    if (parsed.error) {
+      return {
+        sourceShape: 'json_string',
+        packets: [],
+        warnings: [],
+        blockers: [`Exchange input string is not valid JSON: ${parsed.error}`],
+      };
+    }
+
+    const nested = collectPacketCandidates(parsed.value, depth + 1);
+    return {
+      sourceShape: 'json_string',
+      packets: nested.packets,
+      warnings: nested.warnings,
+      blockers: nested.blockers,
+    };
+  }
+
+  if (input instanceof Uint8Array || input instanceof ArrayBuffer) {
+    const decoded = decodeBytesToText(input);
+    const parsed = parseJsonText(decoded);
+    if (parsed.error) {
+      return {
+        sourceShape: 'archive_export_bytes',
+        packets: [],
+        warnings: [],
+        blockers: [`Exchange byte bundle is not valid JSON: ${parsed.error}`],
+      };
+    }
+
+    const nested = collectPacketCandidates(parsed.value, depth + 1);
+    return {
+      sourceShape: 'archive_export_bytes',
+      packets: nested.packets,
+      warnings: nested.warnings,
+      blockers: nested.blockers,
+    };
+  }
+
   if (Array.isArray(input)) {
     return {
       sourceShape: 'packet_array',
@@ -88,17 +177,6 @@ function collectPacketCandidates(input: unknown): {
     };
   }
 
-  if (input instanceof Uint8Array || input instanceof ArrayBuffer || typeof input === 'string') {
-    return {
-      sourceShape: 'archive_export_bytes',
-      packets: [],
-      warnings: [
-        'Archive export byte payloads are recognized, but Pass A does not decode byte bundles inside Exchange yet.',
-      ],
-      blockers: [],
-    };
-  }
-
   if (!isRecord(input)) {
     return {
       sourceShape: 'unknown',
@@ -108,9 +186,26 @@ function collectPacketCandidates(input: unknown): {
     };
   }
 
+  const decodedBytes = decodeRecordBytes(input);
+  if (decodedBytes) {
+    const decoded = collectPacketCandidates(decodedBytes, depth + 1);
+    return {
+      sourceShape: 'archive_export_bytes',
+      packets: decoded.packets,
+      warnings: decoded.warnings,
+      blockers: decoded.blockers,
+    };
+  }
+
   const nestedBundle = input.bundle;
-  if (isRecord(nestedBundle) || Array.isArray(nestedBundle)) {
-    const nested = collectPacketCandidates(nestedBundle);
+  if (
+    isRecord(nestedBundle) ||
+    Array.isArray(nestedBundle) ||
+    typeof nestedBundle === 'string' ||
+    nestedBundle instanceof Uint8Array ||
+    nestedBundle instanceof ArrayBuffer
+  ) {
+    const nested = collectPacketCandidates(nestedBundle, depth + 1);
     return {
       sourceShape: 'nested_bundle_object',
       packets: nested.packets,
@@ -138,13 +233,12 @@ function collectPacketCandidates(input: unknown): {
   }
 
   if (Array.isArray(input.items)) {
-    const packets = input.items
-      .map((item) => {
-        if (!isRecord(item)) {
-          return item;
-        }
-        return item.packet ?? item.envelope ?? item.packet_envelope ?? item.revision ?? item;
-      });
+    const packets = input.items.map((item) => {
+      if (!isRecord(item)) {
+        return item;
+      }
+      return item.packet ?? item.envelope ?? item.packet_envelope ?? item.revision ?? item;
+    });
 
     return {
       sourceShape: 'packets_object',
@@ -158,8 +252,21 @@ function collectPacketCandidates(input: unknown): {
     sourceShape: 'unknown',
     packets: [],
     warnings: [],
-    blockers: ['Exchange object did not include packets, revisions, items, or a nested bundle.'],
+    blockers: ['Exchange object did not include packets, revisions, items, bytes, or a nested bundle.'],
   };
+}
+
+function normalizedRevisionKey(revisionRef: PacketRevisionRef | null): string | null {
+  return revisionRef ? `${revisionRef.packet_id}::${revisionRef.revision_id}` : null;
+}
+
+function packetSubtype(packet: unknown): string | null {
+  if (!isRecord(packet) || !isRecord(packet.body)) {
+    return null;
+  }
+
+  const subtype = packet.body.subtype;
+  return typeof subtype === 'string' ? subtype : null;
 }
 
 export function normalizeTrustedExchangeBundle(input: unknown): TrustedExchangeBundleNormalization {
@@ -167,17 +274,20 @@ export function normalizeTrustedExchangeBundle(input: unknown): TrustedExchangeB
   const entries: TrustedExchangePacketEntry[] = collected.packets.map((packet, index) => {
     try {
       const parsedPacket = parsePacketEnvelope(packet);
+      const revisionRef = {
+        packet_id: parsedPacket.header.packet_id,
+        revision_id: parsedPacket.header.revision_id,
+      };
       return {
         entry_index: index,
         entry_id: `entry-${index}`,
         packet,
         packet_ref: { packet_id: parsedPacket.header.packet_id },
-        revision_ref: {
-          packet_id: parsedPacket.header.packet_id,
-          revision_id: parsedPacket.header.revision_id,
-        },
+        revision_ref: revisionRef,
         packet_type: parsedPacket.header.type,
         declared_schema_version: parsedPacket.header.schema_version,
+        packet_subtype: packetSubtype(parsedPacket),
+        normalized_key: normalizedRevisionKey(revisionRef),
         parent_revision_refs: [...parsedPacket.header.parent_revision_refs],
         parsed_packet: parsedPacket,
         parse_error: null,
@@ -191,6 +301,8 @@ export function normalizeTrustedExchangeBundle(input: unknown): TrustedExchangeB
         revision_ref: null,
         packet_type: null,
         declared_schema_version: null,
+        packet_subtype: packetSubtype(packet),
+        normalized_key: null,
         parent_revision_refs: [],
         parsed_packet: null,
         parse_error: error instanceof Error ? error.message : 'Packet envelope could not be parsed.',
@@ -215,6 +327,27 @@ export function normalizeTrustedExchangeBundle(input: unknown): TrustedExchangeB
     warnings,
     blockers,
   };
+}
+
+export function createTrustedExchangeArchiveBundle(entries: readonly TrustedExchangePacketEntry[]): string {
+  return JSON.stringify({
+    bundle_version: 1,
+    packets: entries.map((entry) => entry.packet),
+  });
+}
+
+export function keyTrustedExchangeEntries(
+  entries: readonly TrustedExchangePacketEntry[]
+): Map<string, TrustedExchangePacketEntry> {
+  const keyedEntries = new Map<string, TrustedExchangePacketEntry>();
+
+  for (const entry of entries) {
+    if (entry.normalized_key && !keyedEntries.has(entry.normalized_key)) {
+      keyedEntries.set(entry.normalized_key, entry);
+    }
+  }
+
+  return keyedEntries;
 }
 
 export function hasExchangeArchiveContext(input: BaseTrustedExchangeInput): boolean {
@@ -385,10 +518,18 @@ export function previewActionToCommitAction(action: TrustedExchangeAction): Trus
   return action;
 }
 
+export function acknowledgementForAction(action: TrustedExchangeAction): string | null {
+  if (action === 'needs_compatibility_acknowledgement' || action === 'needs_verification_acknowledgement') {
+    return action;
+  }
+
+  return null;
+}
+
 export function actionReason(action: TrustedExchangeAction): string {
   switch (action) {
     case 'import_revision':
-      return 'Incoming revision can be imported by a future commit path.';
+      return 'Incoming revision is accepted for Archive import by the Exchange plan.';
     case 'accept_new_packet':
       return 'Incoming packet is not present in the checked archive.';
     case 'accept_new_revision':

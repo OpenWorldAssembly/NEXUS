@@ -20,7 +20,9 @@
     "preweb": "node ./scripts/assert-no-app-tests.mjs",
     "preexport:web": "node ./scripts/assert-no-app-tests.mjs",
     "check:app-boundaries": "node ./scripts/assert-no-app-tests.mjs",
-    "audit:trusted-coordinators": "node --experimental-strip-types --experimental-specifier-resolution=node --loader ./scripts/ts-paths-loader.mjs scripts/audit-trusted-coordinators.ts"
+    "audit:trusted-coordinators": "node --experimental-strip-types --experimental-specifier-resolution=node --loader ./scripts/ts-paths-loader.mjs scripts/audit-trusted-coordinators.ts",
+    "test:trusted-coordinators": "node --experimental-strip-types --experimental-specifier-resolution=node --loader ./scripts/ts-paths-loader.mjs --test runtime/trusted_coordinators/*.test.ts",
+    "check:trusted-coordinators": "npm run audit:trusted-coordinators && npm run test:trusted-coordinators"
   },
   "engines": {
     "node": "24.x"

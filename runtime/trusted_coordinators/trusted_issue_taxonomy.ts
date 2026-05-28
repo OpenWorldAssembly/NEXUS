@@ -299,7 +299,7 @@ const TRUSTED_ISSUE_DESCRIPTORS = [
   },
   {
     code: 'exchange.import_preview_missing',
-    legacy_aliases: ['trusted_exchange_import_preview_missing'],
+    legacy_aliases: ['trusted_exchange_import_preview_missing', 'trusted_exchange_import_plan_missing'],
     default_severity: 'error',
     category: 'blocked_dependency',
     retryability: 'not_retryable',
@@ -308,7 +308,11 @@ const TRUSTED_ISSUE_DESCRIPTORS = [
   },
   {
     code: 'exchange.import_commit_blocked',
-    legacy_aliases: ['trusted_exchange_import_commit_blocked'],
+    legacy_aliases: [
+      'trusted_exchange_import_commit_blocked',
+      'trusted_exchange_import_acknowledgement_missing',
+      'trusted_exchange_import_plan_entry_missing',
+    ],
     default_severity: 'error',
     category: 'blocked_dependency',
     retryability: 'not_retryable',
@@ -350,6 +354,36 @@ const TRUSTED_ISSUE_DESCRIPTORS = [
     retryability: 'retryable',
     user_title: 'Archive audit failed',
     user_message: 'Exchange could not confirm Archive readiness.',
+  },
+  {
+    code: 'exchange.archive_import_failed',
+    legacy_aliases: ['trusted_exchange_archive_import_failed'],
+    default_severity: 'error',
+    category: 'storage',
+    retryability: 'unknown',
+    user_title: 'Archive import failed',
+    user_message: 'Archive import failed during Exchange commit.',
+  },
+  {
+    code: 'exchange.archive_import_mismatch',
+    legacy_aliases: [
+      'trusted_exchange_archive_import_unexpected_count',
+      'trusted_exchange_archive_import_missing_revision',
+    ],
+    default_severity: 'error',
+    category: 'storage',
+    retryability: 'unknown',
+    user_title: 'Archive import mismatch',
+    user_message: 'Archive import results did not match the Exchange commit plan.',
+  },
+  {
+    code: 'exchange.archive_import_skipped',
+    legacy_aliases: ['trusted_exchange_archive_import_skipped_planned_revision'],
+    default_severity: 'warning',
+    category: 'storage',
+    retryability: 'unknown',
+    user_title: 'Archive import skipped planned revision',
+    user_message: 'Archive imported fewer revisions than Exchange accepted, but accepted keys resolved locally.',
   },
   {
     code: 'verification.packet_missing',

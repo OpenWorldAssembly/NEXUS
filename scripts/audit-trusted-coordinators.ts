@@ -1,6 +1,6 @@
 /**
  * File: audit-trusted-coordinators.ts
- * Description: Audits trusted coordinator scaffold boundaries and public surfaces without importing app modules.
+ * Description: Audits trusted coordinator scaffold boundaries, public surfaces, and runtime crossing notes.
  */
 
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
@@ -25,8 +25,78 @@ type AuditNote = {
   message: string;
 };
 
+type RuntimeCrossingCategory = {
+  code: string;
+  patterns: readonly string[];
+};
+
+type RuntimeCrossingHit = {
+  file_path: string;
+  hits: string[];
+};
+
+const RUNTIME_CROSSING_CATEGORIES: readonly RuntimeCrossingCategory[] = [
+  {
+    code: 'direct_storage_touch',
+    patterns: [
+      'packetStore.importBundle(',
+      'packetStore.exportBundle(',
+      'packetStore.write',
+      'packetStore.append',
+      'packetStore.save',
+      'packetStore.delete',
+      'writePacketRevision',
+      'new NodeSQLitePacketStore',
+    ],
+  },
+  {
+    code: 'direct_signature_verification',
+    patterns: [
+      'verifyPacketSignatureDetailed(',
+      'verifyPacketSignature(',
+      'verifySignature(',
+    ],
+  },
+  {
+    code: 'direct_packet_interpretation',
+    patterns: [
+      'interpretPacket(',
+    ],
+  },
+  {
+    code: 'direct_bundle_import_export',
+    patterns: [
+      'importBundle(',
+      'exportBundle(',
+      'analyzePacketImportText(',
+      'commitPacketImport(',
+      'exportNexusPacketBundle(',
+    ],
+  },
+  {
+    code: 'direct_packet_parse_in_api_route',
+    patterns: [
+      'parsePacketEnvelope(',
+    ],
+  },
+  {
+    code: 'legacy_fortress_corridor',
+    patterns: [
+      'fortress',
+      'Fortress',
+      'NexusMutationService',
+      'mutationTicket',
+      'MutationTicket',
+    ],
+  },
+];
+
 function repoPath(path: string): string {
   return join(process.cwd(), path);
+}
+
+function toRepoRelativePath(path: string): string {
+  return path.replace(`${process.cwd()}${process.platform === 'win32' ? '\\' : '/'}`, '').replace(/\\/g, '/');
 }
 
 function readIfFile(path: string): string | null {
@@ -52,7 +122,7 @@ function folderContainsForbiddenPublicFunctionExport(path: string): string[] {
   return content
     .split('\n')
     .map((line) => line.trim())
-    .filter((line) => line.includes("./functions/") || line.includes("./trusted_") && line.includes('_registry'));
+    .filter((line) => line.includes('./functions/') || line.includes('./trusted_') && line.includes('_registry'));
 }
 
 function publicObjectFileContainsMethod(content: string, methodName: string): boolean {
@@ -74,41 +144,134 @@ function expectedCanonicalKind(path: string): string | null {
   return match?.[1] ?? null;
 }
 
-function scanRuntimeBypassNotes(): AuditNote[] {
-  const notes: AuditNote[] = [];
-  const serverRoot = repoPath('runtime/nexus/server');
-
-  if (!existsSync(serverRoot)) {
-    return notes;
+function listFilesRecursively(rootPath: string): string[] {
+  const absoluteRoot = repoPath(rootPath);
+  if (!existsSync(absoluteRoot) || !statSync(absoluteRoot).isDirectory()) {
+    return [];
   }
 
-  const filesToScan = [
-    'runtime/nexus/server/nexus-packet-import.ts',
-    'runtime/nexus/server/nexus-packet-export.ts',
-    'runtime/nexus/server/verification-service.ts',
-    'runtime/nexus/server/nexus-packet-explorer-data.ts',
-  ];
+  const files: string[] = [];
 
-  for (const filePath of filesToScan) {
-    const content = readIfFile(filePath);
-    if (!content) {
+  function walk(path: string): void {
+    for (const entry of readdirSync(path)) {
+      const absolute = join(path, entry);
+      const stats = statSync(absolute);
+      if (stats.isDirectory()) {
+        walk(absolute);
+        continue;
+      }
+
+      if (!entry.endsWith('.ts') && !entry.endsWith('.tsx')) {
+        continue;
+      }
+
+      files.push(toRepoRelativePath(absolute));
+    }
+  }
+
+  walk(absoluteRoot);
+  return files;
+}
+
+function scanTrustedCoordinatorFolderFindings(): AuditFinding[] {
+  const findings: AuditFinding[] = [];
+  const root = repoPath('runtime/trusted_coordinators');
+  if (!existsSync(root) || !statSync(root).isDirectory()) {
+    return findings;
+  }
+
+  const manifestFolders = new Set(
+    listTrustedCoordinatorScaffoldDescriptors()
+      .filter((descriptor) => descriptor.structure === 'foldered_gated')
+      .map((descriptor) => descriptor.runtime_path),
+  );
+
+  for (const entry of readdirSync(root)) {
+    const absolute = join(root, entry);
+    if (!statSync(absolute).isDirectory() || !/^trusted_.+_coordinator$/.test(entry)) {
       continue;
     }
 
-    const bypassTerms = [
-      'packetStore.importBundle(',
-      'packetStore.exportBundle(',
-      'verifyPacketSignatureDetailed(',
-      'interpretPacket({',
-      'readByPacket(',
-    ];
-    const hits = bypassTerms.filter((term) => content.includes(term));
-    if (hits.length > 0) {
-      notes.push({
-        code: 'trusted_runtime_caller_migration_note',
-        message: `${filePath} still contains migration-sensitive direct runtime calls: ${hits.join(', ')}`,
+    const relativePath = `runtime/trusted_coordinators/${entry}`;
+    if (!manifestFolders.has(relativePath)) {
+      findings.push({
+        severity: 'error',
+        coordinator_id: 'trusted_runtime_scaffold',
+        code: 'trusted_unmanifested_coordinator_folder',
+        message: `${relativePath} looks like a trusted coordinator folder but is not declared in the scaffold manifest.`,
       });
     }
+  }
+
+  return findings;
+}
+
+function scanPackageScriptFindings(): AuditFinding[] {
+  const findings: AuditFinding[] = [];
+  const packageContent = readIfFile('package.json');
+  if (!packageContent) {
+    findings.push({
+      severity: 'error',
+      coordinator_id: 'trusted_runtime_tests',
+      code: 'trusted_package_json_missing',
+      message: 'package.json is required to verify trusted coordinator test scripts.',
+    });
+    return findings;
+  }
+
+  const packageJson = JSON.parse(packageContent) as { scripts?: Record<string, string> };
+  for (const scriptName of ['test:trusted-coordinators', 'check:trusted-coordinators']) {
+    if (!packageJson.scripts?.[scriptName]) {
+      findings.push({
+        severity: 'error',
+        coordinator_id: 'trusted_runtime_tests',
+        code: 'trusted_test_script_missing',
+        message: `package.json must define ${scriptName}.`,
+      });
+    }
+  }
+
+  return findings;
+}
+
+function scanRuntimeCrossingNotes(): AuditNote[] {
+  const filesToScan = [
+    ...listFilesRecursively('runtime/nexus/server'),
+    ...listFilesRecursively('src/app/api/nexus'),
+  ].filter((path) => !path.endsWith('.test.ts') && !path.endsWith('.test.tsx'));
+
+  const notes: AuditNote[] = [];
+
+  for (const category of RUNTIME_CROSSING_CATEGORIES) {
+    const hitsByFile: RuntimeCrossingHit[] = [];
+
+    for (const filePath of filesToScan) {
+      const content = readIfFile(filePath);
+      if (!content) {
+        continue;
+      }
+
+      const hits = category.patterns.filter((pattern) => content.includes(pattern));
+      if (hits.length > 0) {
+        hitsByFile.push({ file_path: filePath, hits });
+      }
+    }
+
+    if (hitsByFile.length === 0) {
+      continue;
+    }
+
+    const totalHits = hitsByFile.reduce((sum, entry) => sum + entry.hits.length, 0);
+    const examples = hitsByFile
+      .slice(0, 10)
+      .map((entry) => `${entry.file_path} (${entry.hits.join(', ')})`)
+      .join('; ');
+    const suffix = hitsByFile.length > 10 ? `; +${hitsByFile.length - 10} more file(s)` : '';
+
+    notes.push({
+      code: category.code,
+      message: `${totalHits} pattern hit(s) across ${hitsByFile.length} file(s). Examples: ${examples}${suffix}`,
+    });
   }
 
   return notes;
@@ -127,7 +290,7 @@ function scanIssueCodeFindings(): AuditFinding[] {
     }
 
     const content = readFileSync(filePath, 'utf8');
-    const relativePath = filePath.replace(`${process.cwd()}\\`, '').replace(/\\/g, '/');
+    const relativePath = toRepoRelativePath(filePath);
     const matches = Array.from(content.matchAll(/code:\s*['"]([^'"]+)['"]/g));
 
     for (const match of matches) {
@@ -139,9 +302,7 @@ function scanIssueCodeFindings(): AuditFinding[] {
           code: 'trusted_issue_code_unregistered',
           message: `${relativePath} uses unregistered trusted issue code '${code}'.`,
         });
-        continue;
       }
-
     }
   }
 
@@ -168,6 +329,9 @@ function audit(): { findings: AuditFinding[]; notes: AuditNote[] } {
   const findings: AuditFinding[] = [];
   const notes: AuditNote[] = [];
   const barrelContent = readIfFile('runtime/trusted_coordinators/index.ts') ?? '';
+
+  findings.push(...scanTrustedCoordinatorFolderFindings());
+  findings.push(...scanPackageScriptFindings());
 
   for (const descriptor of listTrustedCoordinatorScaffoldDescriptors()) {
     const pathExists = existsSync(repoPath(descriptor.runtime_path));
@@ -306,7 +470,7 @@ function audit(): { findings: AuditFinding[]; notes: AuditNote[] } {
     }
   }
 
-  notes.push(...scanRuntimeBypassNotes());
+  notes.push(...scanRuntimeCrossingNotes());
   findings.push(...scanIssueCodeFindings());
 
   const runtimeCoordinatorSource = readIfFile('runtime/trusted_coordinators/trusted_runtime_coordinator.ts') ?? '';

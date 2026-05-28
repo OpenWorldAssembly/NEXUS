@@ -37,6 +37,7 @@ export type TrustedExchangeBundleShape =
   | 'revisions_object'
   | 'nested_bundle_object'
   | 'archive_export_bytes'
+  | 'json_string'
   | 'unknown';
 
 export type TrustedExchangeLocalStatus =
@@ -69,6 +70,8 @@ export type TrustedExchangePacketEntry = {
   revision_ref: PacketRevisionRef | null;
   packet_type: PacketType | string | null;
   declared_schema_version: string | null;
+  packet_subtype: string | null;
+  normalized_key: string | null;
   parent_revision_refs: PacketRevisionRef[];
   parsed_packet: PacketEnvelope | null;
   parse_error: string | null;
@@ -98,6 +101,8 @@ export type TrustedExchangePacketPreview = {
   revision_ref: PacketRevisionRef | null;
   packet_type: PacketType | string | null;
   declared_schema_version: string | null;
+  packet_subtype: string | null;
+  normalized_key: string | null;
   readable: boolean;
   verified: boolean;
   local_status: TrustedExchangeLocalStatus;
@@ -130,7 +135,12 @@ export type TrustedExchangeImportCommitPlanItem = {
   entry_id: string;
   packet_ref: PacketRef | null;
   revision_ref: PacketRevisionRef | null;
+  normalized_key: string | null;
   action: TrustedExchangeAction;
+  accepted_for_commit: boolean;
+  required_acknowledgements: string[];
+  blockers: string[];
+  warnings: string[];
   reason: string;
 };
 
@@ -151,6 +161,14 @@ export type TrustedExchangeImportCommit = {
   source_label: string | null;
   import_result: TrustedArchiveBundleImport | null;
   plan: TrustedExchangeImportCommitPlan | null;
+  planned_import_count: number;
+  archived_import_count: number;
+  skipped_count: number;
+  blocked_count: number;
+  imported_revision_keys: string[];
+  skipped_revision_keys: string[];
+  unexpected_archive_keys: string[];
+  missing_archive_keys: string[];
   imported_revision_count: number;
   skipped_duplicate_count: number;
   warnings: string[];
@@ -258,7 +276,9 @@ export type PlanTrustedImportCommitInput = BaseTrustedExchangeInput & {
 export type CommitTrustedImportInput = BaseTrustedExchangeInput & {
   source_label?: string | null;
   preview?: TrustedExchangeImportPreview | null;
-  bundle: Uint8Array | ArrayBuffer | string;
+  plan?: TrustedExchangeImportCommitPlan | null;
+  bundle: unknown;
+  accepted_acknowledgements?: string[];
   options?: TrustedExchangeImportPreviewOptions;
 };
 

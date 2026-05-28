@@ -878,13 +878,17 @@ export async function buildNexusPacketExplorerImportCommit(input: {
     bundle: analyzedImport.normalizedBundleText,
     source_label: analyzedImport.payload.source_file_name,
     context_mode: 'import_preview',
+    accepted_acknowledgements: [
+      'needs_compatibility_acknowledgement',
+      'needs_verification_acknowledgement',
+    ],
     options: {
       verification_mode: 'advisory',
     },
   });
-  const importResult = exchangeCommit.value?.import_result;
+  const importedRevisionCount = exchangeCommit.value?.imported_revision_count ?? 0;
 
-  if (!importResult || exchangeCommit.status === 'error') {
+  if (exchangeCommit.status === 'error') {
     throw new Error(
       exchangeCommit.issues.find((issue) => issue.severity === 'error')?.message ??
         'Trusted Exchange could not commit the import bundle.'
@@ -916,7 +920,7 @@ export async function buildNexusPacketExplorerImportCommit(input: {
     exportMode: analyzedImport.payload.export_mode,
     rootPacketRefs: analyzedImport.payload.root_packet_refs,
     validationMode,
-    importedRevisionCount: importResult.revision_count,
+    importedRevisionCount,
     skippedDuplicateCount: analyzedImport.payload.duplicate_revision_count,
     blockedCount: analyzedImport.payload.validation_blocked_count,
     affectedPacketIds: analyzedImport.affectedPacketIds,
@@ -931,7 +935,7 @@ export async function buildNexusPacketExplorerImportCommit(input: {
   return {
     ...analyzedImport.payload,
     committed: true,
-    imported_revision_count: importResult.revision_count,
+    imported_revision_count: importedRevisionCount,
     skipped_duplicate_count: analyzedImport.payload.duplicate_revision_count,
     restored_preferred_packet_count:
       preferredRepair.restoredPreferredPacketCount,

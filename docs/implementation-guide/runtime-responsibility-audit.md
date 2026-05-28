@@ -14,6 +14,16 @@ Current scan baseline:
 
 The near-term goal is not to hide every product concept from runtime. Runtime may understand generic packet anatomy, refs, schema posture, signatures, storage, projections, and operation results. The goal is to stop encoding product behavior as scattered runtime branches when the rule can be described by packet definitions, projection descriptors, coordinator capabilities, or OWA adapter/profile modules.
 
+## Guardrail housekeeping baseline
+
+The trusted coordinator audit is now responsible for both scaffold shape and migration visibility. It checks for unmanifested `trusted_*_coordinator` folders, required package test scripts, manifest/barrel/method/result-kind drift, and registered trusted issue codes. Runtime crossing findings are reported as non-failing notes so migrations remain visible without blocking unrelated work.
+
+The audit recursively scans implementation files under `runtime/nexus/server/*` and `src/app/api/nexus/*`, not only top-level compatibility bridge files. Current note categories are direct storage touches, direct signature verification, direct packet interpretation, direct bundle import/export, packet parsing inside API routes, and legacy fortress corridor references. These notes are migration targets, not scaffold failures.
+
+Trusted coordinator tests now have a package entrypoint: `npm run test:trusted-coordinators`. The combined guard command is `npm run check:trusted-coordinators`, which runs the scaffold/crossing audit before the coordinator test suite.
+
+The empty `trusted_write_coordinator` remnant was removed. There is intentionally no Write Coordinator; write lifecycle orchestration belongs to Dispatch. Exchange documentation was also corrected to reflect its current import commit orchestration role while preserving Archive as the storage owner.
+
 ## Ownership categories
 
 Use these categories when classifying runtime modules and future migrations.
