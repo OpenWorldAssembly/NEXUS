@@ -254,6 +254,20 @@ export const FORTRESS_HANDLER_GENERICIZATION_ENTRIES = [
     notes: 'Single Claim write with Role authority-scope lookup.',
   },
   {
+    mutation_intent: 'relation.participation.clear',
+    domain: 'role',
+    prepare_handler: 'prepareRoleParticipationRelation',
+    finalize_handler: 'finalizeRoleParticipationRelationUpdate',
+    packet_types_touched: ['Role', 'Relation'],
+    policy_action_ids: ['relation.participation.clear'],
+    operation_kinds: ['relation.clear'],
+    operation_mapping_status: 'directly_mapped',
+    genericization_status: 'generic_ready',
+    next_step:
+      'Enroll role participation clear as a generic Relation withdrawn revision after role scope resolution is isolated.',
+    notes: 'Single Relation withdrawn revision with Role authority-scope lookup.',
+  },
+  {
     mutation_intent: 'reaction.attestation.set',
     domain: 'role',
     prepare_handler: 'prepareReactionAttestation',

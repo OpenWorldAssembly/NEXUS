@@ -23,6 +23,8 @@ import { buildTrustedPacketBodyCandidate } from './build_packet_body_candidate.t
 
 function collectCandidateGraph(input: {
   plan: BuildTrustedCandidateGraphInput['plan'];
+  actor_packet?: BuildTrustedCandidateGraphInput['actor_packet'];
+  packet_store?: BuildTrustedCandidateGraphInput['packet_store'];
   parentCandidateId?: string | null;
   nodes: TrustedPacketCandidateNode[];
   issues: TrustedRuntimeCoordinatorIssue[];
@@ -30,6 +32,8 @@ function collectCandidateGraph(input: {
 }): TrustedPacketCandidateNode | null {
   const nodeResult = buildTrustedPacketBodyCandidate({
     plan: input.plan,
+    actor_packet: input.actor_packet,
+    packet_store: input.packet_store,
     parent_candidate_id: input.parentCandidateId ?? null,
   });
   input.issues.push(...nodeResult.issues);
@@ -45,6 +49,8 @@ function collectCandidateGraph(input: {
   for (const childPlan of input.plan.child_packet_plans?.child_plans ?? []) {
     const childNode = collectCandidateGraph({
       plan: childPlan,
+      actor_packet: input.actor_packet,
+      packet_store: input.packet_store,
       parentCandidateId: node.candidate_id,
       nodes: input.nodes,
       issues: input.issues,
@@ -67,6 +73,8 @@ export function buildTrustedCandidateGraph(
   const nodes: TrustedPacketCandidateNode[] = [];
   const rootNode = collectCandidateGraph({
     plan: input.plan,
+    actor_packet: input.actor_packet,
+    packet_store: input.packet_store,
     parentCandidateId: null,
     nodes,
     issues,

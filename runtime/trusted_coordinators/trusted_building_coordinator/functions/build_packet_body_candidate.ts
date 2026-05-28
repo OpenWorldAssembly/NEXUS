@@ -4,6 +4,10 @@
  */
 
 import {
+  createScopedRelationPacket,
+} from '@core/packets/relations.ts';
+import type { PacketEnvelope } from '@core/schema/packet-schema';
+import {
   createTrustedRuntimeCoordinatorResult,
   type TrustedRuntimeCoordinatorIssue,
   type TrustedRuntimeCoordinatorResult,
@@ -19,6 +23,71 @@ import {
   type TrustedGenericBodyCandidate,
   type TrustedPacketCandidateNode,
 } from '../trusted_building_types.ts';
+
+function buildRelationFollowPacketEnvelope(input: {
+  plan: BuildTrustedPacketBodyCandidateInput['plan'];
+  actor_packet: BuildTrustedPacketBodyCandidateInput['actor_packet'];
+  body_values: Record<string, unknown>;
+  blockers: string[];
+  issues: TrustedRuntimeCoordinatorIssue[];
+}): PacketEnvelope | null {
+  if (input.plan.packet_type !== 'Relation' || input.plan.packet_subtype !== 'follow') {
+    return null;
+  }
+
+  const mutationIntent = input.body_values.kind ?? input.plan.workflow_plan_id;
+
+  if (mutationIntent !== 'relation.follow.add' && mutationIntent !== 'relation.follow.add.workflow.v0') {
+    return null;
+  }
+
+  const targetRef = input.body_values.target_ref as { packet_id?: unknown } | null;
+  const scopeRef = input.body_values.scope_ref as { packet_id?: unknown } | null;
+  const targetScopePacketId = typeof input.body_values.target_scope_packet_id === 'string'
+    ? input.body_values.target_scope_packet_id
+    : typeof targetRef?.packet_id === 'string'
+      ? targetRef.packet_id
+      : null;
+  const scopePacketId = typeof scopeRef?.packet_id === 'string'
+    ? scopeRef.packet_id
+    : targetScopePacketId;
+
+  if (!input.actor_packet?.header?.packet_id) {
+    input.blockers.push('Follow relation materialization requires an actor packet.');
+    input.issues.push(buildingIssue({
+      severity: 'error',
+      code: 'building.actor_packet_missing',
+      path: 'actor_packet',
+      message: 'Building cannot materialize a follow relation packet without an actor packet.',
+    }));
+    return null;
+  }
+
+  if (typeof targetScopePacketId !== 'string' || targetScopePacketId.length === 0) {
+    input.blockers.push('Follow relation materialization requires a target scope packet id.');
+    input.issues.push(buildingIssue({
+      severity: 'error',
+      code: 'building.target_packet_missing',
+      path: 'plan.body_input_plan.resolved_input_values.target_scope_packet_id',
+      message: 'Building cannot materialize a follow relation packet without target_scope_packet_id.',
+    }));
+    return null;
+  }
+
+  return createScopedRelationPacket({
+    subtype: 'follow',
+    subjectPacketId: input.actor_packet.header.packet_id,
+    targetPacketId: targetScopePacketId,
+    scopePacketId,
+    applicableScopeRefs: scopePacketId ? [{ packet_id: scopePacketId }] : [],
+    createdByPacketId: input.actor_packet.header.packet_id,
+    createdAt:
+      typeof input.body_values.created_at === 'string'
+        ? input.body_values.created_at
+        : undefined,
+    status: 'active',
+  });
+}
 
 export function buildTrustedPacketBodyCandidate(
   input: BuildTrustedPacketBodyCandidateInput
@@ -53,6 +122,16 @@ export function buildTrustedPacketBodyCandidate(
     : warnings.length > 0
       ? 'partial'
       : 'candidate';
+  const bodyValues = plan.body_input_plan?.resolved_input_values ?? {};
+  const packetEnvelope = blockers.length === 0
+    ? buildRelationFollowPacketEnvelope({
+        plan,
+        actor_packet: input.actor_packet,
+        body_values: bodyValues,
+        blockers,
+        issues,
+      })
+    : null;
   const bodyCandidate: TrustedGenericBodyCandidate | null = plan.packet_type
     ? {
         candidate_kind: 'trusted.generic_body_candidate',
@@ -62,9 +141,9 @@ export function buildTrustedPacketBodyCandidate(
         schema_version: plan.definition?.current_schema_version ?? null,
         storage_class: plan.definition?.storage_class ?? null,
         revision_behavior: plan.definition?.revision_behavior ?? null,
-        body: {
+        body: packetEnvelope?.body ?? {
           subtype: plan.packet_subtype,
-          ...(plan.body_input_plan?.resolved_input_values ?? {}),
+          ...bodyValues,
         },
         source_plan_id: plan.plan_id,
         materialization_status: materializationStatus,
@@ -87,6 +166,7 @@ export function buildTrustedPacketBodyCandidate(
     packet_subtype: plan.packet_subtype,
     builder_id: bodyCandidate?.builder_id ?? null,
     body_candidate: bodyCandidate,
+    packet_envelope: packetEnvelope,
     parent_candidate_id: input.parent_candidate_id ?? null,
     child_candidate_ids: [],
     blockers,

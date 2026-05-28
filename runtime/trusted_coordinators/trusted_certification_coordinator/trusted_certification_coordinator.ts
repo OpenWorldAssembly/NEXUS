@@ -8,6 +8,7 @@ import { runTrustedCertificationOperation } from './trusted_certification_regist
 import {
   TRUSTED_CERTIFICATION_COORDINATOR_ID,
   type AuditTrustedCertificationReadinessInput,
+  type CertifyTrustedSignedPacketBundleInput,
   type CertifyTrustedSignedTicketInput,
   type PrepareTrustedCertificationTicketInput,
   type PrepareTrustedSignatureRequestsInput,
@@ -62,6 +63,15 @@ export const trustedCertificationCoordinator = {
     }));
   },
 
+  certifySignedPacketBundle(
+    input: CertifyTrustedSignedPacketBundleInput
+  ): TrustedRuntimeCoordinatorResult<TrustedCertifiedPacketSet> {
+    return castResult(runTrustedCertificationOperation({
+      operation: 'certify_signed_packet_bundle',
+      input,
+    }));
+  },
+
   auditReadiness(
     input?: AuditTrustedCertificationReadinessInput
   ): TrustedRuntimeCoordinatorResult<TrustedCertificationReadinessReport> {
@@ -76,5 +86,6 @@ export const trustedCertificationCoordinator = {
   prepareSignatureRequests(input: PrepareTrustedSignatureRequestsInput): TrustedRuntimeCoordinatorResult<TrustedSignatureRequest[]>;
   verifySignedTicket(input: VerifyTrustedSignedTicketInput): TrustedRuntimeCoordinatorResult<TrustedSignedTicketVerification>;
   certifySignedTicket(input: CertifyTrustedSignedTicketInput): TrustedRuntimeCoordinatorResult<TrustedCertifiedPacketSet>;
+  certifySignedPacketBundle(input: CertifyTrustedSignedPacketBundleInput): TrustedRuntimeCoordinatorResult<TrustedCertifiedPacketSet>;
   auditReadiness(input?: AuditTrustedCertificationReadinessInput): TrustedRuntimeCoordinatorResult<TrustedCertificationReadinessReport>;
 };

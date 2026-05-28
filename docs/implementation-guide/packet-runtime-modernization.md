@@ -108,7 +108,7 @@ The intended chain is:
 - Verification owns signed packet legitimacy.
 - Archive stores certified packet sets.
 
-The current correction intentionally blocks rather than falling back where the coordinator chain is incomplete. The known gaps are full packet-envelope materialization from Building, Certification support for the existing signed packet bundle finalize payload, and Archive-ready result mapping without domain finalizer callbacks.
+The current correction intentionally blocks rather than falling back where the coordinator chain is incomplete. `relation.follow.add` now closes the first full route-facing chain: Building emits an archive-ready packet envelope, Certification records the expected packet digest on its ticket and certifies the returned signed packet bundle, Verification validates the signed packet, and Archive stores the certified packet set. Other enrolled write intents still need the same capability closure before they can leave blocked readiness.
 
 The same declaration language should guide both packet creation and packet projection.
 
@@ -131,7 +131,7 @@ Builders remain packet anatomy. Defaults describe normal starting shape. Depende
 
 Trusted coordinators now share a scaffold contract: public coordinator object, stable coordinator id, typed result envelope, issues, trace entries, optional request/operation ids, optional process-chain diagnostics, and a manifest entry describing expected methods. Foldered trusted coordinators expose only their public coordinator and public types from `index.ts`; internal function modules and registries stay private behind the coordinator surface.
 
-`npm run audit:trusted-coordinators` checks the scaffold manifest. The audit currently treats Dispatch, Request, Definition, Regulation, Planning, Building, Inspection, Certification, Archive, Verification, Compatibility, Exchange, Projection, and Write as foldered gated coordinators. Resolution remains legacy-flat with a warning until it is promoted.
+`npm run audit:trusted-coordinators` checks the scaffold manifest. The audit currently treats Dispatch, Request, Definition, Regulation, Planning, Building, Inspection, Certification, Archive, Verification, Compatibility, Exchange, and Projection as foldered gated coordinators. There is intentionally no separate Write Coordinator; Dispatch owns write lifecycle orchestration. Resolution remains legacy-flat with a warning until it is promoted.
 
 ## Trusted Process Chains and Issue Taxonomy
 
@@ -336,7 +336,7 @@ The enrollment layer is interface-neutral. Web shell, Raspberry Pi controls, loc
 The live API routes now consult ingress preflight before delegating to the live corridor:
 
 - prepare parses the request intent, validates client/API ingress enrollment, then delegates to `trustedDispatchCoordinator.prepareEnrolledMutationWrite`;
-- finalize delegates to `trustedDispatchCoordinator.finalizeEnrolledMutationWrite`, which must use Certification/Verification/Archive rather than legacy mutation tickets;
+- finalize delegates to `trustedDispatchCoordinator.finalizeEnrolledMutationWrite`, which certifies the returned signed packet bundle, verifies the signed packets, and stores the certified packet set through Archive;
 - authenticated shell preferences use the standard prepare/finalize mutation routes with `preference.element.set`;
 - `/api/nexus/shell-preferences` remains a guest compatibility route and is outside packet-runtime connector enrollment.
 
@@ -351,7 +351,7 @@ The first proving promotion is follow relation set/clear:
 - `relation.follow.add`
 - `relation.follow.clear`
 
-These intents now prepare through trusted generic workflow planning while Dispatch remains the route-facing signed-write authority. API routes, route payloads, response shapes, policy action IDs, packet schemas, proof behavior, tickets, signatures, persistence, and projections remain unchanged. The promoted path uses manifest workflow metadata and trusted local relation planning to produce the same packet candidates and policy metadata as the previous mutation-service-specific follow planner path.
+`relation.follow.add` is now the first proven Dispatch-owned live write. It prepares and finalizes through the intended coordinator chain: Dispatch intake, Planning, Building, Inspection, Certification ticketing, signed-packet certification, Verification, and Archive storage. API routes, route payloads, response shapes, policy action IDs, packet schemas, proof behavior, signatures, and persistence semantics remain unchanged. `relation.follow.clear` remains queued for the same full-chain promotion rather than falling back to the legacy signed corridor.
 
 The remaining pre-reseed queue is explicit:
 

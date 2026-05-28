@@ -78,6 +78,7 @@ const MUTATION_POLICY_ACTION_IDS = {
     'relation.participation.add',
     'relation.participation.clear',
   ],
+  'relation.participation.clear': ['relation.participation.clear'],
   'reaction.attestation.set': [
     'reaction.attestation.set',
     'reaction.attestation.clear',

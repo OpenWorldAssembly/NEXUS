@@ -5,6 +5,7 @@
 
 import type { TrustedRuntimeCoordinatorResult } from '@runtime/trusted_coordinators/trusted_runtime_coordinator';
 import { auditTrustedCertificationReadiness } from './functions/audit_trusted_certification_readiness.ts';
+import { certifyTrustedSignedPacketBundle } from './functions/certify_signed_packet_bundle.ts';
 import { certifyTrustedSignedTicket } from './functions/certify_signed_ticket.ts';
 import { prepareTrustedCertificationTicket } from './functions/prepare_certification_ticket.ts';
 import { prepareTrustedSignatureRequests } from './functions/prepare_signature_requests.ts';
@@ -37,6 +38,12 @@ const TRUSTED_CERTIFICATION_REGISTRY: Record<TrustedCertificationCoordinatorRequ
       throw new Error('Invalid Trusted Certification operation dispatch.');
     }
     return certifyTrustedSignedTicket(request.input);
+  },
+  certify_signed_packet_bundle: (request) => {
+    if (request.operation !== 'certify_signed_packet_bundle') {
+      throw new Error('Invalid Trusted Certification operation dispatch.');
+    }
+    return certifyTrustedSignedPacketBundle(request.input);
   },
   audit_readiness: (request) => {
     if (request.operation !== 'audit_readiness') {

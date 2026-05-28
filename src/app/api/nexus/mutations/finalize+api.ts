@@ -102,6 +102,7 @@ export const POST: RequestHandler = async (request) => {
           parsePacketEnvelope(packetInput)
         ),
       },
+      packet_store: services.packetStore,
     });
 
     return createJsonResponse(assertCoordinatorValue(

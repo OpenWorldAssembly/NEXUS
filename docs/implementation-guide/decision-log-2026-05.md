@@ -352,4 +352,5 @@ This monthly log condenses the May 2026 decisions that remain most important for
 
 - The mistaken Trusted Write coordinator direction was rejected: write lifecycle orchestration belongs to Dispatch, not a new peer coordinator.
 - `/api/nexus/mutations/prepare` and `/api/nexus/mutations/finalize` now call Dispatch-owned write lifecycle methods and do not call `NexusMutationService` as route-facing authority.
-- The Dispatch write pipeline intentionally blocks where the real coordinator chain is incomplete, especially full packet-envelope materialization, Certification support for the existing signed packet bundle finalize payload, and Archive-ready result mapping without domain finalizer callbacks.
+- `relation.follow.add` is the first live write to complete the corrected Dispatch-owned chain: Planning, Building, Inspection, Certification ticketing, signed-packet bundle certification, Verification, and Archive storage.
+- Other mutation intents remain coordinator capability gaps until they receive equivalent packet-envelope materialization, Certification signed-bundle checks, Verification handoff, Archive storage, and result projection. They must not fall back to the legacy signed corridor.

@@ -23,7 +23,11 @@ import { buildTrustedCandidateGraph } from './build_candidate_graph.ts';
 export function buildTrustedFromOperationPlan(
   input: ResolveTrustedBuildFromOperationPlanInput
 ): TrustedRuntimeCoordinatorResult<TrustedBuildResult> {
-  const graphResult = buildTrustedCandidateGraph({ plan: input.plan });
+  const graphResult = buildTrustedCandidateGraph({
+    plan: input.plan,
+    actor_packet: input.actor_packet,
+    packet_store: input.packet_store,
+  });
   const issues: TrustedRuntimeCoordinatorIssue[] = [...graphResult.issues];
   const graph = graphResult.value;
   const bodyCandidates: TrustedBodyCandidate[] = graph?.candidate_nodes

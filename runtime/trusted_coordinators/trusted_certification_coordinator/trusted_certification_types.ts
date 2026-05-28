@@ -15,6 +15,9 @@ import type {
   TrustedPlanningContextMode,
 } from '@runtime/trusted_coordinators/trusted_planning_coordinator/index.ts';
 import type {
+  PacketEnvelope,
+} from '@core/schema/packet-schema';
+import type {
   TrustedRuntimeCoordinatorIssue,
   TrustedRuntimeCoordinatorTraceEntry,
 } from '@runtime/trusted_coordinators/trusted_runtime_coordinator';
@@ -30,6 +33,13 @@ export type TrustedCertificationHashBundle = {
   inspection_report_hash: string;
   candidate_graph_hash: string;
   payload_hash: string;
+};
+
+export type TrustedCertificationExpectedPacket = {
+  packet_id: string;
+  revision_id: string;
+  packet_type: string;
+  unsigned_digest: string;
 };
 
 export type TrustedCertificationTicket = {
@@ -50,6 +60,7 @@ export type TrustedCertificationTicket = {
   warning_count: number;
   dispatch_return_kind: 'certification.ticket.signed_return';
   human_summary: string;
+  expected_packets: TrustedCertificationExpectedPacket[];
 };
 
 export type TrustedSignatureRequest = {
@@ -118,6 +129,7 @@ export type PrepareTrustedCertificationTicketInput = {
   node_element_id?: string | null;
   request_id?: string | null;
   operation_id?: string | null;
+  expected_packets?: readonly TrustedCertificationExpectedPacket[];
   ttl_ms?: number;
   context_mode?: TrustedCertificationContextMode;
 };
@@ -129,6 +141,13 @@ export type PrepareTrustedSignatureRequestsInput = {
 
 export type CertifyTrustedSignedTicketInput = {
   signed_ticket: TrustedSignedCertificationTicket;
+  context_mode?: TrustedCertificationContextMode;
+};
+
+export type CertifyTrustedSignedPacketBundleInput = {
+  ticket_id: string;
+  signed_packets: PacketEnvelope[];
+  signer_packet?: PacketEnvelope | null;
   context_mode?: TrustedCertificationContextMode;
 };
 
@@ -148,6 +167,7 @@ export type TrustedCertificationOperation =
   | 'prepare_signature_requests'
   | 'verify_signed_ticket'
   | 'certify_signed_ticket'
+  | 'certify_signed_packet_bundle'
   | 'audit_readiness';
 
 export type TrustedCertificationCoordinatorRequest =
@@ -166,6 +186,10 @@ export type TrustedCertificationCoordinatorRequest =
   | {
       operation: 'certify_signed_ticket';
       input: CertifyTrustedSignedTicketInput;
+    }
+  | {
+      operation: 'certify_signed_packet_bundle';
+      input: CertifyTrustedSignedPacketBundleInput;
     }
   | {
       operation: 'audit_readiness';

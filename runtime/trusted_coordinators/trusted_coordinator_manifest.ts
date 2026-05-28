@@ -131,6 +131,7 @@ export const TRUSTED_COORDINATOR_SCAFFOLD_MANIFEST = [
       { method_name: 'prepareSignatureRequests', notes: 'Converts open certification tickets into dispatchable signature request payloads.' },
       { method_name: 'verifySignedTicket', notes: 'Verifies a signed certification ticket return against the stored ticket hash.' },
       { method_name: 'certifySignedTicket', notes: 'Produces an archive-ready certified packet set after signature verification.' },
+      { method_name: 'certifySignedPacketBundle', notes: 'Certifies the existing mutation finalize signed-packet bundle shape against an open certification ticket.' },
       { method_name: 'auditReadiness', notes: 'Audits Planning -> Building -> Inspection -> Certification readiness.' },
     ],
     notes: 'Certification handoff coordinator. It owns tickets, signature request payloads, stable hashes, and archive-ready certified packet sets, but does not write to storage.',

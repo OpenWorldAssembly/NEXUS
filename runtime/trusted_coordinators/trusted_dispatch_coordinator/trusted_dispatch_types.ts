@@ -10,6 +10,7 @@ import type {
   MutationTicket,
   PreparedMutation,
 } from '@core/auth/mutation-corridor';
+import type { PacketStore } from '@core/contracts';
 import type { PacketEnvelopeByType } from '@core/schema/packet-schema';
 
 export type {
@@ -43,6 +44,7 @@ export type PrepareTrustedDispatchMutationWriteInput = {
   intent: MutationIntent;
   actor_packet: PacketEnvelopeByType['Element'];
   actor_key: string;
+  packet_store?: PacketStore | null;
 };
 
 export type FinalizeTrustedDispatchMutationWriteInput = {
@@ -52,4 +54,5 @@ export type FinalizeTrustedDispatchMutationWriteInput = {
   mutation_intent?: MutationIntent['kind'] | null;
   actor_packet: PacketEnvelopeByType['Element'];
   request: MutationFinalizeRequest;
+  packet_store?: PacketStore | null;
 };

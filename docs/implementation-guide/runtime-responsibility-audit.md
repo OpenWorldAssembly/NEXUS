@@ -50,7 +50,7 @@ Use these categories when classifying runtime modules and future migrations.
 
 ## Coordinator readiness and gaps
 
-The major trusted coordinator doors are present: Dispatch, Definition, Regulation, Planning, Building, Inspection, Certification, Archive, Compatibility, Verification, Exchange, Projection, and Write. The remaining work is caller migration and internal cleanup, not inventing another major coordinator.
+The major trusted coordinator doors are present: Dispatch, Definition, Regulation, Planning, Building, Inspection, Certification, Archive, Compatibility, Verification, Exchange, and Projection. There is intentionally no separate Write Coordinator; write lifecycle orchestration belongs to Dispatch. The remaining work is caller migration and internal cleanup, not inventing another major coordinator.
 
 Coordinator gaps to address:
 
@@ -68,7 +68,7 @@ Dispatch is the route-facing write lifecycle owner for `/api/nexus/mutations/pre
 
 | Process | Current files | Ideal owner | Ideal location | Risk |
 | --- | --- | --- | --- | --- |
-| mutation prepare/finalize orchestration | `trusted_dispatch_coordinator/*`, `fortress-prepare-handler-implementation.ts`, `fortress-finalize-handler-implementation.ts`, `mutation-service.ts` | Dispatch plus Regulation/Planning/Certification/Archive handoffs | route-facing Dispatch pipeline now blocks where full coordinator capability is incomplete | High |
+| mutation prepare/finalize orchestration | `trusted_dispatch_coordinator/*`, `fortress-prepare-handler-implementation.ts`, `fortress-finalize-handler-implementation.ts`, `mutation-service.ts` | Dispatch plus Regulation/Planning/Certification/Verification/Archive handoffs | `relation.follow.add` completes the full Dispatch-owned route chain; other intents remain capability gaps, not fallback paths | High |
 | proof/ticket storage | `mutation-ticket-service.ts`, `mutation-ticket-store.ts`, `signed-packet-finalizer.ts` | Certification owns signature handoff; Verification owns signed packet validation; Archive owns storage | replace legacy ticket/finalizer behavior with Certification/Verification/Archive | High |
 | intent schema and enrollment | `prepare-mutation-intent-schema.ts`, `mutation-intent-registry.ts`, `packet-client-intent-enrollment.ts` | Dispatch intake plus Definition-driven client/action metadata | Dispatch/Definition with API schema bridge | Medium |
 | domain-specific finalize handlers | `fortress-handler-domain-*` | Planning/Building/Inspection/Archive or OWA adapter when product-specific | coordinator-specific functions or OWA adapter | High |
@@ -130,7 +130,7 @@ Not candidates for imported executable definition logic:
 1. Keep route-facing write lifecycle under Dispatch and remove legacy fortress concepts instead of wrapping them.
 2. Move read-model work toward Projection Coordinator where payload parity is straightforward: start with Packet Explorer panels, then route query data, then discussion/reaction/scope read models.
 3. Move direct storage, import/export, verification, and compatibility bypasses behind Archive, Exchange, Verification, and Compatibility. Add audit warnings first, then fail newly cleaned seams.
-4. Close the Dispatch write pipeline gaps: full packet envelope materialization, Certification support for the existing signed packet bundle round trip, Verification handoff, Archive storage, and result projection.
+4. Extend the proven Dispatch write pipeline beyond `relation.follow.add`: full packet envelope materialization, Certification signed-bundle checks, Verification handoff, Archive storage, and result projection for each live intent.
 5. Separate OWA-specific adapters from generic runtime. Product profile behavior should be named, not hidden inside generic services.
 6. Retire compatibility bridges only after import scans and route tests prove callers have migrated.
 

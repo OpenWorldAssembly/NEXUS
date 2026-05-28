@@ -6,10 +6,12 @@
 import { getPacketUnsignedDigestCandidates } from '@core/auth/mutation-digests';
 import type { MutationActionId } from '@core/auth/write-policy';
 import { parsePacketEnvelope, type PacketEnvelope } from '@core/schema/packet-schema';
+import { trustedArchiveCoordinator } from '@runtime/trusted_coordinators/trusted_archive_coordinator/index.ts';
 import { trustedBuildingCoordinator } from '@runtime/trusted_coordinators/trusted_building_coordinator/index.ts';
 import { trustedCertificationCoordinator } from '@runtime/trusted_coordinators/trusted_certification_coordinator/index.ts';
 import { trustedInspectionCoordinator } from '@runtime/trusted_coordinators/trusted_inspection_coordinator/index.ts';
 import { trustedPlanningCoordinator } from '@runtime/trusted_coordinators/trusted_planning_coordinator/index.ts';
+import { trustedVerificationCoordinator } from '@runtime/trusted_coordinators/trusted_verification_coordinator/index.ts';
 import {
   appendTrustedChildResult,
   completeTrustedProcessChain,
@@ -97,6 +99,58 @@ function packetCandidatesFromBuildResult(
   return packets;
 }
 
+function mutationKindFromPlanId(planId: string | null): string {
+  if (!planId) {
+    return 'unknown';
+  }
+
+  return planId.replace(/\.workflow\.v\d+$/, '');
+}
+
+function planningHintsForMutationIntent(intentKind: string): {
+  packet_type?: string;
+  packet_subtype?: string;
+  operation_kind?: string;
+  workflow_plan_id?: string;
+  action_ids?: string[];
+} {
+  if (intentKind === 'relation.follow.add') {
+    return {
+      packet_type: 'Relation',
+      packet_subtype: 'follow',
+      operation_kind: 'relation.set',
+      workflow_plan_id: 'relation.follow.add.workflow.v0',
+      action_ids: ['relation.follow.add'],
+    };
+  }
+
+  return {};
+}
+
+function bodyInputValuesForMutationIntent(input: {
+  intent: PrepareTrustedDispatchMutationWriteInput['intent'];
+  actor_packet: PrepareTrustedDispatchMutationWriteInput['actor_packet'];
+}): Record<string, unknown> {
+  if (input.intent.kind === 'relation.follow.add') {
+    return {
+      subtype: 'follow',
+      subject_ref: { packet_id: input.actor_packet.header.packet_id },
+      target_ref: { packet_id: input.intent.target_scope_packet_id },
+      scope_ref: { packet_id: input.intent.target_scope_packet_id },
+      status: 'active',
+      policy_ref: null,
+      terms_ref: null,
+      supporting_refs: [],
+      note: null,
+      effective_from: null,
+      effective_until: null,
+      subscription_options: null,
+    };
+  }
+
+  return input.intent as unknown as Record<string, unknown>;
+}
+
 function blockedDispatchResult<TValue>(input: {
   operation_name: string;
   issue_code: string;
@@ -148,6 +202,32 @@ function blockedDispatchResult<TValue>(input: {
     operation_id: input.operation_id ?? null,
     process_chain: completeTrustedProcessChain(processChain, { status: 'blocked' }),
   });
+}
+
+function dispatchProcessChainFromChildren(input: {
+  operation_name: string;
+  request_id?: string | null;
+  operation_id?: string | null;
+  child_results: readonly TrustedRuntimeCoordinatorResult<unknown>[];
+}) {
+  let processChain = createTrustedProcessChain({
+    coordinator_id: TRUSTED_DISPATCH_COORDINATOR_ID,
+    coordinator_kind: 'dispatch',
+    operation_name: input.operation_name,
+    completion_policy: 'atomic_required',
+    request_id: input.request_id ?? null,
+    operation_id: input.operation_id ?? null,
+  });
+
+  for (const [index, result] of input.child_results.entries()) {
+    processChain = appendTrustedChildResult(processChain, result, {
+      stage_id: `dispatch.${input.operation_name}.child.${index}`,
+      operation_name: result.trace.at(-1)?.step_id ?? result.coordinator_id,
+      notes: `Dispatch write pipeline child result from ${result.coordinator_id}.`,
+    });
+  }
+
+  return completeTrustedProcessChain(processChain);
 }
 
 export const trustedDispatchCoordinator = {
@@ -210,9 +290,15 @@ export const trustedDispatchCoordinator = {
       });
     }
 
+    const planningHints = planningHintsForMutationIntent(input.intent.kind);
     const plan = trustedPlanningCoordinator.resolveOperationPlan({
+      ...planningHints,
+      operation_kind: planningHints.operation_kind as never,
       mutation_intent: input.intent.kind,
-      body_input_values: input.intent as unknown as Record<string, unknown>,
+      body_input_values: bodyInputValuesForMutationIntent({
+        intent: input.intent,
+        actor_packet: input.actor_packet,
+      }),
       include_defaults: true,
       include_dependencies: true,
       include_regulation: true,
@@ -232,6 +318,8 @@ export const trustedDispatchCoordinator = {
 
     const build = trustedBuildingCoordinator.buildFromOperationPlan({
       plan: plan.value,
+      actor_packet: input.actor_packet,
+      packet_store: input.packet_store,
     });
     const inspection = build.value
       ? trustedInspectionCoordinator.inspectBuildResult({
@@ -260,35 +348,7 @@ export const trustedDispatchCoordinator = {
       });
     }
 
-    const certification = trustedCertificationCoordinator.prepareCertificationTicket({
-      plan: plan.value,
-      build_result: build.value,
-      inspection_report: inspection.value,
-      actor_packet_id: input.actor_packet.header.packet_id,
-      request_id: request.value.request_id,
-      operation_id: plan.value.plan_id,
-    });
     const candidatePackets = packetCandidatesFromBuildResult(build.value);
-
-    if (
-      certification.status === 'error' ||
-      certification.status === 'blocked' ||
-      !certification.value ||
-      candidatePackets.length === 0
-    ) {
-      return blockedDispatchResult({
-        operation_name: 'prepare_enrolled_mutation_write',
-        issue_code: 'dispatch.write_pipeline_not_ready',
-        issue_path: 'dispatch.prepare.certification',
-        issue_message:
-          certification.issues[0]?.message ??
-          'Dispatch cannot return a live prepare payload until Building emits full signable packet envelopes for Certification.',
-        request_id: request.value.request_id,
-        operation_id: plan.value.plan_id,
-        child_results: [request, preflight, plan, build, inspection, certification],
-      });
-    }
-
     const preparedPackets = await Promise.all(
       candidatePackets.map(async (packet) => {
         const digests = await getPacketUnsignedDigestCandidates(packet);
@@ -299,6 +359,48 @@ export const trustedDispatchCoordinator = {
         };
       })
     );
+
+    if (candidatePackets.length === 0) {
+      return blockedDispatchResult({
+        operation_name: 'prepare_enrolled_mutation_write',
+        issue_code: 'dispatch.write_pipeline_not_ready',
+        issue_path: 'dispatch.prepare.certification',
+        issue_message:
+          'Dispatch cannot return a live prepare payload until Building emits full signable packet envelopes for Certification.',
+        request_id: request.value.request_id,
+        operation_id: plan.value.plan_id,
+        child_results: [request, preflight, plan, build, inspection],
+      });
+    }
+
+    const certification = trustedCertificationCoordinator.prepareCertificationTicket({
+      plan: plan.value,
+      build_result: build.value,
+      inspection_report: inspection.value,
+      actor_packet_id: input.actor_packet.header.packet_id,
+      request_id: request.value.request_id,
+      operation_id: plan.value.plan_id,
+      expected_packets: preparedPackets.map((preparedPacket) => ({
+        packet_id: preparedPacket.packet.header.packet_id,
+        revision_id: preparedPacket.packet.header.revision_id,
+        packet_type: preparedPacket.packet.header.type,
+        unsigned_digest: preparedPacket.unsigned_digest,
+      })),
+    });
+
+    if (certification.status === 'error' || certification.status === 'blocked' || !certification.value) {
+      return blockedDispatchResult({
+        operation_name: 'prepare_enrolled_mutation_write',
+        issue_code: 'dispatch.write_pipeline_not_ready',
+        issue_path: 'dispatch.prepare.certification',
+        issue_message:
+          certification.issues[0]?.message ??
+          'Certification could not open a ticket for the prepared packet envelopes.',
+        request_id: request.value.request_id,
+        operation_id: plan.value.plan_id,
+        child_results: [request, preflight, plan, build, inspection, certification],
+      });
+    }
     const policyDecision = plan.value.write_policy_gate?.decision;
 
     return createTrustedRuntimeCoordinatorResult({
@@ -332,6 +434,12 @@ export const trustedDispatchCoordinator = {
       ],
       request_id: request.value.request_id,
       operation_id: plan.value.plan_id,
+      process_chain: dispatchProcessChainFromChildren({
+        operation_name: 'prepare_enrolled_mutation_write',
+        request_id: request.value.request_id,
+        operation_id: plan.value.plan_id,
+        child_results: [request, preflight, plan, build, inspection, certification],
+      }),
     });
   },
 
@@ -364,15 +472,98 @@ export const trustedDispatchCoordinator = {
       });
     }
 
-    return blockedDispatchResult({
-      operation_name: 'finalize_enrolled_mutation_write',
-      issue_code: 'dispatch.certification_payload_unsupported',
-      issue_path: 'dispatch.finalize.signed_return',
-      issue_message:
-        'Dispatch finalize now requires Certification signed-ticket return support for the existing signed packet bundle payload; legacy mutation tickets and finalizers are not allowed as fallback.',
+    const certification = trustedCertificationCoordinator.certifySignedPacketBundle({
+      ticket_id: input.request.ticket_id,
+      signed_packets: input.request.signed_packets,
+      signer_packet: input.actor_packet,
+    });
+
+    if (certification.status === 'error' || certification.status === 'blocked' || !certification.value) {
+      return blockedDispatchResult({
+        operation_name: 'finalize_enrolled_mutation_write',
+        issue_code: 'dispatch.certification_payload_unsupported',
+        issue_path: 'dispatch.finalize.certification',
+        issue_message:
+          certification.issues[0]?.message ??
+          'Certification rejected the signed packet bundle for this ticket.',
+        request_id: request.value.request_id,
+        operation_id: input.request.ticket_id,
+        child_results: [request, certification],
+      });
+    }
+
+    const verification = await trustedVerificationCoordinator.verifyPacketBatch({
+      packets: input.request.signed_packets.map((packet) => ({
+        packet,
+        signer_packet: input.actor_packet,
+      })),
+      signer_packets: [input.actor_packet],
+      verification_mode: 'strict',
+    });
+
+    if (verification.status === 'error' || verification.status === 'blocked' || !verification.value) {
+      return blockedDispatchResult({
+        operation_name: 'finalize_enrolled_mutation_write',
+        issue_code: 'dispatch.certification_payload_unsupported',
+        issue_path: 'dispatch.finalize.verification',
+        issue_message:
+          verification.issues[0]?.message ??
+          'Verification rejected the signed packet bundle for this ticket.',
+        request_id: request.value.request_id,
+        operation_id: input.request.ticket_id,
+        child_results: [request, certification, verification],
+      });
+    }
+
+    const archive = await trustedArchiveCoordinator.storeCertifiedPacketSet({
+      packet_store: input.packet_store,
+      certified_packet_set: certification.value,
+    });
+
+    if (archive.status === 'error' || archive.status === 'blocked' || !archive.value) {
+      return blockedDispatchResult({
+        operation_name: 'finalize_enrolled_mutation_write',
+        issue_code: 'dispatch.write_pipeline_not_ready',
+        issue_path: 'dispatch.finalize.archive',
+        issue_message:
+          archive.issues[0]?.message ??
+          'Archive could not store the certified packet set.',
+        request_id: request.value.request_id,
+        operation_id: input.request.ticket_id,
+        child_results: [request, certification, verification, archive],
+      });
+    }
+
+    return createTrustedRuntimeCoordinatorResult({
+      coordinator_id: TRUSTED_DISPATCH_COORDINATOR_ID,
+      coordinator_kind: 'dispatch',
+      value: {
+        kind: (input.mutation_intent ?? mutationKindFromPlanId(certification.value.source_plan_id)) as TrustedDispatchFinalizedMutationResult['kind'],
+        persist_effects: archive.value.writes.map((write) => ({
+          packet: {
+            packet_id: write.packet_ref.packet_id,
+            revision_id: write.revision_ref.revision_id,
+          },
+        })),
+        result: {
+          archive_receipt: archive.value,
+          verification_report: verification.value,
+        },
+      },
+      trace: [
+        ...request.trace,
+        ...certification.trace,
+        ...verification.trace,
+        ...archive.trace,
+      ],
       request_id: request.value.request_id,
       operation_id: input.request.ticket_id,
-      child_results: [request],
+      process_chain: dispatchProcessChainFromChildren({
+        operation_name: 'finalize_enrolled_mutation_write',
+        request_id: request.value.request_id,
+        operation_id: input.request.ticket_id,
+        child_results: [request, certification, verification, archive],
+      }),
     });
   },
 

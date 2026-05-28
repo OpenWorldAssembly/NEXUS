@@ -74,6 +74,7 @@ export const POST: RequestHandler = async (request) => {
       intent: parsedBody.intent as MutationIntent,
       actor_packet: actorContext.actorPacket,
       actor_key: actorContext.actorKey,
+      packet_store: services.packetStore,
     });
 
     return createJsonResponse(assertCoordinatorValue(

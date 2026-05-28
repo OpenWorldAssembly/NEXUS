@@ -100,6 +100,7 @@ export function prepareTrustedCertificationTicket(
     dispatch_return_kind: 'certification.ticket.signed_return',
     human_summary:
       `Certification ticket for plan ${input.plan.plan_id} with ${input.build_result.candidate_graph.candidate_nodes.length} candidate node(s).`,
+    expected_packets: [...(input.expected_packets ?? [])],
   };
   const signatureRequests = ticket.status === 'open' ? [buildSignatureRequest(ticket)] : [];
 

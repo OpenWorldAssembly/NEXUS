@@ -7,6 +7,11 @@ import type {
   PacketDefinitionPartDescriptor,
   PacketTypeDefinition,
 } from '@core/packets/definitions/packet-definition-types.ts';
+import type { PacketStore } from '@core/contracts';
+import type {
+  PacketEnvelope,
+  PacketEnvelopeByType,
+} from '@core/schema/packet-schema';
 import type {
   PacketTypeBodyBuilderInput,
   PacketTypeBodyCandidate,
@@ -49,6 +54,7 @@ export type TrustedPacketCandidateNode = {
   packet_subtype: string | null;
   builder_id: string | null;
   body_candidate: TrustedBodyCandidate | null;
+  packet_envelope?: PacketEnvelope | null;
   parent_candidate_id: string | null;
   child_candidate_ids: string[];
   blockers: string[];
@@ -89,11 +95,15 @@ export type TrustedDefinitionPartBuildPlan = {
 
 export type ResolveTrustedBuildFromOperationPlanInput = {
   plan: TrustedOperationPlan;
+  actor_packet?: PacketEnvelopeByType['Element'] | null;
+  packet_store?: PacketStore | null;
   context_mode?: TrustedBuildingContextMode;
 };
 
 export type BuildTrustedPacketBodyCandidateInput = {
   plan: TrustedOperationPlan;
+  actor_packet?: PacketEnvelopeByType['Element'] | null;
+  packet_store?: PacketStore | null;
   parent_candidate_id?: string | null;
 };
 
@@ -108,6 +118,8 @@ export type BuildTrustedDefinitionPartCandidatesInput = {
 
 export type BuildTrustedCandidateGraphInput = {
   plan: TrustedOperationPlan;
+  actor_packet?: PacketEnvelopeByType['Element'] | null;
+  packet_store?: PacketStore | null;
 };
 
 export type AuditTrustedBuildingReadinessInput = {
