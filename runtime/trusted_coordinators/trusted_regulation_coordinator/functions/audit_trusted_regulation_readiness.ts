@@ -3,7 +3,7 @@
  * Description: Audits whether trusted regulation contexts can resolve for active packet definitions.
  */
 
-import { trustedDefinitionCoordinator } from '@runtime/trusted_coordinators/trusted_definition_coordinator';
+import { trustedDefinitionCoordinator } from '@runtime/trusted_coordinators/trusted_definition_coordinator/index.ts';
 import {
   createTrustedRuntimeCoordinatorResult,
   type TrustedRuntimeCoordinatorIssue,
@@ -68,7 +68,7 @@ export function auditTrustedRegulationReadiness(
 
   return createTrustedRuntimeCoordinatorResult({
     coordinator_id: TRUSTED_REGULATION_COORDINATOR_ID,
-    coordinator_kind: 'policy',
+    coordinator_kind: 'regulation',
     value: {
       report_kind: 'trusted.regulation_readiness_report',
       mode: input.context_mode ?? 'reseed',

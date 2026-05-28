@@ -3,7 +3,7 @@
  * Description: Resolves a trusted UI projection for an already-loaded packet envelope.
  */
 
-import { trustedDefinitionCoordinator } from '@runtime/trusted_coordinators/trusted_definition_coordinator';
+import { trustedDefinitionCoordinator } from '@runtime/trusted_coordinators/trusted_definition_coordinator/index.ts';
 import {
   createTrustedRuntimeCoordinatorResult,
   type TrustedRuntimeCoordinatorIssue,

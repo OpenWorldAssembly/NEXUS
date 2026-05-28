@@ -51,7 +51,7 @@ export function resolveTrustedDefaultPlan(
 
   return createTrustedRuntimeCoordinatorResult({
     coordinator_id: TRUSTED_PLANNING_COORDINATOR_ID,
-    coordinator_kind: 'defaults',
+    coordinator_kind: 'planning',
     value: {
       plan_kind: 'trusted.default_plan',
       packet_type: profile.packet_type,

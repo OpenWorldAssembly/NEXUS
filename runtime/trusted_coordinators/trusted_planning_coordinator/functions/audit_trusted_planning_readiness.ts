@@ -3,7 +3,7 @@
  * Description: Audits trusted planning readiness across active packet definitions before reseed.
  */
 
-import { trustedDefinitionCoordinator } from '@runtime/trusted_coordinators/trusted_definition_coordinator';
+import { trustedDefinitionCoordinator } from '@runtime/trusted_coordinators/trusted_definition_coordinator/index.ts';
 import {
   createTrustedRuntimeCoordinatorResult,
   type TrustedRuntimeCoordinatorIssue,
@@ -64,7 +64,7 @@ export function auditTrustedPlanningReadiness(
 
   return createTrustedRuntimeCoordinatorResult({
     coordinator_id: TRUSTED_PLANNING_COORDINATOR_ID,
-    coordinator_kind: 'workflow',
+    coordinator_kind: 'planning',
     value: {
       report_kind: 'trusted.planning_readiness_report',
       mode: contextMode,

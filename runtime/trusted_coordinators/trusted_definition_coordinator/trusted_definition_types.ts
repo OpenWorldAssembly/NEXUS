@@ -11,8 +11,8 @@ import type {
 } from '@core/packets/definitions/packet-definition-types.ts';
 import type { PacketTypeBodyCandidate } from '@core/packets/packet-type-body-builders.ts';
 import type { TrustedDefinitionPartBuildPlan } from '@runtime/trusted_coordinators/trusted_building_coordinator/index.ts';
-import type { TrustedRegulationProfile } from '@runtime/trusted_coordinators/trusted_regulation_coordinator';
-import type { TrustedOperationPlan } from '@runtime/trusted_coordinators/trusted_planning_coordinator';
+import type { TrustedRegulationProfile } from '@runtime/trusted_coordinators/trusted_regulation_coordinator/index.ts';
+import type { TrustedOperationPlan } from '@runtime/trusted_coordinators/trusted_planning_coordinator/index.ts';
 import type {
   TrustedRuntimeCoordinatorIssue,
   TrustedRuntimeCoordinatorTraceEntry,

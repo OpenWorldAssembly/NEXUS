@@ -5,8 +5,8 @@
 
 import type { MutationActionId } from '@core/auth/write-policy.ts';
 import type { PacketTypeDefinition } from '@core/packets/definitions/packet-definition-types.ts';
-import { trustedDefinitionCoordinator } from '@runtime/trusted_coordinators/trusted_definition_coordinator';
-import { trustedRegulationCoordinator } from '@runtime/trusted_coordinators/trusted_regulation_coordinator';
+import { trustedDefinitionCoordinator } from '@runtime/trusted_coordinators/trusted_definition_coordinator/index.ts';
+import { trustedRegulationCoordinator } from '@runtime/trusted_coordinators/trusted_regulation_coordinator/index.ts';
 import {
   createTrustedRuntimeCoordinatorResult,
   type TrustedRuntimeCoordinatorIssue,
@@ -155,7 +155,7 @@ export function resolveTrustedOperationPlan(
 
     return createTrustedRuntimeCoordinatorResult({
       coordinator_id: TRUSTED_PLANNING_COORDINATOR_ID,
-      coordinator_kind: 'workflow',
+      coordinator_kind: 'planning',
       value: plan,
       issues,
       trace: [
@@ -325,7 +325,7 @@ export function resolveTrustedOperationPlan(
 
   return createTrustedRuntimeCoordinatorResult({
     coordinator_id: TRUSTED_PLANNING_COORDINATOR_ID,
-    coordinator_kind: 'workflow',
+    coordinator_kind: 'planning',
     value: plan,
     issues,
     trace: [

@@ -11,6 +11,7 @@ import type {
   NexusPacketExplorerExportRequest,
 } from '@runtime/nexus/nexus-api-types';
 import type { NexusPacketServices } from '@runtime/nexus/server/nexus-packet-services.types';
+import { trustedExchangeCoordinator } from '@runtime/trusted_coordinators/trusted_exchange_coordinator/index.ts';
 
 type PacketExportServices = Pick<NexusPacketServices, 'packetStore'>;
 
@@ -411,9 +412,19 @@ async function buildBundleExport(input: {
     throw new Error('There are no packet ids available for this export scope.');
   }
 
-  const exportedBundle = await input.services.packetStore.exportBundle(
-    packetIds.map((packetId) => ({ packet_id: packetId }))
-  );
+  const exportResult = await trustedExchangeCoordinator.exportPacketSet({
+    packet_store: input.services.packetStore,
+    root_refs: packetIds.map((packetId) => ({ packet_id: packetId })),
+    context_mode: 'normal_runtime',
+  });
+  const exportedBundle = exportResult.value?.bundle;
+
+  if (!exportedBundle || exportResult.status === 'error') {
+    throw new Error(
+      exportResult.issues.find((issue) => issue.severity === 'error')?.message ??
+        'Trusted Exchange could not export the requested packet set.'
+    );
+  }
   const parsedExport = JSON.parse(
     new TextDecoder().decode(exportedBundle.bytes)
   ) as {

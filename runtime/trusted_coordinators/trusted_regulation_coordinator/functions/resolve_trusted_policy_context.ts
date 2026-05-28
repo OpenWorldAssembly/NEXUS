@@ -11,7 +11,7 @@ import {
   listPacketPolicySemanticDescriptors,
   resolvePolicyPacketSemantics,
 } from '@core/packets/packet-policy-semantics.ts';
-import { trustedDefinitionCoordinator } from '@runtime/trusted_coordinators/trusted_definition_coordinator';
+import { trustedDefinitionCoordinator } from '@runtime/trusted_coordinators/trusted_definition_coordinator/index.ts';
 import {
   createTrustedRuntimeCoordinatorResult,
   type TrustedRuntimeCoordinatorResult,
@@ -77,7 +77,7 @@ export function resolveTrustedPolicyContext(
 
   return createTrustedRuntimeCoordinatorResult({
     coordinator_id: TRUSTED_REGULATION_COORDINATOR_ID,
-    coordinator_kind: 'policy',
+    coordinator_kind: 'regulation',
     value: {
       context_kind: 'trusted.policy_context',
       packet_type: packetType,

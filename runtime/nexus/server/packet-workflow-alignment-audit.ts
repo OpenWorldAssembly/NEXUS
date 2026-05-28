@@ -26,7 +26,7 @@ import {
 } from '@runtime/trusted_coordinators/trusted_composite_workflow_adapters';
 import {
   trustedDefinitionCoordinator,
-} from '@runtime/trusted_coordinators/trusted_definition_coordinator';
+} from '@runtime/trusted_coordinators/trusted_definition_coordinator/index.ts';
 
 export type PacketWorkflowAlignmentStatus =
   | 'workflow_aligned'

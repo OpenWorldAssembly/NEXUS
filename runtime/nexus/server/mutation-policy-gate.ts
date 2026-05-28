@@ -16,7 +16,7 @@ import {
   resolveSecurityModePolicyDecision,
 } from '@runtime/nexus/server/write-security-mode';
 import type { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store';
-import { trustedRegulationCoordinator } from '@runtime/trusted_coordinators/trusted_regulation_coordinator';
+import { trustedRegulationCoordinator } from '@runtime/trusted_coordinators/trusted_regulation_coordinator/index.ts';
 
 type PolicyPacketCache = Map<
   string,

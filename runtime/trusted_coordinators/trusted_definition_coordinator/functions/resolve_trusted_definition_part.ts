@@ -57,7 +57,7 @@ export function resolveTrustedDefinitionPart(
 
     return createTrustedRuntimeCoordinatorResult({
       coordinator_id: TRUSTED_DEFINITION_COORDINATOR_ID,
-      coordinator_kind: 'workflow',
+      coordinator_kind: 'definition',
       value: null,
       issues,
       trace,
@@ -74,7 +74,7 @@ export function resolveTrustedDefinitionPart(
 
   return createTrustedRuntimeCoordinatorResult({
     coordinator_id: TRUSTED_DEFINITION_COORDINATOR_ID,
-    coordinator_kind: 'workflow',
+    coordinator_kind: 'definition',
     value: candidate.payload.part,
     issues,
     trace,

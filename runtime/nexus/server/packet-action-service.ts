@@ -17,7 +17,7 @@ import type {
   NexusPacketActionsBatchRequest,
 } from '@runtime/nexus/nexus-api-types';
 import { NexusPacketVerificationService } from '@runtime/nexus/server/verification-service';
-import { trustedProjectionCoordinator } from '@runtime/trusted_coordinators/trusted_projection_coordinator';
+import { trustedProjectionCoordinator } from '@runtime/trusted_coordinators/trusted_projection_coordinator/index.ts';
 
 const PACKET_ACTION_SURFACES: NexusPacketActionSurface[] = [
   'dashboard',

@@ -7,7 +7,6 @@ import type {
   PacketAdaptationChange,
   PacketAdaptationDirection,
   PacketAdaptationLoss,
-  PacketCompatibilityAuditSummary,
   PacketCompatibilitySupportLevel,
   PacketEnvelope,
   PacketRef,

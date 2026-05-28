@@ -24,6 +24,7 @@ import type {
   NexusPacketExplorerSummary,
 } from '@runtime/nexus/nexus-api-types';
 import type { NexusPacketServices } from '@runtime/nexus/server/nexus-packet-services.types';
+import { trustedArchiveCoordinator } from '@runtime/trusted_coordinators/trusted_archive_coordinator/index.ts';
 
 type PacketExplorerDataServices = Pick<
   NexusPacketServices,
@@ -369,15 +370,18 @@ export async function buildNexusPacketExplorerPayload(input: {
   const compatibilityRead = await runExplorerStage({
     packetId,
     stage: 'raw/adapted packet read',
-    run: async () =>
-      services.packetStore.readByPacket(
-        {
+    run: async () => {
+      const archiveRead = await trustedArchiveCoordinator.readPacket({
+        packet_store: services.packetStore,
+        packet_ref: {
           packet_id: packetId,
         },
-        {
-          mode: 'raw_plus_adaptation',
-        }
-      ),
+        mode: 'raw_plus_adaptation',
+        context_mode: 'normal_runtime',
+      });
+
+      return archiveRead.value?.packet as PacketCompatibilityReadResult | null;
+    },
   });
 
   if (!packetProjection || !preferredRevision || !compatibilityRead) {

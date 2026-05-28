@@ -26,7 +26,7 @@ export function auditTrustedDefinitionReadiness(
   if (!viewSetResult.value) {
     return createTrustedRuntimeCoordinatorResult({
       coordinator_id: TRUSTED_DEFINITION_COORDINATOR_ID,
-      coordinator_kind: 'workflow',
+      coordinator_kind: 'definition',
       value: null,
       issues,
       trace: viewSetResult.trace,
@@ -44,7 +44,7 @@ export function auditTrustedDefinitionReadiness(
 
   return createTrustedRuntimeCoordinatorResult({
     coordinator_id: TRUSTED_DEFINITION_COORDINATOR_ID,
-    coordinator_kind: 'workflow',
+    coordinator_kind: 'definition',
     value: {
       report_kind: 'trusted.definition_readiness_report',
       mode: input.context_mode ?? 'reseed',

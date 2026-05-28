@@ -148,6 +148,7 @@ export const TRUSTED_COORDINATOR_SCAFFOLD_MANIFEST = [
       { method_name: 'resolveRevision', notes: 'Resolves preferred/head/requested archived revision refs.' },
       { method_name: 'queryEdges', notes: 'Queries archived packet graph edges.' },
       { method_name: 'exportBundle', notes: 'Exports archive bundle payloads as a low-level storage primitive.' },
+      { method_name: 'importBundle', notes: 'Imports archive bundle payloads as a low-level storage primitive.' },
       { method_name: 'auditReadiness', notes: 'Audits packet-store and index access.' },
     ],
     notes: 'Archive seam for packet-store writes, reads, refs, edges, and query indexes. Exchange, Projection, Verification, and Compatibility should ask Archive rather than reaching directly into storage.',
@@ -202,6 +203,7 @@ export const TRUSTED_COORDINATOR_SCAFFOLD_MANIFEST = [
     expected_methods: [
       { method_name: 'previewImport', notes: 'Normalizes incoming bundle material and combines compatibility, verification, and local archive comparison without writing storage.' },
       { method_name: 'planImportCommit', notes: 'Turns an import preview into a non-mutating commit plan with skip/import/manual-resolution classifications.' },
+      { method_name: 'commitImport', notes: 'Commits an accepted import plan through Trusted Archive bundle import.' },
       { method_name: 'exportPacketSet', notes: 'Wraps Archive bundle export in an Exchange manifest and records requested expansion options.' },
       { method_name: 'planMerge', notes: 'Compares incoming packet revisions to local archive state and classifies shallow merge actions.' },
       { method_name: 'previewRebundle', notes: 'Normalizes packet material into a rebundle preview and manifest without storage mutation.' },

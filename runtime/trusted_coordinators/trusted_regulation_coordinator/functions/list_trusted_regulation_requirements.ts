@@ -17,7 +17,7 @@ export function listTrustedRegulationRequirements(
 
   return createTrustedRuntimeCoordinatorResult({
     coordinator_id: TRUSTED_REGULATION_COORDINATOR_ID,
-    coordinator_kind: 'policy',
+    coordinator_kind: 'regulation',
     value: contextResult.value?.requirements ?? null,
     issues: contextResult.issues,
     trace: contextResult.trace,

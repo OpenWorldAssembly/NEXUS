@@ -21,6 +21,7 @@ import type {
   NexusPacketExplorerImportRequest,
 } from '@runtime/nexus/nexus-api-types';
 import type { NexusPacketServices } from '@runtime/nexus/server/nexus-packet-services.types';
+import { trustedExchangeCoordinator } from '@runtime/trusted_coordinators/trusted_exchange_coordinator/index.ts';
 
 type PacketImportServices = Pick<
   NexusPacketServices,
@@ -871,15 +872,29 @@ export async function buildNexusPacketExplorerImportCommit(input: {
     services: input.services,
     packetIds: analyzedImport.affectedPacketIds,
   });
-  const importResult = await input.services.packetStore.importBundle(
-    analyzedImport.normalizedBundleText
-  );
+  const validationMode = analyzedImport.validationMode;
+  const exchangeCommit = await trustedExchangeCoordinator.commitImport({
+    packet_store: input.services.packetStore,
+    bundle: analyzedImport.normalizedBundleText,
+    source_label: analyzedImport.payload.source_file_name,
+    context_mode: 'import_preview',
+    options: {
+      verification_mode: 'advisory',
+    },
+  });
+  const importResult = exchangeCommit.value?.import_result;
+
+  if (!importResult || exchangeCommit.status === 'error') {
+    throw new Error(
+      exchangeCommit.issues.find((issue) => issue.severity === 'error')?.message ??
+        'Trusted Exchange could not commit the import bundle.'
+    );
+  }
   const preferredRepair = await repairPreferredHeadsAfterImport({
     services: input.services,
     packetIdsWithNewRevisions: analyzedImport.packetIdsWithNewRevisions,
     snapshots: preferredSnapshots,
   });
-  const validationMode = analyzedImport.validationMode;
   const shouldCreateVerificationReports =
     validationMode === 'validate_before_commit' ||
     validationMode === 'validate_after_commit';

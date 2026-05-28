@@ -91,7 +91,7 @@ export function listTrustedDefinitionCandidates(
 
   return createTrustedRuntimeCoordinatorResult({
     coordinator_id: TRUSTED_DEFINITION_COORDINATOR_ID,
-    coordinator_kind: 'workflow',
+    coordinator_kind: 'definition',
     value: candidates,
     issues,
     trace: [

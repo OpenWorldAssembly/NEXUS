@@ -4,6 +4,7 @@
  */
 
 import type {
+  BundleImportResult,
   BundleExportResult,
   PacketEdgeQuery,
   PacketHeadStatus,
@@ -12,7 +13,6 @@ import type {
 } from '@core/contracts';
 import type {
   PacketEdge,
-  PacketEnvelope,
   PacketReadMode,
   PacketRef,
   PacketRevisionRef,
@@ -116,6 +116,10 @@ export type TrustedArchiveBundleExport = BundleExportResult & {
   result_kind: 'trusted.archive_bundle_export';
 };
 
+export type TrustedArchiveBundleImport = BundleImportResult & {
+  result_kind: 'trusted.archive_bundle_import';
+};
+
 export type TrustedArchiveReadinessReport = {
   report_kind: 'trusted.archive_readiness_report';
   mode: TrustedArchiveContextMode;
@@ -168,6 +172,11 @@ export type ExportTrustedArchiveBundleInput = TrustedArchiveStoreContext & {
   context_mode?: TrustedArchiveContextMode;
 };
 
+export type ImportTrustedArchiveBundleInput = TrustedArchiveStoreContext & {
+  bundle: Uint8Array | ArrayBuffer | string;
+  context_mode?: TrustedArchiveContextMode;
+};
+
 export type AuditTrustedArchiveReadinessInput = TrustedArchiveStoreContext & {
   context_mode?: TrustedArchiveContextMode;
 };
@@ -179,6 +188,7 @@ export type TrustedArchiveOperation =
   | 'resolve_revision'
   | 'query_edges'
   | 'export_bundle'
+  | 'import_bundle'
   | 'audit_readiness';
 
 export type TrustedArchiveCoordinatorRequest =
@@ -205,6 +215,10 @@ export type TrustedArchiveCoordinatorRequest =
   | {
       operation: 'export_bundle';
       input: ExportTrustedArchiveBundleInput;
+    }
+  | {
+      operation: 'import_bundle';
+      input: ImportTrustedArchiveBundleInput;
     }
   | {
       operation: 'audit_readiness';

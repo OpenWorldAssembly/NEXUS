@@ -319,3 +319,10 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - The client-side Interface Signal Conductor direction was renamed to Interface Event Coordinator, reflecting its role as the master interface event lifecycle controller rather than a trusted runtime actor.
 - Trusted Dispatch Coordinator is now the canonical runtime front desk name for request normalization and client-intent preflight; the existing Trusted Request Coordinator remains as the compatibility implementation bridge.
 - Mutation prepare now passes through dispatch normalization and fail-closed client-intent preflight before the existing fortress corridor continues. Mutation finalize records dispatch normalization while preserving ticket-based finalize preflight and signed payload schemas.
+
+## 2026-05 Trusted runtime coordinator audit and caller migration
+
+- The trusted coordinator scaffold audit now checks canonical result kinds, top-level barrel exports, and public method drift; Resolution remains the only accepted legacy-flat coordinator warning.
+- Definition, Regulation, and Planning result envelopes now use their canonical coordinator kinds, with older aliases retained only for legacy workflow paths.
+- Packet Explorer bundle export and import commit now route through Trusted Exchange and Trusted Archive while preserving existing Explorer payloads, import reports, validation modes, and preferred-head repair.
+- The verification service is now a compatibility wrapper over Trusted Verification for packet assessment, while local validator identity and report-writing stay service-owned until a later Certification/Archive migration.

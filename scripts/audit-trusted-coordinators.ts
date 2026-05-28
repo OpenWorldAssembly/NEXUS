@@ -3,7 +3,7 @@
  * Description: Audits trusted coordinator scaffold boundaries and public surfaces without importing app modules.
  */
 
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 import {
@@ -13,6 +13,11 @@ import {
 type AuditFinding = {
   severity: 'warning' | 'error';
   coordinator_id: string;
+  code: string;
+  message: string;
+};
+
+type AuditNote = {
   code: string;
   message: string;
 };
@@ -51,8 +56,65 @@ function publicObjectFileContainsMethod(content: string, methodName: string): bo
   return new RegExp(`${methodName}\\s*\\(`).test(content) || new RegExp(`${methodName}\\s*:`).test(content);
 }
 
-function audit(): AuditFinding[] {
+function expectedCoordinatorExport(path: string): string {
+  if (path.endsWith('.ts')) {
+    return `./${path.replace(/^runtime\/trusted_coordinators\//, '')}`;
+  }
+
+  return `./${path.replace(/^runtime\/trusted_coordinators\//, '')}/index.ts`;
+}
+
+function expectedCanonicalKind(path: string): string | null {
+  const folderName = path.split('/').at(-1) ?? '';
+  const match = /^trusted_(.+)_coordinator$/.exec(folderName);
+
+  return match?.[1] ?? null;
+}
+
+function scanRuntimeBypassNotes(): AuditNote[] {
+  const notes: AuditNote[] = [];
+  const serverRoot = repoPath('runtime/nexus/server');
+
+  if (!existsSync(serverRoot)) {
+    return notes;
+  }
+
+  const filesToScan = [
+    'runtime/nexus/server/nexus-packet-import.ts',
+    'runtime/nexus/server/nexus-packet-export.ts',
+    'runtime/nexus/server/verification-service.ts',
+    'runtime/nexus/server/nexus-packet-explorer-data.ts',
+  ];
+
+  for (const filePath of filesToScan) {
+    const content = readIfFile(filePath);
+    if (!content) {
+      continue;
+    }
+
+    const bypassTerms = [
+      'packetStore.importBundle(',
+      'packetStore.exportBundle(',
+      'verifyPacketSignatureDetailed(',
+      'interpretPacket({',
+      'readByPacket(',
+    ];
+    const hits = bypassTerms.filter((term) => content.includes(term));
+    if (hits.length > 0) {
+      notes.push({
+        code: 'trusted_runtime_caller_migration_note',
+        message: `${filePath} still contains migration-sensitive direct runtime calls: ${hits.join(', ')}`,
+      });
+    }
+  }
+
+  return notes;
+}
+
+function audit(): { findings: AuditFinding[]; notes: AuditNote[] } {
   const findings: AuditFinding[] = [];
+  const notes: AuditNote[] = [];
+  const barrelContent = readIfFile('runtime/trusted_coordinators/index.ts') ?? '';
 
   for (const descriptor of listTrustedCoordinatorScaffoldDescriptors()) {
     const pathExists = existsSync(repoPath(descriptor.runtime_path));
@@ -72,6 +134,7 @@ function audit(): AuditFinding[] {
       const expectedRegistry = `${descriptor.runtime_path}/${folderName?.replace('_coordinator', '_registry')}.ts`;
       const expectedTypes = `${descriptor.runtime_path}/${folderName?.replace('_coordinator', '_types')}.ts`;
       const expectedPublic = publicCoordinatorFile(descriptor.runtime_path);
+      const barrelExport = expectedCoordinatorExport(descriptor.runtime_path);
 
       for (const requiredPath of [
         `${descriptor.runtime_path}/index.ts`,
@@ -88,6 +151,15 @@ function audit(): AuditFinding[] {
             message: `${requiredPath} is required for foldered trusted coordinators.`,
           });
         }
+      }
+
+      if (!barrelContent.includes(barrelExport)) {
+        findings.push({
+          severity: 'error',
+          coordinator_id: descriptor.coordinator_id,
+          code: 'trusted_top_level_barrel_missing_export',
+          message: `runtime/trusted_coordinators/index.ts must export ${barrelExport}.`,
+        });
       }
 
       for (const line of folderContainsForbiddenPublicFunctionExport(descriptor.runtime_path)) {
@@ -132,6 +204,43 @@ function audit(): AuditFinding[] {
           });
         }
       }
+
+      const canonicalKind = expectedCanonicalKind(descriptor.runtime_path);
+      if (canonicalKind && canonicalKind !== 'request') {
+        const functionFolder = repoPath(`${descriptor.runtime_path}/functions`);
+        const coordinatorFiles = [
+          expectedPublic,
+          `${descriptor.runtime_path}/${folderName?.replace('_coordinator', '_registry')}.ts`,
+          ...(
+            existsSync(repoPath(`${descriptor.runtime_path}/functions`)) &&
+            statSync(repoPath(`${descriptor.runtime_path}/functions`)).isDirectory()
+              ? readdirSync(functionFolder)
+                  .filter((name: string) => name.endsWith('.ts'))
+                  .map((name: string) => `${descriptor.runtime_path}/functions/${name}`)
+              : []
+          ),
+        ];
+
+        for (const coordinatorFile of coordinatorFiles) {
+          const content = readIfFile(coordinatorFile);
+          if (!content) {
+            continue;
+          }
+
+          const resultKindMatches = Array.from(content.matchAll(/coordinator_kind:\s*['"]([^'"]+)['"]/g));
+          for (const match of resultKindMatches) {
+            const resultKind = match[1];
+            if (resultKind !== canonicalKind) {
+              findings.push({
+                severity: 'error',
+                coordinator_id: descriptor.coordinator_id,
+                code: 'trusted_result_kind_drift',
+                message: `${coordinatorFile} returns coordinator_kind '${resultKind}' but manifest kind is '${canonicalKind}'.`,
+              });
+            }
+          }
+        }
+      }
     }
 
     if (descriptor.structure === 'legacy_flat') {
@@ -144,16 +253,21 @@ function audit(): AuditFinding[] {
     }
   }
 
-  return findings;
+  notes.push(...scanRuntimeBypassNotes());
+
+  return { findings, notes };
 }
 
-const findings = audit();
+const { findings, notes } = audit();
 const errors = findings.filter((finding) => finding.severity === 'error');
 const warnings = findings.filter((finding) => finding.severity === 'warning');
 
 console.log(`Trusted coordinator scaffold audit: ${errors.length} error(s), ${warnings.length} warning(s).`);
 for (const finding of findings) {
   console.log(`[${finding.severity.toUpperCase()}] ${finding.coordinator_id} ${finding.code}: ${finding.message}`);
+}
+for (const note of notes) {
+  console.log(`[NOTE] ${note.code}: ${note.message}`);
 }
 
 if (errors.length > 0) {

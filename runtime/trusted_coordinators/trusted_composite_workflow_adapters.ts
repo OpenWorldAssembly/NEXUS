@@ -7,8 +7,8 @@ import {
   getPacketOperationDefinition,
   type PacketOperationKind,
 } from '@core/packets/packet-operation-ontology';
-import { trustedRegulationCoordinator } from '@runtime/trusted_coordinators/trusted_regulation_coordinator';
-import { trustedPlanningCoordinator } from '@runtime/trusted_coordinators/trusted_planning_coordinator';
+import { trustedRegulationCoordinator } from '@runtime/trusted_coordinators/trusted_regulation_coordinator/index.ts';
+import { trustedPlanningCoordinator } from '@runtime/trusted_coordinators/trusted_planning_coordinator/index.ts';
 import type { MutationIntent } from '@core/auth/mutation-corridor';
 import type { MutationActionId } from '@core/auth/write-policy';
 

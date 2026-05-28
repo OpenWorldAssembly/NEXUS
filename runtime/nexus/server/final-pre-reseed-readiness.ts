@@ -25,6 +25,7 @@ import {
 import { auditPacketClientIntentEnrollments } from '@runtime/nexus/server/packet-client-intent-enrollment';
 import { auditPacketRuntimeFortressHandoffs } from '@runtime/nexus/server/packet-runtime-fortress-handoff';
 import { auditPacketWorkflowAlignmentCoverage } from '@runtime/nexus/server/packet-workflow-alignment-audit';
+import { trustedDispatchCoordinator } from '@runtime/trusted_coordinators/trusted_dispatch_coordinator/index.ts';
 import { auditLiveGenericWorkflowEnrollments } from '@runtime/trusted_coordinators/trusted_packet_workflow_coordinator';
 import { auditLiveCompositeWorkflowEnrollments } from '@runtime/trusted_coordinators/trusted_composite_workflow_coordinator';
 import { listMutationIntentDescriptors } from '@runtime/nexus/server/mutation-intent-registry';
@@ -35,6 +36,8 @@ import { trustedBuildingCoordinator } from '@runtime/trusted_coordinators/truste
 import { trustedInspectionCoordinator } from '@runtime/trusted_coordinators/trusted_inspection_coordinator/index.ts';
 import { trustedCertificationCoordinator } from '@runtime/trusted_coordinators/trusted_certification_coordinator/index.ts';
 import { trustedProjectionCoordinator } from '@runtime/trusted_coordinators/trusted_projection_coordinator/index.ts';
+import { trustedCompatibilityCoordinator } from '@runtime/trusted_coordinators/trusted_compatibility_coordinator/index.ts';
+import { trustedVerificationCoordinator } from '@runtime/trusted_coordinators/trusted_verification_coordinator/index.ts';
 
 export type FinalPreReseedReadinessStatus = 'pass' | 'fail';
 
@@ -52,6 +55,20 @@ export type FinalPreReseedReadinessReport = {
   seeded_definition_bundle_packet_id: string;
   canonical_definition_seed_packet_ids: string[];
   pruned_packet_types: string[];
+  trusted_runtime_readiness: {
+    dispatch_ready: boolean;
+    definition_ready: boolean;
+    regulation_ready: boolean;
+    planning_ready: boolean;
+    building_ready: boolean;
+    inspection_ready: boolean;
+    certification_ready: boolean;
+    compatibility_ready: boolean;
+    verification_ready: boolean;
+    projection_ready: boolean;
+    archive_ready: 'async_not_run';
+    exchange_ready: 'async_not_run';
+  };
   findings: string[];
 };
 
@@ -94,6 +111,9 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
   const closureReport = createPreReseedModernizationClosureReport();
   const definitionsResult = trustedDefinitionCoordinator.listPacketDefinitions();
   const definitions = definitionsResult.value ?? [];
+  const dispatchReadiness = trustedDispatchCoordinator.auditReadiness({
+    mode: 'debug_audit',
+  }).value;
   const seededDefinitionProfile = resolveSeededPacketDefinitionProfile({ definitions });
   const seededDefinitionAudit = auditSeededPacketDefinitionProfile({
     definitions,
@@ -119,6 +139,12 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
     context_mode: 'reseed',
   }).value;
   const certificationReadiness = trustedCertificationCoordinator.auditReadiness({
+    context_mode: 'reseed',
+  }).value;
+  const compatibilityReadiness = trustedCompatibilityCoordinator.auditReadiness({
+    context_mode: 'reseed',
+  }).value;
+  const verificationReadiness = trustedVerificationCoordinator.auditReadiness({
     context_mode: 'reseed',
   }).value;
   const projectionReadiness = trustedProjectionCoordinator.auditReadiness({
@@ -168,6 +194,7 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
   );
   const findings = [
     ...closureReport.findings,
+    ...(dispatchReadiness?.findings ?? []).map((finding) => finding.message),
     ...definitionsResult.issues.map((issue) => issue.message),
     ...manifestAudit.findings
       .filter((finding) => finding.severity === 'error')
@@ -191,6 +218,12 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
       ...certificationPackage.blockers,
       ...certificationPackage.warnings,
     ]),
+    ...(compatibilityReadiness?.ready === false
+      ? ['Trusted Compatibility Coordinator readiness audit has blockers.']
+      : []),
+    ...(verificationReadiness?.ready === false
+      ? ['Trusted Verification Coordinator readiness audit has blockers.']
+      : []),
     ...(projectionReadiness?.ready === false
       ? ['Trusted Projection Coordinator readiness audit has blockers.']
       : []),
@@ -248,6 +281,20 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
       seededDefinitionProfile.bundle_packet.packet_ref.packet_id,
     canonical_definition_seed_packet_ids: uniqueSorted(definitionSeedPacketIds),
     pruned_packet_types: [...PRUNED_PACKET_TYPES],
+    trusted_runtime_readiness: {
+      dispatch_ready: dispatchReadiness?.status !== 'fail',
+      definition_ready: definitionsResult.status !== 'error',
+      regulation_ready: regulationReadiness?.ready ?? false,
+      planning_ready: planningReadiness?.ready ?? false,
+      building_ready: buildingReadiness?.ready ?? false,
+      inspection_ready: inspectionReadiness?.ready ?? false,
+      certification_ready: certificationReadiness?.ready ?? false,
+      compatibility_ready: compatibilityReadiness?.ready ?? false,
+      verification_ready: verificationReadiness?.ready ?? false,
+      projection_ready: projectionReadiness?.ready ?? false,
+      archive_ready: 'async_not_run',
+      exchange_ready: 'async_not_run',
+    },
     findings,
   };
 }

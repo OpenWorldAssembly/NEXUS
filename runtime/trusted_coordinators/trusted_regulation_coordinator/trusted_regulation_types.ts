@@ -18,7 +18,7 @@ import type { PacketEnvelopeByType } from '@core/schema/packet-schema';
 import type {
   TrustedDefinitionContextMode,
   TrustedDefinitionRuntimePreference,
-} from '@runtime/trusted_coordinators/trusted_definition_coordinator';
+} from '@runtime/trusted_coordinators/trusted_definition_coordinator/index.ts';
 import type {
   TrustedRuntimeCoordinatorIssue,
   TrustedRuntimeCoordinatorTraceEntry,

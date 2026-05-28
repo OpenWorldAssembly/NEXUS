@@ -8,6 +8,7 @@ import {
   type TrustedRuntimeCoordinatorResult,
   type TrustedRuntimeCoordinatorTraceEntry,
 } from '@runtime/trusted_coordinators/trusted_runtime_coordinator';
+import type { PacketSearchIndexRecord } from '@runtime/storage/sqlite-records';
 import {
   archiveTrace,
   matchesArchiveQuery,
@@ -45,10 +46,10 @@ export async function queryTrustedArchivedPackets(
   const trace: TrustedRuntimeCoordinatorTraceEntry[] = [];
   const rows = await withTrustedArchiveStore(input, async (packetStore) => {
     if (!('listSearchRows' in packetStore) || typeof packetStore.listSearchRows !== 'function') {
-      return [];
+      return [] as PacketSearchIndexRecord[];
     }
 
-    return packetStore.listSearchRows();
+    return packetStore.listSearchRows() as Promise<PacketSearchIndexRecord[]>;
   });
   const filteredRows = rows.filter((row) => matchesArchiveQuery({
     row,

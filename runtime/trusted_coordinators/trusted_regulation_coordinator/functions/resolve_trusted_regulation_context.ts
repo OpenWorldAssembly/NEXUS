@@ -3,7 +3,7 @@
  * Description: Resolves a full trusted regulation context by coordinating policy and write-gate semantics.
  */
 
-import { trustedDefinitionCoordinator } from '@runtime/trusted_coordinators/trusted_definition_coordinator';
+import { trustedDefinitionCoordinator } from '@runtime/trusted_coordinators/trusted_definition_coordinator/index.ts';
 import {
   createTrustedRuntimeCoordinatorResult,
   type TrustedRuntimeCoordinatorIssue,
@@ -138,7 +138,7 @@ export function resolveTrustedRegulationContext(
 
   return createTrustedRuntimeCoordinatorResult({
     coordinator_id: TRUSTED_REGULATION_COORDINATOR_ID,
-    coordinator_kind: 'policy',
+    coordinator_kind: 'regulation',
     value: {
       context_kind: 'trusted.regulation_context',
       context_id: `trusted.regulation_context.${resolvedPacketType ?? operationKind}.${operationKind}`,

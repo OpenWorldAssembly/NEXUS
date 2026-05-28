@@ -73,7 +73,7 @@ export function auditTrustedDefinitionConflicts(
 
   return createTrustedRuntimeCoordinatorResult({
     coordinator_id: TRUSTED_DEFINITION_COORDINATOR_ID,
-    coordinator_kind: 'workflow',
+    coordinator_kind: 'definition',
     value: conflictDecisions,
     issues,
     trace: [

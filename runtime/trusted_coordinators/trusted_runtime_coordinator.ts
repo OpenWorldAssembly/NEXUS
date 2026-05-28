@@ -87,7 +87,7 @@ export type TrustedRuntimeCoordinatorScaffoldDescriptor = {
   notes: string;
 };
 
-export function createTrustedRuntimeCoordinatorResult<TValue>(input: {
+type TrustedRuntimeCoordinatorResultInput<TValue> = {
   coordinator_id: string;
   coordinator_kind: TrustedRuntimeCoordinatorKind;
   value: TValue | null;
@@ -97,7 +97,17 @@ export function createTrustedRuntimeCoordinatorResult<TValue>(input: {
   operation_id?: string | null;
   request_id?: string | null;
   mode?: TrustedRuntimeCoordinatorMode | string | null;
-}): TrustedRuntimeCoordinatorResult<TValue> {
+};
+
+export function createTrustedRuntimeCoordinatorResult(input: TrustedRuntimeCoordinatorResultInput<never> & {
+  value: null;
+}): TrustedRuntimeCoordinatorResult<never>;
+export function createTrustedRuntimeCoordinatorResult<TValue>(
+  input: TrustedRuntimeCoordinatorResultInput<TValue>
+): TrustedRuntimeCoordinatorResult<TValue>;
+export function createTrustedRuntimeCoordinatorResult<TValue>(
+  input: TrustedRuntimeCoordinatorResultInput<TValue>
+): TrustedRuntimeCoordinatorResult<TValue> {
   const issues = [...(input.issues ?? [])];
   const status =
     input.status ??

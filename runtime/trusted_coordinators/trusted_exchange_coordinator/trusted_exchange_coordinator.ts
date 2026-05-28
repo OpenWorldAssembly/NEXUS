@@ -8,12 +8,14 @@ import { runTrustedExchangeOperation } from './trusted_exchange_registry.ts';
 import {
   TRUSTED_EXCHANGE_COORDINATOR_ID,
   type AuditTrustedExchangeReadinessInput,
+  type CommitTrustedImportInput,
   type ExportTrustedPacketSetInput,
   type PlanTrustedImportCommitInput,
   type PlanTrustedMergeInput,
   type PreviewTrustedImportInput,
   type PreviewTrustedRebundleInput,
   type TrustedExchangeExportPacketSet,
+  type TrustedExchangeImportCommit,
   type TrustedExchangeImportCommitPlan,
   type TrustedExchangeImportPreview,
   type TrustedExchangeMergePlan,
@@ -44,6 +46,15 @@ export const trustedExchangeCoordinator = {
   ): Promise<TrustedRuntimeCoordinatorResult<TrustedExchangeImportCommitPlan>> {
     return castPromise(runTrustedExchangeOperation({
       operation: 'plan_import_commit',
+      input,
+    }));
+  },
+
+  commitImport(
+    input: CommitTrustedImportInput
+  ): Promise<TrustedRuntimeCoordinatorResult<TrustedExchangeImportCommit>> {
+    return castPromise(runTrustedExchangeOperation({
+      operation: 'commit_import',
       input,
     }));
   },
@@ -87,6 +98,7 @@ export const trustedExchangeCoordinator = {
   id: typeof TRUSTED_EXCHANGE_COORDINATOR_ID;
   previewImport(input: PreviewTrustedImportInput): Promise<TrustedRuntimeCoordinatorResult<TrustedExchangeImportPreview>>;
   planImportCommit(input: PlanTrustedImportCommitInput): Promise<TrustedRuntimeCoordinatorResult<TrustedExchangeImportCommitPlan>>;
+  commitImport(input: CommitTrustedImportInput): Promise<TrustedRuntimeCoordinatorResult<TrustedExchangeImportCommit>>;
   exportPacketSet(input: ExportTrustedPacketSetInput): Promise<TrustedRuntimeCoordinatorResult<TrustedExchangeExportPacketSet>>;
   planMerge(input: PlanTrustedMergeInput): Promise<TrustedRuntimeCoordinatorResult<TrustedExchangeMergePlan>>;
   previewRebundle(input: PreviewTrustedRebundleInput): Promise<TrustedRuntimeCoordinatorResult<TrustedExchangeRebundlePreview>>;

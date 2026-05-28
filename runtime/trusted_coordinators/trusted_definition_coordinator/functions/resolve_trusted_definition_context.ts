@@ -86,7 +86,7 @@ export function resolveTrustedDefinitionContext(
   if (!listResult.value) {
     return createTrustedRuntimeCoordinatorResult({
       coordinator_id: TRUSTED_DEFINITION_COORDINATOR_ID,
-      coordinator_kind: 'workflow',
+      coordinator_kind: 'definition',
       value: null,
       issues,
       trace,
@@ -103,7 +103,7 @@ export function resolveTrustedDefinitionContext(
   if (!rankResult.value) {
     return createTrustedRuntimeCoordinatorResult({
       coordinator_id: TRUSTED_DEFINITION_COORDINATOR_ID,
-      coordinator_kind: 'workflow',
+      coordinator_kind: 'definition',
       value: null,
       issues,
       trace,
@@ -132,7 +132,7 @@ export function resolveTrustedDefinitionContext(
 
   return createTrustedRuntimeCoordinatorResult({
     coordinator_id: TRUSTED_DEFINITION_COORDINATOR_ID,
-    coordinator_kind: 'workflow',
+    coordinator_kind: 'definition',
     value: {
       context_kind: 'trusted.definition_context',
       context_id: `${input.node_element_id ?? 'local-node'}.${contextMode}.${packetTypeFilters.join('-') || 'all'}`,

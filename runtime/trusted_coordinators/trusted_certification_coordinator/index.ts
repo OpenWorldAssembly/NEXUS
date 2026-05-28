@@ -10,6 +10,7 @@ export type {
   PrepareTrustedCertificationTicketInput,
   PrepareTrustedSignatureRequestsInput,
   TrustedCertificationHashBundle,
+  TrustedCertificationContextMode,
   TrustedCertificationPackage,
   TrustedCertificationReadinessReport,
   TrustedCertificationTicket,

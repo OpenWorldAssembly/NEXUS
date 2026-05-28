@@ -23,7 +23,7 @@ export function resolveTrustedChildPacketPlans(
 
   return createTrustedRuntimeCoordinatorResult({
     coordinator_id: TRUSTED_PLANNING_COORDINATOR_ID,
-    coordinator_kind: 'workflow',
+    coordinator_kind: 'planning',
     value: {
       plan_kind: 'trusted.child_packet_plan_set',
       packet_type: packetType,

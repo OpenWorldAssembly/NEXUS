@@ -3,7 +3,7 @@
  * Description: Internal helpers for Trusted Exchange Coordinator normalization, local archive comparison, traces, and plans.
  */
 
-import { parsePacketEnvelope, type PacketEnvelope, type PacketRef, type PacketRevisionRef } from '@core/schema/packet-schema';
+import { parsePacketEnvelope, type PacketRef, type PacketRevisionRef } from '@core/schema/packet-schema';
 import { trustedArchiveCoordinator } from '@runtime/trusted_coordinators/trusted_archive_coordinator/index.ts';
 import {
   createTrustedTraceEntry,

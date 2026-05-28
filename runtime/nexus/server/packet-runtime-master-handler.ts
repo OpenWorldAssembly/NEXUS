@@ -11,7 +11,7 @@ import {
 } from '@core/packets/packet-definition-manifest';
 import {
   trustedDefinitionCoordinator,
-} from '@runtime/trusted_coordinators/trusted_definition_coordinator';
+} from '@runtime/trusted_coordinators/trusted_definition_coordinator/index.ts';
 import type {
   PacketEnvelopeByType,
 } from '@core/schema/packet-schema';

@@ -52,7 +52,7 @@ export function selectTrustedBuilderDescriptor(
 
   return createTrustedRuntimeCoordinatorResult({
     coordinator_id: TRUSTED_PLANNING_COORDINATOR_ID,
-    coordinator_kind: 'builder',
+    coordinator_kind: 'planning',
     value: {
       selection_kind: 'trusted.builder_selection',
       packet_type: input.definition.packet_type,

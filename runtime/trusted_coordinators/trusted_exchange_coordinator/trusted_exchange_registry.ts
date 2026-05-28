@@ -5,6 +5,7 @@
 
 import type { TrustedRuntimeCoordinatorResult } from '@runtime/trusted_coordinators/trusted_runtime_coordinator';
 import { auditTrustedExchangeReadiness } from './functions/audit_trusted_exchange_readiness.ts';
+import { commitTrustedImport } from './functions/commit_import.ts';
 import { exportTrustedPacketSet } from './functions/export_packet_set.ts';
 import { planTrustedImportCommit } from './functions/plan_import_commit.ts';
 import { planTrustedMerge } from './functions/plan_merge.ts';
@@ -31,6 +32,12 @@ const TRUSTED_EXCHANGE_REGISTRY: Record<
       throw new Error('Invalid Trusted Exchange operation dispatch.');
     }
     return planTrustedImportCommit(request.input);
+  },
+  commit_import: async (request) => {
+    if (request.operation !== 'commit_import') {
+      throw new Error('Invalid Trusted Exchange operation dispatch.');
+    }
+    return commitTrustedImport(request.input);
   },
   export_packet_set: async (request) => {
     if (request.operation !== 'export_packet_set') {

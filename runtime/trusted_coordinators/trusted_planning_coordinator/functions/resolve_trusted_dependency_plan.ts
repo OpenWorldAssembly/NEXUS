@@ -13,7 +13,7 @@ import {
 import {
   resolvePacketWorkflowDryRunPlan,
 } from '@core/packets/packet-workflow-planner.ts';
-import { trustedDefinitionCoordinator } from '@runtime/trusted_coordinators/trusted_definition_coordinator';
+import { trustedDefinitionCoordinator } from '@runtime/trusted_coordinators/trusted_definition_coordinator/index.ts';
 import {
   createTrustedRuntimeCoordinatorResult,
   trustedIssue,
@@ -125,7 +125,7 @@ export function resolveTrustedDependencyPlan(
 
   return createTrustedRuntimeCoordinatorResult({
     coordinator_id: TRUSTED_PLANNING_COORDINATOR_ID,
-    coordinator_kind: 'dependency',
+    coordinator_kind: 'planning',
     value: {
       plan_kind: 'trusted.dependency_plan',
       packet_type: packetType,

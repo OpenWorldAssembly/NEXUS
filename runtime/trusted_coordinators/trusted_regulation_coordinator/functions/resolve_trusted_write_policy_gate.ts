@@ -28,7 +28,7 @@ export function resolveTrustedWritePolicyGate(
 
   return createTrustedRuntimeCoordinatorResult({
     coordinator_id: TRUSTED_REGULATION_COORDINATOR_ID,
-    coordinator_kind: 'policy',
+    coordinator_kind: 'regulation',
     value: {
       gate_kind: 'trusted.write_policy_gate',
       operation_kind: operationKind,

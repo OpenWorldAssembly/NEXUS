@@ -64,7 +64,7 @@ export function rankTrustedDefinitionCandidates(
 
   return createTrustedRuntimeCoordinatorResult({
     coordinator_id: TRUSTED_DEFINITION_COORDINATOR_ID,
-    coordinator_kind: 'workflow',
+    coordinator_kind: 'definition',
     value: ranked,
     issues,
     trace: [

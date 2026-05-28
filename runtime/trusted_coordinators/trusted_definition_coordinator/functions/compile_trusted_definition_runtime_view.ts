@@ -82,7 +82,7 @@ function compileForDefinition(input: {
   if (!regulationResult.value || !planningResult.value || !buildResult.value) {
     return createTrustedRuntimeCoordinatorResult({
       coordinator_id: TRUSTED_DEFINITION_COORDINATOR_ID,
-      coordinator_kind: 'workflow',
+      coordinator_kind: 'definition',
       value: null,
       issues,
       trace: traceEntries,
@@ -134,7 +134,7 @@ function compileForDefinition(input: {
 
   return createTrustedRuntimeCoordinatorResult({
     coordinator_id: TRUSTED_DEFINITION_COORDINATOR_ID,
-    coordinator_kind: 'workflow',
+    coordinator_kind: 'definition',
     value: {
       view_kind: 'trusted.definition_runtime_view',
       packet_type: input.definition.packet_type,
@@ -165,7 +165,7 @@ export function compileTrustedDefinitionRuntimeView(
   if (!definitionResult.value) {
     return createTrustedRuntimeCoordinatorResult({
       coordinator_id: TRUSTED_DEFINITION_COORDINATOR_ID,
-      coordinator_kind: 'workflow',
+      coordinator_kind: 'definition',
       value: null,
       issues: definitionResult.issues,
       trace: definitionResult.trace,
@@ -193,7 +193,7 @@ export function compileTrustedDefinitionRuntimeViews(
   if (!definitionsResult.value) {
     return createTrustedRuntimeCoordinatorResult({
       coordinator_id: TRUSTED_DEFINITION_COORDINATOR_ID,
-      coordinator_kind: 'workflow',
+      coordinator_kind: 'definition',
       value: null,
       issues,
       trace: traceEntries,
@@ -218,7 +218,7 @@ export function compileTrustedDefinitionRuntimeViews(
 
   return createTrustedRuntimeCoordinatorResult({
     coordinator_id: TRUSTED_DEFINITION_COORDINATOR_ID,
-    coordinator_kind: 'workflow',
+    coordinator_kind: 'definition',
     value: {
       view_set_kind: 'trusted.definition_runtime_view_set',
       manifest_version: 'trusted_definition_context.v0',

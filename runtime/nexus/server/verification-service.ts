@@ -25,10 +25,11 @@ import {
   generateP256KeyPair,
   importPrivateKeyFromJwk,
   signPacketWithIdentity,
-  verifyPacketSignatureDetailed,
 } from '@runtime/nexus/identity-crypto';
 import type { NexusPacketVerificationActionPayload } from '@runtime/nexus/nexus-api-types';
 import { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store';
+import { trustedArchiveCoordinator } from '@runtime/trusted_coordinators/trusted_archive_coordinator/index.ts';
+import { trustedVerificationCoordinator } from '@runtime/trusted_coordinators/trusted_verification_coordinator/index.ts';
 
 export interface PacketVerificationAssessment {
   packet_id: string;
@@ -367,14 +368,16 @@ export class NexusPacketVerificationService {
     signerPacket: PacketEnvelope | null;
     compatibilityRead: PacketCompatibilityReadResult;
   }> {
-    const compatibilityRead = await this.packetStore.readByPacket(
-      {
+    const archiveRead = await trustedArchiveCoordinator.readPacket({
+      packet_store: this.packetStore,
+      packet_ref: {
         packet_id: packetId,
       },
-      {
-        mode: 'raw_plus_adaptation',
-      }
-    );
+      mode: 'raw_plus_adaptation',
+      context_mode: 'normal_runtime',
+    });
+    const compatibilityRead =
+      archiveRead.value?.packet as PacketCompatibilityReadResult | null;
 
     if (!compatibilityRead) {
       throw new Error(`Unknown packet: ${packetId}`);
@@ -410,39 +413,34 @@ export class NexusPacketVerificationService {
     compatibilityStatus?: NexusPacketVerificationSummary['compatibility_status'];
     provenanceStatus?: NexusPacketVerificationSummary['provenance_status'];
   }): Promise<PacketVerificationAssessment> {
-    const signature = input.packet.header.integrity.embedded_signatures[0] ?? null;
-    const signerPacket = input.signerPacket ?? null;
-    const warnings: string[] = [];
-    let signatureStatus: NexusPacketVerificationSummary['signature_status'] = 'missing';
-    let signerStatus: NexusPacketVerificationSummary['signer_status'] = 'missing';
-
-    if (!signature) {
-      warnings.push('Packet does not include an embedded signature.');
-    } else if (!signerPacket) {
-      signatureStatus = 'unverifiable';
-      signerStatus = 'unknown';
-      warnings.push('Signer packet is not available locally, so the signature is not verifiable on this node.');
-    } else {
-      const verification = await verifyPacketSignatureDetailed({
-        packet: input.rawPacket ?? input.packet,
-        signerPacket,
-      });
-
-      signerStatus = 'known';
-      if (!verification.isValid) {
-        signatureStatus =
-          verification.failureKind === 'canonicalization_mismatch'
-            ? 'canonicalization_mismatch'
-            : 'invalid';
-        warnings.push(
-          verification.failureKind === 'canonicalization_mismatch'
-            ? 'Canonicalization mismatch detected during signature verification.'
-            : 'Embedded signature did not verify against the signer packet.'
-        );
-      } else {
-        signatureStatus = 'valid';
-      }
-    }
+    const verificationResult = await trustedVerificationCoordinator.verifyPacket({
+      packet_store: this.packetStore,
+      raw_packet: input.rawPacket,
+      packet: input.packet,
+      signer_packet: input.signerPacket ?? null,
+      verification_mode: 'advisory',
+      context_mode: 'normal_runtime',
+    });
+    const verification = verificationResult.value;
+    const warnings = verification
+      ? [...verification.warnings]
+      : verificationResult.issues.map((issue) => issue.message);
+    const signatureStatus: NexusPacketVerificationSummary['signature_status'] =
+      verification?.signature_status === 'valid' ||
+      verification?.signature_status === 'missing' ||
+      verification?.signature_status === 'unverifiable' ||
+      verification?.signature_status === 'invalid' ||
+      verification?.signature_status === 'canonicalization_mismatch'
+        ? verification.signature_status
+        : verification?.signature_status === 'unknown'
+          ? 'unverifiable'
+          : 'missing';
+    const signerStatus: NexusPacketVerificationSummary['signer_status'] =
+      verification?.signer_status === 'known' ||
+      verification?.signer_status === 'missing' ||
+      verification?.signer_status === 'unknown'
+        ? verification.signer_status
+        : 'unknown';
 
     const status = createAssessmentStatus({
       signatureStatus,
@@ -461,7 +459,7 @@ export class NexusPacketVerificationService {
       local_trust_status: 'unknown',
       status,
       warnings,
-      signer_packet_id: signerPacket?.header.packet_id ?? null,
+      signer_packet_id: input.signerPacket?.header.packet_id ?? null,
     };
   }
 

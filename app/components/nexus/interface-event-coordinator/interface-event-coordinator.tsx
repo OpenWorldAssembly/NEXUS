@@ -19,6 +19,7 @@ import type {
   InterfaceEventEnvelope,
   InterfaceEventRunInput,
   InterfaceEventRunResult,
+  InterfaceEventStatus,
 } from './interface-event-types';
 
 type InterfaceEventCoordinatorContextValue = {

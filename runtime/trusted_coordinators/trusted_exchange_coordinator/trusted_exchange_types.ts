@@ -5,7 +5,10 @@
 
 import type { PacketEnvelope, PacketRef, PacketRevisionRef, PacketType } from '@core/schema/packet-schema';
 import type { PacketStore } from '@core/contracts';
-import type { TrustedArchiveBundleExport } from '@runtime/trusted_coordinators/trusted_archive_coordinator/index.ts';
+import type {
+  TrustedArchiveBundleExport,
+  TrustedArchiveBundleImport,
+} from '@runtime/trusted_coordinators/trusted_archive_coordinator/index.ts';
 import type { TrustedCompatibilityReadResult } from '@runtime/trusted_coordinators/trusted_compatibility_coordinator/index.ts';
 import type {
   TrustedVerificationMode,
@@ -143,6 +146,17 @@ export type TrustedExchangeImportCommitPlan = {
   items: TrustedExchangeImportCommitPlanItem[];
 };
 
+export type TrustedExchangeImportCommit = {
+  result_kind: 'trusted.exchange_import_commit';
+  source_label: string | null;
+  import_result: TrustedArchiveBundleImport | null;
+  plan: TrustedExchangeImportCommitPlan | null;
+  imported_revision_count: number;
+  skipped_duplicate_count: number;
+  warnings: string[];
+  blockers: string[];
+};
+
 export type TrustedExchangeExportManifest = {
   manifest_kind: 'trusted.exchange_export_manifest';
   exported_at: string;
@@ -241,6 +255,13 @@ export type PlanTrustedImportCommitInput = BaseTrustedExchangeInput & {
   options?: TrustedExchangeImportPreviewOptions;
 };
 
+export type CommitTrustedImportInput = BaseTrustedExchangeInput & {
+  source_label?: string | null;
+  preview?: TrustedExchangeImportPreview | null;
+  bundle: Uint8Array | ArrayBuffer | string;
+  options?: TrustedExchangeImportPreviewOptions;
+};
+
 export type ExportTrustedPacketSetInput = BaseTrustedExchangeInput & {
   root_refs: PacketRef[];
   options?: {
@@ -270,6 +291,7 @@ export type AuditTrustedExchangeReadinessInput = BaseTrustedExchangeInput;
 export type TrustedExchangeOperation =
   | 'preview_import'
   | 'plan_import_commit'
+  | 'commit_import'
   | 'export_packet_set'
   | 'plan_merge'
   | 'preview_rebundle'
@@ -283,6 +305,10 @@ export type TrustedExchangeCoordinatorRequest =
   | {
       operation: 'plan_import_commit';
       input: PlanTrustedImportCommitInput;
+    }
+  | {
+      operation: 'commit_import';
+      input: CommitTrustedImportInput;
     }
   | {
       operation: 'export_packet_set';

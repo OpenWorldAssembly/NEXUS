@@ -6,6 +6,7 @@
 import type { TrustedRuntimeCoordinatorResult } from '@runtime/trusted_coordinators/trusted_runtime_coordinator';
 import { auditTrustedArchiveReadiness } from './functions/audit_trusted_archive_readiness.ts';
 import { exportTrustedArchiveBundle } from './functions/export_archive_bundle.ts';
+import { importTrustedArchiveBundle } from './functions/import_archive_bundle.ts';
 import { queryTrustedArchiveEdges } from './functions/query_packet_edges.ts';
 import { queryTrustedArchivedPackets } from './functions/query_archived_packets.ts';
 import { readTrustedArchivedPacket } from './functions/read_archived_packet.ts';
@@ -51,6 +52,12 @@ const TRUSTED_ARCHIVE_REGISTRY: Record<TrustedArchiveCoordinatorRequest['operati
       throw new Error('Invalid Trusted Archive operation dispatch.');
     }
     return exportTrustedArchiveBundle(request.input);
+  },
+  import_bundle: (request) => {
+    if (request.operation !== 'import_bundle') {
+      throw new Error('Invalid Trusted Archive operation dispatch.');
+    }
+    return importTrustedArchiveBundle(request.input);
   },
   audit_readiness: (request) => {
     if (request.operation !== 'audit_readiness') {

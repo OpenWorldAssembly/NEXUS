@@ -10,12 +10,14 @@ import {
   TRUSTED_ARCHIVE_COORDINATOR_ID,
   type AuditTrustedArchiveReadinessInput,
   type ExportTrustedArchiveBundleInput,
+  type ImportTrustedArchiveBundleInput,
   type QueryTrustedArchivedPacketsInput,
   type QueryTrustedArchiveEdgesInput,
   type ReadTrustedArchivedPacketInput,
   type ResolveTrustedArchivedRevisionInput,
   type StoreTrustedCertifiedPacketSetInput,
   type TrustedArchiveBundleExport,
+  type TrustedArchiveBundleImport,
   type TrustedArchiveEdgeResult,
   type TrustedArchiveQueryResult,
   type TrustedArchiveReadinessReport,
@@ -47,7 +49,7 @@ export const trustedArchiveCoordinator = {
   ): Promise<TrustedRuntimeCoordinatorResult<TrustedArchiveReadResult<TMode>>> =>
     castPromise(runTrustedArchiveOperation({
       operation: 'read_packet',
-      input,
+      input: input as ReadTrustedArchivedPacketInput,
     })),
 
   queryPackets(
@@ -86,6 +88,15 @@ export const trustedArchiveCoordinator = {
     }));
   },
 
+  importBundle(
+    input: ImportTrustedArchiveBundleInput
+  ): Promise<TrustedRuntimeCoordinatorResult<TrustedArchiveBundleImport>> {
+    return castPromise(runTrustedArchiveOperation({
+      operation: 'import_bundle',
+      input,
+    }));
+  },
+
   auditReadiness(
     input?: AuditTrustedArchiveReadinessInput
   ): Promise<TrustedRuntimeCoordinatorResult<TrustedArchiveReadinessReport>> {
@@ -102,5 +113,6 @@ export const trustedArchiveCoordinator = {
   resolveRevision(input: ResolveTrustedArchivedRevisionInput): Promise<TrustedRuntimeCoordinatorResult<TrustedArchiveRevisionResolution>>;
   queryEdges(input: QueryTrustedArchiveEdgesInput): Promise<TrustedRuntimeCoordinatorResult<TrustedArchiveEdgeResult>>;
   exportBundle(input: ExportTrustedArchiveBundleInput): Promise<TrustedRuntimeCoordinatorResult<TrustedArchiveBundleExport>>;
+  importBundle(input: ImportTrustedArchiveBundleInput): Promise<TrustedRuntimeCoordinatorResult<TrustedArchiveBundleImport>>;
   auditReadiness(input?: AuditTrustedArchiveReadinessInput): Promise<TrustedRuntimeCoordinatorResult<TrustedArchiveReadinessReport>>;
 };
