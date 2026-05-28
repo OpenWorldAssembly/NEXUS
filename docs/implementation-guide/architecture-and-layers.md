@@ -59,6 +59,26 @@ The active repo split is:
 - `app/*` for Event Cockpit components, hooks, constants, public content, reusable UI, and shared state
 - `src/app/*` for the Expo Router route shell and API entrypoints
 
+The runtime folder is now organized around stable ownership zones:
+
+- `runtime/trusted_coordinators/*` owns trusted orchestration front doors, result envelopes, process chains, and coordinator audits
+- `runtime/storage/*` owns concrete persistence adapters and storage schemas
+- `runtime/nexus/server/*` owns API-facing Nexus runtime services grouped by bounded context
+
+The `runtime/nexus/server` bounded-context map is:
+
+- `identity/*` for auth, passkeys, shell auth context, and identity search
+- `discussion/*` for discussion projection and discussion surface helpers
+- `reaction/*` for reaction and vote projection/services
+- `locality/*` for locality directory, graph planning, and location search
+- `scope/*` for scope graph, scope compatibility, parent resolution, and display preferences
+- `packet-explorer/*` for Explorer import/export/search/data services
+- `fortress/*` for signed mutation prepare/finalize corridor work as later passes migrate it
+- `readiness/*` for modernization and pre-reseed readiness reports
+- `shared/*` for small server helpers used across bounded contexts
+
+Top-level files in `runtime/nexus/server` may remain as temporary compatibility bridges during migration. New implementation code should prefer the bounded-context folders once a module has moved.
+
 ## Documentation system
 
 The multi-chapter internal docs now use a chapter-first source-of-truth model.

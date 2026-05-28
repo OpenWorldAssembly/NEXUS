@@ -125,6 +125,14 @@ Process chains preserve partial-work posture without imposing one rollback law o
 
 Report packets remain optional. The runtime can create a compact trusted process report draft from a chain, but v1 does not write or sign those report packets automatically. Future server-wide and Interface Event Coordinator adoption should consume the same chain and taxonomy helpers rather than inventing surface-specific error handling.
 
+## Runtime Cleanup And Bounded Contexts
+
+The trusted coordinator layer is structurally complete enough that runtime cleanup now shifts from inventing new coordinator seams to making the server runtime map intuitive. `runtime/nexus/server/*` is moving from one flat folder into bounded-context homes for identity, discussion, reaction, locality, scope, Packet Explorer, fortress mutation flow, readiness reports, and small shared helpers.
+
+The first cleanup pass is intentionally move-first and split-later. Moved implementation files keep behavior intact and old top-level paths remain as compatibility bridges so API routes, tests, and service callers can migrate gradually. Large services such as discussion, auth, query data, reaction, and locality directory should be split by responsibility only after their bounded-context home is established.
+
+Runtime cleanup should continue to tighten crossings through the trusted coordinator front doors. Archive remains the storage access seam, Compatibility remains the schema-version seam, Verification remains the legitimacy/signature seam, Exchange remains the packet movement seam, Projection remains the UI read-model seam, and Dispatch remains the request intake seam. Warnings are acceptable while older service callers migrate; newly cleaned seams should gain audit coverage so direct storage/signature/compatibility/projection bypasses do not reappear.
+
 ## Trusted Planning Coordinator Pass
 
 The Trusted Planning Coordinator is now the runtime middleman for operation planning. It exposes gated methods for resolving operation plans, default plans, dependency plans, builder descriptor selection, child packet plan seams, and planning readiness audits. Defaults and dependencies moved out of the Trusted Regulation Coordinator because they are construction-planning inputs, not policy enforcement by themselves.

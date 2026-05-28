@@ -333,3 +333,10 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - The trusted issue taxonomy uses canonical dotted codes while mapping older underscore codes as aliases, giving reports and future interface handling stable error categories.
 - Archive and Exchange are the first deeper adopters: Archive records partial write progress, failed/skipped work, and preserved partial results; Exchange chains preview/plan/commit/export stages and child Archive results.
 - Report packet persistence is intentionally deferred. V1 only provides a process report draft helper so later Certification/Archive/report flows can choose when to sign and store diagnostics.
+
+## 2026-05 Runtime cleanup bounded-context foundation
+
+- Runtime cleanup began after the major trusted coordinator seams stabilized, with `runtime/nexus/server/*` moving toward bounded-context folders instead of one flat service directory.
+- Identity, discussion, reaction, locality, scope, Packet Explorer, readiness, and shared helper modules now have canonical homes with top-level compatibility bridges preserved for existing callers.
+- Fortress mutation flow has a reserved bounded-context home, but signed corridor files remain top-level until a dedicated behavior-preserving move can keep the ticket/signing path easy to verify.
+- The rule for this chapter is move-first and split-later: large services keep behavior intact now, then decompose by responsibility inside their bounded-context folders in later passes.
