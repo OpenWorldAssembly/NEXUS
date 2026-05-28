@@ -149,6 +149,7 @@ export function certifyTrustedSignedTicket(
     source_plan_id: stored.plan.plan_id,
     hashes: stored.ticket.hashes,
     candidate_graph: stored.build_result.candidate_graph,
+    certified_packet_keys: stored.ticket.expected_packets.map((packet) => `${packet.packet_id}:${packet.revision_id}`),
     archive_ready: blockers.length === 0,
     blockers,
     warnings,

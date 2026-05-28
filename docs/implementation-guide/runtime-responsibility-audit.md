@@ -135,6 +135,24 @@ Not candidates for imported executable definition logic:
 | fortress/mutation corridor | Dispatch-owned coordinator chain | remove legacy route authority; close Certification/Archive readiness gaps |
 | verification service | Verification wrapper plus report Certification/Archive handoff | keep assessment wrapper, isolate report-writing surface |
 
+## Running cleanup tab
+
+Use this as the short check-off ledger so the same issues do not have to be rediscovered by later audits.
+
+| Item | Status | Notes |
+| --- | --- | --- |
+| Trusted coordinator scaffold/test scripts | Done | `audit:trusted-coordinators`, `test:trusted-coordinators`, and `check:trusted-coordinators` are package-level entrypoints. |
+| Empty Write Coordinator remnant | Done | Removed; writes remain Dispatch-owned. |
+| Exchange commit accepted-entry narrowing | Done | Commit bundles are narrowed to accepted plan entries and compare Archive import receipts against the Exchange plan. |
+| Dispatch finalize raw signed-material handoff | Done | Finalize routes no longer parse signed packets before Dispatch; Verification receives raw signed packet material. |
+| Certification/Verification/Archive key continuity | Done | Certification records certified packet revision keys; Dispatch compares Certification against Verification and Archive; Archive blocks mismatched extracted envelopes. |
+| Mutation intent label authority | Done | Dispatch derives finalized kind from the certified plan and rejects mismatched caller labels. |
+| Resolution foldering | Open | Still the expected legacy-flat warning in the trusted coordinator scaffold audit. |
+| Direct storage/signature/interpreter runtime crossings | Open | Still tracked as non-failing audit notes; migrate one bounded context at a time. |
+| Projection adoption | Open | Packet Explorer data, `nexus-query-data`, discussion/reaction/scope read models remain the biggest migration lane. |
+| Legacy fortress corridor removal | Open | `relation.follow.add` uses the new Dispatch chain; other live mutation intents still need equivalent coordinator-backed materialization and finalization. |
+| OWA adapter/profile split | Open | Discussion, reaction, locality, and scope still mix generic runtime with OWA product behavior. |
+
 ## Recommended migration order
 
 1. Keep route-facing write lifecycle under Dispatch and remove legacy fortress concepts instead of wrapping them.

@@ -5,7 +5,7 @@
 
 import { randomUUID } from 'node:crypto';
 
-import type { PacketEnvelope } from '@core/schema/packet-schema';
+import { parsePacketEnvelope, type PacketEnvelope } from '@core/schema/packet-schema';
 import {
   createTrustedRuntimeCoordinatorResult,
   trustedIssue,
@@ -25,6 +25,10 @@ import {
 
 function signedPacketSignerRef(packet: PacketEnvelope): string | null {
   return packet.header.integrity.embedded_signatures[0]?.signer_packet_ref?.packet_id ?? null;
+}
+
+function signedPacketKey(packet: PacketEnvelope): string {
+  return `${packet.header.packet_id}:${packet.header.revision_id}`;
 }
 
 export function certifyTrustedSignedPacketBundle(
@@ -65,22 +69,49 @@ export function certifyTrustedSignedPacketBundle(
   }
 
   const expectedPackets = stored.ticket.expected_packets;
+  const signedPackets: PacketEnvelope[] = [];
 
-  if (expectedPackets.length !== input.signed_packets.length) {
+  for (const [index, rawPacket] of input.signed_packets.entries()) {
+    try {
+      signedPackets.push(parsePacketEnvelope(rawPacket));
+    } catch (error) {
+      issues.push(trustedIssue({
+        severity: 'error',
+        code: 'certification.signed_packet_structural_invalid',
+        path: `signed_packets.${index}`,
+        message: error instanceof Error
+          ? error.message
+          : 'Signed packet could not be parsed for certification.',
+      }));
+    }
+  }
+
+  if (expectedPackets.length !== signedPackets.length) {
     issues.push(trustedIssue({
       severity: 'error',
       code: 'certification.signed_packet_count_mismatch',
       path: 'signed_packets',
-      message: `Certification expected ${expectedPackets.length} signed packet(s), but received ${input.signed_packets.length}.`,
+      message: `Certification expected ${expectedPackets.length} signed packet(s), but received ${signedPackets.length}.`,
     }));
   }
 
-  const signedPacketsByKey = new Map(
-    input.signed_packets.map((packet) => [
-      `${packet.header.packet_id}:${packet.header.revision_id}`,
-      packet,
-    ])
-  );
+  const signedPacketsByKey = new Map<string, PacketEnvelope>();
+
+  for (const packet of signedPackets) {
+    const key = signedPacketKey(packet);
+
+    if (signedPacketsByKey.has(key)) {
+      issues.push(trustedIssue({
+        severity: 'error',
+        code: 'certification.duplicate_signed_packet',
+        path: `signed_packets.${key}`,
+        message: `Signed packet bundle contains duplicate packet revision ${key}.`,
+      }));
+      continue;
+    }
+
+    signedPacketsByKey.set(key, packet);
+  }
 
   for (const expectedPacket of expectedPackets) {
     const key = `${expectedPacket.packet_id}:${expectedPacket.revision_id}`;
@@ -137,15 +168,21 @@ export function certifyTrustedSignedPacketBundle(
     ...(stored.build_result.warnings ?? []),
     ...(stored.inspection_report.warnings ?? []),
   ];
-  const packetById = new Map(input.signed_packets.map((packet) => [packet.header.packet_id, packet]));
+  const expectedPacketKeys = expectedPackets.map((packet) => `${packet.packet_id}:${packet.revision_id}`);
   const candidateGraph = {
     ...stored.build_result.candidate_graph,
-    candidate_nodes: stored.build_result.candidate_graph.candidate_nodes.map((node) => ({
-      ...node,
-      packet_envelope: node.packet_envelope
-        ? packetById.get(node.packet_envelope.header.packet_id) ?? node.packet_envelope
-        : node.packet_envelope,
-    })),
+    candidate_nodes: stored.build_result.candidate_graph.candidate_nodes.map((node) => {
+      const packetKey = node.packet_envelope
+        ? signedPacketKey(node.packet_envelope)
+        : null;
+
+      return {
+        ...node,
+        packet_envelope: packetKey
+          ? signedPacketsByKey.get(packetKey) ?? node.packet_envelope
+          : node.packet_envelope,
+      };
+    }),
   };
   const archiveReady = blockers.length === 0 && !issues.some((issue) => issue.severity === 'error');
   const certified: TrustedCertifiedPacketSet = {
@@ -153,10 +190,11 @@ export function certifyTrustedSignedPacketBundle(
     certification_id: `trusted-certification-${randomUUID()}`,
     ticket_id: stored.ticket.ticket_id,
     certified_at: new Date().toISOString(),
-    signer_ref: stored.ticket.required_signer_ref ?? (input.signed_packets[0] ? signedPacketSignerRef(input.signed_packets[0]) : null) ?? 'unknown',
+    signer_ref: stored.ticket.required_signer_ref ?? (signedPackets[0] ? signedPacketSignerRef(signedPackets[0]) : null) ?? 'unknown',
     source_plan_id: stored.plan.plan_id,
     hashes: stored.ticket.hashes,
     candidate_graph: candidateGraph,
+    certified_packet_keys: archiveReady ? expectedPacketKeys : [],
     archive_ready: archiveReady,
     blockers,
     warnings,

@@ -371,3 +371,11 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - Verification and compatibility risk acknowledgements are explicit commit inputs. Packet Explorer currently treats an approved commit from its preview flow as acknowledgement so existing UI behavior is preserved.
 - Exchange commit receipts now expose planned, archived, skipped, imported, missing, and unexpected revision-key counts/lists so Archive import results can be compared against the Exchange plan.
 - The trusted issue taxonomy gained Exchange archive-import mismatch/failure aliases so coordinator audits fail if future code invents unregistered runtime issue codes.
+
+## 2026-05 Dispatch finalize certification/verification hardening
+
+- `/api/nexus/mutations/finalize` now passes submitted signed packet material through to Dispatch without route-level packet-envelope parsing, preserving the raw signed material for Trusted Verification.
+- Certification accepts the signed bundle shape, parses internally for ticket/digest/type/signer matching, rejects duplicate packet revision keys, and records the exact certified packet revision keys on the certified packet set.
+- Dispatch now verifies the raw signed packets through Trusted Verification, compares verified packet revision keys against Certification before Archive, derives the finalized mutation kind from the certified plan, and rejects mismatched caller-supplied intent labels.
+- Archive now requires certified packet revision keys and checks that extracted archive-ready envelopes match those keys before any write, so Archive stores only the certified packet set.
+- The trusted issue taxonomy gained canonical entries for certified-key and finalize mismatch blockers so audit remains fail-closed for invented issue codes.

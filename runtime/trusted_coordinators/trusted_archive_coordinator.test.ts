@@ -81,6 +81,7 @@ test('trusted archive records partial write progress without claiming rollback',
         candidate_graph_hash: 'graph',
         payload_hash: 'payload',
       },
+      certified_packet_keys: [`${first.header.packet_id}:${first.header.revision_id}`, `${second.header.packet_id}:${second.header.revision_id}`],
       candidate_graph: {
         graph_kind: 'trusted.packet_candidate_graph',
         source_plan_id: 'plan:test',

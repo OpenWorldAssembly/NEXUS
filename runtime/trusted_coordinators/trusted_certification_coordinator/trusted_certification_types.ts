@@ -102,6 +102,7 @@ export type TrustedCertifiedPacketSet = {
   source_plan_id: string | null;
   hashes: TrustedCertificationHashBundle;
   candidate_graph: TrustedPacketCandidateGraph;
+  certified_packet_keys: string[];
   archive_ready: boolean;
   blockers: string[];
   warnings: string[];
@@ -146,7 +147,7 @@ export type CertifyTrustedSignedTicketInput = {
 
 export type CertifyTrustedSignedPacketBundleInput = {
   ticket_id: string;
-  signed_packets: PacketEnvelope[];
+  signed_packets: unknown[];
   signer_packet?: PacketEnvelope | null;
   context_mode?: TrustedCertificationContextMode;
 };

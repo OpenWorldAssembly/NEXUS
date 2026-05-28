@@ -32,6 +32,26 @@ import {
   type TrustedArchiveReceipt,
 } from '../trusted_archive_types.ts';
 
+
+function packetRevisionKey(input: {
+  packet_id?: string | null;
+  revision_id?: string | null;
+}): string | null {
+  return input.packet_id && input.revision_id
+    ? `${input.packet_id}:${input.revision_id}`
+    : null;
+}
+
+function sortedUniqueKeys(values: readonly (string | null | undefined)[]): string[] {
+  return Array.from(new Set(values.filter((value): value is string => Boolean(value))))
+    .sort((left, right) => left.localeCompare(right));
+}
+
+function diffKeys(left: readonly string[], right: readonly string[]): string[] {
+  const rightSet = new Set(right);
+  return left.filter((value) => !rightSet.has(value));
+}
+
 export async function storeTrustedCertifiedPacketSet(
   input: StoreTrustedCertifiedPacketSetInput
 ): Promise<TrustedRuntimeCoordinatorResult<TrustedArchiveReceipt>> {
@@ -71,6 +91,36 @@ export async function storeTrustedCertifiedPacketSet(
       code: 'trusted_archive_no_packet_envelopes',
       path: 'certified_packet_set.candidate_graph.candidate_nodes',
       message: 'Trusted Archive needs full packet envelopes before it can write revisions. Current Building candidates only expose body candidates for some flows.',
+    }));
+  }
+
+  const certifiedPacketKeys = sortedUniqueKeys(input.certified_packet_set.certified_packet_keys);
+  const extractedPacketKeys = sortedUniqueKeys(extraction.packets.map((packet) =>
+    packetRevisionKey({
+      packet_id: packet.header.packet_id,
+      revision_id: packet.header.revision_id,
+    })
+  ));
+  const missingCertifiedKeys = diffKeys(certifiedPacketKeys, extractedPacketKeys);
+  const unexpectedExtractedKeys = diffKeys(extractedPacketKeys, certifiedPacketKeys);
+
+  if (certifiedPacketKeys.length === 0) {
+    blockers.push('Certified packet set did not declare any certified packet revision keys.');
+    issues.push(archiveIssue({
+      severity: 'error',
+      code: 'trusted_archive_certified_keys_missing',
+      path: 'certified_packet_set.certified_packet_keys',
+      message: 'Trusted Archive requires certified packet revision keys so it can prove it is storing exactly the certified set.',
+    }));
+  }
+
+  if (missingCertifiedKeys.length > 0 || unexpectedExtractedKeys.length > 0) {
+    blockers.push('Certified packet keys do not match extracted archive packet envelopes.');
+    issues.push(archiveIssue({
+      severity: 'error',
+      code: 'trusted_archive_certified_packet_key_mismatch',
+      path: 'certified_packet_set.candidate_graph.candidate_nodes',
+      message: `Archive extraction did not match certified packet keys. Missing certified keys: ${missingCertifiedKeys.join(', ') || 'none'}; unexpected extracted keys: ${unexpectedExtractedKeys.join(', ') || 'none'}.`,
     }));
   }
 

@@ -107,6 +107,56 @@ function mutationKindFromPlanId(planId: string | null): string {
   return planId.replace(/\.workflow\.v\d+$/, '');
 }
 
+function packetRevisionKey(input: {
+  packet_id?: string | null;
+  revision_id?: string | null;
+}): string | null {
+  return input.packet_id && input.revision_id
+    ? `${input.packet_id}:${input.revision_id}`
+    : null;
+}
+
+function sortedUniqueKeys(values: readonly (string | null | undefined)[]): string[] {
+  return Array.from(new Set(values.filter((value): value is string => Boolean(value))))
+    .sort((left, right) => left.localeCompare(right));
+}
+
+function diffKeys(left: readonly string[], right: readonly string[]): string[] {
+  const rightSet = new Set(right);
+  return left.filter((value) => !rightSet.has(value));
+}
+
+function verificationPacketKeys(report: {
+  packet_results: readonly {
+    packet_ref: { packet_id: string } | null;
+    revision_ref: { revision_id: string } | null;
+    overall_status: string;
+  }[];
+}): string[] {
+  return sortedUniqueKeys(
+    report.packet_results
+      .filter((result) => result.overall_status === 'passed' || result.overall_status === 'warning')
+      .map((result) => packetRevisionKey({
+        packet_id: result.packet_ref?.packet_id,
+        revision_id: result.revision_ref?.revision_id,
+      }))
+  );
+}
+
+function archiveWriteKeys(receipt: {
+  writes: readonly {
+    packet_ref: { packet_id: string };
+    revision_ref: { revision_id: string };
+  }[];
+}): string[] {
+  return sortedUniqueKeys(
+    receipt.writes.map((write) => packetRevisionKey({
+      packet_id: write.packet_ref.packet_id,
+      revision_id: write.revision_ref.revision_id,
+    }))
+  );
+}
+
 function planningHintsForMutationIntent(intentKind: string): {
   packet_type?: string;
   packet_subtype?: string;
@@ -472,9 +522,10 @@ export const trustedDispatchCoordinator = {
       });
     }
 
+    const rawSignedPackets = input.request.signed_packets;
     const certification = trustedCertificationCoordinator.certifySignedPacketBundle({
       ticket_id: input.request.ticket_id,
-      signed_packets: input.request.signed_packets,
+      signed_packets: rawSignedPackets,
       signer_packet: input.actor_packet,
     });
 
@@ -493,8 +544,9 @@ export const trustedDispatchCoordinator = {
     }
 
     const verification = await trustedVerificationCoordinator.verifyPacketBatch({
-      packets: input.request.signed_packets.map((packet) => ({
-        packet,
+      packets: rawSignedPackets.map((packet, index) => ({
+        entry_id: `signed_packets.${index}`,
+        raw_packet: packet,
         signer_packet: input.actor_packet,
       })),
       signer_packets: [input.actor_packet],
@@ -509,6 +561,41 @@ export const trustedDispatchCoordinator = {
         issue_message:
           verification.issues[0]?.message ??
           'Verification rejected the signed packet bundle for this ticket.',
+        request_id: request.value.request_id,
+        operation_id: input.request.ticket_id,
+        child_results: [request, certification, verification],
+      });
+    }
+
+    const certifiedPacketKeys = sortedUniqueKeys(certification.value.certified_packet_keys);
+    const verifiedPacketKeys = verificationPacketKeys(verification.value);
+    const missingFromVerification = diffKeys(certifiedPacketKeys, verifiedPacketKeys);
+    const unexpectedVerificationKeys = diffKeys(verifiedPacketKeys, certifiedPacketKeys);
+
+    if (missingFromVerification.length > 0 || unexpectedVerificationKeys.length > 0) {
+      return blockedDispatchResult({
+        operation_name: 'finalize_enrolled_mutation_write',
+        issue_code: 'dispatch.verified_certified_packet_mismatch',
+        issue_path: 'dispatch.finalize.verification',
+        issue_message: `Verification packet keys did not match Certification packet keys. Missing from Verification: ${missingFromVerification.join(', ') || 'none'}; unexpected from Verification: ${unexpectedVerificationKeys.join(', ') || 'none'}.`,
+        request_id: request.value.request_id,
+        operation_id: input.request.ticket_id,
+        child_results: [request, certification, verification],
+      });
+    }
+
+    const certifiedMutationKind = mutationKindFromPlanId(certification.value.source_plan_id);
+
+    if (
+      input.mutation_intent &&
+      certifiedMutationKind !== 'unknown' &&
+      input.mutation_intent !== certifiedMutationKind
+    ) {
+      return blockedDispatchResult({
+        operation_name: 'finalize_enrolled_mutation_write',
+        issue_code: 'dispatch.mutation_intent_mismatch',
+        issue_path: 'dispatch.finalize.mutation_intent',
+        issue_message: `Finalize mutation intent ${input.mutation_intent} does not match certification plan ${certifiedMutationKind}.`,
         request_id: request.value.request_id,
         operation_id: input.request.ticket_id,
         child_results: [request, certification, verification],
@@ -534,11 +621,27 @@ export const trustedDispatchCoordinator = {
       });
     }
 
+    const archivedPacketKeys = archiveWriteKeys(archive.value);
+    const missingFromArchive = diffKeys(certifiedPacketKeys, archivedPacketKeys);
+    const unexpectedArchiveKeys = diffKeys(archivedPacketKeys, certifiedPacketKeys);
+
+    if (missingFromArchive.length > 0 || unexpectedArchiveKeys.length > 0) {
+      return blockedDispatchResult({
+        operation_name: 'finalize_enrolled_mutation_write',
+        issue_code: 'dispatch.archive_certified_packet_mismatch',
+        issue_path: 'dispatch.finalize.archive',
+        issue_message: `Archive write keys did not match Certification packet keys. Missing from Archive: ${missingFromArchive.join(', ') || 'none'}; unexpected from Archive: ${unexpectedArchiveKeys.join(', ') || 'none'}.`,
+        request_id: request.value.request_id,
+        operation_id: input.request.ticket_id,
+        child_results: [request, certification, verification, archive],
+      });
+    }
+
     return createTrustedRuntimeCoordinatorResult({
       coordinator_id: TRUSTED_DISPATCH_COORDINATOR_ID,
       coordinator_kind: 'dispatch',
       value: {
-        kind: (input.mutation_intent ?? mutationKindFromPlanId(certification.value.source_plan_id)) as TrustedDispatchFinalizedMutationResult['kind'],
+        kind: certifiedMutationKind as TrustedDispatchFinalizedMutationResult['kind'],
         persist_effects: archive.value.writes.map((write) => ({
           packet: {
             packet_id: write.packet_ref.packet_id,

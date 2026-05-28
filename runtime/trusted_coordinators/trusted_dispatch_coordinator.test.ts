@@ -29,6 +29,7 @@ const actorPacket = {
 function createMemoryPacketStore(seedPackets: PacketEnvelopeByType[keyof PacketEnvelopeByType][] = []) {
   const packets = new Map(seedPackets.map((packet) => [packet.header.packet_id, packet]));
   const writes: { packet_id: string; revision_id: string }[] = [];
+  const writtenPackets: PacketEnvelopeByType[keyof PacketEnvelopeByType][] = [];
 
   return {
     writes,
@@ -38,6 +39,7 @@ function createMemoryPacketStore(seedPackets: PacketEnvelopeByType[keyof PacketE
       },
       async writeRevision(packet: PacketEnvelopeByType[keyof PacketEnvelopeByType]) {
         packets.set(packet.header.packet_id, packet);
+        writtenPackets.push(packet);
         const revision = {
           packet_id: packet.header.packet_id,
           revision_id: packet.header.revision_id,
@@ -122,6 +124,7 @@ function createMemoryPacketStore(seedPackets: PacketEnvelopeByType[keyof PacketE
       },
       async writePacketVerificationSummary() {},
     } as PacketStore,
+    writtenPackets,
   };
 }
 
@@ -187,7 +190,7 @@ test('dispatch-owned write pipeline prepares and finalizes relation.follow.add',
     subtype: 'assembly',
     locality_label: 'Dispatch Target Scope',
   });
-  const { store, writes } = createMemoryPacketStore([actor, targetScope]);
+  const { store, writes, writtenPackets } = createMemoryPacketStore([actor, targetScope]);
   const prepareResult = await trustedDispatchCoordinator.prepareEnrolledMutationWrite({
     source_route: '/api/nexus/mutations/prepare',
     client_intent_id: 'scope.follow.set',
@@ -244,6 +247,59 @@ test('dispatch-owned write pipeline prepares and finalizes relation.follow.add',
     true
   );
   assert.equal(writes.length, 1);
+  assert.equal(writtenPackets[0]?.header.packet_id, signedPacket.header.packet_id);
+  assert.equal(writtenPackets[0]?.header.revision_id, signedPacket.header.revision_id);
+  assert.equal(writtenPackets[0]?.header.integrity.embedded_signatures.length, 1);
+});
+
+test('dispatch-owned finalize rejects mutation intent labels that do not match the certification plan', async () => {
+  const { actor, keyPair, keyBinding } = await createSignedActor();
+  const targetScope = createAssemblyPacket({
+    packet_id: 'nexus:element/dispatch-mismatch-target-scope',
+    created_at: '2026-05-28T12:03:00.000Z',
+    name: 'Dispatch Mismatch Target Scope',
+    subtype: 'assembly',
+    locality_label: 'Dispatch Mismatch Target Scope',
+  });
+  const { store } = createMemoryPacketStore([actor, targetScope]);
+  const prepareResult = await trustedDispatchCoordinator.prepareEnrolledMutationWrite({
+    source_route: '/api/nexus/mutations/prepare',
+    client_intent_id: 'scope.follow.set',
+    request_id: 'dispatch.write.prepare.mismatch.test',
+    actor_packet: actor,
+    actor_key: 'actor.key',
+    intent: {
+      kind: 'relation.follow.add',
+      scope_id: targetScope.header.packet_id,
+      target_scope_packet_id: targetScope.header.packet_id,
+    },
+    packet_store: store,
+  });
+  assert.equal(prepareResult.status, 'ok');
+
+  const unsignedPacket = prepareResult.value!.prepared_mutation.prepared_packets[0]!.packet;
+  const signedPacket = await signPacketWithIdentity({
+    packet: unsignedPacket,
+    signerPacketId: actor.header.packet_id,
+    kid: keyBinding.kid,
+    privateKey: keyPair.privateKey,
+    signedAt: '2026-05-28T12:04:00.000Z',
+  });
+  const finalizeResult = await trustedDispatchCoordinator.finalizeEnrolledMutationWrite({
+    source_route: '/api/nexus/mutations/finalize',
+    client_intent_id: 'scope.follow.set',
+    request_id: 'dispatch.write.finalize.mismatch.test',
+    mutation_intent: 'relation.association.add',
+    actor_packet: actor,
+    request: {
+      ticket_id: prepareResult.value!.ticket.ticket_id,
+      signed_packets: [signedPacket],
+    },
+    packet_store: store,
+  });
+
+  assert.equal(finalizeResult.status, 'blocked');
+  assert.equal(finalizeResult.issues[0]?.code, 'dispatch.mutation_intent_mismatch');
 });
 
 test('dispatch-owned finalize write pipeline rejects unknown certification tickets', async () => {
@@ -276,4 +332,5 @@ test('mutation routes do not call the legacy mutation service corridor', () => {
   assert.equal(routeSource.includes('mutationService.prepareMutation('), false);
   assert.equal(routeSource.includes('mutationService.finalizeMutation('), false);
   assert.equal(routeSource.includes('mutationService.readTicket('), false);
+  assert.equal(finalizeRoute.includes('parsePacketEnvelope'), false);
 });

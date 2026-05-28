@@ -4,7 +4,6 @@
  */
 
 import type {
-  MutationFinalizeRequest,
   MutationIntent,
   MutationPersistEffect,
   MutationTicket,
@@ -53,6 +52,9 @@ export type FinalizeTrustedDispatchMutationWriteInput = {
   request_id?: string | null;
   mutation_intent?: MutationIntent['kind'] | null;
   actor_packet: PacketEnvelopeByType['Element'];
-  request: MutationFinalizeRequest;
+  request: {
+    ticket_id: string;
+    signed_packets: unknown[];
+  };
   packet_store?: PacketStore | null;
 };

@@ -6,7 +6,6 @@
 import type { RequestHandler } from 'expo-router/server';
 import { z } from 'zod';
 
-import { parsePacketEnvelope } from '@core/schema/packet-schema';
 import { getNexusPacketServices } from '@runtime/nexus/server/nexus-packet-services';
 import {
   toNexusAuthFailurePayload,
@@ -98,9 +97,7 @@ export const POST: RequestHandler = async (request) => {
       actor_packet: actorContext.actorPacket,
       request: {
         ticket_id: parsedBody.ticket_id,
-        signed_packets: parsedBody.signed_packets.map((packetInput) =>
-          parsePacketEnvelope(packetInput)
-        ),
+        signed_packets: parsedBody.signed_packets,
       },
       packet_store: services.packetStore,
     });
