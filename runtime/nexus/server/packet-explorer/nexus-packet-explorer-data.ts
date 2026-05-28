@@ -1,9 +1,8 @@
 /**
  * File: nexus-packet-explorer-data.ts
- * Description: Builds Packet Explorer payloads from the shared browser query service, packet store, and runtime projection helpers.
+ * Description: Builds Packet Explorer payloads through Trusted Archive/Projection while preserving route response shape.
  */
 
-import { interpretPacket } from '@core/packets/packet-interpreter';
 import type {
   NexusActionIntentDescriptor,
   NexusActionMap,
@@ -25,11 +24,11 @@ import type {
 } from '@runtime/nexus/nexus-api-types';
 import type { NexusPacketServices } from '@runtime/nexus/server/nexus-packet-services.types';
 import { trustedArchiveCoordinator } from '@runtime/trusted_coordinators/trusted_archive_coordinator/index.ts';
+import { trustedProjectionCoordinator } from '@runtime/trusted_coordinators/trusted_projection_coordinator/index.ts';
 
 type PacketExplorerDataServices = Pick<
   NexusPacketServices,
   | 'packetStore'
-  | 'browserQueryService'
   | 'discussionService'
   | 'packetActionService'
   | 'verificationService'
@@ -110,12 +109,29 @@ function getPacketKind(packet: PacketEnvelope): string | null {
   return null;
 }
 
+async function resolveArchivedExplorerProjection(input: {
+  services: PacketExplorerDataServices;
+  packetId: string;
+}) {
+  const projection = await trustedProjectionCoordinator.resolveArchivedPacketProjection({
+    packet_store: input.services.packetStore,
+    packet_ref: {
+      packet_id: input.packetId,
+    },
+    target_surface: 'nexus.packet.detail',
+    context_mode: 'normal_runtime',
+  });
+
+  return projection.value;
+}
+
 async function getScopeSummary(
   services: PacketExplorerDataServices,
   packetId: string
 ): Promise<NexusPacketExplorerScopeSummary> {
-  const packetProjection = await services.browserQueryService.getPacket({
-    packet_id: packetId,
+  const packetProjection = await resolveArchivedExplorerProjection({
+    services,
+    packetId,
   });
 
   return {
@@ -126,27 +142,8 @@ async function getScopeSummary(
 
 function toAdaptationSummary(
   compatibilityRead: PacketCompatibilityReadResult,
-  readModelInterpretation: ReturnType<typeof interpretPacket> | null,
   readModelWarnings: string[]
 ): NexusPacketExplorerAdaptationSummary {
-  if (readModelInterpretation) {
-    return {
-      compatibility_mode: readModelInterpretation.compatibility_mode,
-      source_type: readModelInterpretation.source_type,
-      target_type: readModelInterpretation.target_type,
-      source_schema_version: readModelInterpretation.source_schema_version,
-      target_schema_version: readModelInterpretation.target_schema_version,
-      stages: [...readModelInterpretation.stages],
-      changes: readModelInterpretation.changes,
-      losses: readModelInterpretation.losses,
-      warnings: [...readModelInterpretation.warnings, ...readModelWarnings],
-      requires_guarded_migration:
-        readModelInterpretation.requires_guarded_migration,
-      requires_loss_acknowledgement:
-        readModelInterpretation.requires_loss_acknowledgement,
-    };
-  }
-
   return {
     compatibility_mode: compatibilityRead.status.is_lossy
       ? 'lossy'
@@ -159,7 +156,7 @@ function toAdaptationSummary(
     target_type: compatibilityRead.adapted_packet.header.type,
     source_schema_version: compatibilityRead.status.source_schema_version,
     target_schema_version: compatibilityRead.status.target_schema_version,
-    stages: ['raw_packet_read', 'same_type_adaptation'],
+    stages: ['raw_packet_read', 'same_type_adaptation', 'read_model_projection'],
     changes: compatibilityRead.status.changes,
     losses: compatibilityRead.status.losses,
     warnings: readModelWarnings,
@@ -187,21 +184,25 @@ async function resolveExplorerLinks(input: {
   packetId: string;
   direction: 'incoming' | 'outgoing';
 }): Promise<NexusPacketExplorerLinkRow[]> {
-  const edges =
-    input.direction === 'incoming'
-      ? await input.services.browserQueryService.listIncomingLinks({
-          packet_id: input.packetId,
-        })
-      : await input.services.browserQueryService.listOutgoingLinks({
-          packet_id: input.packetId,
-        });
+  const edgeResult = await trustedArchiveCoordinator.queryEdges({
+    packet_store: input.services.packetStore,
+    packet_ref: {
+      packet_id: input.packetId,
+    },
+    query: {
+      direction: input.direction,
+    },
+    context_mode: 'normal_runtime',
+  });
+  const edges = edgeResult.value?.edges ?? [];
   const relatedPacketIds = Array.from(
     new Set(edges.map((edge) => edge.target.packet_id))
   );
   const relatedEntries = await Promise.all(
     relatedPacketIds.map(async (packetId) => {
-      const projection = await input.services.browserQueryService.getPacket({
-        packet_id: packetId,
+      const projection = await resolveArchivedExplorerProjection({
+        services: input.services,
+        packetId,
       });
 
       return [packetId, projection] as const;
@@ -224,8 +225,8 @@ async function resolveExplorerLinks(input: {
       revision_id:
         input.direction === 'incoming'
           ? sourceRevisionId
-          : relatedProjection?.revision.revision_id ?? null,
-      type: relatedProjection?.type ?? null,
+          : relatedProjection?.revision_id ?? null,
+      type: (relatedProjection?.packet_type as PacketType | undefined) ?? null,
       label: relatedProjection?.label ?? null,
       title: relatedProjection?.title ?? null,
       metadata,
@@ -343,30 +344,20 @@ export async function buildNexusPacketExplorerPayload(input: {
   inspectionLens?: NexusPacketExplorerInspectionLens;
 }): Promise<NexusPacketExplorerPayload> {
   const { services, packetId } = input;
-  const packetProjection = await runExplorerStage({
+  const revisionResolution = await runExplorerStage({
     packetId,
-    stage: 'packet summary lookup',
+    stage: 'revision resolution',
     run: async () =>
-      services.browserQueryService.getPacket({
-        packet_id: packetId,
+      trustedArchiveCoordinator.resolveRevision({
+        packet_store: services.packetStore,
+        packet_ref: {
+          packet_id: packetId,
+        },
+        context_mode: 'normal_runtime',
       }),
   });
-  const preferredRevision = await runExplorerStage({
-    packetId,
-    stage: 'preferred revision lookup',
-    run: async () =>
-      services.packetStore.fetchPreferredRevision({
-        packet_id: packetId,
-      }),
-  });
-  const revisionHeads = await runExplorerStage({
-    packetId,
-    stage: 'head revision lookup',
-    run: async () =>
-      services.browserQueryService.getRevisionHeads({
-        packet_id: packetId,
-      }),
-  });
+  const preferredRevision = revisionResolution.value?.preferred_revision ?? null;
+  const revisionHeads = revisionResolution.value?.heads ?? null;
   const compatibilityRead = await runExplorerStage({
     packetId,
     stage: 'raw/adapted packet read',
@@ -384,11 +375,22 @@ export async function buildNexusPacketExplorerPayload(input: {
     },
   });
 
-  if (!packetProjection || !preferredRevision || !compatibilityRead) {
+  if (!preferredRevision || !revisionHeads || !compatibilityRead) {
     throw new Error(`Unknown packet: ${packetId}`);
   }
 
   const adaptedPacket = compatibilityRead.adapted_packet;
+  const packetProjection = await runExplorerStage({
+    packetId,
+    stage: 'trusted packet projection',
+    run: async () =>
+      trustedProjectionCoordinator.resolvePacketProjection({
+        packet: adaptedPacket,
+        revision_ref: preferredRevision,
+        target_surface: 'nexus.packet.detail',
+        context_mode: 'normal_runtime',
+      }),
+  });
   const authorityScope = adaptedPacket.header.authority_scope_ref
     ? await runExplorerStage({
         packetId,
@@ -410,32 +412,9 @@ export async function buildNexusPacketExplorerPayload(input: {
         )
       ),
   });
-  const readModelResult = await runExplorerStage({
-    packetId,
-    stage: 'read model projection',
-    run: async () => {
-      try {
-        return {
-          interpretation: interpretPacket({
-            packet: compatibilityRead.raw_packet,
-            target: {
-              mode: 'read_model',
-              read_model_id: 'nexus-interface@1',
-            },
-          }),
-          warning: null,
-        } as const;
-      } catch (error) {
-        return {
-          interpretation: null,
-          warning:
-            error instanceof Error
-              ? error.message
-              : 'Read model interpretation is unavailable for this packet.',
-        } as const;
-      }
-    },
-  });
+  const readModelWarnings = packetProjection.issues
+    .filter((issue) => issue.severity === 'warning' || issue.severity === 'error')
+    .map((issue) => issue.message);
   const incomingLinks = await runExplorerStage({
     packetId,
     stage: 'incoming link query',
@@ -473,24 +452,22 @@ export async function buildNexusPacketExplorerPayload(input: {
     run: async () =>
       services.verificationService.getVerificationOverview(packetId),
   });
+  const projectionView = packetProjection.value;
   const packetSummary: NexusPacketExplorerSummary = {
     packet: {
       packet_id: adaptedPacket.header.packet_id,
     },
     revision: preferredRevision,
     type: adaptedPacket.header.type,
-    label: packetProjection.label,
-    title: packetProjection.title,
-    summary: packetProjection.summary,
+    label: projectionView?.label ?? adaptedPacket.header.type,
+    title: projectionView?.title ?? adaptedPacket.header.packet_id,
+    summary: projectionView?.summary ?? null,
     kind: getPacketKind(adaptedPacket),
     schema_version: adaptedPacket.header.schema_version,
     created_at: adaptedPacket.header.created_at,
     authority_scope: authorityScope,
     applicable_scopes: applicableScopes,
   };
-  const readModelWarnings = readModelResult.warning
-    ? [readModelResult.warning]
-    : [];
   const inspectionLens = input.inspectionLens ?? 'summary';
   const incomingLinkGroups = groupExplorerLinks(incomingLinks);
   const outgoingLinkGroups = groupExplorerLinks(outgoingLinks);
@@ -520,10 +497,9 @@ export async function buildNexusPacketExplorerPayload(input: {
     revision_state: revisionHeads.revision_state,
     raw_view: compatibilityRead.raw_packet,
     adapted_view: compatibilityRead.adapted_packet,
-    read_model_view: readModelResult.interpretation?.interpreted ?? null,
+    read_model_view: projectionView,
     adaptation_summary: toAdaptationSummary(
       compatibilityRead,
-      readModelResult.interpretation,
       readModelWarnings
     ),
     links_basis: getLinksBasis(),

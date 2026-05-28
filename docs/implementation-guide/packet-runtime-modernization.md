@@ -191,7 +191,7 @@ Foldered Definition, Regulation, and Planning functions now report their manifes
 
 Packet Explorer bundle export now routes through Trusted Exchange, which delegates bundle bytes to Trusted Archive. Packet Explorer import commit now routes through Trusted Exchange, which delegates low-level bundle import to Trusted Archive while the existing Explorer service preserves import reports, validation modes, preferred-head repair, and response payload shape. The legacy verification service now acts as a compatibility wrapper over Trusted Verification for packet assessment while it continues to own local validator identity and report-writing until those report flows move behind Certification and Archive.
 
-Explorer's raw/adapted packet read path now uses Trusted Archive. The legacy packet interpreter remains in place for the current Explorer read-model panel because replacing that payload with Projection output would change the existing response contract; Projection migration for that panel is an explicit later cleanup.
+Explorer's generic inspector payload now routes its revision resolution, raw/adapted packet read, graph edge lookup, scope labels, related packet labels, and read-model panel through Trusted Archive and Trusted Projection while preserving the existing API payload fields. `read_model_view` now carries the trusted packet projection view model instead of the legacy packet-interpreter output. Packet Explorer Search, Export, and Import still have their own service-specific logic and should be migrated only where payload parity is straightforward.
 
 
 The current implementation is intentionally pre-reseed practical:

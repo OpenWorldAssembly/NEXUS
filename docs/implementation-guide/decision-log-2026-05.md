@@ -379,3 +379,9 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - Dispatch now verifies the raw signed packets through Trusted Verification, compares verified packet revision keys against Certification before Archive, derives the finalized mutation kind from the certified plan, and rejects mismatched caller-supplied intent labels.
 - Archive now requires certified packet revision keys and checks that extracted archive-ready envelopes match those keys before any write, so Archive stores only the certified packet set.
 - The trusted issue taxonomy gained canonical entries for certified-key and finalize mismatch blockers so audit remains fail-closed for invented issue codes.
+
+## 2026-05 Packet Explorer projection migration pass
+
+- Packet Explorer's generic inspector payload now uses Trusted Archive for preferred/head revision resolution and graph edge lookup instead of direct packet-store/query-service calls.
+- The inspector read-model panel now uses Trusted Projection output as `read_model_view`, preserving the existing response field while removing the direct legacy packet-interpreter call from Packet Explorer data.
+- Scope labels and related link labels in the inspector are resolved through archived packet projections. Search, Export, Import, discussion, reaction, scope, and locality read models remain separate migration lanes.

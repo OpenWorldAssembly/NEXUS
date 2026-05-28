@@ -181,6 +181,10 @@ test('explorer payload returns raw, adapted, read-model, and link data for packe
     assert.equal(payload.revision_state, 'linear');
     assert.equal(payload.adapted_view !== null, true);
     assert.equal(payload.read_model_view !== null, true);
+    assert.equal(
+      (payload.read_model_view as { view_model_kind?: string }).view_model_kind,
+      'trusted.packet_projection_view_model'
+    );
     assert.equal(payload.outgoing_link_groups.length > 0, true);
     assert.equal(payload.outgoing_links.length > 0, true);
     assert.equal(
