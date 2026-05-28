@@ -10,6 +10,15 @@ import {
   type TrustedRuntimeCoordinatorTraceEntry,
 } from '@runtime/trusted_coordinators/trusted_runtime_coordinator';
 import {
+  appendTrustedProcessStage,
+  completeTrustedProcessChain,
+  completeTrustedProcessStage,
+  createTrustedProcessChain,
+  failTrustedProcessStage,
+  startTrustedProcessStage,
+  type TrustedProcessWorkSummary,
+} from '@runtime/trusted_coordinators/trusted_process.ts';
+import {
   archiveIssue,
   archiveTrace,
   createArchiveId,
@@ -32,6 +41,13 @@ export async function storeTrustedCertifiedPacketSet(
   const trace: TrustedRuntimeCoordinatorTraceEntry[] = [];
   const warnings: string[] = [];
   const blockers: string[] = [];
+  let processChain = createTrustedProcessChain({
+    coordinator_id: TRUSTED_ARCHIVE_COORDINATOR_ID,
+    coordinator_kind: 'archive',
+    operation_name: 'store_certified_packet_set',
+    completion_policy: 'preserve_partial',
+    mode: contextMode,
+  });
 
   if (!input.certified_packet_set.archive_ready) {
     blockers.push('Certified packet set is not marked archive_ready.');
@@ -64,6 +80,28 @@ export async function storeTrustedCertifiedPacketSet(
     preset_ids: ['trusted.archive.certified_packet_set.v0'],
     notes: `Extracted ${extraction.packets.length} archive-ready packet envelope(s) from ${input.certified_packet_set.candidate_graph.candidate_nodes.length} candidate node(s).`,
   }));
+  processChain = appendTrustedProcessStage(
+    processChain,
+    completeTrustedProcessStage(
+      startTrustedProcessStage({
+        stage_id: 'archive.certified_packet_set.extract',
+        coordinator_id: TRUSTED_ARCHIVE_COORDINATOR_ID,
+        coordinator_kind: 'archive',
+        operation_name: 'extract_archive_ready_packets',
+        preset_ids: ['trusted.archive.certified_packet_set.v0'],
+        notes: `Extracted ${extraction.packets.length} archive-ready packet envelope(s).`,
+      }),
+      {
+        status: extraction.packets.length > 0 ? 'ok' : 'blocked',
+        issues,
+        skipped_work: extraction.skippedCandidateIds.map((candidateId) => ({
+          work_id: candidateId,
+          label: 'Skipped candidate node without archive-ready packet envelope.',
+        })),
+      }
+    ),
+    { issues }
+  );
 
   const writes: TrustedArchivedPacketWrite[] = [];
 
@@ -96,34 +134,116 @@ export async function storeTrustedCertifiedPacketSet(
       trace,
       status: 'blocked',
       mode: contextMode,
+      process_chain: completeTrustedProcessChain(processChain, { status: 'blocked' }),
     });
   }
 
-  await withTrustedArchiveStore(input, async (packetStore) => {
-    for (const packet of extraction.packets) {
-      const revisionRef = await packetStore.writeRevision(packet);
-      let published = false;
+  const completedWork: TrustedProcessWorkSummary[] = [];
+  const failedWork: TrustedProcessWorkSummary[] = [];
 
-      if (writeMode === 'write_and_publish') {
-        await packetStore.publishRevision(revisionRef);
-        published = true;
+  try {
+    await withTrustedArchiveStore(input, async (packetStore) => {
+      for (const packet of extraction.packets) {
+        try {
+          const revisionRef = await packetStore.writeRevision(packet);
+          let published = false;
+
+          if (writeMode === 'write_and_publish') {
+            await packetStore.publishRevision(revisionRef);
+            published = true;
+          }
+
+          writes.push({
+            packet_ref: { packet_id: packet.header.packet_id },
+            revision_ref: revisionRef,
+            published,
+            packet_type: packet.header.type,
+          });
+          completedWork.push({
+            work_id: `${packet.header.packet_id}:${revisionRef.revision_id}`,
+            label: published ? 'Wrote and published packet revision.' : 'Wrote packet revision.',
+            packet_id: packet.header.packet_id,
+            revision_id: revisionRef.revision_id,
+          });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Unknown archive write failure.';
+          failedWork.push({
+            work_id: packet.header.packet_id,
+            label: `Failed to archive packet revision: ${message}`,
+            packet_id: packet.header.packet_id,
+          });
+          issues.push(archiveIssue({
+            severity: 'error',
+            code: 'archive.write_failed',
+            path: `certified_packet_set.candidate_graph.candidate_nodes.${packet.header.packet_id}`,
+            message,
+          }));
+          blockers.push(message);
+          break;
+        }
       }
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown archive store failure.';
+    issues.push(archiveIssue({
+      severity: 'error',
+      code: 'archive.write_failed',
+      path: 'packet_store',
+      message,
+    }));
+    blockers.push(message);
+  }
 
-      writes.push({
-        packet_ref: { packet_id: packet.header.packet_id },
-        revision_ref: revisionRef,
-        published,
-        packet_type: packet.header.type,
-      });
+  if (failedWork.length > 0) {
+    for (const packet of extraction.packets.slice(writes.length + failedWork.length)) {
+      warnings.push(`Archive write skipped after prior failure for ${packet.header.packet_id}.`);
     }
-  });
+  }
 
   trace.push(archiveTrace({
     step_id: 'archive.certified_packet_set.write',
-    status: 'ok',
+    status: issues.some((issue) => issue.severity === 'error') ? 'error' : 'ok',
     preset_ids: ['trusted.archive.packet_store_write.v0'],
     notes: `Wrote ${writes.length} packet revision(s) through Trusted Archive.`,
   }));
+  processChain = appendTrustedProcessStage(
+    processChain,
+    issues.some((issue) => issue.severity === 'error')
+      ? failTrustedProcessStage(
+          startTrustedProcessStage({
+            stage_id: 'archive.certified_packet_set.write',
+            coordinator_id: TRUSTED_ARCHIVE_COORDINATOR_ID,
+            coordinator_kind: 'archive',
+            operation_name: 'write_archive_ready_packets',
+            preset_ids: ['trusted.archive.packet_store_write.v0'],
+            notes: `Wrote ${writes.length} packet revision(s) before completion.`,
+          }),
+          {
+            issues,
+            completed_work: completedWork,
+            failed_work: failedWork,
+            skipped_work: extraction.packets.slice(writes.length + failedWork.length).map((packet) => ({
+              work_id: packet.header.packet_id,
+              label: 'Skipped after archive write failure.',
+              packet_id: packet.header.packet_id,
+            })),
+          }
+        )
+      : completeTrustedProcessStage(
+          startTrustedProcessStage({
+            stage_id: 'archive.certified_packet_set.write',
+            coordinator_id: TRUSTED_ARCHIVE_COORDINATOR_ID,
+            coordinator_kind: 'archive',
+            operation_name: 'write_archive_ready_packets',
+            preset_ids: ['trusted.archive.packet_store_write.v0'],
+            notes: `Wrote ${writes.length} packet revision(s).`,
+          }),
+          {
+            completed_work: completedWork,
+          }
+        ),
+    { issues }
+  );
 
   const receipt: TrustedArchiveReceipt = {
     receipt_kind: 'trusted.archive_receipt',
@@ -152,5 +272,7 @@ export async function storeTrustedCertifiedPacketSet(
     issues,
     trace,
     mode: contextMode,
+    status: issues.some((issue) => issue.severity === 'error') ? 'error' : undefined,
+    process_chain: completeTrustedProcessChain(processChain),
   });
 }

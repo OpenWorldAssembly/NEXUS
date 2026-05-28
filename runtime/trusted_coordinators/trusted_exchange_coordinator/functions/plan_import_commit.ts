@@ -10,6 +10,14 @@ import {
   type TrustedRuntimeCoordinatorTraceEntry,
 } from '@runtime/trusted_coordinators/trusted_runtime_coordinator';
 import {
+  appendTrustedChildResult,
+  appendTrustedProcessStage,
+  completeTrustedProcessChain,
+  completeTrustedProcessStage,
+  createTrustedProcessChain,
+  startTrustedProcessStage,
+} from '@runtime/trusted_coordinators/trusted_process.ts';
+import {
   actionReason,
   exchangeIssue,
   exchangeTrace,
@@ -31,6 +39,13 @@ export async function planTrustedImportCommit(
   const contextMode = input.context_mode ?? 'import_preview';
   const issues: TrustedRuntimeCoordinatorIssue[] = [];
   const trace: TrustedRuntimeCoordinatorTraceEntry[] = [];
+  let processChain = createTrustedProcessChain({
+    coordinator_id: TRUSTED_EXCHANGE_COORDINATOR_ID,
+    coordinator_kind: 'exchange',
+    operation_name: 'plan_import_commit',
+    completion_policy: 'dry_run_only',
+    mode: contextMode,
+  });
   let preview = input.preview ?? null;
 
   if (!preview && input.bundle !== undefined) {
@@ -44,6 +59,11 @@ export async function planTrustedImportCommit(
     });
     issues.push(...previewResult.issues);
     trace.push(...previewResult.trace);
+    processChain = appendTrustedChildResult(processChain, previewResult, {
+      stage_id: 'exchange.import.plan_commit.preview',
+      operation_name: 'preview_import',
+      notes: 'Generated import preview for commit planning.',
+    });
     preview = previewResult.value;
   }
 
@@ -81,6 +101,47 @@ export async function planTrustedImportCommit(
     preset_ids: ['trusted.exchange.import_commit_plan.v0'],
     notes: `Planned ${items.length} import commit item(s) without writing storage.`,
   }));
+  processChain = appendTrustedProcessStage(
+    processChain,
+    completeTrustedProcessStage(
+      startTrustedProcessStage({
+        stage_id: 'exchange.import.plan_commit',
+        coordinator_id: TRUSTED_EXCHANGE_COORDINATOR_ID,
+        coordinator_kind: 'exchange',
+        operation_name: 'plan_import_commit',
+        preset_ids: ['trusted.exchange.import_commit_plan.v0'],
+        notes: `Planned ${items.length} import commit item(s) without writing storage.`,
+      }),
+      {
+        status: issues.some((issue) => issue.severity === 'error') ? 'error' : 'ok',
+        issues,
+        artifacts: [{
+          artifact_id: `exchange-import-plan:${items.length}`,
+          artifact_kind: 'import_commit_plan',
+          label: 'Import commit plan.',
+          count: items.length,
+          redacted: true,
+        }],
+        blocked_work: blockedCount > 0 || manualResolutionCount > 0
+          ? [{
+              work_id: 'exchange.import.commit',
+              label: 'Import commit requires blocked/manual items to be resolved first.',
+              reason_code: 'exchange.import_commit_blocked',
+              count: blockedCount + manualResolutionCount,
+            }]
+          : [],
+        skipped_work: items
+          .filter((item) => item.action === 'skip_duplicate')
+          .map((item) => ({
+            work_id: item.entry_id,
+            label: item.reason,
+            packet_id: item.packet_ref?.packet_id ?? null,
+            revision_id: item.revision_ref?.revision_id ?? null,
+          })),
+      }
+    ),
+    { issues }
+  );
 
   return createTrustedRuntimeCoordinatorResult({
     coordinator_id: TRUSTED_EXCHANGE_COORDINATOR_ID,
@@ -100,5 +161,6 @@ export async function planTrustedImportCommit(
     trace,
     status: toTrustedExchangeStatus(issues),
     mode: contextMode,
+    process_chain: completeTrustedProcessChain(processChain, { status: toTrustedExchangeStatus(issues) }),
   });
 }

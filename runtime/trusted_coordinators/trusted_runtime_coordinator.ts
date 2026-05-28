@@ -3,6 +3,9 @@
  * Description: Shared trusted-runtime coordinator result contract, envelope helpers, and scaffold metadata types.
  */
 
+import type { TrustedProcessChain } from './trusted_process.ts';
+import { normalizeTrustedIssue } from './trusted_issue_taxonomy.ts';
+
 export type TrustedRuntimeCoordinatorKind =
   | 'request'
   | 'dispatch'
@@ -69,6 +72,7 @@ export type TrustedRuntimeCoordinatorResult<TValue> = {
   operation_id?: string | null;
   request_id?: string | null;
   mode?: TrustedRuntimeCoordinatorMode | string | null;
+  process_chain?: TrustedProcessChain | null;
 };
 
 export type TrustedRuntimeCoordinatorPublicMethod = {
@@ -97,6 +101,7 @@ type TrustedRuntimeCoordinatorResultInput<TValue> = {
   operation_id?: string | null;
   request_id?: string | null;
   mode?: TrustedRuntimeCoordinatorMode | string | null;
+  process_chain?: TrustedProcessChain | null;
 };
 
 export function createTrustedRuntimeCoordinatorResult(input: TrustedRuntimeCoordinatorResultInput<never> & {
@@ -108,9 +113,26 @@ export function createTrustedRuntimeCoordinatorResult<TValue>(
 export function createTrustedRuntimeCoordinatorResult<TValue>(
   input: TrustedRuntimeCoordinatorResultInput<TValue>
 ): TrustedRuntimeCoordinatorResult<TValue> {
-  const issues = [...(input.issues ?? [])];
+  const issues = input.issues
+    ? [...input.issues]
+    : input.process_chain?.issues.map((issue) => ({
+        severity: issue.severity,
+        code: issue.canonical_code,
+        path: issue.path,
+        message: issue.message,
+      })) ?? [];
+  const trace = input.trace
+    ? [...input.trace]
+    : input.process_chain?.stages.map((stage) => ({
+        step_id: stage.stage_id,
+        coordinator_id: stage.coordinator_id,
+        preset_ids: [...stage.preset_ids],
+        status: stage.status,
+        notes: stage.notes ?? `Trusted process stage ${stage.operation_name}.`,
+      })) ?? [];
   const status =
     input.status ??
+    input.process_chain?.status ??
     (issues.some((issue) => issue.severity === 'error')
       ? 'error'
       : issues.some((issue) => issue.severity === 'warning')
@@ -123,15 +145,16 @@ export function createTrustedRuntimeCoordinatorResult<TValue>(
     status,
     value: input.value,
     issues,
-    trace: [...(input.trace ?? [])],
+    trace,
     operation_id: input.operation_id ?? null,
     request_id: input.request_id ?? null,
     mode: input.mode ?? null,
+    process_chain: input.process_chain ?? null,
   };
 }
 
 export function trustedIssue(input: TrustedRuntimeCoordinatorIssue): TrustedRuntimeCoordinatorIssue {
-  return input;
+  return normalizeTrustedIssue(input);
 }
 
 export function hasBlockingTrustedIssue(issues: readonly TrustedRuntimeCoordinatorIssue[]): boolean {

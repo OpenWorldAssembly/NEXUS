@@ -9,6 +9,14 @@ import {
   type TrustedRuntimeCoordinatorResult,
   type TrustedRuntimeCoordinatorTraceEntry,
 } from '@runtime/trusted_coordinators/trusted_runtime_coordinator';
+import {
+  appendTrustedChildResult,
+  appendTrustedProcessStage,
+  completeTrustedProcessChain,
+  completeTrustedProcessStage,
+  createTrustedProcessChain,
+  startTrustedProcessStage,
+} from '@runtime/trusted_coordinators/trusted_process.ts';
 import { trustedCompatibilityCoordinator } from '@runtime/trusted_coordinators/trusted_compatibility_coordinator/index.ts';
 import { trustedVerificationCoordinator } from '@runtime/trusted_coordinators/trusted_verification_coordinator/index.ts';
 import {
@@ -36,6 +44,13 @@ export async function previewTrustedImport(
   const compatibilityStrictness = input.options?.compatibility_strictness ?? 'advisory';
   const issues: TrustedRuntimeCoordinatorIssue[] = [];
   const trace: TrustedRuntimeCoordinatorTraceEntry[] = [];
+  let processChain = createTrustedProcessChain({
+    coordinator_id: TRUSTED_EXCHANGE_COORDINATOR_ID,
+    coordinator_kind: 'exchange',
+    operation_name: 'preview_import',
+    completion_policy: 'dry_run_only',
+    mode: contextMode,
+  });
   const normalized = normalizeTrustedExchangeBundle(input.bundle);
 
   for (const blocker of normalized.blockers) {
@@ -69,6 +84,11 @@ export async function previewTrustedImport(
   });
   issues.push(...verificationResult.issues);
   trace.push(...verificationResult.trace);
+  processChain = appendTrustedChildResult(processChain, verificationResult, {
+    stage_id: 'exchange.import.preview.verify_bundle',
+    operation_name: 'verify_import_bundle',
+    notes: 'Verified incoming bundle material during import preview.',
+  });
   const verificationReport = verificationResult.value ?? null;
 
   for (const entry of normalized.entries) {
@@ -159,6 +179,39 @@ export async function previewTrustedImport(
     preset_ids: ['trusted.exchange.import_preview.v0'],
     notes: `Previewed ${packetPreviews.length} incoming packet entr${packetPreviews.length === 1 ? 'y' : 'ies'}.`,
   }));
+  processChain = appendTrustedProcessStage(
+    processChain,
+    completeTrustedProcessStage(
+      startTrustedProcessStage({
+        stage_id: 'exchange.import.preview',
+        coordinator_id: TRUSTED_EXCHANGE_COORDINATOR_ID,
+        coordinator_kind: 'exchange',
+        operation_name: 'preview_import',
+        preset_ids: ['trusted.exchange.import_preview.v0'],
+        notes: `Previewed ${packetPreviews.length} incoming packet entr${packetPreviews.length === 1 ? 'y' : 'ies'}.`,
+      }),
+      {
+        status: blockers.length > 0 ? 'error' : warnings.length > 0 ? 'partial' : 'ok',
+        issues,
+        artifacts: [{
+          artifact_id: `exchange-import-preview:${packetPreviews.length}`,
+          artifact_kind: 'import_preview',
+          label: 'Import preview summary.',
+          count: packetPreviews.length,
+          redacted: true,
+        }],
+        blocked_work: blockedCount > 0
+          ? [{
+              work_id: 'exchange.import.commit',
+              label: 'Some import entries cannot be committed without resolution.',
+              reason_code: 'exchange.bundle_blocked',
+              count: blockedCount,
+            }]
+          : [],
+      }
+    ),
+    { issues }
+  );
 
   return createTrustedRuntimeCoordinatorResult({
     coordinator_id: TRUSTED_EXCHANGE_COORDINATOR_ID,
@@ -185,5 +238,6 @@ export async function previewTrustedImport(
     trace,
     status: toTrustedExchangeStatus(issues),
     mode: contextMode,
+    process_chain: completeTrustedProcessChain(processChain, { status: toTrustedExchangeStatus(issues) }),
   });
 }

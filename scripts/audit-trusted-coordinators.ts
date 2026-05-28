@@ -9,6 +9,9 @@ import { join } from 'node:path';
 import {
   listTrustedCoordinatorScaffoldDescriptors,
 } from '@runtime/trusted_coordinators/trusted_coordinator_manifest.ts';
+import {
+  isKnownTrustedIssueCode,
+} from '@runtime/trusted_coordinators/trusted_issue_taxonomy.ts';
 
 type AuditFinding = {
   severity: 'warning' | 'error';
@@ -109,6 +112,56 @@ function scanRuntimeBypassNotes(): AuditNote[] {
   }
 
   return notes;
+}
+
+function scanIssueCodeFindings(): AuditFinding[] {
+  const findings: AuditFinding[] = [];
+  const coordinatorRoot = repoPath('runtime/trusted_coordinators');
+
+  function scanFile(filePath: string): void {
+    if (
+      filePath.endsWith('trusted_issue_taxonomy.ts') ||
+      filePath.endsWith('trusted_process.ts')
+    ) {
+      return;
+    }
+
+    const content = readFileSync(filePath, 'utf8');
+    const relativePath = filePath.replace(`${process.cwd()}\\`, '').replace(/\\/g, '/');
+    const matches = Array.from(content.matchAll(/code:\s*['"]([^'"]+)['"]/g));
+
+    for (const match of matches) {
+      const code = match[1];
+      if (!isKnownTrustedIssueCode(code)) {
+        findings.push({
+          severity: 'error',
+          coordinator_id: 'trusted_runtime_issue_taxonomy',
+          code: 'trusted_issue_code_unregistered',
+          message: `${relativePath} uses unregistered trusted issue code '${code}'.`,
+        });
+        continue;
+      }
+
+    }
+  }
+
+  function scanFolder(folderPath: string): void {
+    for (const entry of readdirSync(folderPath)) {
+      const absolute = join(folderPath, entry);
+      const stats = statSync(absolute);
+      if (stats.isDirectory()) {
+        scanFolder(absolute);
+      } else if (entry.endsWith('.ts')) {
+        scanFile(absolute);
+      }
+    }
+  }
+
+  if (existsSync(coordinatorRoot)) {
+    scanFolder(coordinatorRoot);
+  }
+
+  return findings;
 }
 
 function audit(): { findings: AuditFinding[]; notes: AuditNote[] } {
@@ -254,6 +307,17 @@ function audit(): { findings: AuditFinding[]; notes: AuditNote[] } {
   }
 
   notes.push(...scanRuntimeBypassNotes());
+  findings.push(...scanIssueCodeFindings());
+
+  const runtimeCoordinatorSource = readIfFile('runtime/trusted_coordinators/trusted_runtime_coordinator.ts') ?? '';
+  if (!runtimeCoordinatorSource.includes('process_chain?: TrustedProcessChain | null')) {
+    findings.push({
+      severity: 'error',
+      coordinator_id: 'trusted_runtime_process',
+      code: 'trusted_process_chain_missing_from_envelope',
+      message: 'Trusted runtime coordinator results must expose optional process_chain support.',
+    });
+  }
 
   return { findings, notes };
 }

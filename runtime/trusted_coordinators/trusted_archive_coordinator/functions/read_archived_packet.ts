@@ -9,6 +9,13 @@ import {
   type TrustedRuntimeCoordinatorResult,
   type TrustedRuntimeCoordinatorTraceEntry,
 } from '@runtime/trusted_coordinators/trusted_runtime_coordinator';
+import {
+  appendTrustedProcessStage,
+  completeTrustedProcessChain,
+  completeTrustedProcessStage,
+  createTrustedProcessChain,
+  startTrustedProcessStage,
+} from '@runtime/trusted_coordinators/trusted_process.ts';
 import { archiveIssue, archiveTrace, withTrustedArchiveStore } from '../trusted_archive_internal.ts';
 import {
   TRUSTED_ARCHIVE_COORDINATOR_ID,
@@ -24,6 +31,13 @@ export async function readTrustedArchivedPacket<TMode extends PacketReadMode = '
   const mode = input.mode ?? ('adapted' as TMode);
   const issues: TrustedRuntimeCoordinatorIssue[] = [];
   const trace: TrustedRuntimeCoordinatorTraceEntry[] = [];
+  let processChain = createTrustedProcessChain({
+    coordinator_id: TRUSTED_ARCHIVE_COORDINATOR_ID,
+    coordinator_kind: 'archive',
+    operation_name: 'read_archived_packet',
+    completion_policy: 'coordinator_defined',
+    mode: contextMode,
+  });
 
   const read = await withTrustedArchiveStore(input, async (packetStore) => {
     if (input.revision_ref) {
@@ -64,6 +78,36 @@ export async function readTrustedArchivedPacket<TMode extends PacketReadMode = '
       ? `Read archived packet ${input.packet_ref.packet_id}.`
       : `No archived packet found for ${input.packet_ref.packet_id}.`,
   }));
+  processChain = appendTrustedProcessStage(
+    processChain,
+    completeTrustedProcessStage(
+      startTrustedProcessStage({
+        stage_id: 'archive.packet.read',
+        coordinator_id: TRUSTED_ARCHIVE_COORDINATOR_ID,
+        coordinator_kind: 'archive',
+        operation_name: 'read_archived_packet',
+        preset_ids: ['trusted.archive.read.v0'],
+        notes: read.packet
+          ? `Read archived packet ${input.packet_ref.packet_id}.`
+          : `No archived packet found for ${input.packet_ref.packet_id}.`,
+      }),
+      {
+        status: read.packet ? 'ok' : 'partial',
+        issues,
+        artifacts: read.packet
+          ? [{
+              artifact_id: input.packet_ref.packet_id,
+              artifact_kind: 'packet_read',
+              label: 'Archived packet read result.',
+              packet_id: input.packet_ref.packet_id,
+              revision_id: read.revisionRef?.revision_id ?? null,
+              redacted: true,
+            }]
+          : [],
+      }
+    ),
+    { issues }
+  );
 
   return createTrustedRuntimeCoordinatorResult({
     coordinator_id: TRUSTED_ARCHIVE_COORDINATOR_ID,
@@ -78,5 +122,6 @@ export async function readTrustedArchivedPacket<TMode extends PacketReadMode = '
     issues,
     trace,
     mode: contextMode,
+    process_chain: completeTrustedProcessChain(processChain),
   });
 }

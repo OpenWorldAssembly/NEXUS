@@ -9,6 +9,14 @@ import {
   type TrustedRuntimeCoordinatorResult,
   type TrustedRuntimeCoordinatorTraceEntry,
 } from '@runtime/trusted_coordinators/trusted_runtime_coordinator';
+import {
+  appendTrustedChildResult,
+  appendTrustedProcessStage,
+  completeTrustedProcessChain,
+  completeTrustedProcessStage,
+  createTrustedProcessChain,
+  startTrustedProcessStage,
+} from '@runtime/trusted_coordinators/trusted_process.ts';
 import { trustedArchiveCoordinator } from '@runtime/trusted_coordinators/trusted_archive_coordinator/index.ts';
 import { exchangeIssue, exchangeTrace, toTrustedExchangeStatus } from '../trusted_exchange_internal.ts';
 import {
@@ -27,6 +35,13 @@ export async function exportTrustedPacketSet(
   const contextMode = input.context_mode ?? 'normal_runtime';
   const issues: TrustedRuntimeCoordinatorIssue[] = [];
   const trace: TrustedRuntimeCoordinatorTraceEntry[] = [];
+  let processChain = createTrustedProcessChain({
+    coordinator_id: TRUSTED_EXCHANGE_COORDINATOR_ID,
+    coordinator_kind: 'exchange',
+    operation_name: 'export_packet_set',
+    completion_policy: 'dry_run_only',
+    mode: contextMode,
+  });
   const optionIds = Object.entries(input.options ?? {})
     .filter(([, enabled]) => Boolean(enabled))
     .map(([key]) => key);
@@ -51,6 +66,11 @@ export async function exportTrustedPacketSet(
     issues.push(...exportResult.issues);
     trace.push(...exportResult.trace);
     bundle = exportResult.value;
+    processChain = appendTrustedChildResult(processChain, exportResult, {
+      stage_id: 'exchange.export.archive_bundle',
+      operation_name: 'archive_export_bundle',
+      notes: 'Exported packet set through Trusted Archive.',
+    });
   } catch (error) {
     issues.push(exchangeIssue({
       severity: 'error',
@@ -73,6 +93,48 @@ export async function exportTrustedPacketSet(
     preset_ids: ['trusted.exchange.export_packet_set.v0'],
     notes: `Prepared Exchange export wrapper for ${revisionCount} revision(s).`,
   }));
+  processChain = appendTrustedProcessStage(
+    processChain,
+    completeTrustedProcessStage(
+      startTrustedProcessStage({
+        stage_id: 'exchange.export.packet_set',
+        coordinator_id: TRUSTED_EXCHANGE_COORDINATOR_ID,
+        coordinator_kind: 'exchange',
+        operation_name: 'export_packet_set',
+        preset_ids: ['trusted.exchange.export_packet_set.v0'],
+        notes: `Prepared Exchange export wrapper for ${revisionCount} revision(s).`,
+      }),
+      {
+        status: blockers.length > 0 ? 'error' : warnings.length > 0 ? 'partial' : 'ok',
+        issues,
+        artifacts: bundle
+          ? [{
+              artifact_id: `exchange-export:${packetCount}:${revisionCount}`,
+              artifact_kind: 'exchange_export',
+              label: 'Exchange export wrapper.',
+              count: revisionCount,
+              redacted: true,
+            }]
+          : [],
+        completed_work: bundle
+          ? [{
+              work_id: 'exchange.export.packet_set',
+              label: 'Prepared export wrapper.',
+              count: revisionCount,
+            }]
+          : [],
+        blocked_work: bundle
+          ? []
+          : [{
+              work_id: 'exchange.export.packet_set',
+              label: 'Export wrapper could not be prepared.',
+              reason_code: 'exchange.export_failed',
+              count: input.root_refs.length,
+            }],
+      }
+    ),
+    { issues }
+  );
 
   return createTrustedRuntimeCoordinatorResult({
     coordinator_id: TRUSTED_EXCHANGE_COORDINATOR_ID,
@@ -99,5 +161,6 @@ export async function exportTrustedPacketSet(
     trace,
     status: toTrustedExchangeStatus(issues),
     mode: contextMode,
+    process_chain: completeTrustedProcessChain(processChain, { status: toTrustedExchangeStatus(issues) }),
   });
 }

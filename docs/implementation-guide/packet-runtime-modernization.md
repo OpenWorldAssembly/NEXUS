@@ -111,9 +111,19 @@ Builders remain packet anatomy. Defaults describe normal starting shape. Depende
 
 ## Trusted Coordinator Scaffold Standard
 
-Trusted coordinators now share a scaffold contract: public coordinator object, stable coordinator id, typed result envelope, issues, trace entries, optional request/operation ids, and a manifest entry describing expected methods. Foldered trusted coordinators expose only their public coordinator and public types from `index.ts`; internal function modules and registries stay private behind the coordinator surface.
+Trusted coordinators now share a scaffold contract: public coordinator object, stable coordinator id, typed result envelope, issues, trace entries, optional request/operation ids, optional process-chain diagnostics, and a manifest entry describing expected methods. Foldered trusted coordinators expose only their public coordinator and public types from `index.ts`; internal function modules and registries stay private behind the coordinator surface.
 
 `npm run audit:trusted-coordinators` checks the scaffold manifest. The audit currently treats Dispatch, Request, Definition, Regulation, Planning, Building, Inspection, Certification, Archive, Verification, Compatibility, Exchange, and Projection as foldered gated coordinators. Resolution remains legacy-flat with a warning until it is promoted.
+
+## Trusted Process Chains and Issue Taxonomy
+
+Trusted runtime process chains are lightweight runtime diagnostic objects, not automatic packet writes. A chain records the stage-by-stage path through a coordinator operation: coordinator id/kind, operation name, status, timestamps, summary artifacts, completed/failed/blocked/skipped work, child chain ids, and normalized issue codes. Stage snapshots are summary-only by default and must not carry raw packet bodies, signed request payloads, private material, or raw bundle contents.
+
+Issue codes now have a canonical dotted taxonomy such as `archive.packet_not_found`, `exchange.import_commit_blocked`, `verification.packet_structural_invalid`, and `certification.ticket_invalid`. Existing underscore-style codes remain registered as legacy aliases so older coordinator code can migrate incrementally while reports and future interface handling see stable canonical codes.
+
+Process chains preserve partial-work posture without imposing one rollback law on every operation. Each chain records a completion policy such as `preserve_partial`, `atomic_required`, `dry_run_only`, or `coordinator_defined`. Archive write flows now record successful writes, failed writes, skipped candidates, and whether partial work was preserved; Exchange import commit chains preview/plan work, blocked downstream Archive work, and Archive import child results.
+
+Report packets remain optional. The runtime can create a compact trusted process report draft from a chain, but v1 does not write or sign those report packets automatically. Future server-wide and Interface Event Coordinator adoption should consume the same chain and taxonomy helpers rather than inventing surface-specific error handling.
 
 ## Trusted Planning Coordinator Pass
 

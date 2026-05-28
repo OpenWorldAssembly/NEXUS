@@ -326,3 +326,10 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - Definition, Regulation, and Planning result envelopes now use their canonical coordinator kinds, with older aliases retained only for legacy workflow paths.
 - Packet Explorer bundle export and import commit now route through Trusted Exchange and Trusted Archive while preserving existing Explorer payloads, import reports, validation modes, and preferred-head repair.
 - The verification service is now a compatibility wrapper over Trusted Verification for packet assessment, while local validator identity and report-writing stay service-owned until a later Certification/Archive migration.
+
+## 2026-05 Trusted process chains and issue taxonomy
+
+- Trusted coordinator results now support optional lightweight process chains that record stage-by-stage runtime diagnostics without automatically creating report packets.
+- The trusted issue taxonomy uses canonical dotted codes while mapping older underscore codes as aliases, giving reports and future interface handling stable error categories.
+- Archive and Exchange are the first deeper adopters: Archive records partial write progress, failed/skipped work, and preserved partial results; Exchange chains preview/plan/commit/export stages and child Archive results.
+- Report packet persistence is intentionally deferred. V1 only provides a process report draft helper so later Certification/Archive/report flows can choose when to sign and store diagnostics.
