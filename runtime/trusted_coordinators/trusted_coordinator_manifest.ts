@@ -225,6 +225,7 @@ export const TRUSTED_COORDINATOR_SCAFFOLD_MANIFEST = [
       { method_name: 'resolvePacketProjection', notes: 'Projects an already-loaded packet envelope using trusted packet definition projection descriptors.' },
       { method_name: 'resolveArchivedPacketProjection', notes: 'Reads packet material through Trusted Archive and returns a packet projection view model.' },
       { method_name: 'resolvePacketListProjection', notes: 'Projects archive query results into UI-safe packet list items.' },
+      { method_name: 'resolvePacketCardListProjection', notes: 'Projects already-selected packet cards into UI-safe packet card items without owning query selection.' },
       { method_name: 'resolvePacketGraphProjection', notes: 'Projects an archive-backed root packet with archived graph edges.' },
       { method_name: 'resolvePreferredSurface', notes: 'Resolves the preferred UI surface declared by packet projection descriptors.' },
       { method_name: 'auditReadiness', notes: 'Audits projection descriptor coverage for active trusted packet definitions.' },

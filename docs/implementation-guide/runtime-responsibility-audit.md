@@ -96,7 +96,7 @@ These areas are not wrong for the current prototype, but they are the main dista
 | Locality graph planning | OWA locality hierarchy, descriptor, parent, and graph rules in service code | OWA adapter plus Definition/Planning dependency descriptors for reusable graph build rules | High |
 | Scope graph | canonical relations plus legacy claim/home compatibility and OWA policy anchors | Projection graph base plus OWA scope profile adapter and explicit compatibility bridge | High |
 | Identity search and auth packet reads | Element.person checks and actor packet assumptions | identity custody stays runtime-owned; display/search projections move toward Projection descriptors | Medium |
-| Packet Explorer data panels | generic inspector now uses Projection/Archive; Search/Export/Import retain service-specific logic | continue migrating remaining Explorer helper paths behind coordinator seams when response parity is straightforward | Medium |
+| Packet Explorer data panels | generic inspector and search card rows now use Projection/Archive seams; Export/Import retain service-specific logic | continue migrating remaining Explorer helper paths behind coordinator seams when response parity is straightforward | Medium |
 | Query data aggregation | one broad route-read model service mixes many packet semantics | split into projection-backed read models plus product-specific adapters | High |
 | Verification reports | service writes Report packets directly after coordinator assessment | Certification/Archive/report handoff decides durable signed diagnostics | Medium |
 
@@ -131,7 +131,7 @@ Not candidates for imported executable definition logic:
 | reaction service | Projection/action descriptors plus OWA reaction adapter | separate target reaction read model from write path |
 | locality directory | OWA locality adapter plus Planning/Definition descriptors | identify generic graph/dependency planning pieces |
 | scope graph | Projection graph base plus OWA scope adapter | split legacy compatibility reads from canonical graph assembly |
-| Packet Explorer data | Projection/Archive/Compatibility bridge | continue moving Search/Export/Import edge cases behind coordinator seams after the generic inspector payload migration |
+| Packet Explorer data | Projection/Archive/Compatibility bridge | continue moving Export/Import edge cases behind coordinator seams after the generic inspector and search-card projection migrations |
 | fortress/mutation corridor | Dispatch-owned coordinator chain | remove legacy route authority; close Certification/Archive readiness gaps |
 | verification service | Verification wrapper plus report Certification/Archive handoff | keep assessment wrapper, isolate report-writing surface |
 
@@ -148,16 +148,18 @@ Use this as the short check-off ledger so the same issues do not have to be redi
 | Certification/Verification/Archive key continuity | Done | Certification records certified packet revision keys; Dispatch compares Certification against Verification and Archive; Archive blocks mismatched extracted envelopes. |
 | Mutation intent label authority | Done | Dispatch derives finalized kind from the certified plan and rejects mismatched caller labels. |
 | Resolution foldering | Open | Still the expected legacy-flat warning in the trusted coordinator scaffold audit. |
-| Direct storage/signature/interpreter runtime crossings | Open | Packet Explorer generic inspector no longer uses the legacy packet interpreter; remaining notes are bounded-context callers such as discussion/reaction plus storage/export/search paths. |
+| Direct storage/signature/interpreter runtime crossings | Open | Packet Explorer generic inspector no longer uses the legacy packet interpreter; remaining notes are bounded-context callers such as discussion/reaction plus storage/export paths. |
 | Packet Explorer generic projection adoption | Done | The generic inspector payload now gets revision state, edges, raw/adapted reads, and read-model projection through Trusted Archive/Projection while preserving API response shape. |
-| Projection adoption | Open | Packet Explorer Search/Export/Import edges, `nexus-query-data`, discussion/reaction/scope read models remain the biggest migration lane. |
+| Packet Explorer search card projection | Done | Search ranking/grouping remains service-owned, but selected search rows now pass through Trusted Projection card-list output before mapping back to the existing response shape. |
+| Generic query card projection | Partial | Dashboard, votes, and library packet-card lists now pass already-selected cards through Trusted Projection; discussion/reaction/scope/locality read models remain adapter migration lanes. |
+| Projection adoption | Open | Packet Explorer Export/Import edges, deeper `nexus-query-data`, discussion/reaction/scope read models remain the biggest migration lane. |
 | Legacy fortress corridor removal | Open | `relation.follow.add` uses the new Dispatch chain; other live mutation intents still need equivalent coordinator-backed materialization and finalization. |
 | OWA adapter/profile split | Open | Discussion, reaction, locality, and scope still mix generic runtime with OWA product behavior. |
 
 ## Recommended migration order
 
 1. Keep route-facing write lifecycle under Dispatch and remove legacy fortress concepts instead of wrapping them.
-2. Move read-model work toward Projection Coordinator where payload parity is straightforward: Packet Explorer's generic inspector payload has started this migration; continue with route query data, then discussion/reaction/scope read models.
+2. Move read-model work toward Projection Coordinator where payload parity is straightforward: Packet Explorer's generic inspector and search-card paths have started this migration, and generic dashboard/votes/library cards are partially projected; continue with deeper route query data, then discussion/reaction/scope read models.
 3. Move direct storage, import/export, verification, and compatibility bypasses behind Archive, Exchange, Verification, and Compatibility. Add audit warnings first, then fail newly cleaned seams.
 4. Extend the proven Dispatch write pipeline beyond `relation.follow.add`: full packet envelope materialization, Certification signed-bundle checks, Verification handoff, Archive storage, and result projection for each live intent.
 5. Separate OWA-specific adapters from generic runtime. Product profile behavior should be named, not hidden inside generic services.

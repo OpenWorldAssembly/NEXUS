@@ -7,6 +7,7 @@ import type { TrustedRuntimeCoordinatorResult } from '@runtime/trusted_coordinat
 import { auditTrustedProjectionReadiness } from './functions/audit_trusted_projection_readiness.ts';
 import { resolveTrustedArchivedPacketProjection } from './functions/resolve_archived_packet_projection.ts';
 import { resolveTrustedPacketGraphProjection } from './functions/resolve_packet_graph_projection.ts';
+import { resolveTrustedPacketCardListProjection } from './functions/resolve_packet_card_list_projection.ts';
 import { resolveTrustedPacketListProjection } from './functions/resolve_packet_list_projection.ts';
 import { resolveTrustedPacketProjection } from './functions/resolve_packet_projection.ts';
 import { resolveTrustedPreferredSurface } from './functions/resolve_preferred_surface.ts';
@@ -38,6 +39,12 @@ const TRUSTED_PROJECTION_REGISTRY: Record<TrustedProjectionCoordinatorRequest['o
       throw new Error('Invalid Trusted Projection operation dispatch.');
     }
     return resolveTrustedPacketListProjection(request.input);
+  },
+  resolve_packet_card_list_projection: (request) => {
+    if (request.operation !== 'resolve_packet_card_list_projection') {
+      throw new Error('Invalid Trusted Projection operation dispatch.');
+    }
+    return resolveTrustedPacketCardListProjection(request.input);
   },
   resolve_packet_graph_projection: (request) => {
     if (request.operation !== 'resolve_packet_graph_projection') {

@@ -10,9 +10,11 @@ import {
   type AuditTrustedProjectionReadinessInput,
   type ResolveTrustedArchivedPacketProjectionInput,
   type ResolveTrustedPacketGraphProjectionInput,
+  type ResolveTrustedPacketCardListProjectionInput,
   type ResolveTrustedPacketListProjectionInput,
   type ResolveTrustedPacketProjectionInput,
   type ResolveTrustedPreferredSurfaceInput,
+  type TrustedPacketCardListProjection,
   type TrustedPacketGraphProjection,
   type TrustedPacketListProjection,
   type TrustedPacketProjectionViewModel,
@@ -62,6 +64,16 @@ export const trustedProjectionCoordinator = {
     })));
   },
 
+
+  resolvePacketCardListProjection(
+    input: ResolveTrustedPacketCardListProjectionInput
+  ): TrustedRuntimeCoordinatorResult<TrustedPacketCardListProjection> {
+    return castResult(runTrustedProjectionOperation({
+      operation: 'resolve_packet_card_list_projection',
+      input,
+    }) as TrustedRuntimeCoordinatorResult<unknown>);
+  },
+
   resolvePacketGraphProjection(
     input: ResolveTrustedPacketGraphProjectionInput
   ): Promise<TrustedRuntimeCoordinatorResult<TrustedPacketGraphProjection>> {
@@ -93,6 +105,7 @@ export const trustedProjectionCoordinator = {
   resolvePacketProjection(input: ResolveTrustedPacketProjectionInput): TrustedRuntimeCoordinatorResult<TrustedPacketProjectionViewModel>;
   resolveArchivedPacketProjection(input: ResolveTrustedArchivedPacketProjectionInput): Promise<TrustedRuntimeCoordinatorResult<TrustedPacketProjectionViewModel>>;
   resolvePacketListProjection(input?: ResolveTrustedPacketListProjectionInput): Promise<TrustedRuntimeCoordinatorResult<TrustedPacketListProjection>>;
+  resolvePacketCardListProjection(input: ResolveTrustedPacketCardListProjectionInput): TrustedRuntimeCoordinatorResult<TrustedPacketCardListProjection>;
   resolvePacketGraphProjection(input: ResolveTrustedPacketGraphProjectionInput): Promise<TrustedRuntimeCoordinatorResult<TrustedPacketGraphProjection>>;
   resolvePreferredSurface(input: ResolveTrustedPreferredSurfaceInput): TrustedRuntimeCoordinatorResult<TrustedPreferredProjectionSurface>;
   auditReadiness(input?: AuditTrustedProjectionReadinessInput): TrustedRuntimeCoordinatorResult<TrustedProjectionReadinessReport>;

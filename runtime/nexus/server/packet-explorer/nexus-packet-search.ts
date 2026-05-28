@@ -16,6 +16,7 @@ import type {
 import type { NexusPacketServices } from '@runtime/nexus/server/nexus-packet-services.types';
 import type { PacketSearchIndexRecord } from '@runtime/storage/sqlite-records';
 import type { PacketType } from '@core/schema/packet-schema';
+import { trustedProjectionCoordinator } from '@runtime/trusted_coordinators/trusted_projection_coordinator/index.ts';
 
 type PacketSearchServices = Pick<NexusPacketServices, 'packetStore'>;
 
@@ -290,6 +291,52 @@ function findBestSearchCandidate(input: {
   return null;
 }
 
+
+function projectSearchCandidates(
+  candidates: RankedSearchCandidate[]
+): RankedSearchCandidate[] {
+  const projection = trustedProjectionCoordinator.resolvePacketCardListProjection({
+    cards: candidates.map((candidate) => ({
+      packet: { packet_id: candidate.packet_id },
+      revision: {
+        packet_id: candidate.packet_id,
+        revision_id: candidate.revision_id,
+      },
+      type: candidate.type,
+      title: candidate.title,
+      label: candidate.label,
+      summary: candidate.summary,
+      status: candidate.status,
+      created_at: candidate.created_at,
+      verification: candidate.verification,
+      authority_scope_packet_id: candidate.authority_scope_packet_id,
+      applicable_scope_ids: candidate.applicable_scope_ids,
+    })),
+    target_surface: 'packet_explorer_search',
+    context_mode: 'normal_runtime',
+  }).value;
+
+  if (!projection) {
+    return candidates;
+  }
+
+  return projection.items.map((item, index) => {
+    const sourceCandidate = candidates[index];
+
+    return {
+      ...sourceCandidate,
+      packet_id: item.packet_ref.packet_id,
+      revision_id: item.revision_ref.revision_id,
+      type: item.packet_type as PacketType,
+      title: item.title,
+      label: item.label,
+      summary: item.summary,
+      status: item.status,
+      created_at: item.created_at,
+    };
+  });
+}
+
 function buildGroupedPayload(input: {
   query: string;
   activeGroup: NexusPacketExplorerSearchActiveGroup;
@@ -459,13 +506,17 @@ export async function buildNexusPacketExplorerSearchPayload(input: {
     }
   }
 
+  const projectedCandidates = projectSearchCandidates(
+    Array.from(candidatesByPacketId.values())
+  );
+
   return buildGroupedPayload({
     query,
     activeGroup,
     limitPerGroup,
     page,
     pageSize,
-    candidates: Array.from(candidatesByPacketId.values()),
+    candidates: projectedCandidates,
   });
 }
 

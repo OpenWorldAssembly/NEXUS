@@ -50,6 +50,7 @@ import {
   buildNexusProjectedScopeSection,
 } from '@runtime/nexus/nexus-shell';
 import { getNexusPacketServices } from '@runtime/nexus/server/nexus-packet-services';
+import { trustedProjectionCoordinator } from '@runtime/trusted_coordinators/trusted_projection_coordinator/index.ts';
 import { readElementPreferencePacket } from '@runtime/nexus/server/element-preference-packets';
 import { readScopeDisplayPreferences } from '@runtime/nexus/server/scope-display-preferences';
 import { readShellChromePreferencesCompatibility } from '@runtime/nexus/server/shell-preferences';
@@ -152,6 +153,38 @@ function isOpenVoteStatus(status: string | null): boolean {
  * Inputs: dashboard card projection text.
  * Output: whether the packet appears to describe an association relationship.
  */
+
+function projectNexusPacketCards(
+  cards: NexusPacketCardProjection[],
+  targetSurface: string
+): NexusPacketCardProjection[] {
+  const projection = trustedProjectionCoordinator.resolvePacketCardListProjection({
+    cards,
+    target_surface: targetSurface,
+    context_mode: 'normal_runtime',
+  }).value;
+
+  if (!projection) {
+    return cards;
+  }
+
+  return projection.items.map((item, index) => {
+    const sourceCard = cards[index];
+
+    return {
+      ...sourceCard,
+      packet: item.packet_ref,
+      revision: item.revision_ref,
+      type: item.packet_type as PacketType,
+      title: item.title,
+      label: item.label,
+      summary: item.summary,
+      status: item.status,
+      created_at: item.created_at,
+    };
+  });
+}
+
 function isAssociationCardText(card: { title: string; label: string; summary: string | null }): boolean {
   const searchableText = [card.title, card.label, card.summary ?? '']
     .join(' ')
@@ -901,7 +934,7 @@ export async function getNexusDashboardPayload(
     actorPacketId,
   });
   const scopeLens = scopeResolution.lens;
-  const [localLibraryCards, residentCount] = await Promise.all([
+  const [queriedLocalLibraryCards, residentCount] = await Promise.all([
     services.nexusQueryService.listLibraryPackets(scopeLens, undefined, {
       scope_mode: 'local',
     }),
@@ -910,6 +943,10 @@ export async function getNexusDashboardPayload(
       scopeResolution,
     }),
   ]);
+  const localLibraryCards = projectNexusPacketCards(
+    queriedLocalLibraryCards,
+    'nexus_dashboard'
+  );
   const voteCards = localLibraryCards.filter(
     (libraryCard) =>
       libraryCard.type === 'Proposal' ||
@@ -1238,7 +1275,10 @@ export async function getNexusVotesPayload(
     actorPacketId,
   });
   const scopeLens = scopeResolution.lens;
-  const voteCards = await services.nexusQueryService.listVotes(scopeLens);
+  const voteCards = projectNexusPacketCards(
+    await services.nexusQueryService.listVotes(scopeLens),
+    'nexus_votes'
+  );
   const stageCounts = {
     petitioning: 0,
     under_review: 0,
@@ -1302,12 +1342,15 @@ export async function getNexusLibraryPayload(input: {
     actorPacketId: input.actorPacketId,
   });
   const scopeLens = scopeResolution.lens;
-  const packets = await services.nexusQueryService.listLibraryPackets(
-    scopeLens,
-    input.typeFilter ?? undefined,
-    {
-      scope_mode: 'local',
-    }
+  const packets = projectNexusPacketCards(
+    await services.nexusQueryService.listLibraryPackets(
+      scopeLens,
+      input.typeFilter ?? undefined,
+      {
+        scope_mode: 'local',
+      }
+    ),
+    'nexus_library'
   );
 
   return {

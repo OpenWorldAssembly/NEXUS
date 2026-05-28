@@ -385,3 +385,9 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - Packet Explorer's generic inspector payload now uses Trusted Archive for preferred/head revision resolution and graph edge lookup instead of direct packet-store/query-service calls.
 - The inspector read-model panel now uses Trusted Projection output as `read_model_view`, preserving the existing response field while removing the direct legacy packet-interpreter call from Packet Explorer data.
 - Scope labels and related link labels in the inspector are resolved through archived packet projections. Search, Export, Import, discussion, reaction, scope, and locality read models remain separate migration lanes.
+
+## 2026-05 Projection card-list bridge migration
+
+- Trusted Projection now exposes `resolvePacketCardListProjection` for already-selected packet cards, keeping query selection, ranking, and scope filtering outside Projection while centralizing card/list presentation shaping.
+- Packet Explorer Search preserves its direct/name/text grouping, scoring, pagination, and response fields, but selected result rows now pass through the Projection card-list seam before being mapped back to the existing payload shape.
+- `nexus-query-data` now projects generic dashboard, votes, and library packet-card lists after `nexusQueryService` has already selected the cards. Discussion, reaction, scope, locality, and deeper product-specific route read models remain separate adapter cleanup lanes.

@@ -74,6 +74,43 @@ export type TrustedPacketListProjection = {
   archive_cards: TrustedArchivePacketCard[];
 };
 
+
+export type TrustedPreselectedPacketCardInput = {
+  packet: PacketRef;
+  revision: PacketRevisionRef;
+  type: PacketType | string;
+  label: string;
+  title: string;
+  summary: string | null;
+  status: string | null;
+  created_at: string;
+  verification?: unknown;
+  authority_scope_packet_id?: string | null;
+  applicable_scope_ids?: readonly string[];
+};
+
+export type TrustedPacketCardProjectionItem = {
+  item_kind: 'trusted.packet_card_projection_item';
+  packet_ref: PacketRef;
+  revision_ref: PacketRevisionRef;
+  packet_type: string;
+  title: string;
+  label: string;
+  summary: string | null;
+  status: string | null;
+  preferred_surface: string | null;
+  created_at: string;
+  source_card: TrustedPreselectedPacketCardInput;
+};
+
+export type TrustedPacketCardListProjection = {
+  projection_kind: 'trusted.packet_card_list_projection';
+  total_count: number;
+  target_surface: string | null;
+  items: TrustedPacketCardProjectionItem[];
+  source_cards: TrustedPreselectedPacketCardInput[];
+};
+
 export type TrustedPacketGraphProjection = {
   projection_kind: 'trusted.packet_graph_projection';
   packet_ref: PacketRef;
@@ -134,6 +171,12 @@ export type ResolveTrustedPacketListProjectionInput = BaseTrustedProjectionInput
   target_surface?: string | null;
 };
 
+
+export type ResolveTrustedPacketCardListProjectionInput = BaseTrustedProjectionInput & {
+  cards: readonly TrustedPreselectedPacketCardInput[];
+  target_surface?: string | null;
+};
+
 export type ResolveTrustedPacketGraphProjectionInput = BaseTrustedProjectionInput & TrustedArchiveStoreContext & {
   packet_ref: PacketRef;
   revision_ref?: PacketRevisionRef | null;
@@ -155,6 +198,7 @@ export type TrustedProjectionOperation =
   | 'resolve_packet_projection'
   | 'resolve_archived_packet_projection'
   | 'resolve_packet_list_projection'
+  | 'resolve_packet_card_list_projection'
   | 'resolve_packet_graph_projection'
   | 'resolve_preferred_surface'
   | 'audit_readiness';
@@ -171,6 +215,10 @@ export type TrustedProjectionCoordinatorRequest =
   | {
       operation: 'resolve_packet_list_projection';
       input: ResolveTrustedPacketListProjectionInput;
+    }
+  | {
+      operation: 'resolve_packet_card_list_projection';
+      input: ResolveTrustedPacketCardListProjectionInput;
     }
   | {
       operation: 'resolve_packet_graph_projection';
