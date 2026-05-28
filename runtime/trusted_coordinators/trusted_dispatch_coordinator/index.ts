@@ -15,4 +15,8 @@ export type {
   TrustedDispatchReadinessReport,
   TrustedDispatchSourceKind,
   TrustedRuntimeDispatchRequest,
+  PrepareTrustedDispatchMutationWriteInput,
+  FinalizeTrustedDispatchMutationWriteInput,
+  TrustedDispatchPreparedMutationResult,
+  TrustedDispatchFinalizedMutationResult,
 } from './trusted_dispatch_types.ts';

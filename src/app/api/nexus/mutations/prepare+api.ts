@@ -1,6 +1,6 @@
 /**
  * File: prepare+api.ts
- * Description: Prepares canonical unsigned packet candidates and one-time tickets for the fortress mutation corridor.
+ * Description: Prepares canonical unsigned packet candidates through the Dispatch-owned write pipeline.
  */
 
 import type { RequestHandler } from 'expo-router/server';
@@ -30,12 +30,15 @@ function getInterfaceEventHeader(request: Request, name: string): string | null 
   return value && value.trim().length > 0 ? value : null;
 }
 
-function assertDispatchResult(result: { status: string; value: unknown; issues: { message: string }[] }) {
-  if (result.status === 'error' || result.value === null) {
-    throw new Error(
-      result.issues[0]?.message ?? 'Trusted dispatch coordinator blocked this request.'
-    );
+function assertCoordinatorValue<TValue>(
+  result: { status: string; value: TValue | null; issues: { message: string }[] },
+  fallbackMessage: string
+): TValue {
+  if (result.status === 'error' || result.status === 'blocked' || result.value === null) {
+    throw new Error(result.issues[0]?.message ?? fallbackMessage);
   }
+
+  return result.value;
 }
 
 export const POST: RequestHandler = async (request) => {
@@ -49,33 +52,6 @@ export const POST: RequestHandler = async (request) => {
     const clientIntentId =
       getInterfaceEventHeader(request, 'x-nexus-interface-event-client-intent-id') ??
       parsedBody.intent.kind;
-    const normalizedDispatch = trustedDispatchCoordinator.normalizeRequest({
-      source_kind: interfaceEventId ? 'interface_signal' : 'api_route',
-      source_route: '/api/nexus/mutations/prepare',
-      operation_kind: 'mutation_prepare',
-      request_id: interfaceEventId,
-      client_intent_id: clientIntentId,
-      mutation_intent: parsedBody.intent.kind,
-      actor_packet_id: parsedBody.actor_assertion.actor_packet_id,
-      payload: {
-        interface_event_source_kind: getInterfaceEventHeader(
-          request,
-          'x-nexus-interface-event-source-kind'
-        ),
-        interface_event_source_surface: getInterfaceEventHeader(
-          request,
-          'x-nexus-interface-event-source-surface'
-        ),
-      },
-    });
-    assertDispatchResult(normalizedDispatch);
-    const dispatchPreflight = trustedDispatchCoordinator.preflightClientIntent({
-      sourceRoute: '/api/nexus/mutations/prepare',
-      requestId: normalizedDispatch.value?.request_id ?? interfaceEventId,
-      clientIntentId,
-      mutationIntent: parsedBody.intent.kind,
-    });
-    assertDispatchResult(dispatchPreflight);
     resolvePrepareMutationApiPreflight(parsedBody.intent);
     const { actor_assertion: _actorAssertion, ...signedMutationBody } =
       rawBody as Record<string, unknown>;
@@ -91,13 +67,19 @@ export const POST: RequestHandler = async (request) => {
       reauthToken: parsedBody.reauth_token,
       requiredProofLevel: 'session',
     });
-    const result = await services.mutationService.prepareMutation({
+    const result = await trustedDispatchCoordinator.prepareEnrolledMutationWrite({
+      source_route: '/api/nexus/mutations/prepare',
+      client_intent_id: clientIntentId,
+      request_id: interfaceEventId,
       intent: parsedBody.intent as MutationIntent,
-      actorPacket: actorContext.actorPacket,
-      actorKey: actorContext.actorKey,
+      actor_packet: actorContext.actorPacket,
+      actor_key: actorContext.actorKey,
     });
 
-    return createJsonResponse(result);
+    return createJsonResponse(assertCoordinatorValue(
+      result,
+      'Unable to prepare the mutation.'
+    ));
   } catch (error) {
     if (error instanceof LocalityDuplicateWarningError) {
       return createJsonResponse(

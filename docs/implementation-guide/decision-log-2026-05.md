@@ -340,3 +340,16 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - Identity, discussion, reaction, locality, scope, Packet Explorer, readiness, and shared helper modules now have canonical homes with top-level compatibility bridges preserved for existing callers.
 - Fortress mutation flow has a reserved bounded-context home, but signed corridor files remain top-level until a dedicated behavior-preserving move can keep the ticket/signing path easy to verify.
 - The rule for this chapter is move-first and split-later: large services keep behavior intact now, then decompose by responsibility inside their bounded-context folders in later passes.
+
+## 2026-05 Runtime responsibility and ideal ownership audit
+
+- Runtime cleanup shifted from folder organization to ideal ownership analysis, classifying runtime processes by whether they belong to Trusted Coordinators, packet-definition metadata, Projection, storage adapters, OWA adapters, compatibility bridges, or the legacy signed corridor.
+- Discussion, reaction, locality, and scope runtime services are treated as transitional product/runtime adapters rather than final generic architecture.
+- Fortress naming is now explicitly legacy signed-corridor language; new work should use Dispatch, Regulation, Planning, Certification, Archive, and Interface Event Coordinator ownership terms where possible.
+- The audit records packet-definition opportunities for projection fields, action availability, policy requirements, build/default/dependency assumptions, and import/export/verification summaries without allowing imported packet definitions to execute local runtime behavior.
+
+## 2026-05 Dispatch-owned write pipeline correction
+
+- The mistaken Trusted Write coordinator direction was rejected: write lifecycle orchestration belongs to Dispatch, not a new peer coordinator.
+- `/api/nexus/mutations/prepare` and `/api/nexus/mutations/finalize` now call Dispatch-owned write lifecycle methods and do not call `NexusMutationService` as route-facing authority.
+- The Dispatch write pipeline intentionally blocks where the real coordinator chain is incomplete, especially full packet-envelope materialization, Certification support for the existing signed packet bundle finalize payload, and Archive-ready result mapping without domain finalizer callbacks.

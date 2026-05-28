@@ -1,6 +1,6 @@
 /**
  * File: finalize+api.ts
- * Description: Finalizes signed packet candidates against a prepared fortress mutation ticket and persists approved effects.
+ * Description: Finalizes signed packet candidates through the Dispatch-owned write pipeline.
  */
 
 import type { RequestHandler } from 'expo-router/server';
@@ -12,7 +12,6 @@ import {
   toNexusAuthFailurePayload,
   toNexusAuthGatePayload,
 } from '@runtime/nexus/server/auth-service.utils';
-import { resolveFinalizeMutationApiPreflight } from '@runtime/nexus/server/packet-api-crossing-guard';
 import { trustedDispatchCoordinator } from '@runtime/trusted_coordinators/trusted_dispatch_coordinator/index.ts';
 
 const ActorAssertionSchema = z
@@ -52,12 +51,15 @@ function getInterfaceEventHeader(request: Request, name: string): string | null 
   return value && value.trim().length > 0 ? value : null;
 }
 
-function assertDispatchResult(result: { status: string; value: unknown; issues: { message: string }[] }) {
-  if (result.status === 'error' || result.value === null) {
-    throw new Error(
-      result.issues[0]?.message ?? 'Trusted dispatch coordinator blocked this request.'
-    );
+function assertCoordinatorValue<TValue>(
+  result: { status: string; value: TValue | null; issues: { message: string }[] },
+  fallbackMessage: string
+): TValue {
+  if (result.status === 'error' || result.status === 'blocked' || result.value === null) {
+    throw new Error(result.issues[0]?.message ?? fallbackMessage);
   }
+
+  return result.value;
 }
 
 export const POST: RequestHandler = async (request) => {
@@ -67,41 +69,15 @@ export const POST: RequestHandler = async (request) => {
     const { actor_assertion: _actorAssertion, ...signedMutationBody } =
       rawBody as Record<string, unknown>;
     const services = await getNexusPacketServices();
-    const storedTicket = services.mutationService.readTicket(parsedBody.ticket_id);
-
-    if (!storedTicket) {
-      throw new Error('Unknown mutation ticket.');
-    }
 
     const interfaceEventId = getInterfaceEventHeader(
       request,
       'x-nexus-interface-event-id'
     );
-    const normalizedDispatch = trustedDispatchCoordinator.normalizeRequest({
-      source_kind: interfaceEventId ? 'interface_signal' : 'api_route',
-      source_route: '/api/nexus/mutations/finalize',
-      operation_kind: 'mutation_finalize',
-      request_id: interfaceEventId,
-      client_intent_id: getInterfaceEventHeader(
-        request,
-        'x-nexus-interface-event-client-intent-id'
-      ),
-      mutation_intent: storedTicket.intent.kind,
-      actor_packet_id: parsedBody.actor_assertion.actor_packet_id,
-      payload: {
-        ticket_id: parsedBody.ticket_id,
-        interface_event_source_kind: getInterfaceEventHeader(
-          request,
-          'x-nexus-interface-event-source-kind'
-        ),
-        interface_event_source_surface: getInterfaceEventHeader(
-          request,
-          'x-nexus-interface-event-source-surface'
-        ),
-      },
-    });
-    assertDispatchResult(normalizedDispatch);
-    resolveFinalizeMutationApiPreflight(storedTicket.intent);
+    const clientIntentId = getInterfaceEventHeader(
+      request,
+      'x-nexus-interface-event-client-intent-id'
+    );
 
     const actorContext = await services.authService.verifyActorMutation({
       request,
@@ -113,19 +89,25 @@ export const POST: RequestHandler = async (request) => {
       csrfToken: parsedBody.csrf_token,
       reauthToken: parsedBody.reauth_token,
       writeRisk: 'standard',
-      requiredProofLevel: storedTicket.prepared_mutation.required_proof_level,
+      requiredProofLevel: 'session',
     });
-    const result = await services.mutationService.finalizeMutation({
+    const result = await trustedDispatchCoordinator.finalizeEnrolledMutationWrite({
+      source_route: '/api/nexus/mutations/finalize',
+      client_intent_id: clientIntentId,
+      request_id: interfaceEventId,
+      actor_packet: actorContext.actorPacket,
       request: {
         ticket_id: parsedBody.ticket_id,
         signed_packets: parsedBody.signed_packets.map((packetInput) =>
           parsePacketEnvelope(packetInput)
         ),
       },
-      actorContext,
     });
 
-    return createJsonResponse(result);
+    return createJsonResponse(assertCoordinatorValue(
+      result,
+      'Unable to finalize the mutation.'
+    ));
   } catch (error) {
     const authGate = toNexusAuthGatePayload(error);
     const authFailure = toNexusAuthFailurePayload(error);

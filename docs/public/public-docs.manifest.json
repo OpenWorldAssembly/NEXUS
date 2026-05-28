@@ -42,6 +42,7 @@
       "chapterDir": "docs/implementation-guide",
       "sourceFiles": [
         "docs/implementation-guide/packet-runtime-modernization.md",
+        "docs/implementation-guide/runtime-responsibility-audit.md",
         "docs/implementation-guide/architecture-and-layers.md",
         "docs/implementation-guide/nexus-ui-component-catalog.md",
         "docs/implementation-guide/nexus-ui-hard-inventory.md",

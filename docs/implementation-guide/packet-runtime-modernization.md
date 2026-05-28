@@ -88,9 +88,27 @@ The first interface-to-runtime orchestration pass adds a Nexus app-layer `Interf
 
 Client validation is intentionally advisory. The Interface Event Coordinator supports required values, length checks, regex checks, and caller predicates, but runtime policy, proof, tickets, signing, persistence, and mutation effects remain authoritative downstream.
 
-Runtime intake now exposes `trustedDispatchCoordinator` as the canonical front desk. It currently delegates to the existing foldered Trusted Request Coordinator implementation, preserving request compatibility while establishing dispatch naming. Mutation prepare/finalize routes normalize dispatch context through this coordinator; prepare also runs registered client-intent preflight before the existing fortress mutation service path continues. Optional interface event metadata travels in headers so signed mutation payload schemas stay unchanged.
+Runtime intake now exposes `trustedDispatchCoordinator` as the canonical front desk. It currently delegates basic request normalization to the existing foldered Trusted Request Coordinator implementation, preserving request compatibility while establishing dispatch naming. Mutation prepare/finalize routes enter Dispatch-owned write lifecycle methods rather than the legacy mutation service route authority. Optional interface event metadata travels in headers so signed mutation payload schemas stay unchanged.
 
 ## Definition-Driven Build And Projection Direction
+
+## Dispatch-Owned Write Pipeline
+
+The live `/api/nexus/mutations/prepare` and `/api/nexus/mutations/finalize` routes now call `trustedDispatchCoordinator.prepareEnrolledMutationWrite` and `trustedDispatchCoordinator.finalizeEnrolledMutationWrite`. There is no separate Write Coordinator. Dispatch owns route-facing lifecycle orchestration, then asks the existing trusted coordinator organs to do their jobs.
+
+The intended chain is:
+
+- Dispatch remains request and client-intent intake.
+- Definition resolves active packet/workflow definitions.
+- Regulation resolves policy and write-gate requirements.
+- Planning resolves the operation plan.
+- Building materializes candidates.
+- Inspection validates candidates against the frozen plan.
+- Certification owns signing tickets and certification readiness.
+- Verification owns signed packet legitimacy.
+- Archive stores certified packet sets.
+
+The current correction intentionally blocks rather than falling back where the coordinator chain is incomplete. The known gaps are full packet-envelope materialization from Building, Certification support for the existing signed packet bundle finalize payload, and Archive-ready result mapping without domain finalizer callbacks.
 
 The same declaration language should guide both packet creation and packet projection.
 
@@ -113,7 +131,7 @@ Builders remain packet anatomy. Defaults describe normal starting shape. Depende
 
 Trusted coordinators now share a scaffold contract: public coordinator object, stable coordinator id, typed result envelope, issues, trace entries, optional request/operation ids, optional process-chain diagnostics, and a manifest entry describing expected methods. Foldered trusted coordinators expose only their public coordinator and public types from `index.ts`; internal function modules and registries stay private behind the coordinator surface.
 
-`npm run audit:trusted-coordinators` checks the scaffold manifest. The audit currently treats Dispatch, Request, Definition, Regulation, Planning, Building, Inspection, Certification, Archive, Verification, Compatibility, Exchange, and Projection as foldered gated coordinators. Resolution remains legacy-flat with a warning until it is promoted.
+`npm run audit:trusted-coordinators` checks the scaffold manifest. The audit currently treats Dispatch, Request, Definition, Regulation, Planning, Building, Inspection, Certification, Archive, Verification, Compatibility, Exchange, Projection, and Write as foldered gated coordinators. Resolution remains legacy-flat with a warning until it is promoted.
 
 ## Trusted Process Chains and Issue Taxonomy
 
@@ -225,7 +243,7 @@ The manifest audit now fails when compatibility posture and descriptors disagree
 
 ## Mutation Handler Extraction Pass
 
-The signed mutation corridor remains the live authority for prepare, proof, finalize, and persistence decisions. The Interface Event Coordinator remains the client/API-to-runtime event bridge; it does not own signed mutation internals yet.
+Dispatch is now the route-facing authority for enrolled prepare/finalize orchestration. The Interface Event Coordinator remains the client/API-to-runtime event bridge; it does not own signed mutation internals.
 
 The extraction pass introduces domain-composed mutation handler maps for locality, discussion, reaction, assembly, relation, role, and actor policy. `MutationPrepareHandlers` and `MutationFinalizeHandlers` remain compatibility facades for the current implementation, while the composed maps give the runtime a clearer stepping-stone toward generic packet planners.
 
@@ -295,7 +313,7 @@ The handoff pass adds a definition `PacketRuntimeMutationHandoff` contract. A ha
 
 Generic-ready and workflow-aligned planner-extraction intents can now produce `definition_ready` handoffs. Runtime-owned workflow intents produce explicit non-ready handoffs with orchestration reason codes. Legacy bridge intents point at canonical handoff directions. Unknown mutation intents fail closed before any mutation handoff.
 
-At the time of this pass, this did not change the live mutation routes. The current state is stricter: `NexusMutationService` remains the live signed mutation authority, and authenticated `Preference.element` writes now enter that trusted mutation service path rather than the old direct packet-runtime connector.
+At the time of this pass, this did not change the live mutation routes. The current state is stricter: Dispatch is the route-facing signed-write authority, and authenticated `Preference.element` writes enter the Dispatch-owned write pipeline rather than the old mutation service route authority.
 
 ## Packet-Based Policy, Dependency, and Client Ingress Enrollment Pass
 
@@ -317,8 +335,8 @@ The enrollment layer is interface-neutral. Web shell, Raspberry Pi controls, loc
 
 The live API routes now consult ingress preflight before delegating to the live corridor:
 
-- prepare parses the request intent, validates client/API ingress enrollment, then delegates to `NexusMutationService`;
-- finalize reads the stored ticket, validates the ticket's original mutation intent against enrolled prepare ingress, then delegates to `NexusMutationService`;
+- prepare parses the request intent, validates client/API ingress enrollment, then delegates to `trustedDispatchCoordinator.prepareEnrolledMutationWrite`;
+- finalize delegates to `trustedDispatchCoordinator.finalizeEnrolledMutationWrite`, which must use Certification/Verification/Archive rather than legacy mutation tickets;
 - authenticated shell preferences use the standard prepare/finalize mutation routes with `preference.element.set`;
 - `/api/nexus/shell-preferences` remains a guest compatibility route and is outside packet-runtime connector enrollment.
 
@@ -333,7 +351,7 @@ The first proving promotion is follow relation set/clear:
 - `relation.follow.add`
 - `relation.follow.clear`
 
-These intents now prepare through trusted generic workflow planning while `NexusMutationService` remains the signed mutation authority. API routes, route payloads, response shapes, policy action IDs, packet schemas, proof behavior, tickets, signatures, persistence, and projections remain unchanged. The promoted path uses manifest workflow metadata and trusted local relation planning to produce the same packet candidates and policy metadata as the previous mutation-service-specific follow planner path.
+These intents now prepare through trusted generic workflow planning while Dispatch remains the route-facing signed-write authority. API routes, route payloads, response shapes, policy action IDs, packet schemas, proof behavior, tickets, signatures, persistence, and projections remain unchanged. The promoted path uses manifest workflow metadata and trusted local relation planning to produce the same packet candidates and policy metadata as the previous mutation-service-specific follow planner path.
 
 The remaining pre-reseed queue is explicit:
 
@@ -360,7 +378,7 @@ This pass remains runtime-ready. Live API routes, payloads, mutation ticketing, 
 
 ## Remaining Runtime Genericization Closure Pass
 
-The second live generic promotion expands the trusted workflow seam beyond follow relations. The direct operation paths now enrolled behind `NexusMutationService` are:
+The second live generic promotion expands the trusted workflow seam beyond follow relations. The direct operation paths now enrolled behind trusted planning/building work are:
 
 - `relation.follow.add`
 - `relation.follow.clear`
@@ -396,7 +414,7 @@ The runtime genericization lane is now closed for in-scope live prepare handling
 - `composite.role_reaction.set.v0`
 - `composite.actor_write_policy.update.v0`
 
-These resolvers execute trusted local runtime code only. Adapter descriptors describe the reusable workflow shape and audit metadata; packet definitions still cannot inject executable behavior. `MutationPrepareHandlers` remains the compatibility facade, `NexusMutationService` remains the signed mutation authority, and finalize handlers remain unchanged.
+These resolvers execute trusted local runtime code only. Adapter descriptors describe the reusable workflow shape and audit metadata; packet definitions still cannot inject executable behavior. Dispatch is the route-facing signed-write authority; domain finalize handlers are removal targets, not a fallback path.
 
 Actor write-policy update is mechanically promoted through the composite seam, and Policy packets plus Definition dependency parts are authoritative enough for the fresh genesis contract. Discussion canonicalization to top-level `Discussion(subtype: post)` plus reply `Discussion(subtype: message)` and OWA `Action(subtype: initiative)` are now part of the active reseed contract.
 

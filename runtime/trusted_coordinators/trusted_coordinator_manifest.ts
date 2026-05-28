@@ -16,6 +16,8 @@ export const TRUSTED_COORDINATOR_SCAFFOLD_MANIFEST = [
     expected_methods: [
       { method_name: 'normalizeRequest', notes: 'Validates and normalizes interface/API events into trusted runtime requests.' },
       { method_name: 'preflightClientIntent', notes: 'Checks route/intent enrollment before mutation preparation.' },
+      { method_name: 'prepareEnrolledMutationWrite', notes: 'Runs an enrolled mutation prepare request through the dispatch-owned coordinator write pipeline.' },
+      { method_name: 'finalizeEnrolledMutationWrite', notes: 'Runs an enrolled mutation finalize request through Certification, Verification, and Archive.' },
       { method_name: 'listEnrollments', notes: 'Lists registered client/API ingress enrollments.' },
       { method_name: 'auditReadiness', notes: 'Audits dispatch intake enrollment coverage.' },
     ],

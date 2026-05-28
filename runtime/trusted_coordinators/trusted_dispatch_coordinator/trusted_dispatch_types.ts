@@ -1,7 +1,16 @@
 /**
  * File: trusted_dispatch_types.ts
- * Description: Public type aliases for the Trusted Dispatch Coordinator compatibility bridge.
+ * Description: Public types for the Trusted Dispatch Coordinator.
  */
+
+import type {
+  MutationFinalizeRequest,
+  MutationIntent,
+  MutationPersistEffect,
+  MutationTicket,
+  PreparedMutation,
+} from '@core/auth/mutation-corridor';
+import type { PacketEnvelopeByType } from '@core/schema/packet-schema';
 
 export type {
   AuditTrustedRequestReadinessInput as AuditTrustedDispatchReadinessInput,
@@ -15,3 +24,32 @@ export type {
   TrustedRequestSourceKind as TrustedDispatchSourceKind,
   TrustedRuntimeRequest as TrustedRuntimeDispatchRequest,
 } from '@runtime/trusted_coordinators/trusted_request_coordinator/trusted_request_types.ts';
+
+export type TrustedDispatchPreparedMutationResult = {
+  ticket: MutationTicket;
+  prepared_mutation: PreparedMutation;
+};
+
+export type TrustedDispatchFinalizedMutationResult = {
+  kind: MutationIntent['kind'];
+  persist_effects: MutationPersistEffect[];
+  result: unknown;
+};
+
+export type PrepareTrustedDispatchMutationWriteInput = {
+  source_route: string;
+  client_intent_id?: string | null;
+  request_id?: string | null;
+  intent: MutationIntent;
+  actor_packet: PacketEnvelopeByType['Element'];
+  actor_key: string;
+};
+
+export type FinalizeTrustedDispatchMutationWriteInput = {
+  source_route: string;
+  client_intent_id?: string | null;
+  request_id?: string | null;
+  mutation_intent?: MutationIntent['kind'] | null;
+  actor_packet: PacketEnvelopeByType['Element'];
+  request: MutationFinalizeRequest;
+};
