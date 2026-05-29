@@ -108,7 +108,7 @@ export function createElementPreferenceShadowSetPlan(input: {
     body,
     projected_runtime_preferences: preferenceBodyToRuntimeScopeDisplayPreferences(body),
     notes: [
-      'Shadow plan only: Preference.element is envelope-capable and claimed writes are fortress-enrolled, but this manifest-derived plan does not create tickets or persist packets.',
+      'Shadow plan only: Preference.element is envelope-capable and claimed writes have trusted-write coverage, but this manifest-derived plan does not create tickets or persist packets.',
       'This plan proves the manifest can resolve actions, builders, planners, policy action ids, and packet ids without executing imported definition behavior.',
     ],
   };
@@ -177,7 +177,7 @@ export function createElementPreferenceShadowSeed(input: {
       auditReport.finding_counts.error === 0,
     live_fortress_ready: false,
     notes: [
-      'Shadow seed only: this object is not written by the manifest bridge; live claimed writes use the fortress-enrolled Preference.element workflow.',
+      'Shadow seed only: this object is not written by the manifest bridge; live claimed writes use the trusted Preference.element write workflow.',
       'Use this to compare runtime preference state against the Preference.element packet projection while manifest-driven execution remains trusted-local.',
     ],
   };

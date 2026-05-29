@@ -140,8 +140,8 @@ export function listMutationRuntimeModernizationCoverage(): MutationRuntimeModer
         status: 'missing_coverage',
         reason:
           descriptor.kind === 'preference.element.set'
-            ? 'Preference.element is now fortress-enrolled; the old connector remains runtime-ready for compatibility tests and local comparison.'
-            : 'This live mutation intent still runs through the signed fortress corridor and is scheduled for connector enrollment in the modernization chapter.',
+            ? 'Preference.element has trusted-write coverage; the old connector remains runtime-ready for compatibility tests and local comparison.'
+            : 'This live mutation intent still needs explicit Dispatch-chain coverage before it can leave transitional modernization tracking.',
       },
     ],
   }));

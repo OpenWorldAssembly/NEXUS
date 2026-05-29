@@ -146,7 +146,7 @@ function createPrepareEnrollment(
     live_mode: "signed_fortress_prepare",
     handoff_status: handoff.status,
     notes:
-      "Client/API ingress signed fortress prepare intent. The registry is descriptive and does not replace NexusMutationService.",
+      "Client/API ingress write intent. The registry is descriptive metadata for Dispatch-owned prepare/finalize routing.",
   };
 }
 
@@ -290,7 +290,7 @@ export function resolvePacketClientIntentPreflight(input: {
         : "registered_signed_fortress_prepare",
     ],
     notes: [
-      "Preflight validates enrollment metadata only; fortress remains the live authority for proof, policy, tickets, signing, persistence, and mutation effects.",
+      "Preflight validates enrollment metadata only; Dispatch and the trusted coordinator chain own proof, policy, ticketing, signing checks, persistence, and mutation effects.",
     ],
   };
 }

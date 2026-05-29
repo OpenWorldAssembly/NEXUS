@@ -35,6 +35,19 @@ type RuntimeCrossingHit = {
   hits: string[];
 };
 
+
+const REMOVED_LEGACY_MUTATION_EXECUTOR_PATHS = [
+  'runtime/nexus/server/fortress-finalize-handler-implementation.ts',
+  'runtime/nexus/server/fortress-prepare-handler-implementation.ts',
+  'runtime/nexus/server/mutation-finalize-handlers.ts',
+  'runtime/nexus/server/mutation-prepare-handlers.ts',
+  'runtime/nexus/server/mutation-service.ts',
+  'runtime/nexus/server/signed-packet-finalizer.ts',
+  'runtime/nexus/server/preference-fortress-workflow.ts',
+  'runtime/nexus/server/manifest-fortress-bridge.ts',
+  'runtime/nexus/server/manifest-shadow-fortress-bridge.ts',
+] as const;
+
 const RUNTIME_CROSSING_CATEGORIES: readonly RuntimeCrossingCategory[] = [
   {
     code: 'direct_storage_touch',
@@ -342,6 +355,26 @@ function scanLiveMutationServiceDependencyFindings(): AuditFinding[] {
   return findings;
 }
 
+
+function scanRemovedLegacyExecutorFindings(): AuditFinding[] {
+  const findings: AuditFinding[] = [];
+
+  for (const removedPath of REMOVED_LEGACY_MUTATION_EXECUTOR_PATHS) {
+    if (!existsSync(repoPath(removedPath))) {
+      continue;
+    }
+
+    findings.push({
+      severity: 'error',
+      coordinator_id: 'trusted_dispatch_coordinator.v0',
+      code: 'trusted_removed_legacy_executor_present',
+      message: `${removedPath} was retired from the live mutation corridor and must not be restored; Dispatch owns route-facing prepare/finalize authority.`,
+    });
+  }
+
+  return findings;
+}
+
 function scanIssueCodeFindings(): AuditFinding[] {
   const findings: AuditFinding[] = [];
   const coordinatorRoot = repoPath('runtime/trusted_coordinators');
@@ -398,6 +431,7 @@ function audit(): { findings: AuditFinding[]; notes: AuditNote[] } {
   findings.push(...scanTrustedCoordinatorFolderFindings());
   findings.push(...scanPackageScriptFindings());
   findings.push(...scanLiveMutationServiceDependencyFindings());
+  findings.push(...scanRemovedLegacyExecutorFindings());
 
   for (const descriptor of listTrustedCoordinatorScaffoldDescriptors()) {
     const pathExists = existsSync(repoPath(descriptor.runtime_path));

@@ -6,11 +6,11 @@ This audit maps the current runtime toward its ideal ownership model. The truste
 
 Current scan baseline:
 
-- `runtime/*`: 382 TypeScript files
-- `runtime/nexus/server/*`: 164 TypeScript files
-- `runtime/trusted_coordinators/*`: 162 TypeScript files
-- `runtime/nexus/server/*` still contains roughly 333 packet type/subtype references and 349 storage-touch references
-- legacy `fortress` naming still appears broadly in server runtime files and should be treated as signed-corridor compatibility language, not the future architecture name
+- `runtime/*`: 358 TypeScript files
+- `runtime/nexus/server/*`: 137 TypeScript files
+- `runtime/trusted_coordinators/*`: 165 TypeScript files
+- Current trusted-coordinator audit notes report 10 direct storage-touch files, 3 direct signature-verification files, 1 API packet-parse crossing, and 32 legacy-fortress naming hits across 23 server/runtime files
+- legacy `fortress` naming now appears mostly in static audit/readiness ledgers and transitional runtime descriptors; the old route executor files have been removed and should not be restored
 
 The near-term goal is not to hide every product concept from runtime. Runtime may understand generic packet anatomy, refs, schema posture, signatures, storage, projections, and operation results. The goal is to stop encoding product behavior as scattered runtime branches when the rule can be described by packet definitions, projection descriptors, coordinator capabilities, or OWA adapter/profile modules.
 
@@ -18,7 +18,7 @@ The near-term goal is not to hide every product concept from runtime. Runtime ma
 
 The trusted coordinator audit is now responsible for both scaffold shape and migration visibility. It checks for unmanifested `trusted_*_coordinator` folders, required package test scripts, manifest/barrel/method/result-kind drift, and registered trusted issue codes. Runtime crossing findings are reported as non-failing notes so migrations remain visible without blocking unrelated work.
 
-The audit recursively scans implementation files under `runtime/nexus/server/*` and `src/app/api/nexus/*`, not only top-level compatibility bridge files. Current note categories are direct storage touches, direct signature verification, direct packet interpretation, direct bundle import/export, packet parsing inside API routes, and legacy fortress corridor references. These notes are migration targets, not scaffold failures.
+The audit recursively scans implementation files under `runtime/nexus/server/*` and `src/app/api/nexus/*`, not only top-level compatibility bridge files. Current note categories are direct storage touches, direct signature verification, direct packet interpretation, direct bundle import/export, packet parsing inside API routes, and legacy fortress corridor references. These notes are migration targets, not scaffold failures. The audit now also fails if removed legacy executor files such as `mutation-service.ts`, `signed-packet-finalizer.ts`, or the old fortress prepare/finalize handlers reappear.
 
 Trusted coordinator tests now have a package entrypoint: `npm run test:trusted-coordinators`. The combined guard command is `npm run check:trusted-coordinators`, which runs the scaffold/crossing audit before the coordinator test suite.
 
@@ -54,7 +54,7 @@ Use these categories when classifying runtime modules and future migrations.
 | `runtime/nexus/server/scope/*` | Scope graph, ancestry compatibility, parent resolution, display preferences | `owa_product_adapter`, `projection_candidate`, `compatibility_bridge` | Separate generic graph projection from OWA policy/profile adapters and legacy compatibility reads | High |
 | `runtime/nexus/server/identity/*` | Sessions, passkeys, actor custody, auth storage, identity search | `runtime_adapter`, `storage_adapter`, `compatibility_bridge` | Identity custody remains runtime-owned; packet-specific read/display pieces can move toward Projection | Medium |
 | `runtime/nexus/server/readiness/*` | Modernization and pre-reseed readiness reports | `test_or_audit` | Keep as audit/report layer; update as seams migrate | Low |
-| top-level `fortress-*`, `mutation-*`, `signed-*`, `packet-runtime-*` | Signed mutation prepare/finalize, tickets, proof, handoff, genericization audits | `legacy_signed_corridor` | Remove from route-facing traffic; replace through Dispatch-owned coordinator chain | High |
+| remaining `mutation-*` / `packet-runtime-*` ledgers | Static mutation intent descriptors, ticket compatibility helpers, handoff/readiness ledgers | `compatibility_bridge`, `test_or_audit`, `legacy_signed_corridor` | Keep only what describes transitional state; route executor files are removed | Medium |
 | top-level `nexus-query-data.ts` | Broad Nexus read model aggregation | `projection_candidate`, `owa_product_adapter` | Decompose by projection responsibility; move generic packet/card/list/read models behind Projection | High |
 | top-level `verification-service.ts` | Verification wrapper, validator identity, report writing | `compatibility_bridge`, `runtime_adapter` | Keep wrapper short; move report certification/storage decisions later through Certification/Archive | Medium |
 
@@ -78,12 +78,12 @@ Dispatch is the route-facing write lifecycle owner for `/api/nexus/mutations/pre
 
 | Process | Current files | Ideal owner | Ideal location | Risk |
 | --- | --- | --- | --- | --- |
-| mutation prepare/finalize orchestration | `trusted_dispatch_coordinator/*`, `fortress-prepare-handler-implementation.ts`, `fortress-finalize-handler-implementation.ts`, `mutation-service.ts` | Dispatch plus Regulation/Planning/Certification/Verification/Archive handoffs | `relation.follow.add` and `relation.association.add` complete the full Dispatch-owned route chain; other intents remain capability gaps, not fallback paths | High |
-| proof/ticket storage | `mutation-ticket-service.ts`, `mutation-ticket-store.ts`, `signed-packet-finalizer.ts` | Certification owns signature handoff; Verification owns signed packet validation; Archive owns storage | replace legacy ticket/finalizer behavior with Certification/Verification/Archive | High |
+| mutation prepare/finalize orchestration | `trusted_dispatch_coordinator/*` plus thin mutation API routes | Dispatch plus Regulation/Planning/Certification/Verification/Archive handoffs | `relation.follow.add`, `relation.association.add`, and `reaction.vote.set` complete the Dispatch-owned route chain; other intents remain capability gaps, not fallback paths | High |
+| proof/ticket storage | `mutation-ticket-service.ts`, `mutation-ticket-store.ts` | Certification owns signature handoff; Verification owns signed packet validation; Archive owns storage | keep ticket helpers only as transitional compatibility until Certification ticket durability fully replaces them | Medium |
 | intent schema and enrollment | `prepare-mutation-intent-schema.ts`, `mutation-intent-registry.ts`, `packet-client-intent-enrollment.ts` | Dispatch intake plus Definition-driven client/action metadata | Dispatch/Definition with API schema bridge | Medium |
-| domain-specific finalize handlers | `fortress-handler-domain-*` | Planning/Building/Inspection/Archive or OWA adapter when product-specific | coordinator-specific functions or OWA adapter | High |
+| domain-specific finalize handlers | removed legacy `fortress-handler-domain-*` executor files | Planning/Building/Inspection/Archive or OWA adapter when product-specific | migrate remaining product intents directly into coordinator chains or adapter bridges, not old handler maps | High |
 | genericization/handoff audits | `fortress-handler-genericization-audit.ts`, `packet-runtime-fortress-handoff.ts`, workflow alignment audits | readiness/test audit | `readiness/*` after terminology cleanup | Low |
-| Preference fortress workflow | `preference-fortress-workflow.ts`, preference runtime connector files | signed corridor compatibility example, then Definition/Planning/Archive | signed mutation corridor bridge and Definition-driven workflow | Medium |
+| Preference write workflow | `element-preference-packets.ts`, preference runtime connector files | Definition/Planning/Archive plus compatibility cache adapter | migrate claimed Preference.element writes through the trusted chain and retire compatibility cache writes when safe | Medium |
 
 ## Packet-type-specific service inventory
 
@@ -132,7 +132,7 @@ Not candidates for imported executable definition logic:
 | locality directory | OWA locality adapter plus Planning/Definition descriptors | identify generic graph/dependency planning pieces |
 | scope graph | Projection graph base plus OWA scope adapter | split legacy compatibility reads from canonical graph assembly |
 | Packet Explorer data | Projection/Archive/Compatibility bridge | continue moving Export/Import edge cases behind coordinator seams after the generic inspector and search-card projection migrations |
-| fortress/mutation corridor | Dispatch-owned coordinator chain | remove legacy route authority; close Certification/Archive readiness gaps |
+| legacy mutation corridor remnants | Dispatch-owned coordinator chain | keep deleted executor guardrails in audit; classify remaining ticket/handoff ledgers before removal |
 | verification service | Verification wrapper plus report Certification/Archive handoff | keep assessment wrapper, isolate report-writing surface |
 
 ## Running cleanup tab
@@ -153,14 +153,14 @@ Use this as the short check-off ledger so the same issues do not have to be redi
 | Packet Explorer search card projection | Done | Search ranking/grouping remains service-owned, but selected search rows now pass through Trusted Projection card-list output before mapping back to the existing response shape. |
 | Generic query card projection | Partial | Dashboard, votes, and library packet-card lists now pass already-selected cards through Trusted Projection; discussion/reaction/scope/locality read models remain adapter migration lanes. |
 | Projection adoption | Open | Packet Explorer Export/Import edges, deeper `nexus-query-data`, discussion/reaction/scope read models remain the biggest migration lane. |
-| Legacy mutation service registry dependency | Done | `NexusMutationService` is no longer constructed or exposed by the live Nexus packet service registry; remaining mutation/fortress files are legacy corridor candidates, not route-facing service dependencies. |
+| Legacy mutation service registry dependency | Done | `NexusMutationService` is no longer constructed or exposed by the live Nexus packet service registry. |
 | Reaction finalize derived-state bridge | Done | `reaction.vote.set` derived-state response decoration moved out of Trusted Dispatch and into the reaction runtime adapter used by the finalize route. |
-| Legacy fortress corridor removal | Open | `relation.follow.add`, `relation.association.add`, and `reaction.vote.set` use the new Dispatch chain; other live mutation intents still need equivalent coordinator-backed materialization and finalization before old corridor files can be deleted. |
+| Legacy fortress executor removal | Done | Removed the old `NexusMutationService`, signed-packet finalizer, fortress prepare/finalize handlers, fortress handler domain maps, manifest fortress bridges, and preference fortress workflow. Remaining fortress references are static handoff/genericization/readiness ledgers or transitional descriptor language. |
 | OWA adapter/profile split | Open | Discussion, reaction, locality, and scope still mix generic runtime with OWA product behavior. |
 
 ## Recommended migration order
 
-1. Keep route-facing write lifecycle under Dispatch and remove legacy fortress concepts instead of wrapping them.
+1. Keep route-facing write lifecycle under Dispatch. Removed legacy executor files must stay deleted; remaining fortress-named ledgers should be renamed or retired only after their descriptor value is replaced.
 2. Move read-model work toward Projection Coordinator where payload parity is straightforward: Packet Explorer's generic inspector and search-card paths have started this migration, and generic dashboard/votes/library cards are partially projected; continue with deeper route query data, then discussion/reaction/scope read models.
 3. Move direct storage, import/export, verification, and compatibility bypasses behind Archive, Exchange, Verification, and Compatibility. Add audit warnings first, then fail newly cleaned seams.
 4. Extend the proven Dispatch write pipeline beyond the first migrated intents: full packet envelope materialization, Certification signed-bundle checks, Verification handoff, Archive storage, and result projection for each live intent. Reaction vote writes now use the chain, with derived summary/index refresh isolated in the finalize route's reaction adapter until Projection owns the read model.

@@ -1,6 +1,6 @@
 /**
  * File: packet-runtime-fortress-handoff.ts
- * Description: Definition handoff contract between the runtime crossing guard and the signed fortress corridor.
+ * Description: Definition handoff contract between the runtime crossing guard and trusted write-chain readiness ledgers.
  */
 
 import type { MutationIntent } from '@core/auth/mutation-corridor';
@@ -287,7 +287,7 @@ export function resolvePacketRuntimeFortressHandoff(input: {
       workflowPlanPacketTypes: coverage.workflow_plan_packet_types,
     }),
     notes: [
-      'Definition crossing-guard handoff only: runtime may inspect manifest/workflow metadata, but fortress remains the live authority for prepare/finalize/proof/persistence.',
+      'Definition crossing-guard handoff only: runtime may inspect manifest/workflow metadata, but Dispatch and trusted coordinators own prepare/finalize/proof/persistence.',
       ...coverage.remaining_packet_specific_assumptions,
     ],
   };

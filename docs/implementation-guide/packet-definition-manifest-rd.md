@@ -212,7 +212,7 @@ For `Preference.element`, the bridge can resolve `preference.element.set` into:
 - the `preference.element.write` policy action ID
 - a readiness flag for descriptor/runtime planning
 
-This is the first seam between the packet definition manifest and the signed mutation corridor. `Preference` is now inside the canonical packet ontology and claimed interface writes enter a trusted signed mutation path, but the route still executes trusted local workflow code. Manifest descriptors describe the operation; imported definition packets do not execute server behavior.
+This is the first seam between the packet definition manifest and the trusted write chain. `Preference` is now inside the canonical packet ontology and claimed interface writes enter trusted local workflow code. Manifest descriptors describe the operation; imported definition packets do not execute server behavior.
 
 The runtime comparison planner can build a manifest-backed `Preference.element` plan from the existing runtime preference payload. The plan includes the deterministic packet ID, normalized body, projected runtime preference shape, resolved action plan, storage class, revision behavior, and an explicit non-executable comparison marker.
 
@@ -239,7 +239,7 @@ The definition comparison helpers still exist for audit and descriptor compariso
 
 ## Descriptor Runtime Bridge
 
-The manifest work still has a runtime descriptor bridge at `runtime/nexus/server/manifest-fortress-bridge.ts`.
+The old manifest fortress descriptor bridge has been removed; remaining manifest work should route through Definition, Planning, and Dispatch-owned trusted write metadata rather than a separate bridge.
 
 The bridge translates packet-definition descriptors into trusted-coordinator-shaped prepare metadata without entering the trusted mutation corridor. It resolves:
 

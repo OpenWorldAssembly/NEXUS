@@ -231,7 +231,7 @@ export const TRUSTED_PACKET_PLANNER_CAPABILITIES = [
   {
     capability_id: 'runtime.planner.discussion_reply',
     capability_kind: 'planner',
-    source_module: 'runtime/nexus/server/fortress-prepare-handler-implementation.ts',
+    source_module: 'runtime/nexus/server/discussion-service.ts',
     dependency_ids: [
       'runtime.packet_store.read',
       'runtime.policy_gate',
@@ -244,7 +244,7 @@ export const TRUSTED_PACKET_PLANNER_CAPABILITIES = [
   {
     capability_id: 'runtime.resolver.role_scope',
     capability_kind: 'resolver',
-    source_module: 'runtime/nexus/server/fortress-prepare-handler-implementation.ts',
+    source_module: 'runtime/nexus/server/elemental-scope-relation-planner.ts',
     dependency_ids: [
       'runtime.packet_store.read',
       'generic.resolver.role_scope',
@@ -255,7 +255,7 @@ export const TRUSTED_PACKET_PLANNER_CAPABILITIES = [
   {
     capability_id: 'runtime.resolver.target_summary',
     capability_kind: 'resolver',
-    source_module: 'runtime/nexus/server/fortress-prepare-handler-implementation.ts',
+    source_module: 'runtime/nexus/server/reaction-service.ts',
     dependency_ids: [
       'runtime.packet_store.read',
       'generic.resolver.target_summary',
@@ -277,7 +277,7 @@ export const TRUSTED_PACKET_PLANNER_CAPABILITIES = [
   {
     capability_id: 'runtime.planner.preference_element',
     capability_kind: 'planner',
-    source_module: 'runtime/nexus/server/preference-fortress-workflow.ts',
+    source_module: 'runtime/nexus/server/element-preference-packets.ts',
     dependency_ids: [
       'runtime.packet_store.read',
       'runtime.policy_gate',

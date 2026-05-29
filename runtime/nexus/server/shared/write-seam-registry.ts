@@ -4,8 +4,7 @@
  */
 
 export type DirectPacketWriteCategory =
-  | 'fortress_actor_write'
-  | 'fortress_internal_helper'
+  | 'adapter_internal_helper'
   | 'bootstrap_or_seed'
   | 'identity_bootstrap'
   | 'system_backfill'
@@ -17,17 +16,13 @@ export interface DirectPacketWriteSeam {
 }
 
 export const DIRECT_PACKET_WRITE_SEAMS = {
-  'signed-packet-finalizer.ts': {
-    category: 'fortress_actor_write',
-    reason: 'Canonical finalized-packet persistence seam for actor-authored mutation corridor writes.',
-  },
   'discussion-service.ts': {
-    category: 'fortress_internal_helper',
-    reason: 'Fortress-internal discussion persistence helper used by finalized discussion mutations.',
+    category: 'adapter_internal_helper',
+    reason: 'Transitional discussion adapter persistence helper; remaining discussion writes should migrate behind Dispatch/Archive or become explicit derived-state cache writes.',
   },
   'reaction-service.ts': {
-    category: 'fortress_internal_helper',
-    reason: 'Fortress-internal reaction persistence helper used by finalized reaction mutations.',
+    category: 'adapter_internal_helper',
+    reason: 'Transitional reaction adapter persistence/helper surface used for derived reaction state and compatibility response decoration.',
   },
   'default-discussion-surfaces.ts': {
     category: 'bootstrap_or_seed',
@@ -50,7 +45,7 @@ export const DIRECT_PACKET_WRITE_SEAMS = {
     reason: 'System bootstrap/backfill writer for initial packet dataset seeding and recovery.',
   },
   'element-preference-packets.ts': {
-    category: 'fortress_internal_helper',
-    reason: 'Fortress-internal Preference.element planner/persistence helper; claimed writes enter through the preference fortress workflow while the legacy scope-display table remains a compatibility cache.',
+    category: 'adapter_internal_helper',
+    reason: 'Transitional Preference.element planner/persistence helper; claimed preference writes should migrate behind the trusted write chain while the legacy scope-display table remains a compatibility cache.',
   },
 } satisfies Record<string, DirectPacketWriteSeam>;

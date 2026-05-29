@@ -408,3 +408,11 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - Trusted Projection now exposes `resolvePacketCardListProjection` for already-selected packet cards, keeping query selection, ranking, and scope filtering outside Projection while centralizing card/list presentation shaping.
 - Packet Explorer Search preserves its direct/name/text grouping, scoring, pagination, and response fields, but selected result rows now pass through the Projection card-list seam before being mapped back to the existing payload shape.
 - `nexus-query-data` now projects generic dashboard, votes, and library packet-card lists after `nexusQueryService` has already selected the cards. Discussion, reaction, scope, locality, and deeper product-specific route read models remain separate adapter cleanup lanes.
+
+
+## 2026-05 Legacy mutation executor deletion
+
+- Removed the old route executor stack: `NexusMutationService`, fortress prepare/finalize handlers, fortress handler domain maps, mutation prepare/finalize handler maps, signed-packet finalizer, preference fortress workflow, and manifest fortress bridge files.
+- Trusted Dispatch remains the route-facing prepare/finalize authority. Deleted executor files are now guarded by `audit:trusted-coordinators` so they fail if restored.
+- Static genericization/handoff/readiness ledgers remain temporarily because they describe migration state and pre-reseed closure, but their text now points to Dispatch/trusted-chain authority rather than the old fortress corridor.
+- Direct-write seam classification now treats discussion/reaction/preference helpers as transitional adapter/internal or compatibility-cache writes instead of fortress-internal helpers.

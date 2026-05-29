@@ -2503,7 +2503,7 @@ export class NexusAuthService {
   }): Promise<NexusSecurityPreferencesPayload> {
     void input;
     throw new Error(
-      'Direct runtime security preference writes are deprecated. Use actor.write_policy.update through the mutation corridor.'
+      'Direct runtime security preference writes are deprecated. Use actor.write_policy.update through Dispatch-owned trusted writes.'
     );
   }
 

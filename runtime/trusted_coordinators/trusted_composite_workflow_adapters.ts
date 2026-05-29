@@ -308,7 +308,7 @@ const TRUSTED_COMPOSITE_WORKFLOW_ADAPTERS = [
     adapter_id: 'composite.assembly_element.create.v0',
     adapter_kind: 'composite.entity_create.with_followups',
     mutation_intents: ['assembly.element.create'],
-    source_module: 'runtime/nexus/server/fortress-prepare-handler-implementation.ts',
+    source_module: 'runtime/trusted_coordinators/trusted_composite_workflow_coordinator.ts',
     workflow_plan_ids: [],
     operation_kinds: [
       'workflow.compose',
@@ -501,7 +501,7 @@ const TRUSTED_COMPOSITE_WORKFLOW_ADAPTERS = [
     adapter_id: 'composite.discussion_thread_post.create.v0',
     adapter_kind: 'composite.discussion_message.create',
     mutation_intents: ['discussion.thread_post.create'],
-    source_module: 'runtime/nexus/server/fortress-prepare-handler-implementation.ts',
+    source_module: 'runtime/trusted_coordinators/trusted_composite_workflow_coordinator.ts',
     workflow_plan_ids: [],
     operation_kinds: [
       'workflow.compose',
@@ -596,7 +596,7 @@ const TRUSTED_COMPOSITE_WORKFLOW_ADAPTERS = [
     adapter_id: 'composite.discussion_reply.create.v0',
     adapter_kind: 'composite.discussion_message.create',
     mutation_intents: ['discussion.reply.create'],
-    source_module: 'runtime/nexus/server/fortress-prepare-handler-implementation.ts',
+    source_module: 'runtime/trusted_coordinators/trusted_composite_workflow_coordinator.ts',
     workflow_plan_ids: ['discussion.reply.create.workflow.v0'],
     operation_kinds: [
       'workflow.compose',
@@ -693,7 +693,7 @@ const TRUSTED_COMPOSITE_WORKFLOW_ADAPTERS = [
     adapter_id: 'composite.reaction_attestation.set.v0',
     adapter_kind: 'composite.reaction_attestation',
     mutation_intents: ['reaction.attestation.set'],
-    source_module: 'runtime/nexus/server/fortress-prepare-handler-implementation.ts',
+    source_module: 'runtime/trusted_coordinators/trusted_composite_workflow_coordinator.ts',
     workflow_plan_ids: [],
     operation_kinds: [
       'workflow.compose',

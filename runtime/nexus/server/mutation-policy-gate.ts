@@ -1,6 +1,6 @@
 /**
  * File: mutation-policy-gate.ts
- * Description: Resolves mutation write-policy requirements for the runtime mutation corridor.
+ * Description: Resolves mutation write-policy requirements for trusted runtime writes.
  */
 
 import {

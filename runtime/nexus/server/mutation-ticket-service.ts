@@ -1,6 +1,6 @@
 /**
  * File: mutation-ticket-service.ts
- * Description: Runtime ticket lifecycle wrapper for the fortress prepare/finalize mutation corridor.
+ * Description: Runtime ticket lifecycle wrapper retained for transitional trusted prepare/finalize writes.
  */
 
 import type {

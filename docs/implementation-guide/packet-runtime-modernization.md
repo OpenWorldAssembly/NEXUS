@@ -254,7 +254,7 @@ Each live mutation intent now has a genericization classification:
 - `workflow_specific` means runtime orchestration still coordinates multiple packet operations or projections.
 - `legacy_bridge` means the intent is a compatibility alias that should collapse into a canonical intent.
 
-This pass intentionally preserves behavior. It records which mutation-service code should be retired, which should become reusable planners, and which orchestration remains runtime-owned before any live Trusted Runtime Coordinator pipeline promotion.
+This pass originally preserved behavior while recording which mutation-service code should be retired, which should become reusable planners, and which orchestration remains runtime-owned before live trusted coordinator promotion. The old route executor files have since been removed; this section remains as the historical migration map.
 
 ## Packet Operation Ontology Pass
 
@@ -286,7 +286,7 @@ The first definition workflow plans cover the generic-ready mutation candidates:
 - `role_association.claim.set`
 - `reaction.vote.set`
 
-These plans do not enroll live execution. They prove the manifest can describe packet-specific variables and ordered generic work while preserving the signed mutation corridor as the only live prepare/finalize/proof/persistence authority.
+These plans do not enroll live execution. They prove the manifest can describe packet-specific variables and ordered generic work while keeping Dispatch and the trusted write chain as the live prepare/finalize/proof/persistence authority.
 
 Policy and dependency descriptors now matter as referenced workflow metadata, but their full semantics remain a dedicated pre-reseed pass. Unused legacy packet types remain explicit missing coverage items and do not block the generic workflow contract or switch-over planning.
 
@@ -294,7 +294,7 @@ Policy and dependency descriptors now matter as referenced workflow metadata, bu
 
 The workflow alignment pass connects the manifest workflow contract to the extracted mutation planner map. It adds a runtime-side audit that lists every live mutation intent, its genericization status, operation mapping, workflow-plan coverage, policy action IDs, trusted resolver/capability IDs, and remaining packet-specific assumptions.
 
-The alignment map is the working checklist for retiring packet-specific mutation-service code. Generic-ready intents must have clean workflow dry-runs and trusted local capability coverage. Planner-extraction intents may either have a definition workflow plan or an explicit missing coverage item. Workflow-specific intents remain runtime-owned orchestration until their component operations can be split safely. Legacy bridge intents point at canonical workflow directions rather than receiving independent workflows.
+The alignment map is the working checklist for replacing packet-specific mutation-service history with coordinator-owned execution. Generic-ready intents must have clean workflow dry-runs and trusted local capability coverage. Planner-extraction intents may either have a definition workflow plan or an explicit missing coverage item. Workflow-specific intents remain runtime-owned orchestration until their component operations can be split safely. Legacy bridge intents point at canonical workflow directions rather than receiving independent workflows.
 
 This pass expands definition workflow coverage for knowable planner-extraction candidates:
 
@@ -307,7 +307,7 @@ The alignment remains runtime-ready. Existing runtime planner modules are regist
 
 ## Runtime Ingress And Mutation Handoff Pass
 
-Ingress preflight and mutation authority remain separate layers. Ingress preflight owns client/API normalization, manifest/workflow lookup, connector selection, definition handoff metadata, and response/refresh hints. The signed mutation corridor owns policy/proof authority, prepare/finalize lifecycle, mutation tickets, signed packet validation, persistence, and canonical mutation effects.
+Ingress preflight and mutation authority remain separate layers. Ingress preflight owns client/API normalization, manifest/workflow lookup, connector selection, definition handoff metadata, and response/refresh hints. Dispatch and the trusted write chain own policy/proof authority, prepare/finalize lifecycle, mutation tickets or their replacement, signed packet validation, persistence, and canonical mutation effects.
 
 The handoff pass adds a definition `PacketRuntimeMutationHandoff` contract. A handoff records the normalized mutation direction, workflow alignment status, operation kinds, workflow plan IDs, trusted capability IDs, policy action IDs, dependency IDs, resolver IDs, prepare/finalize coordinator names, and return refresh hints. It carries `external_definition_execution_enabled: false` to record that imported definitions describe behavior while trusted local runtime code executes it.
 
@@ -327,7 +327,7 @@ Runtime ingress now has a client/API enrollment registry. The registry is an int
 - `/api/nexus/mutations/prepare` enrolls the `Preference.element` client intent; authenticated shell preference writes now use the same prepare/finalize corridor as other claimed mutations, while `/api/nexus/shell-preferences` remains guest compatibility state only.
 - each enrollment records route or transport source, client intent ID, mutation intent, operation kinds, workflow plans, policy actions, dependency refs, and current live mode.
 
-Unknown or custom route/intent pairings fail ingress preflight. The preflight may resolve handoff metadata and packet-backed policy/dependency descriptors, but it does not authorize, ticket, sign, persist, finalize, or bypass the signed mutation corridor. This keeps the future generic corridor aligned with enrolled client/API ingress from web, device, automation, or other adapters instead of accepting arbitrary injected operation requests.
+Unknown or custom route/intent pairings fail ingress preflight. The preflight may resolve handoff metadata and packet-backed policy/dependency descriptors, but it does not authorize, ticket, sign, persist, finalize, or bypass Dispatch-owned trusted writes. This keeps the generic write path aligned with enrolled client/API ingress from web, device, automation, or other adapters instead of accepting arbitrary injected operation requests.
 
 ## Interface-Neutral API Ingress Pass
 

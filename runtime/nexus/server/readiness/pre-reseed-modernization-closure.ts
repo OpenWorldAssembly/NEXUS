@@ -213,10 +213,10 @@ function createMutationEntries(): PreReseedClosureLedgerEntry[] {
       status: mutationStatus(entry),
       queue: queueForEntry(entry),
       reason: isClosed
-        ? 'In-scope runtime intent now prepares through a trusted generic operation, composite workflow, or fortress-enrolled Preference workflow while the fortress remains the live authority.'
+        ? 'In-scope runtime intent now prepares through a trusted generic operation, composite workflow, or trusted Preference workflow under Dispatch-owned route authority.'
         : 'In-scope runtime work is tracked for explicit pre-reseed closure.',
       next_step: isClosed
-        ? 'Keep parity tests green while closing policy/dependency semantics and legacy bridge retirement.'
+        ? 'Keep parity tests green while closing policy/dependency semantics and remaining bridge retirement.'
         : entry.next_step,
     };
   });
@@ -317,7 +317,7 @@ function createFortressHandoffEntries(): PreReseedClosureLedgerEntry[] {
         ? 'Handoff metadata resolves and the existing fortress corridor now calls a trusted generic operation or composite planner.'
         : 'Handoff metadata remains definition coverage until the owning workflow is promoted.',
       next_step: isLiveGeneric
-        ? 'Preserve signed fortress authority while expanding generic execution.'
+        ? 'Preserve Dispatch route authority while expanding generic execution.'
         : 'Close the owning pre-reseed workflow enrollment before final reseed readiness audit.',
     };
   });
@@ -385,7 +385,7 @@ export function createPreReseedModernizationClosureReport(): PreReseedModernizat
       status: 'closed',
       queue: 'first_generic_promotion',
       reason:
-        'Preference.element keeps a definition comparison connector only; authenticated writes are enrolled through the signed fortress corridor.',
+        'Preference.element keeps a definition comparison connector only; authenticated writes are tracked for the trusted write chain.',
       next_step:
         'Keep guest compatibility writes outside canonical packet enrollment until reseed policy is designed.',
     },
@@ -395,7 +395,7 @@ export function createPreReseedModernizationClosureReport(): PreReseedModernizat
       status: 'closed' as const,
       queue: 'first_generic_promotion' as const,
       reason:
-        'Trusted generic workflow execution is enrolled behind NexusMutationService for direct relation, claim, and reaction operations.',
+        'Trusted generic workflow execution is enrolled behind Dispatch-owned direct relation, claim, and reaction operations.',
       next_step:
         'Use this path while decomposing composed locality, discussion, role-reaction, and actor-policy workflows.',
     })),
@@ -405,7 +405,7 @@ export function createPreReseedModernizationClosureReport(): PreReseedModernizat
       status: 'closed' as const,
       queue: 'first_generic_promotion' as const,
       reason:
-        'Trusted composite workflow execution is enrolled behind NexusMutationService for composed runtime workflows.',
+        'Trusted composite workflow execution is enrolled behind Dispatch-owned composed runtime workflows.',
       next_step:
         enrollment.mutation_intent === 'actor.write_policy.update'
           ? 'Keep policy/dependency semantic authority audits green through reseed design.'
