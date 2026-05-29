@@ -6,10 +6,8 @@
 import { NexusAuthService } from '@runtime/nexus/server/auth-service';
 import { SQLiteReactionService } from '@runtime/nexus/server/reaction-service';
 import { SQLiteDiscussionService } from '@runtime/nexus/server/discussion-service';
-import { NexusMutationService } from '@runtime/nexus/server/mutation-service';
 import { NexusPacketActionService } from '@runtime/nexus/server/packet-action-service';
 import { NexusPacketVerificationService } from '@runtime/nexus/server/verification-service';
-import { MutationTicketStore } from '@runtime/nexus/server/mutation-ticket-store';
 import type { NexusPacketServices } from '@runtime/nexus/server/nexus-packet-services.types';
 import type { NodeSQLiteQueryServices } from '@runtime/storage/node-sqlite-query-services';
 
@@ -29,21 +27,12 @@ export function createNexusPacketServiceRegistry(
     services.browserQueryService,
     verificationService
   );
-  const mutationService = new NexusMutationService(
-    services.packetStore,
-    authService,
-    discussionService,
-    reactionService,
-    new MutationTicketStore()
-  );
-
   return {
     ...services,
     authService,
     reactionService,
     discussionService,
     packetVoteService: reactionService,
-    mutationService,
     verificationService,
     packetActionService,
   };

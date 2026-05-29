@@ -484,7 +484,7 @@ test('dispatch-owned finalize write pipeline rejects unknown certification ticke
   assert.equal(result.issues[0]?.code, 'dispatch.certification_payload_unsupported');
 });
 
-test('mutation routes do not call the legacy mutation service corridor', () => {
+test('live mutation routes and registry do not call the legacy mutation service corridor', () => {
   const prepareRoute = readFileSync(
     'src/app/api/nexus/mutations/prepare+api.ts',
     'utf8'
@@ -493,10 +493,38 @@ test('mutation routes do not call the legacy mutation service corridor', () => {
     'src/app/api/nexus/mutations/finalize+api.ts',
     'utf8'
   );
+  const serviceRegistry = readFileSync(
+    'runtime/nexus/server/nexus-packet-service-registry.ts',
+    'utf8'
+  );
+  const serviceTypes = readFileSync(
+    'runtime/nexus/server/nexus-packet-services.types.ts',
+    'utf8'
+  );
   const routeSource = `${prepareRoute}\n${finalizeRoute}`;
 
   assert.equal(routeSource.includes('mutationService.prepareMutation('), false);
   assert.equal(routeSource.includes('mutationService.finalizeMutation('), false);
   assert.equal(routeSource.includes('mutationService.readTicket('), false);
   assert.equal(finalizeRoute.includes('parsePacketEnvelope'), false);
+  assert.equal(serviceRegistry.includes('NexusMutationService'), false);
+  assert.equal(serviceRegistry.includes('MutationTicketStore'), false);
+  assert.equal(serviceRegistry.includes('mutationService'), false);
+  assert.equal(serviceTypes.includes('mutationService'), false);
+});
+
+test('trusted dispatch does not import reaction runtime services', () => {
+  const dispatchSource = readFileSync(
+    'runtime/trusted_coordinators/trusted_dispatch_coordinator/trusted_dispatch_coordinator.ts',
+    'utf8'
+  );
+  const finalizeRoute = readFileSync(
+    'src/app/api/nexus/mutations/finalize+api.ts',
+    'utf8'
+  );
+
+  assert.equal(dispatchSource.includes('SQLiteReactionService'), false);
+  assert.equal(dispatchSource.includes('@runtime/nexus/server/reaction'), false);
+  assert.equal(dispatchSource.includes('reaction-service'), false);
+  assert.equal(finalizeRoute.includes('decorateReactionFinalizeResponse'), true);
 });

@@ -386,9 +386,16 @@ This monthly log condenses the May 2026 decisions that remain most important for
 
 - `reaction.vote.set` now enters the Dispatch-owned write lifecycle with Reaction packet planning hints, body materialization metadata, generic Reaction packet envelope building, Inspection, Certification, Verification, and Archive storage.
 - Dispatch derives `reaction.vote.set` from both workflow-backed and trusted operation plan IDs so finalize-time mutation-kind parity checks cover reaction writes like relation writes.
-- Finalize refreshes the existing reaction derived index/summary after Archive for parity with the current discussion UI. This is a bounded reaction adapter bridge, not the final Projection-owned read-model architecture.
+- Finalize response decoration refreshes the existing reaction derived index/summary after Archive for parity with the current discussion UI, but that bridge now lives in the reaction runtime adapter instead of Trusted Dispatch. This is still not the final Projection-owned read-model architecture.
 - Inspection now ignores reserved `__trusted_*` materialization metadata keys when comparing planned body values to the candidate body, allowing Dispatch/Building to carry header materialization inputs without polluting packet bodies.
 - The runtime cleanup tab now records reaction vote migration as completed for the legacy signed-corridor checklist while keeping remaining mutation intents open.
+
+## 2026-05 Legacy mutation service containment and reaction finalize adapter
+
+- `NexusMutationService` is no longer constructed by `createNexusPacketServiceRegistry` or exposed on `NexusPacketServices`; the remaining mutation/fortress files are legacy corridor candidates rather than live service-graph dependencies.
+- Trusted Dispatch now returns generic trusted finalize facts for `reaction.vote.set` instead of importing `SQLiteReactionService` or refreshing reaction-derived state directly.
+- The finalize API route decorates completed `reaction.vote.set` responses through `reaction-finalize-response-adapter`, preserving the current target/value/summary response compatibility while keeping reaction runtime services outside the trusted coordinator.
+- The trusted coordinator audit now fails if the live service registry reintroduces `NexusMutationService`, if prepare/finalize routes call legacy mutation service methods, or if Trusted Dispatch imports reaction runtime services.
 
 ## 2026-05 Packet Explorer projection migration pass
 

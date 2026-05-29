@@ -153,7 +153,9 @@ Use this as the short check-off ledger so the same issues do not have to be redi
 | Packet Explorer search card projection | Done | Search ranking/grouping remains service-owned, but selected search rows now pass through Trusted Projection card-list output before mapping back to the existing response shape. |
 | Generic query card projection | Partial | Dashboard, votes, and library packet-card lists now pass already-selected cards through Trusted Projection; discussion/reaction/scope/locality read models remain adapter migration lanes. |
 | Projection adoption | Open | Packet Explorer Export/Import edges, deeper `nexus-query-data`, discussion/reaction/scope read models remain the biggest migration lane. |
-| Legacy fortress corridor removal | Open | `relation.follow.add`, `relation.association.add`, and `reaction.vote.set` use the new Dispatch chain; other live mutation intents still need equivalent coordinator-backed materialization and finalization. |
+| Legacy mutation service registry dependency | Done | `NexusMutationService` is no longer constructed or exposed by the live Nexus packet service registry; remaining mutation/fortress files are legacy corridor candidates, not route-facing service dependencies. |
+| Reaction finalize derived-state bridge | Done | `reaction.vote.set` derived-state response decoration moved out of Trusted Dispatch and into the reaction runtime adapter used by the finalize route. |
+| Legacy fortress corridor removal | Open | `relation.follow.add`, `relation.association.add`, and `reaction.vote.set` use the new Dispatch chain; other live mutation intents still need equivalent coordinator-backed materialization and finalization before old corridor files can be deleted. |
 | OWA adapter/profile split | Open | Discussion, reaction, locality, and scope still mix generic runtime with OWA product behavior. |
 
 ## Recommended migration order
@@ -161,7 +163,7 @@ Use this as the short check-off ledger so the same issues do not have to be redi
 1. Keep route-facing write lifecycle under Dispatch and remove legacy fortress concepts instead of wrapping them.
 2. Move read-model work toward Projection Coordinator where payload parity is straightforward: Packet Explorer's generic inspector and search-card paths have started this migration, and generic dashboard/votes/library cards are partially projected; continue with deeper route query data, then discussion/reaction/scope read models.
 3. Move direct storage, import/export, verification, and compatibility bypasses behind Archive, Exchange, Verification, and Compatibility. Add audit warnings first, then fail newly cleaned seams.
-4. Extend the proven Dispatch write pipeline beyond the first migrated intents: full packet envelope materialization, Certification signed-bundle checks, Verification handoff, Archive storage, and result projection for each live intent. Reaction vote writes now use the chain, with derived summary/index refresh still marked as a reaction adapter bridge until Projection owns the read model.
+4. Extend the proven Dispatch write pipeline beyond the first migrated intents: full packet envelope materialization, Certification signed-bundle checks, Verification handoff, Archive storage, and result projection for each live intent. Reaction vote writes now use the chain, with derived summary/index refresh isolated in the finalize route's reaction adapter until Projection owns the read model.
 5. Separate OWA-specific adapters from generic runtime. Product profile behavior should be named, not hidden inside generic services.
 6. Retire compatibility bridges only after import scans and route tests prove callers have migrated.
 

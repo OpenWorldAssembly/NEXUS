@@ -277,6 +277,71 @@ function scanRuntimeCrossingNotes(): AuditNote[] {
   return notes;
 }
 
+
+function scanLiveMutationServiceDependencyFindings(): AuditFinding[] {
+  const findings: AuditFinding[] = [];
+  const serviceRegistry = readIfFile('runtime/nexus/server/nexus-packet-service-registry.ts') ?? '';
+  const serviceTypes = readIfFile('runtime/nexus/server/nexus-packet-services.types.ts') ?? '';
+  const prepareRoute = readIfFile('src/app/api/nexus/mutations/prepare+api.ts') ?? '';
+  const finalizeRoute = readIfFile('src/app/api/nexus/mutations/finalize+api.ts') ?? '';
+  const dispatchSource = readIfFile('runtime/trusted_coordinators/trusted_dispatch_coordinator/trusted_dispatch_coordinator.ts') ?? '';
+
+  if (
+    serviceRegistry.includes('NexusMutationService') ||
+    serviceRegistry.includes('new MutationTicketStore') ||
+    serviceRegistry.includes('mutationService')
+  ) {
+    findings.push({
+      severity: 'error',
+      coordinator_id: 'trusted_dispatch_coordinator.v0',
+      code: 'trusted_live_mutation_service_dependency',
+      message: 'The live Nexus packet service registry must not construct or expose NexusMutationService; Dispatch owns route-facing prepare/finalize authority.',
+    });
+  }
+
+  if (serviceTypes.includes('mutationService')) {
+    findings.push({
+      severity: 'error',
+      coordinator_id: 'trusted_dispatch_coordinator.v0',
+      code: 'trusted_live_mutation_service_dependency',
+      message: 'NexusPacketServices must not expose mutationService as a live runtime dependency.',
+    });
+  }
+
+  for (const [routePath, routeSource] of [
+    ['src/app/api/nexus/mutations/prepare+api.ts', prepareRoute],
+    ['src/app/api/nexus/mutations/finalize+api.ts', finalizeRoute],
+  ] as const) {
+    if (
+      routeSource.includes('mutationService.prepareMutation(') ||
+      routeSource.includes('mutationService.finalizeMutation(') ||
+      routeSource.includes('mutationService.readTicket(')
+    ) {
+      findings.push({
+        severity: 'error',
+        coordinator_id: 'trusted_dispatch_coordinator.v0',
+        code: 'trusted_route_uses_legacy_mutation_service',
+        message: `${routePath} must call Trusted Dispatch rather than NexusMutationService.`,
+      });
+    }
+  }
+
+  if (
+    dispatchSource.includes('SQLiteReactionService') ||
+    dispatchSource.includes('@runtime/nexus/server/reaction') ||
+    dispatchSource.includes('reaction-service')
+  ) {
+    findings.push({
+      severity: 'error',
+      coordinator_id: 'trusted_dispatch_coordinator.v0',
+      code: 'trusted_dispatch_product_service_dependency',
+      message: 'Trusted Dispatch must not import reaction runtime services; reaction finalize response decoration belongs in the runtime adapter layer.',
+    });
+  }
+
+  return findings;
+}
+
 function scanIssueCodeFindings(): AuditFinding[] {
   const findings: AuditFinding[] = [];
   const coordinatorRoot = repoPath('runtime/trusted_coordinators');
@@ -332,6 +397,7 @@ function audit(): { findings: AuditFinding[]; notes: AuditNote[] } {
 
   findings.push(...scanTrustedCoordinatorFolderFindings());
   findings.push(...scanPackageScriptFindings());
+  findings.push(...scanLiveMutationServiceDependencyFindings());
 
   for (const descriptor of listTrustedCoordinatorScaffoldDescriptors()) {
     const pathExists = existsSync(repoPath(descriptor.runtime_path));

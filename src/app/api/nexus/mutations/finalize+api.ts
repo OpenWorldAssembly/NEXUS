@@ -12,6 +12,7 @@ import {
   toNexusAuthGatePayload,
 } from '@runtime/nexus/server/auth-service.utils';
 import { trustedDispatchCoordinator } from '@runtime/trusted_coordinators/trusted_dispatch_coordinator/index.ts';
+import { decorateReactionFinalizeResponse } from '@runtime/nexus/server/reaction/reaction-finalize-response-adapter';
 
 const ActorAssertionSchema = z
   .object({
@@ -102,10 +103,18 @@ export const POST: RequestHandler = async (request) => {
       packet_store: services.packetStore,
     });
 
-    return createJsonResponse(assertCoordinatorValue(
+    const finalizedMutation = assertCoordinatorValue(
       result,
       'Unable to finalize the mutation.'
-    ));
+    );
+    const responsePayload = await decorateReactionFinalizeResponse({
+      finalized_mutation: finalizedMutation,
+      actor_packet: actorContext.actorPacket,
+      signed_packets: parsedBody.signed_packets,
+      reaction_service: services.reactionService,
+    });
+
+    return createJsonResponse(responsePayload);
   } catch (error) {
     const authGate = toNexusAuthGatePayload(error);
     const authFailure = toNexusAuthFailurePayload(error);

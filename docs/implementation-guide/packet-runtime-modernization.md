@@ -336,7 +336,7 @@ The enrollment layer is interface-neutral. Web shell, Raspberry Pi controls, loc
 The live API routes now consult ingress preflight before delegating to the live corridor:
 
 - prepare parses the request intent, validates client/API ingress enrollment, then delegates to `trustedDispatchCoordinator.prepareEnrolledMutationWrite`;
-- finalize delegates to `trustedDispatchCoordinator.finalizeEnrolledMutationWrite`, which certifies the returned signed packet bundle, verifies the signed packets, and stores the certified packet set through Archive;
+- finalize delegates to `trustedDispatchCoordinator.finalizeEnrolledMutationWrite`, which certifies the returned signed packet bundle, verifies the signed packets, and stores the certified packet set through Archive; reaction-specific response decoration happens afterward in the reaction runtime adapter, not inside Dispatch;
 - authenticated shell preferences use the standard prepare/finalize mutation routes with `preference.element.set`;
 - `/api/nexus/shell-preferences` remains a guest compatibility route and is outside packet-runtime connector enrollment.
 
@@ -353,7 +353,7 @@ The first proving promotion is Relation set/clear:
 - `relation.association.add`
 - `relation.association.clear`
 
-`relation.follow.add` and `relation.association.add` are now proven Dispatch-owned live writes. They prepare and finalize through the intended coordinator chain: Dispatch intake, Planning, Building, Inspection, Certification ticketing, signed-packet certification, Verification, and Archive storage. API routes, route payloads, response shapes, policy action IDs, packet schemas, proof behavior, signatures, and persistence semantics remain unchanged. `relation.follow.clear` and `relation.association.clear` remain queued for the same full-chain promotion rather than falling back to the legacy signed corridor.
+`relation.follow.add`, `relation.association.add`, and `reaction.vote.set` are now proven Dispatch-owned live writes. They prepare and finalize through the intended coordinator chain: Dispatch intake, Planning, Building, Inspection, Certification ticketing, signed-packet certification, Verification, and Archive storage. API routes, route payloads, response shapes, policy action IDs, packet schemas, proof behavior, signatures, and persistence semantics remain unchanged. `reaction.vote.set` response decoration is isolated in the reaction runtime adapter. `relation.follow.clear` and `relation.association.clear` remain queued for the same full-chain promotion rather than falling back to the legacy signed corridor.
 
 The remaining pre-reseed queue is explicit:
 

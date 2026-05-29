@@ -14,8 +14,6 @@ import { trustedCertificationCoordinator } from '@runtime/trusted_coordinators/t
 import { trustedInspectionCoordinator } from '@runtime/trusted_coordinators/trusted_inspection_coordinator/index.ts';
 import { trustedPlanningCoordinator } from '@runtime/trusted_coordinators/trusted_planning_coordinator/index.ts';
 import { trustedVerificationCoordinator } from '@runtime/trusted_coordinators/trusted_verification_coordinator/index.ts';
-import { SQLiteReactionService } from '@runtime/nexus/server/reaction/reaction-service.ts';
-import type { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store';
 import {
   appendTrustedChildResult,
   completeTrustedProcessChain,
@@ -367,63 +365,6 @@ function dispatchProcessChainFromChildren(input: {
   }
 
   return completeTrustedProcessChain(processChain);
-}
-
-function nodeSQLitePacketStoreFrom(packetStore: FinalizeTrustedDispatchMutationWriteInput['packet_store']): NodeSQLitePacketStore | null {
-  return packetStore && typeof (packetStore as { databasePath?: unknown }).databasePath === 'string'
-    ? (packetStore as NodeSQLitePacketStore)
-    : null;
-}
-
-function firstReactionPacketFromCandidates(
-  packets: readonly PacketEnvelope[]
-): PacketEnvelopeByType['Reaction'] | null {
-  const reactionPacket = packets.find(
-    (packet): packet is PacketEnvelopeByType['Reaction'] => packet.header.type === 'Reaction'
-  );
-
-  return reactionPacket ?? null;
-}
-
-async function buildReactionVoteFinalizeResult(input: {
-  packet_store: FinalizeTrustedDispatchMutationWriteInput['packet_store'];
-  actor_packet: PacketEnvelopeByType['Element'];
-  archive_receipt: unknown;
-  verification_report: unknown;
-  candidate_packets: readonly PacketEnvelope[];
-}) {
-  const reactionPacket = firstReactionPacketFromCandidates(input.candidate_packets);
-  if (!reactionPacket) {
-    return {
-      archive_receipt: input.archive_receipt,
-      verification_report: input.verification_report,
-    };
-  }
-
-  const packetStore = nodeSQLitePacketStoreFrom(input.packet_store);
-  if (!packetStore) {
-    return {
-      archive_receipt: input.archive_receipt,
-      verification_report: input.verification_report,
-      target_packet_id: reactionPacket.body.target_ref.packet_id,
-      value: reactionPacket.body.status === 'active' ? reactionPacket.body.vote_value : null,
-    };
-  }
-
-  const reactionService = new SQLiteReactionService(packetStore);
-  await reactionService.syncDerivedState();
-  const summary = await reactionService.getTargetSummary({
-    target_packet_id: reactionPacket.body.target_ref.packet_id,
-    viewer_actor_key: `element:${input.actor_packet.header.packet_id}`,
-  });
-
-  return {
-    archive_receipt: input.archive_receipt,
-    verification_report: input.verification_report,
-    target_packet_id: reactionPacket.body.target_ref.packet_id,
-    value: reactionPacket.body.status === 'active' ? reactionPacket.body.vote_value : null,
-    summary,
-  };
 }
 
 export const trustedDispatchCoordinator = {
@@ -783,19 +724,10 @@ export const trustedDispatchCoordinator = {
       });
     }
 
-    const finalizedCandidatePackets = packetCandidatesFromBuildResult(certification.value);
-    const mutationResult = certifiedMutationKind === 'reaction.vote.set'
-      ? await buildReactionVoteFinalizeResult({
-          packet_store: input.packet_store,
-          actor_packet: input.actor_packet,
-          archive_receipt: archive.value,
-          verification_report: verification.value,
-          candidate_packets: finalizedCandidatePackets,
-        })
-      : {
-          archive_receipt: archive.value,
-          verification_report: verification.value,
-        };
+    const mutationResult = {
+      archive_receipt: archive.value,
+      verification_report: verification.value,
+    };
 
     return createTrustedRuntimeCoordinatorResult({
       coordinator_id: TRUSTED_DISPATCH_COORDINATOR_ID,
