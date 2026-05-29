@@ -78,7 +78,7 @@ Dispatch is the route-facing write lifecycle owner for `/api/nexus/mutations/pre
 
 | Process | Current files | Ideal owner | Ideal location | Risk |
 | --- | --- | --- | --- | --- |
-| mutation prepare/finalize orchestration | `trusted_dispatch_coordinator/*`, `fortress-prepare-handler-implementation.ts`, `fortress-finalize-handler-implementation.ts`, `mutation-service.ts` | Dispatch plus Regulation/Planning/Certification/Verification/Archive handoffs | `relation.follow.add` completes the full Dispatch-owned route chain; other intents remain capability gaps, not fallback paths | High |
+| mutation prepare/finalize orchestration | `trusted_dispatch_coordinator/*`, `fortress-prepare-handler-implementation.ts`, `fortress-finalize-handler-implementation.ts`, `mutation-service.ts` | Dispatch plus Regulation/Planning/Certification/Verification/Archive handoffs | `relation.follow.add` and `relation.association.add` complete the full Dispatch-owned route chain; other intents remain capability gaps, not fallback paths | High |
 | proof/ticket storage | `mutation-ticket-service.ts`, `mutation-ticket-store.ts`, `signed-packet-finalizer.ts` | Certification owns signature handoff; Verification owns signed packet validation; Archive owns storage | replace legacy ticket/finalizer behavior with Certification/Verification/Archive | High |
 | intent schema and enrollment | `prepare-mutation-intent-schema.ts`, `mutation-intent-registry.ts`, `packet-client-intent-enrollment.ts` | Dispatch intake plus Definition-driven client/action metadata | Dispatch/Definition with API schema bridge | Medium |
 | domain-specific finalize handlers | `fortress-handler-domain-*` | Planning/Building/Inspection/Archive or OWA adapter when product-specific | coordinator-specific functions or OWA adapter | High |
@@ -153,7 +153,7 @@ Use this as the short check-off ledger so the same issues do not have to be redi
 | Packet Explorer search card projection | Done | Search ranking/grouping remains service-owned, but selected search rows now pass through Trusted Projection card-list output before mapping back to the existing response shape. |
 | Generic query card projection | Partial | Dashboard, votes, and library packet-card lists now pass already-selected cards through Trusted Projection; discussion/reaction/scope/locality read models remain adapter migration lanes. |
 | Projection adoption | Open | Packet Explorer Export/Import edges, deeper `nexus-query-data`, discussion/reaction/scope read models remain the biggest migration lane. |
-| Legacy fortress corridor removal | Open | `relation.follow.add` uses the new Dispatch chain; other live mutation intents still need equivalent coordinator-backed materialization and finalization. |
+| Legacy fortress corridor removal | Open | `relation.follow.add`, `relation.association.add`, and `reaction.vote.set` use the new Dispatch chain; other live mutation intents still need equivalent coordinator-backed materialization and finalization. |
 | OWA adapter/profile split | Open | Discussion, reaction, locality, and scope still mix generic runtime with OWA product behavior. |
 
 ## Recommended migration order
@@ -161,7 +161,7 @@ Use this as the short check-off ledger so the same issues do not have to be redi
 1. Keep route-facing write lifecycle under Dispatch and remove legacy fortress concepts instead of wrapping them.
 2. Move read-model work toward Projection Coordinator where payload parity is straightforward: Packet Explorer's generic inspector and search-card paths have started this migration, and generic dashboard/votes/library cards are partially projected; continue with deeper route query data, then discussion/reaction/scope read models.
 3. Move direct storage, import/export, verification, and compatibility bypasses behind Archive, Exchange, Verification, and Compatibility. Add audit warnings first, then fail newly cleaned seams.
-4. Extend the proven Dispatch write pipeline beyond `relation.follow.add`: full packet envelope materialization, Certification signed-bundle checks, Verification handoff, Archive storage, and result projection for each live intent.
+4. Extend the proven Dispatch write pipeline beyond the first migrated intents: full packet envelope materialization, Certification signed-bundle checks, Verification handoff, Archive storage, and result projection for each live intent. Reaction vote writes now use the chain, with derived summary/index refresh still marked as a reaction adapter bridge until Projection owns the read model.
 5. Separate OWA-specific adapters from generic runtime. Product profile behavior should be named, not hidden inside generic services.
 6. Retire compatibility bridges only after import scans and route tests prove callers have migrated.
 

@@ -108,7 +108,7 @@ The intended chain is:
 - Verification owns signed packet legitimacy.
 - Archive stores certified packet sets.
 
-The current correction intentionally blocks rather than falling back where the coordinator chain is incomplete. `relation.follow.add` now closes the first full route-facing chain: Building emits an archive-ready packet envelope, Certification records the expected packet digest on its ticket and certifies the returned signed packet bundle, Verification validates the signed packet, and Archive stores the certified packet set. Other enrolled write intents still need the same capability closure before they can leave blocked readiness.
+The current correction intentionally blocks rather than falling back where the coordinator chain is incomplete. `relation.follow.add` and `relation.association.add` now close the first full route-facing Relation chains: Building emits archive-ready packet envelopes, Certification records expected packet digests on its tickets and certifies returned signed packet bundles, Verification validates the signed packets, and Archive stores the certified packet sets. Other enrolled write intents still need the same capability closure before they can leave blocked readiness.
 
 The same declaration language should guide both packet creation and packet projection.
 
@@ -346,12 +346,14 @@ This pass is still not generic execution. Preflight validates allowlist and meta
 
 Reseed design is now gated on full closure of in-scope live runtime modernization work. The chapter can still be split across multiple implementation passes, but the remaining live runtime work is no longer tracked as open-ended missing coverage items. The pre-reseed closure ledger classifies every live mutation intent, runtime connector path, workflow plan, policy/dependency requirement, client/API ingress enrollment, mutation handoff, and active packet type as `closed`, `closing_now`, `queued_pre_reseed`, or `blocked`.
 
-The first proving promotion is follow relation set/clear:
+The first proving promotion is Relation set/clear:
 
 - `relation.follow.add`
 - `relation.follow.clear`
+- `relation.association.add`
+- `relation.association.clear`
 
-`relation.follow.add` is now the first proven Dispatch-owned live write. It prepares and finalizes through the intended coordinator chain: Dispatch intake, Planning, Building, Inspection, Certification ticketing, signed-packet certification, Verification, and Archive storage. API routes, route payloads, response shapes, policy action IDs, packet schemas, proof behavior, signatures, and persistence semantics remain unchanged. `relation.follow.clear` remains queued for the same full-chain promotion rather than falling back to the legacy signed corridor.
+`relation.follow.add` and `relation.association.add` are now proven Dispatch-owned live writes. They prepare and finalize through the intended coordinator chain: Dispatch intake, Planning, Building, Inspection, Certification ticketing, signed-packet certification, Verification, and Archive storage. API routes, route payloads, response shapes, policy action IDs, packet schemas, proof behavior, signatures, and persistence semantics remain unchanged. `relation.follow.clear` and `relation.association.clear` remain queued for the same full-chain promotion rather than falling back to the legacy signed corridor.
 
 The remaining pre-reseed queue is explicit:
 

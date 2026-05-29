@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 import type { PacketStore } from '@core/contracts';
-import { createAssemblyPacket } from '@core/packets/builders';
+import { createAssemblyPacket, createDiscussionThreadPacket } from '@core/packets/builders';
 import { createPersonIdentityPacket } from '@core/packets/identity';
 import type { PacketEnvelopeByType } from '@core/schema/packet-schema';
 import {
@@ -110,8 +110,10 @@ function createMemoryPacketStore(seedPackets: PacketEnvelopeByType[keyof PacketE
       async exportBundle() {
         return { bytes: new Uint8Array(), packet_count: 0, revision_count: 0 };
       },
-      async listPreferredPacketsByType() {
-        return [];
+      async listPreferredPacketsByType(type?: string) {
+        return type
+          ? [...packets.values()].filter((packet) => packet.header.type === type)
+          : [...packets.values()];
       },
       async listPreferredPackets() {
         return [...packets.values()];
@@ -247,9 +249,173 @@ test('dispatch-owned write pipeline prepares and finalizes relation.follow.add',
     true
   );
   assert.equal(writes.length, 1);
-  assert.equal(writtenPackets[0]?.header.packet_id, signedPacket.header.packet_id);
-  assert.equal(writtenPackets[0]?.header.revision_id, signedPacket.header.revision_id);
-  assert.equal(writtenPackets[0]?.header.integrity.embedded_signatures.length, 1);
+  const writtenRelation = writtenPackets[0] as PacketEnvelopeByType['Relation'];
+  assert.equal(writtenRelation.header.packet_id, signedPacket.header.packet_id);
+  assert.equal(writtenRelation.header.revision_id, signedPacket.header.revision_id);
+  assert.equal(writtenRelation.header.integrity.embedded_signatures.length, 1);
+  assert.equal(writtenRelation.body.subtype, 'follow');
+  assert.equal(writtenRelation.body.status, 'active');
+  assert.equal(writtenRelation.body.subject_ref.packet_id, actor.header.packet_id);
+  assert.equal(writtenRelation.body.target_ref.packet_id, targetScope.header.packet_id);
+  assert.equal(writtenRelation.body.scope_ref?.packet_id, targetScope.header.packet_id);
+});
+
+test('dispatch-owned write pipeline prepares and finalizes relation.association.add', async () => {
+  const { actor, keyPair, keyBinding } = await createSignedActor();
+  const targetScope = createAssemblyPacket({
+    packet_id: 'nexus:element/dispatch-association-target-scope',
+    created_at: '2026-05-28T12:05:00.000Z',
+    name: 'Dispatch Association Target Scope',
+    subtype: 'assembly',
+    locality_label: 'Dispatch Association Target Scope',
+  });
+  const { store, writes, writtenPackets } = createMemoryPacketStore([actor, targetScope]);
+  const prepareResult = await trustedDispatchCoordinator.prepareEnrolledMutationWrite({
+    source_route: '/api/nexus/mutations/prepare',
+    client_intent_id: 'scope.association.set',
+    request_id: 'dispatch.association.prepare.test',
+    actor_packet: actor,
+    actor_key: 'actor.key',
+    intent: {
+      kind: 'relation.association.add',
+      target_packet_id: targetScope.header.packet_id,
+      scope_id: targetScope.header.packet_id,
+      note: 'association note',
+    },
+    packet_store: store,
+  });
+
+  assert.equal(prepareResult.status, 'ok');
+  assert.equal(prepareResult.value?.prepared_mutation.kind, 'relation.association.add');
+  assert.equal(prepareResult.value?.prepared_mutation.action_ids.includes('relation.association.add'), true);
+  assert.equal(prepareResult.value?.prepared_mutation.prepared_packets.length, 1);
+
+  const unsignedPacket = prepareResult.value!.prepared_mutation.prepared_packets[0]!.packet as PacketEnvelopeByType['Relation'];
+  assert.equal(unsignedPacket.body.subtype, 'association');
+  assert.equal(unsignedPacket.body.note, 'association note');
+
+  const signedPacket = await signPacketWithIdentity({
+    packet: unsignedPacket,
+    signerPacketId: actor.header.packet_id,
+    kid: keyBinding.kid,
+    privateKey: keyPair.privateKey,
+    signedAt: '2026-05-28T12:06:00.000Z',
+  });
+  const finalizeResult = await trustedDispatchCoordinator.finalizeEnrolledMutationWrite({
+    source_route: '/api/nexus/mutations/finalize',
+    client_intent_id: 'scope.association.set',
+    request_id: 'dispatch.association.finalize.test',
+    mutation_intent: 'relation.association.add',
+    actor_packet: actor,
+    request: {
+      ticket_id: prepareResult.value!.ticket.ticket_id,
+      signed_packets: [signedPacket],
+    },
+    packet_store: store,
+  });
+
+  assert.equal(finalizeResult.status, 'ok');
+  assert.equal(finalizeResult.value?.kind, 'relation.association.add');
+  assert.equal(finalizeResult.value?.persist_effects.length, 1);
+  assert.equal(writes.length, 1);
+  const writtenRelation = writtenPackets[0] as PacketEnvelopeByType['Relation'];
+  assert.equal(writtenRelation.header.packet_id, signedPacket.header.packet_id);
+  assert.equal(writtenRelation.header.revision_id, signedPacket.header.revision_id);
+  assert.equal(writtenRelation.header.integrity.embedded_signatures.length, 1);
+  assert.equal(writtenRelation.body.subtype, 'association');
+  assert.equal(writtenRelation.body.status, 'active');
+  assert.equal(writtenRelation.body.subject_ref.packet_id, actor.header.packet_id);
+  assert.equal(writtenRelation.body.target_ref.packet_id, targetScope.header.packet_id);
+  assert.equal(writtenRelation.body.scope_ref?.packet_id, targetScope.header.packet_id);
+  assert.equal(writtenRelation.body.note, 'association note');
+});
+
+test('dispatch-owned write pipeline prepares and finalizes reaction.vote.set', async () => {
+  const { actor, keyPair, keyBinding } = await createSignedActor();
+  const targetScope = createAssemblyPacket({
+    packet_id: 'nexus:element/dispatch-reaction-scope',
+    created_at: '2026-05-28T12:07:00.000Z',
+    name: 'Dispatch Reaction Scope',
+    subtype: 'assembly',
+    locality_label: 'Dispatch Reaction Scope',
+  });
+  const targetThread = createDiscussionThreadPacket({
+    packet_id: 'nexus:discussion/dispatch-reaction-target',
+    created_at: '2026-05-28T12:07:30.000Z',
+    title: 'Dispatch Reaction Target',
+    summary: 'Target for dispatch reaction write test.',
+    forum_ref: { packet_id: targetScope.header.packet_id },
+    thread_kind: 'general',
+    authority_scope_ref: { packet_id: targetScope.header.packet_id },
+    applicable_scope_refs: [{ packet_id: targetScope.header.packet_id }],
+    created_by: { packet_id: actor.header.packet_id },
+  });
+  const { store, writes, writtenPackets } = createMemoryPacketStore([
+    actor,
+    targetScope,
+    targetThread,
+  ]);
+  const prepareResult = await trustedDispatchCoordinator.prepareEnrolledMutationWrite({
+    source_route: '/api/nexus/mutations/prepare',
+    client_intent_id: 'reaction.vote.set',
+    request_id: 'dispatch.reaction.prepare.test',
+    actor_packet: actor,
+    actor_key: 'actor.key',
+    intent: {
+      kind: 'reaction.vote.set',
+      scope_id: targetScope.header.packet_id,
+      target_packet_id: targetThread.header.packet_id,
+      value: 'up',
+      created_at: '2026-05-28T12:08:00.000Z',
+    },
+    packet_store: store,
+  });
+
+  assert.equal(prepareResult.status, 'ok');
+  assert.equal(prepareResult.value?.prepared_mutation.kind, 'reaction.vote.set');
+  assert.equal(prepareResult.value?.prepared_mutation.action_ids.includes('reaction.vote.set'), true);
+  assert.equal(prepareResult.value?.prepared_mutation.prepared_packets.length, 1);
+
+  const unsignedPacket = prepareResult.value!.prepared_mutation.prepared_packets[0]!.packet as PacketEnvelopeByType['Reaction'];
+  assert.equal(unsignedPacket.header.type, 'Reaction');
+  assert.equal(unsignedPacket.body.subtype, 'reaction');
+  assert.equal(unsignedPacket.body.status, 'active');
+  assert.equal(unsignedPacket.body.vote_value, 'up');
+  assert.equal(unsignedPacket.body.target_ref.packet_id, targetThread.header.packet_id);
+  assert.equal(unsignedPacket.header.authority_scope_ref?.packet_id, targetScope.header.packet_id);
+
+  const signedPacket = await signPacketWithIdentity({
+    packet: unsignedPacket,
+    signerPacketId: actor.header.packet_id,
+    kid: keyBinding.kid,
+    privateKey: keyPair.privateKey,
+    signedAt: '2026-05-28T12:08:30.000Z',
+  });
+  const finalizeResult = await trustedDispatchCoordinator.finalizeEnrolledMutationWrite({
+    source_route: '/api/nexus/mutations/finalize',
+    client_intent_id: 'reaction.vote.set',
+    request_id: 'dispatch.reaction.finalize.test',
+    mutation_intent: 'reaction.vote.set',
+    actor_packet: actor,
+    request: {
+      ticket_id: prepareResult.value!.ticket.ticket_id,
+      signed_packets: [signedPacket],
+    },
+    packet_store: store,
+  });
+
+  assert.equal(finalizeResult.status, 'ok');
+  assert.equal(finalizeResult.value?.kind, 'reaction.vote.set');
+  assert.equal(finalizeResult.value?.persist_effects.length, 1);
+  assert.equal(writes.length, 1);
+  const writtenReaction = writtenPackets[0] as PacketEnvelopeByType['Reaction'];
+  assert.equal(writtenReaction.header.packet_id, signedPacket.header.packet_id);
+  assert.equal(writtenReaction.header.revision_id, signedPacket.header.revision_id);
+  assert.equal(writtenReaction.header.integrity.embedded_signatures.length, 1);
+  assert.equal(writtenReaction.body.subtype, 'reaction');
+  assert.equal(writtenReaction.body.status, 'active');
+  assert.equal(writtenReaction.body.vote_value, 'up');
+  assert.equal(writtenReaction.body.target_ref.packet_id, targetThread.header.packet_id);
 });
 
 test('dispatch-owned finalize rejects mutation intent labels that do not match the certification plan', async () => {

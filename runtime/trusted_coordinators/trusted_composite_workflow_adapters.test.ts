@@ -72,7 +72,7 @@ test('discussion surfaces and assembly creation have reusable adapter descriptor
   );
   assert.equal(
     adaptersByIntent.get('reaction.attestation.set')?.adapter_kind,
-    'composite.attestation_mutual_exclusion'
+    'composite.reaction_attestation'
   );
   assert.equal(
     adaptersByIntent.get('actor.write_policy.update')?.adapter_kind,

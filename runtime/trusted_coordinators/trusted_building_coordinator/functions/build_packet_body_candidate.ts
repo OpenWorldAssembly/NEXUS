@@ -4,9 +4,16 @@
  */
 
 import {
+  createReactionPacket,
+} from '@core/packets/builders';
+import {
+  createDiscussionRevisionId,
+  createReactionPacketId,
+} from '@core/packets/discussion.ts';
+import {
   createScopedRelationPacket,
 } from '@core/packets/relations.ts';
-import type { PacketEnvelope } from '@core/schema/packet-schema';
+import type { PacketEnvelope, PacketRef } from '@core/schema/packet-schema';
 import {
   createTrustedRuntimeCoordinatorResult,
   type TrustedRuntimeCoordinatorIssue,
@@ -24,60 +31,96 @@ import {
   type TrustedPacketCandidateNode,
 } from '../trusted_building_types.ts';
 
-function buildRelationFollowPacketEnvelope(input: {
+function packetIdFromRef(value: unknown): string | null {
+  return value && typeof value === 'object' && typeof (value as { packet_id?: unknown }).packet_id === 'string'
+    ? (value as { packet_id: string }).packet_id
+    : null;
+}
+
+function packetRefFromValue(value: unknown): PacketRef | null {
+  const packetId = packetIdFromRef(value);
+
+  return packetId ? { packet_id: packetId } : null;
+}
+
+function packetRefsFromValue(value: unknown): PacketRef[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((entry) => packetRefFromValue(entry))
+    .filter((entry): entry is PacketRef => Boolean(entry));
+}
+
+function trustedHeaderValuesFromBodyValues(
+  bodyValues: Record<string, unknown>
+): Record<string, unknown> {
+  const headerValues = bodyValues.__trusted_header_values;
+
+  return headerValues && typeof headerValues === 'object'
+    ? (headerValues as Record<string, unknown>)
+    : {};
+}
+
+function buildScopedRelationPacketEnvelope(input: {
   plan: BuildTrustedPacketBodyCandidateInput['plan'];
   actor_packet: BuildTrustedPacketBodyCandidateInput['actor_packet'];
   body_values: Record<string, unknown>;
   blockers: string[];
   issues: TrustedRuntimeCoordinatorIssue[];
 }): PacketEnvelope | null {
-  if (input.plan.packet_type !== 'Relation' || input.plan.packet_subtype !== 'follow') {
+  if (input.plan.packet_type !== 'Relation') {
+    return null;
+  }
+
+  const relationSubtype = input.plan.packet_subtype;
+  if (relationSubtype !== 'follow' && relationSubtype !== 'association') {
     return null;
   }
 
   const mutationIntent = input.body_values.kind ?? input.plan.workflow_plan_id;
+  const expectedMutationIntent = `relation.${relationSubtype}.add`;
+  const expectedWorkflowPlanId = `${expectedMutationIntent}.workflow.v0`;
 
-  if (mutationIntent !== 'relation.follow.add' && mutationIntent !== 'relation.follow.add.workflow.v0') {
+  if (mutationIntent !== expectedMutationIntent && mutationIntent !== expectedWorkflowPlanId) {
     return null;
   }
 
-  const targetRef = input.body_values.target_ref as { packet_id?: unknown } | null;
-  const scopeRef = input.body_values.scope_ref as { packet_id?: unknown } | null;
-  const targetScopePacketId = typeof input.body_values.target_scope_packet_id === 'string'
-    ? input.body_values.target_scope_packet_id
-    : typeof targetRef?.packet_id === 'string'
-      ? targetRef.packet_id
-      : null;
-  const scopePacketId = typeof scopeRef?.packet_id === 'string'
-    ? scopeRef.packet_id
-    : targetScopePacketId;
+  const targetPacketId =
+    typeof input.body_values.target_packet_id === 'string'
+      ? input.body_values.target_packet_id
+      : typeof input.body_values.target_scope_packet_id === 'string'
+        ? input.body_values.target_scope_packet_id
+        : packetIdFromRef(input.body_values.target_ref);
+  const scopePacketId = packetIdFromRef(input.body_values.scope_ref) ?? targetPacketId;
 
   if (!input.actor_packet?.header?.packet_id) {
-    input.blockers.push('Follow relation materialization requires an actor packet.');
+    input.blockers.push(`${relationSubtype} relation materialization requires an actor packet.`);
     input.issues.push(buildingIssue({
       severity: 'error',
       code: 'building.actor_packet_missing',
       path: 'actor_packet',
-      message: 'Building cannot materialize a follow relation packet without an actor packet.',
+      message: `Building cannot materialize a ${relationSubtype} relation packet without an actor packet.`,
     }));
     return null;
   }
 
-  if (typeof targetScopePacketId !== 'string' || targetScopePacketId.length === 0) {
-    input.blockers.push('Follow relation materialization requires a target scope packet id.');
+  if (typeof targetPacketId !== 'string' || targetPacketId.length === 0) {
+    input.blockers.push(`${relationSubtype} relation materialization requires a target packet id.`);
     input.issues.push(buildingIssue({
       severity: 'error',
       code: 'building.target_packet_missing',
-      path: 'plan.body_input_plan.resolved_input_values.target_scope_packet_id',
-      message: 'Building cannot materialize a follow relation packet without target_scope_packet_id.',
+      path: 'plan.body_input_plan.resolved_input_values.target_ref',
+      message: `Building cannot materialize a ${relationSubtype} relation packet without a target packet id.`,
     }));
     return null;
   }
 
   return createScopedRelationPacket({
-    subtype: 'follow',
+    subtype: relationSubtype,
     subjectPacketId: input.actor_packet.header.packet_id,
-    targetPacketId: targetScopePacketId,
+    targetPacketId,
     scopePacketId,
     applicableScopeRefs: scopePacketId ? [{ packet_id: scopePacketId }] : [],
     createdByPacketId: input.actor_packet.header.packet_id,
@@ -85,7 +128,98 @@ function buildRelationFollowPacketEnvelope(input: {
       typeof input.body_values.created_at === 'string'
         ? input.body_values.created_at
         : undefined,
+    note:
+      typeof input.body_values.note === 'string'
+        ? input.body_values.note
+        : null,
     status: 'active',
+  });
+}
+
+function buildReactionPacketEnvelope(input: {
+  plan: BuildTrustedPacketBodyCandidateInput['plan'];
+  actor_packet: BuildTrustedPacketBodyCandidateInput['actor_packet'];
+  body_values: Record<string, unknown>;
+  blockers: string[];
+  issues: TrustedRuntimeCoordinatorIssue[];
+}): PacketEnvelope | null {
+  if (input.plan.packet_type !== 'Reaction' || input.plan.packet_subtype !== 'reaction') {
+    return null;
+  }
+
+  const mutationIntent = input.body_values.kind ?? input.plan.workflow_plan_id;
+  if (mutationIntent !== 'reaction.vote.set' && mutationIntent !== 'reaction.vote.set.workflow.v0') {
+    return null;
+  }
+
+  if (!input.actor_packet?.header?.packet_id) {
+    input.blockers.push('Reaction materialization requires an actor packet.');
+    input.issues.push(buildingIssue({
+      severity: 'error',
+      code: 'building.actor_packet_missing',
+      path: 'actor_packet',
+      message: 'Building cannot materialize a reaction packet without an actor packet.',
+    }));
+    return null;
+  }
+
+  const targetPacketId = packetIdFromRef(input.body_values.target_ref)
+    ?? (typeof input.body_values.target_packet_id === 'string' ? input.body_values.target_packet_id : null);
+
+  if (!targetPacketId) {
+    input.blockers.push('Reaction materialization requires a target packet id.');
+    input.issues.push(buildingIssue({
+      severity: 'error',
+      code: 'building.target_packet_missing',
+      path: 'plan.body_input_plan.resolved_input_values.target_ref',
+      message: 'Building cannot materialize a reaction packet without a target packet id.',
+    }));
+    return null;
+  }
+
+  const status = input.body_values.status === 'cleared' ? 'cleared' : 'active';
+  const voteValue = input.body_values.vote_value === 'up' || input.body_values.vote_value === 'down'
+    ? input.body_values.vote_value
+    : null;
+  const contextRef = packetRefFromValue(input.body_values.context_ref);
+  const headerValues = trustedHeaderValuesFromBodyValues(input.body_values);
+  const authorityScopeRef = packetRefFromValue(headerValues.authority_scope_ref);
+  const applicableScopeRefs = packetRefsFromValue(headerValues.applicable_scope_refs);
+  const createdAt = typeof headerValues.created_at === 'string' && headerValues.created_at.length > 0
+    ? headerValues.created_at
+    : new Date().toISOString();
+  const reactionPacketId = createReactionPacketId({
+    targetPacketId,
+    actorPacketId: input.actor_packet.header.packet_id,
+    contextPacketId: contextRef?.packet_id ?? null,
+  });
+
+  return createReactionPacket({
+    packet_id: reactionPacketId,
+    revision_id: createDiscussionRevisionId(reactionPacketId, createdAt),
+    created_at: createdAt,
+    authority_scope_ref: authorityScopeRef,
+    applicable_scope_refs: applicableScopeRefs.length > 0
+      ? applicableScopeRefs
+      : authorityScopeRef
+        ? [authorityScopeRef]
+        : [],
+    adapter: 'trusted-dispatch',
+    created_by: { packet_id: input.actor_packet.header.packet_id },
+    metadata_tags: ['reaction', 'vote'],
+    metadata_summary: status === 'cleared'
+      ? `Cleared vote on ${targetPacketId}`
+      : `${voteValue ?? 'neutral'} vote on ${targetPacketId}`,
+    subtype: 'reaction',
+    target_ref: { packet_id: targetPacketId },
+    vote_value: voteValue,
+    attestation_value: null,
+    emoji_keys: [],
+    status,
+    context_ref: contextRef,
+    supporting_refs: packetRefsFromValue(input.body_values.supporting_refs),
+    note: typeof input.body_values.note === 'string' ? input.body_values.note : null,
+    supersedes_ref: packetRefFromValue(input.body_values.supersedes_ref),
   });
 }
 
@@ -117,14 +251,15 @@ export function buildTrustedPacketBodyCandidate(
     }));
   }
 
-  const materializationStatus = blockers.length > 0
-    ? 'blocked'
-    : warnings.length > 0
-      ? 'partial'
-      : 'candidate';
   const bodyValues = plan.body_input_plan?.resolved_input_values ?? {};
   const packetEnvelope = blockers.length === 0
-    ? buildRelationFollowPacketEnvelope({
+    ? buildScopedRelationPacketEnvelope({
+        plan,
+        actor_packet: input.actor_packet,
+        body_values: bodyValues,
+        blockers,
+        issues,
+      }) ?? buildReactionPacketEnvelope({
         plan,
         actor_packet: input.actor_packet,
         body_values: bodyValues,
@@ -132,6 +267,11 @@ export function buildTrustedPacketBodyCandidate(
         issues,
       })
     : null;
+  const materializationStatus = blockers.length > 0
+    ? 'blocked'
+    : warnings.length > 0
+      ? 'partial'
+      : 'candidate';
   const bodyCandidate: TrustedGenericBodyCandidate | null = plan.packet_type
     ? {
         candidate_kind: 'trusted.generic_body_candidate',

@@ -125,7 +125,7 @@ function normalizeGeneratedTimestamps(packet: PacketEnvelope) {
   );
 }
 
-test('live generic workflow enrollment includes relation, claim, and attestation direct operations', () => {
+test('live generic workflow enrollment includes relation and reaction direct operations', () => {
   assert.deepEqual(
     listLiveGenericWorkflowEnrollments().map(
       (enrollment) => enrollment.mutation_intent
@@ -137,7 +137,8 @@ test('live generic workflow enrollment includes relation, claim, and attestation
       'relation.follow.add',
       'relation.follow.clear',
       'relation.participation.add',
-      'attestation.vote.set',
+      'relation.participation.clear',
+      'reaction.vote.set',
     ]
   );
 
@@ -307,7 +308,7 @@ test('trusted workflow mutation returns existing fortress prepare shape', async 
     actorPacket,
     intent: {
       kind: 'relation.follow.add',
-      scope_id: 'target-scope',
+      scope_id: targetScopePacket.header.packet_id,
       target_scope_packet_id: targetScopePacket.header.packet_id,
     },
   });
@@ -351,26 +352,33 @@ test('trusted role claim planner creates assert and withdraw operations from pac
     intent: {
       kind: 'relation.participation.add',
       role_packet_id: rolePacket.header.packet_id,
-      scope_id: 'target-scope',
-      
-    },
+      scope_id: targetScopePacket.header.packet_id,
+    } as never,
+  });
+  const existingParticipationRelation = setPlan.relation_plan.packets[0] as PacketEnvelopeByType['Relation'];
+  assert.ok(existingParticipationRelation);
+  const withdrawPacketStore = createFakeStore({
+    targetScopePacket,
+    extraPackets: [rolePacket],
+    existingRelationPacket: existingParticipationRelation,
   });
   const withdrawPlan = await resolveTrustedRoleParticipationRelationOperationPlan({
-    packetStore: packetStore as never,
+    packetStore: withdrawPacketStore as never,
     policyGate: createPolicyGate(),
     actorPacket,
     intent: {
       kind: 'relation.participation.clear',
       role_packet_id: rolePacket.header.packet_id,
-      scope_id: 'target-scope',
-    },
+      scope_id: targetScopePacket.header.packet_id,
+    } as never,
   });
 
   assert.equal(setPlan.operation_kind, 'relation.set');
-  assert.equal(setPlan.relation_plan.packets[0]?.body.status, 'active');
+  assert.equal(existingParticipationRelation.body.status, 'active');
+  const withdrawnParticipationRelation = withdrawPlan.relation_plan.packets[0] as PacketEnvelopeByType['Relation'];
   assert.equal(withdrawPlan.operation_kind, 'relation.clear');
-  assert.equal(withdrawPlan.relation_plan.packets[0]?.body.status, 'withdrawn');
-  assert.equal(setPlan.target_scope_packet.header.packet_id, targetScopePacket.header.packet_id);
+  assert.equal(withdrawnParticipationRelation.body.status, 'withdrawn');
+  assert.equal(setPlan.target_scope_packet?.header.packet_id, targetScopePacket.header.packet_id);
 });
 
 test('unsupported generic workflow requests fail closed', async () => {

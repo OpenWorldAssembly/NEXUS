@@ -4,14 +4,18 @@
  */
 
 import { getPacketUnsignedDigestCandidates } from '@core/auth/mutation-digests';
+import type { MutationIntent } from '@core/auth/mutation-corridor';
 import type { MutationActionId } from '@core/auth/write-policy';
-import { parsePacketEnvelope, type PacketEnvelope } from '@core/schema/packet-schema';
+import { resolveDiscussionScopePacketId } from '@core/packets/discussion.ts';
+import { parsePacketEnvelope, type PacketEnvelope, type PacketEnvelopeByType } from '@core/schema/packet-schema';
 import { trustedArchiveCoordinator } from '@runtime/trusted_coordinators/trusted_archive_coordinator/index.ts';
 import { trustedBuildingCoordinator } from '@runtime/trusted_coordinators/trusted_building_coordinator/index.ts';
 import { trustedCertificationCoordinator } from '@runtime/trusted_coordinators/trusted_certification_coordinator/index.ts';
 import { trustedInspectionCoordinator } from '@runtime/trusted_coordinators/trusted_inspection_coordinator/index.ts';
 import { trustedPlanningCoordinator } from '@runtime/trusted_coordinators/trusted_planning_coordinator/index.ts';
 import { trustedVerificationCoordinator } from '@runtime/trusted_coordinators/trusted_verification_coordinator/index.ts';
+import { SQLiteReactionService } from '@runtime/nexus/server/reaction/reaction-service.ts';
+import type { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store';
 import {
   appendTrustedChildResult,
   completeTrustedProcessChain,
@@ -104,7 +108,30 @@ function mutationKindFromPlanId(planId: string | null): string {
     return 'unknown';
   }
 
-  return planId.replace(/\.workflow\.v\d+$/, '');
+  const workflowMutationKind = planId.replace(/\.workflow\.v\d+$/, '');
+  if (workflowMutationKind !== planId) {
+    return workflowMutationKind;
+  }
+
+  const trustedReactionPlan = /^trusted\.operation_plan\.Reaction\.reaction\.reaction\.(set|clear)$/.exec(planId);
+  if (trustedReactionPlan) {
+    return 'reaction.vote.set';
+  }
+
+  const trustedOperationPlan = /^trusted\.operation_plan\.Relation\.([^.]+)\.relation\.([^.]+)$/.exec(planId);
+  if (trustedOperationPlan) {
+    const [, subtype, action] = trustedOperationPlan;
+
+    if (action === 'set') {
+      return `relation.${subtype}.add`;
+    }
+
+    if (action === 'clear') {
+      return `relation.${subtype}.clear`;
+    }
+  }
+
+  return 'unknown';
 }
 
 function packetRevisionKey(input: {
@@ -157,20 +184,42 @@ function archiveWriteKeys(receipt: {
   );
 }
 
-function planningHintsForMutationIntent(intentKind: string): {
+function planningHintsForMutationIntent(intent: MutationIntent): {
   packet_type?: string;
   packet_subtype?: string;
   operation_kind?: string;
   workflow_plan_id?: string;
   action_ids?: string[];
 } {
-  if (intentKind === 'relation.follow.add') {
+  if (intent.kind === 'relation.follow.add') {
     return {
       packet_type: 'Relation',
       packet_subtype: 'follow',
       operation_kind: 'relation.set',
       workflow_plan_id: 'relation.follow.add.workflow.v0',
       action_ids: ['relation.follow.add'],
+    };
+  }
+
+  if (intent.kind === 'relation.association.add') {
+    return {
+      packet_type: 'Relation',
+      packet_subtype: 'association',
+      operation_kind: 'relation.set',
+      workflow_plan_id: 'relation.association.add.workflow.v0',
+      action_ids: ['relation.association.add'],
+    };
+  }
+
+  if (intent.kind === 'reaction.vote.set') {
+    const isClear = intent.value === null;
+
+    return {
+      packet_type: 'Reaction',
+      packet_subtype: 'reaction',
+      operation_kind: isClear ? 'reaction.clear' : 'reaction.set',
+      workflow_plan_id: 'reaction.vote.set.workflow.v0',
+      action_ids: [isClear ? 'reaction.vote.clear' : 'reaction.vote.set'],
     };
   }
 
@@ -186,7 +235,7 @@ function bodyInputValuesForMutationIntent(input: {
       subtype: 'follow',
       subject_ref: { packet_id: input.actor_packet.header.packet_id },
       target_ref: { packet_id: input.intent.target_scope_packet_id },
-      scope_ref: { packet_id: input.intent.target_scope_packet_id },
+      scope_ref: { packet_id: input.intent.scope_id },
       status: 'active',
       policy_ref: null,
       terms_ref: null,
@@ -195,6 +244,46 @@ function bodyInputValuesForMutationIntent(input: {
       effective_from: null,
       effective_until: null,
       subscription_options: null,
+    };
+  }
+
+  if (input.intent.kind === 'relation.association.add') {
+    return {
+      subtype: 'association',
+      subject_ref: { packet_id: input.actor_packet.header.packet_id },
+      target_ref: { packet_id: input.intent.target_packet_id },
+      scope_ref: { packet_id: input.intent.scope_id },
+      status: 'active',
+      policy_ref: null,
+      terms_ref: null,
+      supporting_refs: [],
+      note: input.intent.note ?? null,
+      effective_from: null,
+      effective_until: null,
+      subscription_options: null,
+    };
+  }
+
+  if (input.intent.kind === 'reaction.vote.set') {
+    const scopePacketId = resolveDiscussionScopePacketId(input.intent.scope_id);
+    const isClear = input.intent.value === null;
+
+    return {
+      __trusted_header_values: {
+        authority_scope_ref: { packet_id: scopePacketId },
+        applicable_scope_refs: [{ packet_id: scopePacketId }],
+        created_at: input.intent.created_at ?? null,
+      },
+      subtype: 'reaction',
+      target_ref: { packet_id: input.intent.target_packet_id },
+      status: isClear ? 'cleared' : 'active',
+      vote_value: input.intent.value,
+      attestation_value: null,
+      emoji_keys: [],
+      context_ref: null,
+      supporting_refs: [],
+      note: null,
+      supersedes_ref: null,
     };
   }
 
@@ -280,6 +369,63 @@ function dispatchProcessChainFromChildren(input: {
   return completeTrustedProcessChain(processChain);
 }
 
+function nodeSQLitePacketStoreFrom(packetStore: FinalizeTrustedDispatchMutationWriteInput['packet_store']): NodeSQLitePacketStore | null {
+  return packetStore && typeof (packetStore as { databasePath?: unknown }).databasePath === 'string'
+    ? (packetStore as NodeSQLitePacketStore)
+    : null;
+}
+
+function firstReactionPacketFromCandidates(
+  packets: readonly PacketEnvelope[]
+): PacketEnvelopeByType['Reaction'] | null {
+  const reactionPacket = packets.find(
+    (packet): packet is PacketEnvelopeByType['Reaction'] => packet.header.type === 'Reaction'
+  );
+
+  return reactionPacket ?? null;
+}
+
+async function buildReactionVoteFinalizeResult(input: {
+  packet_store: FinalizeTrustedDispatchMutationWriteInput['packet_store'];
+  actor_packet: PacketEnvelopeByType['Element'];
+  archive_receipt: unknown;
+  verification_report: unknown;
+  candidate_packets: readonly PacketEnvelope[];
+}) {
+  const reactionPacket = firstReactionPacketFromCandidates(input.candidate_packets);
+  if (!reactionPacket) {
+    return {
+      archive_receipt: input.archive_receipt,
+      verification_report: input.verification_report,
+    };
+  }
+
+  const packetStore = nodeSQLitePacketStoreFrom(input.packet_store);
+  if (!packetStore) {
+    return {
+      archive_receipt: input.archive_receipt,
+      verification_report: input.verification_report,
+      target_packet_id: reactionPacket.body.target_ref.packet_id,
+      value: reactionPacket.body.status === 'active' ? reactionPacket.body.vote_value : null,
+    };
+  }
+
+  const reactionService = new SQLiteReactionService(packetStore);
+  await reactionService.syncDerivedState();
+  const summary = await reactionService.getTargetSummary({
+    target_packet_id: reactionPacket.body.target_ref.packet_id,
+    viewer_actor_key: `element:${input.actor_packet.header.packet_id}`,
+  });
+
+  return {
+    archive_receipt: input.archive_receipt,
+    verification_report: input.verification_report,
+    target_packet_id: reactionPacket.body.target_ref.packet_id,
+    value: reactionPacket.body.status === 'active' ? reactionPacket.body.vote_value : null,
+    summary,
+  };
+}
+
 export const trustedDispatchCoordinator = {
   id: TRUSTED_DISPATCH_COORDINATOR_ID,
 
@@ -340,7 +486,7 @@ export const trustedDispatchCoordinator = {
       });
     }
 
-    const planningHints = planningHintsForMutationIntent(input.intent.kind);
+    const planningHints = planningHintsForMutationIntent(input.intent);
     const plan = trustedPlanningCoordinator.resolveOperationPlan({
       ...planningHints,
       operation_kind: planningHints.operation_kind as never,
@@ -637,6 +783,20 @@ export const trustedDispatchCoordinator = {
       });
     }
 
+    const finalizedCandidatePackets = packetCandidatesFromBuildResult(certification.value);
+    const mutationResult = certifiedMutationKind === 'reaction.vote.set'
+      ? await buildReactionVoteFinalizeResult({
+          packet_store: input.packet_store,
+          actor_packet: input.actor_packet,
+          archive_receipt: archive.value,
+          verification_report: verification.value,
+          candidate_packets: finalizedCandidatePackets,
+        })
+      : {
+          archive_receipt: archive.value,
+          verification_report: verification.value,
+        };
+
     return createTrustedRuntimeCoordinatorResult({
       coordinator_id: TRUSTED_DISPATCH_COORDINATOR_ID,
       coordinator_kind: 'dispatch',
@@ -648,10 +808,7 @@ export const trustedDispatchCoordinator = {
             revision_id: write.revision_ref.revision_id,
           },
         })),
-        result: {
-          archive_receipt: archive.value,
-          verification_report: verification.value,
-        },
+        result: mutationResult,
       },
       trace: [
         ...request.trace,

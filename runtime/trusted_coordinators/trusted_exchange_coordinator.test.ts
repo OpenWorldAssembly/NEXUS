@@ -213,7 +213,7 @@ test('trusted exchange coordinator previews raw JSON string bundles', async () =
     bundle: JSON.stringify({ packets: [packet] }),
   });
 
-  assert.equal(result.status, 'partial');
+  assert.equal(result.status, 'ok');
   assert.equal(result.value?.source_shape, 'json_string');
   assert.equal(result.value?.packet_count, 1);
   assert.equal(result.value?.packet_previews[0]?.normalized_key, `${packet.header.packet_id}::${packet.header.revision_id}`);
@@ -252,7 +252,7 @@ test('trusted exchange coordinator commit refuses missing import acknowledgement
 
   assert.equal(result.status, 'error');
   assert.equal(
-    result.issues.some((issue) => issue.code === 'trusted_exchange_import_acknowledgement_missing'),
+    result.issues.some((issue) => issue.code === 'exchange.import_commit_blocked'),
     true
   );
   assert.equal(await packetStore.fetchByRevision({

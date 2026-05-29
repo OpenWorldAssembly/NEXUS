@@ -353,6 +353,7 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - The mistaken Trusted Write coordinator direction was rejected: write lifecycle orchestration belongs to Dispatch, not a new peer coordinator.
 - `/api/nexus/mutations/prepare` and `/api/nexus/mutations/finalize` now call Dispatch-owned write lifecycle methods and do not call `NexusMutationService` as route-facing authority.
 - `relation.follow.add` is the first live write to complete the corrected Dispatch-owned chain: Planning, Building, Inspection, Certification ticketing, signed-packet bundle certification, Verification, and Archive storage.
+- `relation.association.add` now uses the same full Dispatch-owned chain, with generic scoped Relation materialization and finalize-time mutation-kind parity checks.
 - Other mutation intents remain coordinator capability gaps until they receive equivalent packet-envelope materialization, Certification signed-bundle checks, Verification handoff, Archive storage, and result projection. They must not fall back to the legacy signed corridor.
 
 ## 2026-05 Trusted runtime audit guardrail housekeeping
@@ -379,6 +380,15 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - Dispatch now verifies the raw signed packets through Trusted Verification, compares verified packet revision keys against Certification before Archive, derives the finalized mutation kind from the certified plan, and rejects mismatched caller-supplied intent labels.
 - Archive now requires certified packet revision keys and checks that extracted archive-ready envelopes match those keys before any write, so Archive stores only the certified packet set.
 - The trusted issue taxonomy gained canonical entries for certified-key and finalize mismatch blockers so audit remains fail-closed for invented issue codes.
+
+
+## 2026-05 Dispatch reaction vote write migration
+
+- `reaction.vote.set` now enters the Dispatch-owned write lifecycle with Reaction packet planning hints, body materialization metadata, generic Reaction packet envelope building, Inspection, Certification, Verification, and Archive storage.
+- Dispatch derives `reaction.vote.set` from both workflow-backed and trusted operation plan IDs so finalize-time mutation-kind parity checks cover reaction writes like relation writes.
+- Finalize refreshes the existing reaction derived index/summary after Archive for parity with the current discussion UI. This is a bounded reaction adapter bridge, not the final Projection-owned read-model architecture.
+- Inspection now ignores reserved `__trusted_*` materialization metadata keys when comparing planned body values to the candidate body, allowing Dispatch/Building to carry header materialization inputs without polluting packet bodies.
+- The runtime cleanup tab now records reaction vote migration as completed for the legacy signed-corridor checklist while keeping remaining mutation intents open.
 
 ## 2026-05 Packet Explorer projection migration pass
 

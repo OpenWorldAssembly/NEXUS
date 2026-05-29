@@ -46,7 +46,7 @@ export type FortressHandlerGenericizationEntry = {
   notes: string;
 };
 
-export const FORTRESS_HANDLER_GENERICIZATION_ENTRIES = [
+export const FORTRESS_HANDLER_GENERICIZATION_ENTRIES: readonly FortressHandlerGenericizationEntry[] = [
   {
     mutation_intent: 'locality.path.create',
     domain: 'locality',
@@ -171,12 +171,12 @@ export const FORTRESS_HANDLER_GENERICIZATION_ENTRIES = [
     packet_types_touched: ['Relation'],
     policy_action_ids: ['relation.association.add'],
     operation_kinds: ['relation.set'],
-    operation_mapping_status: 'planner_extraction_gap',
-    genericization_status: 'planner_extraction_needed',
+    operation_mapping_status: 'directly_mapped',
+    genericization_status: 'generic_ready',
     next_step:
-      'Promote scoped relation planner outputs into generic Relation write plans while preserving explicit legacy Claim cleanup.',
+      'Promote association clear through the same generic Relation write chain while preserving explicit legacy Claim cleanup.',
     notes:
-      'Relation-first association write now emits only Relation packets for fresh set flows and keeps legacy Claim withdrawal cleanup explicit.',
+      'Relation-first association add now emits a single Relation packet through the Dispatch-owned coordinator chain; clear mode still has legacy Claim withdrawal cleanup.',
   },
   {
     mutation_intent: 'relation.association.clear',
@@ -241,17 +241,17 @@ export const FORTRESS_HANDLER_GENERICIZATION_ENTRIES = [
     domain: 'role',
     prepare_handler: 'prepareRoleParticipationRelation',
     finalize_handler: 'finalizeRoleParticipationRelationUpdate',
-    packet_types_touched: ['Role', 'Claim'],
+    packet_types_touched: ['Role', 'Relation'],
     policy_action_ids: [
       'relation.participation.add',
       'relation.participation.clear',
     ],
-    operation_kinds: ['claim.assert', 'claim.withdraw'],
+    operation_kinds: ['relation.set'],
     operation_mapping_status: 'directly_mapped',
     genericization_status: 'generic_ready',
     next_step:
-      'Enroll role participation as a generic Relation revision after role scope resolution is isolated.',
-    notes: 'Single Claim write with Role authority-scope lookup.',
+      'Enroll role participation add as a generic Relation revision after role scope resolution is isolated.',
+    notes: 'Single Relation active revision with Role authority-scope lookup.',
   },
   {
     mutation_intent: 'relation.participation.clear',
@@ -316,7 +316,7 @@ export const FORTRESS_HANDLER_GENERICIZATION_ENTRIES = [
     notes:
       'Single private Preference.element revision with latest-active lookup and compatibility cache projection.',
   },
-] as const satisfies readonly FortressHandlerGenericizationEntry[];
+];
 
 export type FortressHandlerGenericizationAuditFinding = {
   severity: 'error' | 'warning';

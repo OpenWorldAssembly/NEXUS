@@ -24,6 +24,10 @@ import {
   type TrustedPacketBodyInspection,
 } from '../trusted_inspection_types.ts';
 
+function isTrustedMaterializationMetadataKey(key: string): boolean {
+  return key.startsWith('__trusted_');
+}
+
 export function inspectTrustedPacketBodyCandidate(
   input: InspectTrustedPacketBodyCandidateInput
 ): TrustedRuntimeCoordinatorResult<TrustedPacketBodyInspection> {
@@ -115,6 +119,10 @@ export function inspectTrustedPacketBodyCandidate(
     }
 
     for (const [key, plannedValue] of Object.entries(planNode.body_input_plan?.resolved_input_values ?? {})) {
+      if (isTrustedMaterializationMetadataKey(key)) {
+        continue;
+      }
+
       if (!body || !sameTrustedValue(body[key], plannedValue)) {
         mismatchPaths.push(`body.${key}`);
       }
