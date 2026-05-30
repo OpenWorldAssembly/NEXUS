@@ -1,9 +1,10 @@
 /**
  * File: list_trusted_definition_candidates.ts
- * Description: Collects Trusted Definition candidates from manifest-backed seed material and caller-provided sources.
+ * Description: Collects Trusted Definition candidates from seeded bundles, bootstrap manifests, and caller-provided sources.
  */
 
 import { listDefinedPacketTypeDefinitions } from '@core/packets/packet-definition-manifest';
+import { listSeededDefinitionBundleCandidates } from './list_seeded_definition_bundle_candidates.ts';
 import {
   createTrustedRuntimeCoordinatorResult,
   type TrustedRuntimeCoordinatorIssue,
@@ -39,6 +40,11 @@ export function listTrustedDefinitionCandidates(
   const issues: TrustedRuntimeCoordinatorIssue[] = [];
   const candidates: TrustedDefinitionCandidate[] = [...(input.candidates ?? [])];
   const packetTypeFilters = input.packet_type_filters ? [...input.packet_type_filters] : [];
+  const seededBundleResult = listSeededDefinitionBundleCandidates({
+    packet_type_filters: packetTypeFilters,
+  });
+  candidates.push(...seededBundleResult.candidates);
+  issues.push(...seededBundleResult.issues);
 
   for (const definition of listDefinedPacketTypeDefinitions()) {
     if (!shouldIncludePacketType({ packetType: definition.packet_type, packetTypeFilters })) {
@@ -98,7 +104,7 @@ export function listTrustedDefinitionCandidates(
       definitionTrace({
         step_id: 'definition.candidates.list',
         status: 'ok',
-        notes: `Collected ${candidates.length} trusted definition candidates from bootstrap and caller-provided material.`,
+        notes: `Collected ${candidates.length} trusted definition candidates from seeded bundles, bootstrap, and caller-provided material.`,
       }),
     ],
   });

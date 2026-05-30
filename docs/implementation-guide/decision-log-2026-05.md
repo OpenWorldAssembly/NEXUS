@@ -263,6 +263,15 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - Claimed shell preference writes now run through the standard signed mutation prepare/finalize corridor as `preference.element.set`, preserving projected responses, actor proof/session checks, same-value no-op behavior, and legacy cache sync. `/api/nexus/shell-preferences` remains guest compatibility state only.
 - The direct `preference.element.interface.set` runtime connector is retained as a definition/internal comparison bridge rather than the live claimed-write corridor.
 
+
+## 2026-05 definition kernel and stored profile decision
+
+- Nexus will hardcode only the Definition packet kernel needed to cold-start, validate, and compose definition material. This kernel includes the Definition body schema, supported Definition part subtypes, and the bootstrap resolver for turning Definition parts into a local active definition view.
+- Long-term packet type authority should live as stored `Definition` packets, not TypeScript-only descriptors. TypeScript packet definitions remain bootstrap/compiler seed material, local fallback material, and test fixtures until active Definition profiles can be resolved from packet storage.
+- A packet type definition is a profile assembled from Definition part packets, not one monolithic object. Schema, actions, builders, planners, projections, compatibility, defaults, and dependencies may version or fork as separate Definition parts and travel together in a `Bundle.packet_set` profile inventory.
+- Nodes/scopes will eventually select their active definition profile through packet-backed defaults, preferences, and policies. The current Trusted Definition Coordinator already models source kinds, trust tiers, pins/preferences, ranking, compatibility-only candidates, quarantine, and ignored candidates, but archive-backed profile loading remains a future migration seam.
+- Imported Definition packets remain descriptive only. They can declare schemas, actions, builders, planners, projections, defaults, policies/dependencies, and compatibility metadata, but execution must stay inside trusted local runtime capabilities and allowlisted coordinators.
+
 ## 2026-05 Nexus discussions UI decomposition
 
 - Nexus discussions began moving route-local UI into `app/components/nexus/features/discussions/*` while preserving `src/app/nexus/discussions.tsx` as the route/controller owner for query state, loading, mutations, auth gates, and reply branch state.

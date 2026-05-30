@@ -176,6 +176,20 @@ The long-term portability model is:
 
 The manifest may eventually be carried inside a Bundle inventory, but the manifest itself is a Definition graph/profile concept, not a Bundle subtype.
 
+
+## Locked target model: Definition kernel and stored profiles
+
+The long-term definition model is now explicit:
+
+- Core Nexus hardcodes the small Definition packet kernel only. This is the cold-start bootloader that knows how to read Definition parts, validate their kernel shape, and compose them into a local active definition view.
+- Packet type and subtype semantics should live as stored `Definition` packets. The current TypeScript manifest is bootstrap/compiler seed material, local fallback material, and test fixture material, not the desired permanent semantic source of truth.
+- A definition profile is assembled from Definition part packets. Schema, action registries, builders, planners, projections, compatibility, defaults, and dependencies may version or fork independently when useful.
+- `Bundle.packet_set` carries active Definition part refs as a profile inventory. Bundle remains a carrier, not the semantic home of the definitions it transports.
+- Nodes and scopes should eventually select active definition profiles through packet-backed defaults, preferences, and policies. This keeps Definition profile selection portable instead of binding it to one runtime config file.
+- Imported Definition material is descriptive, never executable. Trusted local coordinators decide whether local allowlisted builder, planner, projection, compatibility, regulation, and archive capabilities can interpret the declared metadata.
+
+Current state is transitional but close: Definition packets and profile Bundle seeds are generated and audited, Trusted Definition can rank and resolve candidates, and the source/trust model already includes local archive, imported bundle, pinned bundle, and remote mirror concepts. The remaining migration is to load candidate Definition parts from stored packet profiles rather than resolving active definitions directly from `PACKET_TYPE_DEFINITIONS`.
+
 ## Next use
 
 The current safe runtime step is to keep `Preference.element` as the first full template example. Claimed scope-display and shell-chrome writes enter the signed prepare/finalize corridor as `preference.element.set`, while the old direct `preference.element.interface.set` connector is retained only as a definition/internal comparison bridge. Partial `Preference.element.value.interface` patches keep the same projection shape. Empty interface patches are rejected before prepare so the corridor cannot create default preference packets from requests that carry no actual preference change.

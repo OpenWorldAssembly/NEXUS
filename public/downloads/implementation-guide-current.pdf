@@ -4,7 +4,7 @@
 << /Type /Catalog /Pages 2 0 R >>
 endobj
 2 0 obj
-<< /Type /Pages /Kids [6 0 R 8 0 R 10 0 R 12 0 R 14 0 R 16 0 R 18 0 R 20 0 R 22 0 R 24 0 R 26 0 R 28 0 R 30 0 R 32 0 R 34 0 R 36 0 R 38 0 R 40 0 R 42 0 R 44 0 R 46 0 R 48 0 R 50 0 R 52 0 R 54 0 R 56 0 R 58 0 R 60 0 R 62 0 R 64 0 R 66 0 R 68 0 R 70 0 R 72 0 R 74 0 R 76 0 R 78 0 R 80 0 R 82 0 R 84 0 R 86 0 R 88 0 R 90 0 R 92 0 R 94 0 R 96 0 R 98 0 R 100 0 R 102 0 R 104 0 R 106 0 R 108 0 R 110 0 R 112 0 R 114 0 R 116 0 R 118 0 R 120 0 R 122 0 R 124 0 R 126 0 R 128 0 R 130 0 R 132 0 R 134 0 R 136 0 R 138 0 R 140 0 R 142 0 R 144 0 R 146 0 R 148 0 R 150 0 R 152 0 R 154 0 R 156 0 R 158 0 R 160 0 R 162 0 R 164 0 R 166 0 R 168 0 R 170 0 R 172 0 R 174 0 R 176 0 R 178 0 R 180 0 R 182 0 R 184 0 R 186 0 R 188 0 R 190 0 R] /Count 93 >>
+<< /Type /Pages /Kids [6 0 R 8 0 R 10 0 R 12 0 R 14 0 R 16 0 R 18 0 R 20 0 R 22 0 R 24 0 R 26 0 R 28 0 R 30 0 R 32 0 R 34 0 R 36 0 R 38 0 R 40 0 R 42 0 R 44 0 R 46 0 R 48 0 R 50 0 R 52 0 R 54 0 R 56 0 R 58 0 R 60 0 R 62 0 R 64 0 R 66 0 R 68 0 R 70 0 R 72 0 R 74 0 R 76 0 R 78 0 R 80 0 R 82 0 R 84 0 R 86 0 R 88 0 R 90 0 R 92 0 R 94 0 R 96 0 R 98 0 R 100 0 R 102 0 R 104 0 R 106 0 R 108 0 R 110 0 R 112 0 R 114 0 R 116 0 R 118 0 R 120 0 R 122 0 R 124 0 R 126 0 R 128 0 R 130 0 R 132 0 R 134 0 R 136 0 R 138 0 R 140 0 R 142 0 R 144 0 R 146 0 R 148 0 R 150 0 R 152 0 R 154 0 R 156 0 R 158 0 R 160 0 R 162 0 R 164 0 R 166 0 R 168 0 R 170 0 R 172 0 R 174 0 R 176 0 R 178 0 R 180 0 R 182 0 R 184 0 R 186 0 R 188 0 R 190 0 R 192 0 R] /Count 94 >>
 endobj
 3 0 obj
 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
@@ -3749,7 +3749,7 @@ endobj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 171 0 R >>
 endobj
 173 0 obj
-<< /Length 5206 >>
+<< /Length 5269 >>
 stream
 0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
 BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Implementation Guide - 85) Tj ET
@@ -3784,556 +3784,590 @@ BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 240.75 Tm (proof/session check
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 225.50 Tm (/api/nexus/shell-preferences remains guest compatibility state only.) Tj ET
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 206.25 Tm (- The direct preference.element.interface.set runtime connector is retained as a) Tj ET
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 191.00 Tm (definition/internal comparison bridge rather than the live claimed-write corridor.) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 157.75 Tm (2026-05 Nexus discussions UI decomposition) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 131.75 Tm (- Nexus discussions began moving route-local UI into) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 116.50 Tm (app/components/nexus/features/discussions/* while preserving src/app/nexus/discussions.tsx) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 101.25 Tm (as the route/controller owner for query state, loading, mutations, auth gates, and reply) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 86.00 Tm (branch state.) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 157.75 Tm (2026-05 definition kernel and stored profile decision) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 131.75 Tm (- Nexus will hardcode only the Definition packet kernel needed to cold-start, validate, and) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 116.50 Tm (compose definition material. This kernel includes the Definition body schema, supported) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 101.25 Tm (Definition part subtypes, and the bootstrap resolver for turning Definition parts into a) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 86.00 Tm (local active definition view.) Tj ET
 endstream
 endobj
 174 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 173 0 R >>
 endobj
 175 0 obj
-<< /Length 5369 >>
+<< /Length 5571 >>
 stream
 0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
 BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Implementation Guide - 86) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- Extracted discussion feature components now cover feed post cards, root post cards,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 718.75 Tm (vote/reply-count pills, recursive reply trees, and post/reply composers.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 699.50 Tm (- Discussion loading adoption remains visual-scope owned: feed load-more, root replies,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 684.25 Tm (reply branches, vote pills, and composers can mount scoped loading boundaries without) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 669.00 Tm (packet-action registry or runtime coupling.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 649.75 Tm (- Candidate universal pieces such as composer shells, vote/reaction skeletons, and tree) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 634.50 Tm (rails remain feature-local until another Nexus surface proves the same reusable shape.) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 601.25 Tm (2026-05 Nexus discussions workspace panel extraction) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 575.25 Tm (- Discussion feed, thread, and post workspace sections now have feature-local panels under) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 560.00 Tm (app/components/nexus/features/discussions/*, including a thread toolbar, while the route) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 544.75 Tm (keeps router, auth, loading, mutation, and reply-state ownership.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 525.50 Tm (- The panel props are explicit callbacks and display state rather than runtime services or) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 510.25 Tm (router hooks, keeping the feature components ready for later generic promotion if another) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 495.00 Tm (surface needs the same workspace/feed/thread/composer skeletons.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 475.75 Tm (- Scoped loading boundaries remain attached to visual regions such as feed, root replies,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 460.50 Tm (reply branches, votes, and composers; operation semantics still stay outside UI.) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 427.25 Tm (2026-05 Nexus sidebar feature extraction) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 401.25 Tm (- Nexus sidebar rail/menu UI began moving into app/components/nexus/features/sidebar/* while) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 386.00 Tm (nexus-sidebar.tsx remains the shell controller for router, auth, preference persistence,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 370.75 Tm (rail animation, and scope mutation state.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 351.50 Tm (- Extracted sidebar feature components now cover rail toggles, guest avatar, preference) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 336.25 Tm (switches, current context card, function menu content, scope section headers, grouped) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 321.00 Tm (scope rows, scope action menus, and scope menu content.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 301.75 Tm (- Scope follow, association, and main-tree visibility actions now use caller-owned loading) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 286.50 Tm (scopes such as sidebar:scope-follow:<scopeId> and block the affected scope row/menu region) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 271.25 Tm (without coupling loading to packet/runtime semantics.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 252.00 Tm (- Candidate universal pieces such as rail toggles, compact nav rows, preference switches,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 236.75 Tm (grouped sections, scope/action rows, and anchored compact menus remain feature-local until) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 221.50 Tm (another Nexus surface proves the same reusable shape.) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 188.25 Tm (2026-05 Nexus locality create UI decomposition) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 162.25 Tm (- Nexus locality create UI began moving into app/components/nexus/features/locality/* while) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 147.00 Tm (src/app/nexus/locality/create.tsx remains the controller for params, auth gates, draft) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 131.75 Tm (persistence, graph/path state, API calls, mutation handlers, and modal state.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 112.50 Tm (- Extracted locality feature components now cover the search panel, builder panel,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 97.25 Tm (parent/type/create-kind dialogs, selected-result and remove confirmation dialogs, outcome) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 82.00 Tm (dialogs, graph rows, and preview panel.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- Long-term packet type authority should live as stored Definition packets, not) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 718.75 Tm (TypeScript-only descriptors. TypeScript packet definitions remain bootstrap/compiler seed) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 703.50 Tm (material, local fallback material, and test fixtures until active Definition profiles can) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 688.25 Tm (be resolved from packet storage.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 669.00 Tm (- A packet type definition is a profile assembled from Definition part packets, not one) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 653.75 Tm (monolithic object. Schema, actions, builders, planners, projections, compatibility,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 638.50 Tm (defaults, and dependencies may version or fork as separate Definition parts and travel) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 623.25 Tm (together in a Bundle.packet_set profile inventory.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 604.00 Tm (- Nodes/scopes will eventually select their active definition profile through packet-backed) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 588.75 Tm (defaults, preferences, and policies. The current Trusted Definition Coordinator already) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 573.50 Tm (models source kinds, trust tiers, pins/preferences, ranking, compatibility-only) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 558.25 Tm (candidates, quarantine, and ignored candidates, but archive-backed profile loading remains) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 543.00 Tm (a future migration seam.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 523.75 Tm (- Imported Definition packets remain descriptive only. They can declare schemas, actions,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 508.50 Tm (builders, planners, projections, defaults, policies/dependencies, and compatibility) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 493.25 Tm (metadata, but execution must stay inside trusted local runtime capabilities and) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 478.00 Tm (allowlisted coordinators.) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 444.75 Tm (2026-05 Nexus discussions UI decomposition) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 418.75 Tm (- Nexus discussions began moving route-local UI into) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 403.50 Tm (app/components/nexus/features/discussions/* while preserving src/app/nexus/discussions.tsx) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 388.25 Tm (as the route/controller owner for query state, loading, mutations, auth gates, and reply) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 373.00 Tm (branch state.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 353.75 Tm (- Extracted discussion feature components now cover feed post cards, root post cards,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 338.50 Tm (vote/reply-count pills, recursive reply trees, and post/reply composers.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 319.25 Tm (- Discussion loading adoption remains visual-scope owned: feed load-more, root replies,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 304.00 Tm (reply branches, vote pills, and composers can mount scoped loading boundaries without) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 288.75 Tm (packet-action registry or runtime coupling.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 269.50 Tm (- Candidate universal pieces such as composer shells, vote/reaction skeletons, and tree) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 254.25 Tm (rails remain feature-local until another Nexus surface proves the same reusable shape.) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 221.00 Tm (2026-05 Nexus discussions workspace panel extraction) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 195.00 Tm (- Discussion feed, thread, and post workspace sections now have feature-local panels under) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 179.75 Tm (app/components/nexus/features/discussions/*, including a thread toolbar, while the route) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 164.50 Tm (keeps router, auth, loading, mutation, and reply-state ownership.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 145.25 Tm (- The panel props are explicit callbacks and display state rather than runtime services or) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 130.00 Tm (router hooks, keeping the feature components ready for later generic promotion if another) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 114.75 Tm (surface needs the same workspace/feed/thread/composer skeletons.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 95.50 Tm (- Scoped loading boundaries remain attached to visual regions such as feed, root replies,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 80.25 Tm (reply branches, votes, and composers; operation semantics still stay outside UI.) Tj ET
 endstream
 endobj
 176 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 175 0 R >>
 endobj
 177 0 obj
-<< /Length 4852 >>
+<< /Length 5077 >>
 stream
 0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
 BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Implementation Guide - 87) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- Locality loading remains visual-scope owned: search results, parent picker results, graph) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 718.75 Tm (row results, preview, create-path, and set-home actions use caller-owned loading scopes) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 703.50 Tm (without coupling UI to packet/runtime semantics.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 684.25 Tm (- The obsolete level-row ladder builder path was removed after extraction; the active create) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 669.00 Tm (flow is the graph-based builder, with route/controller ownership preserved.) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 635.75 Tm (2026-05 Nexus Explorer feature extraction) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 609.75 Tm (- Packet Explorer moved into app/components/nexus/features/explorer/*, including its shell) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 594.50 Tm (overlay, document tabs, toolbar, search, import/export, data, links, resize, and) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 579.25 Tm (inspection panels.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 560.00 Tm (- Explorer import/export work now uses caller-owned visual loading scopes for packet export,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 544.75 Tm (store export, import analysis, import commit, and import history, while preserving) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 529.50 Tm (existing disabled labels and panel behavior.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 510.25 Tm (- Explorer document tabs remain feature-local and compose shared tab primitives only where) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 495.00 Tm (they already did; generic document-tab promotion is deferred until a dedicated) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 479.75 Tm (tab-extension pass.) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 446.50 Tm (2026-05 Nexus Explorer internal decomposition) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 420.50 Tm (- Explorer import cards, export preview/request helpers, packet inspection panels, and the) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 405.25 Tm (validation dialog were split into focused feature-local files under) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 390.00 Tm (app/components/nexus/features/explorer/*.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 370.75 Tm (- Packet validation now has a caller-owned visual loading scope,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 355.50 Tm (packet-explorer:validation:<packetId>, mounted around the validation panel without) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 340.25 Tm (coupling loading to packet/runtime semantics.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 321.00 Tm (- The main Explorer shell still owns tabs, search state, packet loading, validation) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 305.75 Tm (handlers, resize behavior, router calls, and session coordination; generic promotion) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 290.50 Tm (remains deferred until repeated component types appear elsewhere.) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 257.25 Tm (2026-05 Nexus primitive adoption checkpoint) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 231.25 Tm (- Nexus entered a primitive-adoption checkpoint phase after the main ui/* foundations and) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 216.00 Tm (feature extractions, classifying remaining raw React Native usage as official primitive) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 200.75 Tm (internals, acceptable feature-local controls, route/controller usage to migrate, or) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 185.50 Tm (behavior-sensitive deferred usage.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 166.25 Tm (- The first low-risk cleanup converted only trivial outer route scroll shells in account,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 151.00 Tm (dashboard, discussions, roles, trust, and votes to NexusScrollFrame; scroll containers) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 135.75 Tm (with refs, handlers, bounded modal regions, graph focus, Explorer resize/session behavior,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 120.50 Tm (or sidebar shell animation remain local.) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 720.00 Tm (2026-05 Nexus sidebar feature extraction) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 694.00 Tm (- Nexus sidebar rail/menu UI began moving into app/components/nexus/features/sidebar/* while) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 678.75 Tm (nexus-sidebar.tsx remains the shell controller for router, auth, preference persistence,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 663.50 Tm (rail animation, and scope mutation state.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 644.25 Tm (- Extracted sidebar feature components now cover rail toggles, guest avatar, preference) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 629.00 Tm (switches, current context card, function menu content, scope section headers, grouped) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 613.75 Tm (scope rows, scope action menus, and scope menu content.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 594.50 Tm (- Scope follow, association, and main-tree visibility actions now use caller-owned loading) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 579.25 Tm (scopes such as sidebar:scope-follow:<scopeId> and block the affected scope row/menu region) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 564.00 Tm (without coupling loading to packet/runtime semantics.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 544.75 Tm (- Candidate universal pieces such as rail toggles, compact nav rows, preference switches,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 529.50 Tm (grouped sections, scope/action rows, and anchored compact menus remain feature-local until) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 514.25 Tm (another Nexus surface proves the same reusable shape.) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 481.00 Tm (2026-05 Nexus locality create UI decomposition) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 455.00 Tm (- Nexus locality create UI began moving into app/components/nexus/features/locality/* while) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 439.75 Tm (src/app/nexus/locality/create.tsx remains the controller for params, auth gates, draft) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 424.50 Tm (persistence, graph/path state, API calls, mutation handlers, and modal state.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 405.25 Tm (- Extracted locality feature components now cover the search panel, builder panel,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 390.00 Tm (parent/type/create-kind dialogs, selected-result and remove confirmation dialogs, outcome) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 374.75 Tm (dialogs, graph rows, and preview panel.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 355.50 Tm (- Locality loading remains visual-scope owned: search results, parent picker results, graph) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 340.25 Tm (row results, preview, create-path, and set-home actions use caller-owned loading scopes) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 325.00 Tm (without coupling UI to packet/runtime semantics.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 305.75 Tm (- The obsolete level-row ladder builder path was removed after extraction; the active create) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 290.50 Tm (flow is the graph-based builder, with route/controller ownership preserved.) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 257.25 Tm (2026-05 Nexus Explorer feature extraction) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 231.25 Tm (- Packet Explorer moved into app/components/nexus/features/explorer/*, including its shell) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 216.00 Tm (overlay, document tabs, toolbar, search, import/export, data, links, resize, and) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 200.75 Tm (inspection panels.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 181.50 Tm (- Explorer import/export work now uses caller-owned visual loading scopes for packet export,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 166.25 Tm (store export, import analysis, import commit, and import history, while preserving) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 151.00 Tm (existing disabled labels and panel behavior.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 131.75 Tm (- Explorer document tabs remain feature-local and compose shared tab primitives only where) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 116.50 Tm (they already did; generic document-tab promotion is deferred until a dedicated) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 101.25 Tm (tab-extension pass.) Tj ET
 endstream
 endobj
 178 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 177 0 R >>
 endobj
 179 0 obj
-<< /Length 5156 >>
+<< /Length 4720 >>
 stream
 0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
 BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Implementation Guide - 88) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- Stale @app/components/nexus/nexus-ui imports are treated as retired outside the) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 718.75 Tm (compatibility bridge. Loading adoption remains visual-scope owned, with future route) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 703.50 Tm (adoption limited to places where the async owner and blocked visual boundary are obvious.) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 670.25 Tm (2026-05 Nexus UI pre-audit wrap-up) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 644.25 Tm (- Identity route UI helpers moved into app/components/nexus/features/identity/*, completing) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 629.00 Tm (the main feature-folder map alongside discussions, Explorer, locality, and sidebar.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 609.75 Tm (- app/components/nexus/nexus-identity-ui.tsx remains a temporary bridge only; identity) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 594.50 Tm (routes now import from the feature folder while keeping router, auth/session, passkey,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 579.25 Tm (storage, mutation, and error behavior route-owned.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 560.00 Tm (- The wrap-up stayed organizational and audit-oriented: deeper trust/roles extraction,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 544.75 Tm (sidebar second split, dashboard/library/account/votes polish, and interface event) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 529.50 Tm (coordination work remain post-audit follow-ups.) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 496.25 Tm (2026-05 Interface Event Coordinator and Trusted Dispatch) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 478.25 Tm (foundation) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 452.25 Tm (- The client-side Interface Signal Conductor direction was renamed to Interface Event) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 437.00 Tm (Coordinator, reflecting its role as the master interface event lifecycle controller rather) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 421.75 Tm (than a trusted runtime actor.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 402.50 Tm (- Trusted Dispatch Coordinator is now the canonical runtime front desk name for request) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 387.25 Tm (normalization and client-intent preflight; the existing Trusted Request Coordinator) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 372.00 Tm (remains as the compatibility implementation bridge.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 352.75 Tm (- Mutation prepare now passes through dispatch normalization and fail-closed client-intent) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 337.50 Tm (preflight before the existing Dispatch corridor continues. Mutation finalize records) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 322.25 Tm (dispatch normalization while preserving ticket-based finalize preflight and signed payload) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 307.00 Tm (schemas.) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 273.75 Tm (2026-05 Trusted runtime coordinator audit and caller migration) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 247.75 Tm (- The trusted coordinator scaffold audit now checks canonical result kinds, top-level barrel) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 232.50 Tm (exports, and public method drift; Resolution remains the only accepted legacy-flat) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 217.25 Tm (coordinator warning.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 198.00 Tm (- Definition, Regulation, and Planning result envelopes now use their canonical coordinator) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 182.75 Tm (kinds, with older aliases retained only for legacy workflow paths.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 163.50 Tm (- Packet Explorer bundle export and import commit now route through Trusted Exchange and) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 148.25 Tm (Trusted Archive while preserving existing Explorer payloads, import reports, validation) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 133.00 Tm (modes, and preferred-head repair.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 113.75 Tm (- The verification service is now a compatibility wrapper over Trusted Verification for) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 98.50 Tm (packet assessment, while local validator identity and report-writing stay service-owned) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 83.25 Tm (until a later Certification/Archive migration.) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 720.00 Tm (2026-05 Nexus Explorer internal decomposition) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 694.00 Tm (- Explorer import cards, export preview/request helpers, packet inspection panels, and the) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 678.75 Tm (validation dialog were split into focused feature-local files under) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 663.50 Tm (app/components/nexus/features/explorer/*.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 644.25 Tm (- Packet validation now has a caller-owned visual loading scope,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 629.00 Tm (packet-explorer:validation:<packetId>, mounted around the validation panel without) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 613.75 Tm (coupling loading to packet/runtime semantics.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 594.50 Tm (- The main Explorer shell still owns tabs, search state, packet loading, validation) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 579.25 Tm (handlers, resize behavior, router calls, and session coordination; generic promotion) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 564.00 Tm (remains deferred until repeated component types appear elsewhere.) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 530.75 Tm (2026-05 Nexus primitive adoption checkpoint) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 504.75 Tm (- Nexus entered a primitive-adoption checkpoint phase after the main ui/* foundations and) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 489.50 Tm (feature extractions, classifying remaining raw React Native usage as official primitive) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 474.25 Tm (internals, acceptable feature-local controls, route/controller usage to migrate, or) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 459.00 Tm (behavior-sensitive deferred usage.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 439.75 Tm (- The first low-risk cleanup converted only trivial outer route scroll shells in account,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 424.50 Tm (dashboard, discussions, roles, trust, and votes to NexusScrollFrame; scroll containers) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 409.25 Tm (with refs, handlers, bounded modal regions, graph focus, Explorer resize/session behavior,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 394.00 Tm (or sidebar shell animation remain local.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 374.75 Tm (- Stale @app/components/nexus/nexus-ui imports are treated as retired outside the) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 359.50 Tm (compatibility bridge. Loading adoption remains visual-scope owned, with future route) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 344.25 Tm (adoption limited to places where the async owner and blocked visual boundary are obvious.) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 311.00 Tm (2026-05 Nexus UI pre-audit wrap-up) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 285.00 Tm (- Identity route UI helpers moved into app/components/nexus/features/identity/*, completing) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 269.75 Tm (the main feature-folder map alongside discussions, Explorer, locality, and sidebar.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 250.50 Tm (- app/components/nexus/nexus-identity-ui.tsx remains a temporary bridge only; identity) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 235.25 Tm (routes now import from the feature folder while keeping router, auth/session, passkey,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 220.00 Tm (storage, mutation, and error behavior route-owned.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 200.75 Tm (- The wrap-up stayed organizational and audit-oriented: deeper trust/roles extraction,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 185.50 Tm (sidebar second split, dashboard/library/account/votes polish, and interface event) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 170.25 Tm (coordination work remain post-audit follow-ups.) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 137.00 Tm (2026-05 Interface Event Coordinator and Trusted Dispatch) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 119.00 Tm (foundation) Tj ET
 endstream
 endobj
 180 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 179 0 R >>
 endobj
 181 0 obj
-<< /Length 4723 >>
+<< /Length 4909 >>
 stream
 0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
 BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Implementation Guide - 89) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 720.00 Tm (2026-05 Trusted process chains and issue taxonomy) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 694.00 Tm (- Trusted coordinator results now support optional lightweight process chains that record) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 678.75 Tm (stage-by-stage runtime diagnostics without automatically creating report packets.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 659.50 Tm (- The trusted issue taxonomy uses canonical dotted codes while mapping older underscore) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 644.25 Tm (codes as aliases, giving reports and future interface handling stable error categories.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 625.00 Tm (- Archive and Exchange are the first deeper adopters: Archive records partial write) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 609.75 Tm (progress, failed/skipped work, and preserved partial results; Exchange chains) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 594.50 Tm (preview/plan/commit/export stages and child Archive results.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 575.25 Tm (- Report packet persistence is intentionally deferred. V1 only provides a process report) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 560.00 Tm (draft helper so later Certification/Archive/report flows can choose when to sign and store) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 544.75 Tm (diagnostics.) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 511.50 Tm (2026-05 Runtime cleanup bounded-context foundation) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 485.50 Tm (- Runtime cleanup began after the major trusted coordinator seams stabilized, with) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 470.25 Tm (runtime/nexus/server/* moving toward bounded-context folders instead of one flat service) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 455.00 Tm (directory.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 435.75 Tm (- Identity, discussion, reaction, locality, scope, Packet Explorer, readiness, and shared) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 420.50 Tm (helper modules now have canonical homes with top-level compatibility bridges preserved for) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 405.25 Tm (existing callers.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 386.00 Tm (- Dispatch mutation flow owns the reserved bounded-context home; signed corridor helpers) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 370.75 Tm (should stay behavior-preserving and ticket/signing paths easy to verify.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 351.50 Tm (- The rule for this chapter is move-first and split-later: large services keep behavior) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 336.25 Tm (intact now, then decompose by responsibility inside their bounded-context folders in later) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 321.00 Tm (passes.) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 287.75 Tm (2026-05 Runtime responsibility and ideal ownership audit) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 261.75 Tm (- Runtime cleanup shifted from folder organization to ideal ownership analysis, classifying) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 246.50 Tm (runtime processes by whether they belong to Trusted Coordinators, packet-definition) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 231.25 Tm (metadata, Projection, storage adapters, OWA adapters, compatibility bridges, or the legacy) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 216.00 Tm (signed corridor.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 196.75 Tm (- Discussion, reaction, locality, and scope runtime services are treated as transitional) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 181.50 Tm (product/runtime adapters rather than final generic architecture.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 162.25 Tm (- Signed-corridor naming is now explicitly legacy signed-corridor language; new work should) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 147.00 Tm (use Dispatch, Regulation, Planning, Certification, Archive, and Interface Event) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 131.75 Tm (Coordinator ownership terms where possible.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- The client-side Interface Signal Conductor direction was renamed to Interface Event) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 718.75 Tm (Coordinator, reflecting its role as the master interface event lifecycle controller rather) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 703.50 Tm (than a trusted runtime actor.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 684.25 Tm (- Trusted Dispatch Coordinator is now the canonical runtime front desk name for request) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 669.00 Tm (normalization and client-intent preflight; the existing Trusted Request Coordinator) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 653.75 Tm (remains as the compatibility implementation bridge.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 634.50 Tm (- Mutation prepare now passes through dispatch normalization and fail-closed client-intent) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 619.25 Tm (preflight before the existing Dispatch corridor continues. Mutation finalize records) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 604.00 Tm (dispatch normalization while preserving ticket-based finalize preflight and signed payload) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 588.75 Tm (schemas.) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 555.50 Tm (2026-05 Trusted runtime coordinator audit and caller migration) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 529.50 Tm (- The trusted coordinator scaffold audit now checks canonical result kinds, top-level barrel) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 514.25 Tm (exports, and public method drift; Resolution remains the only accepted legacy-flat) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 499.00 Tm (coordinator warning.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 479.75 Tm (- Definition, Regulation, and Planning result envelopes now use their canonical coordinator) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 464.50 Tm (kinds, with older aliases retained only for legacy workflow paths.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 445.25 Tm (- Packet Explorer bundle export and import commit now route through Trusted Exchange and) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 430.00 Tm (Trusted Archive while preserving existing Explorer payloads, import reports, validation) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 414.75 Tm (modes, and preferred-head repair.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 395.50 Tm (- The verification service is now a compatibility wrapper over Trusted Verification for) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 380.25 Tm (packet assessment, while local validator identity and report-writing stay service-owned) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 365.00 Tm (until a later Certification/Archive migration.) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 331.75 Tm (2026-05 Trusted process chains and issue taxonomy) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 305.75 Tm (- Trusted coordinator results now support optional lightweight process chains that record) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 290.50 Tm (stage-by-stage runtime diagnostics without automatically creating report packets.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 271.25 Tm (- The trusted issue taxonomy uses canonical dotted codes while mapping older underscore) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 256.00 Tm (codes as aliases, giving reports and future interface handling stable error categories.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 236.75 Tm (- Archive and Exchange are the first deeper adopters: Archive records partial write) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 221.50 Tm (progress, failed/skipped work, and preserved partial results; Exchange chains) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 206.25 Tm (preview/plan/commit/export stages and child Archive results.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 187.00 Tm (- Report packet persistence is intentionally deferred. V1 only provides a process report) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 171.75 Tm (draft helper so later Certification/Archive/report flows can choose when to sign and store) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 156.50 Tm (diagnostics.) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 123.25 Tm (2026-05 Runtime cleanup bounded-context foundation) Tj ET
 endstream
 endobj
 182 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 181 0 R >>
 endobj
 183 0 obj
-<< /Length 5052 >>
+<< /Length 5026 >>
 stream
 0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
 BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Implementation Guide - 90) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- The audit records packet-definition opportunities for projection fields, action) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 718.75 Tm (availability, policy requirements, build/default/dependency assumptions, and) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 703.50 Tm (import/export/verification summaries without allowing imported packet definitions to) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 688.25 Tm (execute local runtime behavior.) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 655.00 Tm (2026-05 Dispatch-owned write pipeline correction) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 629.00 Tm (- The mistaken Trusted Write coordinator direction was rejected: write lifecycle) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 613.75 Tm (orchestration belongs to Dispatch, not a new peer coordinator.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 594.50 Tm (- /api/nexus/mutations/prepare and /api/nexus/mutations/finalize now call Dispatch-owned) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 579.25 Tm (write lifecycle methods and do not call NexusMutationService as route-facing authority.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 560.00 Tm (- relation.follow.add is the first live write to complete the corrected Dispatch-owned) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 544.75 Tm (chain: Planning, Building, Inspection, Certification ticketing, signed-packet bundle) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 529.50 Tm (certification, Verification, and Archive storage.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 510.25 Tm (- relation.association.add now uses the same full Dispatch-owned chain, with generic scoped) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 495.00 Tm (Relation materialization and finalize-time mutation-kind parity checks.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 475.75 Tm (- Other mutation intents remain coordinator capability gaps until they receive equivalent) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 460.50 Tm (packet-envelope materialization, Certification signed-bundle checks, Verification handoff,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 445.25 Tm (Archive storage, and result projection. They must not fall back to the legacy signed) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 430.00 Tm (corridor.) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 396.75 Tm (2026-05 Trusted runtime audit guardrail housekeeping) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 370.75 Tm (- Added package-level trusted coordinator test scripts: test:trusted-coordinators for the) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 355.50 Tm (runtime coordinator tests and check:trusted-coordinators for audit plus tests.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 336.25 Tm (- Hardened the trusted coordinator audit to catch unmanifested trusted*coordinator folders,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 321.00 Tm (missing trusted test scripts, manifest/barrel/method/result-kind drift, and unregistered) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 305.75 Tm (trusted issue codes.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 286.50 Tm (- Runtime crossing notes now recursively scan real implementation folders under) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 271.25 Tm (runtime/nexus/server/ and src/app/api/nexus/ instead of only top-level compatibility) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 256.00 Tm (bridge files. Direct storage touches, signature verification, packet interpretation,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 240.75 Tm (bundle import/export, API packet parsing, and legacy Dispatch corridor references remain) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 225.50 Tm (non-failing migration notes.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 206.25 Tm (- Removed the empty trustedwritecoordinator remnant. Writes remain Dispatch-owned lifecycle) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 191.00 Tm (orchestration, not a separate coordinator.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 171.75 Tm (- Corrected the Exchange manifest note: Exchange can orchestrate accepted import commits) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 156.50 Tm (through Archive, but Archive remains the storage owner and Exchange should not bypass) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 141.25 Tm (Compatibility or Verification ownership.) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 108.00 Tm (2026-05 Trusted Exchange import commit hardening) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- Runtime cleanup began after the major trusted coordinator seams stabilized, with) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 718.75 Tm (runtime/nexus/server/* moving toward bounded-context folders instead of one flat service) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 703.50 Tm (directory.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 684.25 Tm (- Identity, discussion, reaction, locality, scope, Packet Explorer, readiness, and shared) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 669.00 Tm (helper modules now have canonical homes with top-level compatibility bridges preserved for) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 653.75 Tm (existing callers.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 634.50 Tm (- Dispatch mutation flow owns the reserved bounded-context home; signed corridor helpers) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 619.25 Tm (should stay behavior-preserving and ticket/signing paths easy to verify.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 600.00 Tm (- The rule for this chapter is move-first and split-later: large services keep behavior) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 584.75 Tm (intact now, then decompose by responsibility inside their bounded-context folders in later) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 569.50 Tm (passes.) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 536.25 Tm (2026-05 Runtime responsibility and ideal ownership audit) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 510.25 Tm (- Runtime cleanup shifted from folder organization to ideal ownership analysis, classifying) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 495.00 Tm (runtime processes by whether they belong to Trusted Coordinators, packet-definition) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 479.75 Tm (metadata, Projection, storage adapters, OWA adapters, compatibility bridges, or the legacy) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 464.50 Tm (signed corridor.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 445.25 Tm (- Discussion, reaction, locality, and scope runtime services are treated as transitional) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 430.00 Tm (product/runtime adapters rather than final generic architecture.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 410.75 Tm (- Signed-corridor naming is now explicitly legacy signed-corridor language; new work should) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 395.50 Tm (use Dispatch, Regulation, Planning, Certification, Archive, and Interface Event) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 380.25 Tm (Coordinator ownership terms where possible.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 361.00 Tm (- The audit records packet-definition opportunities for projection fields, action) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 345.75 Tm (availability, policy requirements, build/default/dependency assumptions, and) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 330.50 Tm (import/export/verification summaries without allowing imported packet definitions to) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 315.25 Tm (execute local runtime behavior.) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 282.00 Tm (2026-05 Dispatch-owned write pipeline correction) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 256.00 Tm (- The mistaken Trusted Write coordinator direction was rejected: write lifecycle) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 240.75 Tm (orchestration belongs to Dispatch, not a new peer coordinator.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 221.50 Tm (- /api/nexus/mutations/prepare and /api/nexus/mutations/finalize now call Dispatch-owned) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 206.25 Tm (write lifecycle methods and do not call NexusMutationService as route-facing authority.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 187.00 Tm (- relation.follow.add is the first live write to complete the corrected Dispatch-owned) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 171.75 Tm (chain: Planning, Building, Inspection, Certification ticketing, signed-packet bundle) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 156.50 Tm (certification, Verification, and Archive storage.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 137.25 Tm (- relation.association.add now uses the same full Dispatch-owned chain, with generic scoped) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 122.00 Tm (Relation materialization and finalize-time mutation-kind parity checks.) Tj ET
 endstream
 endobj
 184 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 183 0 R >>
 endobj
 185 0 obj
-<< /Length 5151 >>
+<< /Length 5036 >>
 stream
 0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
 BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Implementation Guide - 91) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- Exchange import preview now normalizes JSON string inputs and archive byte payloads into a) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 718.75 Tm (consistent packet bundle before asking Verification and Compatibility for posture.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 699.50 Tm (- Exchange import commit now narrows Archive writes to accepted plan entries only; skipped) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 684.25 Tm (duplicates and blocked/manual entries are no longer passed through to Archive as part of) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 669.00 Tm (the commit bundle.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 649.75 Tm (- Verification and compatibility risk acknowledgements are explicit commit inputs. Packet) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 634.50 Tm (Explorer currently treats an approved commit from its preview flow as acknowledgement so) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 619.25 Tm (existing UI behavior is preserved.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 600.00 Tm (- Exchange commit receipts now expose planned, archived, skipped, imported, missing, and) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 584.75 Tm (unexpected revision-key counts/lists so Archive import results can be compared against the) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 569.50 Tm (Exchange plan.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 550.25 Tm (- The trusted issue taxonomy gained Exchange archive-import mismatch/failure aliases so) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 535.00 Tm (coordinator audits fail if future code invents unregistered runtime issue codes.) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 501.75 Tm (2026-05 Dispatch finalize certification/verification hardening) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 475.75 Tm (- /api/nexus/mutations/finalize now passes submitted signed packet material through to) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 460.50 Tm (Dispatch without route-level packet-envelope parsing, preserving the raw signed material) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 445.25 Tm (for Trusted Verification.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 426.00 Tm (- Certification accepts the signed bundle shape, parses internally for) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 410.75 Tm (ticket/digest/type/signer matching, rejects duplicate packet revision keys, and records) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 395.50 Tm (the exact certified packet revision keys on the certified packet set.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 376.25 Tm (- Dispatch now verifies the raw signed packets through Trusted Verification, compares) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 361.00 Tm (verified packet revision keys against Certification before Archive, derives the finalized) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 345.75 Tm (mutation kind from the certified plan, and rejects mismatched caller-supplied intent) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 330.50 Tm (labels.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 311.25 Tm (- Archive now requires certified packet revision keys and checks that extracted) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 296.00 Tm (archive-ready envelopes match those keys before any write, so Archive stores only the) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 280.75 Tm (certified packet set.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 261.50 Tm (- The trusted issue taxonomy gained canonical entries for certified-key and finalize) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 246.25 Tm (mismatch blockers so audit remains fail-closed for invented issue codes.) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 213.00 Tm (2026-05 Dispatch reaction vote write migration) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 187.00 Tm (- reaction.vote.set now enters the Dispatch-owned write lifecycle with Reaction packet) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 171.75 Tm (planning hints, body materialization metadata, generic Reaction packet envelope building,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 156.50 Tm (Inspection, Certification, Verification, and Archive storage.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 137.25 Tm (- Dispatch derives reaction.vote.set from both workflow-backed and trusted operation plan) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 122.00 Tm (IDs so finalize-time mutation-kind parity checks cover reaction writes like relation) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 106.75 Tm (writes.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- Other mutation intents remain coordinator capability gaps until they receive equivalent) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 718.75 Tm (packet-envelope materialization, Certification signed-bundle checks, Verification handoff,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 703.50 Tm (Archive storage, and result projection. They must not fall back to the legacy signed) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 688.25 Tm (corridor.) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 655.00 Tm (2026-05 Trusted runtime audit guardrail housekeeping) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 629.00 Tm (- Added package-level trusted coordinator test scripts: test:trusted-coordinators for the) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 613.75 Tm (runtime coordinator tests and check:trusted-coordinators for audit plus tests.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 594.50 Tm (- Hardened the trusted coordinator audit to catch unmanifested trusted*coordinator folders,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 579.25 Tm (missing trusted test scripts, manifest/barrel/method/result-kind drift, and unregistered) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 564.00 Tm (trusted issue codes.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 544.75 Tm (- Runtime crossing notes now recursively scan real implementation folders under) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 529.50 Tm (runtime/nexus/server/ and src/app/api/nexus/ instead of only top-level compatibility) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 514.25 Tm (bridge files. Direct storage touches, signature verification, packet interpretation,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 499.00 Tm (bundle import/export, API packet parsing, and legacy Dispatch corridor references remain) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 483.75 Tm (non-failing migration notes.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 464.50 Tm (- Removed the empty trustedwritecoordinator remnant. Writes remain Dispatch-owned lifecycle) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 449.25 Tm (orchestration, not a separate coordinator.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 430.00 Tm (- Corrected the Exchange manifest note: Exchange can orchestrate accepted import commits) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 414.75 Tm (through Archive, but Archive remains the storage owner and Exchange should not bypass) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 399.50 Tm (Compatibility or Verification ownership.) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 366.25 Tm (2026-05 Trusted Exchange import commit hardening) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 340.25 Tm (- Exchange import preview now normalizes JSON string inputs and archive byte payloads into a) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 325.00 Tm (consistent packet bundle before asking Verification and Compatibility for posture.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 305.75 Tm (- Exchange import commit now narrows Archive writes to accepted plan entries only; skipped) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 290.50 Tm (duplicates and blocked/manual entries are no longer passed through to Archive as part of) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 275.25 Tm (the commit bundle.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 256.00 Tm (- Verification and compatibility risk acknowledgements are explicit commit inputs. Packet) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 240.75 Tm (Explorer currently treats an approved commit from its preview flow as acknowledgement so) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 225.50 Tm (existing UI behavior is preserved.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 206.25 Tm (- Exchange commit receipts now expose planned, archived, skipped, imported, missing, and) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 191.00 Tm (unexpected revision-key counts/lists so Archive import results can be compared against the) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 175.75 Tm (Exchange plan.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 156.50 Tm (- The trusted issue taxonomy gained Exchange archive-import mismatch/failure aliases so) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 141.25 Tm (coordinator audits fail if future code invents unregistered runtime issue codes.) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 108.00 Tm (2026-05 Dispatch finalize certification/verification hardening) Tj ET
 endstream
 endobj
 186 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 185 0 R >>
 endobj
 187 0 obj
-<< /Length 5215 >>
+<< /Length 5142 >>
 stream
 0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
 BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Implementation Guide - 92) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- Finalize response decoration refreshes the existing reaction derived index/summary after) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 718.75 Tm (Archive for parity with the current discussion UI, but that bridge now lives in the) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 703.50 Tm (reaction runtime adapter instead of Trusted Dispatch. This is still not the final) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 688.25 Tm (Projection-owned read-model architecture.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 669.00 Tm (- Inspection now ignores reserved _trusted* materialization metadata keys when comparing) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 653.75 Tm (planned body values to the candidate body, allowing Dispatch/Building to carry header) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 638.50 Tm (materialization inputs without polluting packet bodies.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 619.25 Tm (- The runtime cleanup tab now records reaction vote migration as completed for the legacy) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 604.00 Tm (signed-corridor checklist while keeping remaining mutation intents open.) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 570.75 Tm (2026-05 Legacy mutation service containment and reaction finalize) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 552.75 Tm (adapter) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 526.75 Tm (- NexusMutationService is no longer constructed by createNexusPacketServiceRegistry or) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 511.50 Tm (exposed on NexusPacketServices; the remaining mutation/signed-corridor files are legacy) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 496.25 Tm (corridor candidates rather than live service-graph dependencies.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 477.00 Tm (- Trusted Dispatch now returns generic trusted finalize facts for reaction.vote.set instead) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 461.75 Tm (of importing SQLiteReactionService or refreshing reaction-derived state directly.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 442.50 Tm (- The finalize API route decorates completed reaction.vote.set responses through) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 427.25 Tm (reaction-finalize-response-adapter, preserving the current target/value/summary response) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 412.00 Tm (compatibility while keeping reaction runtime services outside the trusted coordinator.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 392.75 Tm (- The trusted coordinator audit now fails if the live service registry reintroduces) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 377.50 Tm (NexusMutationService, if prepare/finalize routes call legacy mutation service methods, or) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 362.25 Tm (if Trusted Dispatch imports reaction runtime services.) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 329.00 Tm (2026-05 Packet Explorer projection migration pass) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 303.00 Tm (- Packet Explorer's generic inspector payload now uses Trusted Archive for preferred/head) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 287.75 Tm (revision resolution and graph edge lookup instead of direct packet-store/query-service) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 272.50 Tm (calls.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 253.25 Tm (- The inspector read-model panel now uses Trusted Projection output as readmodelview,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 238.00 Tm (preserving the existing response field while removing the direct legacy packet-interpreter) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 222.75 Tm (call from Packet Explorer data.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 203.50 Tm (- Scope labels and related link labels in the inspector are resolved through archived packet) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 188.25 Tm (projections. Search, Export, Import, discussion, reaction, scope, and locality read models) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 173.00 Tm (remain separate migration lanes.) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 139.75 Tm (2026-05 Projection card-list bridge migration) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 113.75 Tm (- Trusted Projection now exposes resolvePacketCardListProjection for already-selected packet) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 98.50 Tm (cards, keeping query selection, ranking, and scope filtering outside Projection while) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 83.25 Tm (centralizing card/list presentation shaping.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- /api/nexus/mutations/finalize now passes submitted signed packet material through to) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 718.75 Tm (Dispatch without route-level packet-envelope parsing, preserving the raw signed material) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 703.50 Tm (for Trusted Verification.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 684.25 Tm (- Certification accepts the signed bundle shape, parses internally for) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 669.00 Tm (ticket/digest/type/signer matching, rejects duplicate packet revision keys, and records) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 653.75 Tm (the exact certified packet revision keys on the certified packet set.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 634.50 Tm (- Dispatch now verifies the raw signed packets through Trusted Verification, compares) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 619.25 Tm (verified packet revision keys against Certification before Archive, derives the finalized) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 604.00 Tm (mutation kind from the certified plan, and rejects mismatched caller-supplied intent) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 588.75 Tm (labels.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 569.50 Tm (- Archive now requires certified packet revision keys and checks that extracted) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 554.25 Tm (archive-ready envelopes match those keys before any write, so Archive stores only the) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 539.00 Tm (certified packet set.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 519.75 Tm (- The trusted issue taxonomy gained canonical entries for certified-key and finalize) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 504.50 Tm (mismatch blockers so audit remains fail-closed for invented issue codes.) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 471.25 Tm (2026-05 Dispatch reaction vote write migration) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 445.25 Tm (- reaction.vote.set now enters the Dispatch-owned write lifecycle with Reaction packet) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 430.00 Tm (planning hints, body materialization metadata, generic Reaction packet envelope building,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 414.75 Tm (Inspection, Certification, Verification, and Archive storage.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 395.50 Tm (- Dispatch derives reaction.vote.set from both workflow-backed and trusted operation plan) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 380.25 Tm (IDs so finalize-time mutation-kind parity checks cover reaction writes like relation) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 365.00 Tm (writes.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 345.75 Tm (- Finalize response decoration refreshes the existing reaction derived index/summary after) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 330.50 Tm (Archive for parity with the current discussion UI, but that bridge now lives in the) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 315.25 Tm (reaction runtime adapter instead of Trusted Dispatch. This is still not the final) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 300.00 Tm (Projection-owned read-model architecture.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 280.75 Tm (- Inspection now ignores reserved _trusted* materialization metadata keys when comparing) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 265.50 Tm (planned body values to the candidate body, allowing Dispatch/Building to carry header) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 250.25 Tm (materialization inputs without polluting packet bodies.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 231.00 Tm (- The runtime cleanup tab now records reaction vote migration as completed for the legacy) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 215.75 Tm (signed-corridor checklist while keeping remaining mutation intents open.) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 182.50 Tm (2026-05 Legacy mutation service containment and reaction finalize) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 164.50 Tm (adapter) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 138.50 Tm (- NexusMutationService is no longer constructed by createNexusPacketServiceRegistry or) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 123.25 Tm (exposed on NexusPacketServices; the remaining mutation/signed-corridor files are legacy) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 108.00 Tm (corridor candidates rather than live service-graph dependencies.) Tj ET
 endstream
 endobj
 188 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 187 0 R >>
 endobj
 189 0 obj
-<< /Length 2858 >>
+<< /Length 5118 >>
 stream
 0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
 BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Implementation Guide - 93) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- Packet Explorer Search preserves its direct/name/text grouping, scoring, pagination, and) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 718.75 Tm (response fields, but selected result rows now pass through the Projection card-list seam) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 703.50 Tm (before being mapped back to the existing payload shape.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 684.25 Tm (- nexus-query-data now projects generic dashboard, votes, and library packet-card lists) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 669.00 Tm (after nexusQueryService has already selected the cards. Discussion, reaction, scope,) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 653.75 Tm (locality, and deeper product-specific route read models remain separate adapter cleanup) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 638.50 Tm (lanes.) Tj ET
-BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 605.25 Tm (2026-05 Legacy mutation executor deletion) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 579.25 Tm (- Removed the old route executor stack: NexusMutationService, Dispatch prepare/finalize) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 564.00 Tm (handlers, old handler domain maps, mutation prepare/finalize handler maps, signed-packet) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 548.75 Tm (finalizer, preference Dispatch workflow, and manifest Dispatch metadata bridge files.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 529.50 Tm (- Trusted Dispatch remains the route-facing prepare/finalize authority. Deleted executor) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 514.25 Tm (files are now guarded by audit:trusted-coordinators so they fail if restored.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 495.00 Tm (- Static genericization/handoff/readiness ledgers remain temporarily because they describe) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 479.75 Tm (migration state and pre-reseed closure, but their text now points to) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 464.50 Tm (Dispatch/trusted-chain authority rather than the old Dispatch corridor.) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 445.25 Tm (- Direct-write seam classification now treats discussion/reaction/preference helpers as) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 430.00 Tm (transitional adapter/internal or compatibility-cache writes instead of Dispatch-internal) Tj ET
-BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 414.75 Tm (helpers.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- Trusted Dispatch now returns generic trusted finalize facts for reaction.vote.set instead) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 718.75 Tm (of importing SQLiteReactionService or refreshing reaction-derived state directly.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 699.50 Tm (- The finalize API route decorates completed reaction.vote.set responses through) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 684.25 Tm (reaction-finalize-response-adapter, preserving the current target/value/summary response) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 669.00 Tm (compatibility while keeping reaction runtime services outside the trusted coordinator.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 649.75 Tm (- The trusted coordinator audit now fails if the live service registry reintroduces) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 634.50 Tm (NexusMutationService, if prepare/finalize routes call legacy mutation service methods, or) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 619.25 Tm (if Trusted Dispatch imports reaction runtime services.) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 586.00 Tm (2026-05 Packet Explorer projection migration pass) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 560.00 Tm (- Packet Explorer's generic inspector payload now uses Trusted Archive for preferred/head) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 544.75 Tm (revision resolution and graph edge lookup instead of direct packet-store/query-service) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 529.50 Tm (calls.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 510.25 Tm (- The inspector read-model panel now uses Trusted Projection output as readmodelview,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 495.00 Tm (preserving the existing response field while removing the direct legacy packet-interpreter) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 479.75 Tm (call from Packet Explorer data.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 460.50 Tm (- Scope labels and related link labels in the inspector are resolved through archived packet) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 445.25 Tm (projections. Search, Export, Import, discussion, reaction, scope, and locality read models) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 430.00 Tm (remain separate migration lanes.) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 396.75 Tm (2026-05 Projection card-list bridge migration) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 370.75 Tm (- Trusted Projection now exposes resolvePacketCardListProjection for already-selected packet) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 355.50 Tm (cards, keeping query selection, ranking, and scope filtering outside Projection while) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 340.25 Tm (centralizing card/list presentation shaping.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 321.00 Tm (- Packet Explorer Search preserves its direct/name/text grouping, scoring, pagination, and) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 305.75 Tm (response fields, but selected result rows now pass through the Projection card-list seam) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 290.50 Tm (before being mapped back to the existing payload shape.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 271.25 Tm (- nexus-query-data now projects generic dashboard, votes, and library packet-card lists) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 256.00 Tm (after nexusQueryService has already selected the cards. Discussion, reaction, scope,) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 240.75 Tm (locality, and deeper product-specific route read models remain separate adapter cleanup) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 225.50 Tm (lanes.) Tj ET
+BT 0.090 0.160 0.240 rg /F2 13.5 Tf 1 0 0 1 54.00 192.25 Tm (2026-05 Legacy mutation executor deletion) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 166.25 Tm (- Removed the old route executor stack: NexusMutationService, Dispatch prepare/finalize) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 151.00 Tm (handlers, old handler domain maps, mutation prepare/finalize handler maps, signed-packet) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 135.75 Tm (finalizer, preference Dispatch workflow, and manifest Dispatch metadata bridge files.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 116.50 Tm (- Trusted Dispatch remains the route-facing prepare/finalize authority. Deleted executor) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 101.25 Tm (files are now guarded by audit:trusted-coordinators so they fail if restored.) Tj ET
 endstream
 endobj
 190 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 189 0 R >>
 endobj
+191 0 obj
+<< /Length 998 >>
+stream
+0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
+BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Implementation Guide - 94) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 734.00 Tm (- Static genericization/handoff/readiness ledgers remain temporarily because they describe) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 718.75 Tm (migration state and pre-reseed closure, but their text now points to) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 703.50 Tm (Dispatch/trusted-chain authority rather than the old Dispatch corridor.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 684.25 Tm (- Direct-write seam classification now treats discussion/reaction/preference helpers as) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 669.00 Tm (transitional adapter/internal or compatibility-cache writes instead of Dispatch-internal) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 653.75 Tm (helpers.) Tj ET
+endstream
+endobj
+192 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 191 0 R >>
+endobj
 xref
-0 191
+0 193
 0000000000 65535 f 
 0000000015 00000 n 
 0000000064 00000 n 
-0000000811 00000 n 
-0000000881 00000 n 
-0000000956 00000 n 
-0000005186 00000 n 
-0000005322 00000 n 
-0000009950 00000 n 
-0000010086 00000 n 
-0000014417 00000 n 
-0000014554 00000 n 
-0000015467 00000 n 
-0000015605 00000 n 
-0000022682 00000 n 
-0000022820 00000 n 
-0000027607 00000 n 
-0000027745 00000 n 
-0000033230 00000 n 
-0000033368 00000 n 
-0000038749 00000 n 
-0000038887 00000 n 
-0000043904 00000 n 
-0000044042 00000 n 
-0000049707 00000 n 
-0000049845 00000 n 
-0000055406 00000 n 
-0000055544 00000 n 
-0000060848 00000 n 
-0000060986 00000 n 
-0000066144 00000 n 
-0000066282 00000 n 
-0000071023 00000 n 
-0000071161 00000 n 
-0000076342 00000 n 
-0000076480 00000 n 
-0000081738 00000 n 
-0000081876 00000 n 
-0000087129 00000 n 
-0000087267 00000 n 
-0000092982 00000 n 
-0000093120 00000 n 
-0000098139 00000 n 
-0000098277 00000 n 
-0000103227 00000 n 
-0000103365 00000 n 
-0000108409 00000 n 
-0000108547 00000 n 
-0000113735 00000 n 
-0000113873 00000 n 
-0000118258 00000 n 
-0000118396 00000 n 
-0000123571 00000 n 
-0000123709 00000 n 
-0000128961 00000 n 
-0000129099 00000 n 
-0000134637 00000 n 
-0000134775 00000 n 
-0000139492 00000 n 
-0000139630 00000 n 
-0000145611 00000 n 
-0000145749 00000 n 
-0000149496 00000 n 
-0000149634 00000 n 
-0000153422 00000 n 
-0000153560 00000 n 
-0000158960 00000 n 
-0000159098 00000 n 
-0000162059 00000 n 
-0000162197 00000 n 
-0000168127 00000 n 
-0000168265 00000 n 
-0000173123 00000 n 
-0000173261 00000 n 
-0000177392 00000 n 
-0000177530 00000 n 
-0000181970 00000 n 
-0000182108 00000 n 
-0000185867 00000 n 
-0000186005 00000 n 
-0000189797 00000 n 
-0000189935 00000 n 
-0000193572 00000 n 
-0000193710 00000 n 
-0000198284 00000 n 
-0000198422 00000 n 
-0000203395 00000 n 
-0000203533 00000 n 
-0000208548 00000 n 
-0000208686 00000 n 
-0000212894 00000 n 
-0000213032 00000 n 
-0000224987 00000 n 
-0000225125 00000 n 
-0000230401 00000 n 
-0000230539 00000 n 
-0000235198 00000 n 
-0000235336 00000 n 
-0000239885 00000 n 
-0000240023 00000 n 
-0000244959 00000 n 
-0000245098 00000 n 
-0000250674 00000 n 
-0000250814 00000 n 
-0000256201 00000 n 
-0000256341 00000 n 
-0000262072 00000 n 
-0000262212 00000 n 
-0000267473 00000 n 
-0000267613 00000 n 
-0000278943 00000 n 
-0000279083 00000 n 
-0000279804 00000 n 
-0000279944 00000 n 
-0000286437 00000 n 
-0000286577 00000 n 
-0000292241 00000 n 
-0000292381 00000 n 
-0000297644 00000 n 
-0000297784 00000 n 
-0000301396 00000 n 
-0000301536 00000 n 
-0000305550 00000 n 
-0000305690 00000 n 
-0000309546 00000 n 
-0000309686 00000 n 
-0000314292 00000 n 
-0000314432 00000 n 
-0000318720 00000 n 
-0000318860 00000 n 
-0000323479 00000 n 
-0000323619 00000 n 
-0000327394 00000 n 
-0000327534 00000 n 
-0000332518 00000 n 
-0000332658 00000 n 
-0000337684 00000 n 
-0000337824 00000 n 
-0000342120 00000 n 
-0000342260 00000 n 
-0000346243 00000 n 
-0000346383 00000 n 
-0000350019 00000 n 
-0000350159 00000 n 
-0000354505 00000 n 
-0000354645 00000 n 
-0000358585 00000 n 
-0000358725 00000 n 
-0000362880 00000 n 
-0000363020 00000 n 
-0000367235 00000 n 
-0000367375 00000 n 
-0000372040 00000 n 
-0000372180 00000 n 
-0000376935 00000 n 
-0000377075 00000 n 
-0000382357 00000 n 
-0000382497 00000 n 
-0000387761 00000 n 
-0000387901 00000 n 
-0000393336 00000 n 
-0000393476 00000 n 
-0000398552 00000 n 
-0000398692 00000 n 
-0000403431 00000 n 
-0000403571 00000 n 
-0000408586 00000 n 
-0000408726 00000 n 
-0000413728 00000 n 
-0000413868 00000 n 
-0000419219 00000 n 
-0000419359 00000 n 
-0000424514 00000 n 
-0000424654 00000 n 
-0000429914 00000 n 
-0000430054 00000 n 
-0000435477 00000 n 
-0000435617 00000 n 
-0000440523 00000 n 
-0000440663 00000 n 
-0000445873 00000 n 
-0000446013 00000 n 
-0000450790 00000 n 
-0000450930 00000 n 
-0000456036 00000 n 
-0000456176 00000 n 
-0000461381 00000 n 
-0000461521 00000 n 
-0000466790 00000 n 
-0000466930 00000 n 
-0000469842 00000 n 
+0000000819 00000 n 
+0000000889 00000 n 
+0000000964 00000 n 
+0000005194 00000 n 
+0000005330 00000 n 
+0000009958 00000 n 
+0000010094 00000 n 
+0000014425 00000 n 
+0000014562 00000 n 
+0000015475 00000 n 
+0000015613 00000 n 
+0000022690 00000 n 
+0000022828 00000 n 
+0000027615 00000 n 
+0000027753 00000 n 
+0000033238 00000 n 
+0000033376 00000 n 
+0000038757 00000 n 
+0000038895 00000 n 
+0000043912 00000 n 
+0000044050 00000 n 
+0000049715 00000 n 
+0000049853 00000 n 
+0000055414 00000 n 
+0000055552 00000 n 
+0000060856 00000 n 
+0000060994 00000 n 
+0000066152 00000 n 
+0000066290 00000 n 
+0000071031 00000 n 
+0000071169 00000 n 
+0000076350 00000 n 
+0000076488 00000 n 
+0000081746 00000 n 
+0000081884 00000 n 
+0000087137 00000 n 
+0000087275 00000 n 
+0000092990 00000 n 
+0000093128 00000 n 
+0000098147 00000 n 
+0000098285 00000 n 
+0000103235 00000 n 
+0000103373 00000 n 
+0000108417 00000 n 
+0000108555 00000 n 
+0000113743 00000 n 
+0000113881 00000 n 
+0000118266 00000 n 
+0000118404 00000 n 
+0000123579 00000 n 
+0000123717 00000 n 
+0000128969 00000 n 
+0000129107 00000 n 
+0000134645 00000 n 
+0000134783 00000 n 
+0000139500 00000 n 
+0000139638 00000 n 
+0000145619 00000 n 
+0000145757 00000 n 
+0000149504 00000 n 
+0000149642 00000 n 
+0000153430 00000 n 
+0000153568 00000 n 
+0000158968 00000 n 
+0000159106 00000 n 
+0000162067 00000 n 
+0000162205 00000 n 
+0000168135 00000 n 
+0000168273 00000 n 
+0000173131 00000 n 
+0000173269 00000 n 
+0000177400 00000 n 
+0000177538 00000 n 
+0000181978 00000 n 
+0000182116 00000 n 
+0000185875 00000 n 
+0000186013 00000 n 
+0000189805 00000 n 
+0000189943 00000 n 
+0000193580 00000 n 
+0000193718 00000 n 
+0000198292 00000 n 
+0000198430 00000 n 
+0000203403 00000 n 
+0000203541 00000 n 
+0000208556 00000 n 
+0000208694 00000 n 
+0000212902 00000 n 
+0000213040 00000 n 
+0000224995 00000 n 
+0000225133 00000 n 
+0000230409 00000 n 
+0000230547 00000 n 
+0000235206 00000 n 
+0000235344 00000 n 
+0000239893 00000 n 
+0000240031 00000 n 
+0000244967 00000 n 
+0000245106 00000 n 
+0000250682 00000 n 
+0000250822 00000 n 
+0000256209 00000 n 
+0000256349 00000 n 
+0000262080 00000 n 
+0000262220 00000 n 
+0000267481 00000 n 
+0000267621 00000 n 
+0000278951 00000 n 
+0000279091 00000 n 
+0000279812 00000 n 
+0000279952 00000 n 
+0000286445 00000 n 
+0000286585 00000 n 
+0000292249 00000 n 
+0000292389 00000 n 
+0000297652 00000 n 
+0000297792 00000 n 
+0000301404 00000 n 
+0000301544 00000 n 
+0000305558 00000 n 
+0000305698 00000 n 
+0000309554 00000 n 
+0000309694 00000 n 
+0000314300 00000 n 
+0000314440 00000 n 
+0000318728 00000 n 
+0000318868 00000 n 
+0000323487 00000 n 
+0000323627 00000 n 
+0000327402 00000 n 
+0000327542 00000 n 
+0000332526 00000 n 
+0000332666 00000 n 
+0000337692 00000 n 
+0000337832 00000 n 
+0000342128 00000 n 
+0000342268 00000 n 
+0000346251 00000 n 
+0000346391 00000 n 
+0000350027 00000 n 
+0000350167 00000 n 
+0000354513 00000 n 
+0000354653 00000 n 
+0000358593 00000 n 
+0000358733 00000 n 
+0000362888 00000 n 
+0000363028 00000 n 
+0000367243 00000 n 
+0000367383 00000 n 
+0000372048 00000 n 
+0000372188 00000 n 
+0000376943 00000 n 
+0000377083 00000 n 
+0000382365 00000 n 
+0000382505 00000 n 
+0000387769 00000 n 
+0000387909 00000 n 
+0000393344 00000 n 
+0000393484 00000 n 
+0000398560 00000 n 
+0000398700 00000 n 
+0000403439 00000 n 
+0000403579 00000 n 
+0000408594 00000 n 
+0000408734 00000 n 
+0000413736 00000 n 
+0000413876 00000 n 
+0000419227 00000 n 
+0000419367 00000 n 
+0000424522 00000 n 
+0000424662 00000 n 
+0000429985 00000 n 
+0000430125 00000 n 
+0000435750 00000 n 
+0000435890 00000 n 
+0000441021 00000 n 
+0000441161 00000 n 
+0000445935 00000 n 
+0000446075 00000 n 
+0000451038 00000 n 
+0000451178 00000 n 
+0000456258 00000 n 
+0000456398 00000 n 
+0000461488 00000 n 
+0000461628 00000 n 
+0000466824 00000 n 
+0000466964 00000 n 
+0000472136 00000 n 
+0000472276 00000 n 
+0000473327 00000 n 
 trailer
-<< /Size 191 /Root 1 0 R >>
+<< /Size 193 /Root 1 0 R >>
 startxref
-469982
+473467
 %%EOF

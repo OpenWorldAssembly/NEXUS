@@ -2527,6 +2527,18 @@ export const PUBLIC_READABLE_DOCUMENTS = {
         ],
       },
       {
+        id: "implementation-guide-2026-05-definition-kernel-and-stored-profile-decision",
+        level: 3,
+        title: "2026-05 definition kernel and stored profile decision",
+        body: [
+          "- Nexus will hardcode only the Definition packet kernel needed to cold-start, validate, and compose definition material. This kernel includes the Definition body schema, supported Definition part subtypes, and the bootstrap resolver for turning Definition parts into a local active definition view.",
+          "- Long-term packet type authority should live as stored Definition packets, not TypeScript-only descriptors. TypeScript packet definitions remain bootstrap/compiler seed material, local fallback material, and test fixtures until active Definition profiles can be resolved from packet storage.",
+          "- A packet type definition is a profile assembled from Definition part packets, not one monolithic object. Schema, actions, builders, planners, projections, compatibility, defaults, and dependencies may version or fork as separate Definition parts and travel together in a Bundle.packet_set profile inventory.",
+          "- Nodes/scopes will eventually select their active definition profile through packet-backed defaults, preferences, and policies. The current Trusted Definition Coordinator already models source kinds, trust tiers, pins/preferences, ranking, compatibility-only candidates, quarantine, and ignored candidates, but archive-backed profile loading remains a future migration seam.",
+          "- Imported Definition packets remain descriptive only. They can declare schemas, actions, builders, planners, projections, defaults, policies/dependencies, and compatibility metadata, but execution must stay inside trusted local runtime capabilities and allowlisted coordinators.",
+        ],
+      },
+      {
         id: "implementation-guide-2026-05-nexus-discussions-ui-decomposition",
         level: 3,
         title: "2026-05 Nexus discussions UI decomposition",

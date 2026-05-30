@@ -64,7 +64,7 @@ export type TrustedDefinitionRuntimePreference = {
   author_element_id?: string | null;
   packet_type?: string | null;
   packet_subtype?: string | null;
-  part_subtype?: PacketDefinitionPartSubtype | null;
+  part_subtype?: PacketDefinitionPartSubtype | 'packet_type_definition' | null;
   trust_mode: TrustedDefinitionTrustMode;
   priority: number;
   read_only_allowed?: boolean;
@@ -261,7 +261,7 @@ export type ResolveTrustedDefinitionPartInput = BaseTrustedDefinitionInput & {
 export type ResolveTrustedCompatibilityDefinitionInput = BaseTrustedDefinitionInput & {
   packet_type: string;
   packet_subtype?: string | null;
-  part_subtype?: PacketDefinitionPartSubtype | null;
+  part_subtype?: PacketDefinitionPartSubtype | 'packet_type_definition' | null;
   from_schema_version?: string | null;
   to_schema_version?: string | null;
 };
