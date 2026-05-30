@@ -30,6 +30,17 @@ export type ElementPreferenceBody = Extract<
   { subtype: 'element' }
 >;
 
+
+export type ElementPreferenceInterfacePatch = {
+  scope_display?: Partial<ScopeDisplayPreferenceValue> | null;
+  shell_chrome?: Partial<ShellChromePreferenceValue> | null;
+};
+
+export type ElementPreferenceInterfaceProjection = {
+  scope_display: ScopeDisplayPreferenceValue;
+  shell_chrome: ShellChromePreferenceValue;
+};
+
 export type ScopeDisplayPreferenceProjectionRecord = {
   body: ElementPreferenceBody;
   revision_ref?: PacketRevisionRef | null;
@@ -212,6 +223,60 @@ export function projectLatestActiveScopeDisplayPreference(
   });
 
   return latest.body;
+}
+
+
+export function projectElementPreferenceInterface(
+  body: ElementPreferenceBody | null | undefined
+): ElementPreferenceInterfaceProjection {
+  return {
+    scope_display: normalizeScopeDisplayPreferenceValue(
+      body?.value.interface.scope_display
+    ),
+    shell_chrome: normalizeShellChromePreferenceValue(
+      body?.value.interface.shell_chrome
+    ),
+  };
+}
+
+export function mergeElementPreferenceInterfacePatch(input: {
+  current?: ElementPreferenceInterfaceProjection | null;
+  patch?: ElementPreferenceInterfacePatch | null;
+}): ElementPreferenceInterfaceProjection {
+  const current = input.current ?? projectElementPreferenceInterface(null);
+
+  return {
+    scope_display: normalizeScopeDisplayPreferenceValue({
+      ...current.scope_display,
+      ...(input.patch?.scope_display ?? {}),
+    }),
+    shell_chrome: normalizeShellChromePreferenceValue({
+      ...current.shell_chrome,
+      ...(input.patch?.shell_chrome ?? {}),
+    }),
+  };
+}
+
+function stablePreferenceJson(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stablePreferenceJson(item)).join(',')}]`;
+  }
+
+  if (value && typeof value === 'object') {
+    return `{${Object.entries(value as Record<string, unknown>)
+      .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
+      .map(([key, item]) => `${JSON.stringify(key)}:${stablePreferenceJson(item)}`)
+      .join(',')}}`;
+  }
+
+  return JSON.stringify(value);
+}
+
+export function elementPreferenceInterfaceProjectionsEqual(
+  left: ElementPreferenceInterfaceProjection,
+  right: ElementPreferenceInterfaceProjection
+): boolean {
+  return stablePreferenceJson(left) === stablePreferenceJson(right);
 }
 
 export function upcastLegacyScopeDisplayPreferenceValueV0(

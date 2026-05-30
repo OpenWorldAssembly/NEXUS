@@ -190,7 +190,7 @@ export const PACKET_PIPELINE_INVENTORY: Record<
     builderPath:
       'core/packets/packet-build-pipeline.ts + core/packets/definitions/preference-helpers.ts',
     readProjectionPath:
-      'runtime/nexus/server/element-preference-packets.ts + guest compatibility cache fallback',
+      'runtime/nexus/server/preference-runtime-connectors.ts + guest compatibility cache fallback',
     uiConsumers: ['Shell preferences', 'Scope display preferences'],
     writePaths: ['Signed Preference.element mutation corridor'],
     readModelStatus: 'production',

@@ -230,9 +230,9 @@ export const preferencePacketDefinition = {
       action_ids: ['preference.element.create', 'preference.element.revise'],
       input_schema_key: 'ElementPreferenceBuilderInputSchema',
       output_schema_key: 'ElementPreferenceBodySchema',
-      availability: 'canonical',
+      availability: 'runtime_ready',
       notes:
-        'Canonical body builder descriptor metadata; claimed Preference.element writes now enter the Dispatch-enrolled preference workflow, while this descriptor remains manifest metadata rather than executable imported code.',
+        'Definition-backed body builder used by the live interface preference connector and ready for Dispatch-owned single-packet revision planning.',
     },
   ],
   planners: [
@@ -246,9 +246,9 @@ export const preferencePacketDefinition = {
       ],
       builder_ids: ['preference.element.body.v0'],
       policy_action_ids: ['preference.element.write'],
-      availability: 'canonical',
+      availability: 'runtime_ready',
       notes:
-        'Plans the latest-active/supersedes-chain preference write before manifest-driven corridor enrollment.',
+        'Plans latest-active/supersedes-chain Preference.element writes using definition metadata plus the generic single-packet revision corridor.',
     },
     {
       planner_id: 'preference.element.projection.v0',
@@ -256,9 +256,9 @@ export const preferencePacketDefinition = {
       action_ids: ['preference.element.project'],
       builder_ids: [],
       policy_action_ids: [],
-      availability: 'canonical',
+      availability: 'runtime_ready',
       notes:
-        'Projects latest active preference packets into shell display preferences without creating relations.',
+        'Projects latest active Preference.element packets into shell display and chrome preferences without preference-specific core runtime code.',
     },
   ],
   mutations: [
@@ -267,9 +267,9 @@ export const preferencePacketDefinition = {
       action_ids: ['preference.element.create', 'preference.element.revise'],
       planner_id: 'preference.element.latest_active_revision.v0',
       result_type: 'packet_write',
-      availability: 'canonical',
+      availability: 'runtime_ready',
       notes:
-        'Manifest mutation intent for creating or revising element preferences through the signed corridor.',
+        'Manifest mutation intent for creating or revising element preferences through the definition-backed connector and signed corridor.',
     },
     {
       mutation_intent: 'preference.element.withdraw',
@@ -330,9 +330,9 @@ export const preferencePacketDefinition = {
             'Definition workflow for claimed actor interface preference revisions through the Dispatch corridor.',
         },
       ],
-      availability: 'canonical',
+      availability: 'runtime_ready',
       notes:
-        'Describes Preference.element set semantics; trusted runtime code interprets and enforces the live write path.',
+        'Describes Preference.element set semantics with enough body/projection metadata for the generic revision corridor to build the live write path.',
     },
   ],
   compatibility_adapters: [
@@ -375,8 +375,64 @@ export const preferencePacketDefinition = {
       projection_key: 'scope_display_preferences',
       target_surface: 'nexus_shell',
       mode: 'derived',
+      resolver_preset_ids: [
+        'actor.ref',
+        'packet.lookup.latest_active',
+        'projection.field_map',
+      ],
+      field_descriptors: [
+        {
+          field_key: 'owner_ref',
+          label: 'Owner',
+          binding: { binding_kind: 'current_packet', path: 'body.owner_ref', required: true },
+          display_role: 'meta',
+          required: true,
+        },
+        {
+          field_key: 'scope_display',
+          label: 'Scope display preferences',
+          binding: { binding_kind: 'current_packet', path: 'body.value.interface.scope_display', required: true },
+          display_role: 'body',
+          required: true,
+        },
+        {
+          field_key: 'shell_chrome',
+          label: 'Shell chrome preferences',
+          binding: { binding_kind: 'current_packet', path: 'body.value.interface.shell_chrome', required: true },
+          display_role: 'body',
+          required: true,
+        },
+        {
+          field_key: 'context_key',
+          label: 'Context',
+          binding: { binding_kind: 'current_packet', path: 'body.context', required: true },
+          display_role: 'meta',
+          required: true,
+        },
+        {
+          field_key: 'status',
+          label: 'Status',
+          binding: { binding_kind: 'current_packet', path: 'body.status', required: true },
+          display_role: 'status',
+          required: true,
+        },
+      ],
+      layout: {
+        layout_key: 'preference.element.interface.detail.v0',
+        component_key: 'packet.detail_panel',
+        density: 'standard',
+        slots: ['owner_ref', 'scope_display', 'shell_chrome', 'context_key', 'status'],
+        notes: 'Shows the complete interface-preference projection without requiring shell-specific code paths.',
+      },
+      preferred_surface: 'nexus_shell',
+      policy_action_ids: ['preference.element.write'],
+      dependency_ids: [
+        'generic.preference.latest_active_planner',
+        'runtime.scope_display_projection',
+        'runtime.shell_chrome_projection',
+      ],
       notes:
-        'Projects the latest active owner/context preference into the existing shell element preference shape.',
+        'Projects the latest active owner/context preference into shell scope-display and chrome preference shapes.',
     },
   ],
   indexes: [

@@ -5,13 +5,27 @@
 
 import { z } from 'zod';
 
-import type { ShellChromePreferenceValue } from '@core/packets/packet-definition-manifest';
+import { createPacketRef, createPacketRevisionRef } from '@core/packets/builders';
+import type { ShellChromePreferenceValue } from '@core/packets/definitions/preference.ts';
+import {
+  buildElementPreferenceBody,
+  createElementPreferencePacketId,
+  elementPreferenceInterfaceProjectionsEqual,
+  mergeElementPreferenceInterfacePatch,
+  normalizeScopeDisplayPreferenceValue,
+  normalizeShellChromePreferenceValue,
+  projectElementPreferenceInterface,
+  type ElementPreferenceBody,
+  type ElementPreferenceInterfacePatch,
+} from '@core/packets/definitions/preference-helpers.ts';
+import type { PacketEnvelopeByType, PacketRevisionRef } from '@core/schema/packet-schema';
 import type { NexusScopeDisplayPreferencesPayload } from '@runtime/nexus/nexus-api-types';
 import {
-  writeElementPreferenceInterfacePacket,
-  type ElementPreferencePacketWriteResult,
-} from '@runtime/nexus/server/element-preference-packets';
+  readLatestDefinitionPacketRevision,
+  writeDefinitionPacketRevision,
+} from '@runtime/nexus/server/definition-packet-revisions.ts';
 import type { PacketRuntimeConnector } from '@runtime/nexus/server/packet-runtime-master-handler';
+import type { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store';
 
 const ScopeDisplayPreferencePatchSchema = z
   .object({
@@ -64,6 +78,21 @@ export type PreferenceElementInterfaceRuntimeInput = {
   note?: string;
 };
 
+export type ElementPreferencePacketProjection = {
+  packet_id: string;
+  revision_ref: PacketRevisionRef | null;
+  body: ElementPreferenceBody | null;
+  preferences: NexusScopeDisplayPreferencesPayload;
+  shell_chrome: ShellChromePreferenceValue;
+};
+
+export type ElementPreferencePacketWriteResult = {
+  revision_ref: PacketRevisionRef;
+  wrote_revision: boolean;
+  preferences: NexusScopeDisplayPreferencesPayload;
+  shell_chrome: ShellChromePreferenceValue;
+};
+
 export type PreferenceElementInterfaceRuntimeResult = {
   packet_id: string;
   revision_id: string;
@@ -71,6 +100,150 @@ export type PreferenceElementInterfaceRuntimeResult = {
   preferences: NexusScopeDisplayPreferencesPayload;
   shell_chrome: ShellChromePreferenceValue;
 };
+
+type ElementPreferencePacket = PacketEnvelopeByType['Preference'] & {
+  body: ElementPreferenceBody;
+};
+
+function toScopeDisplayPayload(
+  value: Partial<NexusScopeDisplayPreferencesPayload> | null | undefined
+): NexusScopeDisplayPreferencesPayload {
+  return normalizeScopeDisplayPreferenceValue(value);
+}
+
+function getElementPreferencePacketId(actorPacketId: string): string {
+  return createElementPreferencePacketId({
+    owner_ref: createPacketRef(actorPacketId),
+  });
+}
+
+function asElementPreferencePacket(
+  packet: PacketEnvelopeByType['Preference'] | null
+): ElementPreferencePacket | null {
+  return packet?.body.subtype === 'element'
+    ? (packet as ElementPreferencePacket)
+    : null;
+}
+
+export async function readElementPreferencePacket(input: {
+  packetStore: NodeSQLitePacketStore;
+  actorPacketId: string;
+}): Promise<ElementPreferencePacketProjection | null> {
+  const packetId = getElementPreferencePacketId(input.actorPacketId);
+  const packet = asElementPreferencePacket(
+    await readLatestDefinitionPacketRevision({
+      packetStore: input.packetStore,
+      packetId,
+      packetType: 'Preference',
+      packetSubtype: 'element',
+    })
+  );
+
+  if (!packet) {
+    return null;
+  }
+
+  const projection = projectElementPreferenceInterface(packet.body);
+
+  return {
+    packet_id: packetId,
+    revision_ref: createPacketRevisionRef(
+      packet.header.packet_id,
+      packet.header.revision_id
+    ),
+    body: packet.body,
+    preferences: toScopeDisplayPayload(projection.scope_display),
+    shell_chrome: normalizeShellChromePreferenceValue(projection.shell_chrome),
+  };
+}
+
+export async function readElementScopeDisplayPreferencePacket(input: {
+  packetStore: NodeSQLitePacketStore;
+  actorPacketId: string;
+}): Promise<ElementPreferencePacketProjection | null> {
+  return readElementPreferencePacket(input);
+}
+
+export async function writeElementPreferenceInterfacePacket(input: {
+  packetStore: NodeSQLitePacketStore;
+  actorPacketId: string;
+  patch: ElementPreferenceInterfacePatch;
+  createdAt: string;
+  note?: string | null;
+}): Promise<ElementPreferencePacketWriteResult> {
+  const packetId = getElementPreferencePacketId(input.actorPacketId);
+  const current = await readElementPreferencePacket({
+    packetStore: input.packetStore,
+    actorPacketId: input.actorPacketId,
+  });
+  const currentProjection = projectElementPreferenceInterface(current?.body);
+  const nextProjection = mergeElementPreferenceInterfacePatch({
+    current: currentProjection,
+    patch: input.patch,
+  });
+
+  if (
+    current?.revision_ref &&
+    elementPreferenceInterfaceProjectionsEqual(currentProjection, nextProjection)
+  ) {
+    return {
+      revision_ref: current.revision_ref,
+      wrote_revision: false,
+      preferences: toScopeDisplayPayload(nextProjection.scope_display),
+      shell_chrome: normalizeShellChromePreferenceValue(nextProjection.shell_chrome),
+    };
+  }
+
+  const body = buildElementPreferenceBody({
+    owner_ref: createPacketRef(input.actorPacketId),
+    privacy: 'private_sync',
+    context: null,
+    value: nextProjection.scope_display,
+    shell_chrome: nextProjection.shell_chrome,
+    supersedes_ref: current?.revision_ref ?? null,
+    note: input.note ?? null,
+  });
+  const revisionRef = await writeDefinitionPacketRevision({
+    packetStore: input.packetStore,
+    packetType: 'Preference',
+    packetId,
+    schemaVersion: '0.1.0',
+    body,
+    actorPacketId: input.actorPacketId,
+    createdAt: input.createdAt,
+    parentRevisionRef: current?.revision_ref ?? null,
+    mergeStrategy: 'supersedes',
+    visibility: 'private',
+    metadataTags: ['preference', 'interface'],
+    metadataSummary: 'Element interface preferences.',
+    adapter: 'runtime.preference_interface_connector',
+  });
+
+  return {
+    revision_ref: revisionRef,
+    wrote_revision: true,
+    preferences: toScopeDisplayPayload(nextProjection.scope_display),
+    shell_chrome: normalizeShellChromePreferenceValue(nextProjection.shell_chrome),
+  };
+}
+
+export async function writeElementScopeDisplayPreferencePacket(input: {
+  packetStore: NodeSQLitePacketStore;
+  actorPacketId: string;
+  preferences: Partial<NexusScopeDisplayPreferencesPayload>;
+  createdAt: string;
+  note?: string | null;
+}): Promise<ElementPreferencePacketWriteResult> {
+  return writeElementPreferenceInterfacePacket({
+    packetStore: input.packetStore,
+    actorPacketId: input.actorPacketId,
+    patch: {
+      scope_display: input.preferences,
+    },
+    createdAt: input.createdAt,
+    note: input.note ?? 'Element scope-display preferences.',
+  });
+}
 
 function toRuntimeResult(
   writeResult: ElementPreferencePacketWriteResult

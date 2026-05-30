@@ -6,15 +6,15 @@ import { tmpdir } from 'node:os';
 
 import {
   GENERIC_PACKET_RUNTIME_CAPABILITIES,
-  type ShellChromePreferenceValue,
 } from '@core/packets/packet-definition-manifest';
+import type { ShellChromePreferenceValue } from '@core/packets/definitions/preference.ts';
 import type { NexusScopeDisplayPreferencesPayload } from '@runtime/nexus/nexus-api-types';
 import { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store';
 import {
   readElementPreferencePacket,
   writeElementPreferenceInterfacePacket,
   writeElementScopeDisplayPreferencePacket,
-} from './element-preference-packets.ts';
+} from './preference-runtime-connectors.ts';
 import { runRegisteredPacketRuntimeMutation } from './packet-runtime-connectors.ts';
 import type { PreferenceElementInterfaceRuntimeResult } from './preference-runtime-connectors.ts';
 import {

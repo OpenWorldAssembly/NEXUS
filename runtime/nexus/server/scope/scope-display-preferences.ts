@@ -7,7 +7,7 @@ import type { NexusScopeDisplayPreferencesPayload } from '@runtime/nexus/nexus-a
 import {
   readElementScopeDisplayPreferencePacket,
   writeElementScopeDisplayPreferencePacket,
-} from '@runtime/nexus/server/element-preference-packets';
+} from '@runtime/nexus/server/preference-runtime-connectors';
 import {
   readScopeDisplayPreferencesCompatibility,
 } from '@runtime/nexus/server/shell-preferences';

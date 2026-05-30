@@ -213,18 +213,19 @@ function classifyStorageTouch(input: {
     filePath === 'runtime/nexus/server/discussion/default-discussion-surfaces.ts' ||
     filePath === 'runtime/nexus/server/locality/locality-directory-service.ts' ||
     filePath === 'runtime/nexus/server/identity/auth-service.ts' ||
-    filePath === 'runtime/nexus/server/verification-service.ts'
+    filePath === 'runtime/nexus/server/verification-service.ts' ||
+    filePath === 'runtime/nexus/server/definition-packet-revisions.ts'
   ) {
     return {
       category: 'allowed_infrastructure',
-      reason: 'Classified transitional infrastructure writer: bootstrap, identity custody, locality seed path, or verification report backfill.',
+      reason: 'Classified infrastructure writer: bootstrap, identity custody, locality seed path, generic definition revision seam, or verification report backfill.',
     };
   }
 
   if (
     filePath === 'runtime/nexus/server/discussion/discussion-service.ts' ||
     filePath === 'runtime/nexus/server/reaction/reaction-service.ts' ||
-    filePath === 'runtime/nexus/server/element-preference-packets.ts' ||
+    filePath === 'runtime/nexus/server/preference-runtime-connectors.ts' ||
     filePath === 'runtime/nexus/server/packet-explorer/nexus-packet-import.ts'
   ) {
     return {

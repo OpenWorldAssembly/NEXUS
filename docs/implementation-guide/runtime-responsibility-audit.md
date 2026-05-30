@@ -86,7 +86,7 @@ Dispatch is the route-facing write lifecycle owner for `/api/nexus/mutations/pre
 | intent schema and enrollment | `prepare-mutation-intent-schema.ts`, `mutation-intent-registry.ts`, `packet-client-intent-enrollment.ts` | Dispatch intake plus Definition-driven client/action metadata | Dispatch/Definition with API schema bridge | Medium |
 | domain-specific finalize handlers | removed legacy handler-domain executor files | Planning/Building/Inspection/Archive or OWA adapter when product-specific | migrate remaining product intents directly into coordinator chains or adapter bridges, not old handler maps | High |
 | genericization/handoff audits | `packet-runtime-dispatch-handoff.ts`, workflow alignment audits | readiness/test audit | `readiness/*` after terminology cleanup | Low |
-| Preference write workflow | `element-preference-packets.ts`, preference runtime connector files | Definition/Planning/Archive plus compatibility cache adapter | migrate claimed Preference.element writes through the trusted chain and retire compatibility cache writes when safe | Medium |
+| Preference write workflow | `preference-runtime-connectors.ts`, preference runtime connector files | Definition/Planning/Archive plus compatibility cache adapter | migrate claimed Preference.element writes through the trusted chain and retire compatibility cache writes when safe | Medium |
 
 ## Packet-type-specific service inventory
 

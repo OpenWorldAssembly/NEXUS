@@ -6,6 +6,7 @@
 export type DirectPacketWriteCategory =
   | 'adapter_internal_helper'
   | 'bootstrap_or_seed'
+  | 'coordinator_write_seam'
   | 'identity_bootstrap'
   | 'system_backfill'
   | 'temporary_bridge';
@@ -44,7 +45,11 @@ export const DIRECT_PACKET_WRITE_SEAMS = {
     category: 'system_backfill',
     reason: 'System bootstrap/backfill writer for initial packet dataset seeding and recovery.',
   },
-  'element-preference-packets.ts': {
+  'definition-packet-revisions.ts': {
+    category: 'coordinator_write_seam',
+    reason: 'Generic definition-backed single-packet revision seam shared by runtime adapters before full Archive-only writes.',
+  },
+  'preference-runtime-connectors.ts': {
     category: 'adapter_internal_helper',
     reason: 'Transitional Preference.element planner/persistence helper; claimed preference writes should migrate behind the trusted write chain while the legacy scope-display table remains a compatibility cache.',
   },

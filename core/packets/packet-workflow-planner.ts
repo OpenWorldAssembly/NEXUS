@@ -277,7 +277,7 @@ export const TRUSTED_PACKET_PLANNER_CAPABILITIES = [
   {
     capability_id: 'runtime.planner.preference_element',
     capability_kind: 'planner',
-    source_module: 'runtime/nexus/server/element-preference-packets.ts',
+    source_module: 'runtime/nexus/server/preference-runtime-connectors.ts',
     dependency_ids: [
       'runtime.packet_store.read',
       'runtime.policy_gate',

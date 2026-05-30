@@ -211,14 +211,14 @@ const MIGRATION_ENTRIES_BY_INTENT: Partial<
       'Keep policy/dependency semantic authority audits green through reseed design.',
   },
   'preference.element.set': {
-    migration_status: 'workflow_specific',
-    operation_mapping_status: 'runtime_specific_workflow',
+    migration_status: 'generic_ready',
+    operation_mapping_status: 'definition_operation_ready',
     operation_kinds: ['single_packet.revise', 'projection.refresh'],
     policy_action_ids: ['preference.element.write'],
     notes:
-      'Element preferences have definition workflow coverage, but live projection refresh behavior is still runtime-specific.',
+      'Element preferences now use a definition-backed generic revision seam with projection metadata for scope display and shell chrome.',
     next_step:
-      'Add a fresh trusted-chain preference test when preference.element.set is fully migrated through Dispatch-owned route authority.',
+      'Retire the compatibility cache write after the packet projection path fully replaces the legacy scope-display table.',
   },
 };
 

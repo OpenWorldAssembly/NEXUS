@@ -51,7 +51,7 @@ import {
 } from '@runtime/nexus/nexus-shell';
 import { getNexusPacketServices } from '@runtime/nexus/server/nexus-packet-services';
 import { trustedProjectionCoordinator } from '@runtime/trusted_coordinators/trusted_projection_coordinator/index.ts';
-import { readElementPreferencePacket } from '@runtime/nexus/server/element-preference-packets';
+import { readElementPreferencePacket } from '@runtime/nexus/server/preference-runtime-connectors';
 import { readScopeDisplayPreferences } from '@runtime/nexus/server/scope-display-preferences';
 import { readShellChromePreferencesCompatibility } from '@runtime/nexus/server/shell-preferences';
 import {
