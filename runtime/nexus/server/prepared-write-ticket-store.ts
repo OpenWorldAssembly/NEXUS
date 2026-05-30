@@ -1,6 +1,6 @@
 /**
- * File: mutation-ticket-store.ts
- * Description: In-memory one-time mutation ticket storage for the fortress prepare/finalize corridor.
+ * File: prepared-write-ticket-store.ts
+ * Description: In-memory one-time prepared-write ticket storage for the Dispatch prepare/finalize corridor.
  */
 
 import { randomUUID } from 'node:crypto';
@@ -11,9 +11,9 @@ import type {
 } from '@core/auth/mutation-corridor';
 
 const DEFAULT_TICKET_TTL_MS = 5 * 60 * 1000;
-const MUTATION_TICKET_STORE_KEY = '__owaMutationTicketStore';
+const PREPARED_WRITE_TICKET_STORE_KEY = '__owaPreparedWriteTicketStore';
 
-export interface StoredMutationTicket {
+export interface StoredPreparedWriteTicket {
   ticket_id: string;
   actor_packet_id: string;
   expires_at: string;
@@ -23,19 +23,19 @@ export interface StoredMutationTicket {
   consumed_at: string | null;
 }
 
-function getSharedTicketMap(): Map<string, StoredMutationTicket> {
+function getSharedTicketMap(): Map<string, StoredPreparedWriteTicket> {
   const globalState = globalThis as typeof globalThis & {
-    [MUTATION_TICKET_STORE_KEY]?: Map<string, StoredMutationTicket>;
+    [PREPARED_WRITE_TICKET_STORE_KEY]?: Map<string, StoredPreparedWriteTicket>;
   };
 
-  if (!globalState[MUTATION_TICKET_STORE_KEY]) {
-    globalState[MUTATION_TICKET_STORE_KEY] = new Map<string, StoredMutationTicket>();
+  if (!globalState[PREPARED_WRITE_TICKET_STORE_KEY]) {
+    globalState[PREPARED_WRITE_TICKET_STORE_KEY] = new Map<string, StoredPreparedWriteTicket>();
   }
 
-  return globalState[MUTATION_TICKET_STORE_KEY]!;
+  return globalState[PREPARED_WRITE_TICKET_STORE_KEY]!;
 }
 
-export class MutationTicketStore {
+export class PreparedWriteTicketStore {
   private readonly tickets = getSharedTicketMap();
 
   create(input: {
@@ -44,11 +44,11 @@ export class MutationTicketStore {
     intent: MutationIntent;
     prepared_result?: unknown;
     ttl_ms?: number;
-  }): StoredMutationTicket {
+  }): StoredPreparedWriteTicket {
     this.cleanupExpired();
 
     const now = Date.now();
-    const ticket: StoredMutationTicket = {
+    const ticket: StoredPreparedWriteTicket = {
       ticket_id: randomUUID(),
       actor_packet_id: input.actor_packet_id,
       expires_at: new Date(now + (input.ttl_ms ?? DEFAULT_TICKET_TTL_MS)).toISOString(),
@@ -63,26 +63,26 @@ export class MutationTicketStore {
     return ticket;
   }
 
-  read(ticketId: string): StoredMutationTicket | null {
+  read(ticketId: string): StoredPreparedWriteTicket | null {
     this.cleanupExpired();
     return this.tickets.get(ticketId) ?? null;
   }
 
-  consume(ticketId: string): StoredMutationTicket {
+  consume(ticketId: string): StoredPreparedWriteTicket {
     this.cleanupExpired();
     const ticket = this.tickets.get(ticketId);
 
     if (!ticket) {
-      throw new Error('Unknown mutation ticket.');
+      throw new Error('Unknown prepared-write ticket.');
     }
 
     if (ticket.consumed_at) {
-      throw new Error('That mutation ticket has already been used.');
+      throw new Error('That prepared-write ticket has already been used.');
     }
 
     if (new Date(ticket.expires_at).getTime() < Date.now()) {
       this.tickets.delete(ticketId);
-      throw new Error('That mutation ticket has expired.');
+      throw new Error('That prepared-write ticket has expired.');
     }
 
     const consumedTicket = {

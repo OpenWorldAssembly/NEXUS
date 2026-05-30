@@ -299,7 +299,7 @@ test('trusted follow clear planner matches withdrawn relation oracle', async () 
   assert.equal(withdrawnRelationPacket?.body.status, 'withdrawn');
 });
 
-test('trusted workflow mutation returns existing fortress prepare shape', async () => {
+test('trusted workflow mutation returns existing Dispatch prepare shape', async () => {
   const actorPacket = await createClaimedActor();
   const targetScopePacket = createTargetScope();
   const preparedMutation: PreparedMutation = await runTrustedPacketWorkflowMutation({

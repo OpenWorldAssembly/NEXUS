@@ -1,6 +1,6 @@
 /**
  * File: assemblies+api.ts
- * Description: Lists or deprecates legacy assembly write routes now that first-party writes use the fortress corridor.
+ * Description: Lists or deprecates legacy assembly write routes now that first-party writes use the Dispatch-owned mutation corridor.
  */
 
 import type { RequestHandler } from 'expo-router/server';
@@ -18,7 +18,7 @@ export const POST: RequestHandler = async () =>
   createJsonResponse(
     {
       error:
-        'Assembly creation has moved to the shared fortress mutation corridor.',
+        'Assembly creation has moved to the shared Dispatch-owned mutation corridor.',
     },
     410
   );

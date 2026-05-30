@@ -1,16 +1,16 @@
 /**
  * File: nexus-api-types.mutations.ts
- * Description: Shared prepare/finalize mutation transport payloads for the fortress corridor.
+ * Description: Shared prepare/finalize mutation transport payloads for the Dispatch corridor.
  */
 
 import type {
   MutationPersistEffect,
-  MutationTicket,
+  PreparedWriteTicket,
   PreparedMutation,
 } from '@core/auth/mutation-corridor';
 
 export interface NexusPreparedMutationPayload {
-  ticket: MutationTicket;
+  ticket: PreparedWriteTicket;
   prepared_mutation: PreparedMutation;
 }
 

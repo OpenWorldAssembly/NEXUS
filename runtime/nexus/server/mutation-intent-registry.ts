@@ -1,6 +1,6 @@
 /**
  * File: mutation-intent-registry.ts
- * Description: Central registry mapping fortress mutation intent kinds to their typed prepare/finalize handlers.
+ * Description: Central registry mapping mutation intent kinds to their typed Dispatch prepare/finalize adapters.
  */
 
 import type { MutationIntent } from '@core/auth/mutation-corridor';

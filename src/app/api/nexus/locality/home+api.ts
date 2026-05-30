@@ -1,6 +1,6 @@
 /**
  * File: home+api.ts
- * Description: Deprecates the legacy direct-write home-locality route in favor of the fortress corridor.
+ * Description: Deprecates the legacy direct-write home-locality route in favor of the Dispatch-owned mutation corridor.
  */
 
 import type { RequestHandler } from 'expo-router/server';
@@ -18,7 +18,7 @@ export const PUT: RequestHandler = async () =>
   createJsonResponse(
     {
       error:
-        'Home-locality writes have moved to the shared fortress mutation corridor.',
+        'Home-locality writes have moved to the shared Dispatch-owned mutation corridor.',
     },
     410
   );

@@ -690,7 +690,7 @@ function createGenericReadyWorkflowPlans(input: {
         ],
         availability: 'runtime_ready',
         notes:
-          'Describes the generic-ready relation.follow.add fortress intent without enrolling live execution.',
+          'Describes the generic-ready relation.follow.add Dispatch intent without enrolling live execution.',
       },
       {
         workflow_plan_id: 'relation.follow.clear.workflow.v0',
@@ -735,7 +735,7 @@ function createGenericReadyWorkflowPlans(input: {
         ],
         availability: 'runtime_ready',
         notes:
-          'Describes the generic-ready relation.follow.clear fortress intent without enrolling live execution.',
+          'Describes the generic-ready relation.follow.clear Dispatch intent without enrolling live execution.',
       },
       {
         workflow_plan_id: 'relation.association.add.workflow.v0',
@@ -1123,7 +1123,7 @@ function createGenericReadyWorkflowPlans(input: {
         ],
         availability: 'runtime_ready',
         notes:
-          'Describes the generic-ready reaction.vote.set fortress intent without enrolling live execution.',
+          'Describes the generic-ready reaction.vote.set Dispatch intent without enrolling live execution.',
       },
       {
         workflow_plan_id: 'reaction.relation_participation.set.workflow.v0',
@@ -1174,7 +1174,7 @@ function createGenericReadyWorkflowPlans(input: {
         ],
         availability: 'runtime_ready',
         notes:
-          'Describes the generic-ready reaction.attestation.set fortress intent without enrolling live execution.',
+          'Describes the generic-ready reaction.attestation.set Dispatch intent without enrolling live execution.',
       },
     ];
   }

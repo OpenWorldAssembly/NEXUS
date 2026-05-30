@@ -54,7 +54,7 @@ export const PUT: RequestHandler = async () =>
   createJsonResponse(
     {
       error:
-        'Association claim writes are not available through this route; use the shared fortress mutation corridor for supported workflows.',
+        'Association claim writes are not available through this route; use the shared Dispatch-owned mutation corridor for supported workflows.',
     },
     410
   );

@@ -82,7 +82,7 @@ import {
   isNexusAuthGatePayload,
   NexusAuthGateError,
 } from '@runtime/nexus/nexus-auth-gate-error';
-import { createIdentityShellFortressAdapter } from '@app/components/nexus/identity-shell-fortress-adapter';
+import { createIdentityShellDispatchAdapter } from '@app/components/nexus/identity-shell-dispatch-adapter';
 const IDENTITY_STORE_NAME = 'identities';
 const FRESH_UNLOCKED_IDENTITY_HANDOFF_MS = 30_000;
 
@@ -156,7 +156,7 @@ type IdentityShellContextValue = {
   }) => Promise<void>;
   exportCurrentIdentityBundle: (passphrase: string) => Promise<string>;
   setSecurityMode: (securityMode: NexusSecurityMode) => Promise<void>;
-  runFortressMutation: <TResult = unknown>(input: {
+  runDispatchMutation: <TResult = unknown>(input: {
     intent: MutationIntent;
     writeRisk?: 'standard' | 'high_impact';
     interfaceEventHeaders?: Record<string, string>;
@@ -733,7 +733,7 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
       return;
     }
 
-    await runFortressMutationForIdentity({
+    await runDispatchMutationForIdentity({
       identity: input.identity,
       session: input.session,
       intent: {
@@ -1825,7 +1825,7 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
   };
 
   const setSecurityMode = async (securityMode: NexusSecurityMode) => {
-    await runFortressMutation({
+    await runDispatchMutation({
       intent: {
         kind: 'actor.write_policy.update',
         security_mode: securityMode,
@@ -1857,10 +1857,10 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
 
   const {
     createVerifiedRequestBody,
-    runFortressMutation,
-    runFortressMutationForIdentity,
+    runDispatchMutation,
+    runDispatchMutationForIdentity,
     signCurrentIdentityPacket,
-  } = createIdentityShellFortressAdapter({
+  } = createIdentityShellDispatchAdapter({
     requireUnlockedCurrentIdentity,
     refreshAuthSession,
     ensureFreshReauth,
@@ -2027,7 +2027,7 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
         restoreIdentityFromBundle,
         exportCurrentIdentityBundle,
         setSecurityMode,
-        runFortressMutation,
+        runDispatchMutation,
         revokePasskey,
         revokeSession,
         revokeOtherSessions,

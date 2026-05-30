@@ -1,6 +1,6 @@
 /**
  * File: packet-runtime-master-handler.ts
- * Description: Generic runtime connector corridor for manifest-backed packet actions before full fortress enrollment.
+ * Description: Generic runtime connector corridor for manifest-backed packet actions before full Dispatch enrollment.
  */
 
 import {
@@ -38,7 +38,7 @@ export type PacketRuntimeConnector<TResult = unknown> = {
   packet_type: string;
   packet_subtype: string;
   mutation_intent: string;
-  availability: 'definition' | 'live_bridge' | 'fortress_enrolled';
+  availability: 'definition' | 'live_bridge' | 'dispatch_enrolled';
   run: (input: unknown, context: PacketRuntimeConnectorContext) => Promise<TResult>;
 };
 

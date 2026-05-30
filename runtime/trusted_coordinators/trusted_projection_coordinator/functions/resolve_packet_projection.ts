@@ -12,7 +12,7 @@ import {
 import {
   resolveTrustedResolutionBinding,
   type TrustedResolutionCoordinatorContext,
-} from '@runtime/trusted_coordinators/trusted_resolution_coordinator';
+} from '@runtime/trusted_coordinators/trusted_resolution_coordinator/index.ts';
 import {
   chooseProjection,
   firstString,

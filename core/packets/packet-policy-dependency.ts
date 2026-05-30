@@ -179,7 +179,7 @@ export function listPacketPolicyRequirementDescriptorsFromDefinitions(input: {
       workflow_plan_ids: uniqueSorted(planIdsByPolicyAction.get(policyActionId) ?? []),
       live_write_policy_action: liveWritePolicyAction,
       notes: liveWritePolicyAction
-        ? 'Live fortress policy enforcement is resolved from Policy.write_lock packets by MutationPolicyGate.'
+        ? 'Live Dispatch policy enforcement is resolved from Policy.write_lock packets by MutationPolicyGate.'
         : 'Definition policy action is packet-definition metadata until live write-policy enrollment is scoped.',
     };
   });

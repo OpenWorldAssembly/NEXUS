@@ -338,7 +338,7 @@ export const PACKET_OPERATION_CAPABILITY_REGISTRY = [
     operation_kinds: ['relation.set', 'relation.clear'],
     planner_kinds: ['single_packet_revision'],
     builder_kinds: ['single_packet_body', 'single_packet_envelope'],
-    notes: 'Relation operation type awaiting extraction from current fortress handlers.',
+    notes: 'Relation operation type awaiting extraction from current Dispatch adapters.',
   },
   {
     engine_id: 'generic.claim_planner',

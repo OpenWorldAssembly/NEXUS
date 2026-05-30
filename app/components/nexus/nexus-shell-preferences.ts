@@ -19,7 +19,7 @@ export type PersistNexusElementPreferenceInput = {
   scopeDisplay?: Partial<NexusScopeDisplayPreferencesPayload>;
   shellChrome?: Partial<ShellChromePreferenceValue>;
   note: string;
-  runFortressMutation: <TResult = unknown>(input: {
+  runDispatchMutation: <TResult = unknown>(input: {
     intent: {
       kind: 'preference.element.set';
       scope_display?: Partial<NexusScopeDisplayPreferencesPayload>;
@@ -44,7 +44,7 @@ export async function persistNexusElementPreference(
   input: PersistNexusElementPreferenceInput
 ): Promise<PersistNexusElementPreferenceResult> {
   if (input.currentMode === 'claimed') {
-    const finalized = await input.runFortressMutation<{
+    const finalized = await input.runDispatchMutation<{
       preferences: NexusScopeDisplayPreferencesPayload;
       shell_chrome: ShellChromePreferenceValue;
       wrote_revision: boolean;

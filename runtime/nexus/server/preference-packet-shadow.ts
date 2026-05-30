@@ -33,7 +33,7 @@ export type ElementPreferenceShadowPlan = {
   schema_version: string;
   storage_class: string;
   revision_behavior: string;
-  live_fortress_ready: false;
+  live_dispatch_ready: false;
   action_plan: ShadowPacketDefinitionMutationActionPlan;
   body: ElementPreferenceBody;
   projected_runtime_preferences: NexusScopeDisplayPreferencesPayload;
@@ -103,7 +103,7 @@ export function createElementPreferenceShadowSetPlan(input: {
     schema_version: definition.current_schema_version,
     storage_class: definition.storage_class,
     revision_behavior: definition.revision_behavior,
-    live_fortress_ready: false,
+    live_dispatch_ready: false,
     action_plan: actionPlan,
     body,
     projected_runtime_preferences: preferenceBodyToRuntimeScopeDisplayPreferences(body),
@@ -126,7 +126,7 @@ export type ElementPreferenceShadowSeed = {
   action_plan: ShadowPacketDefinitionMutationActionPlan;
   packet_definition_audit_status: 'pass' | 'warn' | 'fail';
   safe_to_seed_shadow: boolean;
-  live_fortress_ready: false;
+  live_dispatch_ready: false;
   notes: string[];
 };
 
@@ -175,7 +175,7 @@ export function createElementPreferenceShadowSeed(input: {
       projectionEquivalent &&
       plan.action_plan.ready_for_shadow_runtime &&
       auditReport.finding_counts.error === 0,
-    live_fortress_ready: false,
+    live_dispatch_ready: false,
     notes: [
       'Shadow seed only: this object is not written by the manifest bridge; live claimed writes use the trusted Preference.element write workflow.',
       'Use this to compare runtime preference state against the Preference.element packet projection while manifest-driven execution remains trusted-local.',

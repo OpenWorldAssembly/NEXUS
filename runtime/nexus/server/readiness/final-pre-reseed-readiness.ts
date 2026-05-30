@@ -23,7 +23,7 @@ import {
   type PreReseedClosureLedgerEntry,
 } from '@runtime/nexus/server/pre-reseed-modernization-closure';
 import { auditPacketClientIntentEnrollments } from '@runtime/nexus/server/packet-client-intent-enrollment';
-import { auditPacketRuntimeFortressHandoffs } from '@runtime/nexus/server/packet-runtime-fortress-handoff';
+import { auditPacketRuntimeDispatchHandoffs } from '@runtime/nexus/server/packet-runtime-dispatch-handoff';
 import { auditPacketWorkflowAlignmentCoverage } from '@runtime/nexus/server/packet-workflow-alignment-audit';
 import { createDirectStorageTouchAuditReport } from '@runtime/nexus/server/readiness/direct-storage-touch-audit.ts';
 import { trustedDispatchCoordinator } from '@runtime/trusted_coordinators/trusted_dispatch_coordinator/index.ts';
@@ -158,7 +158,7 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
     ),
   });
   const clientIngressAudit = auditPacketClientIntentEnrollments();
-  const fortressHandoffAudit = auditPacketRuntimeFortressHandoffs();
+  const dispatchHandoffAudit = auditPacketRuntimeDispatchHandoffs();
   const workflowAlignmentAudit = auditPacketWorkflowAlignmentCoverage();
   const liveGenericAudit = auditLiveGenericWorkflowEnrollments();
   const liveCompositeAudit = auditLiveCompositeWorkflowEnrollments();
@@ -170,7 +170,7 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
     ...closureReport.policy_requirements,
     ...closureReport.dependency_requirements,
     ...closureReport.client_ingress_enrollments,
-    ...closureReport.fortress_handoffs,
+    ...closureReport.dispatch_handoffs,
     ...closureReport.composite_workflow_adapters,
     ...closureReport.packet_types,
   ];
@@ -231,7 +231,7 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
       : []),
     ...policySemanticAudit.findings.map((finding) => finding.message),
     ...clientIngressAudit.findings.map((finding) => finding.message),
-    ...fortressHandoffAudit.findings.map((finding) => finding.message),
+    ...dispatchHandoffAudit.findings.map((finding) => finding.message),
     ...workflowAlignmentAudit.findings.map((finding) => finding.message),
     ...liveGenericAudit.findings.map((finding) => finding.message),
     ...liveCompositeAudit.findings.map((finding) => finding.message),

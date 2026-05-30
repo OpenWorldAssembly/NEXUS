@@ -1,6 +1,6 @@
 /**
  * File: locality-graph-apply-planner.ts
- * Description: Plans the composite locality graph apply packet bundle before fortress signing.
+ * Description: Plans the composite locality graph apply packet bundle before Dispatch signing.
  */
 
 import type { MutationIntent } from '@core/auth/mutation-corridor';

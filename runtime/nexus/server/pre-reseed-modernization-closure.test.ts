@@ -18,7 +18,7 @@ function allEntries(): PreReseedClosureLedgerEntry[] {
     ...report.policy_requirements,
     ...report.dependency_requirements,
     ...report.client_ingress_enrollments,
-    ...report.fortress_handoffs,
+    ...report.dispatch_handoffs,
     ...report.composite_workflow_adapters,
     ...report.packet_types,
     ...report.follow_on_pass_queue,

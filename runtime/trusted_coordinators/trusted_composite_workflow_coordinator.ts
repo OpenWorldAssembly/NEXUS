@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto';
 
 import type {
   MutationIntent,
-  MutationTicket,
+  PreparedWriteTicket,
   PreparedMutation,
 } from '@core/auth/mutation-corridor';
 import {
@@ -45,7 +45,7 @@ import {
 } from '@runtime/nexus/server/locality-directory-service';
 import { planLocalityGraphApplyPackets } from '@runtime/nexus/server/locality-graph-apply-planner';
 import type { MutationPolicyGate } from '@runtime/nexus/server/mutation-policy-gate';
-import type { MutationTicketService } from '@runtime/nexus/server/mutation-ticket-service';
+import type { PreparedWriteTicketService } from '@runtime/nexus/server/prepared-write-ticket-service';
 import {
   getTrustedCompositeWorkflowAdapter,
   listTrustedCompositeWorkflowAdapters,
@@ -78,7 +78,7 @@ export type LiveCompositeWorkflowEnrollment = {
   operation_kinds: string[];
   policy_action_ids: MutationActionId[];
   dependency_ids: string[];
-  fortress_prepare_handler:
+  dispatch_prepare_adapter:
     | 'prepareLocalityPathCreate'
     | 'prepareLocalityGraphApply'
     | 'prepareDiscussionSurfacesEnsure'
@@ -100,7 +100,7 @@ export type TrustedCompositeWorkflowPlan = {
 };
 
 export type PreparedCompositeMutationResult = {
-  ticket: MutationTicket;
+  ticket: PreparedWriteTicket;
   prepared_mutation: PreparedMutation;
   prepared_result: unknown;
 };
@@ -108,7 +108,7 @@ export type PreparedCompositeMutationResult = {
 export type TrustedCompositeWorkflowMutationInput = {
   packetStore: NodeSQLitePacketStore;
   policyGate: MutationPolicyGate;
-  ticketService: MutationTicketService;
+  ticketService: PreparedWriteTicketService;
   actorPacket: PacketEnvelopeByType['Element'];
   intent: Extract<MutationIntent, { kind: LiveCompositeWorkflowMutationIntent }>;
 };
@@ -157,7 +157,7 @@ const PREPARE_HANDLER_BY_INTENT = {
   'actor.write_policy.update': 'prepareActorWritePolicyUpdate',
 } as const satisfies Record<
   LiveCompositeWorkflowMutationIntent,
-  LiveCompositeWorkflowEnrollment['fortress_prepare_handler']
+  LiveCompositeWorkflowEnrollment['dispatch_prepare_adapter']
 >;
 
 function normalizePreparedMutation(input: {
@@ -472,10 +472,10 @@ export function listLiveCompositeWorkflowEnrollments(): LiveCompositeWorkflowEnr
         operation_kinds: [...adapter.operation_kinds],
         policy_action_ids: [...adapter.policy_action_ids],
         dependency_ids: [...adapter.dependency_ids],
-        fortress_prepare_handler: PREPARE_HANDLER_BY_INTENT[mutationIntent],
+        dispatch_prepare_adapter: PREPARE_HANDLER_BY_INTENT[mutationIntent],
         live_mode: 'trusted_generic_composite_workflow',
         notes:
-          'Trusted generic-composite workflow: local runtime code executes adapter-aligned planning inside the existing fortress prepare/finalize corridor.',
+          'Trusted generic-composite workflow: local runtime code executes adapter-aligned planning inside the existing Dispatch prepare/finalize corridor.',
       };
     });
 }
@@ -1168,13 +1168,13 @@ export async function resolveTrustedDiscussionSurfacesCompositePlan(
 }
 
 function createPreparedCompositeTicket(input: {
-  ticketService: MutationTicketService;
+  ticketService: PreparedWriteTicketService;
   actorPacket: PacketEnvelopeByType['Element'];
   intent: MutationIntent;
   plan: TrustedCompositeWorkflowPlan;
 }): PreparedCompositeMutationResult {
   return {
-    ...input.ticketService.createPreparedMutationTicket({
+    ...input.ticketService.createPreparedWriteTicket({
       actorPacketId: input.actorPacket.header.packet_id,
       preparedMutation: input.plan.prepared_mutation,
       intent: input.intent,

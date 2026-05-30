@@ -1,6 +1,6 @@
 /**
  * File: posts+api.ts
- * Description: Deprecates the legacy discussion-post write route in favor of the fortress mutation corridor.
+ * Description: Deprecates the legacy discussion-post write route in favor of the Dispatch-owned mutation corridor.
  */
 
 import type { RequestHandler } from 'expo-router/server';

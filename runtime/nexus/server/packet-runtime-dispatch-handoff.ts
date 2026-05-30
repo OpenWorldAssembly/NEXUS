@@ -1,6 +1,6 @@
 /**
- * File: packet-runtime-fortress-handoff.ts
- * Description: Definition handoff contract between the runtime crossing guard and trusted write-chain readiness ledgers.
+ * File: packet-runtime-dispatch-handoff.ts
+ * Description: Dispatch handoff contract between the runtime crossing guard and trusted write-chain readiness ledgers.
  */
 
 import type { MutationIntent } from '@core/auth/mutation-corridor';
@@ -15,14 +15,14 @@ import {
   type PacketWorkflowAlignmentStatus,
 } from '@runtime/nexus/server/packet-workflow-alignment-audit';
 
-export type PacketRuntimeFortressHandoffStatus =
+export type PacketRuntimeDispatchHandoffStatus =
   | 'definition_ready'
   | 'missing_coverage'
   | 'runtime_owned'
   | 'legacy_bridge'
   | 'blocked';
 
-export type PacketRuntimeFortressHandoffReasonCode =
+export type PacketRuntimeDispatchHandoffReasonCode =
   | 'workflow_alignment_ready'
   | 'external_definition_execution_disabled'
   | 'planner_extraction_gap'
@@ -33,19 +33,19 @@ export type PacketRuntimeFortressHandoffReasonCode =
   | 'unready_workflow_dry_run'
   | 'missing_trusted_capability';
 
-export type PacketRuntimeFortressReturnHint = {
-  hint_kind: 'packet_runtime.fortress_return_hint';
+export type PacketRuntimeDispatchReturnHint = {
+  hint_kind: 'packet_runtime.dispatch_return_hint';
   mutation_intent: MutationIntent['kind'];
   refresh_surfaces: string[];
   projection_dependency_ids: string[];
   notes: string[];
 };
 
-export type PacketRuntimeFortressHandoff = {
-  handoff_kind: 'packet_runtime.fortress_handoff.definition';
+export type PacketRuntimeDispatchHandoff = {
+  handoff_kind: 'packet_runtime.dispatch_handoff.definition';
   mutation_intent: MutationIntent['kind'] | string;
   canonical_intent: MutationIntent['kind'] | null;
-  status: PacketRuntimeFortressHandoffStatus;
+  status: PacketRuntimeDispatchHandoffStatus;
   workflow_alignment_status: PacketWorkflowAlignmentStatus | null;
   operation_kinds: string[];
   workflow_plan_ids: string[];
@@ -55,20 +55,20 @@ export type PacketRuntimeFortressHandoff = {
   policy_action_ids: string[];
   dependency_ids: string[];
   resolver_ids: string[];
-  reason_codes: PacketRuntimeFortressHandoffReasonCode[];
+  reason_codes: PacketRuntimeDispatchHandoffReasonCode[];
   external_definition_execution_enabled: false;
   normalized_prepare_intent_kind: MutationIntent['kind'] | null;
-  fortress_prepare_handler: string | null;
-  fortress_finalize_handler: string | null;
-  return_hint: PacketRuntimeFortressReturnHint;
+  dispatch_prepare_adapter: string | null;
+  dispatch_finalize_adapter: string | null;
+  return_hint: PacketRuntimeDispatchReturnHint;
   notes: string[];
 };
 
-export type PacketRuntimeFortressHandoffCoverage = {
+export type PacketRuntimeDispatchHandoffCoverage = {
   mutation_intent: MutationIntent['kind'];
-  status: PacketRuntimeFortressHandoffStatus;
+  status: PacketRuntimeDispatchHandoffStatus;
   canonical_intent: MutationIntent['kind'] | null;
-  reason_codes: PacketRuntimeFortressHandoffReasonCode[];
+  reason_codes: PacketRuntimeDispatchHandoffReasonCode[];
   workflow_plan_ids: string[];
   composition_adapter_ids: string[];
   trusted_capability_ids: string[];
@@ -77,17 +77,17 @@ export type PacketRuntimeFortressHandoffCoverage = {
   external_definition_execution_enabled: false;
 };
 
-export type PacketRuntimeFortressHandoffAuditFinding = {
+export type PacketRuntimeDispatchHandoffAuditFinding = {
   severity: 'error';
   code: string;
   mutation_intent: string;
   message: string;
 };
 
-export type PacketRuntimeFortressHandoffAuditReport = {
+export type PacketRuntimeDispatchHandoffAuditReport = {
   status: 'pass' | 'fail';
   checked_mutation_intents: string[];
-  findings: PacketRuntimeFortressHandoffAuditFinding[];
+  findings: PacketRuntimeDispatchHandoffAuditFinding[];
 };
 
 function uniqueSorted(values: readonly string[]): string[] {
@@ -98,9 +98,9 @@ function createReturnHint(input: {
   mutationIntent: MutationIntent['kind'];
   dependencyIds: readonly string[];
   workflowPlanPacketTypes: readonly string[];
-}): PacketRuntimeFortressReturnHint {
+}): PacketRuntimeDispatchReturnHint {
   return {
-    hint_kind: 'packet_runtime.fortress_return_hint',
+    hint_kind: 'packet_runtime.dispatch_return_hint',
     mutation_intent: input.mutationIntent,
     refresh_surfaces: uniqueSorted([
       ...input.workflowPlanPacketTypes.map((packetType) =>
@@ -126,7 +126,7 @@ function createReturnHint(input: {
 
 function mapAlignmentToHandoffStatus(
   alignmentStatus: PacketWorkflowAlignmentStatus
-): PacketRuntimeFortressHandoffStatus {
+): PacketRuntimeDispatchHandoffStatus {
   if (alignmentStatus === 'workflow_aligned') {
     return 'definition_ready';
   }
@@ -144,8 +144,8 @@ function mapAlignmentToHandoffStatus(
 
 function reasonCodesForCoverage(
   coverage: PacketWorkflowAlignmentCoverage
-): PacketRuntimeFortressHandoffReasonCode[] {
-  const reasonCodes: PacketRuntimeFortressHandoffReasonCode[] = [];
+): PacketRuntimeDispatchHandoffReasonCode[] {
+  const reasonCodes: PacketRuntimeDispatchHandoffReasonCode[] = [];
 
   if (coverage.workflow_alignment_status === 'workflow_aligned') {
     reasonCodes.push('workflow_alignment_ready');
@@ -173,7 +173,7 @@ function reasonCodesForCoverage(
 
   reasonCodes.push('external_definition_execution_disabled');
 
-  return uniqueSorted(reasonCodes) as PacketRuntimeFortressHandoffReasonCode[];
+  return uniqueSorted(reasonCodes) as PacketRuntimeDispatchHandoffReasonCode[];
 }
 
 function isKnownMutationIntent(
@@ -184,12 +184,12 @@ function isKnownMutationIntent(
   );
 }
 
-export function resolvePacketRuntimeFortressHandoff(input: {
+export function resolvePacketRuntimeDispatchHandoff(input: {
   mutationIntent: string;
-}): PacketRuntimeFortressHandoff {
+}): PacketRuntimeDispatchHandoff {
   if (!isKnownMutationIntent(input.mutationIntent)) {
     return {
-      handoff_kind: 'packet_runtime.fortress_handoff.definition',
+      handoff_kind: 'packet_runtime.dispatch_handoff.definition',
       mutation_intent: input.mutationIntent,
       canonical_intent: null,
       status: 'blocked',
@@ -205,19 +205,19 @@ export function resolvePacketRuntimeFortressHandoff(input: {
       reason_codes: ['unknown_mutation_intent'],
       external_definition_execution_enabled: false,
       normalized_prepare_intent_kind: null,
-      fortress_prepare_handler: null,
-      fortress_finalize_handler: null,
+      dispatch_prepare_adapter: null,
+      dispatch_finalize_adapter: null,
       return_hint: {
-        hint_kind: 'packet_runtime.fortress_return_hint',
+        hint_kind: 'packet_runtime.dispatch_return_hint',
         mutation_intent: 'actor.write_policy.update',
         refresh_surfaces: [],
         projection_dependency_ids: [],
         notes: [
-          'Unknown mutation intents cannot produce fortress return hints.',
+          'Unknown mutation intents cannot produce Dispatch return hints.',
         ],
       },
       notes: [
-        'The crossing guard refuses unknown mutation intents before fortress handoff.',
+        'The crossing guard refuses unknown mutation intents before Dispatch handoff.',
       ],
     };
   }
@@ -227,7 +227,7 @@ export function resolvePacketRuntimeFortressHandoff(input: {
 
   if (!coverage) {
     return {
-      handoff_kind: 'packet_runtime.fortress_handoff.definition',
+      handoff_kind: 'packet_runtime.dispatch_handoff.definition',
       mutation_intent: input.mutationIntent,
       canonical_intent: null,
       status: 'blocked',
@@ -243,8 +243,8 @@ export function resolvePacketRuntimeFortressHandoff(input: {
       reason_codes: ['missing_workflow_alignment'],
       external_definition_execution_enabled: false,
       normalized_prepare_intent_kind: input.mutationIntent,
-      fortress_prepare_handler: descriptor.prepare,
-      fortress_finalize_handler: descriptor.finalize,
+      dispatch_prepare_adapter: descriptor.prepare,
+      dispatch_finalize_adapter: descriptor.finalize,
       return_hint: createReturnHint({
         mutationIntent: input.mutationIntent,
         dependencyIds: [],
@@ -263,7 +263,7 @@ export function resolvePacketRuntimeFortressHandoff(input: {
       : mapAlignmentToHandoffStatus(coverage.workflow_alignment_status);
 
   return {
-    handoff_kind: 'packet_runtime.fortress_handoff.definition',
+    handoff_kind: 'packet_runtime.dispatch_handoff.definition',
     mutation_intent: coverage.mutation_intent,
     canonical_intent: coverage.canonical_intent,
     status,
@@ -279,8 +279,8 @@ export function resolvePacketRuntimeFortressHandoff(input: {
     reason_codes: reasonCodes,
     external_definition_execution_enabled: false,
     normalized_prepare_intent_kind: coverage.canonical_intent ?? coverage.mutation_intent,
-    fortress_prepare_handler: descriptor.prepare,
-    fortress_finalize_handler: descriptor.finalize,
+    dispatch_prepare_adapter: descriptor.prepare,
+    dispatch_finalize_adapter: descriptor.finalize,
     return_hint: createReturnHint({
       mutationIntent: coverage.mutation_intent,
       dependencyIds: coverage.dependency_ids,
@@ -293,9 +293,9 @@ export function resolvePacketRuntimeFortressHandoff(input: {
   };
 }
 
-export function listPacketRuntimeFortressHandoffCoverage(): PacketRuntimeFortressHandoffCoverage[] {
+export function listPacketRuntimeDispatchHandoffCoverage(): PacketRuntimeDispatchHandoffCoverage[] {
   return listPacketWorkflowAlignmentCoverage().map((coverage) => {
-    const handoff = resolvePacketRuntimeFortressHandoff({
+    const handoff = resolvePacketRuntimeDispatchHandoff({
       mutationIntent: coverage.mutation_intent,
     });
 
@@ -314,11 +314,11 @@ export function listPacketRuntimeFortressHandoffCoverage(): PacketRuntimeFortres
   });
 }
 
-export function auditPacketRuntimeFortressHandoffs(): PacketRuntimeFortressHandoffAuditReport {
-  const findings: PacketRuntimeFortressHandoffAuditFinding[] = [];
+export function auditPacketRuntimeDispatchHandoffs(): PacketRuntimeDispatchHandoffAuditReport {
+  const findings: PacketRuntimeDispatchHandoffAuditFinding[] = [];
 
   for (const descriptor of listMutationIntentDescriptors()) {
-    const handoff = resolvePacketRuntimeFortressHandoff({
+    const handoff = resolvePacketRuntimeDispatchHandoff({
       mutationIntent: descriptor.kind,
     });
 

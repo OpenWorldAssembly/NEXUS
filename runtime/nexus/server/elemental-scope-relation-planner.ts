@@ -1,6 +1,6 @@
 /**
  * File: elemental-scope-relation-planner.ts
- * Description: Plans actor-to-scope relation packets for fortress mutations without persisting them.
+ * Description: Plans actor-to-scope relation packets for Dispatch-owned mutations without persisting them.
  */
 
 import {

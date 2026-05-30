@@ -1,6 +1,6 @@
 /**
  * File: nexus-query-api.mutations.ts
- * Description: Client-side helpers for the fortress prepare/finalize mutation transport.
+ * Description: Client-side helpers for the Dispatch prepare/finalize mutation transport.
  */
 
 import type {

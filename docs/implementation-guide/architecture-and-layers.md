@@ -73,7 +73,7 @@ The `runtime/nexus/server` bounded-context map is:
 - `locality/*` for locality directory, graph planning, and location search
 - `scope/*` for scope graph, scope compatibility, parent resolution, and display preferences
 - `packet-explorer/*` for Explorer import/export/search/data services
-- `fortress/*` for signed mutation prepare/finalize corridor work as later passes migrate it
+- `dispatch/*` or coordinator-owned folders for signed mutation prepare/finalize corridor work as later passes migrate it
 - `readiness/*` for modernization and pre-reseed readiness reports
 - `shared/*` for small server helpers used across bounded contexts
 

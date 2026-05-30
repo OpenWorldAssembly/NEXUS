@@ -1,6 +1,6 @@
 /**
  * File: mutation-digests.ts
- * Description: Builds canonical unsigned packet digests for the fortress mutation corridor.
+ * Description: Builds canonical unsigned packet digests for the Dispatch-owned mutation corridor.
  */
 
 import { canonicalizeJson, sha256Base64Url } from '@core/crypto/canonical-json';

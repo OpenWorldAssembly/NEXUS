@@ -1,32 +1,32 @@
 /**
- * File: mutation-ticket-service.ts
- * Description: Runtime ticket lifecycle wrapper retained for transitional trusted prepare/finalize writes.
+ * File: prepared-write-ticket-service.ts
+ * Description: Runtime prepared-write ticket lifecycle wrapper retained for transitional trusted prepare/finalize writes.
  */
 
 import type {
   MutationIntent,
-  MutationTicket,
+  PreparedWriteTicket,
   PreparedMutation,
 } from '@core/auth/mutation-corridor';
 import {
-  MutationTicketStore,
-  type StoredMutationTicket,
-} from '@runtime/nexus/server/mutation-ticket-store';
+  PreparedWriteTicketStore,
+  type StoredPreparedWriteTicket,
+} from '@runtime/nexus/server/prepared-write-ticket-store';
 
-export type PreparedMutationTicketResult = {
-  ticket: MutationTicket;
+export type PreparedWriteTicketResult = {
+  ticket: PreparedWriteTicket;
   prepared_mutation: PreparedMutation;
 };
 
-export class MutationTicketService {
-  constructor(private readonly store: MutationTicketStore) {}
+export class PreparedWriteTicketService {
+  constructor(private readonly store: PreparedWriteTicketStore) {}
 
-  createPreparedMutationTicket(input: {
+  createPreparedWriteTicket(input: {
     actorPacketId: string;
     preparedMutation: PreparedMutation;
     intent: MutationIntent;
     preparedResult?: unknown;
-  }): PreparedMutationTicketResult {
+  }): PreparedWriteTicketResult {
     const storedTicket = this.store.create({
       actor_packet_id: input.actorPacketId,
       prepared_mutation: input.preparedMutation,
@@ -35,30 +35,30 @@ export class MutationTicketService {
     });
 
     return {
-      ticket: toPublicMutationTicket(storedTicket),
+      ticket: toPublicPreparedWriteTicket(storedTicket),
       prepared_mutation: input.preparedMutation,
     };
   }
 
-  read(ticketId: string): StoredMutationTicket | null {
+  read(ticketId: string): StoredPreparedWriteTicket | null {
     return this.store.read(ticketId);
   }
 
   consumeForActor(input: {
     ticketId: string;
     actorPacketId: string;
-  }): StoredMutationTicket {
+  }): StoredPreparedWriteTicket {
     const storedTicket = this.store.consume(input.ticketId);
 
     if (storedTicket.actor_packet_id !== input.actorPacketId) {
-      throw new Error('Mutation ticket actor does not match the current actor.');
+      throw new Error('Prepared-write ticket actor does not match the current actor.');
     }
 
     return storedTicket;
   }
 }
 
-function toPublicMutationTicket(storedTicket: StoredMutationTicket): MutationTicket {
+function toPublicPreparedWriteTicket(storedTicket: StoredPreparedWriteTicket): PreparedWriteTicket {
   return {
     ticket_id: storedTicket.ticket_id,
     actor_packet_id: storedTicket.actor_packet_id,

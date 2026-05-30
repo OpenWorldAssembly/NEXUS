@@ -236,13 +236,13 @@ export const TRUSTED_COORDINATOR_SCAFFOLD_MANIFEST = [
     coordinator_id: 'trusted_resolution_coordinator.v0',
     coordinator_kind: 'resolution',
     public_object_name: 'trustedResolutionCoordinator',
-    public_import_path: '@runtime/trusted_coordinators/trusted_resolution_coordinator',
-    runtime_path: 'runtime/trusted_coordinators/trusted_resolution_coordinator.ts',
-    structure: 'legacy_flat',
+    public_import_path: '@runtime/trusted_coordinators/trusted_resolution_coordinator/index.ts',
+    runtime_path: 'runtime/trusted_coordinators/trusted_resolution_coordinator',
+    structure: 'foldered_gated',
     expected_methods: [
-      { method_name: 'runStep', notes: 'Planned future public method if Resolution becomes foldered.' },
+      { method_name: 'runStep', notes: 'Executes one shared Resolution DSL step against trusted runtime context.' },
     ],
-    notes: 'Shared DSL executor is intentionally small and flat for now.',
+    notes: 'Shared DSL executor for definition/projection value binding. Foldered so Resolution remains a bounded coordinator seam before resolver complexity grows.',
   },
 ] as const satisfies readonly TrustedRuntimeCoordinatorScaffoldDescriptor[];
 

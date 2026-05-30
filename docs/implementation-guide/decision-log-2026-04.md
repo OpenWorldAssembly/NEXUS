@@ -42,11 +42,11 @@ This monthly log condenses the April 2026 decisions that remain most important f
 - Locality search and locality creation hardened around canonical geographic assembly flows.
 - Location disclosure remained separate from mounted home-locality truth.
 
-## 2026-04-23 and 2026-04-24 compatibility and fortress corridor
+## 2026-04-23 and 2026-04-24 compatibility and Dispatch corridor
 
 - Schema compatibility moved into a real raw/adapted/read-for-write pipeline.
-- Fortress pass 1 moved discussion write admission into core mutation law.
-- Fortress pass 2 introduced the shared prepare/sign/finalize corridor and packet-backed write-lock policy updates.
+- Dispatch pass 1 moved discussion write admission into core mutation law.
+- Dispatch pass 2 introduced the shared prepare/sign/finalize corridor and packet-backed write-lock policy updates.
 
 ## 2026-04-25 to 2026-04-29 packet floor and verification
 

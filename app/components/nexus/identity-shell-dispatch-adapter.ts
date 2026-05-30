@@ -1,6 +1,6 @@
 /**
- * File: identity-shell-fortress-adapter.ts
- * Description: Contains the client-side signer/orchestration seam for fortress mutations.
+ * File: identity-shell-dispatch-adapter.ts
+ * Description: Contains the client-side signer/orchestration seam for Dispatch mutations.
  */
 
 import {
@@ -33,7 +33,7 @@ type UnlockedIdentity = ActiveIdentityState & { privateJwk: JsonWebKey };
 
 type MutationWriteRisk = 'standard' | 'high_impact';
 
-type IdentityShellFortressAdapterInput = {
+type IdentityShellDispatchAdapterInput = {
   requireUnlockedCurrentIdentity: () => UnlockedIdentity;
   refreshAuthSession: () => Promise<NexusAuthSessionPayload>;
   ensureFreshReauth: (
@@ -91,8 +91,8 @@ async function signPacketForIdentity<TPacket extends PacketEnvelope>(input: {
   });
 }
 
-export function createIdentityShellFortressAdapter(
-  input: IdentityShellFortressAdapterInput
+export function createIdentityShellDispatchAdapter(
+  input: IdentityShellDispatchAdapterInput
 ) {
   const createVerifiedRequestBody = async <
     TPayload extends Record<string, unknown>,
@@ -243,7 +243,7 @@ export function createIdentityShellFortressAdapter(
     });
   };
 
-  const runFortressMutation = async <TResult = unknown>(inputForMutation: {
+  const runDispatchMutation = async <TResult = unknown>(inputForMutation: {
     intent: MutationIntent;
     writeRisk?: MutationWriteRisk;
     interfaceEventHeaders?: Record<string, string>;
@@ -316,7 +316,7 @@ export function createIdentityShellFortressAdapter(
     };
   };
 
-  const runFortressMutationForIdentity = async <TResult = unknown>(inputForIdentity: {
+  const runDispatchMutationForIdentity = async <TResult = unknown>(inputForIdentity: {
     identity: UnlockedIdentity;
     session: NexusAuthSessionPayload;
     intent: MutationIntent;
@@ -365,8 +365,8 @@ export function createIdentityShellFortressAdapter(
 
   return {
     createVerifiedRequestBody,
-    runFortressMutation,
-    runFortressMutationForIdentity,
+    runDispatchMutation,
+    runDispatchMutationForIdentity,
     signCurrentIdentityPacket,
   };
 }

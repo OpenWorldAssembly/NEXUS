@@ -314,7 +314,7 @@ export default function NexusDiscussionsPage() {
     currentActorPacketId,
     currentIdentity,
     currentLabel,
-    runFortressMutation,
+    runDispatchMutation,
   } = useIdentityShell();
   const writeScopeId =
     activeScope.id === 'you' && currentActorPacketId
@@ -722,7 +722,7 @@ export default function NexusDiscussionsPage() {
       setFeedError(null);
 
       try {
-        await runFortressMutation<{
+        await runDispatchMutation<{
           created_packet_refs: { packet_id: string; revision_id: string }[];
           discussions: NexusDiscussionsPayload;
         }>({
@@ -759,7 +759,7 @@ export default function NexusDiscussionsPage() {
     guardNexusWrite,
     loadWorkspace,
     openNexusAuthGateForError,
-    runFortressMutation,
+    runDispatchMutation,
   ]);
 
   /**
@@ -980,7 +980,7 @@ export default function NexusDiscussionsPage() {
               setPendingVotePacketId(post.packet.packet_id);
               setVoteError(null);
               const applyVote = async () => {
-                const finalizedMutation = await runFortressMutation<{
+                const finalizedMutation = await runDispatchMutation<{
                   target_packet_id: string;
                   value: 'up' | 'down' | null;
                   summary: NexusDiscussionPost['vote_summary'];
@@ -1060,7 +1060,7 @@ export default function NexusDiscussionsPage() {
       replyBranchStates,
       rootReplies,
       runWithLoading,
-      runFortressMutation,
+      runDispatchMutation,
     ]
   );
 
@@ -1124,7 +1124,7 @@ export default function NexusDiscussionsPage() {
         setIsSubmittingPost(true);
         setSubmitError(null);
         const createPost = async () => {
-          const finalizedMutation = await runFortressMutation<{
+          const finalizedMutation = await runDispatchMutation<{
             viewer: unknown;
             post: NexusDiscussionPost;
           }>({
@@ -1186,7 +1186,7 @@ export default function NexusDiscussionsPage() {
     selectedFeedSort,
     selectedForum,
     selectedReplySort,
-    runFortressMutation,
+    runDispatchMutation,
     writeScopeId,
   ]);
 
@@ -1222,7 +1222,7 @@ export default function NexusDiscussionsPage() {
             throw new Error('Unable to resolve the reply target for this thread.');
           }
 
-          const finalizedMutation = await runFortressMutation<{
+          const finalizedMutation = await runDispatchMutation<{
             viewer: unknown;
             post: NexusDiscussionPost;
           }>({
@@ -1298,7 +1298,7 @@ export default function NexusDiscussionsPage() {
     router,
     selectedFeedSort,
     selectedReplySort,
-    runFortressMutation,
+    runDispatchMutation,
     threadPayload,
     writeScopeId,
   ]);

@@ -6,7 +6,7 @@
 import type {
   MutationIntent,
   MutationPersistEffect,
-  MutationTicket,
+  PreparedWriteTicket,
   PreparedMutation,
 } from '@core/auth/mutation-corridor';
 import type { PacketStore } from '@core/contracts';
@@ -26,7 +26,7 @@ export type {
 } from '@runtime/trusted_coordinators/trusted_request_coordinator/trusted_request_types.ts';
 
 export type TrustedDispatchPreparedMutationResult = {
-  ticket: MutationTicket;
+  ticket: PreparedWriteTicket;
   prepared_mutation: PreparedMutation;
 };
 

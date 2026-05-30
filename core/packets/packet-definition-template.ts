@@ -62,7 +62,7 @@ export const PACKET_MANIFEST_DEFINITION_TEMPLATE = [
   {
     section_key: 'policy',
     status: 'supported',
-    summary: 'Policy action IDs and future proof/scope descriptors used by the fortress gate.',
+    summary: 'Policy action IDs and future proof/scope descriptors used by the Dispatch gate.',
     required_for_definition: true,
   },
   {

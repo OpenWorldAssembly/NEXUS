@@ -232,8 +232,8 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - Claimed shell preference reads now resolve the actor from the authenticated session; actor query mismatches use guest projection instead of reading another actor's private preference packet.
 - `Preference.element` now includes an `interface.shell_chrome` section for navigation mode, theme mode, and UI density so remaining shell-interface preferences can move into the same body without redefining the packet shape.
 - `runtime/nexus/server/packet-runtime-master-handler.ts` is the first generic runtime connector corridor: routes can request a connector id, the handler resolves the packet definition and mutation action plan, then dispatches to local trusted connector code instead of hardcoding route-specific packet writes.
-- `preference.element.interface.set` was initially enrolled in that master handler as a live bridge. It wrote `Preference.element.value.interface.scope_display`, could preserve or update `interface.shell_chrome`, and kept the legacy scope-display table as a compatibility cache. The later fortress promotion pass moves claimed writes to `preference.element.set` and keeps this connector runtime-ready.
-- The manifest definition fortress bridge remains non-executing and descriptor-only. The new runtime master handler still runs trusted local connector code; it does not execute arbitrary behavior from imported definitions.
+- `preference.element.interface.set` was initially enrolled in that master handler as a live bridge. It wrote `Preference.element.value.interface.scope_display`, could preserve or update `interface.shell_chrome`, and kept the legacy scope-display table as a compatibility cache. The later Dispatch promotion pass moves claimed writes to `preference.element.set` and keeps this connector runtime-ready.
+- The manifest definition Dispatch metadata bridge remains non-executing and descriptor-only. The new runtime master handler still runs trusted local connector code; it does not execute arbitrary behavior from imported definitions.
 
 ## 2026-05 policy/dependency semantic authority
 
@@ -254,7 +254,7 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - Legacy claim/home-locality material remains compatibility-readable and importable, but it is no longer a live mutation corridor entrypoint.
 - A final pre-reseed readiness report now inventories canonical write intents, compatibility-only surfaces, OWA default anchors, required seed policies, discussion defaults, canonical definition packet types, and out-of-scope packet types for the separate reseed design pass.
 
-## 2026-05 definition packetization and Preference fortress promotion
+## 2026-05 definition packetization and Preference Dispatch promotion
 
 - Active manifest definition parts now produce schema-validated canonical `Definition` packet envelopes, and those envelopes are grouped into one canonical `Bundle.packet_set` definition profile inventory for reseed readiness.
 - The seeded definition profile audit compares packet material back to the core manifest and fails closed on missing parts, unexpected parts, stale profile metadata, duplicate bundle refs, or digest drift.
@@ -318,7 +318,7 @@ This monthly log condenses the May 2026 decisions that remain most important for
 
 - The client-side Interface Signal Conductor direction was renamed to Interface Event Coordinator, reflecting its role as the master interface event lifecycle controller rather than a trusted runtime actor.
 - Trusted Dispatch Coordinator is now the canonical runtime front desk name for request normalization and client-intent preflight; the existing Trusted Request Coordinator remains as the compatibility implementation bridge.
-- Mutation prepare now passes through dispatch normalization and fail-closed client-intent preflight before the existing fortress corridor continues. Mutation finalize records dispatch normalization while preserving ticket-based finalize preflight and signed payload schemas.
+- Mutation prepare now passes through dispatch normalization and fail-closed client-intent preflight before the existing Dispatch corridor continues. Mutation finalize records dispatch normalization while preserving ticket-based finalize preflight and signed payload schemas.
 
 ## 2026-05 Trusted runtime coordinator audit and caller migration
 
@@ -338,14 +338,14 @@ This monthly log condenses the May 2026 decisions that remain most important for
 
 - Runtime cleanup began after the major trusted coordinator seams stabilized, with `runtime/nexus/server/*` moving toward bounded-context folders instead of one flat service directory.
 - Identity, discussion, reaction, locality, scope, Packet Explorer, readiness, and shared helper modules now have canonical homes with top-level compatibility bridges preserved for existing callers.
-- Fortress mutation flow has a reserved bounded-context home, but signed corridor files remain top-level until a dedicated behavior-preserving move can keep the ticket/signing path easy to verify.
+- Dispatch mutation flow owns the reserved bounded-context home; signed corridor helpers should stay behavior-preserving and ticket/signing paths easy to verify.
 - The rule for this chapter is move-first and split-later: large services keep behavior intact now, then decompose by responsibility inside their bounded-context folders in later passes.
 
 ## 2026-05 Runtime responsibility and ideal ownership audit
 
 - Runtime cleanup shifted from folder organization to ideal ownership analysis, classifying runtime processes by whether they belong to Trusted Coordinators, packet-definition metadata, Projection, storage adapters, OWA adapters, compatibility bridges, or the legacy signed corridor.
 - Discussion, reaction, locality, and scope runtime services are treated as transitional product/runtime adapters rather than final generic architecture.
-- Fortress naming is now explicitly legacy signed-corridor language; new work should use Dispatch, Regulation, Planning, Certification, Archive, and Interface Event Coordinator ownership terms where possible.
+- Signed-corridor naming is now explicitly legacy signed-corridor language; new work should use Dispatch, Regulation, Planning, Certification, Archive, and Interface Event Coordinator ownership terms where possible.
 - The audit records packet-definition opportunities for projection fields, action availability, policy requirements, build/default/dependency assumptions, and import/export/verification summaries without allowing imported packet definitions to execute local runtime behavior.
 
 ## 2026-05 Dispatch-owned write pipeline correction
@@ -360,7 +360,7 @@ This monthly log condenses the May 2026 decisions that remain most important for
 
 - Added package-level trusted coordinator test scripts: `test:trusted-coordinators` for the runtime coordinator tests and `check:trusted-coordinators` for audit plus tests.
 - Hardened the trusted coordinator audit to catch unmanifested `trusted_*_coordinator` folders, missing trusted test scripts, manifest/barrel/method/result-kind drift, and unregistered trusted issue codes.
-- Runtime crossing notes now recursively scan real implementation folders under `runtime/nexus/server/*` and `src/app/api/nexus/*` instead of only top-level compatibility bridge files. Direct storage touches, signature verification, packet interpretation, bundle import/export, API packet parsing, and legacy fortress corridor references remain non-failing migration notes.
+- Runtime crossing notes now recursively scan real implementation folders under `runtime/nexus/server/*` and `src/app/api/nexus/*` instead of only top-level compatibility bridge files. Direct storage touches, signature verification, packet interpretation, bundle import/export, API packet parsing, and legacy Dispatch corridor references remain non-failing migration notes.
 - Removed the empty `trusted_write_coordinator` remnant. Writes remain Dispatch-owned lifecycle orchestration, not a separate coordinator.
 - Corrected the Exchange manifest note: Exchange can orchestrate accepted import commits through Archive, but Archive remains the storage owner and Exchange should not bypass Compatibility or Verification ownership.
 
@@ -392,7 +392,7 @@ This monthly log condenses the May 2026 decisions that remain most important for
 
 ## 2026-05 Legacy mutation service containment and reaction finalize adapter
 
-- `NexusMutationService` is no longer constructed by `createNexusPacketServiceRegistry` or exposed on `NexusPacketServices`; the remaining mutation/fortress files are legacy corridor candidates rather than live service-graph dependencies.
+- `NexusMutationService` is no longer constructed by `createNexusPacketServiceRegistry` or exposed on `NexusPacketServices`; the remaining mutation/signed-corridor files are legacy corridor candidates rather than live service-graph dependencies.
 - Trusted Dispatch now returns generic trusted finalize facts for `reaction.vote.set` instead of importing `SQLiteReactionService` or refreshing reaction-derived state directly.
 - The finalize API route decorates completed `reaction.vote.set` responses through `reaction-finalize-response-adapter`, preserving the current target/value/summary response compatibility while keeping reaction runtime services outside the trusted coordinator.
 - The trusted coordinator audit now fails if the live service registry reintroduces `NexusMutationService`, if prepare/finalize routes call legacy mutation service methods, or if Trusted Dispatch imports reaction runtime services.
@@ -412,7 +412,7 @@ This monthly log condenses the May 2026 decisions that remain most important for
 
 ## 2026-05 Legacy mutation executor deletion
 
-- Removed the old route executor stack: `NexusMutationService`, fortress prepare/finalize handlers, fortress handler domain maps, mutation prepare/finalize handler maps, signed-packet finalizer, preference fortress workflow, and manifest fortress bridge files.
+- Removed the old route executor stack: `NexusMutationService`, Dispatch prepare/finalize handlers, old handler domain maps, mutation prepare/finalize handler maps, signed-packet finalizer, preference Dispatch workflow, and manifest Dispatch metadata bridge files.
 - Trusted Dispatch remains the route-facing prepare/finalize authority. Deleted executor files are now guarded by `audit:trusted-coordinators` so they fail if restored.
-- Static genericization/handoff/readiness ledgers remain temporarily because they describe migration state and pre-reseed closure, but their text now points to Dispatch/trusted-chain authority rather than the old fortress corridor.
-- Direct-write seam classification now treats discussion/reaction/preference helpers as transitional adapter/internal or compatibility-cache writes instead of fortress-internal helpers.
+- Static genericization/handoff/readiness ledgers remain temporarily because they describe migration state and pre-reseed closure, but their text now points to Dispatch/trusted-chain authority rather than the old Dispatch corridor.
+- Direct-write seam classification now treats discussion/reaction/preference helpers as transitional adapter/internal or compatibility-cache writes instead of Dispatch-internal helpers.

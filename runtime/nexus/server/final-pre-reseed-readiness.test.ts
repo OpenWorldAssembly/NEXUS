@@ -6,7 +6,7 @@ import { PACKET_TYPES } from '@core/schema/packet-ontology';
 import { createFinalPreReseedReadinessReport } from './final-pre-reseed-readiness.ts';
 import { listMutationIntentDescriptors } from './mutation-intent-registry.ts';
 import { listPacketClientIntentEnrollments } from './packet-client-intent-enrollment.ts';
-import { listPacketRuntimeFortressHandoffCoverage } from './packet-runtime-fortress-handoff.ts';
+import { listPacketRuntimeDispatchHandoffCoverage } from './packet-runtime-dispatch-handoff.ts';
 
 const RETIRED_LEGACY_MUTATION_INTENTS = [
   'association.claim.set',
@@ -33,7 +33,7 @@ test('retired legacy mutation intents are absent from live registries', () => {
     )
   );
   const handoffIntentKinds = new Set<string>(
-    listPacketRuntimeFortressHandoffCoverage().map(
+    listPacketRuntimeDispatchHandoffCoverage().map(
       (coverage) => coverage.mutation_intent
     )
   );

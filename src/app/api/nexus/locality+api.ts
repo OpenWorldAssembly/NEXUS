@@ -1,6 +1,6 @@
 /**
  * File: locality+api.ts
- * Description: Deprecates the legacy direct-write locality creation route in favor of the fortress corridor.
+ * Description: Deprecates the legacy direct-write locality creation route in favor of the Dispatch-owned mutation corridor.
  */
 
 import type { RequestHandler } from 'expo-router/server';
@@ -17,7 +17,7 @@ function createJsonResponse(body: unknown, status = 200): Response {
 export const POST: RequestHandler = async () =>
   createJsonResponse(
     {
-      error: 'Locality creation has moved to the shared fortress mutation corridor.',
+      error: 'Locality creation has moved to the shared Dispatch-owned mutation corridor.',
     },
     410
   );

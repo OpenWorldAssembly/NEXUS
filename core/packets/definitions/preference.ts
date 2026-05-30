@@ -232,7 +232,7 @@ export const preferencePacketDefinition = {
       output_schema_key: 'ElementPreferenceBodySchema',
       availability: 'canonical',
       notes:
-        'Canonical body builder descriptor metadata; claimed Preference.element writes now enter the fortress-enrolled preference workflow, while this descriptor remains manifest metadata rather than executable imported code.',
+        'Canonical body builder descriptor metadata; claimed Preference.element writes now enter the Dispatch-enrolled preference workflow, while this descriptor remains manifest metadata rather than executable imported code.',
     },
   ],
   planners: [
@@ -327,7 +327,7 @@ export const preferencePacketDefinition = {
           output_key: 'preference_revision',
           on_failure: 'abort_workflow',
           notes:
-            'Definition workflow for claimed actor interface preference revisions through the fortress corridor.',
+            'Definition workflow for claimed actor interface preference revisions through the Dispatch corridor.',
         },
       ],
       availability: 'canonical',

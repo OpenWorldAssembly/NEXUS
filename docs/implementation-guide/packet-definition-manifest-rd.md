@@ -239,7 +239,7 @@ The definition comparison helpers still exist for audit and descriptor compariso
 
 ## Descriptor Runtime Bridge
 
-The old manifest fortress descriptor bridge has been removed; remaining manifest work should route through Definition, Planning, and Dispatch-owned trusted write metadata rather than a separate bridge.
+The old manifest Dispatch descriptor bridge has been removed; remaining manifest work should route through Definition, Planning, and Dispatch-owned trusted write metadata rather than a separate bridge.
 
 The bridge translates packet-definition descriptors into trusted-coordinator-shaped prepare metadata without entering the trusted mutation corridor. It resolves:
 

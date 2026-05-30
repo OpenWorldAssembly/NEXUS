@@ -145,7 +145,7 @@ Report packets remain optional. The runtime can create a compact trusted process
 
 ## Runtime Cleanup And Bounded Contexts
 
-The trusted coordinator layer is structurally complete enough that runtime cleanup now shifts from inventing new coordinator seams to making the server runtime map intuitive. `runtime/nexus/server/*` is moving from one flat folder into bounded-context homes for identity, discussion, reaction, locality, scope, Packet Explorer, fortress mutation flow, readiness reports, and small shared helpers.
+The trusted coordinator layer is structurally complete enough that runtime cleanup now shifts from inventing new coordinator seams to making the server runtime map intuitive. `runtime/nexus/server/*` is moving from one flat folder into bounded-context homes for identity, discussion, reaction, locality, scope, Packet Explorer, Dispatch mutation flow, readiness reports, and small shared helpers.
 
 The first cleanup pass is intentionally move-first and split-later. Moved implementation files keep behavior intact and old top-level paths remain as compatibility bridges so API routes, tests, and service callers can migrate gradually. Large services such as discussion, auth, query data, reaction, and locality directory should be split by responsibility only after their bounded-context home is established.
 
@@ -457,7 +457,7 @@ Canonical writes now enter through `relation.association.add`, `relation.associa
 
 The final readiness handoff lives in runtime audit code as `createFinalPreReseedReadinessReport()`. It records canonical write intents, compatibility-only legacy surfaces, OWA seed/default anchors, required default policies, discussion default packets, canonical definition packet types, and out-of-scope never-live packet types. Reseed design should start from that report rather than rediscovering chapter state from scattered modernization audits.
 
-## Definition Packetization and Preference Fortress Promotion
+## Definition Packetization and Preference Dispatch Promotion
 
 Active manifest definitions now have canonical packet material. `buildDefinitionPacketSeedEnvelopes()` emits schema-validated `Definition` packet envelopes for every active manifest definition part, and `buildDefinitionBundleSeedEnvelope()` groups those envelopes into one `Bundle.packet_set` definition profile inventory. `auditSeededPacketDefinitionProfile()` compares that packet material back to the core manifest and fails on missing parts, duplicate or stale bundle refs, digest drift, or manifest/profile mismatch.
 

@@ -21,7 +21,7 @@ import type {
   TrustedArchiveStoreContext,
 } from '@runtime/trusted_coordinators/trusted_archive_coordinator/index.ts';
 import type { TrustedDefinitionContextMode } from '@runtime/trusted_coordinators/trusted_definition_coordinator/index.ts';
-import type { TrustedResolutionCoordinatorContext } from '@runtime/trusted_coordinators/trusted_resolution_coordinator.ts';
+import type { TrustedResolutionCoordinatorContext } from '@runtime/trusted_coordinators/trusted_resolution_coordinator/index.ts';
 import type {
   TrustedRuntimeCoordinatorIssue,
   TrustedRuntimeCoordinatorTraceEntry,

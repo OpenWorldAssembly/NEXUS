@@ -54,13 +54,13 @@ export type LiveGenericWorkflowEnrollment = {
   policy_action_ids: MutationActionId[];
   dependency_ids: string[];
   trusted_capability_ids: string[];
-  fortress_prepare_handler:
+  dispatch_prepare_adapter:
     | 'prepareAssociationRelation'
     | 'prepareHomeLocalityRelation'
     | 'prepareFollowRelation'
     | 'prepareRoleParticipationRelation'
     | 'preparePacketVoteReaction';
-  fortress_finalize_handler:
+  dispatch_finalize_adapter:
     | 'finalizeAssociationRelationUpdate'
     | 'finalizeHomeLocalityRelation'
     | 'finalizeFollowRelationUpdate'
@@ -224,8 +224,8 @@ function relationEnrollmentConfig(
       workflow_plan_id: 'relation.association.add.workflow.v0',
       operation_kind: 'relation.set' as const,
       policy_action_ids: ['relation.association.add'] as MutationActionId[],
-      fortress_prepare_handler: 'prepareAssociationRelation' as const,
-      fortress_finalize_handler: 'finalizeAssociationRelationUpdate' as const,
+      dispatch_prepare_adapter: 'prepareAssociationRelation' as const,
+      dispatch_finalize_adapter: 'finalizeAssociationRelationUpdate' as const,
     };
   }
 
@@ -235,8 +235,8 @@ function relationEnrollmentConfig(
       workflow_plan_id: 'relation.association.clear.workflow.v0',
       operation_kind: 'relation.clear' as const,
       policy_action_ids: ['relation.association.clear'] as MutationActionId[],
-      fortress_prepare_handler: 'prepareAssociationRelation' as const,
-      fortress_finalize_handler: 'finalizeAssociationRelationUpdate' as const,
+      dispatch_prepare_adapter: 'prepareAssociationRelation' as const,
+      dispatch_finalize_adapter: 'finalizeAssociationRelationUpdate' as const,
     };
   }
 
@@ -249,8 +249,8 @@ function relationEnrollmentConfig(
         'relation.residence.add',
         'relation.residence.clear',
       ] as MutationActionId[],
-      fortress_prepare_handler: 'prepareHomeLocalityRelation' as const,
-      fortress_finalize_handler: 'finalizeHomeLocalityRelation' as const,
+      dispatch_prepare_adapter: 'prepareHomeLocalityRelation' as const,
+      dispatch_finalize_adapter: 'finalizeHomeLocalityRelation' as const,
     };
   }
 
@@ -260,8 +260,8 @@ function relationEnrollmentConfig(
       workflow_plan_id: 'relation.follow.add.workflow.v0',
       operation_kind: 'relation.set' as const,
       policy_action_ids: ['relation.follow.add'] as MutationActionId[],
-      fortress_prepare_handler: 'prepareFollowRelation' as const,
-      fortress_finalize_handler: 'finalizeFollowRelationUpdate' as const,
+      dispatch_prepare_adapter: 'prepareFollowRelation' as const,
+      dispatch_finalize_adapter: 'finalizeFollowRelationUpdate' as const,
     };
   }
 
@@ -271,8 +271,8 @@ function relationEnrollmentConfig(
       workflow_plan_id: 'relation.follow.clear.workflow.v0',
       operation_kind: 'relation.clear' as const,
       policy_action_ids: ['relation.follow.clear'] as MutationActionId[],
-      fortress_prepare_handler: 'prepareFollowRelation' as const,
-      fortress_finalize_handler: 'finalizeFollowRelationUpdate' as const,
+      dispatch_prepare_adapter: 'prepareFollowRelation' as const,
+      dispatch_finalize_adapter: 'finalizeFollowRelationUpdate' as const,
     };
   }
 
@@ -282,8 +282,8 @@ function relationEnrollmentConfig(
       workflow_plan_id: 'relation.participation.add.workflow.v0',
       operation_kind: 'relation.set' as const,
       policy_action_ids: ['relation.participation.add'] as MutationActionId[],
-      fortress_prepare_handler: 'prepareRoleParticipationRelation' as const,
-      fortress_finalize_handler: 'finalizeRoleParticipationRelationUpdate' as const,
+      dispatch_prepare_adapter: 'prepareRoleParticipationRelation' as const,
+      dispatch_finalize_adapter: 'finalizeRoleParticipationRelationUpdate' as const,
     };
   }
 
@@ -293,8 +293,8 @@ function relationEnrollmentConfig(
       workflow_plan_id: 'relation.participation.clear.workflow.v0',
       operation_kind: 'relation.clear' as const,
       policy_action_ids: ['relation.participation.clear'] as MutationActionId[],
-      fortress_prepare_handler: 'prepareRoleParticipationRelation' as const,
-      fortress_finalize_handler: 'finalizeRoleParticipationRelationUpdate' as const,
+      dispatch_prepare_adapter: 'prepareRoleParticipationRelation' as const,
+      dispatch_finalize_adapter: 'finalizeRoleParticipationRelationUpdate' as const,
     };
   }
 
@@ -329,11 +329,11 @@ function createEnrollment(
       policy_action_ids: relationConfig.policy_action_ids,
       dependency_ids: [...alignment.dependency_ids],
       trusted_capability_ids: [...alignment.trusted_capability_ids],
-      fortress_prepare_handler: relationConfig.fortress_prepare_handler,
-      fortress_finalize_handler: relationConfig.fortress_finalize_handler,
+      dispatch_prepare_adapter: relationConfig.dispatch_prepare_adapter,
+      dispatch_finalize_adapter: relationConfig.dispatch_finalize_adapter,
       live_mode: 'trusted_generic_workflow',
       notes:
-        'Trusted generic relation workflow: local Relation planner executes definition-declared relation operation metadata inside the existing fortress prepare/finalize corridor.',
+        'Trusted generic relation workflow: local Relation planner executes definition-declared relation operation metadata inside the existing Dispatch prepare/finalize corridor.',
     };
   }
 
@@ -350,11 +350,11 @@ function createEnrollment(
     ],
     dependency_ids: [...alignment.dependency_ids],
     trusted_capability_ids: [...alignment.trusted_capability_ids],
-    fortress_prepare_handler: 'preparePacketVoteReaction',
-    fortress_finalize_handler: 'finalizePacketVoteReaction',
+    dispatch_prepare_adapter: 'preparePacketVoteReaction',
+    dispatch_finalize_adapter: 'finalizePacketVoteReaction',
     live_mode: 'trusted_generic_workflow',
     notes:
-      'Trusted generic reaction workflow: local Reaction planner executes definition-declared packet vote metadata inside the existing fortress corridor.',
+      'Trusted generic reaction workflow: local Reaction planner executes definition-declared packet vote metadata inside the existing Dispatch corridor.',
   };
 }
 

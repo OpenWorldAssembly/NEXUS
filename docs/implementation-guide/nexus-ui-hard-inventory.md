@@ -191,7 +191,7 @@ These are not primary UI templates, but several contain providers, controllers, 
 | File | Lines | Component/provider candidates | Exported types | Zone |
 | --- | ---: | --- | --- | --- |
 | `app/components/nexus/identity-shell-context.tsx` | 2056 | IdentityShellContext, IdentityShellProvider | — | support |
-| `app/components/nexus/identity-shell-fortress-adapter.ts` | 367 | — | — | support |
+| `app/components/nexus/identity-shell-dispatch-adapter.ts` | 367 | — | — | support |
 | `app/components/nexus/nexus-auth-gate-types.ts` | 12 | — | — | support |
 | `app/components/nexus/nexus-feature-status-context.tsx` | 234 | NexusFeatureStatusContext, NexusFeatureStatusOverlay, NexusFeatureStatusProvider | — | support |
 | `app/components/nexus/nexus-feature-status-registry.ts` | 203 | — | NexusFeatureStatusKind, NexusFeatureStatusEntry, NexusFeatureStatusId | support |

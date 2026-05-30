@@ -508,7 +508,7 @@ test('live mutation routes and registry do not call the legacy mutation service 
   assert.equal(routeSource.includes('mutationService.readTicket('), false);
   assert.equal(finalizeRoute.includes('parsePacketEnvelope'), false);
   assert.equal(serviceRegistry.includes('NexusMutationService'), false);
-  assert.equal(serviceRegistry.includes('MutationTicketStore'), false);
+  assert.equal(serviceRegistry.includes('PreparedWriteTicketStore'), false);
   assert.equal(serviceRegistry.includes('mutationService'), false);
   assert.equal(serviceTypes.includes('mutationService'), false);
 });

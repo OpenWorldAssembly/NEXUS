@@ -44,7 +44,7 @@ export default function NexusRolesPage() {
   const router = useRouter();
   const appearance = useNexusAppearance();
   const { activeScope, currentActorPacketId, currentActorLabel } = useNexusShell();
-  const { runFortressMutation } = useIdentityShell();
+  const { runDispatchMutation } = useIdentityShell();
   const previewTargetParams = useNexusPreviewTargetParams();
   const focusedPacketId =
     previewTargetParams.focusPacketId ?? previewTargetParams.packetId;
@@ -178,7 +178,7 @@ export default function NexusRolesPage() {
   const handleRoleParticipation = async (rolePacketId: string, participating: boolean) => {
     const applyRoleParticipation = async () => {
       try {
-        await runFortressMutation({
+        await runDispatchMutation({
           intent: {
             kind: participating
               ? 'relation.participation.add'
@@ -226,7 +226,7 @@ export default function NexusRolesPage() {
 
     const applyRoleAttestation = async () => {
       try {
-        await runFortressMutation({
+        await runDispatchMutation({
           intent: {
             kind: 'reaction.attestation.set',
             scope_id: activeScope.id,

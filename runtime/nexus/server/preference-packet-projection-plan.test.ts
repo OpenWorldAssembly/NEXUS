@@ -3,7 +3,7 @@ import { test } from 'node:test';
 
 import { createElementPreferenceDefinitionSetPlan } from '@runtime/nexus/server/preference-packet-definition';
 
-test('creates a definition fortress-compatible plan for Preference.element', () => {
+test('creates a definition Dispatch-compatible plan for Preference.element', () => {
   const plan = createElementPreferenceDefinitionSetPlan({
     actorPacketId: 'nexus:element/person-alice',
     preferences: {

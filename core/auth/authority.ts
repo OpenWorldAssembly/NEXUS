@@ -1,6 +1,6 @@
 /**
  * File: authority.ts
- * Description: Centralizes type-specific mutation authority checks for the first fortress write pilot.
+ * Description: Centralizes type-specific mutation authority checks for the first Dispatch write pilot.
  */
 
 import type { DiscussionViewerContext } from '@core/contracts';

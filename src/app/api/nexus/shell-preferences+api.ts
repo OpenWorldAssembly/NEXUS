@@ -1,6 +1,6 @@
 /**
  * File: shell-preferences+api.ts
- * Description: Persists guest shell preference compatibility state; claimed Preference.element writes use the signed mutation corridor.
+ * Description: Persists guest shell preference compatibility state; claimed Preference.element writes use the signed Dispatch-owned mutation corridor.
  */
 
 import type { RequestHandler } from 'expo-router/server';

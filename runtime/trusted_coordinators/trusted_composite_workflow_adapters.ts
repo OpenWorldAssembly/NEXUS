@@ -186,7 +186,7 @@ const TRUSTED_COMPOSITE_WORKFLOW_ADAPTERS = [
         dependency_ids: ['runtime.policy_gate'],
         output_key: 'multi_scope_policy_decision',
         notes:
-          'Groups policy actions by governing scope before ticket creation, matching the current fortress policy path.',
+          'Groups policy actions by governing scope before ticket creation, matching the current Dispatch policy path.',
       },
       {
         phase_id: 'prepare_packet_digests',
@@ -216,7 +216,7 @@ const TRUSTED_COMPOSITE_WORKFLOW_ADAPTERS = [
         dependency_ids: ['generic.operation.projection'],
         output_key: 'shell_refresh_hint',
         notes:
-          'Classifies scope display preference reconciliation and shell payload refresh as a post-fortress runtime extension, not hidden packet write authority.',
+          'Classifies scope display preference reconciliation and shell payload refresh as a post-finalize runtime extension, not hidden packet write authority.',
       },
     ],
     availability: 'runtime_ready',
@@ -490,7 +490,7 @@ const TRUSTED_COMPOSITE_WORKFLOW_ADAPTERS = [
         dependency_ids: ['generic.operation.projection'],
         output_key: 'locality_directory_refresh',
         notes:
-          'Carries directory/projection refresh metadata without granting packet write authority outside fortress finalization.',
+          'Carries directory/projection refresh metadata without granting packet write authority outside Dispatch finalization.',
       },
     ],
     availability: 'runtime_ready',
@@ -760,7 +760,7 @@ const TRUSTED_COMPOSITE_WORKFLOW_ADAPTERS = [
         dependency_ids: ['runtime.policy_gate'],
         output_key: 'reaction_attestation_policy_decision',
         notes:
-          'Keeps current role reaction policy action selection inside the fortress authority path.',
+          'Keeps current role reaction policy action selection inside the Dispatch authority path.',
       },
       {
         phase_id: 'prepare_reaction_attestation_digests',
@@ -847,7 +847,7 @@ const TRUSTED_COMPOSITE_WORKFLOW_ADAPTERS = [
         dependency_ids: ['runtime.policy_gate'],
         output_key: 'actor_write_policy_decision',
         notes:
-          'Leaves self-update authorization with MutationPolicyGate and the signed fortress corridor.',
+          'Leaves self-update authorization with MutationPolicyGate and the signed Dispatch-owned mutation corridor.',
       },
       {
         phase_id: 'prepare_policy_update_digests',
@@ -867,7 +867,7 @@ const TRUSTED_COMPOSITE_WORKFLOW_ADAPTERS = [
         dependency_ids: ['generic.operation.projection'],
         output_key: 'actor_policy_projection_refresh',
         notes:
-          'Captures actor projection refresh as a runtime return extension after fortress finalization.',
+          'Captures actor projection refresh as a runtime return extension after Dispatch finalization.',
       },
     ],
     availability: 'runtime_ready',

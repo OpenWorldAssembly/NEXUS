@@ -13,7 +13,7 @@ const guestPreferences = {
 };
 
 test('claimed shell preference writes use the signed Preference.element mutation corridor', async () => {
-  const fortressCalls: unknown[] = [];
+  const dispatchCalls: unknown[] = [];
   const compatibilityCalls: unknown[] = [];
   const result = await persistNexusElementPreference({
     currentMode: 'claimed',
@@ -24,10 +24,10 @@ test('claimed shell preference writes use the signed Preference.element mutation
       navigation_mode: 'scope',
     },
     note: 'Element interface preferences.',
-    runFortressMutation: async <TResult,>(
-      input: Parameters<PersistNexusElementPreferenceInput['runFortressMutation']>[0]
+    runDispatchMutation: async <TResult,>(
+      input: Parameters<PersistNexusElementPreferenceInput['runDispatchMutation']>[0]
     ) => {
-      fortressCalls.push(input);
+      dispatchCalls.push(input);
       return {
         result: {
           preferences: {
@@ -51,7 +51,7 @@ test('claimed shell preference writes use the signed Preference.element mutation
     },
   });
 
-  assert.deepEqual(fortressCalls, [
+  assert.deepEqual(dispatchCalls, [
     {
       intent: {
         kind: 'preference.element.set',
@@ -70,7 +70,7 @@ test('claimed shell preference writes use the signed Preference.element mutation
 });
 
 test('guest shell preference writes use the compatibility shell-preferences route payload', async () => {
-  const fortressCalls: unknown[] = [];
+  const dispatchCalls: unknown[] = [];
   const compatibilityCalls: unknown[] = [];
 
   await persistNexusElementPreference({
@@ -82,10 +82,10 @@ test('guest shell preference writes use the compatibility shell-preferences rout
       ui_density: 'large',
     },
     note: 'Element scope-display preferences.',
-    runFortressMutation: async <TResult,>(
-      input: Parameters<PersistNexusElementPreferenceInput['runFortressMutation']>[0]
+    runDispatchMutation: async <TResult,>(
+      input: Parameters<PersistNexusElementPreferenceInput['runDispatchMutation']>[0]
     ) => {
-      fortressCalls.push(input);
+      dispatchCalls.push(input);
       return {
         result: {
           preferences: guestPreferences,
@@ -114,7 +114,7 @@ test('guest shell preference writes use the compatibility shell-preferences rout
     },
   });
 
-  assert.deepEqual(fortressCalls, []);
+  assert.deepEqual(dispatchCalls, []);
   assert.deepEqual(compatibilityCalls, [
     {
       show_followed_parent_chains: false,

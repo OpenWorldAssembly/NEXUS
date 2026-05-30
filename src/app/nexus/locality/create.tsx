@@ -944,7 +944,7 @@ export default function NexusLocalityCreatePage() {
     refreshShellData,
     setActiveScopeId,
   } = useNexusShell();
-  const { currentMode, isAuthenticated, runFortressMutation } = useIdentityShell();
+  const { currentMode, isAuthenticated, runDispatchMutation } = useIdentityShell();
   const explicitReturnTo = getSingleParam(params.return_to);
   const returnTo = explicitReturnTo ?? '/nexus/trust';
   const hasReturnTarget = explicitReturnTo !== null;
@@ -1817,7 +1817,7 @@ export default function NexusLocalityCreatePage() {
     locality: NexusLocationSearchResult,
     options: { created?: boolean } = {}
   ) => {
-    await runFortressMutation({
+    await runDispatchMutation({
       intent: {
         kind: 'relation.residence.add',
         residence_scope_packet_id: locality.scope_id,
@@ -2040,7 +2040,7 @@ export default function NexusLocalityCreatePage() {
           LOCALITY_CREATE_PATH_LOADING_SCOPE,
           async () => {
             const finalizedMutation =
-              await runFortressMutation<NexusLocalityGraphApplyPayload>({
+              await runDispatchMutation<NexusLocalityGraphApplyPayload>({
                 intent: {
                   kind: 'locality.graph.apply',
                   paths,

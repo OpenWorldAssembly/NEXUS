@@ -212,7 +212,7 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
     currentActorPacketId,
     currentLabel,
     currentMode,
-    runFortressMutation,
+    runDispatchMutation,
   } = useIdentityShell();
   const [scopeSummaries, setScopeSummaries] = useState<NexusScopeSummary[]>([
     FALLBACK_SCOPE_SUMMARY,
@@ -428,14 +428,14 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
         scopeDisplay: input.scopeDisplay,
         shellChrome: input.shellChrome,
         note: input.note,
-        runFortressMutation,
+        runDispatchMutation,
         updateCompatibilityPreferences: (requestBody) =>
           updateNexusScopeDisplayPreferences({
             requestBody,
           }),
       });
     },
-    [currentMode, runFortressMutation]
+    [currentMode, runDispatchMutation]
   );
 
   const persistShellChromePreference = useCallback(
@@ -484,7 +484,7 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
       throw new Error('Unknown scope follow target.');
     }
 
-    await runFortressMutation({
+    await runDispatchMutation({
       intent: isFollowed
         ? {
             kind: 'relation.follow.add',
@@ -507,7 +507,7 @@ export function NexusShellProvider({ children }: PropsWithChildren) {
       throw new Error('Unknown scope association target.');
     }
 
-    await runFortressMutation({
+    await runDispatchMutation({
       intent: isAssociated
         ? {
             kind: 'relation.association.add',

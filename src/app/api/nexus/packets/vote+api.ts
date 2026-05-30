@@ -1,6 +1,6 @@
 /**
  * File: vote+api.ts
- * Description: Deprecates the legacy packet-vote write route in favor of the fortress mutation corridor.
+ * Description: Deprecates the legacy packet-vote write route in favor of the Dispatch-owned mutation corridor.
  */
 
 import type { RequestHandler } from 'expo-router/server';

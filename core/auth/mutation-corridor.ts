@@ -1,6 +1,6 @@
 /**
  * File: mutation-corridor.ts
- * Description: Shared prepare/finalize mutation types for the fortress write corridor.
+ * Description: Shared prepare/finalize mutation types for the Dispatch-owned write corridor.
  */
 
 import type {
@@ -227,12 +227,14 @@ export interface PreparedMutation {
   prepared_packets: PreparedPacketCandidate[];
 }
 
-export interface MutationTicket {
+export interface PreparedWriteTicket {
   ticket_id: string;
   actor_packet_id: string;
   kind: MutationIntent['kind'];
   expires_at: string;
 }
+
+export type MutationTicket = PreparedWriteTicket;
 
 export interface MutationFinalizeRequest {
   ticket_id: string;

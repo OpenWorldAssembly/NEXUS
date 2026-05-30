@@ -50,7 +50,7 @@ export default function NexusTrustPage() {
     refreshShellData,
     setScopeFollowed,
   } = useNexusShell();
-  const { currentMode, isAuthenticated, runFortressMutation } =
+  const { currentMode, isAuthenticated, runDispatchMutation } =
     useIdentityShell();
   const previewTargetParams = useNexusPreviewTargetParams();
   const highlightedPacketId =
@@ -173,7 +173,7 @@ export default function NexusTrustPage() {
           ),
         ],
         dispatch: ({ headers }) =>
-          runFortressMutation({
+          runDispatchMutation({
             intent: {
               kind: mutationIntent,
               target_packet_id: activeScope.packetId,
@@ -235,7 +235,7 @@ export default function NexusTrustPage() {
   const handleHomeLocalityChange = async (residenceScopePacketId: string | null) => {
     const applyHomeLocalityChange = async () => {
       try {
-        await runFortressMutation({
+        await runDispatchMutation({
           intent: {
             kind: 'relation.residence.add',
             residence_scope_packet_id: residenceScopePacketId,

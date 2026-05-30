@@ -11,8 +11,8 @@ import {
 } from '@runtime/nexus/server/trusted-write-migration-audit';
 import { auditPacketClientIntentEnrollments } from '@runtime/nexus/server/packet-client-intent-enrollment';
 import {
-  listPacketRuntimeFortressHandoffCoverage,
-} from '@runtime/nexus/server/packet-runtime-fortress-handoff';
+  listPacketRuntimeDispatchHandoffCoverage,
+} from '@runtime/nexus/server/packet-runtime-dispatch-handoff';
 import {
   auditLiveGenericWorkflowEnrollments,
   listLiveGenericWorkflowEnrollments,
@@ -48,7 +48,7 @@ export type PreReseedClosureLedgerEntry = {
     | 'policy_requirement'
     | 'dependency_requirement'
     | 'client_ingress_enrollment'
-    | 'fortress_handoff'
+    | 'dispatch_handoff'
     | 'composite_workflow_adapter'
     | 'packet_type';
   subject_id: string;
@@ -73,7 +73,7 @@ export type PreReseedModernizationClosureReport = {
   policy_requirements: PreReseedClosureLedgerEntry[];
   dependency_requirements: PreReseedClosureLedgerEntry[];
   client_ingress_enrollments: PreReseedClosureLedgerEntry[];
-  fortress_handoffs: PreReseedClosureLedgerEntry[];
+  dispatch_handoffs: PreReseedClosureLedgerEntry[];
   composite_workflow_adapters: PreReseedClosureLedgerEntry[];
   packet_types: PreReseedClosureLedgerEntry[];
   follow_on_pass_queue: PreReseedClosureLedgerEntry[];
@@ -254,7 +254,7 @@ function createPolicyRequirementEntries(): PreReseedClosureLedgerEntry[] {
       ? 'first_generic_promotion'
       : 'policy_dependency_semantic_authority',
     reason: descriptor.live_write_policy_action
-      ? 'Live fortress write-policy action is anchored to Policy packet semantics through MutationPolicyGate.'
+      ? 'Live Dispatch write-policy action is anchored to Policy packet semantics through MutationPolicyGate.'
       : 'Definition policy action is now anchored to packet-based policy semantics for reseed readiness.',
     next_step: descriptor.live_write_policy_action
       ? 'Preserve current Policy packet enforcement while generic workflows are promoted.'
@@ -304,17 +304,17 @@ function createClientIngressEntries(): PreReseedClosureLedgerEntry[] {
   }));
 }
 
-function createFortressHandoffEntries(): PreReseedClosureLedgerEntry[] {
-  return listPacketRuntimeFortressHandoffCoverage().map((handoff) => {
+function createDispatchHandoffEntries(): PreReseedClosureLedgerEntry[] {
+  return listPacketRuntimeDispatchHandoffCoverage().map((handoff) => {
     const isLiveGeneric = CLOSED_RUNTIME_MUTATION_INTENTS.has(handoff.mutation_intent);
 
     return {
-      subject_kind: 'fortress_handoff',
+      subject_kind: 'dispatch_handoff',
       subject_id: handoff.mutation_intent,
       status: isLiveGeneric ? 'closed' : 'queued_pre_reseed',
       queue: isLiveGeneric ? 'first_generic_promotion' : 'final_reseed_readiness_audit',
       reason: isLiveGeneric
-        ? 'Handoff metadata resolves and the existing fortress corridor now calls a trusted generic operation or composite planner.'
+        ? 'Handoff metadata resolves and the existing Dispatch corridor now calls a trusted generic operation or composite planner.'
         : 'Handoff metadata remains definition coverage until the owning workflow is promoted.',
       next_step: isLiveGeneric
         ? 'Preserve Dispatch route authority while expanding generic execution.'
@@ -375,7 +375,7 @@ export function createPreReseedModernizationClosureReport(): PreReseedModernizat
   const policy_requirements = createPolicyRequirementEntries();
   const dependency_requirements = createDependencyRequirementEntries();
   const client_ingress_enrollments = createClientIngressEntries();
-  const fortress_handoffs = createFortressHandoffEntries();
+  const dispatch_handoffs = createDispatchHandoffEntries();
   const composite_workflow_adapters = createCompositeWorkflowAdapterEntries();
   const packet_types = createPacketTypeEntries();
   const runtime_connector_paths: PreReseedClosureLedgerEntry[] = [
@@ -453,7 +453,7 @@ export function createPreReseedModernizationClosureReport(): PreReseedModernizat
     policy_requirements,
     dependency_requirements,
     client_ingress_enrollments,
-    fortress_handoffs,
+    dispatch_handoffs,
     composite_workflow_adapters,
     packet_types,
     follow_on_pass_queue,

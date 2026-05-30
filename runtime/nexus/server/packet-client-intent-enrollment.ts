@@ -10,11 +10,11 @@ import {
 } from "@runtime/nexus/server/mutation-intent-registry";
 import type { MutationIntent } from "@core/auth/mutation-corridor";
 import {
-  listPacketRuntimeFortressHandoffCoverage,
-  resolvePacketRuntimeFortressHandoff,
-  type PacketRuntimeFortressHandoff,
-  type PacketRuntimeFortressHandoffStatus,
-} from "@runtime/nexus/server/packet-runtime-fortress-handoff";
+  listPacketRuntimeDispatchHandoffCoverage,
+  resolvePacketRuntimeDispatchHandoff,
+  type PacketRuntimeDispatchHandoff,
+  type PacketRuntimeDispatchHandoffStatus,
+} from "@runtime/nexus/server/packet-runtime-dispatch-handoff";
 import { trustedRegulationCoordinator } from "@runtime/trusted_coordinators/trusted_regulation_coordinator/index.ts";
 import { trustedPlanningCoordinator } from "@runtime/trusted_coordinators/trusted_planning_coordinator/index.ts";
 
@@ -36,7 +36,7 @@ export type PacketClientIntentEnrollment = {
   policy_action_ids: string[];
   dependencies_definition_ids: string[];
   live_mode: PacketClientIntentEnrollmentMode;
-  handoff_status: PacketRuntimeFortressHandoffStatus | "connector_live";
+  handoff_status: PacketRuntimeDispatchHandoffStatus | "connector_live";
   notes: string;
 };
 
@@ -44,7 +44,7 @@ export type PacketClientIntentPreflight = {
   preflight_kind: "packet.client_intent.preflight";
   status: "allowed_definition" | "allowed_live_connector" | "blocked";
   enrollment: PacketClientIntentEnrollment | null;
-  handoff: PacketRuntimeFortressHandoff | null;
+  handoff: PacketRuntimeDispatchHandoff | null;
   policy_requirement_ids: string[];
   dependency_requirement_ids: string[];
   reason_codes: string[];
@@ -125,7 +125,7 @@ function uniqueSorted(values: readonly string[]): string[] {
 function createPrepareEnrollment(
   descriptor: MutationIntentDescriptor,
 ): PacketClientIntentEnrollment {
-  const handoff = resolvePacketRuntimeFortressHandoff({
+  const handoff = resolvePacketRuntimeDispatchHandoff({
     mutationIntent: descriptor.kind,
   });
 
@@ -224,7 +224,7 @@ export function resolvePacketClientIntentPreflight(input: {
   );
   const handoff =
     enrollment.live_mode === "signed_dispatch_prepare"
-      ? resolvePacketRuntimeFortressHandoff({
+      ? resolvePacketRuntimeDispatchHandoff({
           mutationIntent: enrollment.mutation_intent,
         })
       : null;
@@ -305,7 +305,7 @@ export function auditPacketClientIntentEnrollments(): PacketClientIntentEnrollme
     listMutationIntentDescriptors().map((descriptor) => descriptor.kind),
   );
   const handoffCoverage = new Map(
-    listPacketRuntimeFortressHandoffCoverage().map((coverage) => [
+    listPacketRuntimeDispatchHandoffCoverage().map((coverage) => [
       coverage.mutation_intent,
       coverage,
     ]),
@@ -375,7 +375,7 @@ export function auditPacketClientIntentEnrollments(): PacketClientIntentEnrollme
         severity: "error",
         code: "missing_handoff_enrollment",
         enrollment_id: enrollment.enrollment_id,
-        message: `${enrollment.enrollment_id} has no fortress handoff coverage.`,
+        message: `${enrollment.enrollment_id} has no Dispatch handoff coverage.`,
       });
     }
 

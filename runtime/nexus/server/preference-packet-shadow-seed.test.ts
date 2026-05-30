@@ -22,7 +22,7 @@ test('creates a safe shadow seed candidate for current runtime preferences', () 
 
   assert.equal(seed.seed_kind, 'preference.element.shadow_seed');
   assert.equal(seed.safe_to_seed_shadow, true);
-  assert.equal(seed.live_fortress_ready, false);
+  assert.equal(seed.live_dispatch_ready, false);
   assert.equal(seed.packet_definition_audit_status, 'pass');
   assert.equal(seed.projection_equivalent, true);
   assert.deepEqual(seed.projected_runtime_preferences, {
