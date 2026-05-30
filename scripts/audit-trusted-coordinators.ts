@@ -48,6 +48,22 @@ const REMOVED_LEGACY_MUTATION_EXECUTOR_PATHS = [
   'runtime/nexus/server/manifest-shadow-fortress-bridge.ts',
 ] as const;
 
+
+const REMOVED_LEGACY_IMPORT_PATTERNS = [
+  'fortress-request',
+  'fortress-handler-genericization-audit',
+  'preference-fortress-workflow',
+  'signed-packet-finalizer',
+  'mutation-service',
+  'fortress-prepare-handler',
+  'fortress-finalize-handler',
+] as const;
+
+const REMOVED_LEGACY_IMPORT_SCAN_ROOTS = [
+  'runtime/nexus/server',
+  'src/app/api/nexus',
+] as const;
+
 const RUNTIME_CROSSING_CATEGORIES: readonly RuntimeCrossingCategory[] = [
   {
     code: 'direct_storage_touch',
@@ -375,6 +391,36 @@ function scanRemovedLegacyExecutorFindings(): AuditFinding[] {
   return findings;
 }
 
+
+function scanRemovedLegacyImportFindings(): AuditFinding[] {
+  const findings: AuditFinding[] = [];
+  const filesToScan = REMOVED_LEGACY_IMPORT_SCAN_ROOTS.flatMap((rootPath) =>
+    listFilesRecursively(rootPath)
+  );
+
+  for (const filePath of filesToScan) {
+    const content = readIfFile(filePath);
+    if (!content) {
+      continue;
+    }
+
+    const matches = REMOVED_LEGACY_IMPORT_PATTERNS.filter((pattern) =>
+      content.includes(pattern)
+    );
+
+    for (const pattern of matches) {
+      findings.push({
+        severity: 'error',
+        coordinator_id: 'trusted_dispatch_coordinator.v0',
+        code: 'trusted_removed_legacy_import_present',
+        message: `${filePath} references retired module pattern '${pattern}'. Deleted runtime executor modules must not be restored through stale imports.`,
+      });
+    }
+  }
+
+  return findings;
+}
+
 function scanIssueCodeFindings(): AuditFinding[] {
   const findings: AuditFinding[] = [];
   const coordinatorRoot = repoPath('runtime/trusted_coordinators');
@@ -432,6 +478,7 @@ function audit(): { findings: AuditFinding[]; notes: AuditNote[] } {
   findings.push(...scanPackageScriptFindings());
   findings.push(...scanLiveMutationServiceDependencyFindings());
   findings.push(...scanRemovedLegacyExecutorFindings());
+  findings.push(...scanRemovedLegacyImportFindings());
 
   for (const descriptor of listTrustedCoordinatorScaffoldDescriptors()) {
     const pathExists = existsSync(repoPath(descriptor.runtime_path));

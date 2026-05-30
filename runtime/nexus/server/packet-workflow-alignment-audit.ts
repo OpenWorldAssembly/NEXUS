@@ -1,6 +1,6 @@
 /**
  * File: packet-workflow-alignment-audit.ts
- * Description: Runtime-side audit map from live fortress intents to definition workflow plans and trusted planner capabilities.
+ * Description: Runtime-side audit map from live mutation intents to definition workflow plans and trusted planner capabilities.
  */
 
 import type { MutationIntent } from '@core/auth/mutation-corridor';
@@ -14,12 +14,12 @@ import {
   type TrustedPlannerCapabilityDescriptor,
 } from '@core/packets/packet-workflow-planner.ts';
 import type {
-  FortressGenericizationStatus,
-  FortressOperationMappingStatus,
-} from '@runtime/nexus/server/fortress-handler-genericization-audit';
+  TrustedWriteMigrationStatus,
+  TrustedWriteOperationMappingStatus,
+} from '@runtime/nexus/server/trusted-write-migration-audit';
 import {
-  listFortressHandlerGenericizationEntries,
-} from '@runtime/nexus/server/fortress-handler-genericization-audit';
+  listTrustedWriteMigrationEntries,
+} from '@runtime/nexus/server/trusted-write-migration-audit';
 import { listMutationIntentDescriptors } from '@runtime/nexus/server/mutation-intent-registry';
 import {
   listTrustedCompositeWorkflowAdapters,
@@ -47,8 +47,8 @@ export type PacketWorkflowAlignmentGap = {
 export type PacketWorkflowAlignmentCoverage = {
   mutation_intent: MutationIntent['kind'];
   canonical_intent: MutationIntent['kind'] | null;
-  genericization_status: FortressGenericizationStatus;
-  operation_mapping_status: FortressOperationMappingStatus;
+  migration_status: TrustedWriteMigrationStatus;
+  operation_mapping_status: TrustedWriteOperationMappingStatus;
   operation_kinds: string[];
   workflow_alignment_status: PacketWorkflowAlignmentStatus;
   workflow_plan_ids: string[];
@@ -182,14 +182,14 @@ function getCompositeAdapterIdsByIntent(): Map<string, string[]> {
 }
 
 function resolveAlignmentStatus(input: {
-  genericizationStatus: FortressGenericizationStatus;
+  migrationStatus: TrustedWriteMigrationStatus;
   hasWorkflowPlans: boolean;
 }): PacketWorkflowAlignmentStatus {
-  if (input.genericizationStatus === 'legacy_bridge') {
+  if (input.migrationStatus === 'legacy_bridge') {
     return 'legacy_bridge';
   }
 
-  if (input.genericizationStatus === 'workflow_specific') {
+  if (input.migrationStatus === 'workflow_specific') {
     return 'runtime_owned';
   }
 
@@ -202,7 +202,7 @@ export function listPacketWorkflowAlignmentCoverage(): PacketWorkflowAlignmentCo
   const plansByIntent = getWorkflowPlansByIntent(definitions);
   const compositeAdapterIdsByIntent = getCompositeAdapterIdsByIntent();
 
-  return listFortressHandlerGenericizationEntries().map((entry) => {
+  return listTrustedWriteMigrationEntries().map((entry) => {
     const lookupIntent = entry.canonical_intent ?? entry.mutation_intent;
     const workflowPlans = plansByIntent.get(lookupIntent) ?? [];
     const compositionAdapterIds = uniqueSorted(
@@ -218,19 +218,19 @@ export function listPacketWorkflowAlignmentCoverage(): PacketWorkflowAlignmentCo
     );
     const missing_coverage_items: PacketWorkflowAlignmentGap[] = [];
 
-    if (entry.genericization_status === 'planner_extraction_needed' && workflowPlans.length === 0) {
+    if (entry.migration_status === 'planner_extraction_needed' && workflowPlans.length === 0) {
       missing_coverage_items.push(
         plannedGap('workflow_plan', entry.next_step)
       );
     }
 
-    if (entry.genericization_status === 'workflow_specific') {
+    if (entry.migration_status === 'workflow_specific') {
       missing_coverage_items.push(
         plannedGap('runtime_orchestration', entry.next_step)
       );
     }
 
-    if (entry.genericization_status === 'legacy_bridge') {
+    if (entry.migration_status === 'legacy_bridge') {
       missing_coverage_items.push(
         plannedGap(
           'legacy_bridge',
@@ -251,11 +251,11 @@ export function listPacketWorkflowAlignmentCoverage(): PacketWorkflowAlignmentCo
     return {
       mutation_intent: entry.mutation_intent,
       canonical_intent: entry.canonical_intent ?? null,
-      genericization_status: entry.genericization_status,
+      migration_status: entry.migration_status,
       operation_mapping_status: entry.operation_mapping_status,
       operation_kinds: [...entry.operation_kinds],
       workflow_alignment_status: resolveAlignmentStatus({
-        genericizationStatus: entry.genericization_status,
+        migrationStatus: entry.migration_status,
         hasWorkflowPlans: workflowPlans.length > 0,
       }),
       workflow_plan_ids: workflowPlans.map((plan) => plan.workflow_plan_id),
@@ -315,7 +315,7 @@ export function auditPacketWorkflowAlignmentCoverage(): PacketWorkflowAlignmentA
     }
 
     if (
-      coverage.genericization_status === 'generic_ready' &&
+      coverage.migration_status === 'generic_ready' &&
       (coverage.workflow_plan_ids.length === 0 ||
         !coverage.dry_run_ready ||
         coverage.trusted_capability_ids.length === 0)
@@ -324,12 +324,12 @@ export function auditPacketWorkflowAlignmentCoverage(): PacketWorkflowAlignmentA
         severity: 'error',
         code: 'generic_ready_workflow_not_aligned',
         mutation_intent: descriptor.kind,
-        message: `${descriptor.kind} is generic-ready and must have clean workflow and trusted capability coverage.`,
+        message: `${descriptor.kind} is trusted-write-ready and must have clean workflow and trusted capability coverage.`,
       });
     }
 
     if (
-      coverage.genericization_status === 'planner_extraction_needed' &&
+      coverage.migration_status === 'planner_extraction_needed' &&
       coverage.workflow_plan_ids.length === 0 &&
       coverage.missing_coverage_items.length === 0
     ) {
@@ -342,7 +342,7 @@ export function auditPacketWorkflowAlignmentCoverage(): PacketWorkflowAlignmentA
     }
 
     if (
-      coverage.genericization_status === 'workflow_specific' &&
+      coverage.migration_status === 'workflow_specific' &&
       !coverage.missing_coverage_items.some((gap) => gap.area === 'runtime_orchestration')
     ) {
       findings.push({
@@ -354,7 +354,7 @@ export function auditPacketWorkflowAlignmentCoverage(): PacketWorkflowAlignmentA
     }
 
     if (
-      coverage.genericization_status === 'legacy_bridge' &&
+      coverage.migration_status === 'legacy_bridge' &&
       (!coverage.canonical_intent || coverage.workflow_plan_ids.length === 0)
     ) {
       findings.push({

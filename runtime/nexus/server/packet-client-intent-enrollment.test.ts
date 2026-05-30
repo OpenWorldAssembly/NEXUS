@@ -48,7 +48,7 @@ test('enrolled prepare intent preflight resolves handoff and packet-backed requi
   assert.ok(preflight.handoff);
   assert.ok(preflight.policy_requirement_ids.length > 0);
   assert.ok(preflight.dependency_requirement_ids.length > 0);
-  assert.ok(preflight.reason_codes.includes('registered_signed_fortress_prepare'));
+  assert.ok(preflight.reason_codes.includes('registered_signed_dispatch_prepare'));
 });
 
 test('Preference.element direct connector is runtime-ready and claimed writes use prepare enrollment', () => {
@@ -78,7 +78,7 @@ test('Preference.element direct connector is runtime-ready and claimed writes us
   });
 
   assert.equal(preflight.status, 'allowed_definition');
-  assert.equal(preflight.enrollment?.live_mode, 'signed_fortress_prepare');
+  assert.equal(preflight.enrollment?.live_mode, 'signed_dispatch_prepare');
 });
 
 test('custom or unregistered client intent requests fail closed', () => {

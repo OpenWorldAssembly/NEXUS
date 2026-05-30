@@ -6,9 +6,9 @@
 import { PACKET_TYPES, type PacketType } from '@core/schema/packet-schema';
 import { listPacketWorkflowPlanDescriptorsFromDefinitions } from '@core/packets/packet-workflow-planner.ts';
 import {
-  listFortressHandlerGenericizationEntries,
-  type FortressHandlerGenericizationEntry,
-} from '@runtime/nexus/server/fortress-handler-genericization-audit';
+  listTrustedWriteMigrationEntries,
+  type TrustedWriteMigrationEntry,
+} from '@runtime/nexus/server/trusted-write-migration-audit';
 import { auditPacketClientIntentEnrollments } from '@runtime/nexus/server/packet-client-intent-enrollment';
 import {
   listPacketRuntimeFortressHandoffCoverage,
@@ -174,7 +174,7 @@ function certificationReadinessPasses(): boolean {
 }
 
 function queueForEntry(
-  entry: FortressHandlerGenericizationEntry
+  entry: TrustedWriteMigrationEntry
 ): PreReseedClosureLedgerEntry['queue'] {
   if (CLOSED_RUNTIME_MUTATION_INTENTS.has(entry.mutation_intent)) {
     return 'first_generic_promotion';
@@ -192,7 +192,7 @@ function queueForEntry(
 }
 
 function mutationStatus(
-  entry: FortressHandlerGenericizationEntry
+  entry: TrustedWriteMigrationEntry
 ): PreReseedClosureStatus {
   return CLOSED_RUNTIME_MUTATION_INTENTS.has(entry.mutation_intent)
     ? 'closed'
@@ -204,7 +204,7 @@ function uniqueSorted(values: readonly string[]): string[] {
 }
 
 function createMutationEntries(): PreReseedClosureLedgerEntry[] {
-  return listFortressHandlerGenericizationEntries().map((entry) => {
+  return listTrustedWriteMigrationEntries().map((entry) => {
     const isClosed = CLOSED_RUNTIME_MUTATION_INTENTS.has(entry.mutation_intent);
 
     return {

@@ -12,7 +12,7 @@ import {
   getPacketWorkflowAlignmentCoverage,
   listPacketWorkflowAlignmentCoverage,
 } from './packet-workflow-alignment-audit.ts';
-import { listFortressHandlerGenericizationEntries } from './fortress-handler-genericization-audit.ts';
+import { listTrustedWriteMigrationEntries } from './trusted-write-migration-audit.ts';
 import { listMutationIntentDescriptors } from './mutation-intent-registry.ts';
 
 test('workflow alignment coverage includes every live mutation intent', () => {
@@ -33,9 +33,9 @@ test('workflow alignment audit passes with explicit gaps', () => {
   assert.deepEqual(report.findings, []);
 });
 
-test('generic-ready intents have clean workflow and capability coverage', () => {
-  const genericReadyIntents = listFortressHandlerGenericizationEntries()
-    .filter((entry) => entry.genericization_status === 'generic_ready')
+test('trusted-write-ready intents have clean workflow and capability coverage', () => {
+  const genericReadyIntents = listTrustedWriteMigrationEntries()
+    .filter((entry) => entry.migration_status === 'generic_ready')
     .map((entry) => entry.mutation_intent);
 
   assert.ok(genericReadyIntents.length > 0);
@@ -57,8 +57,8 @@ test('generic-ready intents have clean workflow and capability coverage', () => 
 });
 
 test('planner-extraction candidates are definition-planned or explicitly gapped', () => {
-  const plannerEntries = listFortressHandlerGenericizationEntries().filter(
-    (entry) => entry.genericization_status === 'planner_extraction_needed'
+  const plannerEntries = listTrustedWriteMigrationEntries().filter(
+    (entry) => entry.migration_status === 'planner_extraction_needed'
   );
 
   assert.ok(plannerEntries.length > 0);
@@ -88,7 +88,7 @@ test('planner-extraction candidates are definition-planned or explicitly gapped'
 
 test('workflow-specific intents remain runtime-owned with orchestration reasons', () => {
   const runtimeOwned = listPacketWorkflowAlignmentCoverage().filter(
-    (coverage) => coverage.genericization_status === 'workflow_specific'
+    (coverage) => coverage.migration_status === 'workflow_specific'
   );
 
   assert.ok(runtimeOwned.length > 0);
@@ -143,8 +143,8 @@ test('complex graph workflow intents name reusable composite adapters', () => {
 });
 
 test('legacy bridge intents are absent from live workflow alignment coverage', () => {
-  const legacyEntries = listFortressHandlerGenericizationEntries().filter(
-    (entry) => entry.genericization_status === 'legacy_bridge'
+  const legacyEntries = listTrustedWriteMigrationEntries().filter(
+    (entry) => entry.migration_status === 'legacy_bridge'
   );
 
   assert.deepEqual(legacyEntries, []);

@@ -19,7 +19,7 @@ import { trustedRegulationCoordinator } from "@runtime/trusted_coordinators/trus
 import { trustedPlanningCoordinator } from "@runtime/trusted_coordinators/trusted_planning_coordinator/index.ts";
 
 export type PacketClientIntentEnrollmentMode =
-  | "signed_fortress_prepare"
+  | "signed_dispatch_prepare"
   | "live_connector"
   | "runtime_ready";
 
@@ -143,7 +143,7 @@ function createPrepareEnrollment(
     workflow_plan_ids: handoff.workflow_plan_ids,
     policy_action_ids: handoff.policy_action_ids,
     dependencies_definition_ids: handoff.dependency_ids,
-    live_mode: "signed_fortress_prepare",
+    live_mode: "signed_dispatch_prepare",
     handoff_status: handoff.status,
     notes:
       "Client/API ingress write intent. The registry is descriptive metadata for Dispatch-owned prepare/finalize routing.",
@@ -223,7 +223,7 @@ export function resolvePacketClientIntentPreflight(input: {
       enrollment.dependencies_definition_ids.includes(descriptor.dependency_id),
   );
   const handoff =
-    enrollment.live_mode === "signed_fortress_prepare"
+    enrollment.live_mode === "signed_dispatch_prepare"
       ? resolvePacketRuntimeFortressHandoff({
           mutationIntent: enrollment.mutation_intent,
         })
@@ -248,7 +248,7 @@ export function resolvePacketClientIntentPreflight(input: {
     ...missingDependencyRequirements.map(
       (dependencyId) => `missing_dependency_requirement:${dependencyId}`,
     ),
-    handoff?.status === "blocked" ? "blocked_fortress_handoff" : null,
+    handoff?.status === "blocked" ? "blocked_dispatch_handoff" : null,
   ].filter((reasonCode): reasonCode is string => reasonCode !== null);
 
   if (reasonCodes.length > 0) {
@@ -287,7 +287,7 @@ export function resolvePacketClientIntentPreflight(input: {
     reason_codes: [
       enrollment.live_mode === "live_connector"
         ? "registered_live_connector"
-        : "registered_signed_fortress_prepare",
+        : "registered_signed_dispatch_prepare",
     ],
     notes: [
       "Preflight validates enrollment metadata only; Dispatch and the trusted coordinator chain own proof, policy, ticketing, signing checks, persistence, and mutation effects.",
@@ -342,7 +342,7 @@ export function auditPacketClientIntentEnrollments(): PacketClientIntentEnrollme
 
   for (const enrollment of enrollments) {
     if (
-      enrollment.live_mode === "signed_fortress_prepare" &&
+      enrollment.live_mode === "signed_dispatch_prepare" &&
       !knownMutationIntents.has(enrollment.mutation_intent)
     ) {
       findings.push({
@@ -370,7 +370,7 @@ export function auditPacketClientIntentEnrollments(): PacketClientIntentEnrollme
 
     const handoff = handoffCoverage.get(enrollment.mutation_intent);
 
-    if (enrollment.live_mode === "signed_fortress_prepare" && !handoff) {
+    if (enrollment.live_mode === "signed_dispatch_prepare" && !handoff) {
       findings.push({
         severity: "error",
         code: "missing_handoff_enrollment",
