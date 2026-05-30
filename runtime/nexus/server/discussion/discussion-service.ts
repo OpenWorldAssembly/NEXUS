@@ -3,14 +3,6 @@
  * Description: Projects packet-backed discussion forums, threads, root posts, replies, and reaction-backed votes from the SQLite packet store.
  */
 
-import { DatabaseSync } from 'node:sqlite';
-
-import {
-  assertMutationProofBundle,
-  evaluateDiscussionReplyMutation,
-  evaluateDiscussionThreadPostMutation,
-  type MutationIntent,
-} from '@core/auth/mutation-verifier';
 import { createTextExcerpt } from '@core/packets/builders';
 import {
   areDiscussionPacketIdsEquivalent,
@@ -44,8 +36,6 @@ import type {
   PacketEnvelope,
   PacketEnvelopeByType,
 } from '@core/schema/packet-schema';
-import type { MutationProofBundle } from '@core/auth/proof-types';
-import { verifyPacketSignature } from '@runtime/nexus/identity-crypto';
 import {
   paginateItems,
   resolvePageSize,
@@ -74,6 +64,8 @@ import type {
   ReactionTallyIndexRecord,
 } from '@runtime/storage/sqlite-records';
 import { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store';
+import { NodeSQLiteDerivedDiscussionStore } from '@runtime/storage/node-sqlite-derived-discussion-store';
+import { NodeSQLiteDerivedReactionStore } from '@runtime/storage/node-sqlite-derived-reaction-store';
 import { DISCUSSION_ACTION_DESCRIPTORS } from '@runtime/nexus/discussion-action-contract';
 
 const REDDIT_EPOCH_SECONDS = 1134028003;
@@ -121,28 +113,6 @@ type DiscussionState = {
   voteTallyRows: ReactionTallyIndexRecord[];
   discussionIndexRows: DiscussionPostIndexRecord[];
 };
-
-type DiscussionPostWriteInput = {
-  scope_id: string;
-  actor_key: string;
-  actor_class: DiscussionActorClass;
-  actor_packet: PacketEnvelopeByType['Element'];
-  proof_bundle: MutationProofBundle;
-  intent: Extract<MutationIntent, { kind: 'discussion.thread_post.create' }>;
-  signed_thread_packet: PacketEnvelope;
-  signed_post_packet: PacketEnvelope;
-};
-
-type DiscussionReplyWriteInput = {
-  scope_id: string;
-  actor_key: string;
-  actor_class: DiscussionActorClass;
-  actor_packet: PacketEnvelopeByType['Element'];
-  proof_bundle: MutationProofBundle;
-  intent: Extract<MutationIntent, { kind: 'discussion.reply.create' }>;
-  signed_reply_packet: PacketEnvelope;
-};
-
 
 type VoteAggregate = {
   upvote_count: number;
@@ -643,43 +613,14 @@ async function getDiscussionEntryById(
   return packet as DiscussionEntryPacket;
 }
 
-async function getElementPacketById(
-  packetStore: NodeSQLitePacketStore,
-  packetId: string | null
-): Promise<PacketEnvelopeByType['Element'] | null> {
-  if (!packetId) {
-    return null;
-  }
-
-  const packet = await packetStore.fetchByPacket({ packet_id: packetId });
-
-  if (!packet || packet.header.type !== 'Element') {
-    return null;
-  }
-
-  return packet as PacketEnvelopeByType['Element'];
-}
-
-async function getPolicyPacketsByRefs(
-  packetStore: NodeSQLitePacketStore,
-  policyRefs: PacketEnvelopeByType['Element']['header']['moderation']['policy_refs']
-): Promise<PacketEnvelopeByType['Policy'][]> {
-  const packets = await Promise.all(
-    policyRefs.map((policyRef) => packetStore.fetchByPacket(policyRef))
-  );
-
-  return packets.filter(
-    (packet): packet is PacketEnvelopeByType['Policy'] =>
-      packet !== null && packet.header.type === 'Policy'
-  );
-}
-
 export class SQLiteDiscussionService
   implements DiscussionQueryService
 {
   private state: DiscussionState | null = null;
   private readonly packetStore: NodeSQLitePacketStore;
   private readonly reactionService: ReactionService;
+  private readonly derivedDiscussionStore: NodeSQLiteDerivedDiscussionStore;
+  private readonly derivedReactionStore: NodeSQLiteDerivedReactionStore;
 
   constructor(
     packetStore: NodeSQLitePacketStore,
@@ -687,6 +628,12 @@ export class SQLiteDiscussionService
   ) {
     this.packetStore = packetStore;
     this.reactionService = reactionService;
+    this.derivedDiscussionStore = new NodeSQLiteDerivedDiscussionStore({
+      databasePath: packetStore.databasePath,
+    });
+    this.derivedReactionStore = new NodeSQLiteDerivedReactionStore({
+      databasePath: packetStore.databasePath,
+    });
   }
 
   async syncDerivedState(): Promise<void> {
@@ -770,43 +717,8 @@ export class SQLiteDiscussionService
       entryPacketsAll.map((packet) => [packet.header.packet_id, packet] as const)
     );
     const entryOperationalMap = createOperationalDiscussionMap(entryPacketsAll);
-    const database = new DatabaseSync(this.packetStore.databasePath);
-    const voteIndexRows = database
-      .prepare(
-        `
-          SELECT
-            reaction_packet_id,
-            target_packet_id,
-            actor_key,
-            vote_value,
-            attestation_value,
-            emoji_keys_json,
-            status,
-            context_packet_id,
-            note,
-            created_at,
-            updated_at
-          FROM reaction_index
-        `
-      )
-      .all() as unknown as ReactionIndexRecord[];
-    const voteTallyRows = database
-      .prepare(
-        `
-          SELECT
-            target_packet_id,
-            upvote_count,
-            downvote_count,
-            net_score,
-            total_votes,
-            negative_ratio,
-            auto_hidden,
-            deprioritized
-          FROM reaction_tally_index
-        `
-      )
-      .all() as unknown as ReactionTallyIndexRecord[];
-    database.close();
+    const voteIndexRows = this.derivedReactionStore.listReactionIndexRows();
+    const voteTallyRows = this.derivedReactionStore.listReactionTallyRows();
 
     const viewerVotesByActor = new Map<string, Map<string, ReactionVoteValue>>();
 
@@ -1012,27 +924,6 @@ export class SQLiteDiscussionService
     }
 
     return false;
-  }
-
-  private async verifySignedCandidatePacket<TPacket extends PacketEnvelope>(
-    packet: TPacket,
-    actorPacket: PacketEnvelopeByType['Element']
-  ): Promise<void> {
-    if (
-      packet.header.integrity.embedded_signatures[0]?.signer_packet_ref?.packet_id !==
-      actorPacket.header.packet_id
-    ) {
-      throw new Error('Signed mutation packet signature does not match the actor packet.');
-    }
-
-    const signatureIsValid = await verifyPacketSignature({
-      packet,
-      signerPacket: actorPacket,
-    });
-
-    if (!signatureIsValid) {
-      throw new Error('Signed mutation packet signature verification failed.');
-    }
   }
 
   async getForumFeed(input: {
@@ -1717,287 +1608,10 @@ export class SQLiteDiscussionService
     };
   }
 
-  async createPost(input: DiscussionPostWriteInput): Promise<{
-    viewer: DiscussionViewerContext;
-    post: DiscussionPostProjection;
-  }> {
-    await this.syncDerivedState();
-
-    if (!this.state) {
-      throw new Error('Discussion state is unavailable.');
-    }
-
-    const forumPacket = await getDiscussionForumById(
-      this.packetStore,
-      input.intent.forum_packet_id
-    );
-
-    if (!forumPacket) {
-      throw new Error(
-        `Unknown discussion forum: ${input.intent.forum_packet_id}`
-      );
-    }
-
-    const scopeLens = buildScopeLens(input.scope_id, this.state.scopeMap);
-
-    if (!matchesAuthorityScope(forumPacket, scopeLens)) {
-      throw new Error('This discussion forum is not available from the current scope.');
-    }
-
-    const actorIdentity = {
-      actor_key: input.actor_key,
-      actor_class: input.actor_class,
-    } satisfies ActorIdentity;
-    const viewer = await this.buildViewerContext(
-      forumPacket,
-      actorIdentity
-    );
-
-    const governingScopePacket = await getElementPacketById(
-      this.packetStore,
-      forumPacket.header.authority_scope_ref?.packet_id ?? null
-    );
-    const policyPackets = governingScopePacket
-      ? await getPolicyPacketsByRefs(
-          this.packetStore,
-          governingScopePacket.header.moderation.policy_refs
-        )
-      : [];
-    const decision = evaluateDiscussionThreadPostMutation({
-      intent: input.intent,
-      actorPacket: input.actor_packet,
-      viewer,
-      governingScopePacket,
-      policyPackets,
-    });
-
-    assertMutationProofBundle({
-      decision,
-      proofs: input.proof_bundle,
-    });
-    await this.verifySignedCandidatePacket(
-      input.signed_thread_packet,
-      input.actor_packet
-    );
-    await this.verifySignedCandidatePacket(
-      input.signed_post_packet,
-      input.actor_packet
-    );
-
-    await this.packetStore.writeRevision(input.signed_thread_packet);
-    await this.packetStore.publishRevision({
-      packet_id: input.signed_thread_packet.header.packet_id,
-      revision_id: input.signed_thread_packet.header.revision_id,
-    });
-    await this.packetStore.writeRevision(input.signed_post_packet);
-    await this.packetStore.publishRevision({
-      packet_id: input.signed_post_packet.header.packet_id,
-      revision_id: input.signed_post_packet.header.revision_id,
-    });
-    await this.syncDerivedState();
-
-    const nextViewer = await this.buildViewerContext(
-      forumPacket,
-      actorIdentity,
-      forumPacket.header.packet_id === input.signed_thread_packet.header.packet_id
-        ? null
-        : await getDiscussionThreadById(
-            this.packetStore,
-            input.signed_thread_packet.header.packet_id
-          )
-    );
-    const createdPost = await getDiscussionEntryById(
-      this.packetStore,
-      input.signed_post_packet.header.packet_id
-    );
-
-    if (!createdPost) {
-      throw new Error('Created discussion post could not be projected.');
-    }
-
-    return {
-      viewer: nextViewer,
-      post: this.toDiscussionPostProjection(
-        createdPost,
-        actorIdentity.actor_key,
-        nextViewer
-      ),
-    };
-  }
-
-  async createReply(input: DiscussionReplyWriteInput): Promise<{
-    viewer: DiscussionViewerContext;
-    post: DiscussionPostProjection;
-  }> {
-    await this.syncDerivedState();
-
-    if (!this.state) {
-      throw new Error('Discussion state is unavailable.');
-    }
-
-    const parentEntry = await getDiscussionEntryById(
-      this.packetStore,
-      input.intent.parent_post_packet_id
-    );
-
-    if (!parentEntry) {
-      throw new Error(`Unknown discussion post: ${input.intent.parent_post_packet_id}`);
-    }
-
-    const threadPacket = await getDiscussionThreadById(
-      this.packetStore,
-      getEntryThreadPacketId(parentEntry)
-    );
-
-    if (!threadPacket) {
-      throw new Error(
-        `Missing discussion thread for post ${input.intent.parent_post_packet_id}.`
-      );
-    }
-
-    const forumPacket = await getDiscussionForumById(
-      this.packetStore,
-      getDiscussionParentPacketId(threadPacket)
-    );
-
-    if (!forumPacket) {
-      throw new Error(
-        `Missing discussion forum for thread ${threadPacket.header.packet_id}.`
-      );
-    }
-
-    const rootPostPacketId = resolveOperationalRootPostId({
-      entryMap: this.state.entryMap,
-      entryOperationalMap: this.state.entryOperationalMap,
-      packetId: parentEntry.header.packet_id,
-    });
-    const rootPostPacket = this.state.rootPostOperationalMap.get(rootPostPacketId);
-
-    if (!rootPostPacket) {
-      throw new Error(
-        `Missing root discussion post for reply target ${input.intent.parent_post_packet_id}.`
-      );
-    }
-
-    const scopeLens = buildScopeLens(input.scope_id, this.state.scopeMap);
-
-    if (!matchesAuthorityScope(forumPacket, scopeLens)) {
-      throw new Error('This discussion forum is not available from the current scope.');
-    }
-
-    const actorIdentity = {
-      actor_key: input.actor_key,
-      actor_class: input.actor_class,
-    } satisfies ActorIdentity;
-    const viewer = await this.buildViewerContext(
-      forumPacket,
-      actorIdentity,
-      threadPacket
-    );
-
-    const governingScopePacket = await getElementPacketById(
-      this.packetStore,
-      forumPacket.header.authority_scope_ref?.packet_id ?? null
-    );
-    const policyPackets = governingScopePacket
-      ? await getPolicyPacketsByRefs(
-          this.packetStore,
-          governingScopePacket.header.moderation.policy_refs
-        )
-      : [];
-    const decision = evaluateDiscussionReplyMutation({
-      intent: input.intent,
-      actorPacket: input.actor_packet,
-      viewer,
-      governingScopePacket,
-      policyPackets,
-    });
-
-    assertMutationProofBundle({
-      decision,
-      proofs: input.proof_bundle,
-    });
-    await this.verifySignedCandidatePacket(
-      input.signed_reply_packet,
-      input.actor_packet
-    );
-
-    await this.packetStore.writeRevision(input.signed_reply_packet);
-    await this.packetStore.publishRevision({
-      packet_id: input.signed_reply_packet.header.packet_id,
-      revision_id: input.signed_reply_packet.header.revision_id,
-    });
-    await this.syncDerivedState();
-
-    const nextViewer = await this.buildViewerContext(
-      forumPacket,
-      actorIdentity,
-      threadPacket
-    );
-    const createdReply = await getDiscussionEntryById(
-      this.packetStore,
-      input.signed_reply_packet.header.packet_id
-    );
-
-    if (!createdReply) {
-      throw new Error('Created discussion reply could not be projected.');
-    }
-
-    return {
-      viewer: nextViewer,
-      post: this.toDiscussionPostProjection(
-        createdReply,
-        actorIdentity.actor_key,
-        nextViewer
-      ),
-    };
-  }
-
   private persistDerivedState(input: {
     discussionIndexRows: DiscussionPostIndexRecord[];
   }): void {
-    const database = new DatabaseSync(this.packetStore.databasePath);
-
-    try {
-      database.exec('BEGIN IMMEDIATE');
-      database.exec('DELETE FROM discussion_post_index');
-      database.exec('DELETE FROM discussion_actor_ledger');
-      const insertDiscussionIndexStatement = database.prepare(`
-        INSERT INTO discussion_post_index (
-          post_packet_id,
-          thread_packet_id,
-          root_post_packet_id,
-          reply_to_packet_id,
-          depth,
-          author_key,
-          created_at,
-          last_activity_at,
-          direct_reply_count,
-          descendant_count
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-      for (const row of input.discussionIndexRows) {
-        insertDiscussionIndexStatement.run(
-          row.post_packet_id,
-          row.thread_packet_id,
-          row.root_post_packet_id,
-          row.reply_to_packet_id,
-          row.depth,
-          row.author_key,
-          row.created_at,
-          row.last_activity_at,
-          row.direct_reply_count,
-          row.descendant_count
-        );
-      }
-
-      database.exec('COMMIT');
-    } catch (error) {
-      database.exec('ROLLBACK');
-      throw error;
-    } finally {
-      database.close();
-    }
+    this.derivedDiscussionStore.replaceDiscussionProjection(input);
   }
 
   private getVoteSummaryForTarget(

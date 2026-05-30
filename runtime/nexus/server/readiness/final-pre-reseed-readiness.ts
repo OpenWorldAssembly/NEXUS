@@ -25,6 +25,7 @@ import {
 import { auditPacketClientIntentEnrollments } from '@runtime/nexus/server/packet-client-intent-enrollment';
 import { auditPacketRuntimeFortressHandoffs } from '@runtime/nexus/server/packet-runtime-fortress-handoff';
 import { auditPacketWorkflowAlignmentCoverage } from '@runtime/nexus/server/packet-workflow-alignment-audit';
+import { createDirectStorageTouchAuditReport } from '@runtime/nexus/server/readiness/direct-storage-touch-audit.ts';
 import { trustedDispatchCoordinator } from '@runtime/trusted_coordinators/trusted_dispatch_coordinator/index.ts';
 import { auditLiveGenericWorkflowEnrollments } from '@runtime/trusted_coordinators/trusted_packet_workflow_coordinator';
 import { auditLiveCompositeWorkflowEnrollments } from '@runtime/trusted_coordinators/trusted_composite_workflow_coordinator';
@@ -161,6 +162,7 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
   const workflowAlignmentAudit = auditPacketWorkflowAlignmentCoverage();
   const liveGenericAudit = auditLiveGenericWorkflowEnrollments();
   const liveCompositeAudit = auditLiveCompositeWorkflowEnrollments();
+  const directStorageTouchAudit = createDirectStorageTouchAuditReport();
   const closureEntries = [
     ...closureReport.live_mutation_intents,
     ...closureReport.runtime_connector_paths,
@@ -233,6 +235,7 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
     ...workflowAlignmentAudit.findings.map((finding) => finding.message),
     ...liveGenericAudit.findings.map((finding) => finding.message),
     ...liveCompositeAudit.findings.map((finding) => finding.message),
+    ...directStorageTouchAudit.findings.map((finding) => finding.message),
     ...openEntries.map(
       (entry) =>
         `${entry.subject_kind}:${entry.subject_id} remains ${entry.status} before reseed design.`

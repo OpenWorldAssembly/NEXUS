@@ -120,6 +120,20 @@ export type TrustedArchiveBundleImport = BundleImportResult & {
   result_kind: 'trusted.archive_bundle_import';
 };
 
+export type TrustedArchivePreferredHeadSnapshot = {
+  packet_id: string;
+  preferred_revision_id: string | null;
+  head_revision_ids: string[];
+};
+
+export type TrustedArchivePreferredHeadRepair = {
+  result_kind: 'trusted.archive_preferred_head_repair';
+  packet_count: number;
+  repaired_packet_count: number;
+  restored_preferred_packet_count: number;
+  diverged_packet_count: number;
+};
+
 export type TrustedArchiveReadinessReport = {
   report_kind: 'trusted.archive_readiness_report';
   mode: TrustedArchiveContextMode;
@@ -177,6 +191,12 @@ export type ImportTrustedArchiveBundleInput = TrustedArchiveStoreContext & {
   context_mode?: TrustedArchiveContextMode;
 };
 
+export type RepairTrustedArchivePreferredHeadsInput = TrustedArchiveStoreContext & {
+  packet_ids: string[];
+  snapshots: TrustedArchivePreferredHeadSnapshot[];
+  context_mode?: TrustedArchiveContextMode;
+};
+
 export type AuditTrustedArchiveReadinessInput = TrustedArchiveStoreContext & {
   context_mode?: TrustedArchiveContextMode;
 };
@@ -189,6 +209,7 @@ export type TrustedArchiveOperation =
   | 'query_edges'
   | 'export_bundle'
   | 'import_bundle'
+  | 'repair_preferred_heads_after_import'
   | 'audit_readiness';
 
 export type TrustedArchiveCoordinatorRequest =
@@ -219,6 +240,10 @@ export type TrustedArchiveCoordinatorRequest =
   | {
       operation: 'import_bundle';
       input: ImportTrustedArchiveBundleInput;
+    }
+  | {
+      operation: 'repair_preferred_heads_after_import';
+      input: RepairTrustedArchivePreferredHeadsInput;
     }
   | {
       operation: 'audit_readiness';

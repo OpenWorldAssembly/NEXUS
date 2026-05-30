@@ -34,6 +34,7 @@ import {
   type TrustedExchangeImportCommitPlanItem,
   type TrustedExchangePacketEntry,
 } from '../trusted_exchange_types.ts';
+import type { TrustedArchivePreferredHeadSnapshot } from '@runtime/trusted_coordinators/trusted_archive_coordinator/index.ts';
 import { planTrustedImportCommit } from './plan_import_commit.ts';
 
 function itemRequiresAcknowledgement(item: TrustedExchangeImportCommitPlanItem): boolean {
@@ -108,6 +109,46 @@ async function resolveImportedRevisionKeys(input: {
   }
 
   return { resolvedKeys, missingKeys, issues, trace };
+}
+
+async function snapshotPreferredHeads(input: {
+  entries: readonly TrustedExchangePacketEntry[];
+  packet_store: CommitTrustedImportInput['packet_store'];
+  database_path: CommitTrustedImportInput['database_path'];
+  context_mode: CommitTrustedImportInput['context_mode'];
+}): Promise<{
+  snapshots: TrustedArchivePreferredHeadSnapshot[];
+  issues: TrustedRuntimeCoordinatorIssue[];
+  trace: TrustedRuntimeCoordinatorTraceEntry[];
+}> {
+  const packetIds = Array.from(new Set(
+    input.entries
+      .map((entry) => entry.packet_ref?.packet_id ?? null)
+      .filter((packetId): packetId is string => Boolean(packetId))
+  ));
+  const snapshots: TrustedArchivePreferredHeadSnapshot[] = [];
+  const issues: TrustedRuntimeCoordinatorIssue[] = [];
+  const trace: TrustedRuntimeCoordinatorTraceEntry[] = [];
+
+  for (const packetId of packetIds) {
+    const resolution = await trustedArchiveCoordinator.resolveRevision({
+      packet_store: input.packet_store,
+      database_path: input.database_path,
+      packet_ref: { packet_id: packetId },
+      context_mode: input.context_mode ?? 'import_preview',
+    });
+    issues.push(...resolution.issues.filter((issue) => issue.code !== 'trusted_archive_revision_not_found'));
+    trace.push(...resolution.trace);
+    snapshots.push({
+      packet_id: packetId,
+      preferred_revision_id: resolution.value?.preferred_revision?.revision_id ?? null,
+      head_revision_ids: resolution.value?.heads.head_revisions.map(
+        (revision) => revision.revision_id
+      ) ?? [],
+    });
+  }
+
+  return { snapshots, issues, trace };
 }
 
 export async function commitTrustedImport(
@@ -250,12 +291,24 @@ export async function commitTrustedImport(
   let importResult: TrustedExchangeImportCommit['import_result'] = null;
   let importedRevisionKeys: string[] = [];
   let missingArchiveKeys: string[] = [];
+  let repairedPreferredPacketCount = 0;
+  let restoredPreferredPacketCount = 0;
+  let divergedPacketCount = 0;
   const unexpectedArchiveKeys: string[] = [];
   const acceptedRevisionKeys = acceptedEntries
     .map((entry) => entry.normalized_key)
     .filter((key): key is string => Boolean(key));
 
   if (!issues.some((issue) => issue.severity === 'error') && acceptedEntries.length > 0) {
+    const preferredSnapshots = await snapshotPreferredHeads({
+      entries: acceptedEntries,
+      packet_store: input.packet_store,
+      database_path: input.database_path,
+      context_mode: contextMode,
+    });
+    issues.push(...preferredSnapshots.issues);
+    trace.push(...preferredSnapshots.trace);
+
     const narrowedBundle = createTrustedExchangeArchiveBundle(acceptedEntries);
     try {
       const archiveImportResult = await trustedArchiveCoordinator.importBundle({
@@ -313,6 +366,28 @@ export async function commitTrustedImport(
         path: 'archive_import',
         message: `Archive import did not resolve ${missingArchiveKeys.length} planned revision(s) after commit.`,
       }));
+    }
+
+    if (importResult) {
+      const preferredRepair = await trustedArchiveCoordinator.repairPreferredHeadsAfterImport({
+        packet_store: input.packet_store,
+        database_path: input.database_path,
+        packet_ids: Array.from(new Set(acceptedEntries
+          .map((entry) => entry.packet_ref?.packet_id ?? null)
+          .filter((packetId): packetId is string => Boolean(packetId)))),
+        snapshots: preferredSnapshots.snapshots,
+        context_mode: contextMode,
+      });
+      issues.push(...preferredRepair.issues);
+      trace.push(...preferredRepair.trace);
+      repairedPreferredPacketCount = preferredRepair.value?.repaired_packet_count ?? 0;
+      restoredPreferredPacketCount = preferredRepair.value?.restored_preferred_packet_count ?? 0;
+      divergedPacketCount = preferredRepair.value?.diverged_packet_count ?? 0;
+      processChain = appendTrustedChildResult(processChain, preferredRepair, {
+        stage_id: 'exchange.import.commit.archive_preferred_head_repair',
+        operation_name: 'repair_preferred_heads_after_import',
+        notes: 'Asked Trusted Archive to reconcile preferred heads after import.',
+      });
     }
 
     if (importResult && importResult.revision_count < acceptedEntries.length && missingArchiveKeys.length === 0) {
@@ -390,6 +465,9 @@ export async function commitTrustedImport(
       skipped_revision_keys: skippedRevisionKeys,
       unexpected_archive_keys: unexpectedArchiveKeys,
       missing_archive_keys: missingArchiveKeys,
+      repaired_preferred_packet_count: repairedPreferredPacketCount,
+      restored_preferred_packet_count: restoredPreferredPacketCount,
+      diverged_packet_count: divergedPacketCount,
       imported_revision_count: importResult?.revision_count ?? 0,
       skipped_duplicate_count: plan?.skip_duplicate_count ?? 0,
       warnings,

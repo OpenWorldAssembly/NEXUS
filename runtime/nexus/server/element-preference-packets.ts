@@ -24,6 +24,7 @@ import {
   runtimeScopeDisplayPreferencesToPreferenceBody,
 } from '@runtime/nexus/server/preference-packet-definition';
 import type { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store';
+import { trustedExchangeCoordinator } from '@runtime/trusted_coordinators/trusted_exchange_coordinator/index.ts';
 
 type ElementPreferencePacket = PacketEnvelopeByType['Preference'];
 
@@ -312,11 +313,33 @@ export async function writeElementPreferenceInterfacePacket(input: {
     return plan;
   }
 
-  const revisionRef = await input.packetStore.writeRevision(plan.packet);
+  const commitResult = await trustedExchangeCoordinator.commitImport({
+    packet_store: input.packetStore,
+    bundle: JSON.stringify({
+      bundle_version: 1,
+      packets: [plan.packet],
+    }),
+    source_label: 'preference.element.interface.set',
+    context_mode: 'normal_runtime',
+    accepted_acknowledgements: [
+      'needs_compatibility_acknowledgement',
+      'needs_verification_acknowledgement',
+    ],
+    options: {
+      verification_mode: 'advisory',
+    },
+  });
+
+  if (commitResult.status === 'error') {
+    throw new Error(
+      commitResult.issues.find((issue) => issue.severity === 'error')?.message ??
+        'Trusted Exchange could not commit the element preference packet.'
+    );
+  }
 
   return {
     packet: plan.packet,
-    revision_ref: revisionRef,
+    revision_ref: plan.revision_ref,
     preferences: plan.preferences,
     shell_chrome: plan.shell_chrome,
     wrote_revision: true,

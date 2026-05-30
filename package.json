@@ -23,7 +23,8 @@
     "check:app-boundaries": "node ./scripts/assert-no-app-tests.mjs",
     "audit:trusted-coordinators": "node --experimental-strip-types --experimental-specifier-resolution=node --loader ./scripts/ts-paths-loader.mjs scripts/audit-trusted-coordinators.ts",
     "test:trusted-coordinators": "node --experimental-strip-types --experimental-specifier-resolution=node --loader ./scripts/ts-paths-loader.mjs --test runtime/trusted_coordinators/*.test.ts",
-    "check:trusted-coordinators": "npm run audit:trusted-coordinators && npm run test:trusted-coordinators"
+    "check:trusted-coordinators": "npm run audit:trusted-coordinators && npm run test:trusted-coordinators",
+    "audit:direct-storage-touches": "node --experimental-strip-types --experimental-specifier-resolution=node --loader ./scripts/ts-paths-loader.mjs scripts/audit-direct-storage-touches.ts"
   },
   "engines": {
     "node": "24.x"

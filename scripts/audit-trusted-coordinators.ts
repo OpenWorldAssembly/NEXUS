@@ -267,7 +267,11 @@ function scanRuntimeCrossingNotes(): AuditNote[] {
   const filesToScan = [
     ...listFilesRecursively('runtime/nexus/server'),
     ...listFilesRecursively('src/app/api/nexus'),
-  ].filter((path) => !path.endsWith('.test.ts') && !path.endsWith('.test.tsx'));
+  ].filter((path) =>
+    !path.endsWith('.test.ts') &&
+    !path.endsWith('.test.tsx') &&
+    path !== 'runtime/nexus/server/readiness/direct-storage-touch-audit.ts'
+  );
 
   const notes: AuditNote[] = [];
 

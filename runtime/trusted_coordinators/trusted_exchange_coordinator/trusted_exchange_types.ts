@@ -169,6 +169,9 @@ export type TrustedExchangeImportCommit = {
   skipped_revision_keys: string[];
   unexpected_archive_keys: string[];
   missing_archive_keys: string[];
+  repaired_preferred_packet_count: number;
+  restored_preferred_packet_count: number;
+  diverged_packet_count: number;
   imported_revision_count: number;
   skipped_duplicate_count: number;
   warnings: string[];

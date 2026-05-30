@@ -11,6 +11,7 @@ import {
   type AuditTrustedArchiveReadinessInput,
   type ExportTrustedArchiveBundleInput,
   type ImportTrustedArchiveBundleInput,
+  type RepairTrustedArchivePreferredHeadsInput,
   type QueryTrustedArchivedPacketsInput,
   type QueryTrustedArchiveEdgesInput,
   type ReadTrustedArchivedPacketInput,
@@ -18,6 +19,7 @@ import {
   type StoreTrustedCertifiedPacketSetInput,
   type TrustedArchiveBundleExport,
   type TrustedArchiveBundleImport,
+  type TrustedArchivePreferredHeadRepair,
   type TrustedArchiveEdgeResult,
   type TrustedArchiveQueryResult,
   type TrustedArchiveReadinessReport,
@@ -97,6 +99,15 @@ export const trustedArchiveCoordinator = {
     }));
   },
 
+  repairPreferredHeadsAfterImport(
+    input: RepairTrustedArchivePreferredHeadsInput
+  ): Promise<TrustedRuntimeCoordinatorResult<TrustedArchivePreferredHeadRepair>> {
+    return castPromise(runTrustedArchiveOperation({
+      operation: 'repair_preferred_heads_after_import',
+      input,
+    }));
+  },
+
   auditReadiness(
     input?: AuditTrustedArchiveReadinessInput
   ): Promise<TrustedRuntimeCoordinatorResult<TrustedArchiveReadinessReport>> {
@@ -114,5 +125,6 @@ export const trustedArchiveCoordinator = {
   queryEdges(input: QueryTrustedArchiveEdgesInput): Promise<TrustedRuntimeCoordinatorResult<TrustedArchiveEdgeResult>>;
   exportBundle(input: ExportTrustedArchiveBundleInput): Promise<TrustedRuntimeCoordinatorResult<TrustedArchiveBundleExport>>;
   importBundle(input: ImportTrustedArchiveBundleInput): Promise<TrustedRuntimeCoordinatorResult<TrustedArchiveBundleImport>>;
+  repairPreferredHeadsAfterImport(input: RepairTrustedArchivePreferredHeadsInput): Promise<TrustedRuntimeCoordinatorResult<TrustedArchivePreferredHeadRepair>>;
   auditReadiness(input?: AuditTrustedArchiveReadinessInput): Promise<TrustedRuntimeCoordinatorResult<TrustedArchiveReadinessReport>>;
 };

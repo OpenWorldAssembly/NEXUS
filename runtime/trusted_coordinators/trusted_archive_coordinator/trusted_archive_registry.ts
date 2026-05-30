@@ -11,6 +11,7 @@ import { queryTrustedArchiveEdges } from './functions/query_packet_edges.ts';
 import { queryTrustedArchivedPackets } from './functions/query_archived_packets.ts';
 import { readTrustedArchivedPacket } from './functions/read_archived_packet.ts';
 import { resolveTrustedArchivedRevision } from './functions/resolve_archived_revision.ts';
+import { repairTrustedArchivePreferredHeadsAfterImport } from './functions/repair_preferred_heads_after_import.ts';
 import { storeTrustedCertifiedPacketSet } from './functions/store_certified_packet_set.ts';
 import type { TrustedArchiveCoordinatorRequest } from './trusted_archive_types.ts';
 
@@ -58,6 +59,12 @@ const TRUSTED_ARCHIVE_REGISTRY: Record<TrustedArchiveCoordinatorRequest['operati
       throw new Error('Invalid Trusted Archive operation dispatch.');
     }
     return importTrustedArchiveBundle(request.input);
+  },
+  repair_preferred_heads_after_import: (request) => {
+    if (request.operation !== 'repair_preferred_heads_after_import') {
+      throw new Error('Invalid Trusted Archive operation dispatch.');
+    }
+    return repairTrustedArchivePreferredHeadsAfterImport(request.input);
   },
   audit_readiness: (request) => {
     if (request.operation !== 'audit_readiness') {

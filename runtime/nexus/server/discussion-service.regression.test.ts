@@ -15,7 +15,6 @@ import {
 } from '@core/packets/builders';
 import { createCanonicalDiscussionMirrorPacket } from '@core/packets/discussion-compat';
 import { createPersonIdentityPacket } from '@core/packets/identity';
-import type { MutationProofBundle } from '@core/auth/proof-types';
 import type { PacketEnvelope, PacketEnvelopeByType } from '@core/schema/packet-schema';
 import {
   createIdentityKeyBinding,
@@ -94,21 +93,6 @@ async function signPacketForActor<TPacket extends PacketEnvelope>(
     privateKey: await importPrivateKeyFromJwk(privateJwk),
     signedAt: packet.header.created_at,
   });
-}
-
-function createGuestProofBundle(
-  actorPacket: PacketEnvelopeByType['Element']
-): MutationProofBundle {
-  return {
-    actor_packet_id: actorPacket.header.packet_id,
-    is_claimed_identity: false,
-    has_actor_assertion: true,
-    has_claimed_session: false,
-    has_unlocked_identity: true,
-    has_recent_reauth: false,
-    has_passkey_confirmation: false,
-    proof_methods: ['bundle_unlocked'],
-  };
 }
 
 function createDiscussionHarness() {
@@ -253,39 +237,16 @@ test('guest top-level canonical posts stay visible and navigable under a legacy 
       ],
     });
 
-    const result = await harness.discussionService.createPost({
-      scope_id: SCOPE_ROUTE_ID,
-      actor_key: `element:${guestActor.actorPacket.header.packet_id}`,
-      actor_class: 'anonymous_guest',
-      actor_packet: guestActor.actorPacket,
-      proof_bundle: createGuestProofBundle(guestActor.actorPacket),
-      intent: {
-        kind: 'discussion.thread_post.create',
-        scope_id: SCOPE_ROUTE_ID,
-        mutation_nonce: 'top-level-post-1',
-        created_at: '2026-04-28T19:42:41.000Z',
-        forum_packet_id: legacyForumPacket.header.packet_id,
-        forum_kind: 'visitor_lobby',
-        authority_scope_packet_id: SCOPE_PACKET_ID,
-        applicable_scope_packet_ids: [SCOPE_PACKET_ID],
-        default_sort: 'new',
-        thread_title: 'for all your testing needs',
-        post_markdown: 'for all your testing needs',
-        thread_kind: 'visitor_lobby',
-        related_packet_ids: [],
-        legacy_context_packet_ids: [legacyForumPacket.header.packet_id],
-      },
-      signed_thread_packet: await signPacketForActor(
-        topicPacket,
-        guestActor.actorPacket,
-        guestActor.privateJwk
-      ),
-      signed_post_packet: await signPacketForActor(
-        rootPostPacket,
-        guestActor.actorPacket,
-        guestActor.privateJwk
-      ),
-    });
+    await writePreferredPacket(harness.packetStore, guestActor.actorPacket);
+    await writePreferredPacket(
+      harness.packetStore,
+      await signPacketForActor(topicPacket, guestActor.actorPacket, guestActor.privateJwk)
+    );
+    await writePreferredPacket(
+      harness.packetStore,
+      await signPacketForActor(rootPostPacket, guestActor.actorPacket, guestActor.privateJwk)
+    );
+    await harness.discussionService.syncDerivedState();
 
     const feed = await harness.discussionService.getForumFeed({
       scope_id: SCOPE_ROUTE_ID,
@@ -296,13 +257,12 @@ test('guest top-level canonical posts stay visible and navigable under a legacy 
     });
     const thread = await harness.discussionService.getThreadDetail({
       scope_id: SCOPE_ROUTE_ID,
-      post_packet_id: result.post.packet.packet_id,
+      post_packet_id: rootPostPacket.header.packet_id,
       reply_sort: 'top',
       show_hidden: true,
       viewer_actor_key: null,
     });
 
-    assert.equal(result.post.packet.packet_id, rootPostPacket.header.packet_id);
     assert.equal(feed.top_level_posts.length, 1);
     assert.equal(feed.top_level_posts[0]?.packet.packet_id, rootPostPacket.header.packet_id);
     assert.equal(thread.root_post.packet.packet_id, rootPostPacket.header.packet_id);
@@ -380,32 +340,11 @@ test('guest replies to canonical roots and nested replies without duplicate sema
       content_markdown: 'First reply',
     });
 
-    const firstReplyResult = await harness.discussionService.createReply({
-      scope_id: SCOPE_ROUTE_ID,
-      actor_key: `element:${guestActor.actorPacket.header.packet_id}`,
-      actor_class: 'anonymous_guest',
-      actor_packet: guestActor.actorPacket,
-      proof_bundle: createGuestProofBundle(guestActor.actorPacket),
-      intent: {
-        kind: 'discussion.reply.create',
-        scope_id: SCOPE_ROUTE_ID,
-        mutation_nonce: 'reply-1',
-        created_at: '2026-04-28T20:01:00.000Z',
-        forum_kind: 'visitor_lobby',
-        authority_scope_packet_id: SCOPE_PACKET_ID,
-        applicable_scope_packet_ids: [SCOPE_PACKET_ID],
-        thread_packet_id: topicPacket.header.packet_id,
-        root_post_packet_id: rootPostPacket.header.packet_id,
-        parent_post_packet_id: rootPostPacket.header.packet_id,
-        reply_markdown: 'First reply',
-        legacy_context_packet_ids: [],
-      },
-      signed_reply_packet: await signPacketForActor(
-        firstReplyPacket,
-        guestActor.actorPacket,
-        guestActor.privateJwk
-      ),
-    });
+    await writePreferredPacket(harness.packetStore, guestActor.actorPacket);
+    await writePreferredPacket(
+      harness.packetStore,
+      await signPacketForActor(firstReplyPacket, guestActor.actorPacket, guestActor.privateJwk)
+    );
 
     const nestedReplyPacket = createDiscussionPacket({
       packet_id: 'nexus:discussion/message/global-commons-visitor-lobby-reply-2',
@@ -419,39 +358,18 @@ test('guest replies to canonical roots and nested replies without duplicate sema
       subtype: 'message',
       role: 'reply',
       title: 'Reply from Guest Reply',
-      parent_ref: { packet_id: firstReplyResult.post.packet.packet_id },
+      parent_ref: { packet_id: firstReplyPacket.header.packet_id },
       topic_ref: { packet_id: topicPacket.header.packet_id },
       root_message_ref: { packet_id: rootPostPacket.header.packet_id },
       status: 'open',
       content_markdown: 'Nested reply',
     });
 
-    const nestedReplyResult = await harness.discussionService.createReply({
-      scope_id: SCOPE_ROUTE_ID,
-      actor_key: `element:${guestActor.actorPacket.header.packet_id}`,
-      actor_class: 'anonymous_guest',
-      actor_packet: guestActor.actorPacket,
-      proof_bundle: createGuestProofBundle(guestActor.actorPacket),
-      intent: {
-        kind: 'discussion.reply.create',
-        scope_id: SCOPE_ROUTE_ID,
-        mutation_nonce: 'reply-2',
-        created_at: '2026-04-28T20:02:00.000Z',
-        forum_kind: 'visitor_lobby',
-        authority_scope_packet_id: SCOPE_PACKET_ID,
-        applicable_scope_packet_ids: [SCOPE_PACKET_ID],
-        thread_packet_id: topicPacket.header.packet_id,
-        root_post_packet_id: rootPostPacket.header.packet_id,
-        parent_post_packet_id: firstReplyResult.post.packet.packet_id,
-        reply_markdown: 'Nested reply',
-        legacy_context_packet_ids: [],
-      },
-      signed_reply_packet: await signPacketForActor(
-        nestedReplyPacket,
-        guestActor.actorPacket,
-        guestActor.privateJwk
-      ),
-    });
+    await writePreferredPacket(
+      harness.packetStore,
+      await signPacketForActor(nestedReplyPacket, guestActor.actorPacket, guestActor.privateJwk)
+    );
+    await harness.discussionService.syncDerivedState();
 
     const thread = await harness.discussionService.getThreadDetail({
       scope_id: SCOPE_ROUTE_ID,
@@ -461,8 +379,6 @@ test('guest replies to canonical roots and nested replies without duplicate sema
       viewer_actor_key: null,
     });
 
-    assert.equal(firstReplyResult.post.packet.packet_id, firstReplyPacket.header.packet_id);
-    assert.equal(nestedReplyResult.post.packet.packet_id, nestedReplyPacket.header.packet_id);
     assert.equal(thread.root_post.reply_count, 1);
     assert.equal(thread.replies[0]?.packet.packet_id, firstReplyPacket.header.packet_id);
   } finally {

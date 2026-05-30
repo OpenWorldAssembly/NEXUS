@@ -86,6 +86,15 @@ const TRUSTED_ISSUE_DESCRIPTORS = [
     user_message: 'Archive storage failed before all work completed.',
   },
   {
+    code: 'archive.preferred_head_repair_skipped',
+    legacy_aliases: ['trusted_archive_preferred_head_repair_no_heads'],
+    default_severity: 'warning',
+    category: 'not_found',
+    retryability: 'unknown',
+    user_title: 'Preferred head repair skipped',
+    user_message: 'Archive could not repair a preferred packet head because no head revisions were available.',
+  },
+  {
     code: 'archive.certified_keys_missing',
     legacy_aliases: ['trusted_archive_certified_keys_missing'],
     default_severity: 'error',

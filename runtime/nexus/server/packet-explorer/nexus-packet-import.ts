@@ -47,7 +47,6 @@ type AnalyzedImport = {
   payload: NexusPacketExplorerImportPreviewPayload;
   normalizedBundleText: string | null;
   affectedPacketIds: string[];
-  packetIdsWithNewRevisions: string[];
   validationMode: NexusPacketValidationMode;
 };
 
@@ -77,11 +76,6 @@ function normalizeValidationMode(
 
   return 'validate_before_commit';
 }
-
-type PreferredSnapshot = {
-  preferredRevisionId: string | null;
-  headRevisionIds: string[];
-};
 
 function trimOptionalString(value: string | null | undefined): string | null {
   if (typeof value !== 'string') {
@@ -446,7 +440,6 @@ async function analyzeImportRequest(input: {
       }),
       normalizedBundleText: null,
       affectedPacketIds: [],
-      packetIdsWithNewRevisions: [],
       validationMode,
     };
   }
@@ -525,7 +518,6 @@ async function analyzeImportRequest(input: {
   const seenRevisionKeys = new Set<string>();
   const importedRevisionIdsByPacketId = new Map<string, Set<string>>();
   const existingRevisionPresence = new Map<string, boolean>();
-  const packetIdsWithNewRevisions = new Set<string>();
   let duplicateRevisionCount = 0;
   let newRevisionCount = 0;
 
@@ -564,7 +556,6 @@ async function analyzeImportRequest(input: {
     }
 
     newRevisionCount += 1;
-    packetIdsWithNewRevisions.add(packetId);
   }
 
   const existingParentPresence = new Map<string, boolean>();
@@ -703,7 +694,6 @@ async function analyzeImportRequest(input: {
           })
         : null,
     affectedPacketIds,
-    packetIdsWithNewRevisions: Array.from(packetIdsWithNewRevisions),
     validationMode,
   };
 }
@@ -716,84 +706,6 @@ function canCommitImport(
     payload.status === 'duplicates_only' ||
     payload.status === 'partial_risk'
   );
-}
-
-async function snapshotPreferredHeads(input: {
-  services: PacketImportServices;
-  packetIds: string[];
-}): Promise<Map<string, PreferredSnapshot>> {
-  const snapshots = new Map<string, PreferredSnapshot>();
-
-  await Promise.all(
-    input.packetIds.map(async (packetId) => {
-      const headStatus = await input.services.packetStore.fetchRevisionHeads({
-        packet_id: packetId,
-      });
-
-      snapshots.set(packetId, {
-        preferredRevisionId: headStatus.preferred_revision?.revision_id ?? null,
-        headRevisionIds: headStatus.head_revisions.map(
-          (revision) => revision.revision_id
-        ),
-      });
-    })
-  );
-
-  return snapshots;
-}
-
-async function repairPreferredHeadsAfterImport(input: {
-  services: PacketImportServices;
-  packetIdsWithNewRevisions: string[];
-  snapshots: Map<string, PreferredSnapshot>;
-}): Promise<{
-  restoredPreferredPacketCount: number;
-  divergedPacketCount: number;
-}> {
-  let restoredPreferredPacketCount = 0;
-  let divergedPacketCount = 0;
-
-  for (const packetId of input.packetIdsWithNewRevisions) {
-    const headStatus = await input.services.packetStore.fetchRevisionHeads({
-      packet_id: packetId,
-    });
-    const nextHeadRevisionIds = headStatus.head_revisions.map(
-      (revision) => revision.revision_id
-    );
-    const snapshot = input.snapshots.get(packetId) ?? {
-      preferredRevisionId: null,
-      headRevisionIds: [],
-    };
-
-    if (nextHeadRevisionIds.length === 1) {
-      await input.services.packetStore.publishRevision({
-        packet_id: packetId,
-        revision_id: nextHeadRevisionIds[0]!,
-      });
-      continue;
-    }
-
-    if (
-      snapshot.preferredRevisionId &&
-      nextHeadRevisionIds.includes(snapshot.preferredRevisionId)
-    ) {
-      await input.services.packetStore.publishRevision({
-        packet_id: packetId,
-        revision_id: snapshot.preferredRevisionId,
-      });
-      restoredPreferredPacketCount += 1;
-      continue;
-    }
-
-    if (nextHeadRevisionIds.length > 1) {
-      divergedPacketCount += 1;
-    }
-  }
-
-  return {
-    restoredPreferredPacketCount,
-    divergedPacketCount,
-  };
 }
 
 export function parseNexusPacketExplorerImportRequest(
@@ -868,10 +780,6 @@ export async function buildNexusPacketExplorerImportCommit(input: {
     };
   }
 
-  const preferredSnapshots = await snapshotPreferredHeads({
-    services: input.services,
-    packetIds: analyzedImport.affectedPacketIds,
-  });
   const validationMode = analyzedImport.validationMode;
   const exchangeCommit = await trustedExchangeCoordinator.commitImport({
     packet_store: input.services.packetStore,
@@ -894,11 +802,6 @@ export async function buildNexusPacketExplorerImportCommit(input: {
         'Trusted Exchange could not commit the import bundle.'
     );
   }
-  const preferredRepair = await repairPreferredHeadsAfterImport({
-    services: input.services,
-    packetIdsWithNewRevisions: analyzedImport.packetIdsWithNewRevisions,
-    snapshots: preferredSnapshots,
-  });
   const shouldCreateVerificationReports =
     validationMode === 'validate_before_commit' ||
     validationMode === 'validate_after_commit';
@@ -938,8 +841,8 @@ export async function buildNexusPacketExplorerImportCommit(input: {
     imported_revision_count: importedRevisionCount,
     skipped_duplicate_count: analyzedImport.payload.duplicate_revision_count,
     restored_preferred_packet_count:
-      preferredRepair.restoredPreferredPacketCount,
-    diverged_packet_count: preferredRepair.divergedPacketCount,
+      exchangeCommit.value?.restored_preferred_packet_count ?? 0,
+    diverged_packet_count: exchangeCommit.value?.diverged_packet_count ?? 0,
     import_report_packet_id: importReport.header.packet_id,
     created_verification_report_packet_ids: createdVerificationReports.map(
       (report) => report.report_packet_id

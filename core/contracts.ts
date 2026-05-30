@@ -524,18 +524,6 @@ export interface DiscussionQueryService {
 
 export interface ReactionService {
   syncDerivedState(): Promise<void>;
-  setReaction(input: {
-    target_packet_id: string;
-    actor_key: string;
-    actor_class: DiscussionActorClass;
-    authority_scope_id: string | null;
-    vote_value?: ReactionVoteValue | null;
-    attestation_value?: ReactionAttestationValue | null;
-    emoji_keys?: ReactionEmojiKey[];
-    context_packet_id?: string | null;
-    supporting_packet_ids?: string[];
-    note?: string | null;
-  }): Promise<ReactionVoteSummary>;
   getTargetSummary(input: {
     target_packet_id: string;
     viewer_actor_key: string | null;

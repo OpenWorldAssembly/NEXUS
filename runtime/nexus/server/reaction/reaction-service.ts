@@ -1,17 +1,9 @@
 /**
  * File: reaction-service.ts
- * Description: Projects and mutates canonical reaction packets across discussions and association flows.
+ * Description: Projects canonical reaction packets across discussions and association flows.
  */
 
-import { DatabaseSync } from 'node:sqlite';
-
-import { createReactionPacket } from '@core/packets/builders';
-import {
-  isDiscussionMessagePacket,
-  type DiscussionLegacyType,
-} from '@core/packets/discussion-compat';
 import { interpretPacket } from '@core/packets/packet-interpreter';
-import { resolvePacketTarget } from '@core/packets/packet-target-resolver';
 import type {
   AssociationClaimProjection,
   AssociationRelationProjection,
@@ -21,13 +13,10 @@ import type {
 } from '@core/contracts';
 import type {
   ReactionAttestationValue,
-  ReactionEmojiKey,
   ReactionVoteValue,
-  DiscussionActorClass,
   PacketEnvelope,
   PacketEnvelopeByType,
 } from '@core/schema/packet-schema';
-import { verifyPacketSignature } from '@runtime/nexus/identity-crypto';
 import {
   filterClaimPackets,
   listClaimPackets,
@@ -36,15 +25,12 @@ import {
   filterRelationPackets,
   listRelationPackets,
 } from '@runtime/nexus/server/relation-utils';
-import {
-  createReactionPacketId,
-  resolveDiscussionScopePacketId,
-} from '@runtime/nexus/discussion-packets';
 import type {
   ReactionIndexRecord,
   ReactionTallyIndexRecord,
 } from '@runtime/storage/sqlite-records';
 import { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store';
+import { NodeSQLiteDerivedReactionStore } from '@runtime/storage/node-sqlite-derived-reaction-store';
 
 type ReactionAggregate = Omit<ReactionVoteSummary, 'viewer_value'>;
 
@@ -65,18 +51,6 @@ function getActorKeyFromPacket(packet: PacketEnvelope): string | null {
   }
 
   return `element:${createdByPacketId}`;
-}
-
-function createNextRevisionId(
-  packetId: string,
-  currentRevisionId?: string | null
-): string {
-  const currentRevisionNumber =
-    currentRevisionId?.match(/@r(\d+)$/)?.[1] ?? null;
-  const nextRevisionNumber =
-    currentRevisionNumber === null ? 1 : Number(currentRevisionNumber) + 1;
-
-  return `${packetId}@r${nextRevisionNumber}`;
 }
 
 function applyModerationThresholds(
@@ -140,107 +114,16 @@ function toReactionEdgeProjection(
   };
 }
 
-function projectDiscussionLegacyView<TType extends DiscussionLegacyType>(
-  packet: PacketEnvelope,
-  targetType: TType
-): PacketEnvelopeByType[TType] | null {
-  void targetType;
-  return packet.header.type === 'Discussion'
-    ? (packet as unknown as PacketEnvelopeByType[TType])
-    : null;
-}
-
-async function getDiscussionForumById(
-  packetStore: NodeSQLitePacketStore,
-  forumPacketId: string
-): Promise<PacketEnvelopeByType['Discussion'] | null> {
-  const resolution = await resolvePacketTarget({
-    packet_id: forumPacketId,
-    fetchPacket: async (packetId) =>
-      packetStore.fetchByPacket({ packet_id: packetId }),
-    fetchRevisionHeads: async (packetId) =>
-      packetStore.fetchRevisionHeads({ packet_id: packetId }),
-  });
-  const packet = resolution.resolved_packet ?? resolution.source_packet;
-
-  if (!packet) {
-    return null;
-  }
-
-  if (packet.header.type !== 'Discussion') {
-    return projectDiscussionLegacyView(packet, 'Discussion');
-  }
-
-  return packet as PacketEnvelopeByType['Discussion'];
-}
-
-async function getDiscussionThreadById(
-  packetStore: NodeSQLitePacketStore,
-  threadPacketId: string
-): Promise<PacketEnvelopeByType['Discussion'] | null> {
-  const resolution = await resolvePacketTarget({
-    packet_id: threadPacketId,
-    fetchPacket: async (packetId) =>
-      packetStore.fetchByPacket({ packet_id: packetId }),
-    fetchRevisionHeads: async (packetId) =>
-      packetStore.fetchRevisionHeads({ packet_id: packetId }),
-  });
-  const packet = resolution.resolved_packet ?? resolution.source_packet;
-
-  if (!packet) {
-    return null;
-  }
-
-  if (packet.header.type !== 'Discussion') {
-    return projectDiscussionLegacyView(packet, 'Discussion');
-  }
-
-  return packet as PacketEnvelopeByType['Discussion'];
-}
-
-function getEntryThreadPacketId(
-  entryPacket:
-    | PacketEnvelopeByType['Discussion']
-    | PacketEnvelopeByType['Discussion']
-): string {
-  const body = entryPacket.body as {
-    topic_ref?: { packet_id: string };
-    parent_ref?: { packet_id: string };
-  };
-
-  return body.topic_ref?.packet_id ?? body.parent_ref?.packet_id ?? entryPacket.header.packet_id;
-}
-
-function toLegacyDiscussionEntry(
-  packet: PacketEnvelope
-):
-  | PacketEnvelopeByType['Discussion']
-  | PacketEnvelopeByType['Discussion']
-  | null {
-  if (isDiscussionMessagePacket(packet)) {
-    return (
-      (projectDiscussionLegacyView(packet, 'Discussion') as
-        | PacketEnvelopeByType['Discussion']
-        | null) ??
-      (projectDiscussionLegacyView(packet, 'Discussion') as
-        | PacketEnvelopeByType['Discussion']
-        | null)
-    );
-  }
-
-  if (packet.header.type === 'Discussion') {
-    return packet as PacketEnvelopeByType['Discussion'];
-  }
-
-  return null;
-}
-
 export class SQLiteReactionService implements ReactionService {
   private state: ReactionState | null = null;
   private readonly packetStore: NodeSQLitePacketStore;
+  private readonly derivedReactionStore: NodeSQLiteDerivedReactionStore;
 
   constructor(packetStore: NodeSQLitePacketStore) {
     this.packetStore = packetStore;
+    this.derivedReactionStore = new NodeSQLiteDerivedReactionStore({
+      databasePath: packetStore.databasePath,
+    });
   }
 
   async syncDerivedState(): Promise<void> {
@@ -357,310 +240,6 @@ export class SQLiteReactionService implements ReactionService {
     });
   }
 
-  async setReaction(input: {
-    target_packet_id: string;
-    actor_key: string;
-    actor_class: DiscussionActorClass;
-    authority_scope_id: string | null;
-    vote_value?: ReactionVoteValue | null;
-    attestation_value?: ReactionAttestationValue | null;
-    emoji_keys?: ReactionEmojiKey[];
-    context_packet_id?: string | null;
-    supporting_packet_ids?: string[];
-    note?: string | null;
-  }): Promise<ReactionVoteSummary> {
-    await this.syncDerivedState();
-
-    if (!this.state) {
-      throw new Error('Reaction state is unavailable.');
-    }
-
-    const targetPacket = await this.packetStore.fetchByPacket({
-      packet_id: input.target_packet_id,
-    });
-
-    if (!targetPacket) {
-      throw new Error(`Unknown reaction target: ${input.target_packet_id}`);
-    }
-
-    const entryPacket = toLegacyDiscussionEntry(targetPacket);
-
-    if (entryPacket) {
-      const threadPacket = await getDiscussionThreadById(
-        this.packetStore,
-        getEntryThreadPacketId(entryPacket)
-      );
-
-      if (!threadPacket) {
-        throw new Error(
-          `Missing discussion thread for packet ${input.target_packet_id}.`
-        );
-      }
-
-      const forumPacket = await getDiscussionForumById(
-        this.packetStore,
-        (threadPacket.body as { parent_ref: { packet_id: string } }).parent_ref.packet_id
-      );
-
-      if (!forumPacket) {
-        throw new Error(
-          `Missing discussion forum for thread ${threadPacket.header.packet_id}.`
-        );
-      }
-
-      if (forumPacket.body.role !== 'visitor_lobby') {
-        const actorPacketId = input.actor_key.startsWith('element:')
-          ? input.actor_key.slice('element:'.length)
-          : null;
-        const assemblyPacketId = forumPacket.header.authority_scope_ref?.packet_id ?? null;
-
-        if (!actorPacketId || !assemblyPacketId) {
-          throw new Error('Reactions are not open to your current actor class here.');
-        }
-
-        const hasMembership = await this.hasActiveAssociationRelation({
-          actor_packet_id: actorPacketId,
-          target_packet_id: assemblyPacketId,
-        });
-
-        if (!hasMembership) {
-          throw new Error('Reactions are not open to your current actor class here.');
-        }
-      }
-    }
-
-    const actorPacketId = input.actor_key.replace(/^element:/, '');
-    const reactionPacketId = createReactionPacketId({
-      targetPacketId: input.target_packet_id,
-      actorPacketId,
-      contextPacketId: input.context_packet_id ?? null,
-    });
-    const existingPreferredRevision = await this.packetStore.fetchPreferredRevision({
-      packet_id: reactionPacketId,
-    });
-    const existingPacket =
-      existingPreferredRevision === null
-        ? null
-        : await this.packetStore.fetchByRevision(existingPreferredRevision);
-    const currentReactionPacket =
-      existingPacket?.header.type === 'Reaction'
-        ? (existingPacket as PacketEnvelopeByType['Reaction'])
-        : null;
-
-    const requestedVoteValue = input.vote_value;
-    const nextVoteValue =
-      requestedVoteValue === undefined
-        ? currentReactionPacket?.body.vote_value ?? null
-        : requestedVoteValue;
-    const nextAttestationValue =
-      input.attestation_value === undefined
-        ? currentReactionPacket?.body.attestation_value ?? null
-        : input.attestation_value;
-    const nextEmojiKeys =
-      input.emoji_keys === undefined
-        ? currentReactionPacket?.body.emoji_keys ?? []
-        : input.emoji_keys;
-    const nextStatus =
-      nextVoteValue === null && nextAttestationValue === null && nextEmojiKeys.length === 0
-        ? 'cleared'
-        : 'active';
-
-    if (nextStatus === 'cleared' && !currentReactionPacket) {
-      await this.syncDerivedState();
-      return this.getTargetSummary({
-        target_packet_id: input.target_packet_id,
-        viewer_actor_key: input.actor_key,
-      });
-    }
-
-    const nextPacket = createReactionPacket({
-      packet_id: reactionPacketId,
-      revision_id: createNextRevisionId(
-        reactionPacketId,
-        existingPreferredRevision?.revision_id ?? null
-      ),
-      created_at: new Date().toISOString(),
-      parent_revision_refs: existingPreferredRevision
-        ? [existingPreferredRevision]
-        : [],
-      authority_scope_ref: input.authority_scope_id
-        ? {
-            packet_id: resolveDiscussionScopePacketId(input.authority_scope_id),
-          }
-        : null,
-      applicable_scope_refs:
-        targetPacket.header.applicable_scope_refs.length > 0
-          ? targetPacket.header.applicable_scope_refs
-          : targetPacket.header.authority_scope_ref
-            ? [targetPacket.header.authority_scope_ref]
-            : [],
-      created_by: input.actor_key.startsWith('element:')
-        ? {
-            packet_id: input.actor_key.slice('element:'.length),
-          }
-        : null,
-      adapter: 'nexus-web',
-      metadata_tags: ['reaction'],
-      target_ref: { packet_id: input.target_packet_id },
-      status: nextStatus,
-      subtype: 'reaction',
-      vote_value: nextVoteValue,
-      attestation_value: nextAttestationValue,
-      emoji_keys: nextEmojiKeys,
-      context_ref: input.context_packet_id
-        ? {
-            packet_id: input.context_packet_id,
-          }
-        : null,
-      supporting_refs: (input.supporting_packet_ids ?? []).map((packetId) => ({
-        packet_id: packetId,
-      })),
-      note: input.note ?? currentReactionPacket?.body.note ?? null,
-      supersedes_ref: currentReactionPacket
-        ? {
-            packet_id: currentReactionPacket.header.packet_id,
-          }
-        : null,
-    });
-
-    await this.packetStore.writeRevision(nextPacket);
-    await this.packetStore.publishRevision({
-      packet_id: nextPacket.header.packet_id,
-      revision_id: nextPacket.header.revision_id,
-    });
-    await this.syncDerivedState();
-
-    return this.getTargetSummary({
-      target_packet_id: input.target_packet_id,
-      viewer_actor_key: input.actor_key,
-    });
-  }
-
-  async persistSignedReaction(input: {
-    reaction_packet: PacketEnvelopeByType['Reaction'];
-    actor_packet: PacketEnvelopeByType['Element'];
-    actor_key: string;
-    actor_class: DiscussionActorClass;
-  }): Promise<ReactionVoteSummary> {
-    await this.syncDerivedState();
-
-    if (!this.state) {
-      throw new Error('Reaction state is unavailable.');
-    }
-
-    const { reaction_packet: reactionPacket, actor_packet: actorPacket } = input;
-    const expectedPacketId = createReactionPacketId({
-      targetPacketId: reactionPacket.body.target_ref.packet_id,
-      actorPacketId: actorPacket.header.packet_id,
-      contextPacketId: reactionPacket.body.context_ref?.packet_id ?? null,
-    });
-
-    if (reactionPacket.header.packet_id !== expectedPacketId) {
-      throw new Error('Reaction packet id does not match the reaction target.');
-    }
-
-    if (
-      reactionPacket.header.provenance.created_by?.packet_id !==
-      actorPacket.header.packet_id
-    ) {
-      throw new Error('Reaction packet provenance does not match the actor packet.');
-    }
-
-    if (
-      reactionPacket.header.integrity.embedded_signatures[0]?.signer_packet_ref
-        ?.packet_id !== actorPacket.header.packet_id
-    ) {
-      throw new Error('Reaction packet signature does not match the actor packet.');
-    }
-
-    const signatureIsValid = await verifyPacketSignature({
-      packet: reactionPacket,
-      signerPacket: actorPacket,
-    });
-
-    if (!signatureIsValid) {
-      throw new Error('Reaction packet signature verification failed.');
-    }
-
-    const targetPacket = await this.packetStore.fetchByPacket({
-      packet_id: reactionPacket.body.target_ref.packet_id,
-    });
-
-    if (!targetPacket) {
-      throw new Error(
-        `Unknown reaction target: ${reactionPacket.body.target_ref.packet_id}`
-      );
-    }
-
-    const entryPacket = toLegacyDiscussionEntry(targetPacket);
-
-    if (entryPacket) {
-      const threadPacket = await getDiscussionThreadById(
-        this.packetStore,
-        getEntryThreadPacketId(entryPacket)
-      );
-
-      if (!threadPacket) {
-        throw new Error(
-          `Missing discussion thread for packet ${reactionPacket.body.target_ref.packet_id}.`
-        );
-      }
-
-      const forumPacket = await getDiscussionForumById(
-        this.packetStore,
-        (threadPacket.body as { parent_ref: { packet_id: string } }).parent_ref.packet_id
-      );
-
-      if (!forumPacket) {
-        throw new Error(
-          `Missing discussion forum for thread ${threadPacket.header.packet_id}.`
-        );
-      }
-
-      if (forumPacket.body.role !== 'visitor_lobby') {
-        const assemblyPacketId = forumPacket.header.authority_scope_ref?.packet_id ?? null;
-
-        if (!assemblyPacketId) {
-          throw new Error('Reactions are not open to your current actor class here.');
-        }
-
-        const hasMembership = await this.hasActiveAssociationRelation({
-          actor_packet_id: actorPacket.header.packet_id,
-          target_packet_id: assemblyPacketId,
-        });
-
-        if (!hasMembership) {
-          throw new Error('Reactions are not open to your current actor class here.');
-        }
-      }
-    }
-
-    const existingPreferredRevision = await this.packetStore.fetchPreferredRevision({
-      packet_id: reactionPacket.header.packet_id,
-    });
-
-    if (!existingPreferredRevision && reactionPacket.body.status === 'cleared') {
-      await this.syncDerivedState();
-
-      return this.getTargetSummary({
-        target_packet_id: reactionPacket.body.target_ref.packet_id,
-        viewer_actor_key: input.actor_key,
-      });
-    }
-
-    await this.packetStore.writeRevision(reactionPacket);
-    await this.packetStore.publishRevision({
-      packet_id: reactionPacket.header.packet_id,
-      revision_id: reactionPacket.header.revision_id,
-    });
-    await this.syncDerivedState();
-
-    return this.getTargetSummary({
-      target_packet_id: reactionPacket.body.target_ref.packet_id,
-      viewer_actor_key: input.actor_key,
-    });
-  }
-
   async getTargetSummary(input: {
     target_packet_id: string;
     viewer_actor_key: string | null;
@@ -756,22 +335,6 @@ export class SQLiteReactionService implements ReactionService {
       .map((reactionPacket) =>
         toReactionEdgeProjection(reactionPacket, this.state?.packetMap ?? new Map())
       );
-  }
-
-  private async hasActiveAssociationRelation(input: {
-    actor_packet_id: string;
-    target_packet_id: string;
-  }): Promise<boolean> {
-    const relations = await listRelationPackets(this.packetStore);
-
-    return filterRelationPackets({
-      relations,
-      relationSubtype: 'association',
-      subjectPacketId: input.actor_packet_id,
-      targetPacketId: input.target_packet_id,
-      scopePacketId: input.target_packet_id,
-      activeOnly: true,
-    }).length > 0;
   }
 
   async listAssociationRelationsForActor(
@@ -894,76 +457,7 @@ export class SQLiteReactionService implements ReactionService {
     indexRows: ReactionIndexRecord[];
     tallyRows: ReactionTallyIndexRecord[];
   }): void {
-    const database = new DatabaseSync(this.packetStore.databasePath);
-
-    try {
-      database.exec('BEGIN IMMEDIATE');
-      database.exec('DELETE FROM reaction_index');
-      database.exec('DELETE FROM reaction_tally_index');
-
-      const insertIndexStatement = database.prepare(`
-        INSERT INTO reaction_index (
-          reaction_packet_id,
-          target_packet_id,
-          actor_key,
-          vote_value,
-          attestation_value,
-          emoji_keys_json,
-          status,
-          context_packet_id,
-          note,
-          created_at,
-          updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-      const insertTallyStatement = database.prepare(`
-        INSERT INTO reaction_tally_index (
-          target_packet_id,
-          upvote_count,
-          downvote_count,
-          net_score,
-          total_votes,
-          negative_ratio,
-          auto_hidden,
-          deprioritized
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-
-      for (const row of input.indexRows) {
-        insertIndexStatement.run(
-          row.reaction_packet_id,
-          row.target_packet_id,
-          row.actor_key,
-          row.vote_value,
-          row.attestation_value,
-          row.emoji_keys_json,
-          row.status,
-          row.context_packet_id,
-          row.note,
-          row.created_at,
-          row.updated_at
-        );
-      }
-
-      for (const row of input.tallyRows) {
-        insertTallyStatement.run(
-          row.target_packet_id,
-          row.upvote_count,
-          row.downvote_count,
-          row.net_score,
-          row.total_votes,
-          row.negative_ratio,
-          row.auto_hidden,
-          row.deprioritized
-        );
-      }
-
-      database.exec('COMMIT');
-    } catch (error) {
-      database.exec('ROLLBACK');
-      throw error;
-    } finally {
-      database.close();
-    }
+    this.derivedReactionStore.replaceReactionProjection(input);
   }
+
 }
