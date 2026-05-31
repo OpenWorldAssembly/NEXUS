@@ -15,6 +15,10 @@ test('node preference protocol inspection locks the intended carriers', () => {
   );
   assert.ok(report.counts.preference_node_definition_parts >= 8);
   assert.ok(report.counts.node_preference_helpers >= 4);
+  assert.ok(report.counts.env_private_key_paths >= 2);
+  assert.ok(report.counts.default_node_preference_bootstrap_refs >= 4);
+  assert.ok(report.counts.trusted_definition_node_preference_refs >= 5);
+  assert.ok(report.counts.node_signer_acceptance_refs >= 1);
   assert.ok(
     report.findings.some(
       (finding) => finding.code === 'LOCAL_VALIDATOR_SECRET_STORAGE_TRANSITIONAL'

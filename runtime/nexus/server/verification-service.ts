@@ -3,10 +3,13 @@
  * Description: Owns local validator bootstrap, packet verification assessment, signed verification reports, and import reports.
  */
 
+import { existsSync, readFileSync } from 'node:fs';
 import { sha256Base64Url } from '@core/crypto/canonical-json';
 import {
   createElementPacket,
   createInitialRevisionId,
+  createPacketRef,
+  createPreferencePacket,
   createReportPacket,
   type ReportPacketInput,
 } from '@core/packets/builders';
@@ -25,7 +28,12 @@ import {
   generateP256KeyPair,
   importPrivateKeyFromJwk,
   signPacketWithIdentity,
+  type IdentityKeyPairJwk,
 } from '@runtime/nexus/identity-crypto';
+import {
+  buildNodePreferenceBody,
+  createNodePreferencePacketId,
+} from '@core/packets/definitions/preference-helpers.ts';
 import type { NexusPacketVerificationActionPayload } from '@runtime/nexus/nexus-api-types';
 import { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store';
 import { trustedArchiveCoordinator } from '@runtime/trusted_coordinators/trusted_archive_coordinator/index.ts';
@@ -78,6 +86,177 @@ type LocalValidatorIdentity = {
   privateKey: CryptoKey;
   kid: string;
 };
+
+
+type NodeSigningCredentialSource = 'env' | 'file' | 'generated' | 'side_table';
+
+type NodeSigningCredentialJwk = IdentityKeyPairJwk & {
+  source: NodeSigningCredentialSource;
+};
+
+function readJsonObjectFromText(input: string, sourceDescription: string): JsonWebKey {
+  try {
+    const parsed = JSON.parse(input) as unknown;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      throw new Error('value is not an object');
+    }
+
+    return parsed as JsonWebKey;
+  } catch (error) {
+    throw new Error(
+      `Invalid Nexus node private JWK from ${sourceDescription}: ${error instanceof Error ? error.message : 'unknown parse error'}`
+    );
+  }
+}
+
+function readConfiguredNodePrivateJwk(): {
+  privateJwk: JsonWebKey;
+  source: Extract<NodeSigningCredentialSource, 'env' | 'file'>;
+} | null {
+  const rawJwk = process.env.NEXUS_NODE_PRIVATE_JWK?.trim();
+  if (rawJwk) {
+    return {
+      privateJwk: readJsonObjectFromText(rawJwk, 'NEXUS_NODE_PRIVATE_JWK'),
+      source: 'env',
+    };
+  }
+
+  const rawPath =
+    process.env.NEXUS_NODE_PRIVATE_JWK_PATH?.trim() ??
+    process.env.NEXUS_NODE_KEY_PATH?.trim();
+
+  if (rawPath) {
+    if (!existsSync(rawPath)) {
+      throw new Error(`Configured Nexus node private JWK file does not exist: ${rawPath}`);
+    }
+
+    return {
+      privateJwk: readJsonObjectFromText(
+        readFileSync(rawPath, 'utf8'),
+        rawPath
+      ),
+      source: 'file',
+    };
+  }
+
+  return null;
+}
+
+function publicJwkFromPrivateJwk(privateJwk: JsonWebKey): JsonWebKey {
+  const { d: _d, p: _p, q: _q, dp: _dp, dq: _dq, qi: _qi, oth: _oth, ...publicJwk } =
+    privateJwk as JsonWebKey & Record<string, unknown>;
+
+  return {
+    ...publicJwk,
+    key_ops: ['verify'],
+  } as JsonWebKey;
+}
+
+function sideTablePrivateJwkForStorage(input: {
+  source: NodeSigningCredentialSource;
+  publicJwk: JsonWebKey;
+  privateJwk: JsonWebKey;
+}): JsonWebKey {
+  if (input.source === 'env' || input.source === 'file') {
+    return {
+      ...input.publicJwk,
+      nexus_secret_storage: 'external_runtime_configuration',
+    } as JsonWebKey;
+  }
+
+  return input.privateJwk;
+}
+
+async function createNodeSigningCredential(): Promise<NodeSigningCredentialJwk> {
+  const configured = readConfiguredNodePrivateJwk();
+
+  if (configured) {
+    return {
+      source: configured.source,
+      privateJwk: configured.privateJwk,
+      publicJwk: publicJwkFromPrivateJwk(configured.privateJwk),
+    };
+  }
+
+  const keyPair = await generateP256KeyPair();
+  const jwkPair = await exportIdentityKeyPairToJwk(keyPair);
+
+  return {
+    source: 'generated',
+    ...jwkPair,
+  };
+}
+
+async function credentialFromStoredIdentity(input: {
+  publicJwk: JsonWebKey;
+  privateJwk: JsonWebKey;
+}): Promise<NodeSigningCredentialJwk> {
+  const configured = readConfiguredNodePrivateJwk();
+
+  if (configured) {
+    return {
+      source: configured.source,
+      privateJwk: configured.privateJwk,
+      publicJwk: publicJwkFromPrivateJwk(configured.privateJwk),
+    };
+  }
+
+  return {
+    source: 'side_table',
+    publicJwk: input.publicJwk,
+    privateJwk: input.privateJwk,
+  };
+}
+
+function getConfiguredNodePacketId(fallbackKid: string): string {
+  const configuredPacketId = process.env.NEXUS_NODE_PACKET_ID?.trim();
+  if (configuredPacketId) {
+    return configuredPacketId;
+  }
+
+  const environmentKey =
+    process.env.NEXUS_NODE_ENVIRONMENT_KEY?.trim() ??
+    process.env.RAILWAY_ENVIRONMENT_NAME?.trim() ??
+    process.env.NODE_ENV?.trim() ??
+    'local-validator';
+  const safeEnvironmentKey = environmentKey
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'local-validator';
+
+  return `nexus:element/node/${safeEnvironmentKey}-${fallbackKid.slice(0, 12)}`;
+}
+
+function getConfiguredNodeDisplayName(): string {
+  return process.env.NEXUS_NODE_NAME?.trim() || 'Local Nexus Node';
+}
+
+function hasPrivateSigningMaterial(privateJwk: JsonWebKey): boolean {
+  return (
+    typeof privateJwk.d === 'string' ||
+    typeof (privateJwk as Record<string, unknown>).privateKey === 'string'
+  );
+}
+
+function isStoredCredentialUsable(input: {
+  storedKid: string;
+  configuredKid: string | null;
+  configuredPacketId: string | null;
+  storedPacketId: string;
+}): boolean {
+  if (input.configuredKid && input.configuredKid !== input.storedKid) {
+    return false;
+  }
+
+  if (
+    input.configuredPacketId &&
+    input.configuredPacketId !== input.storedPacketId
+  ) {
+    return false;
+  }
+
+  return true;
+}
 
 function createNextRevisionId(packetId: string, currentRevisionId?: string): string {
   const match = currentRevisionId?.match(/@r(\d+)$/);
@@ -291,38 +470,73 @@ export class NexusPacketVerificationService {
 
   async ensureLocalValidatorIdentity(): Promise<LocalValidatorIdentity> {
     const stored = await this.packetStore.readRuntimeValidatorIdentity();
+    const configuredCredential = readConfiguredNodePrivateJwk();
+    const configuredPublicJwk = configuredCredential
+      ? publicJwkFromPrivateJwk(configuredCredential.privateJwk)
+      : null;
+    const configuredKid = configuredPublicJwk
+      ? (await createIdentityKeyBinding({
+          publicJwk: configuredPublicJwk,
+          addedAt: new Date().toISOString(),
+        })).kid
+      : null;
+    const configuredPacketId = process.env.NEXUS_NODE_PACKET_ID?.trim() || null;
 
     if (stored) {
       const validatorPacket = await this.packetStore.fetchByPacket({
         packet_id: stored.validator_packet_id,
       });
 
-      if (validatorPacket && validatorPacket.header.type === 'Element') {
+      if (
+        validatorPacket &&
+        validatorPacket.header.type === 'Element' &&
+        isStoredCredentialUsable({
+          storedKid: stored.kid,
+          configuredKid,
+          configuredPacketId,
+          storedPacketId: stored.validator_packet_id,
+        }) &&
+        (configuredCredential !== null || hasPrivateSigningMaterial(stored.private_jwk))
+      ) {
+        const credential = await credentialFromStoredIdentity({
+          publicJwk: stored.public_jwk,
+          privateJwk: stored.private_jwk,
+        });
+
+        const privateKey = await importPrivateKeyFromJwk(credential.privateJwk);
+
+        await this.ensureDefaultNodePreferencePacket({
+          nodePacketId: validatorPacket.header.packet_id,
+          privateKey,
+          kid: stored.kid,
+        });
+
         return {
           packet: validatorPacket as PacketEnvelopeByType['Element'],
-          privateKey: await importPrivateKeyFromJwk(stored.private_jwk),
+          privateKey,
           kid: stored.kid,
         };
       }
     }
 
     const createdAt = new Date().toISOString();
-    const keyPair = await generateP256KeyPair();
-    const jwkPair = await exportIdentityKeyPairToJwk(keyPair);
+    const credential = await createNodeSigningCredential();
+    const privateKey = await importPrivateKeyFromJwk(credential.privateJwk);
     const keyBinding = await createIdentityKeyBinding({
-      publicJwk: jwkPair.publicJwk,
+      publicJwk: credential.publicJwk,
       addedAt: createdAt,
     });
-    const packetId = `nexus:element/node/local-validator-${keyBinding.kid.slice(0, 12)}`;
+    const packetId = getConfiguredNodePacketId(keyBinding.kid);
+    const nodeDisplayName = getConfiguredNodeDisplayName();
     const unsignedPacket = createElementPacket({
       packet_id: packetId,
       revision_id: createInitialRevisionId(packetId),
       created_at: createdAt,
-      name: 'Local Validator',
+      name: nodeDisplayName,
       subtype: 'node',
-      summary: 'Runtime-owned packet validation identity for this Nexus node.',
+      summary: 'Runtime-owned packet validation and node identity for this Nexus environment.',
       identity: {
-        alias: 'Local Validator',
+        alias: nodeDisplayName,
         claim_status: 'claimed',
         location_disclosure: null,
         public_key_bindings: [keyBinding],
@@ -337,7 +551,7 @@ export class NexusPacketVerificationService {
       packet: unsignedPacket,
       signerPacketId: packetId,
       kid: keyBinding.kid,
-      privateKey: keyPair.privateKey,
+      privateKey,
       signedAt: createdAt,
     });
 
@@ -349,17 +563,111 @@ export class NexusPacketVerificationService {
     await this.packetStore.writeRuntimeValidatorIdentity({
       validator_packet_id: packetId,
       kid: keyBinding.kid,
-      public_jwk: jwkPair.publicJwk,
-      private_jwk: jwkPair.privateJwk,
+      public_jwk: credential.publicJwk,
+      private_jwk: sideTablePrivateJwkForStorage({
+        source: credential.source,
+        publicJwk: credential.publicJwk,
+        privateJwk: credential.privateJwk,
+      }),
       created_at: createdAt,
       updated_at: createdAt,
     });
 
+    await this.ensureDefaultNodePreferencePacket({
+      nodePacketId: packetId,
+      privateKey,
+      kid: keyBinding.kid,
+    });
+
     return {
       packet: signedPacket,
-      privateKey: keyPair.privateKey,
+      privateKey,
       kid: keyBinding.kid,
     };
+  }
+
+  private async ensureDefaultNodePreferencePacket(input: {
+    nodePacketId: string;
+    privateKey: CryptoKey;
+    kid: string;
+  }): Promise<PacketEnvelopeByType['Preference']> {
+    const packetId = createNodePreferencePacketId({
+      owner_ref: createPacketRef(input.nodePacketId),
+    });
+    const existingPacket = await this.packetStore.fetchByPacket({ packet_id: packetId });
+
+    if (
+      existingPacket &&
+      existingPacket.header.type === 'Preference' &&
+      existingPacket.body.subtype === 'node'
+    ) {
+      return existingPacket as PacketEnvelopeByType['Preference'];
+    }
+
+    const createdAt = new Date().toISOString();
+    const body = buildNodePreferenceBody({
+      owner_ref: createPacketRef(input.nodePacketId),
+      privacy: 'sealed_private',
+      value: {
+        definitions: {
+          active_definition_profile_ref: null,
+          trusted_definition_profile_refs: [],
+          update_mode: 'manual_review',
+          allow_seeded_definition_fallback: true,
+        },
+        trust_graph: {
+          default_unknown_node_trust_level: 'unknown',
+          minimum_import_trust_level: 'trusted',
+          trusted_node_refs: [],
+          trusted_node_attestation_refs: [],
+          accepted_capabilities: [],
+          require_attestation_for_trusted_import: true,
+        },
+        import_verification: {
+          unsigned_packet_mode: 'quarantine',
+          unknown_signer_mode: 'quarantine',
+          trusted_signer_mode: 'accept_after_verification',
+          random_reverification_rate: 0.05,
+          require_definition_profile_match: true,
+        },
+        storage_cleanup: {
+          cleanup_mode: 'manual',
+          retain_superseded_revisions_days: null,
+          retain_rejected_imports_days: 30,
+          retain_cached_projection_days: 30,
+        },
+      },
+      note:
+        'Default node preference posture: bootstrap definitions remain safe fallback, imported material stays conservative until explicitly trusted.',
+    });
+    const unsignedPacket = createPreferencePacket({
+      packet_id: packetId,
+      revision_id: createInitialRevisionId(packetId),
+      created_at: createdAt,
+      body,
+      adapter: 'runtime.node_preference_bootstrap',
+      visibility: 'private',
+      metadata_tags: ['preference', 'node', 'definition-profile', 'bootstrap'],
+      metadata_summary: 'Default node preference posture.',
+      created_by: createPacketRef(input.nodePacketId),
+      submitted_by: createPacketRef(input.nodePacketId),
+      recorded_at: createdAt,
+    });
+    const signedPacket = await signPacketWithIdentity({
+      packet: unsignedPacket,
+      signerPacketId: input.nodePacketId,
+      kid: input.kid,
+      privateKey: input.privateKey,
+      signedAt: createdAt,
+    });
+
+    await this.packetStore.writeRevision(signedPacket);
+    await this.packetStore.publishRevision({
+      packet_id: signedPacket.header.packet_id,
+      revision_id: signedPacket.header.revision_id,
+    });
+
+    return signedPacket;
   }
 
   async assessStoredPacket(packetId: string): Promise<{

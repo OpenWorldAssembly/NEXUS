@@ -147,7 +147,7 @@ function stripRawPacketSignatures<TPacket extends RawPacketEnvelopeInput>(
   };
 }
 
-const VERIFIED_SIGNER_ELEMENT_KINDS = new Set(['person', 'service']);
+const VERIFIED_SIGNER_ELEMENT_KINDS = new Set(['person', 'service', 'node']);
 
 function isIdentityElementPacketForVerification(
   packet: PacketEnvelope

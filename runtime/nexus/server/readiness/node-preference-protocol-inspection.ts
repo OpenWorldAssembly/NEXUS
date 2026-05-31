@@ -12,6 +12,8 @@ export type NodePreferenceProtocolArea =
   | 'definition_manifest_parts'
   | 'builder_projection_helpers'
   | 'verification_identity_storage'
+  | 'node_preference_bootstrap'
+  | 'trusted_definition_consumption'
   | 'trust_graph_authority'
   | 'runtime_service_boundary';
 
@@ -55,6 +57,10 @@ export type NodePreferenceProtocolInspectionReport = {
     node_preference_helpers: number;
     local_validator_side_tables: number;
     private_key_side_table_fields: number;
+    env_private_key_paths: number;
+    default_node_preference_bootstrap_refs: number;
+    trusted_definition_node_preference_refs: number;
+    node_signer_acceptance_refs: number;
   };
   entries: NodePreferenceProtocolEntry[];
   findings: NodePreferenceProtocolFinding[];
@@ -66,6 +72,9 @@ const SOURCE_FILES = [
   'core/packets/definitions/preference.ts',
   'core/packets/definitions/preference-helpers.ts',
   'runtime/nexus/server/verification-service.ts',
+  'runtime/nexus/identity-crypto.ts',
+  'runtime/trusted_coordinators/trusted_definition_coordinator/trusted_definition_coordinator.ts',
+  'runtime/trusted_coordinators/trusted_definition_coordinator/functions/list_node_preference_definition_preferences.ts',
   'runtime/storage/packet-store-schema.ts',
   'runtime/storage/node-sqlite-packet-store.ts',
 ] as const;
@@ -123,6 +132,9 @@ export function createNodePreferenceProtocolInspectionReport(): NodePreferencePr
   const preferenceDefinition = sources['core/packets/definitions/preference.ts'];
   const preferenceHelpers = sources['core/packets/definitions/preference-helpers.ts'];
   const verificationService = sources['runtime/nexus/server/verification-service.ts'];
+  const identityCrypto = sources['runtime/nexus/identity-crypto.ts'];
+  const trustedDefinitionCoordinator = sources['runtime/trusted_coordinators/trusted_definition_coordinator/trusted_definition_coordinator.ts'];
+  const nodeDefinitionPreferences = sources['runtime/trusted_coordinators/trusted_definition_coordinator/functions/list_node_preference_definition_preferences.ts'];
   const packetStoreSchema = sources['runtime/storage/packet-store-schema.ts'];
   const sqlitePacketStore = sources['runtime/storage/node-sqlite-packet-store.ts'];
 
@@ -143,6 +155,22 @@ export function createNodePreferenceProtocolInspectionReport(): NodePreferencePr
     private_key_side_table_fields: countMatches(
       `${packetStoreSchema}\n${sqlitePacketStore}`,
       /private_jwk_json|private_jwk/g
+    ),
+    env_private_key_paths: countMatches(
+      verificationService,
+      /NEXUS_NODE_PRIVATE_JWK|NEXUS_NODE_PRIVATE_JWK_PATH|NEXUS_NODE_KEY_PATH/g
+    ),
+    default_node_preference_bootstrap_refs: countMatches(
+      verificationService,
+      /ensureDefaultNodePreferencePacket|createNodePreferencePacketId|createPreferencePacket|buildNodePreferenceBody/g
+    ),
+    trusted_definition_node_preference_refs: countMatches(
+      `${trustedDefinitionCoordinator}\n${nodeDefinitionPreferences}`,
+      /listNodePreferenceDefinitionPreferences|Preference\.node|active_definition_profile_ref|trusted_definition_profile_refs|allow_seeded_definition_fallback/g
+    ),
+    node_signer_acceptance_refs: countMatches(
+      identityCrypto,
+      /'node'/g
     ),
   };
 
@@ -183,6 +211,47 @@ export function createNodePreferenceProtocolInspectionReport(): NodePreferencePr
       code: 'NODE_HELPERS_INCOMPLETE',
       message:
         'Preference.node helper coverage is incomplete for builder, deterministic id, normalization, and latest-active projection.',
+    });
+  }
+
+
+  if (counts.env_private_key_paths < 2) {
+    findings.push({
+      severity: 'error',
+      area: 'verification_identity_storage',
+      code: 'ENV_NODE_SIGNING_SECRET_PATH_MISSING',
+      message:
+        'Node signing credentials do not expose an env/file-backed private JWK path.',
+    });
+  }
+
+  if (counts.default_node_preference_bootstrap_refs < 4) {
+    findings.push({
+      severity: 'error',
+      area: 'node_preference_bootstrap',
+      code: 'DEFAULT_NODE_PREFERENCE_BOOTSTRAP_MISSING',
+      message:
+        'Runtime node bootstrap does not ensure a default signed Preference.node packet for the node Element.',
+    });
+  }
+
+  if (counts.trusted_definition_node_preference_refs < 5) {
+    findings.push({
+      severity: 'error',
+      area: 'trusted_definition_consumption',
+      code: 'TRUSTED_DEFINITION_NODE_PREFERENCE_CONSUMPTION_MISSING',
+      message:
+        'Trusted Definition does not yet consume packet-backed Preference.node definition profile settings.',
+    });
+  }
+
+  if (counts.node_signer_acceptance_refs < 1) {
+    findings.push({
+      severity: 'error',
+      area: 'node_element_identity',
+      code: 'NODE_SIGNER_VERIFICATION_MISSING',
+      message:
+        'Packet signature verification does not yet accept Element.node as a valid signer carrier.',
     });
   }
 
@@ -267,21 +336,57 @@ export function createNodePreferenceProtocolInspectionReport(): NodePreferencePr
         'Node preference builder, deterministic packet id, normalization, and latest-active projection helpers are present.',
       ],
       next_step:
-        'Wire live node preference reads through the Definition and Projection coordinators when node bootstrap starts consuming packet-backed preferences.',
+        'Use the same helper surface for future Projection preference reads rather than adding custom surface-specific preference logic.',
+    }),
+
+    createEntry({
+      area: 'node_preference_bootstrap',
+      status: counts.default_node_preference_bootstrap_refs >= 4 ? 'aligned' : 'missing',
+      source_files: ['runtime/nexus/server/verification-service.ts'],
+      evidence: [
+        verificationService.includes('ensureDefaultNodePreferencePacket')
+          ? 'Node bootstrap now ensures a signed default Preference.node packet owned by the node Element.'
+          : 'Node bootstrap does not yet ensure a default Preference.node packet.',
+        verificationService.includes('NEXUS_NODE_PRIVATE_JWK')
+          ? 'Node signing credentials prefer env/file-backed private JWK material before local fallback generation.'
+          : 'Node signing credentials are not env/file-backed yet.',
+      ],
+      next_step:
+        'Keep production node credentials environment-specific so local and Railway nodes stop sharing cloned identity material.',
+    }),
+    createEntry({
+      area: 'trusted_definition_consumption',
+      status: counts.trusted_definition_node_preference_refs >= 5 ? 'aligned' : 'missing',
+      source_files: [
+        'runtime/trusted_coordinators/trusted_definition_coordinator/trusted_definition_coordinator.ts',
+        'runtime/trusted_coordinators/trusted_definition_coordinator/functions/list_node_preference_definition_preferences.ts',
+      ],
+      evidence: [
+        nodeDefinitionPreferences.includes('active_definition_profile_ref')
+          ? 'Trusted Definition maps Preference.node active_definition_profile_ref into a pin preference.'
+          : 'Trusted Definition does not map active_definition_profile_ref yet.',
+        nodeDefinitionPreferences.includes('allow_seeded_definition_fallback')
+          ? 'Trusted Definition can disable seeded definition fallback when Preference.node says so.'
+          : 'Seeded fallback posture is not consumed from Preference.node yet.',
+      ],
+      next_step:
+        'After reseed, set active/trusted definition profile refs through Preference.node instead of runtime constants.',
     }),
     createEntry({
       area: 'verification_identity_storage',
       status: counts.private_key_side_table_fields > 0 ? 'transitional' : 'aligned',
       source_files: [
+        'runtime/nexus/server/verification-service.ts',
         'runtime/storage/packet-store-schema.ts',
         'runtime/storage/node-sqlite-packet-store.ts',
       ],
       evidence: [
         `${counts.local_validator_side_tables} runtime_validator_identity reference(s) were found.`,
         `${counts.private_key_side_table_fields} private key storage reference(s) were found.`,
+        `${counts.env_private_key_paths} env/file-backed node private key reference(s) were found.`,
       ],
       next_step:
-        'Do not store private keys in packet bodies. Move node signing secrets toward env-backed or encrypted local secret material before enabling node-to-node exchange.',
+        'Do not store private keys in packet bodies. Keep env-backed node signing secrets as the production path and treat side-table storage as local fallback only.',
     }),
     createEntry({
       area: 'trust_graph_authority',

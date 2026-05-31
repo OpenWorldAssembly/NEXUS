@@ -36,9 +36,13 @@ export function auditTrustedDefinitionConflicts(
       continue;
     }
 
+    const deterministicBootstrapSeedConflict = candidateIds.every((candidateId) =>
+      candidateId.includes('.bootstrap') || candidateId.includes('.seeded_bundle')
+    );
+
     issues.push(
       trustedIssue({
-        severity: 'warning',
+        severity: deterministicBootstrapSeedConflict ? 'info' : 'warning',
         code: 'multiple_active_definition_candidates',
         path: key,
         message: `Multiple active definition candidates resolve for ${key}: ${candidateIds.join(', ')}. Highest ranked candidate will be used by callers unless pinned differently.`,

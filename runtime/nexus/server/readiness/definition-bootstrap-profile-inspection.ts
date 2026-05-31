@@ -74,6 +74,7 @@ const SOURCE_FILES = [
   'runtime/trusted_coordinators/trusted_definition_coordinator/functions/resolve_trusted_definition_context.ts',
   'runtime/trusted_coordinators/trusted_definition_coordinator/functions/normalize_packet_backed_definition_preferences.ts',
   'runtime/trusted_coordinators/trusted_definition_coordinator/functions/list_archive_definition_profile_preference_carriers.ts',
+  'runtime/trusted_coordinators/trusted_definition_coordinator/functions/list_node_preference_definition_preferences.ts',
   'runtime/trusted_coordinators/trusted_definition_coordinator/trusted_definition_coordinator.ts',
   'runtime/trusted_coordinators/trusted_definition_coordinator/functions/resolve_trusted_packet_definition.ts',
   'runtime/trusted_coordinators/trusted_definition_coordinator/functions/resolve_trusted_definition_part.ts',
@@ -145,6 +146,7 @@ export function createDefinitionBootstrapProfileInspectionReport(): DefinitionBo
   const contextResolver = sources['runtime/trusted_coordinators/trusted_definition_coordinator/functions/resolve_trusted_definition_context.ts'];
   const packetBackedPreferenceNormalizer = sources['runtime/trusted_coordinators/trusted_definition_coordinator/functions/normalize_packet_backed_definition_preferences.ts'];
   const archiveProfilePreferenceDiscovery = sources['runtime/trusted_coordinators/trusted_definition_coordinator/functions/list_archive_definition_profile_preference_carriers.ts'];
+  const nodePreferenceDefinitionPreferences = sources['runtime/trusted_coordinators/trusted_definition_coordinator/functions/list_node_preference_definition_preferences.ts'];
   const trustedDefinitionCoordinator = sources['runtime/trusted_coordinators/trusted_definition_coordinator/trusted_definition_coordinator.ts'];
   const packetResolver = sources['runtime/trusted_coordinators/trusted_definition_coordinator/functions/resolve_trusted_packet_definition.ts'];
   const partResolver = sources['runtime/trusted_coordinators/trusted_definition_coordinator/functions/resolve_trusted_definition_part.ts'];
@@ -253,6 +255,7 @@ export function createDefinitionBootstrapProfileInspectionReport(): DefinitionBo
         'runtime/trusted_coordinators/trusted_definition_coordinator/functions/resolve_trusted_definition_context.ts',
         'runtime/trusted_coordinators/trusted_definition_coordinator/functions/normalize_packet_backed_definition_preferences.ts',
         'runtime/trusted_coordinators/trusted_definition_coordinator/functions/list_archive_definition_profile_preference_carriers.ts',
+        'runtime/trusted_coordinators/trusted_definition_coordinator/functions/list_node_preference_definition_preferences.ts',
         'runtime/trusted_coordinators/trusted_definition_coordinator/trusted_definition_coordinator.ts',
       ],
       evidence: [
@@ -285,6 +288,7 @@ export function createDefinitionBootstrapProfileInspectionReport(): DefinitionBo
         'runtime/trusted_coordinators/trusted_definition_coordinator/functions/list_trusted_definition_candidates.ts',
         'runtime/trusted_coordinators/trusted_definition_coordinator/functions/list_seeded_definition_bundle_candidates.ts',
         'runtime/trusted_coordinators/trusted_definition_coordinator/functions/list_archive_definition_profile_preference_carriers.ts',
+        'runtime/trusted_coordinators/trusted_definition_coordinator/functions/list_node_preference_definition_preferences.ts',
         'runtime/trusted_coordinators/trusted_definition_coordinator/trusted_definition_coordinator.ts',
       ],
       evidence: [
@@ -317,20 +321,23 @@ export function createDefinitionBootstrapProfileInspectionReport(): DefinitionBo
         'definition_profile_preference_packets',
         'trust_mode',
         'priority',
-      ]) && hasAll(contextResolver + packetBackedPreferenceNormalizer + archiveProfilePreferenceDiscovery + trustedDefinitionCoordinator, [
+      ]) && hasAll(contextResolver + packetBackedPreferenceNormalizer + archiveProfilePreferenceDiscovery + nodePreferenceDefinitionPreferences + trustedDefinitionCoordinator, [
         'normalizePacketBackedDefinitionPreferences',
         'definition_profile_preferences',
         'BundleBodySchema.safeParse',
         'listArchiveDefinitionProfilePreferenceCarriers',
+        'listNodePreferenceDefinitionPreferences',
+        'active_definition_profile_ref',
         'resolveContextWithArchiveProfilePreferences',
       ])
-        ? 'mostly_aligned'
+        ? 'aligned'
         : 'transitional',
       source_files: [
         'runtime/trusted_coordinators/trusted_definition_coordinator/trusted_definition_types.ts',
         'runtime/trusted_coordinators/trusted_definition_coordinator/functions/resolve_trusted_definition_context.ts',
         'runtime/trusted_coordinators/trusted_definition_coordinator/functions/normalize_packet_backed_definition_preferences.ts',
         'runtime/trusted_coordinators/trusted_definition_coordinator/functions/list_archive_definition_profile_preference_carriers.ts',
+        'runtime/trusted_coordinators/trusted_definition_coordinator/functions/list_node_preference_definition_preferences.ts',
         'runtime/trusted_coordinators/trusted_definition_coordinator/trusted_definition_coordinator.ts',
       ],
       evidence: [
@@ -341,9 +348,12 @@ export function createDefinitionBootstrapProfileInspectionReport(): DefinitionBo
         archiveProfilePreferenceDiscovery.includes('listArchiveDefinitionProfilePreferenceCarriers')
           ? 'Trusted Definition can discover archived Bundle.packet_set profile preference carriers before running the existing context resolver.'
           : 'Profile preference carriers still need to be supplied directly by callers.',
+        nodePreferenceDefinitionPreferences.includes('active_definition_profile_ref')
+          ? 'Trusted Definition now reads Preference.node definition profile refs and converts them into runtime preferences.'
+          : 'Preference.node definition profile refs are not consumed by Trusted Definition yet.',
       ],
       next_step:
-        'Next, replace the bridge carrier shape with full Preference/Default/Policy packet-backed profile selection and inheritance.',
+        'Next, use Preference.node during reseed to pin active/trusted definition profiles per node, then decide whether Default/Policy inheritance needs the same loader pattern.',
     }),
     createEntry({
       area: 'definition_component_model',
@@ -427,7 +437,7 @@ export function createDefinitionBootstrapProfileInspectionReport(): DefinitionBo
       area: 'archive_backed_definition_loading',
       code: 'seeded_bundle_candidate_loader_active',
       message:
-        'Trusted Definition now lists kernel-validated seeded Bundle.packet_set candidates and can discover Bundle.packet_set profile preference carriers through Trusted Archive. Full local archive and pinned definition candidate loading remain future extensions of the same source model.',
+        'Trusted Definition now lists kernel-validated seeded Bundle.packet_set candidates, can discover Bundle.packet_set profile preference carriers, and can consume Preference.node definition profile settings through Trusted Archive. Full local archive and pinned definition candidate loading remain future extensions of the same source model.',
     });
   }
 
@@ -437,7 +447,7 @@ export function createDefinitionBootstrapProfileInspectionReport(): DefinitionBo
       area: 'node_profile_selection',
       code: 'node_profile_selection_not_packet_backed',
       message:
-        'Definition profile preferences are represented in coordinator input but packet-backed Bundle preference carriers are not yet normalized or discovered before ranking.',
+        'Definition profile preferences are represented in coordinator input but packet-backed Bundle / Preference.node carriers are not yet normalized or discovered before ranking.',
     });
   }
 

@@ -15,6 +15,7 @@ import {
   executeTrustedDefinitionOperation,
 } from './trusted_definition_registry.ts';
 import { listArchiveDefinitionProfilePreferenceCarriers } from './functions/list_archive_definition_profile_preference_carriers.ts';
+import { listNodePreferenceDefinitionPreferences } from './functions/list_node_preference_definition_preferences.ts';
 import type {
   AuditTrustedDefinitionReadinessInput,
   AuditTrustedDefinitionConflictsInput,
@@ -70,9 +71,16 @@ export const trustedDefinitionCoordinator = {
   async resolveContextWithArchiveProfilePreferences(
     input: ResolveTrustedDefinitionContextFromArchiveInput = {}
   ): Promise<TrustedRuntimeCoordinatorResult<TrustedDefinitionContext>> {
-    const discovery = await listArchiveDefinitionProfilePreferenceCarriers(input);
+    const [discovery, nodePreferences] = await Promise.all([
+      listArchiveDefinitionProfilePreferenceCarriers(input),
+      listNodePreferenceDefinitionPreferences(input),
+    ]);
     const contextResult = trustedDefinitionCoordinator.resolveContext({
       ...input,
+      preferences: [
+        ...nodePreferences.preferences,
+        ...(input.preferences ?? []),
+      ],
       definition_profile_preference_packets: [
         ...discovery.preference_packets,
         ...(input.definition_profile_preference_packets ?? []),
@@ -82,10 +90,17 @@ export const trustedDefinitionCoordinator = {
     return createTrustedRuntimeCoordinatorResult({
       coordinator_id: contextResult.coordinator_id,
       coordinator_kind: contextResult.coordinator_kind,
-      status: mergeArchiveDiscoveryStatus(contextResult, discovery.issues),
+      status: mergeArchiveDiscoveryStatus(contextResult, [
+        ...discovery.issues,
+        ...nodePreferences.issues,
+      ]),
       value: contextResult.value,
-      issues: [...discovery.issues, ...contextResult.issues],
-      trace: [...discovery.trace, ...contextResult.trace],
+      issues: [
+        ...discovery.issues,
+        ...nodePreferences.issues,
+        ...contextResult.issues,
+      ],
+      trace: [...discovery.trace, ...nodePreferences.trace, ...contextResult.trace],
       operation_id: contextResult.operation_id,
       request_id: contextResult.request_id,
       mode: contextResult.mode,

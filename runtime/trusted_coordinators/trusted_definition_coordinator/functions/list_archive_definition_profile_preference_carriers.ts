@@ -28,6 +28,19 @@ function toPacketEnvelope(value: unknown): PacketEnvelope | null {
   try {
     return parsePacketEnvelope(value);
   } catch {
+    const candidate = value as { header?: { type?: unknown }; body?: unknown } | null;
+    if (
+      candidate &&
+      typeof candidate === 'object' &&
+      candidate.header &&
+      typeof candidate.header === 'object' &&
+      candidate.header.type === 'Bundle' &&
+      candidate.body &&
+      typeof candidate.body === 'object'
+    ) {
+      return candidate as PacketEnvelope;
+    }
+
     return null;
   }
 }
