@@ -425,3 +425,11 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - Trusted Dispatch remains the route-facing prepare/finalize authority. Deleted executor files are now guarded by `audit:trusted-coordinators` so they fail if restored.
 - Static genericization/handoff/readiness ledgers remain temporarily because they describe migration state and pre-reseed closure, but their text now points to Dispatch/trusted-chain authority rather than the old Dispatch corridor.
 - Direct-write seam classification now treats discussion/reaction/preference helpers as transitional adapter/internal or compatibility-cache writes instead of Dispatch-internal helpers.
+
+
+### 2026-05-30 - Packet-backed definition profile preference carrier bridge
+
+- Trusted Definition remains the owner of active definition source selection. No new runtime service was added.
+- `ResolveTrustedDefinitionContextInput` can now accept packet-backed definition profile preference carriers through `definition_profile_preference_packets`. The current bridge reads active `Bundle.packet_set` bodies whose `bundle_data.definition_profile_preferences` descriptors normalize into `TrustedDefinitionRuntimePreference` records before candidate ranking.
+- Preference targeting now carries both `node_element_id` and `scope_packet_id`, so a carrier can select a profile for one node, one scope, or broad local runtime use without hardcoding packet-specific behavior in core.
+- This is still a bridge, not the final archive search path: local archive / pinned bundle discovery should feed this same coordinator input after reseed material is stored. Imported definition material remains descriptive; trusted local coordinators still own execution.

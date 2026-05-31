@@ -188,7 +188,7 @@ The long-term definition model is now explicit:
 - Nodes and scopes should eventually select active definition profiles through packet-backed defaults, preferences, and policies. This keeps Definition profile selection portable instead of binding it to one runtime config file.
 - Imported Definition material is descriptive, never executable. Trusted local coordinators decide whether local allowlisted builder, planner, projection, compatibility, regulation, and archive capabilities can interpret the declared metadata.
 
-Current state is transitional but close: Definition packets and profile Bundle seeds are generated and audited, Trusted Definition can rank and resolve candidates, and the source/trust model already includes local archive, imported bundle, pinned bundle, and remote mirror concepts. The remaining migration is to load candidate Definition parts from stored packet profiles rather than resolving active definitions directly from `PACKET_TYPE_DEFINITIONS`.
+Current state is transitional but close: Definition packets and profile Bundle seeds are generated and audited, Trusted Definition can rank and resolve candidates, and the source/trust model already includes local archive, imported bundle, pinned bundle, and remote mirror concepts. The coordinator also has a packet-backed selection bridge: active `Bundle.packet_set` carriers can include `bundle_data.definition_profile_preferences`, which are normalized into runtime preferences before source ranking. The remaining migration is to discover/load those profile and preference carriers from the local archive or pinned bundle set, then reduce direct dependence on `PACKET_TYPE_DEFINITIONS` as the active semantic source.
 
 ## Next use
 

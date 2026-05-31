@@ -186,6 +186,33 @@ const TRUSTED_ISSUE_DESCRIPTORS = [
     user_message: 'Definition candidates need review before the runtime can rely on them.',
   },
   {
+    code: 'definition.seeded_profile_invalid',
+    legacy_aliases: [
+      'seeded_definition_bundle_kernel_validation_failed',
+      'seeded_definition_part_not_bundled',
+      'seeded_definition_part_kernel_validation_failed',
+      'seeded_definition_part_without_bootstrap_snapshot',
+    ],
+    default_severity: 'warning',
+    category: 'validation',
+    retryability: 'not_retryable',
+    user_title: 'Seeded definition profile invalid',
+    user_message: 'The seeded definition profile material failed validation.',
+  },
+  {
+    code: 'definition.profile_preference_invalid',
+    legacy_aliases: [
+      'definition_profile_preference_bundle_invalid',
+      'definition_profile_preference_descriptors_invalid',
+      'definition_profile_preference_packet_type_unsupported',
+    ],
+    default_severity: 'warning',
+    category: 'validation',
+    retryability: 'not_retryable',
+    user_title: 'Definition profile preference invalid',
+    user_message: 'A packet-backed definition profile preference carrier could not be used.',
+  },
+  {
     code: 'planning.definition_missing',
     legacy_aliases: ['trusted_planning_definition_missing'],
     default_severity: 'error',

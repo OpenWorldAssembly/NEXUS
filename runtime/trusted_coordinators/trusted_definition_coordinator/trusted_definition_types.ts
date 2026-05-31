@@ -10,6 +10,7 @@ import type {
   PacketTypeDefinition,
 } from '@core/packets/definitions/packet-definition-types.ts';
 import type { PacketTypeBodyCandidate } from '@core/packets/packet-type-body-builders.ts';
+import type { PacketEnvelope, PacketHeader, PacketRef, PacketRevisionRef } from '@core/schema/packet-schema';
 import type { TrustedDefinitionPartBuildPlan } from '@runtime/trusted_coordinators/trusted_building_coordinator/index.ts';
 import type { TrustedRegulationProfile } from '@runtime/trusted_coordinators/trusted_regulation_coordinator/index.ts';
 import type { TrustedOperationPlan } from '@runtime/trusted_coordinators/trusted_planning_coordinator/index.ts';
@@ -60,6 +61,7 @@ export type TrustedDefinitionTrustMode =
 export type TrustedDefinitionRuntimePreference = {
   preference_id: string;
   node_element_id?: string | null;
+  scope_packet_id?: string | null;
   source_id?: string | null;
   author_element_id?: string | null;
   packet_type?: string | null;
@@ -71,6 +73,17 @@ export type TrustedDefinitionRuntimePreference = {
   compatibility_allowed?: boolean;
   notes?: string | null;
 };
+
+
+export type TrustedDefinitionProfilePreferencePacket =
+  | PacketEnvelope
+  | {
+      header?: Partial<PacketHeader> | null;
+      packet_ref?: PacketRef | null;
+      revision_ref?: PacketRevisionRef | null;
+      packet_type?: string | null;
+      body: unknown;
+    };
 
 export type TrustedDefinitionCandidateStatus =
   | 'active_candidate'
@@ -124,6 +137,7 @@ export type TrustedDefinitionContext = {
   context_id: string;
   context_mode: TrustedDefinitionContextMode;
   node_element_id: string | null;
+  scope_packet_id: string | null;
   packet_type_filters: string[];
   active_candidates: TrustedDefinitionCandidate[];
   inactive_candidates: TrustedDefinitionCandidate[];
@@ -232,8 +246,10 @@ export type TrustedDefinitionCoordinatorRequest =
 
 export type BaseTrustedDefinitionInput = {
   node_element_id?: string | null;
+  scope_packet_id?: string | null;
   context_mode?: TrustedDefinitionContextMode;
   preferences?: readonly TrustedDefinitionRuntimePreference[];
+  definition_profile_preference_packets?: readonly TrustedDefinitionProfilePreferencePacket[];
   candidates?: readonly TrustedDefinitionCandidate[];
   include_compatibility?: boolean;
   include_quarantined?: boolean;

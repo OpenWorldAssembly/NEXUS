@@ -86,3 +86,69 @@ test('trusted definition coordinator can prefer the seeded bundle source without
 
   assert.equal(activeDefinitionCandidate?.source.source_kind, 'seeded_bundle');
 });
+
+test('trusted definition coordinator can prefer seeded definitions from packet-backed profile preferences', () => {
+  const packetBackedPreferenceCarrier = {
+    header: {
+      packet_id: 'nexus:test/definition-profile-preferences',
+      revision_id: 'nexus:test/definition-profile-preferences@r-001',
+      type: 'Bundle',
+      schema_version: '0.1.0',
+      created_at: '2026-05-30T00:00:00.000Z',
+      adapter: 'test',
+      metadata_tags: ['definition-profile-preferences'],
+      metadata_summary: 'Definition profile preference carrier.',
+      edges: [],
+      body_hash: null,
+      signature: null,
+    },
+    body: {
+      subtype: 'packet_set',
+      title: 'Definition profile preference test carrier',
+      summary: 'Packet-backed definition profile preference descriptors.',
+      status: 'active',
+      bundle_version: '0.1.0',
+      purpose: 'Carries node/scope trusted definition source preferences.',
+      root_refs: [],
+      items: [],
+      manifest_digest: null,
+      bundle_data: {
+        definition_profile_preferences: [
+          {
+            preference_id: 'test.packet_backed.prefer.seeded.definition.bundle',
+            target_node_element_id: 'node:test',
+            source_id: 'nexus:definition-profile/pre-reseed-active-manifest',
+            packet_type: 'Preference',
+            packet_subtype: null,
+            part_subtype: 'packet_type_definition',
+            trust_mode: 'prefer',
+            priority: 1000,
+            notes: 'Packet-backed smoke-test preference for the seeded definition bundle source.',
+          },
+        ],
+      },
+    },
+  } as const;
+
+  const result = trustedDefinitionCoordinator.resolveContext({
+    node_element_id: 'node:test',
+    packet_type_filters: ['Preference'],
+    definition_profile_preference_packets: [packetBackedPreferenceCarrier],
+  });
+
+  assert.notEqual(result.status, 'error');
+  assert.equal(
+    result.value?.preferences_used.some((preference) =>
+      preference.preference_id.startsWith('test.packet_backed.prefer.seeded.definition.bundle')
+    ),
+    true
+  );
+
+  const activeDefinitionCandidate = result.value?.active_candidates.find(
+    (candidate) =>
+      candidate.defines_packet_type === 'Preference' &&
+      candidate.part_subtype === 'packet_type_definition'
+  );
+
+  assert.equal(activeDefinitionCandidate?.source.source_kind, 'seeded_bundle');
+});
