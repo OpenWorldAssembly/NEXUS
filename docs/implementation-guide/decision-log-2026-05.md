@@ -433,3 +433,10 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - `ResolveTrustedDefinitionContextInput` can now accept packet-backed definition profile preference carriers through `definition_profile_preference_packets`. The current bridge reads active `Bundle.packet_set` bodies whose `bundle_data.definition_profile_preferences` descriptors normalize into `TrustedDefinitionRuntimePreference` records before candidate ranking.
 - Preference targeting now carries both `node_element_id` and `scope_packet_id`, so a carrier can select a profile for one node, one scope, or broad local runtime use without hardcoding packet-specific behavior in core.
 - This is still a bridge, not the final archive search path: local archive / pinned bundle discovery should feed this same coordinator input after reseed material is stored. Imported definition material remains descriptive; trusted local coordinators still own execution.
+
+### 2026-05-30 - Archive-backed definition profile preference discovery bridge
+
+- Trusted Definition now has an archive-backed profile preference discovery path inside the existing coordinator surface: `resolveContextWithArchiveProfilePreferences` queries Bundle packets through Trusted Archive, reads candidate carriers through Trusted Archive, and then feeds the discovered carriers into the existing packet-backed preference normalizer.
+- This keeps ownership clean: Archive owns packet-store reads, Definition owns source/profile selection, and the shared definition preference normalizer remains the single conversion seam into `TrustedDefinitionRuntimePreference` records.
+- The normal synchronous Definition resolver remains intact for bootstrap, tests, and callers that already have carriers in hand. Archive-backed discovery is async because it crosses the Archive read boundary.
+- This is still a narrow bridge for definition profile preference carriers. Full local-archive/pinned-bundle Definition candidate loading should reuse the same coordinator path later instead of adding new runtime services.

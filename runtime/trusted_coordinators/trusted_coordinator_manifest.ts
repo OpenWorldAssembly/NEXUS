@@ -47,6 +47,7 @@ export const TRUSTED_COORDINATOR_SCAFFOLD_MANIFEST = [
     structure: 'foldered_gated',
     expected_methods: [
       { method_name: 'resolveContext', notes: 'Resolves active trusted definition context.' },
+      { method_name: 'resolveContextWithArchiveProfilePreferences', notes: 'Discovers Bundle.packet_set definition profile preference carriers through Trusted Archive before resolving context.' },
       { method_name: 'resolvePacketDefinition', notes: 'Resolves a trusted packet definition.' },
       { method_name: 'resolveDefinitionPart', notes: 'Resolves an active trusted definition part.' },
       { method_name: 'compileRuntimeView', notes: 'Compiles coordinator-facing definition runtime view.' },

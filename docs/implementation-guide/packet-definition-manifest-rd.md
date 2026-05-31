@@ -123,7 +123,7 @@ Current Definition subtypes are intentionally limited to packet-definition work 
 - `packet_compatibility`
 - `dependencies_definition`
 
-The long-term model is graph-discoverable definition parts resolved into a pinned local definition profile. The current implementation builds a local seeded definition profile: every active manifest definition part is represented as a valid `Definition` packet envelope and grouped into one `Bundle.packet_set` inventory for reseed readiness. Runtime execution still resolves trusted local code rather than executing behavior supplied by those packets.
+The long-term model is graph-discoverable definition parts resolved into a pinned local definition profile. The current implementation builds a local seeded definition profile: every active manifest definition part is represented as a valid `Definition` packet envelope and grouped into one `Bundle.packet_set` inventory for reseed readiness. Trusted Definition can also discover archived Bundle.packet_set profile preference carriers through Trusted Archive before resolving source preferences. Runtime execution still resolves trusted local code rather than executing behavior supplied by those packets.
 
 ### Preference
 
@@ -185,7 +185,7 @@ The long-term definition model is now explicit:
 - Packet type and subtype semantics should live as stored `Definition` packets. The current TypeScript manifest is bootstrap/compiler seed material, local fallback material, and test fixture material, not the desired permanent semantic source of truth.
 - A definition profile is assembled from Definition part packets. Schema, action registries, builders, planners, projections, compatibility, defaults, and dependencies may version or fork independently when useful.
 - `Bundle.packet_set` carries active Definition part refs as a profile inventory. Bundle remains a carrier, not the semantic home of the definitions it transports.
-- Nodes and scopes should eventually select active definition profiles through packet-backed defaults, preferences, and policies. This keeps Definition profile selection portable instead of binding it to one runtime config file.
+- Nodes and scopes should select active definition profiles through packet-backed defaults, preferences, and policies. The current bridge supports Bundle.packet_set profile preference carriers supplied directly to Trusted Definition or discovered asynchronously through Trusted Archive, keeping profile selection portable instead of binding it to one runtime config file.
 - Imported Definition material is descriptive, never executable. Trusted local coordinators decide whether local allowlisted builder, planner, projection, compatibility, regulation, and archive capabilities can interpret the declared metadata.
 
 Current state is transitional but close: Definition packets and profile Bundle seeds are generated and audited, Trusted Definition can rank and resolve candidates, and the source/trust model already includes local archive, imported bundle, pinned bundle, and remote mirror concepts. The coordinator also has a packet-backed selection bridge: active `Bundle.packet_set` carriers can include `bundle_data.definition_profile_preferences`, which are normalized into runtime preferences before source ranking. The remaining migration is to discover/load those profile and preference carriers from the local archive or pinned bundle set, then reduce direct dependence on `PACKET_TYPE_DEFINITIONS` as the active semantic source.

@@ -18,6 +18,7 @@ import type {
   TrustedRuntimeCoordinatorIssue,
   TrustedRuntimeCoordinatorTraceEntry,
 } from '@runtime/trusted_coordinators/trusted_runtime_coordinator';
+import type { TrustedArchiveStoreContext } from '@runtime/trusted_coordinators/trusted_archive_coordinator/index.ts';
 
 export const TRUSTED_DEFINITION_COORDINATOR_ID = 'trusted_definition_coordinator.v0' as const;
 
@@ -258,6 +259,13 @@ export type BaseTrustedDefinitionInput = {
 export type ResolveTrustedDefinitionContextInput = BaseTrustedDefinitionInput & {
   packet_type_filters?: readonly string[];
 };
+
+export type ResolveTrustedDefinitionContextFromArchiveInput =
+  ResolveTrustedDefinitionContextInput &
+    TrustedArchiveStoreContext & {
+      archive_profile_preference_limit?: number;
+      archive_profile_preference_text?: string | null;
+    };
 
 export type ResolveTrustedPacketDefinitionInput = BaseTrustedDefinitionInput & {
   packet_type: string;

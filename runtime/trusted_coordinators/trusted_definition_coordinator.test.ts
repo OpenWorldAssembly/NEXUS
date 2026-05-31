@@ -152,3 +152,89 @@ test('trusted definition coordinator can prefer seeded definitions from packet-b
 
   assert.equal(activeDefinitionCandidate?.source.source_kind, 'seeded_bundle');
 });
+
+test('trusted definition coordinator can discover archived definition profile preference carriers through Trusted Archive', async () => {
+  const archivedPreferenceCarrier = {
+    header: {
+      packet_id: 'nexus:test/archived-definition-profile-preferences',
+      revision_id: 'nexus:test/archived-definition-profile-preferences@r-001',
+      type: 'Bundle',
+      schema_version: '0.1.0',
+      created_at: '2026-05-30T00:00:00.000Z',
+      adapter: 'test',
+      metadata_tags: ['definition-profile-preferences'],
+      metadata_summary: 'Archived definition profile preference carrier.',
+      edges: [],
+      body_hash: null,
+      signature: null,
+    },
+    body: {
+      subtype: 'packet_set',
+      title: 'Archived definition profile preference carrier',
+      summary: 'Packet-backed definition profile preference descriptors loaded through Trusted Archive.',
+      status: 'active',
+      bundle_version: '0.1.0',
+      purpose: 'Carries node/scope trusted definition source preferences.',
+      root_refs: [],
+      items: [],
+      manifest_digest: null,
+      bundle_data: {
+        definition_profile_preferences: [
+          {
+            preference_id: 'test.archived.prefer.seeded.definition.bundle',
+            target_node_element_id: 'node:archive-test',
+            source_id: 'nexus:definition-profile/pre-reseed-active-manifest',
+            packet_type: 'Preference',
+            packet_subtype: null,
+            part_subtype: 'packet_type_definition',
+            trust_mode: 'prefer',
+            priority: 1000,
+            notes: 'Archived smoke-test preference for the seeded definition bundle source.',
+          },
+        ],
+      },
+    },
+  } as const;
+
+  const packetStore = {
+    listSearchRows: async () => [
+      {
+        packet_id: archivedPreferenceCarrier.header.packet_id,
+        revision_id: archivedPreferenceCarrier.header.revision_id,
+        type: 'Bundle',
+        label: 'Bundle',
+        title: 'Archived definition profile preference carrier',
+        summary: 'Archived definition profile preference carrier.',
+        status: 'active',
+        authority_scope_packet_id: null,
+        applicable_scope_ids_json: '[]',
+        tags_json: '["definition-profile-preferences"]',
+        created_at: archivedPreferenceCarrier.header.created_at,
+      },
+    ],
+    readByPacket: async () => archivedPreferenceCarrier,
+    readByRevision: async () => archivedPreferenceCarrier,
+  } as any;
+
+  const result = await trustedDefinitionCoordinator.resolveContextWithArchiveProfilePreferences({
+    node_element_id: 'node:archive-test',
+    packet_type_filters: ['Preference'],
+    packet_store: packetStore,
+  });
+
+  assert.notEqual(result.status, 'error');
+  assert.equal(
+    result.value?.preferences_used.some((preference) =>
+      preference.preference_id.startsWith('test.archived.prefer.seeded.definition.bundle')
+    ),
+    true
+  );
+
+  const activeDefinitionCandidate = result.value?.active_candidates.find(
+    (candidate) =>
+      candidate.defines_packet_type === 'Preference' &&
+      candidate.part_subtype === 'packet_type_definition'
+  );
+
+  assert.equal(activeDefinitionCandidate?.source.source_kind, 'seeded_bundle');
+});

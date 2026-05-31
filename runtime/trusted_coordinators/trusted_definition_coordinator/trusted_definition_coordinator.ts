@@ -7,12 +7,14 @@ import type {
   PacketDefinitionPartDescriptor,
   PacketTypeDefinition,
 } from '@core/packets/definitions/packet-definition-types.ts';
-import type {
-  TrustedRuntimeCoordinatorResult,
+import {
+  createTrustedRuntimeCoordinatorResult,
+  type TrustedRuntimeCoordinatorResult,
 } from '@runtime/trusted_coordinators/trusted_runtime_coordinator';
 import {
   executeTrustedDefinitionOperation,
 } from './trusted_definition_registry.ts';
+import { listArchiveDefinitionProfilePreferenceCarriers } from './functions/list_archive_definition_profile_preference_carriers.ts';
 import type {
   AuditTrustedDefinitionReadinessInput,
   AuditTrustedDefinitionConflictsInput,
@@ -23,6 +25,7 @@ import type {
   RankTrustedDefinitionCandidatesInput,
   ResolveTrustedCompatibilityDefinitionInput,
   ResolveTrustedDefinitionContextInput,
+  ResolveTrustedDefinitionContextFromArchiveInput,
   ResolveTrustedDefinitionPartInput,
   ResolveTrustedPacketDefinitionInput,
   TrustedDefinitionCandidate,
@@ -36,6 +39,21 @@ function castResult<T>(result: TrustedRuntimeCoordinatorResult<unknown>): Truste
   return result as TrustedRuntimeCoordinatorResult<T>;
 }
 
+function mergeArchiveDiscoveryStatus(
+  contextResult: TrustedRuntimeCoordinatorResult<unknown>,
+  discoveryIssues: readonly { severity: 'info' | 'warning' | 'error' }[]
+): TrustedRuntimeCoordinatorResult<unknown>['status'] {
+  if (contextResult.status === 'error' || discoveryIssues.some((issue) => issue.severity === 'error')) {
+    return 'error';
+  }
+
+  if (contextResult.status === 'partial' || discoveryIssues.some((issue) => issue.severity === 'warning')) {
+    return 'partial';
+  }
+
+  return contextResult.status;
+}
+
 export const trustedDefinitionCoordinator = {
   id: 'trusted_definition_coordinator.v0',
 
@@ -45,6 +63,34 @@ export const trustedDefinitionCoordinator = {
     return castResult<TrustedDefinitionContext>(
       executeTrustedDefinitionOperation({ operation: 'resolve_context', input })
     );
+  },
+
+
+
+  async resolveContextWithArchiveProfilePreferences(
+    input: ResolveTrustedDefinitionContextFromArchiveInput = {}
+  ): Promise<TrustedRuntimeCoordinatorResult<TrustedDefinitionContext>> {
+    const discovery = await listArchiveDefinitionProfilePreferenceCarriers(input);
+    const contextResult = trustedDefinitionCoordinator.resolveContext({
+      ...input,
+      definition_profile_preference_packets: [
+        ...discovery.preference_packets,
+        ...(input.definition_profile_preference_packets ?? []),
+      ],
+    });
+
+    return createTrustedRuntimeCoordinatorResult({
+      coordinator_id: contextResult.coordinator_id,
+      coordinator_kind: contextResult.coordinator_kind,
+      status: mergeArchiveDiscoveryStatus(contextResult, discovery.issues),
+      value: contextResult.value,
+      issues: [...discovery.issues, ...contextResult.issues],
+      trace: [...discovery.trace, ...contextResult.trace],
+      operation_id: contextResult.operation_id,
+      request_id: contextResult.request_id,
+      mode: contextResult.mode,
+      process_chain: contextResult.process_chain,
+    });
   },
 
   resolvePacketDefinition(

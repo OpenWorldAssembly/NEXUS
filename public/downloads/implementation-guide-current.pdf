@@ -4156,7 +4156,7 @@ endobj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 189 0 R >>
 endobj
 191 0 obj
-<< /Length 998 >>
+<< /Length 5023 >>
 stream
 0.720 0.820 0.900 RG 0.60 w 54.00 40.00 m 558.00 40.00 l S
 BT 0.330 0.430 0.530 rg /F1 8.5 Tf 1 0 0 1 54.00 22.00 Tm (Open World Assembly - Implementation Guide - 94) Tj ET
@@ -4166,6 +4166,34 @@ BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 703.50 Tm (Dispatch/trusted-ch
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 684.25 Tm (- Direct-write seam classification now treats discussion/reaction/preference helpers as) Tj ET
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 669.00 Tm (transitional adapter/internal or compatibility-cache writes instead of Dispatch-internal) Tj ET
 BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 653.75 Tm (helpers.) Tj ET
+BT 0.090 0.160 0.240 rg /F2 11.5 Tf 1 0 0 1 54.00 624.50 Tm (2026-05-30 - Packet-backed definition profile preference carrier bridge) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 602.50 Tm (- Trusted Definition remains the owner of active definition source selection. No new runtime) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 587.25 Tm (service was added.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 568.00 Tm (- ResolveTrustedDefinitionContextInput can now accept packet-backed definition profile) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 552.75 Tm (preference carriers through definitionprofilepreferencepackets. The current bridge reads) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 537.50 Tm (active Bundle.packetset bodies whose bundledata.definitionprofile_preferences descriptors) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 522.25 Tm (normalize into TrustedDefinitionRuntimePreference records before candidate ranking.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 503.00 Tm (- Preference targeting now carries both nodeelementid and scopepacketid, so a carrier can) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 487.75 Tm (select a profile for one node, one scope, or broad local runtime use without hardcoding) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 472.50 Tm (packet-specific behavior in core.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 453.25 Tm (- This is still a bridge, not the final archive search path: local archive / pinned bundle) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 438.00 Tm (discovery should feed this same coordinator input after reseed material is stored.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 422.75 Tm (Imported definition material remains descriptive; trusted local coordinators still own) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 407.50 Tm (execution.) Tj ET
+BT 0.090 0.160 0.240 rg /F2 11.5 Tf 1 0 0 1 54.00 378.25 Tm (2026-05-30 - Archive-backed definition profile preference discovery bridge) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 356.25 Tm (- Trusted Definition now has an archive-backed profile preference discovery path inside the) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 341.00 Tm (existing coordinator surface: resolveContextWithArchiveProfilePreferences queries Bundle) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 325.75 Tm (packets through Trusted Archive, reads candidate carriers through Trusted Archive, and) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 310.50 Tm (then feeds the discovered carriers into the existing packet-backed preference normalizer.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 291.25 Tm (- This keeps ownership clean: Archive owns packet-store reads, Definition owns) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 276.00 Tm (source/profile selection, and the shared definition preference normalizer remains the) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 260.75 Tm (single conversion seam into TrustedDefinitionRuntimePreference records.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 241.50 Tm (- The normal synchronous Definition resolver remains intact for bootstrap, tests, and) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 226.25 Tm (callers that already have carriers in hand. Archive-backed discovery is async because it) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 211.00 Tm (crosses the Archive read boundary.) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 66.00 191.75 Tm (- This is still a narrow bridge for definition profile preference carriers. Full) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 176.50 Tm (local-archive/pinned-bundle Definition candidate loading should reuse the same coordinator) Tj ET
+BT 0.090 0.160 0.240 rg /F1 10.5 Tf 1 0 0 1 70.00 161.25 Tm (path later instead of adding new runtime services.) Tj ET
 endstream
 endobj
 192 0 obj
@@ -4365,9 +4393,9 @@ xref
 0000466964 00000 n 
 0000472136 00000 n 
 0000472276 00000 n 
-0000473327 00000 n 
+0000477353 00000 n 
 trailer
 << /Size 193 /Root 1 0 R >>
 startxref
-473467
+477493
 %%EOF

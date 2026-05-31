@@ -7,6 +7,7 @@ export { trustedDefinitionCoordinator } from './trusted_definition_coordinator.t
 export type {
   TrustedDefinitionCandidate,
   TrustedDefinitionContext,
+  ResolveTrustedDefinitionContextFromArchiveInput,
   TrustedDefinitionContextMode,
   TrustedDefinitionReadinessReport,
   TrustedDefinitionRuntimePreference,
