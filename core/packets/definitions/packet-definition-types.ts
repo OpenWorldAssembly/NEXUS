@@ -105,7 +105,12 @@ export type PacketProjectionLayoutDescriptor = {
     | 'packet.focus_card'
     | 'packet.detail_panel'
     | 'packet.list_row'
-    | 'packet.raw_panel';
+    | 'packet.raw_panel'
+    | 'discussion.workspace_shell'
+    | 'discussion.forum_feed'
+    | 'discussion.thread_panel'
+    | 'discussion.reply_tree'
+    | 'discussion.composer_surface';
   density: 'compact' | 'standard' | 'expanded';
   slots: readonly string[];
   notes: string;

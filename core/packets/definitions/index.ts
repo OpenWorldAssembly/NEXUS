@@ -24,4 +24,9 @@ export {
   type ShellChromePreferenceValue,
 } from './preference.ts';
 export * from './preference-helpers.ts';
+export {
+  discussionPacketDefinition,
+  DISCUSSION_AGGREGATE_PROJECTIONS,
+  DISCUSSION_SURFACE_ACTIONS,
+} from './discussion.ts';
 export * from './bundle.ts';

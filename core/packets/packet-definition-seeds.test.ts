@@ -112,3 +112,30 @@ test('seeded definition profile audit passes and fails closed on drift', () => {
     )
   );
 });
+
+test('discussion definition seed carries aggregate projection descriptors', () => {
+  const candidates = buildDefinitionPacketSeedCandidates();
+  const discussionProjectionPart = candidates.find(
+    (candidate) =>
+      candidate.defines_packet_type === 'Discussion' &&
+      candidate.part_id === 'discussion.packet_projection_descriptor.aggregate_surfaces.v0'
+  );
+
+  assert.ok(discussionProjectionPart);
+  assert.equal(discussionProjectionPart.body_candidate.body.subtype, 'packet_projection_descriptor');
+  assert.ok(
+    discussionProjectionPart.body_candidate.body.projection_keys.includes(
+      'discussion.workspace.aggregate.v0'
+    )
+  );
+  assert.ok(
+    discussionProjectionPart.body_candidate.body.projection_keys.includes(
+      'discussion.post.thread.aggregate.v0'
+    )
+  );
+  assert.ok(
+    discussionProjectionPart.body_candidate.body.projection_keys.includes(
+      'discussion.composer.surface.v0'
+    )
+  );
+});

@@ -1430,5 +1430,5 @@ export const proposalPacketDefinition = genericTypePacketDefinitions.Proposal;
 export const reactionPacketDefinition = genericTypePacketDefinitions.Reaction;
 export const decisionPacketDefinition = genericTypePacketDefinitions.Decision;
 export const actionPacketDefinition = genericTypePacketDefinitions.Action;
-export const discussionPacketDefinition = genericTypePacketDefinitions.Discussion;
+export const genericDiscussionPacketDefinition = genericTypePacketDefinitions.Discussion;
 export const policyPacketDefinition = genericTypePacketDefinitions.Policy;
