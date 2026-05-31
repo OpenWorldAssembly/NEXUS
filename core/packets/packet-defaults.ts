@@ -111,6 +111,13 @@ function defaultMatchesSubtype(
     return true;
   }
 
+  if (
+    descriptor.applies_to.workflow_id &&
+    descriptor.applies_to.packet_subtype === undefined
+  ) {
+    return false;
+  }
+
   const appliesSubtype = descriptor.applies_to.packet_subtype;
   return appliesSubtype === undefined || appliesSubtype === null || appliesSubtype === packetSubtype;
 }

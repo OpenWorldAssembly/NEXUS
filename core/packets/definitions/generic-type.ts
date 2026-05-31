@@ -31,6 +31,8 @@ import {
   createRegistryCompatibilityAdapterDescriptors,
   derivePacketCompatibilityPosture,
 } from './compatibility-standard.ts';
+import { createOwaDomainDefaultValues } from '@core/packets/defaults/owa-domain-defaults.ts';
+import { createDiscussionSubtypeDefaultValues } from '@core/packets/defaults/element-discussion-defaults.ts';
 
 type GenericBuilderType =
   | 'Element'
@@ -246,6 +248,16 @@ function createDefaultValues(input: {
       subtype: input.subtype,
       status: 'active',
     };
+  }
+
+  if (input.type === 'Discussion') {
+    return createDiscussionSubtypeDefaultValues(input.subtype);
+  }
+
+  const owaDefaults = createOwaDomainDefaultValues(input);
+
+  if (owaDefaults) {
+    return owaDefaults;
   }
 
   return {

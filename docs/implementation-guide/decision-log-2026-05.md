@@ -448,3 +448,10 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - The Preference definition manifest now declares `Preference.node` actions, builder/planner/projection descriptors, compatibility, defaults, dependencies, fixtures, and definition parts so the seeded definition profile can carry the subtype alongside `Preference.element`.
 - Runtime local validator identity creation now emits an `Element.node` packet instead of a non-canonical `local_validator` element subtype. Existing private key storage remains transitional and local-runtime-only; private keys must not be stored in packet bodies.
 - Added a node preference protocol inspection audit that fails on missing node schema/definition/helper seams and warns while local validator private JWK material remains in the runtime side table. Future node-to-node exchange should move signing secrets toward environment-backed or encrypted local secret storage under Verification/Archive/Exchange coordinator ownership.
+
+### 2026-05-31 - Discussion defaults and OWA domain default closure
+
+- Discussion defaults now have packet-definition material for the Element discussion surface recipe: person, assembly, and locality assembly profiles; deterministic space/forum/thread/post/reply id strategy; forum-kind semantics; and the `buildElementDefaultDiscussionPackets` recipe are carried as a `Discussion` `defaults_definition` part.
+- Discussion subtype defaults remain separate from the workflow recipe, so resolving `Discussion.post` defaults does not pollute post bodies with surface-level profile data.
+- OWA-domain generic packet families now record default semantics for `Action`, `Proposal`, and `Decision` in definition defaults. Actions carry hierarchy/policy/template/default-packet-set refs, Proposals remain deliberation records, and Decisions stay recorded outcomes linked to proposal/vote material by refs.
+- The packet-definition readiness audit now treats Action, Proposal, Decision, and Discussion OWA-default decisions as closed when their definition-backed defaults are present, leaving reseed fixture construction as the next step rather than another terminology/design pass.

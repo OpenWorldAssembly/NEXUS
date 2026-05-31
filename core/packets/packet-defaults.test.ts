@@ -88,3 +88,57 @@ test('policy default sections can reference default definitions and override res
   ]);
   assert.equal(localBehavior.require_local_ratification, true);
 });
+
+test('OWA domain defaults are resolved for Action, Proposal, and Decision packet families', () => {
+  const actionDefinition = getDefinedPacketTypeDefinition('Action');
+  const proposalDefinition = getDefinedPacketTypeDefinition('Proposal');
+  const decisionDefinition = getDefinedPacketTypeDefinition('Decision');
+  assert.ok(actionDefinition);
+  assert.ok(proposalDefinition);
+  assert.ok(decisionDefinition);
+
+  const actionProfile = resolvePacketDefaultProfile({
+    definition: actionDefinition,
+    packet_subtype: 'initiative',
+  });
+  const proposalProfile = resolvePacketDefaultProfile({
+    definition: proposalDefinition,
+    packet_subtype: 'proposal',
+  });
+  const decisionProfile = resolvePacketDefaultProfile({
+    definition: decisionDefinition,
+    packet_subtype: 'decision',
+  });
+
+  assert.equal(actionProfile.resolved_values.status, 'active');
+  assert.equal(actionProfile.resolved_values.owa_default_role, 'initiative_anchor');
+  assert.deepEqual(actionProfile.resolved_values.policy_refs, []);
+  assert.equal(proposalProfile.resolved_values.status, 'draft');
+  assert.equal(
+    proposalProfile.resolved_values.default_vote_behavior,
+    'reaction_or_governance_policy_defined'
+  );
+  assert.equal(decisionProfile.resolved_values.outcome, 'recorded');
+  assert.equal(decisionProfile.resolved_values.proposal_ref, null);
+});
+
+test('discussion subtype defaults do not absorb workflow-only surface recipes', () => {
+  const discussionDefinition = getDefinedPacketTypeDefinition('Discussion');
+  assert.ok(discussionDefinition);
+
+  const postProfile = resolvePacketDefaultProfile({
+    definition: discussionDefinition,
+    packet_subtype: 'post',
+  });
+  const allDiscussionDefaults = listPacketDefinitionDefaults(discussionDefinition);
+
+  assert.equal(postProfile.resolved_values.subtype, 'post');
+  assert.equal(postProfile.resolved_values.role, 'forum_post');
+  assert.equal(postProfile.resolved_values.default_profiles, undefined);
+  assert.ok(
+    allDiscussionDefaults.some(
+      (descriptor) =>
+        descriptor.default_id === 'discussion.defaults_definition.element_surface_recipe.v0'
+    )
+  );
+});

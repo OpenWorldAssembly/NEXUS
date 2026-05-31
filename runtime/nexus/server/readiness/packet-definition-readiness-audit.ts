@@ -374,12 +374,38 @@ function hasCoreDefinitionGaps(coverage: PacketDefinitionReadinessEntry['coverag
   );
 }
 
+function hasResolvedOwaDomainDefaults(input: {
+  packetType: string;
+  source: string;
+}): boolean {
+  if (input.packetType === 'Discussion') {
+    return (
+      input.source.includes('discussion.defaults_definition.element_surface_recipe.v0') &&
+      input.source.includes('ELEMENT_DISCUSSION_DEFAULT_PROFILES')
+    );
+  }
+
+  if (
+    input.packetType === 'Action' ||
+    input.packetType === 'Decision' ||
+    input.packetType === 'Proposal'
+  ) {
+    return (
+      input.source.includes('createOwaDomainDefaultValues') &&
+      input.source.includes('@core/packets/defaults/owa-domain-defaults')
+    );
+  }
+
+  return false;
+}
+
 function createBuckets(input: {
   packetType: string;
   layer: PacketDefinitionReadinessLayer;
   definitionStatus: PacketDefinitionReadinessEntry['definition_status'];
   sourceStyle: PacketDefinitionReadinessEntry['source_style'];
   coverage: PacketDefinitionReadinessEntry['coverage'];
+  owaDomainDefaultsResolved: boolean;
 }): PacketDefinitionReadinessBucket[] {
   const buckets = new Set<PacketDefinitionReadinessBucket>();
 
@@ -416,7 +442,7 @@ function createBuckets(input: {
     buckets.add('legacy_candidate');
   }
 
-  if (input.layer === 'owa_domain') {
+  if (input.layer === 'owa_domain' && !input.owaDomainDefaultsResolved) {
     buckets.add('needs_decision');
   }
 
@@ -429,6 +455,7 @@ function createNotes(input: {
   sourceStyle: PacketDefinitionReadinessEntry['source_style'];
   buckets: readonly PacketDefinitionReadinessBucket[];
   coverage: PacketDefinitionReadinessEntry['coverage'];
+  owaDomainDefaultsResolved: boolean;
 }): string[] {
   const notes: string[] = [];
 
@@ -452,6 +479,8 @@ function createNotes(input: {
 
   if (input.packetType === 'Discussion') {
     notes.push('Discussion has a native overlay for aggregate workspace/feed/thread/composer projection descriptors while preserving the generic base definition.');
+  } else if (input.layer === 'owa_domain' && input.owaDomainDefaultsResolved) {
+    notes.push('Generic packet-family definition is present and OWA-specific default/seed semantics are explicitly recorded for the reseed pass.');
   } else if (input.layer === 'owa_domain') {
     notes.push('Generic packet-family definition is present; OWA-specific defaults and seed semantics still need product/domain decisions.');
   }
@@ -467,6 +496,7 @@ function createNextStep(input: {
   packetType: string;
   layer: PacketDefinitionReadinessLayer;
   buckets: readonly PacketDefinitionReadinessBucket[];
+  owaDomainDefaultsResolved: boolean;
 }): string {
   if (input.buckets.includes('definition_partial')) {
     return 'Fill missing manifest sections before treating this definition as reseed-ready.';
@@ -477,11 +507,15 @@ function createNextStep(input: {
   }
 
   if (input.packetType === 'Discussion') {
-    return 'Promote default discussion surface recipes into definition/reseed material before the big reseed.';
+    return input.owaDomainDefaultsResolved
+      ? 'Use the packetized element discussion surface recipe when building the reseed packet set.'
+      : 'Promote default discussion surface recipes into definition/reseed material before the big reseed.';
   }
 
   if (input.layer === 'owa_domain') {
-    return 'Decide the OWA default packets/policies for this generic family before reseed.';
+    return input.owaDomainDefaultsResolved
+      ? 'Use the recorded OWA default semantics when building reseed fixtures and default packet sets.'
+      : 'Decide the OWA default packets/policies for this generic family before reseed.';
   }
 
   if (input.buckets.includes('projection_incomplete')) {
@@ -525,12 +559,17 @@ function createEntry(input: {
     sourceStyle,
     counts,
   });
+  const owaDomainDefaultsResolved = hasResolvedOwaDomainDefaults({
+    packetType: input.packetType,
+    source,
+  });
   const buckets = createBuckets({
     packetType: input.packetType,
     layer,
     definitionStatus,
     sourceStyle,
     coverage,
+    owaDomainDefaultsResolved,
   });
 
   return {
@@ -549,11 +588,13 @@ function createEntry(input: {
       sourceStyle,
       buckets,
       coverage,
+      owaDomainDefaultsResolved,
     }),
     next_step: createNextStep({
       packetType: input.packetType,
       layer,
       buckets,
+      owaDomainDefaultsResolved,
     }),
   };
 }

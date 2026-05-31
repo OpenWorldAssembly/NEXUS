@@ -139,3 +139,27 @@ test('discussion definition seed carries aggregate projection descriptors', () =
     )
   );
 });
+
+test('discussion definition seed carries default surface recipe descriptors', () => {
+  const candidates = buildDefinitionPacketSeedCandidates();
+  const discussionDefaultsPart = candidates.find(
+    (candidate) =>
+      candidate.defines_packet_type === 'Discussion' &&
+      candidate.part_id === 'discussion.defaults_definition.element_surface_recipe.v0'
+  );
+
+  assert.ok(discussionDefaultsPart);
+  assert.equal(discussionDefaultsPart.body_candidate.body.subtype, 'defaults_definition');
+  assert.equal(
+    discussionDefaultsPart.body_candidate.body.applies_to?.workflow_id,
+    'element.default_discussion_surface.v0'
+  );
+  const defaultValues = discussionDefaultsPart.body_candidate.body.default_values as Record<
+    string,
+    unknown
+  >;
+  const defaultProfiles = defaultValues.default_profiles as Record<string, unknown>;
+
+  assert.ok(defaultProfiles.locality_assembly);
+  assert.equal(defaultValues.default_builder, 'buildElementDefaultDiscussionPackets');
+});

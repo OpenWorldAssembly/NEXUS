@@ -44,7 +44,7 @@ export type ElementDiscussionStarterThreadInput = {
   relatedRefs?: PacketRef[];
 };
 
-type ElementDiscussionForumPlan = {
+export type ElementDiscussionForumPlan = {
   forumKind: ElementDiscussionForumKind;
   title: string;
   summary: string;
@@ -56,6 +56,107 @@ type ElementDiscussionForumPlan = {
     top_level_post_cost: number;
   };
 };
+
+const DEFAULT_MEMBER_PARTICIPATION_RULES = {
+  top_level_actor_classes: ['scope_member', 'trusted_member', 'steward'],
+  reply_actor_classes: ['scope_member', 'trusted_member', 'steward'],
+  reaction_actor_classes: ['scope_member', 'trusted_member', 'steward'],
+  top_level_post_cost: 0,
+} as const;
+
+
+export const ELEMENT_DISCUSSION_DEFAULT_PROFILES = {
+  person: {
+    profile: 'person',
+    description:
+      'Personal Element discussion surface with a public general forum and optional starter thread.',
+    default_forum_kinds: ['general'],
+    default_welcome_forum_kind: 'general',
+    include_proposals_by_default: false,
+    include_reports_by_default: false,
+    guest_access: 'general forum allows anonymous guest replies/reactions by default.',
+  },
+  assembly: {
+    profile: 'assembly',
+    description:
+      'Assembly discussion surface with visitor lobby, general discussion, and reports/AARs by default.',
+    default_forum_kinds: ['visitor_lobby', 'general', 'reports'],
+    default_welcome_forum_kind: 'visitor_lobby',
+    include_proposals_by_default: false,
+    include_reports_by_default: true,
+    guest_access: 'visitor lobby allows anonymous guest orientation by default; member forums are trust-gated.',
+  },
+  locality_assembly: {
+    profile: 'locality_assembly',
+    description:
+      'Locality assembly discussion surface with visitor lobby, general, proposals, and reports/AAR forums by default.',
+    default_forum_kinds: ['visitor_lobby', 'general', 'proposals', 'reports'],
+    default_welcome_forum_kind: 'visitor_lobby',
+    include_proposals_by_default: true,
+    include_reports_by_default: true,
+    guest_access: 'visitor lobby allows anonymous guest locality routing by default; proposal/report forums are member-gated.',
+  },
+} as const;
+
+export const ELEMENT_DISCUSSION_DEFAULT_ID_STRATEGY = {
+  space_packet_id: 'nexus:discussion-space/{element_slug}',
+  forum_packet_id: 'nexus:discussion-forum/{element_slug}-{forum_slug}',
+  thread_packet_id: 'nexus:discussion-thread/{element_slug}-{forum_slug}-{suffix}',
+  root_post_packet_id: 'nexus:discussion-post/{element_slug}-{forum_slug}-{suffix}',
+  reply_packet_id: 'nexus:discussion-reply/{element_slug}-{forum_slug}-{suffix}',
+} as const;
+
+export const DISCUSSION_SUBTYPE_DEFAULT_VALUES = {
+  space: {
+    subtype: 'space',
+    role: 'space',
+    status: 'open',
+  },
+  forum: {
+    subtype: 'forum',
+    role: 'general',
+    status: 'open',
+    participation_rules: DEFAULT_MEMBER_PARTICIPATION_RULES,
+    default_sort: 'hot',
+  },
+  topic: {
+    subtype: 'topic',
+    role: 'general',
+    status: 'open',
+    related_refs: [],
+    participation_rules: DEFAULT_MEMBER_PARTICIPATION_RULES,
+    default_sort: 'hot',
+  },
+  post: {
+    subtype: 'post',
+    role: 'forum_post',
+    status: 'open',
+    related_refs: [],
+    participation_rules: DEFAULT_MEMBER_PARTICIPATION_RULES,
+    default_sort: 'hot',
+    content_markdown: null,
+    attachment_refs: [],
+  },
+  message: {
+    subtype: 'message',
+    role: 'reply',
+    status: 'open',
+    root_message_ref: null,
+  },
+} as const;
+
+export function createDiscussionSubtypeDefaultValues(
+  subtype: string
+): Record<string, unknown> {
+  return {
+    ...(DISCUSSION_SUBTYPE_DEFAULT_VALUES[
+      subtype as keyof typeof DISCUSSION_SUBTYPE_DEFAULT_VALUES
+    ] ?? {
+      subtype,
+      status: 'open',
+    }),
+  };
+}
 
 const GUEST_FORUM_ACTORS = [
   'anonymous_guest',
@@ -208,7 +309,12 @@ export function buildElementDiscussionForumPlans(input: {
         : createActorRules(MEMBER_FORUM_ACTORS),
   });
 
-  if (input.includeProposalsForum) {
+  const includeProposalsForum =
+    input.includeProposalsForum ?? input.profile === 'locality_assembly';
+  const includeReportsForum =
+    input.includeReportsForum ?? input.profile !== 'person';
+
+  if (includeProposalsForum) {
     plans.push({
       forumKind: 'proposals',
       title: `${input.elementName} proposals`,
@@ -219,7 +325,7 @@ export function buildElementDiscussionForumPlans(input: {
     });
   }
 
-  if (input.profile !== 'person' && input.includeReportsForum !== false) {
+  if (includeReportsForum) {
     plans.push({
       forumKind: 'reports',
       title: `${input.elementName} reports and AARs`,

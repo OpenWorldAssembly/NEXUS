@@ -3,6 +3,10 @@
  * Description: Discussion packet definition overlay for definition-backed aggregate projection surfaces.
  */
 
+import {
+  ELEMENT_DISCUSSION_DEFAULT_ID_STRATEGY,
+  ELEMENT_DISCUSSION_DEFAULT_PROFILES,
+} from '@core/packets/defaults/element-discussion-defaults.ts';
 import { genericDiscussionPacketDefinition } from './generic-type.ts';
 import type {
   PacketActionDescriptor,
@@ -579,6 +583,37 @@ export const DISCUSSION_AGGREGATE_PROJECTIONS = [
   },
 ] as const satisfies readonly PacketProjectionDescriptor[];
 
+
+const DISCUSSION_ELEMENT_SURFACE_DEFAULTS_PART: PacketDefinitionPartDescriptor = {
+  part_id: 'discussion.defaults_definition.element_surface_recipe.v0',
+  part_subtype: 'defaults_definition',
+  defines_packet_type: 'Discussion',
+  defines_packet_subtype: null,
+  schema_version: genericDiscussionPacketDefinition.current_schema_version,
+  availability: 'runtime_ready',
+  required: true,
+  applies_to: {
+    packet_type: 'Discussion',
+    workflow_id: 'element.default_discussion_surface.v0',
+  },
+  default_values: {
+    default_profiles: ELEMENT_DISCUSSION_DEFAULT_PROFILES,
+    id_strategy: ELEMENT_DISCUSSION_DEFAULT_ID_STRATEGY,
+    default_builder: 'buildElementDefaultDiscussionPackets',
+    default_packet_family: 'Element discussion space, forums, starter topics, starter posts, and optional seeded replies',
+    forum_kind_semantics: {
+      visitor_lobby: 'public newcomer orientation and locality routing',
+      general: 'broad scope/member discussion',
+      proposals: 'proposal drafting, review, and amendment context',
+      reports: 'reports, after-action reviews, and learning records',
+      role_prefix: 'role-specific forums use role_{slug}',
+    },
+  },
+  default_merge_strategy: 'deep_overlay',
+  notes:
+    'Default discussion surface recipe for reseeding Element-attached discussion spaces without hardcoding forum layout in Element packets.',
+};
+
 const DISCUSSION_PROJECTION_DESCRIPTOR_PART: PacketDefinitionPartDescriptor = {
   part_id: 'discussion.packet_projection_descriptor.aggregate_surfaces.v0',
   part_subtype: 'packet_projection_descriptor',
@@ -603,6 +638,7 @@ const DISCUSSION_AGGREGATE_DEPENDENCIES_PART: PacketDefinitionPartDescriptor = {
   availability: 'runtime_ready',
   required: true,
   references: [
+    DISCUSSION_ELEMENT_SURFACE_DEFAULTS_PART.part_id,
     'runtime.packet_store.read',
     'runtime.policy_gate',
     'runtime.trusted_coordinator.archive',
@@ -613,6 +649,7 @@ const DISCUSSION_AGGREGATE_DEPENDENCIES_PART: PacketDefinitionPartDescriptor = {
     'runtime.trusted_coordinator.building',
     'generic.operation.discussion',
     'generic.operation.reaction',
+    'core.default_builder.buildElementDefaultDiscussionPackets',
     'generic.resolver.projection',
     'reaction.packet_projection_descriptor.v0',
   ],
@@ -634,6 +671,7 @@ function enrichDiscussionRootPart(): PacketDefinitionPartDescriptor[] {
       ...genericRootDefinitionPart,
       references: [
         ...(genericRootDefinitionPart.references ?? []),
+        DISCUSSION_ELEMENT_SURFACE_DEFAULTS_PART.part_id,
         DISCUSSION_PROJECTION_DESCRIPTOR_PART.part_id,
         DISCUSSION_AGGREGATE_DEPENDENCIES_PART.part_id,
       ],
@@ -660,6 +698,7 @@ export const discussionPacketDefinition = {
   packet_definition_parts: [
     ...enrichDiscussionRootPart(),
     ...genericNonRootDefinitionParts,
+    DISCUSSION_ELEMENT_SURFACE_DEFAULTS_PART,
     DISCUSSION_PROJECTION_DESCRIPTOR_PART,
     DISCUSSION_AGGREGATE_DEPENDENCIES_PART,
   ],
