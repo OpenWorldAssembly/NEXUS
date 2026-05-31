@@ -200,6 +200,25 @@ const TRUSTED_ISSUE_DESCRIPTORS = [
     user_message: 'The seeded definition profile material failed validation.',
   },
   {
+    code: 'definition.stored_profile_invalid',
+    legacy_aliases: [
+      'stored_definition_bundle_not_found',
+      'stored_definition_profile_not_bundle',
+      'stored_definition_bundle_kernel_validation_failed',
+      'stored_definition_bundle_inactive',
+      'stored_definition_part_missing',
+      'stored_definition_part_not_definition_packet',
+      'stored_definition_part_kernel_validation_failed',
+      'stored_definition_part_without_bootstrap_snapshot',
+      'stored_definition_bundle_empty_or_filtered',
+    ],
+    default_severity: 'warning',
+    category: 'validation',
+    retryability: 'not_retryable',
+    user_title: 'Stored definition profile invalid',
+    user_message: 'A stored definition profile Bundle or referenced Definition part could not be used.',
+  },
+  {
     code: 'definition.profile_preference_invalid',
     legacy_aliases: [
       'definition_profile_preference_bundle_invalid',

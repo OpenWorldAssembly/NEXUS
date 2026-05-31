@@ -74,6 +74,7 @@ const SOURCE_FILES = [
   'runtime/trusted_coordinators/trusted_definition_coordinator/functions/resolve_trusted_definition_context.ts',
   'runtime/trusted_coordinators/trusted_definition_coordinator/functions/normalize_packet_backed_definition_preferences.ts',
   'runtime/trusted_coordinators/trusted_definition_coordinator/functions/list_archive_definition_profile_preference_carriers.ts',
+  'runtime/trusted_coordinators/trusted_definition_coordinator/functions/list_archive_definition_bundle_candidates.ts',
   'runtime/trusted_coordinators/trusted_definition_coordinator/functions/list_node_preference_definition_preferences.ts',
   'runtime/trusted_coordinators/trusted_definition_coordinator/trusted_definition_coordinator.ts',
   'runtime/trusted_coordinators/trusted_definition_coordinator/functions/resolve_trusted_packet_definition.ts',
@@ -146,6 +147,7 @@ export function createDefinitionBootstrapProfileInspectionReport(): DefinitionBo
   const contextResolver = sources['runtime/trusted_coordinators/trusted_definition_coordinator/functions/resolve_trusted_definition_context.ts'];
   const packetBackedPreferenceNormalizer = sources['runtime/trusted_coordinators/trusted_definition_coordinator/functions/normalize_packet_backed_definition_preferences.ts'];
   const archiveProfilePreferenceDiscovery = sources['runtime/trusted_coordinators/trusted_definition_coordinator/functions/list_archive_definition_profile_preference_carriers.ts'];
+  const archiveBundleCandidateLoader = sources['runtime/trusted_coordinators/trusted_definition_coordinator/functions/list_archive_definition_bundle_candidates.ts'];
   const nodePreferenceDefinitionPreferences = sources['runtime/trusted_coordinators/trusted_definition_coordinator/functions/list_node_preference_definition_preferences.ts'];
   const trustedDefinitionCoordinator = sources['runtime/trusted_coordinators/trusted_definition_coordinator/trusted_definition_coordinator.ts'];
   const packetResolver = sources['runtime/trusted_coordinators/trusted_definition_coordinator/functions/resolve_trusted_packet_definition.ts'];
@@ -255,6 +257,7 @@ export function createDefinitionBootstrapProfileInspectionReport(): DefinitionBo
         'runtime/trusted_coordinators/trusted_definition_coordinator/functions/resolve_trusted_definition_context.ts',
         'runtime/trusted_coordinators/trusted_definition_coordinator/functions/normalize_packet_backed_definition_preferences.ts',
         'runtime/trusted_coordinators/trusted_definition_coordinator/functions/list_archive_definition_profile_preference_carriers.ts',
+        'runtime/trusted_coordinators/trusted_definition_coordinator/functions/list_archive_definition_bundle_candidates.ts',
         'runtime/trusted_coordinators/trusted_definition_coordinator/functions/list_node_preference_definition_preferences.ts',
         'runtime/trusted_coordinators/trusted_definition_coordinator/trusted_definition_coordinator.ts',
       ],
@@ -266,7 +269,7 @@ export function createDefinitionBootstrapProfileInspectionReport(): DefinitionBo
           : 'Seeded Bundle.packet_set material does not yet participate in Trusted Definition candidate listing.',
       ],
       next_step:
-        'Promote source resolution from bootstrap/caller-provided candidates to archive-backed definition profile loading when reseed material is ready.',
+        'Use the archive-backed stored definition bundle seam during reseed, then phase the TypeScript manifest down to bootstrap/compiler snapshots.',
     }),
     createEntry({
       area: 'archive_backed_definition_loading',
@@ -276,18 +279,21 @@ export function createDefinitionBootstrapProfileInspectionReport(): DefinitionBo
         'DefinitionBodySchema.safeParse',
         'BundleBodySchema.safeParse',
         "source_kind: 'seeded_bundle'",
-      ]) && hasAll(archiveProfilePreferenceDiscovery + trustedDefinitionCoordinator, [
+      ]) && hasAll(archiveProfilePreferenceDiscovery + archiveBundleCandidateLoader + trustedDefinitionCoordinator, [
         'listArchiveDefinitionProfilePreferenceCarriers',
+        'listArchiveDefinitionBundleCandidates',
         'trustedArchiveCoordinator.queryPackets',
         'trustedArchiveCoordinator.readPacket',
         'resolveContextWithArchiveProfilePreferences',
+        "'pinned_bundle'",
       ])
-        ? 'mostly_aligned'
+        ? 'aligned'
         : 'transitional',
       source_files: [
         'runtime/trusted_coordinators/trusted_definition_coordinator/functions/list_trusted_definition_candidates.ts',
         'runtime/trusted_coordinators/trusted_definition_coordinator/functions/list_seeded_definition_bundle_candidates.ts',
         'runtime/trusted_coordinators/trusted_definition_coordinator/functions/list_archive_definition_profile_preference_carriers.ts',
+        'runtime/trusted_coordinators/trusted_definition_coordinator/functions/list_archive_definition_bundle_candidates.ts',
         'runtime/trusted_coordinators/trusted_definition_coordinator/functions/list_node_preference_definition_preferences.ts',
         'runtime/trusted_coordinators/trusted_definition_coordinator/trusted_definition_coordinator.ts',
       ],
@@ -307,9 +313,12 @@ export function createDefinitionBootstrapProfileInspectionReport(): DefinitionBo
         archiveProfilePreferenceDiscovery.includes('trustedArchiveCoordinator.queryPackets') && archiveProfilePreferenceDiscovery.includes('trustedArchiveCoordinator.readPacket')
           ? 'Definition profile preference carrier discovery now uses Trusted Archive query/read calls rather than direct storage touches.'
           : 'Archive-backed profile preference carrier discovery is not yet connected to Trusted Archive.',
+        archiveBundleCandidateLoader.includes('listArchiveDefinitionBundleCandidates') && archiveBundleCandidateLoader.includes('BundleBodySchema.safeParse') && archiveBundleCandidateLoader.includes('DefinitionBodySchema.safeParse')
+          ? 'Pinned/trusted stored Bundle.packet_set profile refs now load archive-backed Definition candidates through Trusted Archive with kernel validation.'
+          : 'Stored Bundle.packet_set profile refs are not yet loaded as archive-backed Definition candidates.',
       ],
       next_step:
-        'Next, generalize archive-backed definition candidate loading beyond preference carriers once full reseed material exists in the packet store.',
+        'Next, replace the temporary compiled bootstrap snapshot handoff with a full stored Definition profile compiler once reseed material becomes the primary source.',
     }),
     createEntry({
       area: 'node_profile_selection',
@@ -337,6 +346,7 @@ export function createDefinitionBootstrapProfileInspectionReport(): DefinitionBo
         'runtime/trusted_coordinators/trusted_definition_coordinator/functions/resolve_trusted_definition_context.ts',
         'runtime/trusted_coordinators/trusted_definition_coordinator/functions/normalize_packet_backed_definition_preferences.ts',
         'runtime/trusted_coordinators/trusted_definition_coordinator/functions/list_archive_definition_profile_preference_carriers.ts',
+        'runtime/trusted_coordinators/trusted_definition_coordinator/functions/list_archive_definition_bundle_candidates.ts',
         'runtime/trusted_coordinators/trusted_definition_coordinator/functions/list_node_preference_definition_preferences.ts',
         'runtime/trusted_coordinators/trusted_definition_coordinator/trusted_definition_coordinator.ts',
       ],
@@ -423,21 +433,21 @@ export function createDefinitionBootstrapProfileInspectionReport(): DefinitionBo
 
   const findings: DefinitionBootstrapProfileFinding[] = [];
 
-  if (entries.find((entry) => entry.area === 'archive_backed_definition_loading')?.status !== 'mostly_aligned') {
+  if (!['mostly_aligned', 'aligned'].includes(entries.find((entry) => entry.area === 'archive_backed_definition_loading')?.status ?? 'missing')) {
     findings.push({
       severity: 'warning',
       area: 'archive_backed_definition_loading',
       code: 'stored_definition_candidate_loader_incomplete',
       message:
-        'Trusted Definition has not yet completed seeded Bundle.packet_set candidate loading and kernel validation inside the existing coordinator path.',
+        'Trusted Definition has not yet completed stored Bundle.packet_set candidate loading and kernel validation inside the existing coordinator path.',
     });
   } else {
     findings.push({
       severity: 'info',
       area: 'archive_backed_definition_loading',
-      code: 'seeded_bundle_candidate_loader_active',
+      code: 'stored_bundle_candidate_loader_active',
       message:
-        'Trusted Definition now lists kernel-validated seeded Bundle.packet_set candidates, can discover Bundle.packet_set profile preference carriers, and can consume Preference.node definition profile settings through Trusted Archive. Full local archive and pinned definition candidate loading remain future extensions of the same source model.',
+        'Trusted Definition now lists kernel-validated seeded Bundle.packet_set candidates, discovers profile preference carriers, consumes Preference.node definition settings, and loads pinned/trusted stored Bundle.packet_set Definition candidates through Trusted Archive. The remaining transition is replacing compiled bootstrap snapshots with a full stored-profile compiler.',
     });
   }
 

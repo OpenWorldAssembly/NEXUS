@@ -16,6 +16,8 @@ import {
 } from './trusted_definition_registry.ts';
 import { listArchiveDefinitionProfilePreferenceCarriers } from './functions/list_archive_definition_profile_preference_carriers.ts';
 import { listNodePreferenceDefinitionPreferences } from './functions/list_node_preference_definition_preferences.ts';
+import { listArchiveDefinitionBundleCandidates } from './functions/list_archive_definition_bundle_candidates.ts';
+import { normalizePacketBackedDefinitionPreferences } from './functions/normalize_packet_backed_definition_preferences.ts';
 import type {
   AuditTrustedDefinitionReadinessInput,
   AuditTrustedDefinitionConflictsInput,
@@ -75,15 +77,31 @@ export const trustedDefinitionCoordinator = {
       listArchiveDefinitionProfilePreferenceCarriers(input),
       listNodePreferenceDefinitionPreferences(input),
     ]);
+    const discoveredPreferencePackets = [
+      ...discovery.preference_packets,
+      ...(input.definition_profile_preference_packets ?? []),
+    ];
+    const packetBackedPreferences = normalizePacketBackedDefinitionPreferences({
+      preference_packets: discoveredPreferencePackets,
+      node_element_id: input.node_element_id ?? null,
+      scope_packet_id: input.scope_packet_id ?? null,
+    });
+    const preferences = [
+      ...packetBackedPreferences.preferences,
+      ...nodePreferences.preferences,
+      ...(input.preferences ?? []),
+    ];
+    const archiveCandidates = await listArchiveDefinitionBundleCandidates({
+      ...input,
+      preferences,
+    });
     const contextResult = trustedDefinitionCoordinator.resolveContext({
       ...input,
-      preferences: [
-        ...nodePreferences.preferences,
-        ...(input.preferences ?? []),
-      ],
-      definition_profile_preference_packets: [
-        ...discovery.preference_packets,
-        ...(input.definition_profile_preference_packets ?? []),
+      preferences,
+      definition_profile_preference_packets: [],
+      candidates: [
+        ...archiveCandidates.candidates,
+        ...(input.candidates ?? []),
       ],
     });
 
@@ -93,14 +111,23 @@ export const trustedDefinitionCoordinator = {
       status: mergeArchiveDiscoveryStatus(contextResult, [
         ...discovery.issues,
         ...nodePreferences.issues,
+        ...packetBackedPreferences.issues,
+        ...archiveCandidates.issues,
       ]),
       value: contextResult.value,
       issues: [
         ...discovery.issues,
         ...nodePreferences.issues,
+        ...packetBackedPreferences.issues,
+        ...archiveCandidates.issues,
         ...contextResult.issues,
       ],
-      trace: [...discovery.trace, ...nodePreferences.trace, ...contextResult.trace],
+      trace: [
+        ...discovery.trace,
+        ...nodePreferences.trace,
+        ...archiveCandidates.trace,
+        ...contextResult.trace,
+      ],
       operation_id: contextResult.operation_id,
       request_id: contextResult.request_id,
       mode: contextResult.mode,

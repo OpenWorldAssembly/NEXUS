@@ -2,7 +2,7 @@
 
 ## Status
 
-Active design with canonical Definition/Bundle packet material and trusted signed Preference writes. `Definition`, `Bundle`, and `Preference` are now first-class `PacketEnvelope` types. Active definition parts produce valid `Definition` packet envelopes, those envelopes are grouped into a seeded `Bundle.packet_set` profile, and `Preference.element` writes for claimed actors enter the signed prepare/finalize corridor while the legacy runtime table remains a compatibility cache.
+Active design with canonical Definition/Bundle packet material and trusted signed Preference writes. `Definition`, `Bundle`, and `Preference` are now first-class `PacketEnvelope` types. Active definition parts produce valid `Definition` packet envelopes, those envelopes are grouped into a seeded `Bundle.packet_set` profile, and `Preference.element` writes for claimed actors enter the signed prepare/finalize corridor while the legacy runtime table remains a compatibility cache. `Preference.node` now carries node-level definition profile selection, trusted definition profile refs, trust defaults, import verification defaults, and storage cleanup posture.
 
 Stored Definition and Bundle packets are portable semantic material, not executable plugins. The bootstrap kernel validates Definition/Bundle envelopes, verifies the active definition profile, and keeps executable builders, planners, resolvers, signing, policy checks, and persistence owned by trusted local runtime code.
 
@@ -55,7 +55,7 @@ The manifest is now modeled around a native bootstrap `Definition` packet type. 
 
 Bundle remains a carrier/inventory packet. It may transport Definition parts, Preference packets, resources, and adapter metadata, but those items keep their own packet semantics.
 
-Definition, Bundle, and Preference now have runtime-ready body builders. These builders parse `Definition`, `Bundle.packet_set`, and `Preference.element` bodies for canonical seed/profile verification. The definition seed helpers use those builders to produce full packet envelopes and a local definition bundle inventory, but imported or stored definitions still cannot introduce executable server behavior.
+Definition, Bundle, and Preference now have runtime-ready body builders. These builders parse `Definition`, `Bundle.packet_set`, `Preference.element`, and `Preference.node` bodies for canonical seed/profile verification. The definition seed helpers use those builders to produce full packet envelopes and a local definition bundle inventory. Trusted Definition can also discover profile preference carriers, consume `Preference.node` definition refs, and load pinned/trusted stored `Bundle.packet_set` definition candidates through Trusted Archive. Stored/imported definitions still cannot introduce executable server behavior; the runtime currently uses compiled bootstrap snapshots while stored-profile compilation matures.
 
 The current canonical surface lives at:
 
