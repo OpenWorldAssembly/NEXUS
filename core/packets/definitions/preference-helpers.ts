@@ -8,10 +8,14 @@ import type { PacketRef, PacketRevisionRef } from '@core/schema/packet-schema';
 import {
   PreferenceContextSchema,
   ElementPreferenceBuilderInputSchema,
+  NodePreferenceBuilderInputSchema,
+  NodePreferenceValueSchema,
   ScopeDisplayPreferenceValueSchema,
   ShellChromePreferenceValueSchema,
   type PreferenceBody,
   type ElementPreferenceBuilderInput,
+  type NodePreferenceBuilderInput,
+  type NodePreferenceValue,
   type ScopeDisplayPreferenceContext,
   type ScopeDisplayPreferenceValue,
   type ShellChromePreferenceValue,
@@ -25,9 +29,16 @@ export const DEFAULT_SCOPE_DISPLAY_PREFERENCE_VALUE =
 export const DEFAULT_SHELL_CHROME_PREFERENCE_VALUE =
   ShellChromePreferenceValueSchema.parse({});
 
+export const DEFAULT_NODE_PREFERENCE_VALUE = NodePreferenceValueSchema.parse({});
+
 export type ElementPreferenceBody = Extract<
   PreferenceBody,
   { subtype: 'element' }
+>;
+
+export type NodePreferenceBody = Extract<
+  PreferenceBody,
+  { subtype: 'node' }
 >;
 
 
@@ -51,6 +62,19 @@ export type ScopeDisplayPreferenceProjectionInput = {
   owner_ref: PacketRef;
   context?: Partial<ScopeDisplayPreferenceContext> | null;
   records: readonly (ElementPreferenceBody | ScopeDisplayPreferenceProjectionRecord)[];
+};
+
+
+export type NodePreferenceProjectionRecord = {
+  body: NodePreferenceBody;
+  revision_ref?: PacketRevisionRef | null;
+  recorded_at?: string | null;
+};
+
+export type NodePreferenceProjectionInput = {
+  owner_ref: PacketRef;
+  context?: Partial<ScopeDisplayPreferenceContext> | null;
+  records: readonly (NodePreferenceBody | NodePreferenceProjectionRecord)[];
 };
 
 export type LegacyScopeDisplayPreferenceValueV0 = {
@@ -112,7 +136,7 @@ export function normalizeShellChromePreferenceValue(
   });
 }
 
-export function createElementPreferenceContextKey(
+export function createPreferenceContextKey(
   context: Partial<ScopeDisplayPreferenceContext> | null | undefined
 ): string {
   const normalizedContext = normalizeContext(context);
@@ -126,18 +150,47 @@ export function createElementPreferenceContextKey(
   ].join('|');
 }
 
+export function createElementPreferenceContextKey(
+  context: Partial<ScopeDisplayPreferenceContext> | null | undefined
+): string {
+  return createPreferenceContextKey(context);
+}
+
+function createPreferencePacketId(input: {
+  subtype: 'element' | 'node';
+  owner_ref: PacketRef;
+  context?: Partial<ScopeDisplayPreferenceContext> | null;
+}): string {
+  const contextKey = createPreferenceContextKey(input.context);
+
+  return [
+    'nexus:preference',
+    input.subtype,
+    encodePacketIdSegment(input.owner_ref.packet_id),
+    encodePacketIdSegment(contextKey),
+  ].join('/');
+}
+
 export function createElementPreferencePacketId(input: {
   owner_ref: PacketRef;
   context?: Partial<ScopeDisplayPreferenceContext> | null;
 }): string {
-  const contextKey = createElementPreferenceContextKey(input.context);
+  return createPreferencePacketId({
+    subtype: 'element',
+    owner_ref: input.owner_ref,
+    context: input.context,
+  });
+}
 
-  return [
-    'nexus:preference',
-    'element',
-    encodePacketIdSegment(input.owner_ref.packet_id),
-    encodePacketIdSegment(contextKey),
-  ].join('/');
+export function createNodePreferencePacketId(input: {
+  owner_ref: PacketRef;
+  context?: Partial<ScopeDisplayPreferenceContext> | null;
+}): string {
+  return createPreferencePacketId({
+    subtype: 'node',
+    owner_ref: input.owner_ref,
+    context: input.context,
+  });
 }
 
 export function buildElementPreferenceBody(
@@ -163,6 +216,36 @@ export function buildElementPreferenceBody(
         shell_chrome: normalizeShellChromePreferenceValue(parsedInput.shell_chrome),
       },
     },
+  };
+}
+
+
+export function normalizeNodePreferenceValue(
+  value: Partial<NodePreferenceValue> | null | undefined
+): NodePreferenceValue {
+  return NodePreferenceValueSchema.parse({
+    ...DEFAULT_NODE_PREFERENCE_VALUE,
+    ...(value ?? {}),
+  });
+}
+
+export function buildNodePreferenceBody(
+  input: NodePreferenceBuilderInput
+): NodePreferenceBody {
+  const parsedInput = NodePreferenceBuilderInputSchema.parse({
+    ...input,
+    value: normalizeNodePreferenceValue(input.value),
+  });
+
+  return {
+    subtype: 'node',
+    owner_ref: parsedInput.owner_ref,
+    status: 'active',
+    privacy: parsedInput.privacy ?? 'sealed_private',
+    context: normalizeContext(parsedInput.context),
+    supersedes_ref: parsedInput.supersedes_ref ?? null,
+    note: parsedInput.note ?? null,
+    value: normalizeNodePreferenceValue(parsedInput.value),
   };
 }
 
@@ -198,6 +281,66 @@ export function projectLatestActiveScopeDisplayPreference(
     .filter((record) => record.body.status === 'active')
     .filter(
       (record) => createElementPreferenceContextKey(record.body.context) === targetContextKey
+    );
+
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  const [latest] = candidates.sort((left, right) => {
+    const leftRecordedAt = left.recorded_at ?? '';
+    const rightRecordedAt = right.recorded_at ?? '';
+
+    if (leftRecordedAt !== rightRecordedAt) {
+      return rightRecordedAt.localeCompare(leftRecordedAt);
+    }
+
+    const leftRevisionId = left.revision_ref?.revision_id ?? '';
+    const rightRevisionId = right.revision_ref?.revision_id ?? '';
+
+    if (leftRevisionId !== rightRevisionId) {
+      return rightRevisionId.localeCompare(leftRevisionId);
+    }
+
+    return right.arrayIndex - left.arrayIndex;
+  });
+
+  return latest.body;
+}
+
+
+function unwrapNodeProjectionRecord(
+  record: NodePreferenceBody | NodePreferenceProjectionRecord,
+  arrayIndex: number
+): NodePreferenceProjectionRecord & { arrayIndex: number } {
+  if ('body' in record) {
+    return {
+      ...record,
+      arrayIndex,
+    };
+  }
+
+  return {
+    body: record,
+    revision_ref: null,
+    recorded_at: null,
+    arrayIndex,
+  };
+}
+
+export function projectLatestActiveNodePreference(
+  input: NodePreferenceProjectionInput
+): NodePreferenceBody | null {
+  const targetOwnerPacketId = input.owner_ref.packet_id;
+  const targetContextKey = createPreferenceContextKey(input.context);
+
+  const candidates = input.records
+    .map(unwrapNodeProjectionRecord)
+    .filter((record) => record.body.owner_ref.packet_id === targetOwnerPacketId)
+    .filter((record) => record.body.subtype === 'node')
+    .filter((record) => record.body.status === 'active')
+    .filter(
+      (record) => createPreferenceContextKey(record.body.context) === targetContextKey
     );
 
   if (candidates.length === 0) {

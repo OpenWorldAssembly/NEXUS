@@ -9,11 +9,12 @@ import { PacketRefSchema, PacketRevisionRefSchema } from '@core/schema/packet-sc
 
 import type { PacketTypeDefinition } from './packet-definition-types.ts';
 
-export const PREFERENCE_PACKET_SUBTYPES = ['element'] as const;
+export const PREFERENCE_PACKET_SUBTYPES = ['element', 'node'] as const;
 
 export const PreferencePrivacyModeSchema = z.enum([
   'local_only',
   'private_sync',
+  'sealed_private',
   'shared_with_trusted',
   'public',
 ]);
@@ -50,6 +51,76 @@ export const ShellChromePreferenceValueSchema = z
   })
   .strict();
 
+
+export const NodeDefinitionProfileUpdateModeSchema = z.enum([
+  'pinned_only',
+  'manual_review',
+  'auto_sync_minor',
+]);
+
+export const NodeTrustLevelSchema = z.enum([
+  'blocked',
+  'unknown',
+  'observed',
+  'trusted',
+  'high_trust',
+]);
+
+export const NodeImportReviewModeSchema = z.enum([
+  'block',
+  'quarantine',
+  'advisory',
+  'accept_after_verification',
+]);
+
+export const NodeTrustedCapabilitySchema = z.enum([
+  'definition_source',
+  'packet_signer',
+  'verification_reporter',
+  'import_source',
+]);
+
+export const NodeDefinitionPreferenceValueSchema = z
+  .object({
+    active_definition_profile_ref: PacketRefSchema.nullable().default(null),
+    trusted_definition_profile_refs: z.array(PacketRefSchema).default([]),
+    update_mode: NodeDefinitionProfileUpdateModeSchema.default('manual_review'),
+    allow_seeded_definition_fallback: z.boolean().default(true),
+  })
+  .strict();
+
+export const NodeTrustGraphPreferenceValueSchema = z
+  .object({
+    default_unknown_node_trust_level: NodeTrustLevelSchema.default('unknown'),
+    minimum_import_trust_level: NodeTrustLevelSchema.default('trusted'),
+    trusted_node_refs: z.array(PacketRefSchema).default([]),
+    trusted_node_attestation_refs: z.array(PacketRefSchema).default([]),
+    accepted_capabilities: z.array(NodeTrustedCapabilitySchema).default([]),
+    require_attestation_for_trusted_import: z.boolean().default(true),
+  })
+  .strict();
+
+export const NodeImportVerificationPreferenceValueSchema = z
+  .object({
+    unsigned_packet_mode: NodeImportReviewModeSchema.default('quarantine'),
+    unknown_signer_mode: NodeImportReviewModeSchema.default('quarantine'),
+    trusted_signer_mode: NodeImportReviewModeSchema.default(
+      'accept_after_verification'
+    ),
+    random_reverification_rate: z.number().min(0).max(1).default(0.05),
+    require_definition_profile_match: z.boolean().default(true),
+  })
+  .strict();
+
+export const NodeStorageCleanupPreferenceValueSchema = z
+  .object({
+    cleanup_mode: z.enum(['manual', 'suggest', 'automatic_safe_only']).default('manual'),
+    retain_superseded_revisions_days: z.number().int().positive().nullable().default(null),
+    retain_rejected_imports_days: z.number().int().positive().nullable().default(30),
+    retain_cached_projection_days: z.number().int().positive().nullable().default(30),
+  })
+  .strict();
+
 const DEFAULT_SCOPE_DISPLAY_PREFERENCE_VALUE = {
   main_visible_scope_packet_ids: [],
   show_associated_parent_chains: true,
@@ -60,6 +131,38 @@ const DEFAULT_SHELL_CHROME_PREFERENCE_VALUE = {
   navigation_mode: 'function',
   theme_mode: 'dark',
   ui_density: 'small',
+} as const;
+
+
+const DEFAULT_NODE_DEFINITION_PREFERENCE_VALUE = {
+  active_definition_profile_ref: null,
+  trusted_definition_profile_refs: [],
+  update_mode: 'manual_review',
+  allow_seeded_definition_fallback: true,
+} as const;
+
+const DEFAULT_NODE_TRUST_GRAPH_PREFERENCE_VALUE = {
+  default_unknown_node_trust_level: 'unknown',
+  minimum_import_trust_level: 'trusted',
+  trusted_node_refs: [],
+  trusted_node_attestation_refs: [],
+  accepted_capabilities: [],
+  require_attestation_for_trusted_import: true,
+} as const;
+
+const DEFAULT_NODE_IMPORT_VERIFICATION_PREFERENCE_VALUE = {
+  unsigned_packet_mode: 'quarantine',
+  unknown_signer_mode: 'quarantine',
+  trusted_signer_mode: 'accept_after_verification',
+  random_reverification_rate: 0.05,
+  require_definition_profile_match: true,
+} as const;
+
+const DEFAULT_NODE_STORAGE_CLEANUP_PREFERENCE_VALUE = {
+  cleanup_mode: 'manual',
+  retain_superseded_revisions_days: null,
+  retain_rejected_imports_days: 30,
+  retain_cached_projection_days: 30,
 } as const;
 
 const PreferenceBaseBodySchema = z
@@ -104,7 +207,38 @@ export const ElementPreferenceBodySchema = PreferenceBaseBodySchema.extend({
   value: ElementPreferenceValueSchema,
 }).strict();
 
-export const PreferenceBodySchema = ElementPreferenceBodySchema;
+export const NodePreferenceValueSchema = z
+  .object({
+    definitions: NodeDefinitionPreferenceValueSchema.default(
+      DEFAULT_NODE_DEFINITION_PREFERENCE_VALUE
+    ),
+    trust_graph: NodeTrustGraphPreferenceValueSchema.default(
+      DEFAULT_NODE_TRUST_GRAPH_PREFERENCE_VALUE
+    ),
+    import_verification: NodeImportVerificationPreferenceValueSchema.default(
+      DEFAULT_NODE_IMPORT_VERIFICATION_PREFERENCE_VALUE
+    ),
+    storage_cleanup: NodeStorageCleanupPreferenceValueSchema.default(
+      DEFAULT_NODE_STORAGE_CLEANUP_PREFERENCE_VALUE
+    ),
+  })
+  .strict();
+
+export const NodePreferenceBodySchema = PreferenceBaseBodySchema.extend({
+  subtype: z.literal('node'),
+  privacy: PreferencePrivacyModeSchema.default('sealed_private'),
+  value: NodePreferenceValueSchema.default({
+    definitions: DEFAULT_NODE_DEFINITION_PREFERENCE_VALUE,
+    trust_graph: DEFAULT_NODE_TRUST_GRAPH_PREFERENCE_VALUE,
+    import_verification: DEFAULT_NODE_IMPORT_VERIFICATION_PREFERENCE_VALUE,
+    storage_cleanup: DEFAULT_NODE_STORAGE_CLEANUP_PREFERENCE_VALUE,
+  }),
+}).strict();
+
+export const PreferenceBodySchema = z.discriminatedUnion('subtype', [
+  ElementPreferenceBodySchema,
+  NodePreferenceBodySchema,
+]);
 
 
 export const ElementPreferenceBuilderInputSchema = z
@@ -119,8 +253,23 @@ export const ElementPreferenceBuilderInputSchema = z
   })
   .strict();
 
+export const NodePreferenceBuilderInputSchema = z
+  .object({
+    owner_ref: PacketRefSchema,
+    context: PreferenceContextSchema.optional(),
+    privacy: PreferencePrivacyModeSchema.optional(),
+    supersedes_ref: PacketRevisionRefSchema.nullable().optional(),
+    note: z.string().min(1).nullable().optional(),
+    value: NodePreferenceValueSchema.optional(),
+  })
+  .strict();
+
 export type ElementPreferenceBuilderInput = z.input<
   typeof ElementPreferenceBuilderInputSchema
+>;
+
+export type NodePreferenceBuilderInput = z.input<
+  typeof NodePreferenceBuilderInputSchema
 >;
 
 export type PreferenceBody = z.infer<typeof PreferenceBodySchema>;
@@ -134,6 +283,19 @@ export type ShellChromePreferenceValue = z.infer<
   typeof ShellChromePreferenceValueSchema
 >;
 export type ElementPreferenceValue = z.infer<typeof ElementPreferenceValueSchema>;
+export type NodeDefinitionPreferenceValue = z.infer<
+  typeof NodeDefinitionPreferenceValueSchema
+>;
+export type NodeTrustGraphPreferenceValue = z.infer<
+  typeof NodeTrustGraphPreferenceValueSchema
+>;
+export type NodeImportVerificationPreferenceValue = z.infer<
+  typeof NodeImportVerificationPreferenceValueSchema
+>;
+export type NodeStorageCleanupPreferenceValue = z.infer<
+  typeof NodeStorageCleanupPreferenceValueSchema
+>;
+export type NodePreferenceValue = z.infer<typeof NodePreferenceValueSchema>;
 
 export const preferencePacketDefinition = {
   packet_type: 'Preference',
@@ -152,7 +314,7 @@ export const preferencePacketDefinition = {
     supports_downcast: true,
     loss_awareness: 'loss_annotated',
     notes:
-      'Preference.element compatibility is represented as definition.packet_compatibility in the canonical definition-part model.',
+      'Preference.element and Preference.node compatibility are represented as definition.packet_compatibility in the canonical definition-part model.',
   },
   id_strategy: {
     strategy_id: 'preference.latest_active.owner_subtype_context',
@@ -221,6 +383,56 @@ export const preferencePacketDefinition = {
       notes:
         'Indexes owner/subtype/context fields for latest-active preference projection.',
     },
+    {
+      action_id: 'preference.node.create',
+      action_kind: 'create',
+      packet_subtype: 'node',
+      label: 'Create node preference',
+      policy_action_id: 'preference.node.write',
+      availability: 'canonical',
+      notes:
+        'Creates a node-owned preference packet for definition profile selection, trust-graph defaults, import verification, and storage cleanup policy.',
+    },
+    {
+      action_id: 'preference.node.revise',
+      action_kind: 'revise',
+      packet_subtype: 'node',
+      label: 'Revise node preference',
+      policy_action_id: 'preference.node.write',
+      availability: 'canonical',
+      notes:
+        'Supersedes the previous active node preference for the same node owner/context while keeping node trust attestations packet-native.',
+    },
+    {
+      action_id: 'preference.node.withdraw',
+      action_kind: 'withdraw',
+      packet_subtype: 'node',
+      label: 'Withdraw node preference',
+      policy_action_id: 'preference.node.write',
+      availability: 'canonical',
+      notes:
+        'Withdraws a node preference so the node falls back to pinned seed defaults or administrator-provided local configuration.',
+    },
+    {
+      action_id: 'preference.node.project',
+      action_kind: 'project',
+      packet_subtype: 'node',
+      label: 'Project node preference',
+      policy_action_id: null,
+      availability: 'canonical',
+      notes:
+        'Read-side projection for node definition, trust, verification, and cleanup defaults without adding an independent node preference service.',
+    },
+    {
+      action_id: 'preference.node.index',
+      action_kind: 'index',
+      packet_subtype: 'node',
+      label: 'Index node preference',
+      policy_action_id: null,
+      availability: 'canonical',
+      notes:
+        'Indexes owner/subtype/context fields for latest-active node preference projection.',
+    },
   ],
   builders: [
     {
@@ -233,6 +445,17 @@ export const preferencePacketDefinition = {
       availability: 'runtime_ready',
       notes:
         'Definition-backed body builder used by the live interface preference connector and ready for Dispatch-owned single-packet revision planning.',
+    },
+    {
+      builder_id: 'preference.node.body.v0',
+      packet_subtype: 'node',
+      builder_kind: 'single_packet_body',
+      action_ids: ['preference.node.create', 'preference.node.revise'],
+      input_schema_key: 'NodePreferenceBuilderInputSchema',
+      output_schema_key: 'NodePreferenceBodySchema',
+      availability: 'canonical',
+      notes:
+        'Definition-backed body builder for node-owned preferences. The node remains an Element packet; this builder only prepares its Preference.node packet.',
     },
   ],
   planners: [
@@ -260,6 +483,30 @@ export const preferencePacketDefinition = {
       notes:
         'Projects latest active Preference.element packets into shell display and chrome preferences without preference-specific core runtime code.',
     },
+    {
+      planner_id: 'preference.node.latest_active_revision.v0',
+      planner_kind: 'single_packet_revision',
+      action_ids: [
+        'preference.node.create',
+        'preference.node.revise',
+        'preference.node.withdraw',
+      ],
+      builder_ids: ['preference.node.body.v0'],
+      policy_action_ids: ['preference.node.write'],
+      availability: 'canonical',
+      notes:
+        'Plans latest-active Preference.node writes through the same generic single-packet revision corridor as Preference.element.',
+    },
+    {
+      planner_id: 'preference.node.projection.v0',
+      planner_kind: 'projection_only',
+      action_ids: ['preference.node.project'],
+      builder_ids: [],
+      policy_action_ids: [],
+      availability: 'canonical',
+      notes:
+        'Projects latest active Preference.node packets for node-owned definition/trust/verification defaults.',
+    },
   ],
   mutations: [
     {
@@ -278,6 +525,23 @@ export const preferencePacketDefinition = {
       result_type: 'packet_write',
       availability: 'canonical',
       notes: 'Manifest mutation intent for withdrawing element preferences.',
+    },
+    {
+      mutation_intent: 'preference.node.set',
+      action_ids: ['preference.node.create', 'preference.node.revise'],
+      planner_id: 'preference.node.latest_active_revision.v0',
+      result_type: 'packet_write',
+      availability: 'canonical',
+      notes:
+        'Manifest mutation intent for node-owned preferences. Live ingress should enter through Dispatch and the generic Preference planner when enabled.',
+    },
+    {
+      mutation_intent: 'preference.node.withdraw',
+      action_ids: ['preference.node.withdraw'],
+      planner_id: 'preference.node.latest_active_revision.v0',
+      result_type: 'packet_write',
+      availability: 'canonical',
+      notes: 'Manifest mutation intent for withdrawing node preferences.',
     },
   ],
   workflow_plans: [
@@ -334,6 +598,60 @@ export const preferencePacketDefinition = {
       notes:
         'Describes Preference.element set semantics with enough body/projection metadata for the generic revision corridor to build the live write path.',
     },
+    {
+      workflow_plan_id: 'preference.node.set.workflow.v0',
+      packet_type: 'Preference',
+      packet_subtype: 'node',
+      planner_id: 'preference.node.latest_active_revision.v0',
+      mutation_intents: ['preference.node.set'],
+      operation_kinds: ['single_packet.revise'],
+      resolver_ids: ['node.ref', 'input.value', 'projection.current'],
+      policy_action_ids: ['preference.node.write'],
+      dependency_ids: [
+        'runtime.packet_store.read',
+        'runtime.policy_gate',
+        'generic.preference.builder',
+        'generic.preference.latest_active_planner',
+        'trusted.definition.resolution',
+        'trusted.verification.assessment',
+        'trusted.archive.discovery',
+      ],
+      steps: [
+        {
+          step_id: 'revise_node_preference',
+          step_kind: 'operation',
+          operation_kind: 'single_packet.revise',
+          packet_type: 'Preference',
+          packet_subtype: 'node',
+          resolver_ids: ['node.ref', 'input.value', 'projection.current'],
+          input_bindings: {
+            owner_ref: {
+              binding_kind: 'node_ref',
+              required: true,
+            },
+            node_preference_patch: {
+              binding_kind: 'input_path',
+              path: 'value',
+              required: true,
+            },
+          },
+          policy_action_ids: ['preference.node.write'],
+          dependency_ids: [
+            'runtime.packet_store.read',
+            'runtime.policy_gate',
+            'generic.preference.builder',
+            'generic.preference.latest_active_planner',
+          ],
+          output_key: 'preference_revision',
+          on_failure: 'abort_workflow',
+          notes:
+            'Definition workflow for node preference revisions. Trust ratings stay packet-native through attestations; this packet stores node defaults and pointers.',
+        },
+      ],
+      availability: 'canonical',
+      notes:
+        'Describes Preference.node write semantics without introducing a new independent runtime service.',
+    },
   ],
   compatibility_adapters: [
     {
@@ -368,6 +686,17 @@ export const preferencePacketDefinition = {
       availability: 'canonical',
       notes:
         'Identity adapter placeholder for the initial Preference.element schema; future versions should add nearest-current steps here.',
+    },
+    {
+      adapter_id: 'preference.node.0_1_current_neighbor',
+      packet_subtype: 'node',
+      from_schema_version: '0.1.0',
+      to_schema_version: '0.1.0',
+      direction: 'bidirectional_neighbor',
+      loss_awareness: 'none',
+      availability: 'canonical',
+      notes:
+        'Identity adapter placeholder for the initial Preference.node schema; future versions should add nearest-current steps here.',
     },
   ],
   projections: [
@@ -433,6 +762,84 @@ export const preferencePacketDefinition = {
       ],
       notes:
         'Projects the latest active owner/context preference into shell scope-display and chrome preference shapes.',
+    },
+    {
+      projection_key: 'node_preferences',
+      target_surface: 'nexus_runtime',
+      mode: 'derived',
+      resolver_preset_ids: [
+        'node.ref',
+        'packet.lookup.latest_active',
+        'projection.field_map',
+      ],
+      field_descriptors: [
+        {
+          field_key: 'owner_ref',
+          label: 'Node owner',
+          binding: { binding_kind: 'current_packet', path: 'body.owner_ref', required: true },
+          display_role: 'meta',
+          required: true,
+        },
+        {
+          field_key: 'definitions',
+          label: 'Definition profile preferences',
+          binding: { binding_kind: 'current_packet', path: 'body.value.definitions', required: true },
+          display_role: 'body',
+          required: true,
+        },
+        {
+          field_key: 'trust_graph',
+          label: 'Node trust graph preferences',
+          binding: { binding_kind: 'current_packet', path: 'body.value.trust_graph', required: true },
+          display_role: 'body',
+          required: true,
+        },
+        {
+          field_key: 'import_verification',
+          label: 'Import verification preferences',
+          binding: { binding_kind: 'current_packet', path: 'body.value.import_verification', required: true },
+          display_role: 'body',
+          required: true,
+        },
+        {
+          field_key: 'storage_cleanup',
+          label: 'Storage cleanup preferences',
+          binding: { binding_kind: 'current_packet', path: 'body.value.storage_cleanup', required: true },
+          display_role: 'body',
+          required: true,
+        },
+        {
+          field_key: 'context_key',
+          label: 'Context',
+          binding: { binding_kind: 'current_packet', path: 'body.context', required: true },
+          display_role: 'meta',
+          required: true,
+        },
+      ],
+      layout: {
+        layout_key: 'preference.node.runtime.detail.v0',
+        component_key: 'packet.detail_panel',
+        density: 'standard',
+        slots: [
+          'owner_ref',
+          'definitions',
+          'trust_graph',
+          'import_verification',
+          'storage_cleanup',
+          'context_key',
+        ],
+        notes: 'Shows node preference defaults and pointers without node-specific presentation code.',
+      },
+      preferred_surface: 'nexus_runtime',
+      policy_action_ids: ['preference.node.write'],
+      dependency_ids: [
+        'generic.preference.latest_active_planner',
+        'trusted.definition.resolution',
+        'trusted.verification.assessment',
+        'trusted.archive.discovery',
+      ],
+      notes:
+        'Projects the latest active node preference for definition profile selection, trust-graph defaults, import verification, and storage cleanup.',
     },
   ],
   indexes: [
@@ -580,14 +987,151 @@ export const preferencePacketDefinition = {
       notes:
         'Dependency definition part for the generic builder/planner/projection capabilities needed by trusted-local Preference planning.',
     },
+
+    {
+      part_id: 'preference.node.packet_definition.v0',
+      part_subtype: 'packet_definition',
+      defines_packet_type: 'Preference',
+      defines_packet_subtype: 'node',
+      schema_version: '0.1.0',
+      availability: 'canonical',
+      required: true,
+      references: [
+        'preference.node.packet_schema.v0',
+        'preference.node.packet_action_registry.v0',
+        'preference.node.packet_builder_descriptor.v0',
+        'preference.node.packet_planner_descriptor.v0',
+        'preference.node.packet_projection_descriptor.v0',
+        'preference.node.packet_compatibility.v0',
+        'preference.node.defaults_definition.v0',
+        'preference.node.dependencies_definition.v0',
+      ],
+      notes:
+        'Root definition record for node-owned Preference packets. Nodes are still Element packets; this subtype only stores node preferences.',
+    },
+    {
+      part_id: 'preference.node.packet_schema.v0',
+      part_subtype: 'packet_schema',
+      defines_packet_type: 'Preference',
+      defines_packet_subtype: 'node',
+      schema_version: '0.1.0',
+      availability: 'canonical',
+      required: true,
+      covers_subtypes: ['node'],
+      notes:
+        'Schema part covering definition profile, trust graph, import verification, and storage cleanup preference sections.',
+    },
+    {
+      part_id: 'preference.node.packet_action_registry.v0',
+      part_subtype: 'packet_action_registry',
+      defines_packet_type: 'Preference',
+      defines_packet_subtype: 'node',
+      schema_version: '0.1.0',
+      availability: 'canonical',
+      required: true,
+      references: [
+        'preference.node.create',
+        'preference.node.revise',
+        'preference.node.withdraw',
+        'preference.node.project',
+        'preference.node.index',
+      ],
+      notes:
+        'Action registry part for node preference create/revise/withdraw/project/index operations.',
+    },
+    {
+      part_id: 'preference.node.packet_builder_descriptor.v0',
+      part_subtype: 'packet_builder_descriptor',
+      defines_packet_type: 'Preference',
+      defines_packet_subtype: 'node',
+      schema_version: '0.1.0',
+      availability: 'canonical',
+      required: true,
+      references: ['preference.node.body.v0'],
+      notes: 'Builder descriptor part for the generic node preference body builder.',
+    },
+    {
+      part_id: 'preference.node.packet_planner_descriptor.v0',
+      part_subtype: 'packet_planner_descriptor',
+      defines_packet_type: 'Preference',
+      defines_packet_subtype: 'node',
+      schema_version: '0.1.0',
+      availability: 'canonical',
+      required: true,
+      references: [
+        'preference.node.latest_active_revision.v0',
+        'preference.node.projection.v0',
+      ],
+      notes: 'Planner descriptor part for node preference latest-active write planning and read projection.',
+    },
+    {
+      part_id: 'preference.node.packet_projection_descriptor.v0',
+      part_subtype: 'packet_projection_descriptor',
+      defines_packet_type: 'Preference',
+      defines_packet_subtype: 'node',
+      schema_version: '0.1.0',
+      availability: 'canonical',
+      required: true,
+      references: ['node_preferences'],
+      notes: 'Projection descriptor part for node preference runtime/profile discovery.',
+    },
+    {
+      part_id: 'preference.node.packet_compatibility.v0',
+      part_subtype: 'packet_compatibility',
+      defines_packet_type: 'Preference',
+      defines_packet_subtype: 'node',
+      schema_version: '0.1.0',
+      availability: 'canonical',
+      required: true,
+      references: ['preference.node.0_1_current_neighbor'],
+      notes: 'Compatibility definition part for the initial Preference.node schema.',
+    },
+    {
+      part_id: 'preference.node.defaults_definition.v0',
+      part_subtype: 'defaults_definition',
+      defines_packet_type: 'Preference',
+      defines_packet_subtype: 'node',
+      schema_version: '0.1.0',
+      availability: 'canonical',
+      required: true,
+      applies_to: { packet_type: 'Preference', packet_subtype: 'node' },
+      default_values: {
+        subtype: 'node',
+        status: 'active',
+        privacy: 'sealed_private',
+        value: {},
+      },
+      default_merge_strategy: 'deep_overlay',
+      notes:
+        'Default-definition part for node preference packets; active node defaults can then point to trusted definition profiles and trust attestations.',
+    },
+    {
+      part_id: 'preference.node.dependencies_definition.v0',
+      part_subtype: 'dependencies_definition',
+      defines_packet_type: 'Preference',
+      defines_packet_subtype: 'node',
+      schema_version: '0.1.0',
+      availability: 'canonical',
+      required: true,
+      references: [
+        'generic.preference.builder',
+        'generic.preference.latest_active_planner',
+        'trusted.definition.resolution',
+        'trusted.verification.assessment',
+        'trusted.archive.discovery',
+      ],
+      notes:
+        'Dependency definition part for node preference projection and generic planning. Node trust ratings remain graph-derived through attestation packets.',
+    },
   ],
   fixtures: [
     'preference.element.current_runtime_equivalence',
     'preference.element.legacy_v0_adapter',
+    'preference.node.default_runtime_profile',
   ],
   notes: [
     'Bootstrap definition plus seeded Definition material; Preference.element packets are canonical for claimed actor preferences, while execution remains trusted-local.',
     'Preference packets never create graph relationships. They only configure display/behavior for already eligible packets.',
-    'Only element is currently enrolled as a supported Preference subtype; scope_display is the first live section under value.interface and shell_chrome is schema/helper-ready for the next bridge pass.',
+    'Preference.node is an official canonical subtype for node-owned defaults and pointers; live trust scores should still resolve from attestation/verification graph data, not from a private side table.',
   ],
 } as const satisfies PacketTypeDefinition<typeof PreferenceBodySchema>;

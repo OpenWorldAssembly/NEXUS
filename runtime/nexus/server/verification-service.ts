@@ -313,13 +313,13 @@ export class NexusPacketVerificationService {
       publicJwk: jwkPair.publicJwk,
       addedAt: createdAt,
     });
-    const packetId = `nexus:element/local-validator-${keyBinding.kid.slice(0, 12)}`;
+    const packetId = `nexus:element/node/local-validator-${keyBinding.kid.slice(0, 12)}`;
     const unsignedPacket = createElementPacket({
       packet_id: packetId,
       revision_id: createInitialRevisionId(packetId),
       created_at: createdAt,
       name: 'Local Validator',
-      subtype: 'local_validator',
+      subtype: 'node',
       summary: 'Runtime-owned packet validation identity for this Nexus node.',
       identity: {
         alias: 'Local Validator',
@@ -327,7 +327,7 @@ export class NexusPacketVerificationService {
         location_disclosure: null,
         public_key_bindings: [keyBinding],
       },
-      tags: ['service', 'validator'],
+      tags: ['node', 'service', 'validator'],
       adapter: 'runtime_verification',
       created_by: { packet_id: packetId },
       submitted_by: { packet_id: packetId },

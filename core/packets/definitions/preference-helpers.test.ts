@@ -1,6 +1,6 @@
 /**
  * File: preference-helpers.test.ts
- * Description: Tests for Preference.element builders, projection, compatibility helpers, and canonical schema alignment.
+ * Description: Tests for Preference.element and Preference.node builders, projection, compatibility helpers, and canonical schema alignment.
  */
 
 import assert from 'node:assert/strict';
@@ -8,17 +8,24 @@ import test from 'node:test';
 
 import {
   ElementPreferenceBodySchema as CanonicalElementPreferenceBodySchema,
+  NodePreferenceBodySchema as CanonicalNodePreferenceBodySchema,
 } from '@core/schema/packet-body-schemas';
 import {
   ElementPreferenceBodySchema as DefinitionElementPreferenceBodySchema,
+  NodePreferenceBodySchema as DefinitionNodePreferenceBodySchema,
+  preferencePacketDefinition,
 } from './preference.ts';
 import {
   buildElementPreferenceBody,
+  buildNodePreferenceBody,
   createElementPreferenceContextKey,
   createElementPreferencePacketId,
+  createNodePreferencePacketId,
   downcastScopeDisplayPreferenceValueToLegacyV0,
+  normalizeNodePreferenceValue,
   normalizeScopeDisplayPreferenceValue,
   normalizeShellChromePreferenceValue,
+  projectLatestActiveNodePreference,
   projectLatestActiveScopeDisplayPreference,
   upcastLegacyScopeDisplayPreferenceValueV0,
 } from './preference-helpers.ts';
@@ -190,4 +197,130 @@ test('Preference.element definition schema stays aligned with canonical packet b
     show_associated_parent_chains: false,
     show_followed_parent_chains: true,
   });
+});
+
+
+test('Preference.node builder normalizes node-owned definition and trust defaults', () => {
+  const body = buildNodePreferenceBody({
+    owner_ref: { packet_id: 'nexus:element/node/local-dev' },
+    value: {
+      definitions: {
+        active_definition_profile_ref: {
+          packet_id: 'nexus:bundle/definition-profile/default',
+        },
+      },
+      trust_graph: {
+        trusted_node_refs: [
+          { packet_id: 'nexus:element/node/railway' },
+        ],
+        trusted_node_attestation_refs: [
+          { packet_id: 'nexus:reaction/node-trust/railway' },
+        ],
+      },
+    },
+  });
+
+  assert.equal(body.subtype, 'node');
+  assert.equal(body.privacy, 'sealed_private');
+  assert.equal(body.value.definitions.update_mode, 'manual_review');
+  assert.equal(body.value.import_verification.unknown_signer_mode, 'quarantine');
+  assert.equal(body.value.storage_cleanup.cleanup_mode, 'manual');
+  assert.deepEqual(body.value.trust_graph.trusted_node_refs, [
+    { packet_id: 'nexus:element/node/railway' },
+  ]);
+});
+
+test('Preference.node derives deterministic packet id under the node subtype', () => {
+  assert.match(
+    createNodePreferencePacketId({
+      owner_ref: { packet_id: 'nexus:element/node/local-dev' },
+      context: { namespace: 'nexus', surface_key: 'runtime' },
+    }),
+    /^nexus:preference\/node\//
+  );
+});
+
+test('Preference.node latest-active projection selects the newest matching active body', () => {
+  const owner_ref = { packet_id: 'nexus:element/node/local-dev' };
+  const older = buildNodePreferenceBody({
+    owner_ref,
+    value: {
+      import_verification: {
+        unknown_signer_mode: 'advisory',
+      },
+    },
+  });
+  const newer = buildNodePreferenceBody({
+    owner_ref,
+    value: {
+      import_verification: {
+        unknown_signer_mode: 'block',
+      },
+    },
+  });
+  const otherOwner = buildNodePreferenceBody({
+    owner_ref: { packet_id: 'nexus:element/node/other' },
+    value: {
+      import_verification: {
+        unknown_signer_mode: 'accept_after_verification',
+      },
+    },
+  });
+
+  const projected = projectLatestActiveNodePreference({
+    owner_ref,
+    records: [
+      { body: newer, recorded_at: '2026-01-02T00:00:00.000Z' },
+      { body: older, recorded_at: '2026-01-01T00:00:00.000Z' },
+      { body: otherOwner, recorded_at: '2026-01-03T00:00:00.000Z' },
+    ],
+  });
+
+  assert.equal(projected?.value.import_verification.unknown_signer_mode, 'block');
+});
+
+test('Preference.node definition schema stays aligned with canonical packet body schema', () => {
+  const body = buildNodePreferenceBody({
+    owner_ref: { packet_id: 'nexus:element/node/local-dev' },
+    context: {
+      namespace: 'nexus',
+      surface_key: 'runtime',
+    },
+    value: normalizeNodePreferenceValue({
+      definitions: {
+        active_definition_profile_ref: {
+          packet_id: 'nexus:bundle/definition-profile/default',
+        },
+        trusted_definition_profile_refs: [
+          { packet_id: 'nexus:bundle/definition-profile/default' },
+        ],
+      },
+      trust_graph: {
+        trusted_node_attestation_refs: [
+          { packet_id: 'nexus:reaction/node-trust/railway' },
+        ],
+      },
+    }),
+  });
+
+  const definitionParsed = DefinitionNodePreferenceBodySchema.parse(body);
+  const canonicalParsed = CanonicalNodePreferenceBodySchema.parse(body);
+
+  assert.deepEqual(canonicalParsed, definitionParsed);
+  assert.equal(canonicalParsed.value.definitions.update_mode, 'manual_review');
+  assert.equal(canonicalParsed.value.trust_graph.minimum_import_trust_level, 'trusted');
+});
+
+test('Preference definition declares node as an official packet subtype with definition parts', () => {
+  assert.ok(preferencePacketDefinition.declared_subtypes.includes('node'));
+  assert.ok(
+    preferencePacketDefinition.actions.some(
+      (action) => action.action_id === 'preference.node.create'
+    )
+  );
+  assert.ok(
+    preferencePacketDefinition.packet_definition_parts.some(
+      (part) => part.part_id === 'preference.node.packet_definition.v0'
+    )
+  );
 });

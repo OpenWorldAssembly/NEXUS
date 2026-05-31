@@ -129,7 +129,7 @@ async function createServiceSignerPacket(input: {
     revision_id: `${input.packetId}@r1`,
     created_at: input.createdAt,
     name: 'Export Signer',
-    subtype: 'local_validator',
+    subtype: 'node',
     identity: {
       alias: 'Export Signer',
       claim_status: 'claimed',

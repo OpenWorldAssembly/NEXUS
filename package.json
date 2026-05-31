@@ -23,13 +23,14 @@
     "check:app-boundaries": "node ./scripts/assert-no-app-tests.mjs",
     "audit:trusted-coordinators": "node --experimental-strip-types --experimental-specifier-resolution=node --loader ./scripts/ts-paths-loader.mjs scripts/audit-trusted-coordinators.ts",
     "test:trusted-coordinators": "node --experimental-strip-types --experimental-specifier-resolution=node --loader ./scripts/ts-paths-loader.mjs --test runtime/trusted_coordinators/*.test.ts",
-    "check:trusted-coordinators": "npm run audit:trusted-coordinators && npm run audit:direct-storage-touches && npm run audit:nexus-write-routes && npm run audit:packet-specific-runtime && npm run audit:packet-definition-readiness && npm run audit:definition-dsl-capability && npm run audit:definition-bootstrap-profile && npm run test:trusted-coordinators",
+    "check:trusted-coordinators": "npm run audit:trusted-coordinators && npm run audit:direct-storage-touches && npm run audit:nexus-write-routes && npm run audit:packet-specific-runtime && npm run audit:packet-definition-readiness && npm run audit:definition-dsl-capability && npm run audit:definition-bootstrap-profile && npm run audit:node-preference-protocol && npm run test:trusted-coordinators",
     "audit:direct-storage-touches": "node --experimental-strip-types --experimental-specifier-resolution=node --loader ./scripts/ts-paths-loader.mjs scripts/audit-direct-storage-touches.ts",
     "audit:nexus-write-routes": "node --experimental-strip-types --experimental-specifier-resolution=node --loader ./scripts/ts-paths-loader.mjs scripts/audit-nexus-write-routes.ts",
     "audit:packet-specific-runtime": "node --experimental-strip-types --experimental-specifier-resolution=node --loader ./scripts/ts-paths-loader.mjs scripts/audit-packet-specific-runtime.ts",
     "audit:packet-definition-readiness": "node --experimental-strip-types --experimental-specifier-resolution=node --loader ./scripts/ts-paths-loader.mjs scripts/audit-packet-definition-readiness.ts",
     "audit:definition-dsl-capability": "node --experimental-strip-types --experimental-specifier-resolution=node --loader ./scripts/ts-paths-loader.mjs scripts/audit-definition-dsl-capability.ts",
-    "audit:definition-bootstrap-profile": "node --experimental-strip-types --experimental-specifier-resolution=node --loader ./scripts/ts-paths-loader.mjs scripts/audit-definition-bootstrap-profile.ts"
+    "audit:definition-bootstrap-profile": "node --experimental-strip-types --experimental-specifier-resolution=node --loader ./scripts/ts-paths-loader.mjs scripts/audit-definition-bootstrap-profile.ts",
+    "audit:node-preference-protocol": "node --experimental-strip-types --experimental-specifier-resolution=node --loader ./scripts/ts-paths-loader.mjs scripts/audit-node-preference-protocol.ts"
   },
   "engines": {
     "node": "24.x"

@@ -8,3 +8,4 @@ export * from './pre-reseed-modernization-closure.ts';
 export * from './packet-definition-readiness-audit.ts';
 export * from './definition-dsl-capability-audit.ts';
 export * from './definition-bootstrap-profile-inspection.ts';
+export * from './node-preference-protocol-inspection.ts';

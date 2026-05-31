@@ -440,3 +440,11 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - This keeps ownership clean: Archive owns packet-store reads, Definition owns source/profile selection, and the shared definition preference normalizer remains the single conversion seam into `TrustedDefinitionRuntimePreference` records.
 - The normal synchronous Definition resolver remains intact for bootstrap, tests, and callers that already have carriers in hand. Archive-backed discovery is async because it crosses the Archive read boundary.
 - This is still a narrow bridge for definition profile preference carriers. Full local-archive/pinned-bundle Definition candidate loading should reuse the same coordinator path later instead of adding new runtime services.
+
+### 2026-05-30 - Node preference protocol carrier baseline
+
+- Locked the carrier split for node bootstrap: node identities are `Element.node` packets, while node-owned configuration is represented as `Preference.node` packets. Node preferences are not a new runtime service.
+- `Preference.node` now has canonical schema coverage for definition profile selection, trust-graph defaults and pointers, import verification defaults, and storage cleanup defaults. Trust scores remain graph-derived from attestations, verification reports, and coordinator policy rather than becoming private preference facts.
+- The Preference definition manifest now declares `Preference.node` actions, builder/planner/projection descriptors, compatibility, defaults, dependencies, fixtures, and definition parts so the seeded definition profile can carry the subtype alongside `Preference.element`.
+- Runtime local validator identity creation now emits an `Element.node` packet instead of a non-canonical `local_validator` element subtype. Existing private key storage remains transitional and local-runtime-only; private keys must not be stored in packet bodies.
+- Added a node preference protocol inspection audit that fails on missing node schema/definition/helper seams and warns while local validator private JWK material remains in the runtime side table. Future node-to-node exchange should move signing secrets toward environment-backed or encrypted local secret storage under Verification/Archive/Exchange coordinator ownership.

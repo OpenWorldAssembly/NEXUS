@@ -583,6 +583,7 @@ export const PolicyBodySchema = z
 export const PreferencePrivacyModeSchema = z.enum([
   'local_only',
   'private_sync',
+  'sealed_private',
   'shared_with_trusted',
   'public',
 ]);
@@ -619,6 +620,76 @@ export const ShellChromePreferenceValueSchema = z
   })
   .strict();
 
+
+export const NodeDefinitionProfileUpdateModeSchema = z.enum([
+  'pinned_only',
+  'manual_review',
+  'auto_sync_minor',
+]);
+
+export const NodeTrustLevelSchema = z.enum([
+  'blocked',
+  'unknown',
+  'observed',
+  'trusted',
+  'high_trust',
+]);
+
+export const NodeImportReviewModeSchema = z.enum([
+  'block',
+  'quarantine',
+  'advisory',
+  'accept_after_verification',
+]);
+
+export const NodeTrustedCapabilitySchema = z.enum([
+  'definition_source',
+  'packet_signer',
+  'verification_reporter',
+  'import_source',
+]);
+
+export const NodeDefinitionPreferenceValueSchema = z
+  .object({
+    active_definition_profile_ref: PacketRefSchema.nullable().default(null),
+    trusted_definition_profile_refs: z.array(PacketRefSchema).default([]),
+    update_mode: NodeDefinitionProfileUpdateModeSchema.default('manual_review'),
+    allow_seeded_definition_fallback: z.boolean().default(true),
+  })
+  .strict();
+
+export const NodeTrustGraphPreferenceValueSchema = z
+  .object({
+    default_unknown_node_trust_level: NodeTrustLevelSchema.default('unknown'),
+    minimum_import_trust_level: NodeTrustLevelSchema.default('trusted'),
+    trusted_node_refs: z.array(PacketRefSchema).default([]),
+    trusted_node_attestation_refs: z.array(PacketRefSchema).default([]),
+    accepted_capabilities: z.array(NodeTrustedCapabilitySchema).default([]),
+    require_attestation_for_trusted_import: z.boolean().default(true),
+  })
+  .strict();
+
+export const NodeImportVerificationPreferenceValueSchema = z
+  .object({
+    unsigned_packet_mode: NodeImportReviewModeSchema.default('quarantine'),
+    unknown_signer_mode: NodeImportReviewModeSchema.default('quarantine'),
+    trusted_signer_mode: NodeImportReviewModeSchema.default(
+      'accept_after_verification'
+    ),
+    random_reverification_rate: z.number().min(0).max(1).default(0.05),
+    require_definition_profile_match: z.boolean().default(true),
+  })
+  .strict();
+
+export const NodeStorageCleanupPreferenceValueSchema = z
+  .object({
+    cleanup_mode: z.enum(['manual', 'suggest', 'automatic_safe_only']).default('manual'),
+    retain_superseded_revisions_days: z.number().int().positive().nullable().default(null),
+    retain_rejected_imports_days: z.number().int().positive().nullable().default(30),
+    retain_cached_projection_days: z.number().int().positive().nullable().default(30),
+  })
+  .strict();
+
 const DEFAULT_SCOPE_DISPLAY_PREFERENCE_VALUE = {
   main_visible_scope_packet_ids: [],
   show_associated_parent_chains: true,
@@ -629,6 +700,38 @@ const DEFAULT_SHELL_CHROME_PREFERENCE_VALUE = {
   navigation_mode: 'function',
   theme_mode: 'dark',
   ui_density: 'small',
+} as const;
+
+
+const DEFAULT_NODE_DEFINITION_PREFERENCE_VALUE = {
+  active_definition_profile_ref: null,
+  trusted_definition_profile_refs: [],
+  update_mode: 'manual_review',
+  allow_seeded_definition_fallback: true,
+} as const;
+
+const DEFAULT_NODE_TRUST_GRAPH_PREFERENCE_VALUE = {
+  default_unknown_node_trust_level: 'unknown',
+  minimum_import_trust_level: 'trusted',
+  trusted_node_refs: [],
+  trusted_node_attestation_refs: [],
+  accepted_capabilities: [],
+  require_attestation_for_trusted_import: true,
+} as const;
+
+const DEFAULT_NODE_IMPORT_VERIFICATION_PREFERENCE_VALUE = {
+  unsigned_packet_mode: 'quarantine',
+  unknown_signer_mode: 'quarantine',
+  trusted_signer_mode: 'accept_after_verification',
+  random_reverification_rate: 0.05,
+  require_definition_profile_match: true,
+} as const;
+
+const DEFAULT_NODE_STORAGE_CLEANUP_PREFERENCE_VALUE = {
+  cleanup_mode: 'manual',
+  retain_superseded_revisions_days: null,
+  retain_rejected_imports_days: 30,
+  retain_cached_projection_days: 30,
 } as const;
 
 export const ElementInterfacePreferenceValueSchema = z
@@ -673,7 +776,38 @@ export const ElementPreferenceBodySchema = PreferenceBaseBodySchema.extend({
   value: ElementPreferenceValueSchema,
 }).strict();
 
-export const PreferenceBodySchema = ElementPreferenceBodySchema;
+export const NodePreferenceValueSchema = z
+  .object({
+    definitions: NodeDefinitionPreferenceValueSchema.default(
+      DEFAULT_NODE_DEFINITION_PREFERENCE_VALUE
+    ),
+    trust_graph: NodeTrustGraphPreferenceValueSchema.default(
+      DEFAULT_NODE_TRUST_GRAPH_PREFERENCE_VALUE
+    ),
+    import_verification: NodeImportVerificationPreferenceValueSchema.default(
+      DEFAULT_NODE_IMPORT_VERIFICATION_PREFERENCE_VALUE
+    ),
+    storage_cleanup: NodeStorageCleanupPreferenceValueSchema.default(
+      DEFAULT_NODE_STORAGE_CLEANUP_PREFERENCE_VALUE
+    ),
+  })
+  .strict();
+
+export const NodePreferenceBodySchema = PreferenceBaseBodySchema.extend({
+  subtype: z.literal('node'),
+  privacy: PreferencePrivacyModeSchema.default('sealed_private'),
+  value: NodePreferenceValueSchema.default({
+    definitions: DEFAULT_NODE_DEFINITION_PREFERENCE_VALUE,
+    trust_graph: DEFAULT_NODE_TRUST_GRAPH_PREFERENCE_VALUE,
+    import_verification: DEFAULT_NODE_IMPORT_VERIFICATION_PREFERENCE_VALUE,
+    storage_cleanup: DEFAULT_NODE_STORAGE_CLEANUP_PREFERENCE_VALUE,
+  }),
+}).strict();
+
+export const PreferenceBodySchema = z.discriminatedUnion('subtype', [
+  ElementPreferenceBodySchema,
+  NodePreferenceBodySchema,
+]);
 
 const DiscussionParticipationRulesSchema = z
   .object({

@@ -189,7 +189,7 @@ test('local validator service identity signs reports that verify under the norma
     });
 
     assert.equal(validatorPacket?.header.type, 'Element');
-    assert.equal((validatorPacket?.body as { subtype?: string }).subtype, 'local_validator');
+    assert.equal((validatorPacket?.body as { subtype?: string }).subtype, 'node');
     assert.equal(verification.isValid, true);
   } finally {
     queryServices.packetStore.close();
