@@ -335,6 +335,7 @@ function classifyFile(input: {
 
   if (
     name.startsWith('preference-packet-') ||
+    name === 'element-preference-packets.ts' ||
     name === 'preference-runtime-connectors.ts'
   ) {
     return {

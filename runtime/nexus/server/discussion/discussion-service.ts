@@ -17,6 +17,7 @@ import { resolvePacketTarget } from '@core/packets/packet-target-resolver';
 import type {
   ReactionService,
   ReactionVoteSummary,
+  DiscussionDefinitionProjectionMetadata,
   DiscussionForumProjection,
   DiscussionFocusModel,
   DiscussionNavigationTarget,
@@ -67,11 +68,16 @@ import { NodeSQLitePacketStore } from '@runtime/storage/node-sqlite-packet-store
 import { NodeSQLiteDerivedDiscussionStore } from '@runtime/storage/node-sqlite-derived-discussion-store';
 import { NodeSQLiteDerivedReactionStore } from '@runtime/storage/node-sqlite-derived-reaction-store';
 import { DISCUSSION_ACTION_DESCRIPTORS } from '@runtime/nexus/discussion-action-contract';
+import { trustedProjectionCoordinator } from '@runtime/trusted_coordinators/trusted_projection_coordinator/index.ts';
 
 const REDDIT_EPOCH_SECONDS = 1134028003;
 const HOT_SCORE_DECAY_SECONDS = 45000;
 const DEFAULT_FEED_PAGE_SIZE = 20;
 const DEFAULT_REPLY_PAGE_SIZE = 10;
+const DISCUSSION_WORKSPACE_PROJECTION_KEY = 'discussion.workspace.aggregate.v0';
+const DISCUSSION_FORUM_FEED_PROJECTION_KEY = 'discussion.forum.feed.aggregate.v0';
+const DISCUSSION_THREAD_PROJECTION_KEY = 'discussion.post.thread.aggregate.v0';
+const DISCUSSION_REPLY_CARD_PROJECTION_KEY = 'discussion.message.reply_card.v0';
 
 function projectDiscussionLegacyView<TType extends DiscussionLegacyType>(
   packet: PacketEnvelope,
@@ -1470,6 +1476,14 @@ export class SQLiteDiscussionService
       selectedThreadPacketId,
       feedHasMore: feed.has_more,
     });
+    const workspaceProjectionPacket =
+      this.resolveWorkspaceProjectionPacket(selectedForum);
+    const workspaceDefinitionProjection = workspaceProjectionPacket
+      ? this.resolveDiscussionDefinitionProjection({
+          packet: workspaceProjectionPacket,
+          projection_key: DISCUSSION_WORKSPACE_PROJECTION_KEY,
+        })
+      : null;
 
     return {
       lens: feed.lens,
@@ -1494,8 +1508,9 @@ export class SQLiteDiscussionService
               : 'none',
         root_post_packet_id: threadRoot?.packet.packet_id ?? null,
         reply_target_packet_id: replyTargetPacketId,
-        },
-      };
+      },
+      definition_projection: workspaceDefinitionProjection,
+    };
     }
 
   async inspectPacketActionsForExplorer(input: {
@@ -1606,6 +1621,50 @@ export class SQLiteDiscussionService
       actions: {},
       action_descriptors: DISCUSSION_ACTION_DESCRIPTORS,
     };
+  }
+
+  private resolveDiscussionDefinitionProjection(input: {
+    packet: PacketEnvelopeByType['Discussion'];
+    projection_key: string;
+  }): DiscussionDefinitionProjectionMetadata | null {
+    try {
+      const projectionResult = trustedProjectionCoordinator.resolvePacketProjection({
+        packet: input.packet,
+        projection_key: input.projection_key,
+        context_mode: 'normal_runtime',
+      });
+      const projection = projectionResult.value;
+
+      if (!projection) {
+        return null;
+      }
+
+      return {
+        projection_key: projection.projection_key,
+        target_surface: projection.target_surface,
+        preferred_surface: projection.preferred_surface,
+        layout_key: projection.layout_key,
+        component_key: projection.component_key,
+        action_registry_keys: projection.action_registry_keys,
+        fields: projection.fields,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private resolveWorkspaceProjectionPacket(
+    selectedForum: DiscussionForumProjection | null
+  ): PacketEnvelopeByType['Discussion'] | null {
+    if (!this.state || !selectedForum) {
+      return null;
+    }
+
+    return resolveOperationalDiscussionPacket({
+      packetMap: this.state.discussionSpaceMap,
+      operationalMap: this.state.discussionSpaceOperationalMap,
+      packetId: selectedForum.discussion_space_packet_id,
+    });
   }
 
   private persistDerivedState(input: {
@@ -1876,6 +1935,10 @@ export class SQLiteDiscussionService
         (scopeRef) => scopeRef.packet_id
       ),
       default_sort: forumPacket.body.default_sort,
+      definition_projection: this.resolveDiscussionDefinitionProjection({
+        packet: forumPacket,
+        projection_key: DISCUSSION_FORUM_FEED_PROJECTION_KEY,
+      }),
     };
   }
 
@@ -1927,6 +1990,10 @@ export class SQLiteDiscussionService
         has_loaded_children: false,
       },
       actions: {},
+      definition_projection: this.resolveDiscussionDefinitionProjection({
+        packet: postPacket as PacketEnvelopeByType['Discussion'],
+        projection_key: DISCUSSION_THREAD_PROJECTION_KEY,
+      }),
     };
 
     return {
@@ -2181,6 +2248,10 @@ export class SQLiteDiscussionService
       },
       is_collapsed_by_default:
         postProjection.depth >= DEFAULT_COLLAPSED_REPLY_DEPTH,
+      definition_projection: this.resolveDiscussionDefinitionProjection({
+        packet: replyPacket,
+        projection_key: DISCUSSION_REPLY_CARD_PROJECTION_KEY,
+      }),
     };
   }
 

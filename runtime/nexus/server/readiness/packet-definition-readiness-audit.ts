@@ -307,24 +307,25 @@ function createCoverage(input: {
   counts: PacketDefinitionReadinessEntry['descriptor_counts'];
 }): PacketDefinitionReadinessEntry['coverage'] {
   const isGeneric = input.sourceStyle === 'generic_factory';
-  const hasRequiredParts = isGeneric || includesAllRequiredDefinitionParts(input.source);
+  const inheritsGenericBase = isGeneric || input.packetType === 'Discussion';
+  const hasRequiredParts = inheritsGenericBase || includesAllRequiredDefinitionParts(input.source);
   const richProjectionMetadata =
-    isGeneric ||
+    inheritsGenericBase ||
     input.source.includes('field_descriptors') ||
     input.source.includes('layout: {');
   const runtimeReadyWrite = hasRuntimeReadyWriteCoverage(input);
 
   return {
     schema:
-      isGeneric ||
+      inheritsGenericBase ||
       input.source.includes('body_schema:') ||
       input.source.includes('BodySchema'),
     defaults:
       hasRequiredParts && input.source.includes("defaults_definition"),
     storage:
-      isGeneric || input.source.includes('storage_class:'),
+      inheritsGenericBase || input.source.includes('storage_class:'),
     revision:
-      isGeneric || input.source.includes('revision_behavior:'),
+      inheritsGenericBase || input.source.includes('revision_behavior:'),
     actions: input.counts.actions > 0 || isGeneric,
     builders: input.counts.builders > 0 || isGeneric,
     planners: input.counts.planners > 0 || isGeneric,
@@ -334,11 +335,11 @@ function createCoverage(input: {
       input.source.includes('policy_action_ids'),
     projection: input.counts.projections > 0 || isGeneric,
     rich_projection_metadata: richProjectionMetadata,
-    indexing: input.counts.indexes > 0 || isGeneric,
+    indexing: input.counts.indexes > 0 || inheritsGenericBase,
     compatibility:
       input.counts.compatibility_adapters > 0 ||
       input.source.includes('compatibility:') ||
-      isGeneric,
+      inheritsGenericBase,
     bundling:
       input.packetType === 'Bundle' ||
       input.source.includes('bundle') ||
@@ -476,7 +477,7 @@ function createNextStep(input: {
   }
 
   if (input.packetType === 'Discussion') {
-    return 'Wire UI discussion surfaces to consume aggregate descriptors through Trusted Projection before adding more custom discussion branches.';
+    return 'Promote default discussion surface recipes into definition/reseed material before the big reseed.';
   }
 
   if (input.layer === 'owa_domain') {

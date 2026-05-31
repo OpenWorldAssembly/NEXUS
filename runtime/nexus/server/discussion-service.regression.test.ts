@@ -545,10 +545,29 @@ test('discussion workspace projections expose runtime-owned action maps and desc
       status: 'open',
       content_markdown: 'Workspace root body',
     });
+    const replyPacket = createDiscussionPacket({
+      packet_id: 'nexus:discussion/message/global-commons-workspace-reply',
+      revision_id:
+        'nexus:discussion/message/global-commons-workspace-reply@r1',
+      created_at: '2026-04-28T21:01:00.000Z',
+      authority_scope_ref: { packet_id: SCOPE_PACKET_ID },
+      applicable_scope_refs: [{ packet_id: SCOPE_PACKET_ID }],
+      adapter: 'nexus-web',
+      created_by: { packet_id: guestActor.actorPacket.header.packet_id },
+      subtype: 'message',
+      role: 'reply',
+      title: 'Workspace reply',
+      parent_ref: { packet_id: rootPostPacket.header.packet_id },
+      topic_ref: { packet_id: topicPacket.header.packet_id },
+      root_message_ref: { packet_id: rootPostPacket.header.packet_id },
+      status: 'open',
+      content_markdown: 'Workspace reply body',
+    });
 
     await writePreferredPacket(harness.packetStore, guestActor.actorPacket);
     await writePreferredPacket(harness.packetStore, topicPacket);
     await writePreferredPacket(harness.packetStore, rootPostPacket);
+    await writePreferredPacket(harness.packetStore, replyPacket);
     await harness.discussionService.syncDerivedState();
 
     const workspace = await harness.discussionService.getWorkspace({
@@ -580,6 +599,34 @@ test('discussion workspace projections expose runtime-owned action maps and desc
         (descriptor) => descriptor.id === 'discussion.reply'
       ),
       true
+    );
+    assert.equal(
+      workspace.definition_projection?.projection_key,
+      'discussion.workspace.aggregate.v0'
+    );
+    assert.equal(
+      workspace.definition_projection?.component_key,
+      'discussion.workspace_shell'
+    );
+    assert.equal(
+      workspace.selected_forum?.definition_projection?.projection_key,
+      'discussion.forum.feed.aggregate.v0'
+    );
+    assert.equal(
+      workspace.thread_root?.definition_projection?.projection_key,
+      'discussion.post.thread.aggregate.v0'
+    );
+    assert.equal(
+      workspace.thread_root?.definition_projection?.component_key,
+      'discussion.thread_panel'
+    );
+    assert.equal(
+      workspace.thread_items[0]?.definition_projection?.projection_key,
+      'discussion.message.reply_card.v0'
+    );
+    assert.equal(
+      workspace.thread_items[0]?.definition_projection?.component_key,
+      'discussion.reply_tree'
     );
   } finally {
     harness.cleanup();

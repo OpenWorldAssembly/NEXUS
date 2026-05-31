@@ -330,6 +330,16 @@ export interface AssociationClaimProjection {
   is_current: boolean;
 }
 
+export interface DiscussionDefinitionProjectionMetadata {
+  projection_key: string;
+  target_surface: string;
+  preferred_surface: string | null;
+  layout_key: string | null;
+  component_key: string | null;
+  action_registry_keys: string[];
+  fields: Record<string, unknown>;
+}
+
 export interface DiscussionForumProjection {
   id: string;
   forum_kind: string;
@@ -344,6 +354,7 @@ export interface DiscussionForumProjection {
   authority_scope_packet_id: string | null;
   applicable_scope_packet_ids: string[];
   default_sort: DiscussionSort;
+  definition_projection: DiscussionDefinitionProjectionMetadata | null;
 }
 
 export interface DiscussionNodeState {
@@ -375,6 +386,7 @@ export interface DiscussionPostProjection {
   vote_summary: ReactionVoteSummary;
   state: DiscussionNodeState;
   actions: NexusActionMap;
+  definition_projection: DiscussionDefinitionProjectionMetadata | null;
 }
 
 export interface DiscussionPageInfo {
@@ -438,6 +450,7 @@ export interface DiscussionWorkspaceModel {
   workspace_actions: NexusActionMap;
   action_descriptors: NexusActionIntentDescriptor[];
   composer: DiscussionWorkspaceComposer;
+  definition_projection: DiscussionDefinitionProjectionMetadata | null;
 }
 
 export interface DiscussionFeedProjection {

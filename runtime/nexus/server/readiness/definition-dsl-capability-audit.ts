@@ -373,15 +373,27 @@ export function createDefinitionDslCapabilityAuditReport(): DefinitionDslCapabil
         'discussion.forum.feed.aggregate.v0',
         'discussion.post.thread.aggregate.v0',
         'discussion.composer.surface.v0',
+      ]) && hasAll(discussionService, [
+        'resolveDiscussionDefinitionProjection',
+        'trustedProjectionCoordinator.resolvePacketProjection',
+        'definition_projection',
       ])
-        ? 'definition_ready'
-        : hasAll(discussionService, [
-          'DiscussionWorkspaceModel',
-          'DiscussionForumProjection',
-          'ReactionVoteSummary',
+        ? 'runtime_ready'
+        : hasAll(discussionDefinition, [
+          'DISCUSSION_AGGREGATE_PROJECTIONS',
+          'discussion.workspace.aggregate.v0',
+          'discussion.forum.feed.aggregate.v0',
+          'discussion.post.thread.aggregate.v0',
+          'discussion.composer.surface.v0',
         ])
-          ? 'custom_runtime_owned'
-          : 'needs_design_decision',
+          ? 'definition_ready'
+          : hasAll(discussionService, [
+            'DiscussionWorkspaceModel',
+            'DiscussionForumProjection',
+            'ReactionVoteSummary',
+          ])
+            ? 'custom_runtime_owned'
+            : 'needs_design_decision',
       source_files: [
         'core/packets/definitions/discussion.ts',
         'core/packets/definitions/generic-type.ts',
@@ -390,9 +402,10 @@ export function createDefinitionDslCapabilityAuditReport(): DefinitionDslCapabil
       evidence: [
         'Discussion workspace/forum/topic/thread/reply/composer projection descriptors now live in the Discussion definition overlay.',
         'Adapter aggregation can still compute child lists, vote summaries, and pagination, but layout, action keys, and query intent are definition-owned.',
+        'The discussion service now attaches definition_projection metadata resolved through Trusted Projection while preserving its existing UI-compatible aggregate payloads.',
       ],
       next_step:
-        'Wire discussion surfaces to consume these aggregate descriptors through Trusted Projection before adding more surface-specific branching.',
+        'Keep aggregation adapter-owned; the next high-value step is promoting default discussion surface recipes into definition/reseed material.',
     }),
     createEntry({
       area: 'seed_defaults',
@@ -474,7 +487,9 @@ export function createDefinitionDslCapabilityAuditReport(): DefinitionDslCapabil
       area: 'discussion_projection',
       code: 'discussion_aggregate_projection_definition_ready',
       message:
-        'Discussion aggregate projection descriptors are now definition-backed; adapter aggregation remains contained behind trusted coordinator seams.',
+        discussionService.includes('resolveDiscussionDefinitionProjection')
+          ? 'Discussion aggregate projection descriptors are definition-backed and consumed through Trusted Projection; adapter aggregation remains contained behind trusted coordinator seams.'
+          : 'Discussion aggregate projection descriptors are now definition-backed; adapter aggregation remains contained behind trusted coordinator seams.',
     });
   }
 
