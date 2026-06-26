@@ -69,6 +69,10 @@ import {
   type NexusStorageMode,
 } from '@runtime/nexus/identity-storage';
 import {
+  buildSignedMigratedIdentityPacket,
+  classifyStoredIdentityForMigration,
+} from '@runtime/nexus/identity-migration';
+import {
   completePasskeyAssertion,
   isPasskeySupported,
   registerPasskey,
@@ -144,6 +148,11 @@ type IdentityShellContextValue = {
     keepMeLoggedIn: boolean;
   }) => Promise<void>;
   signInStoredIdentity: (input: {
+    actorPacketId: string;
+    passphrase: string;
+    keepMeLoggedIn: boolean;
+  }) => Promise<NexusAuthSessionPayload>;
+  migrateStoredIdentity: (input: {
     actorPacketId: string;
     passphrase: string;
     keepMeLoggedIn: boolean;
@@ -1664,6 +1673,105 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
     return verifyResult.session;
   };
 
+  const migrateStoredIdentity = async (input: {
+    actorPacketId: string;
+    passphrase: string;
+    keepMeLoggedIn: boolean;
+  }) => {
+    if (currentIdentity && currentIdentity.claimStatus !== 'claimed') {
+      storePreservedGuestIdentity(currentIdentity);
+    }
+
+    const records = await readStoredIdentityRecords();
+    const targetRecord = records.find(
+      (record) => record.actor_packet_id === input.actorPacketId
+    );
+
+    if (!targetRecord || !targetRecord.encrypted_bundle_json) {
+      throw new Error('That legacy identity is not available on this device.');
+    }
+
+    if (classifyStoredIdentityForMigration(targetRecord) !== 'migration_required') {
+      throw new Error('That identity does not require migration.');
+    }
+
+    const decryptedBundle = (await decryptBundleWithPassphrase({
+      passphrase: input.passphrase,
+      encryptedBundle: parseEncryptedBundleJson(
+        targetRecord.encrypted_bundle_json,
+        'The saved identity bundle is malformed.'
+      ),
+    })) as {
+      actor_packet: ActiveIdentityState['actorPacket'];
+      public_jwk: JsonWebKey;
+      private_jwk: JsonWebKey;
+    };
+    const migratedActorPacket = await buildSignedMigratedIdentityPacket({
+      legacyActorPacket: targetRecord.actor_packet,
+      bundle: {
+        actorPacket: decryptedBundle.actor_packet,
+        publicJwk: decryptedBundle.public_jwk,
+        privateJwk: decryptedBundle.private_jwk,
+      },
+    });
+    const privateKey = await importPrivateKeyFromJwk(decryptedBundle.private_jwk);
+    const activeKeyBinding =
+      migratedActorPacket.body.identity?.public_key_bindings[0] ??
+      (() => {
+        throw new Error('Migrated identity is missing its active key binding.');
+      })();
+    const migrationBody = {
+      migrated_actor_packet: migratedActorPacket,
+      legacy_actor_packet_id: targetRecord.actor_packet_id,
+    };
+    const actorAssertion = await createActorAssertion({
+      actorPacketId: migratedActorPacket.header.packet_id,
+      kid: activeKeyBinding.kid,
+      privateKey,
+      method: 'POST',
+      path: '/api/nexus/auth/migrate',
+      body: migrationBody,
+    });
+    const encryptedBundle = await encryptIdentityBundle({
+      passphrase: input.passphrase,
+      bundle: {
+        actor_packet: migratedActorPacket,
+        public_jwk: decryptedBundle.public_jwk,
+        private_jwk: decryptedBundle.private_jwk,
+      },
+    });
+
+    await fetchJsonOrThrow('/api/nexus/auth/migrate', {
+      method: 'POST',
+      body: {
+        ...migrationBody,
+        actor_assertion: actorAssertion,
+      },
+    });
+
+    const record: StoredIdentityRecord = {
+      actor_packet_id: migratedActorPacket.header.packet_id,
+      alias: createIdentityLabel(migratedActorPacket),
+      claim_status: 'claimed',
+      stored_kind: 'claimed',
+      actor_packet: migratedActorPacket,
+      public_jwk: decryptedBundle.public_jwk,
+      private_jwk: null,
+      encrypted_bundle_json: JSON.stringify(encryptedBundle),
+      updated_at: new Date().toISOString(),
+    };
+
+    await writeObjectStore(IDENTITY_STORE_NAME, record);
+    await writeCurrentIdentityPreference(record.actor_packet_id);
+    await refreshStoredIdentities();
+
+    return signInStoredIdentity({
+      actorPacketId: record.actor_packet_id,
+      passphrase: input.passphrase,
+      keepMeLoggedIn: input.keepMeLoggedIn,
+    });
+  };
+
   const restoreIdentityFromBundle = async (input: {
     encryptedBundleJson: string;
     passphrase: string;
@@ -2022,6 +2130,7 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
         createClaimedIdentity,
         claimCurrentGuest,
         signInStoredIdentity,
+        migrateStoredIdentity,
         signInWithPasskey,
         registerCurrentPasskey,
         restoreIdentityFromBundle,

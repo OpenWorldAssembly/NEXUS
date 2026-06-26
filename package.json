@@ -30,6 +30,7 @@
     "audit:packet-definition-readiness": "node --experimental-strip-types --experimental-specifier-resolution=node --loader ./scripts/ts-paths-loader.mjs scripts/audit-packet-definition-readiness.ts",
     "audit:definition-dsl-capability": "node --experimental-strip-types --experimental-specifier-resolution=node --loader ./scripts/ts-paths-loader.mjs scripts/audit-definition-dsl-capability.ts",
     "audit:definition-bootstrap-profile": "node --experimental-strip-types --experimental-specifier-resolution=node --loader ./scripts/ts-paths-loader.mjs scripts/audit-definition-bootstrap-profile.ts",
+    "audit:final-pre-reseed-readiness": "node --experimental-strip-types --experimental-specifier-resolution=node --loader ./scripts/ts-paths-loader.mjs scripts/audit-final-pre-reseed-readiness.ts",
     "audit:node-preference-protocol": "node --experimental-strip-types --experimental-specifier-resolution=node --loader ./scripts/ts-paths-loader.mjs scripts/audit-node-preference-protocol.ts"
   },
   "engines": {

@@ -220,7 +220,8 @@ export function getPacketDefinitionSectionStatus(
     case 'compatibility':
       return definition.compatibility_adapters.length > 0 ? 'supported' : 'unsupported';
     case 'bundling':
-      return listPacketDefinitionBundleActionIds(definition).length > 0
+      return listPacketDefinitionBundleActionIds(definition).length > 0 ||
+        (definition.packet_definition_parts ?? []).length > 0
         ? 'supported'
         : 'unsupported';
     case 'fixtures':

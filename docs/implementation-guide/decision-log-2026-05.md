@@ -455,3 +455,24 @@ This monthly log condenses the May 2026 decisions that remain most important for
 - Discussion subtype defaults remain separate from the workflow recipe, so resolving `Discussion.post` defaults does not pollute post bodies with surface-level profile data.
 - OWA-domain generic packet families now record default semantics for `Action`, `Proposal`, and `Decision` in definition defaults. Actions carry hierarchy/policy/template/default-packet-set refs, Proposals remain deliberation records, and Decisions stay recorded outcomes linked to proposal/vote material by refs.
 - The packet-definition readiness audit now treats Action, Proposal, Decision, and Discussion OWA-default decisions as closed when their definition-backed defaults are present, leaving reseed fixture construction as the next step rather than another terminology/design pass.
+
+### 2026-05-31 - Temporary identity migration bridge
+
+- Legacy locally stored Nexus identities now migrate through an explicit, key-proven auth flow instead of silently becoming current identities during sign-in.
+- Old local records are migration candidates only: the user must unlock the encrypted bundle, sign a current-schema claimed identity packet, submit it to `/api/nexus/auth/migrate`, and wait for server acceptance before local IndexedDB is replaced.
+- The bridge is versioned with `migration_version: 1` custody metadata and a finite reseed-transition policy. It is not a permanent provisional-id framework; migrated packets are current-schema identities and remain valid after the bridge is removed.
+- Migration carries only identity continuity material: alias, safe packet-id reuse when allowed, active public key binding, readable location disclosure, and migration custody hints. Old preferences, relations, posts, votes, attestations, graph edges, authored packets, and history are intentionally not migrated.
+
+### 2026-05-31 - Pre-reseed definition completeness gate
+
+- The packet-definition readiness audit is now subtype-aware and checks every active packet type/subtype for required Definition parts, default-definition coverage, projection descriptor coverage, and generated Definition seed parity.
+- TypeScript packet definitions remain bootstrap/compiler fallback material until stored Definition profile resolution becomes primary; the audit now verifies fallback descriptors and packet-shaped seed candidates agree on digest-relevant identity fields.
+- Defaults and projection are no longer coarse presence checks. Semantic subtypes must resolve useful defaults and rich projection descriptors before reseed readiness passes.
+- `Definition` and `Bundle` retain explicit acceptable-minimal notes: Definition is the cold-start bootstrap kernel, Bundle is carrier/import-export inventory material, and Bundle transport labels are not separately seeded semantic Definition profiles.
+
+### 2026-06-02 - Final pre-reseed readiness classification
+
+- The final pre-reseed readiness report now separates true `blockers` from `accepted_transition_notes` and `cleanup_candidates`; `findings` remains a compatibility alias for blockers during caller/test migration.
+- Acceptable bootstrap transitions stay visible but non-blocking: TypeScript fallback definitions plus generated Definition seed packets, intentionally minimal Definition/Bundle projections, Bundle carrier labels, and synthetic debug-audit candidate failures are not reseed blockers.
+- Added a legacy seed/source inventory for pruned packet type names, old seed-batch labels, old Vote/Attestation naming, retired mutation intents, split discussion helpers, and `parent_scope` edges. No safe `remove_now` artifacts were found; `parent_scope` remains a classified cleanup candidate.
+- The final readiness CLI can now be run directly with `npm run audit:final-pre-reseed-readiness`.

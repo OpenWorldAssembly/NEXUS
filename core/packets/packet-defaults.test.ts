@@ -23,6 +23,30 @@ test('every packet definition exposes at least one default-definition part', () 
   }
 });
 
+test('every reseed semantic subtype resolves default-definition values', () => {
+  for (const definition of listDefinedPacketTypeDefinitions()) {
+    for (const packetSubtype of definition.declared_subtypes) {
+      if (definition.packet_type === 'Bundle' && packetSubtype !== 'packet_set') {
+        continue;
+      }
+
+      const profile = resolvePacketDefaultProfile({
+        definition,
+        packet_subtype: packetSubtype,
+      });
+
+      assert.ok(
+        profile.definition_defaults.length > 0,
+        `${definition.packet_type}.${packetSubtype} default definitions`
+      );
+      assert.ok(
+        Object.keys(profile.resolved_values).length > 0,
+        `${definition.packet_type}.${packetSubtype} resolved defaults`
+      );
+    }
+  }
+});
+
 test('relation subscription defaults carry inheritance posture', () => {
   const relationDefinition = getDefinedPacketTypeDefinition('Relation');
   assert.ok(relationDefinition);

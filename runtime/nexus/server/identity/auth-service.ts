@@ -24,6 +24,10 @@ import {
   verifyPacketSignatureDetailed,
 } from '@runtime/nexus/identity-crypto';
 import {
+  LEGACY_IDENTITY_MIGRATION_POLICY,
+  type LegacyIdentityMigrationPolicy,
+} from '@runtime/nexus/identity-migration';
+import {
   NexusAuthFailureError,
   NexusAuthGateError,
   isNexusAuthFailureError,
@@ -609,7 +613,10 @@ export class NexusAuthService {
         ? (packet.body as Record<string, unknown>)
         : null;
 
-    if (packet.header.type !== 'Element' || body?.kind !== 'person') {
+    if (
+      packet.header.type !== 'Element' ||
+      (body?.kind !== 'person' && body?.subtype !== 'person')
+    ) {
       throw new Error('Actor packet must be a person element.');
     }
 
@@ -1164,6 +1171,98 @@ export class NexusAuthService {
     });
 
     return actorPacket;
+  }
+
+  async migrateIdentity(input: {
+    migratedActorPacket: unknown;
+    legacyActorPacketId: string;
+    legacyActorPacketDigest?: string | null;
+    actorAssertion: ActorAssertion;
+    migrationPolicy?: LegacyIdentityMigrationPolicy;
+  }): Promise<PacketEnvelopeByType['Element']> {
+    const migrationPolicy =
+      input.migrationPolicy ?? LEGACY_IDENTITY_MIGRATION_POLICY;
+
+    if (!migrationPolicy.enabled) {
+      throw new Error('Legacy identity migration is not enabled.');
+    }
+
+    assertRecentAssertion(input.actorAssertion.issued_at);
+
+    const actorPacket = await this.verifyIdentityPacket(
+      input.migratedActorPacket,
+      'request'
+    );
+
+    if (actorPacket.body.identity?.claim_status !== 'claimed') {
+      throw new Error('Migrated identity requires a claimed person element.');
+    }
+
+    const activeSigningKey = this.getActiveIdentityKeyBinding({
+      actorPacket,
+      kid: input.actorAssertion.kid,
+    });
+
+    if (!activeSigningKey) {
+      throw new Error('Actor assertion key is not active for that identity.');
+    }
+
+    if (input.actorAssertion.actor_packet_id !== actorPacket.header.packet_id) {
+      throw new Error('Actor assertion packet id does not match the migrated identity.');
+    }
+
+    const assertionBody = {
+      migrated_actor_packet: input.migratedActorPacket,
+      legacy_actor_packet_id: input.legacyActorPacketId,
+      ...(input.legacyActorPacketDigest
+        ? { legacy_actor_packet_digest: input.legacyActorPacketDigest }
+        : {}),
+    };
+    const assertionIsValid = await verifyActorAssertion({
+      assertion: input.actorAssertion,
+      publicJwk: activeSigningKey.public_jwk as JsonWebKey,
+      body: assertionBody,
+    });
+
+    if (!assertionIsValid) {
+      throw new Error('Migration actor assertion verification failed.');
+    }
+
+    if (input.actorAssertion.method.toUpperCase() !== 'POST') {
+      throw new Error('Migration actor assertion method does not match this request.');
+    }
+
+    if (input.actorAssertion.path !== '/api/nexus/auth/migrate') {
+      throw new Error('Migration actor assertion path does not match this request.');
+    }
+
+    const storedActorPacketInput = await this.getPersonPacketRevisionInput(
+      actorPacket.header.packet_id
+    );
+
+    if (storedActorPacketInput) {
+      const existingCanonical = canonicalizeJson(storedActorPacketInput);
+      const migratedCanonical = canonicalizeJson(input.migratedActorPacket);
+
+      if (existingCanonical !== migratedCanonical) {
+        throw new Error('Migrated identity packet id collides with an existing identity.');
+      }
+    }
+
+    const persistedActorPacket = await this.persistVerifiedIdentityPacket(actorPacket);
+
+    this.writeAuthEvent({
+      actorPacketId: persistedActorPacket.header.packet_id,
+      eventType: 'identity_migrated',
+      metadata: {
+        legacy_actor_packet_id: input.legacyActorPacketId,
+        legacy_actor_packet_digest: input.legacyActorPacketDigest ?? null,
+        migration_version: migrationPolicy.migration_version,
+        legacy_window_label: migrationPolicy.legacy_window_label,
+      },
+    });
+
+    return persistedActorPacket;
   }
 
   async verifyActorMutation(input: {

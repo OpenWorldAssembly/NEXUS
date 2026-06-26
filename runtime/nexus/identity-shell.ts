@@ -10,6 +10,7 @@ export {
   createGuestAlias,
   createIdentityLabel,
   createIdentityStatusRevision,
+  createMigratedPersonIdentityPacket,
   createPersonIdentityPacket,
   type IdentityLocationDisclosure,
   type NexusIdentityMode,

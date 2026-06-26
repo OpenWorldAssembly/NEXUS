@@ -82,6 +82,7 @@ export function createPersonIdentityPacket(input: {
   createdAt?: string;
   packetId?: string;
   locationDisclosure?: IdentityLocationDisclosure | null;
+  custodyHints?: Record<string, unknown> | null;
 }): PacketEnvelopeByType['Element'] {
   const createdAt = input.createdAt ?? new Date().toISOString();
   const packetId = input.packetId ?? createPacketId(input.alias);
@@ -103,7 +104,44 @@ export function createPersonIdentityPacket(input: {
       location_disclosure: input.locationDisclosure ?? null,
       public_key_bindings: [input.publicKeyBinding],
     },
+    custody_hints: input.custodyHints ?? null,
     tags: ['person', input.claimStatus],
+  });
+}
+
+/**
+ * Inputs: safe legacy identity fields and the selected current packet id.
+ * Output: a current-schema claimed person identity packet with migration custody hints.
+ */
+export function createMigratedPersonIdentityPacket(input: {
+  alias: string;
+  legacyActorPacketId: string;
+  publicKeyBinding: NonNullable<
+    NonNullable<ElementPacketInput['identity']>['public_key_bindings']
+  >[number];
+  tentativePacketId: string;
+  createdAt?: string;
+  locationDisclosure?: IdentityLocationDisclosure | null;
+  migrationVersion: number;
+  packetIdPolicy: 'reused_legacy_id' | 'reminted_id';
+}): PacketEnvelopeByType['Element'] {
+  const createdAt = input.createdAt ?? new Date().toISOString();
+
+  return createPersonIdentityPacket({
+    alias: input.alias,
+    claimStatus: 'claimed',
+    publicKeyBinding: input.publicKeyBinding,
+    packetId: input.tentativePacketId,
+    createdAt,
+    locationDisclosure: input.locationDisclosure ?? null,
+    custodyHints: {
+      migration: {
+        legacy_actor_packet_id: input.legacyActorPacketId,
+        migrated_at: createdAt,
+        migration_version: input.migrationVersion,
+        packet_id_policy: input.packetIdPolicy,
+      },
+    },
   });
 }
 

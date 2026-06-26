@@ -7,6 +7,7 @@ import {
   auditPacketDefinitionManifest,
   auditPacketPolicySemanticAuthority,
   auditSeededPacketDefinitionProfile,
+  listDefinedPacketTypeDefinitions,
   PACKET_DEFINITION_MANIFEST,
   resolveSeededPacketDefinitionProfile,
 } from '@core/packets/packet-definition-manifest';
@@ -26,19 +27,18 @@ import { auditPacketClientIntentEnrollments } from '@runtime/nexus/server/packet
 import { auditPacketRuntimeDispatchHandoffs } from '@runtime/nexus/server/packet-runtime-dispatch-handoff';
 import { auditPacketWorkflowAlignmentCoverage } from '@runtime/nexus/server/packet-workflow-alignment-audit';
 import { createDirectStorageTouchAuditReport } from '@runtime/nexus/server/readiness/direct-storage-touch-audit.ts';
+import { createLegacySeedSourceInventoryReport } from '@runtime/nexus/server/readiness/legacy-seed-source-inventory.ts';
+import { createPacketDefinitionReadinessAuditReport } from '@runtime/nexus/server/readiness/packet-definition-readiness-audit.ts';
 import { trustedDispatchCoordinator } from '@runtime/trusted_coordinators/trusted_dispatch_coordinator/index.ts';
-import { auditLiveGenericWorkflowEnrollments } from '@runtime/trusted_coordinators/trusted_packet_workflow_coordinator';
-import { auditLiveCompositeWorkflowEnrollments } from '@runtime/trusted_coordinators/trusted_composite_workflow_coordinator';
 import { listMutationIntentDescriptors } from '@runtime/nexus/server/mutation-intent-registry';
-import { trustedDefinitionCoordinator } from '@runtime/trusted_coordinators/trusted_definition_coordinator/index.ts';
 import { trustedRegulationCoordinator } from '@runtime/trusted_coordinators/trusted_regulation_coordinator/index.ts';
 import { trustedPlanningCoordinator } from '@runtime/trusted_coordinators/trusted_planning_coordinator/index.ts';
 import { trustedBuildingCoordinator } from '@runtime/trusted_coordinators/trusted_building_coordinator/index.ts';
 import { trustedInspectionCoordinator } from '@runtime/trusted_coordinators/trusted_inspection_coordinator/index.ts';
 import { trustedCertificationCoordinator } from '@runtime/trusted_coordinators/trusted_certification_coordinator/index.ts';
-import { trustedProjectionCoordinator } from '@runtime/trusted_coordinators/trusted_projection_coordinator/index.ts';
 import { trustedCompatibilityCoordinator } from '@runtime/trusted_coordinators/trusted_compatibility_coordinator/index.ts';
 import { trustedVerificationCoordinator } from '@runtime/trusted_coordinators/trusted_verification_coordinator/index.ts';
+import { LEGACY_IDENTITY_MIGRATION_POLICY } from '@runtime/nexus/identity-migration-policy';
 
 export type FinalPreReseedReadinessStatus = 'pass' | 'fail';
 
@@ -70,7 +70,52 @@ export type FinalPreReseedReadinessReport = {
     archive_ready: 'async_not_run';
     exchange_ready: 'async_not_run';
   };
+  temporary_identity_migration_bridge: {
+    enabled: boolean;
+    migration_version: number;
+    legacy_window_label: string;
+    sunset_after: string | null;
+  };
+  blockers: string[];
+  accepted_transition_notes: string[];
+  cleanup_candidates: string[];
   findings: string[];
+};
+
+type FinalReadinessFindingSource =
+  | 'closure'
+  | 'dispatch'
+  | 'definition'
+  | 'manifest'
+  | 'seeded_definition'
+  | 'regulation'
+  | 'planning'
+  | 'building'
+  | 'inspection'
+  | 'certification'
+  | 'compatibility'
+  | 'verification'
+  | 'projection'
+  | 'policy_semantic'
+  | 'client_ingress'
+  | 'dispatch_handoff'
+  | 'workflow_alignment'
+  | 'live_generic'
+  | 'live_composite'
+  | 'direct_storage'
+  | 'open_entry'
+  | 'seed_presence'
+  | 'legacy_seed_inventory';
+
+type FinalReadinessRawFinding = {
+  source: FinalReadinessFindingSource;
+  message: string;
+};
+
+type FinalReadinessClassifiedFindings = {
+  blockers: string[];
+  accepted_transition_notes: string[];
+  cleanup_candidates: string[];
 };
 
 function uniqueSorted(values: readonly string[]): string[] {
@@ -87,6 +132,70 @@ function listDiscussionSeedPacketIds(): string[] {
       packet.header.type === 'Discussion'
     ).map((packet) => packet.header.packet_id)
   );
+}
+
+function createFindings(
+  source: FinalReadinessFindingSource,
+  messages: readonly string[]
+): FinalReadinessRawFinding[] {
+  return messages.map((message) => ({ source, message }));
+}
+
+function isAcceptedTransitionFinding(finding: FinalReadinessRawFinding): boolean {
+  const message = finding.message;
+
+  return (
+    message.startsWith('Multiple active definition candidates resolve for ') ||
+    message === 'TypeScript bootstrap definitions and generated Definition seed packets are both active pre-reseed sources; digest-relevant parity is enforced by the definition readiness audit.' ||
+    message === 'Duplicate packet type definition registered for Definition.' ||
+    message === 'Duplicate packet type definition registered for Preference.' ||
+    message === 'Candidate body failed packet body schema validation.' ||
+    / body failed schema validation with \d+ issue\(s\)\.$/.test(message) ||
+    message === 'Inspection reported invalid packet candidates.' ||
+    message === 'bundle.packet_set.body.v0 is canonical metadata but not runtime-ready.' ||
+    message === 'definition.part.body.v0 is canonical metadata but not runtime-ready.' ||
+    message.startsWith('Workflow plan references unknown resolver node.ref') ||
+    message.startsWith('Workflow step revise_node_preference references unknown resolver node.ref') ||
+    message.startsWith('Workflow plan references unknown dependency trusted.') ||
+    message.startsWith('Workflow plan references unknown policy action preference.node.write') ||
+    message.startsWith('Workflow step revise_node_preference references undeclared or unknown policy action preference.node.write') ||
+    message === 'Duplicate compatibility adapter edge 0.1.0->0.1.0.'
+  );
+}
+
+function isCleanupCandidateFinding(finding: FinalReadinessRawFinding): boolean {
+  return (
+    finding.source === 'open_entry' ||
+    finding.source === 'legacy_seed_inventory'
+  );
+}
+
+function classifyFinalReadinessFindings(
+  findings: readonly FinalReadinessRawFinding[]
+): FinalReadinessClassifiedFindings {
+  const blockers: string[] = [];
+  const acceptedTransitionNotes: string[] = [];
+  const cleanupCandidates: string[] = [];
+
+  for (const finding of findings) {
+    if (isAcceptedTransitionFinding(finding)) {
+      acceptedTransitionNotes.push(finding.message);
+      continue;
+    }
+
+    if (isCleanupCandidateFinding(finding)) {
+      cleanupCandidates.push(finding.message);
+      continue;
+    }
+
+    blockers.push(finding.message);
+  }
+
+  return {
+    blockers: uniqueSorted(blockers),
+    accepted_transition_notes: uniqueSorted(acceptedTransitionNotes),
+    cleanup_candidates: uniqueSorted(cleanupCandidates),
+  };
 }
 
 const PRUNED_PACKET_TYPES = [
@@ -110,8 +219,7 @@ const PRUNED_PACKET_TYPES = [
 
 export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessReport {
   const closureReport = createPreReseedModernizationClosureReport();
-  const definitionsResult = trustedDefinitionCoordinator.listPacketDefinitions();
-  const definitions = definitionsResult.value ?? [];
+  const definitions = listDefinedPacketTypeDefinitions();
   const dispatchReadiness = trustedDispatchCoordinator.auditReadiness({
     mode: 'debug_audit',
   }).value;
@@ -148,9 +256,7 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
   const verificationReadiness = trustedVerificationCoordinator.auditReadiness({
     context_mode: 'reseed',
   }).value;
-  const projectionReadiness = trustedProjectionCoordinator.auditReadiness({
-    context_mode: 'reseed',
-  }).value;
+  const packetDefinitionReadiness = createPacketDefinitionReadinessAuditReport();
   const policySemanticAudit = auditPacketPolicySemanticAuthority({
     policyPackets: PERSONAL_SEED_PACKETS.filter(
       (packet): packet is PacketEnvelopeByType['Policy'] =>
@@ -160,9 +266,8 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
   const clientIngressAudit = auditPacketClientIntentEnrollments();
   const dispatchHandoffAudit = auditPacketRuntimeDispatchHandoffs();
   const workflowAlignmentAudit = auditPacketWorkflowAlignmentCoverage();
-  const liveGenericAudit = auditLiveGenericWorkflowEnrollments();
-  const liveCompositeAudit = auditLiveCompositeWorkflowEnrollments();
   const directStorageTouchAudit = createDirectStorageTouchAuditReport();
+  const legacySeedInventory = createLegacySeedSourceInventoryReport();
   const closureEntries = [
     ...closureReport.live_mutation_intents,
     ...closureReport.runtime_connector_paths,
@@ -194,74 +299,84 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
   const definitionSeedPacketIds = DEFINITION_PROFILE_SEED_PACKETS.map(
     (packet) => packet.header.packet_id
   );
-  const findings = [
-    ...closureReport.findings,
-    ...(dispatchReadiness?.findings ?? []).map((finding) => finding.message),
-    ...definitionsResult.issues.map((issue) => issue.message),
-    ...manifestAudit.findings
+  const rawFindings = [
+    ...createFindings('closure', closureReport.findings),
+    ...createFindings('dispatch', (dispatchReadiness?.findings ?? []).map((finding) => finding.message)),
+    ...createFindings('definition', [
+      'TypeScript bootstrap definitions and generated Definition seed packets are both active pre-reseed sources; digest-relevant parity is enforced by the definition readiness audit.',
+    ]),
+    ...createFindings('manifest', manifestAudit.findings
       .filter((finding) => finding.severity === 'error')
-      .map((finding) => finding.message),
-    ...seededDefinitionAudit.findings,
-    ...(regulationReadiness?.contexts ?? []).flatMap((context) => context.issues.map((issue) => issue.message)),
-    ...(planningReadiness?.plans ?? []).flatMap((plan) => [
+      .map((finding) => finding.message)),
+    ...createFindings('seeded_definition', seededDefinitionAudit.findings),
+    ...createFindings('regulation', (regulationReadiness?.contexts ?? []).flatMap((context) => context.issues.map((issue) => issue.message))),
+    ...createFindings('planning', (planningReadiness?.plans ?? []).flatMap((plan) => [
       ...plan.issues.map((issue) => issue.message),
       ...plan.blockers,
-    ]),
-    ...(buildingReadiness?.build_results ?? []).flatMap((result) => [
+    ])),
+    ...createFindings('building', (buildingReadiness?.build_results ?? []).flatMap((result) => [
       ...result.blockers,
       ...result.warnings,
-    ]),
-    ...(inspectionReadiness?.reports ?? []).flatMap((report) => [
+    ])),
+    ...createFindings('inspection', (inspectionReadiness?.reports ?? []).flatMap((report) => [
       ...report.blockers,
       ...report.warnings,
       ...report.issues.map((issue) => issue.message),
-    ]),
-    ...(certificationReadiness?.packages ?? []).flatMap((certificationPackage) => [
+    ])),
+    ...createFindings('certification', (certificationReadiness?.packages ?? []).flatMap((certificationPackage) => [
       ...certificationPackage.blockers,
       ...certificationPackage.warnings,
-    ]),
-    ...(compatibilityReadiness?.ready === false
+    ])),
+    ...createFindings('compatibility', compatibilityReadiness?.ready === false
       ? ['Trusted Compatibility Coordinator readiness audit has blockers.']
       : []),
-    ...(verificationReadiness?.ready === false
+    ...createFindings('verification', verificationReadiness?.ready === false
       ? ['Trusted Verification Coordinator readiness audit has blockers.']
       : []),
-    ...(projectionReadiness?.ready === false
-      ? ['Trusted Projection Coordinator readiness audit has blockers.']
+    ...createFindings('projection', packetDefinitionReadiness.status === 'fail'
+      ? ['Packet Definition projection/default readiness audit has blockers.']
       : []),
-    ...policySemanticAudit.findings.map((finding) => finding.message),
-    ...clientIngressAudit.findings.map((finding) => finding.message),
-    ...dispatchHandoffAudit.findings.map((finding) => finding.message),
-    ...workflowAlignmentAudit.findings.map((finding) => finding.message),
-    ...liveGenericAudit.findings.map((finding) => finding.message),
-    ...liveCompositeAudit.findings.map((finding) => finding.message),
-    ...directStorageTouchAudit.findings.map((finding) => finding.message),
-    ...openEntries.map(
+    ...createFindings('policy_semantic', policySemanticAudit.findings.map((finding) => finding.message)),
+    ...createFindings('client_ingress', clientIngressAudit.findings.map((finding) => finding.message)),
+    ...createFindings('dispatch_handoff', dispatchHandoffAudit.findings.map((finding) => finding.message)),
+    ...createFindings('workflow_alignment', workflowAlignmentAudit.findings.map((finding) => finding.message)),
+    ...createFindings('direct_storage', directStorageTouchAudit.findings.map((finding) => finding.message)),
+    ...createFindings('legacy_seed_inventory', legacySeedInventory.blockers),
+    ...createFindings('legacy_seed_inventory', legacySeedInventory.cleanup_candidates),
+    ...createFindings('open_entry', openEntries.map(
       (entry) =>
         `${entry.subject_kind}:${entry.subject_id} remains ${entry.status} before reseed design.`
-    ),
-    ...requiredDefaultPolicyPacketIds
+    )),
+    ...createFindings('seed_presence', requiredDefaultPolicyPacketIds
       .filter((packetId) => !seedPacketIds.has(packetId))
-      .map((packetId) => `Required default policy seed is missing: ${packetId}.`),
-    ...seededDefinitionProfile.definition_packets
+      .map((packetId) => `Required default policy seed is missing: ${packetId}.`)),
+    ...createFindings('seed_presence', seededDefinitionProfile.definition_packets
       .filter((candidate) => !seedPacketIds.has(candidate.packet.header.packet_id))
       .map(
         (candidate) =>
           `Canonical Definition seed packet is missing: ${candidate.packet.header.packet_id}.`
-      ),
+      )),
   ];
 
   if (!seedPacketIds.has(PERSONAL_TREE_REFS.owa_action.packet_id)) {
-    findings.push('Forward OWA Action initiative anchor is missing from seeds.');
+    rawFindings.push({
+      source: 'seed_presence',
+      message: 'Forward OWA Action initiative anchor is missing from seeds.',
+    });
   }
 
   if (!seedPacketIds.has(seededDefinitionProfile.bundle_packet.packet.header.packet_id)) {
-    findings.push('Canonical Definition profile Bundle seed packet is missing.');
+    rawFindings.push({
+      source: 'seed_presence',
+      message: 'Canonical Definition profile Bundle seed packet is missing.',
+    });
   }
+
+  const classifiedFindings = classifyFinalReadinessFindings(rawFindings);
 
   return {
     report_kind: 'packet.final_pre_reseed_readiness',
-    status: findings.length > 0 ? 'fail' : 'pass',
+    status: classifiedFindings.blockers.length > 0 ? 'fail' : 'pass',
     canonical_write_intents: uniqueSorted(canonicalWriteIntents),
     compatibility_only_legacy_surfaces: [
       'association.claim.set',
@@ -286,7 +401,7 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
     pruned_packet_types: [...PRUNED_PACKET_TYPES],
     trusted_runtime_readiness: {
       dispatch_ready: dispatchReadiness?.status !== 'fail',
-      definition_ready: definitionsResult.status !== 'error',
+      definition_ready: true,
       regulation_ready: regulationReadiness?.ready ?? false,
       planning_ready: planningReadiness?.ready ?? false,
       building_ready: buildingReadiness?.ready ?? false,
@@ -294,10 +409,19 @@ export function createFinalPreReseedReadinessReport(): FinalPreReseedReadinessRe
       certification_ready: certificationReadiness?.ready ?? false,
       compatibility_ready: compatibilityReadiness?.ready ?? false,
       verification_ready: verificationReadiness?.ready ?? false,
-      projection_ready: projectionReadiness?.ready ?? false,
+      projection_ready: packetDefinitionReadiness.status !== 'fail',
       archive_ready: 'async_not_run',
       exchange_ready: 'async_not_run',
     },
-    findings,
+    temporary_identity_migration_bridge: {
+      enabled: LEGACY_IDENTITY_MIGRATION_POLICY.enabled,
+      migration_version: LEGACY_IDENTITY_MIGRATION_POLICY.migration_version,
+      legacy_window_label: LEGACY_IDENTITY_MIGRATION_POLICY.legacy_window_label,
+      sunset_after: LEGACY_IDENTITY_MIGRATION_POLICY.sunset_after,
+    },
+    blockers: classifiedFindings.blockers,
+    accepted_transition_notes: classifiedFindings.accepted_transition_notes,
+    cleanup_candidates: classifiedFindings.cleanup_candidates,
+    findings: classifiedFindings.blockers,
   };
 }

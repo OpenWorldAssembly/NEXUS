@@ -140,6 +140,38 @@ test('discussion definition seed carries aggregate projection descriptors', () =
   );
 });
 
+test('seeded projection definition parts carry rich descriptors for reseed read models', () => {
+  const candidates = buildDefinitionPacketSeedCandidates();
+  const projectionParts = candidates.filter(
+    (candidate) => candidate.part_subtype === 'packet_projection_descriptor'
+  );
+
+  assert.ok(projectionParts.length > 0);
+
+  for (const candidate of projectionParts) {
+    const body = candidate.body_candidate.body;
+    assert.equal(body.subtype, 'packet_projection_descriptor');
+    assert.ok(body.projection_keys.length > 0, candidate.part_id);
+
+    if (candidate.defines_packet_type === 'Bundle' || candidate.defines_packet_type === 'Definition') {
+      continue;
+    }
+
+    assert.ok(body.projection_descriptors.length > 0, candidate.part_id);
+    assert.ok(
+      body.projection_descriptors.some((descriptor) => {
+        const record = descriptor as Record<string, unknown>;
+        return (
+          Array.isArray(record.field_descriptors) &&
+          record.field_descriptors.length > 0 &&
+          record.layout !== undefined
+        );
+      }),
+      candidate.part_id
+    );
+  }
+});
+
 test('discussion definition seed carries default surface recipe descriptors', () => {
   const candidates = buildDefinitionPacketSeedCandidates();
   const discussionDefaultsPart = candidates.find(

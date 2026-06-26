@@ -11,7 +11,7 @@ const warnings = report.findings.filter((finding) => finding.severity === 'warni
 const infos = report.findings.filter((finding) => finding.severity === 'info');
 
 console.log(
-  `Packet definition readiness audit: ${report.status}. ${report.entries.length} packet type(s), ${errors.length} error(s), ${warnings.length} warning(s), ${infos.length} info note(s).`
+  `Packet definition readiness audit: ${report.status}. ${report.entries.length} packet type(s), ${report.subtype_entries.length} subtype row(s), ${errors.length} error(s), ${warnings.length} warning(s), ${infos.length} info note(s).`
 );
 console.log(`Buckets: ${Object.entries(report.bucket_counts).map(([key, value]) => `${key}=${value}`).join(', ')}.`);
 console.log(`Layers: ${Object.entries(report.layer_counts).map(([key, value]) => `${key}=${value}`).join(', ')}.`);

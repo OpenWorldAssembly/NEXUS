@@ -92,6 +92,14 @@ Runtime intake now exposes `trustedDispatchCoordinator` as the canonical front d
 
 ## Definition-Driven Build And Projection Direction
 
+## Pre-Reseed Definition Completeness Gate
+
+The final definition-readiness gate before reseed is now subtype-aware. `npm run audit:packet-definition-readiness` checks every active packet type and declared subtype for Definition part coverage, parseable `defaults_definition` material, parseable `packet_projection_descriptor` material, generated Definition seed parity, and agreement between TypeScript fallback descriptors and packet-shaped seed candidates.
+
+TypeScript packet definitions remain bootstrap/compiler fallback material for now. Stored Definition and Bundle packets are reseed truth material, but archive-backed active Definition profile resolution is still a later profile-compiler step. The audit is therefore a consistency gate between fallback material and generated seed packets rather than a runtime replacement of trusted local definition code.
+
+Defaults and projection are explicitly audited at subtype depth. Semantic packet subtypes must resolve non-empty defaults and projection descriptor coverage. `Definition` keeps intentionally minimal bootstrap projection metadata because it is the cold-start definition kernel, and `Bundle` keeps intentionally minimal carrier/import-export projection metadata. Bundle carrier labels such as `export`, `sync`, and `archive` are classified as declared transport labels rather than separately seeded semantic Definition profiles. Those are acceptable pre-reseed transition notes, not blockers.
+
 ## Dispatch-Owned Write Pipeline
 
 The live `/api/nexus/mutations/prepare` and `/api/nexus/mutations/finalize` routes now call `trustedDispatchCoordinator.prepareEnrolledMutationWrite` and `trustedDispatchCoordinator.finalizeEnrolledMutationWrite`. There is no separate Write Coordinator. Dispatch owns route-facing lifecycle orchestration, then asks the existing trusted coordinator organs to do their jobs.
@@ -456,6 +464,10 @@ The final wrap-up retires the remaining live legacy bridge mutation intents from
 Canonical writes now enter through `relation.association.add`, `relation.association.clear`, and `relation.residence.add`. Historical legacy claim material remains readable/importable/projectable through compatibility surfaces, but the signed mutation prepare corridor, client ingress registry, handoff coverage, and live write-policy action list no longer enroll the legacy bridge intents.
 
 The final readiness handoff lives in runtime audit code as `createFinalPreReseedReadinessReport()`. It records canonical write intents, compatibility-only legacy surfaces, OWA seed/default anchors, required default policies, discussion default packets, canonical definition packet types, and out-of-scope never-live packet types. Reseed design should start from that report rather than rediscovering chapter state from scattered modernization audits.
+
+The final handoff now separates report output into `blockers`, `accepted_transition_notes`, and `cleanup_candidates`. `findings` remains a temporary compatibility alias for `blockers`, so the reseed gate passes only when `blockers.length === 0`. Accepted transition notes keep known bootstrap states visible without blocking reseed: TypeScript fallback definitions and generated Definition seed packets are both active pre-reseed sources, Definition and Bundle keep intentionally minimal projection metadata, Bundle transport labels are carrier labels rather than semantic subtypes, and synthetic coordinator debug-audit candidates are not treated as live write failures.
+
+The final gate also includes a legacy seed/source inventory. It scans current seed, builder, discussion default, compatibility, runtime helper, and readiness doc material for pruned packet type names, old seed-batch labels, old Vote/Attestation naming, retired mutation intents, split discussion helper names, and `parent_scope` seed edges. The inventory classifies each hit as fresh canon, compatibility-read-only, test-fixture-only, stale seed candidate, or remove-now. No remove-now artifact was deleted in this pass; `parent_scope` remains an explicit cleanup candidate because it is still present as a compatibility/read-model edge rather than an active fresh-canon seed requirement.
 
 ## Definition Packetization and Preference Dispatch Promotion
 

@@ -8,8 +8,10 @@ import {
 } from './pre-reseed-modernization-closure.ts';
 import { listMutationIntentDescriptors } from './mutation-intent-registry.ts';
 
+const preReseedClosureReport = createPreReseedModernizationClosureReport();
+
 function allEntries(): PreReseedClosureLedgerEntry[] {
-  const report = createPreReseedModernizationClosureReport();
+  const report = preReseedClosureReport;
 
   return [
     ...report.live_mutation_intents,
@@ -26,7 +28,7 @@ function allEntries(): PreReseedClosureLedgerEntry[] {
 }
 
 test('pre-reseed closure report passes without vague gap language', () => {
-  const report = createPreReseedModernizationClosureReport();
+  const report = preReseedClosureReport;
 
   assert.equal(report.status, 'pass');
   assert.deepEqual(report.findings, []);
@@ -34,7 +36,7 @@ test('pre-reseed closure report passes without vague gap language', () => {
 });
 
 test('every live mutation intent has a strict pre-reseed closure status', () => {
-  const report = createPreReseedModernizationClosureReport();
+  const report = preReseedClosureReport;
   const closureByIntent = new Map(
     report.live_mutation_intents.map((entry) => [entry.subject_id, entry])
   );
@@ -54,7 +56,7 @@ test('every live mutation intent has a strict pre-reseed closure status', () => 
 });
 
 test('follow set and clear are closed as the first live generic workflow promotion', () => {
-  const report = createPreReseedModernizationClosureReport();
+  const report = preReseedClosureReport;
   const closureByIntent = new Map(
     report.live_mutation_intents.map((entry) => [entry.subject_id, entry])
   );
@@ -72,7 +74,7 @@ test('follow set and clear are closed as the first live generic workflow promoti
 });
 
 test('remaining direct relation and attestation operation paths are closed', () => {
-  const report = createPreReseedModernizationClosureReport();
+  const report = preReseedClosureReport;
   const closureByIntent = new Map(
     report.live_mutation_intents.map((entry) => [entry.subject_id, entry])
   );
@@ -83,7 +85,7 @@ test('remaining direct relation and attestation operation paths are closed', () 
     'relation.residence.add',
     'relation.participation.add',
     'relation.participation.clear',
-    'attestation.vote.set',
+    'reaction.attestation.set',
   ] as const) {
     const entry = closureByIntent.get(mutationIntent);
 
@@ -94,7 +96,7 @@ test('remaining direct relation and attestation operation paths are closed', () 
 });
 
 test('legacy bridge mutation intents are retired before reseed readiness', () => {
-  const report = createPreReseedModernizationClosureReport();
+  const report = preReseedClosureReport;
   const mutationIntentIds = new Set(
     report.live_mutation_intents.map((entry) => entry.subject_id)
   );
@@ -105,7 +107,7 @@ test('legacy bridge mutation intents are retired before reseed readiness', () =>
 });
 
 test('composite workflow mutation intents are closed as live generic-composite work', () => {
-  const report = createPreReseedModernizationClosureReport();
+  const report = preReseedClosureReport;
   const closureByIntent = new Map(
     report.live_mutation_intents.map((entry) => [entry.subject_id, entry])
   );
@@ -129,7 +131,7 @@ test('composite workflow mutation intents are closed as live generic-composite w
 });
 
 test('composite workflow adapters are tracked as closed definition extraction work', () => {
-  const report = createPreReseedModernizationClosureReport();
+  const report = preReseedClosureReport;
   const adapterStatus = new Map(
     report.composite_workflow_adapters.map((entry) => [
       entry.subject_id,
@@ -172,7 +174,7 @@ test('composite workflow adapters are tracked as closed definition extraction wo
 });
 
 test('active packet types are the only packet type closure subjects', () => {
-  const report = createPreReseedModernizationClosureReport();
+  const report = preReseedClosureReport;
   const typeStatus = new Map(
     report.packet_types.map((entry) => [entry.subject_id, entry.status])
   );

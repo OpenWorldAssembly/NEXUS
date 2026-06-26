@@ -13,14 +13,45 @@ const RETIRED_LEGACY_MUTATION_INTENTS = [
   'residence.claim.set',
 ] as const;
 
-test('final pre-reseed readiness report passes with no open in-scope work', () => {
-  const report = createFinalPreReseedReadinessReport();
+const finalReadinessReport = createFinalPreReseedReadinessReport();
 
-  assert.equal(report.status, 'pass', JSON.stringify(report.findings, null, 2));
+test('final pre-reseed readiness report passes with no open in-scope work', () => {
+  const report = finalReadinessReport;
+
+  assert.equal(report.status, 'pass', JSON.stringify(report.blockers, null, 2));
+  assert.deepEqual(report.blockers, []);
   assert.deepEqual(report.findings, []);
   assert.ok(report.canonical_write_intents.includes('relation.residence.add'));
   assert.ok(report.canonical_write_intents.includes('relation.association.add'));
   assert.ok(report.canonical_write_intents.includes('relation.association.clear'));
+});
+
+test('final readiness handoff keeps accepted transitions visible but non-blocking', () => {
+  const report = finalReadinessReport;
+
+  assert.ok(report.accepted_transition_notes.length > 0);
+  assert.ok(
+    report.accepted_transition_notes.some((note) =>
+      note.includes('TypeScript bootstrap definitions and generated Definition seed packets')
+    )
+  );
+  assert.ok(
+    report.accepted_transition_notes.some((note) =>
+      note.includes('canonical metadata but not runtime-ready')
+    )
+  );
+  assert.equal(report.blockers.length, 0);
+});
+
+test('final readiness handoff classifies legacy seed cleanup candidates', () => {
+  const report = finalReadinessReport;
+
+  assert.ok(report.cleanup_candidates.length > 0);
+  assert.ok(
+    report.cleanup_candidates.some((candidate) =>
+      candidate.includes('parent_scope')
+    )
+  );
 });
 
 test('retired legacy mutation intents are absent from live registries', () => {
@@ -50,7 +81,7 @@ test('retired legacy mutation intents are absent from live registries', () => {
 });
 
 test('final readiness handoff records compatibility-only legacy surfaces', () => {
-  const report = createFinalPreReseedReadinessReport();
+  const report = finalReadinessReport;
 
   for (const legacySurface of [
     'association.claim.set',
@@ -67,7 +98,7 @@ test('final readiness handoff records compatibility-only legacy surfaces', () =>
 });
 
 test('final readiness handoff records seed/default anchors and discussion defaults', () => {
-  const report = createFinalPreReseedReadinessReport();
+  const report = finalReadinessReport;
 
   assert.ok(report.seed_default_anchor_packet_ids.includes('nexus:action/owa'));
   assert.ok(
@@ -84,7 +115,7 @@ test('final readiness handoff records seed/default anchors and discussion defaul
 });
 
 test('final readiness handoff records canonical Definition and Bundle seed material', () => {
-  const report = createFinalPreReseedReadinessReport();
+  const report = finalReadinessReport;
 
   assert.ok(report.seeded_definition_packet_count > 0);
   assert.ok(
@@ -101,7 +132,7 @@ test('final readiness handoff records canonical Definition and Bundle seed mater
 
 
 test('pruned packet types do not overlap the active packet ontology', () => {
-  const report = createFinalPreReseedReadinessReport();
+  const report = finalReadinessReport;
   const activeTypes = new Set<string>(PACKET_TYPES);
 
   for (const packetType of report.pruned_packet_types) {

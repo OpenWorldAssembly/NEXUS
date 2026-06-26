@@ -307,6 +307,12 @@ export interface NexusLocalIdentityPreview {
   claim_status: 'ephemeral_guest' | 'persistent_guest' | 'claimed';
   stored_kind: 'persistent_guest' | 'claimed';
   updated_at: string;
+  migration_readiness?:
+    | 'current'
+    | 'migration_required'
+    | 'locked_candidate'
+    | 'unsupported_legacy'
+    | 'corrupt_or_unreadable';
 }
 
 export interface NexusIdentityMutationEnvelope {

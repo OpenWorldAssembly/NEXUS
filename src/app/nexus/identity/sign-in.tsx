@@ -29,7 +29,10 @@ import {
   useNexusLoading,
 } from '@app/components/nexus/ui';
 import { NexusTabRail, type NexusTabNode } from '@app/components/nexus/ui/tabs/nexus-tabs';
-import type { NexusIdentitySearchResultPayload } from '@runtime/nexus/nexus-api-types';
+import type {
+  NexusIdentitySearchResultPayload,
+  NexusLocalIdentityPreview,
+} from '@runtime/nexus/nexus-api-types';
 import { fetchNexusIdentitySearchPayload } from '@runtime/nexus/nexus-query-api';
 import {
   validateEncryptedBundleJson,
@@ -37,6 +40,10 @@ import {
 } from '@runtime/nexus/identity-validation';
 
 type SignInMode = 'local' | 'passkey' | 'import';
+
+type LocalIdentityOption = NexusIdentitySearchResultPayload & {
+  migration_readiness?: NonNullable<NexusLocalIdentityPreview['migration_readiness']>;
+};
 
 const IDENTITY_MODE_TAB_NODES: NexusTabNode[] = [
   { id: 'local', label: 'Saved / Find identity', shortLabel: 'Saved / Find' },
@@ -61,9 +68,9 @@ function getStorageModeCopy(
 }
 
 function dedupeIdentityOptions(
-  identities: NexusIdentitySearchResultPayload[]
-): NexusIdentitySearchResultPayload[] {
-  const identityMap = new Map<string, NexusIdentitySearchResultPayload>();
+  identities: LocalIdentityOption[]
+): LocalIdentityOption[] {
+  const identityMap = new Map<string, LocalIdentityOption>();
 
   identities.forEach((identity) => {
     const currentIdentity = identityMap.get(identity.actor_packet_id);
@@ -77,6 +84,8 @@ function dedupeIdentityOptions(
       ...currentIdentity,
       ...identity,
       saved_on_device: currentIdentity.saved_on_device || identity.saved_on_device,
+      migration_readiness:
+        currentIdentity.migration_readiness ?? identity.migration_readiness,
       display_alias:
         identity.display_alias || currentIdentity.display_alias,
     });
@@ -106,6 +115,7 @@ export default function NexusIdentitySignInPage() {
     rememberClaimedSessions,
     restoreIdentityFromBundle,
     signInStoredIdentity,
+    migrateStoredIdentity,
     signInWithPasskey,
     storedIdentityPreviews,
   } = useIdentityShell();
@@ -215,6 +225,7 @@ export default function NexusIdentitySignInPage() {
           claim_status: identity.claim_status,
           saved_on_device: true,
           match_source: 'alias' as const,
+          migration_readiness: identity.migration_readiness,
         }))
       );
     }
@@ -222,7 +233,7 @@ export default function NexusIdentitySignInPage() {
     return dedupeIdentityOptions(identityResults);
   }, [claimedIdentities, identityResults, normalizedIdentityQuery]);
   const selectableIdentityMap = useMemo(() => {
-    const nextMap = new Map<string, NexusIdentitySearchResultPayload>();
+    const nextMap = new Map<string, LocalIdentityOption>();
 
     claimedIdentities.forEach((identity) => {
       nextMap.set(identity.actor_packet_id, {
@@ -231,6 +242,7 @@ export default function NexusIdentitySignInPage() {
         claim_status: identity.claim_status,
         saved_on_device: true,
         match_source: 'alias',
+        migration_readiness: identity.migration_readiness,
       });
     });
     identityResults.forEach((identity) => {
@@ -263,9 +275,16 @@ export default function NexusIdentitySignInPage() {
   const showSelectedIdentityCard = selectedIdentity !== null && !showIdentityResults;
   const selectedIdentityIsCurrentActor =
     selectedIdentity?.actor_packet_id === currentActorPacketId;
+  const selectedIdentityNeedsMigration =
+    selectedIdentity?.saved_on_device === true &&
+    selectedIdentity.migration_readiness === 'migration_required';
   const bundleActionLabel =
     isBusy === 'bundle'
-      ? 'Signing in...'
+      ? selectedIdentityNeedsMigration
+        ? 'Migrating...'
+        : 'Signing in...'
+      : selectedIdentityNeedsMigration
+        ? 'Migrate and sign in'
       : selectedIdentityIsCurrentActor && currentMode === 'claimed' && !hasActiveClaimedSession
         ? 'Resume this identity'
         : selectedIdentityIsCurrentActor &&
@@ -291,11 +310,19 @@ export default function NexusIdentitySignInPage() {
     setErrorMessage(null);
 
     try {
-      await signInStoredIdentity({
-        actorPacketId: selectedIdentityId,
-        passphrase,
-        keepMeLoggedIn: rememberClaimedSessions,
-      });
+      if (selectedIdentityNeedsMigration) {
+        await migrateStoredIdentity({
+          actorPacketId: selectedIdentityId,
+          passphrase,
+          keepMeLoggedIn: rememberClaimedSessions,
+        });
+      } else {
+        await signInStoredIdentity({
+          actorPacketId: selectedIdentityId,
+          passphrase,
+          keepMeLoggedIn: rememberClaimedSessions,
+        });
+      }
       navigateAfterIdentitySuccess();
     } catch (error) {
       setErrorMessage(
@@ -416,7 +443,9 @@ export default function NexusIdentitySignInPage() {
                     {selectedIdentity.actor_packet_id}
                   </Text>
                   <Text className={appearance.itemMetaClass}>
-                    {selectedIdentity.saved_on_device
+                    {selectedIdentityNeedsMigration
+                      ? 'Needs migration on this device'
+                      : selectedIdentity.saved_on_device
                       ? 'Saved on this device'
                       : 'Known in Nexus, but not saved on this device'}
                   </Text>
@@ -459,7 +488,9 @@ export default function NexusIdentitySignInPage() {
                         {identity.actor_packet_id}
                       </Text>
                       <Text className={appearance.itemMetaClass}>
-                        {identity.saved_on_device
+                        {identity.migration_readiness === 'migration_required'
+                          ? 'Needs migration on this device'
+                          : identity.saved_on_device
                           ? 'Saved on this device'
                           : 'Known in Nexus only'}
                       </Text>

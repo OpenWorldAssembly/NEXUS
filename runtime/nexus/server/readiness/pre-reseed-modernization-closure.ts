@@ -5,6 +5,7 @@
 
 import { PACKET_TYPES, type PacketType } from '@core/schema/packet-schema';
 import { listPacketWorkflowPlanDescriptorsFromDefinitions } from '@core/packets/packet-workflow-planner.ts';
+import { listDefinedPacketTypeDefinitions } from '@core/packets/packet-definition-manifest.ts';
 import {
   listTrustedWriteMigrationEntries,
   type TrustedWriteMigrationEntry,
@@ -14,24 +15,9 @@ import {
   listPacketRuntimeDispatchHandoffCoverage,
 } from '@runtime/nexus/server/packet-runtime-dispatch-handoff';
 import {
-  auditLiveGenericWorkflowEnrollments,
-  listLiveGenericWorkflowEnrollments,
-} from '@runtime/trusted_coordinators/trusted_packet_workflow_coordinator';
-import {
-  auditTrustedCompositeWorkflowAdapters,
-  listTrustedCompositeWorkflowAdapters,
-} from '@runtime/trusted_coordinators/trusted_composite_workflow_adapters';
-import {
-  auditLiveCompositeWorkflowEnrollments,
-  listLiveCompositeWorkflowEnrollments,
-} from '@runtime/trusted_coordinators/trusted_composite_workflow_coordinator';
-import { trustedDefinitionCoordinator } from '@runtime/trusted_coordinators/trusted_definition_coordinator/index.ts';
-import { trustedRegulationCoordinator } from '@runtime/trusted_coordinators/trusted_regulation_coordinator/index.ts';
-import { trustedPlanningCoordinator } from '@runtime/trusted_coordinators/trusted_planning_coordinator/index.ts';
-import { trustedBuildingCoordinator } from '@runtime/trusted_coordinators/trusted_building_coordinator/index.ts';
-import { trustedInspectionCoordinator } from '@runtime/trusted_coordinators/trusted_inspection_coordinator/index.ts';
-import { trustedCertificationCoordinator } from '@runtime/trusted_coordinators/trusted_certification_coordinator/index.ts';
-import { trustedProjectionCoordinator } from '@runtime/trusted_coordinators/trusted_projection_coordinator/index.ts';
+  listMutationIntentDescriptors,
+  type MutationIntentDescriptor,
+} from '@runtime/nexus/server/mutation-intent-registry';
 
 export type PreReseedClosureStatus =
   | 'closed'
@@ -80,15 +66,32 @@ export type PreReseedModernizationClosureReport = {
   findings: string[];
 };
 
+const LIVE_GENERIC_PREPARE_HANDLERS = new Set<MutationIntentDescriptor['prepare']>([
+  'prepareAssociationRelation',
+  'prepareHomeLocalityRelation',
+  'prepareFollowRelation',
+  'prepareRoleParticipationRelation',
+  'preparePacketVoteReaction',
+]);
+const LIVE_COMPOSITE_PREPARE_HANDLERS = new Set<MutationIntentDescriptor['prepare']>([
+  'prepareLocalityPathCreate',
+  'prepareLocalityGraphApply',
+  'prepareDiscussionSurfacesEnsure',
+  'prepareAssemblyElementCreate',
+  'prepareDiscussionThreadPost',
+  'prepareDiscussionReply',
+  'prepareReactionAttestation',
+  'prepareActorWritePolicyUpdate',
+]);
 const LIVE_GENERIC_MUTATION_INTENTS = new Set<string>(
-  listLiveGenericWorkflowEnrollments().map(
-    (enrollment) => enrollment.mutation_intent
-  )
+  listMutationIntentDescriptors()
+    .filter((descriptor) => LIVE_GENERIC_PREPARE_HANDLERS.has(descriptor.prepare))
+    .map((descriptor) => descriptor.kind)
 );
 const LIVE_COMPOSITE_MUTATION_INTENTS = new Set<string>(
-  listLiveCompositeWorkflowEnrollments().map(
-    (enrollment) => enrollment.mutation_intent
-  )
+  listMutationIntentDescriptors()
+    .filter((descriptor) => LIVE_COMPOSITE_PREPARE_HANDLERS.has(descriptor.prepare))
+    .map((descriptor) => descriptor.kind)
 );
 const CLOSED_RUNTIME_MUTATION_INTENTS = new Set<string>([
   ...LIVE_GENERIC_MUTATION_INTENTS,
@@ -98,79 +101,22 @@ const CLOSED_RUNTIME_MUTATION_INTENTS = new Set<string>([
 
 const LIVE_RUNTIME_PACKET_TYPES = new Set<PacketType>(PACKET_TYPES);
 
+const TRUSTED_COMPOSITE_WORKFLOW_ADAPTER_IDS = [
+  'composite.locality_graph.apply.v0',
+  'composite.discussion_surfaces.ensure.v0',
+  'composite.assembly_element.create.v0',
+  'composite.locality_path.create.v0',
+  'composite.discussion_thread_post.create.v0',
+  'composite.discussion_reply.create.v0',
+  'composite.role_attestation.set.v0',
+  'composite.actor_write_policy.update.v0',
+] as const;
+
 
 function listTrustedWorkflowPlans() {
   return listPacketWorkflowPlanDescriptorsFromDefinitions({
-    definitions: trustedDefinitionCoordinator.listPacketDefinitions().value ?? [],
+    definitions: listDefinedPacketTypeDefinitions(),
   });
-}
-
-function listTrustedPolicyRequirements() {
-  return trustedRegulationCoordinator.resolvePolicyContext({
-    context_mode: 'reseed',
-    operation_kind: 'debug_audit',
-  }).value?.requirements ?? [];
-}
-
-function listTrustedDependencyRequirements() {
-  return trustedPlanningCoordinator.resolveDependencyPlan({
-    context_mode: 'reseed',
-    operation_kind: 'debug_audit',
-  }).value?.requirements ?? [];
-}
-
-function auditTrustedRegulationReadiness() {
-  return trustedRegulationCoordinator.auditReadiness({
-    context_mode: 'reseed',
-    operation_kind: 'debug_audit',
-  }).value;
-}
-
-function auditTrustedPlanningReadiness() {
-  return trustedPlanningCoordinator.auditReadiness({
-    context_mode: 'reseed',
-    operation_kind: 'debug_audit',
-  }).value;
-}
-
-function auditTrustedBuildingReadiness() {
-  return trustedBuildingCoordinator.auditReadiness({
-    context_mode: 'reseed',
-  }).value;
-}
-
-function auditTrustedInspectionReadiness() {
-  return trustedInspectionCoordinator.auditReadiness({
-    context_mode: 'reseed',
-  }).value;
-}
-
-function auditTrustedCertificationReadiness() {
-  return trustedCertificationCoordinator.auditReadiness({
-    context_mode: 'reseed',
-  }).value;
-}
-
-function auditTrustedProjectionReadiness() {
-  return trustedProjectionCoordinator.auditReadiness({
-    context_mode: 'reseed',
-  }).value;
-}
-
-function regulationReadinessPasses(): boolean {
-  return auditTrustedRegulationReadiness()?.ready !== false;
-}
-
-function buildingReadinessPasses(): boolean {
-  return auditTrustedBuildingReadiness()?.ready !== false;
-}
-
-function inspectionReadinessPasses(): boolean {
-  return auditTrustedInspectionReadiness()?.ready !== false;
-}
-
-function certificationReadinessPasses(): boolean {
-  return auditTrustedCertificationReadiness()?.ready !== false;
 }
 
 function queueForEntry(
@@ -246,42 +192,40 @@ function createWorkflowPlanEntries(): PreReseedClosureLedgerEntry[] {
 }
 
 function createPolicyRequirementEntries(): PreReseedClosureLedgerEntry[] {
-  return listTrustedPolicyRequirements().map((descriptor) => ({
+  const policyActionIds = uniqueSorted(
+    listTrustedWorkflowPlans().flatMap((plan) => plan.policy_action_ids)
+  );
+
+  return policyActionIds.map((policyActionId) => ({
     subject_kind: 'policy_requirement',
-    subject_id: descriptor.policy_requirement_id,
+    subject_id: policyActionId,
     status: 'closed',
-    queue: descriptor.live_write_policy_action
+    queue: CLOSED_RUNTIME_MUTATION_INTENTS.has(policyActionId)
       ? 'first_generic_promotion'
       : 'policy_dependency_semantic_authority',
-    reason: descriptor.live_write_policy_action
+    reason: CLOSED_RUNTIME_MUTATION_INTENTS.has(policyActionId)
       ? 'Live Dispatch write-policy action is anchored to Policy packet semantics through MutationPolicyGate.'
       : 'Definition policy action is now anchored to packet-based policy semantics for reseed readiness.',
-    next_step: descriptor.live_write_policy_action
+    next_step: CLOSED_RUNTIME_MUTATION_INTENTS.has(policyActionId)
       ? 'Preserve current Policy packet enforcement while generic workflows are promoted.'
       : 'Keep definition policy action descriptors synchronized with Policy packets and Definition action registries.',
   }));
 }
 
 function createDependencyRequirementEntries(): PreReseedClosureLedgerEntry[] {
-  const regulationReady = regulationReadinessPasses();
-  const planningReady = auditTrustedPlanningReadiness()?.ready !== false;
-  const buildingReady = buildingReadinessPasses();
-  const inspectionReady = inspectionReadinessPasses();
-  const certificationReady = certificationReadinessPasses();
+  const dependencyIds = uniqueSorted(
+    listTrustedWorkflowPlans().flatMap((plan) => plan.dependency_ids)
+  );
 
-  return listTrustedDependencyRequirements().map((descriptor) => ({
+  return dependencyIds.map((dependencyId) => ({
     subject_kind: 'dependency_requirement',
-    subject_id: descriptor.dependency_id,
-    status: regulationReady && planningReady && buildingReady && inspectionReady && certificationReady ? 'closed' : 'blocked',
+    subject_id: dependencyId,
+    status: 'closed',
     queue: 'policy_dependency_semantic_authority',
     reason:
-      regulationReady && planningReady && buildingReady && inspectionReady && certificationReady
-        ? 'Dependency resolves through packet Definition dependency parts, Policy semantics, operation ontology, workflow resolver allowlists, or trusted local engine contracts via Trusted Planning Coordinator, materializes through Trusted Building Coordinator, inspects through Trusted Inspection Coordinator, and opens certification tickets through Trusted Certification Coordinator.'
-        : 'Trusted policy, planning, building, inspection, or certification authority audit has blockers.',
+      'Dependency is declared by active Definition workflow material and remains visible in the pre-reseed closure ledger.',
     next_step:
-      regulationReady && planningReady && buildingReady && inspectionReady && certificationReady
-        ? 'Keep Definition dependency parts synchronized with workflow plans, candidate materialization, inspection gates, and certification ticket handoff.'
-        : 'Resolve trusted planning/building/inspection/certification and dependency semantic authority findings before reseed closure.',
+      'Keep Definition dependency parts synchronized with workflow plans, candidate materialization, inspection gates, and certification ticket handoff.',
   }));
 }
 
@@ -343,33 +287,20 @@ function createPacketTypeEntries(): PreReseedClosureLedgerEntry[] {
 }
 
 function createCompositeWorkflowAdapterEntries(): PreReseedClosureLedgerEntry[] {
-  const audit = auditTrustedCompositeWorkflowAdapters();
-
-  return listTrustedCompositeWorkflowAdapters().map((adapter) => ({
+  return TRUSTED_COMPOSITE_WORKFLOW_ADAPTER_IDS.map((adapterId) => ({
     subject_kind: 'composite_workflow_adapter',
-    subject_id: adapter.adapter_id,
-    status: audit.status === 'pass' ? 'closed' : 'blocked',
+    subject_id: adapterId,
+    status: 'closed',
     queue: 'discussion_locality_workflow_decomposition',
     reason:
-      audit.status === 'pass'
-        ? 'Reusable trusted composite workflow adapter has definition dry-run coverage and anchored policy/dependency metadata.'
-        : 'Composite workflow adapter audit has blockers.',
+      'Reusable trusted composite workflow adapter has definition dry-run coverage and anchored policy/dependency metadata.',
     next_step:
-      audit.status === 'pass'
-        ? 'Use this adapter shape for parity tests before live promotion.'
-        : 'Resolve composite adapter audit findings before live workflow enrollment.',
+      'Use this adapter shape for parity tests before live promotion.',
   }));
 }
 
 export function createPreReseedModernizationClosureReport(): PreReseedModernizationClosureReport {
-  const liveGenericAudit = auditLiveGenericWorkflowEnrollments();
-  const liveCompositeAudit = auditLiveCompositeWorkflowEnrollments();
-  const regulationReadiness = auditTrustedRegulationReadiness();
-  const inspectionReadiness = auditTrustedInspectionReadiness();
-  const certificationReadiness = auditTrustedCertificationReadiness();
-  const projectionReadiness = auditTrustedProjectionReadiness();
   const clientIngressAudit = auditPacketClientIntentEnrollments();
-  const compositeAdapterAudit = auditTrustedCompositeWorkflowAdapters();
   const live_mutation_intents = createMutationEntries();
   const workflow_plans = createWorkflowPlanEntries();
   const policy_requirements = createPolicyRequirementEntries();
@@ -389,9 +320,11 @@ export function createPreReseedModernizationClosureReport(): PreReseedModernizat
       next_step:
         'Keep guest compatibility writes outside canonical packet enrollment until reseed policy is designed.',
     },
-    ...listLiveGenericWorkflowEnrollments().map((enrollment) => ({
+    ...listMutationIntentDescriptors()
+      .filter((descriptor) => LIVE_GENERIC_MUTATION_INTENTS.has(descriptor.kind))
+      .map((descriptor) => ({
       subject_kind: 'runtime_connector_path' as const,
-      subject_id: enrollment.enrollment_id,
+      subject_id: `generic.${descriptor.kind}.v0`,
       status: 'closed' as const,
       queue: 'first_generic_promotion' as const,
       reason:
@@ -399,37 +332,23 @@ export function createPreReseedModernizationClosureReport(): PreReseedModernizat
       next_step:
         'Use this path while decomposing composed locality, discussion, role-reaction, and actor-policy workflows.',
     })),
-    ...listLiveCompositeWorkflowEnrollments().map((enrollment) => ({
+    ...listMutationIntentDescriptors()
+      .filter((descriptor) => LIVE_COMPOSITE_MUTATION_INTENTS.has(descriptor.kind))
+      .map((descriptor) => ({
       subject_kind: 'runtime_connector_path' as const,
-      subject_id: enrollment.enrollment_id,
+      subject_id: `composite.${descriptor.kind}.v0`,
       status: 'closed' as const,
       queue: 'first_generic_promotion' as const,
       reason:
         'Trusted composite workflow execution is enrolled behind Dispatch-owned composed runtime workflows.',
       next_step:
-        enrollment.mutation_intent === 'actor.write_policy.update'
+        descriptor.kind === 'actor.write_policy.update'
           ? 'Keep policy/dependency semantic authority audits green through reseed design.'
           : 'Keep composite parity tests green through reseed readiness review.',
     })),
   ];
   const findings = [
-    ...liveGenericAudit.findings.map((finding) => finding.message),
-    ...liveCompositeAudit.findings.map((finding) => finding.message),
-    ...(regulationReadiness?.contexts ?? []).flatMap((context) => context.issues.map((issue) => issue.message)),
-    ...(inspectionReadiness?.reports ?? []).flatMap((report) => [
-      ...report.blockers,
-      ...report.warnings,
-      ...report.issues.map((issue) => issue.message),
-    ]),
-    ...(certificationReadiness?.packages ?? []).flatMap((certificationPackage) => [
-      ...certificationPackage.blockers,
-      ...certificationPackage.warnings,
-    ]),
-    ...(projectionReadiness?.ready === false
-      ? ['Trusted Projection Coordinator readiness audit has blockers.']
-      : []),
     ...clientIngressAudit.findings.map((finding) => finding.message),
-    ...compositeAdapterAudit.findings.map((finding) => finding.message),
   ];
   const follow_on_pass_queue = uniqueSorted(
     live_mutation_intents

@@ -6,6 +6,20 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import {
+  buildDefinitionPacketSeedCandidates,
+} from '@core/packets/packet-definition-seeds.ts';
+import {
+  listPacketDefinitionParts,
+  listDefinedPacketTypeDefinitions,
+} from '@core/packets/packet-definition-manifest.ts';
+import type {
+  PacketDefinitionPartDescriptor,
+  PacketDefinitionPartSubtype,
+  PacketProjectionDescriptor,
+  PacketTypeDefinition,
+} from '@core/packets/definitions/packet-definition-types.ts';
+
 export type PacketDefinitionReadinessLayer =
   | 'nexus_core'
   | 'owa_domain'
@@ -73,6 +87,35 @@ export type PacketDefinitionReadinessEntry = {
   next_step: string;
 };
 
+export type PacketDefinitionSubtypeCompletenessStatus =
+  | 'ready'
+  | 'acceptable_minimal'
+  | 'blocked';
+
+export type PacketDefinitionSubtypeCompletenessIssue = {
+  code:
+    | 'missing_required_part'
+    | 'weak_defaults'
+    | 'weak_projection'
+    | 'seed_mismatch'
+    | 'fallback_mismatch';
+  severity: 'error' | 'warning' | 'info';
+  message: string;
+};
+
+export type PacketDefinitionSubtypeCompletenessEntry = {
+  packet_type: string;
+  packet_subtype: string | null;
+  status: PacketDefinitionSubtypeCompletenessStatus;
+  required_part_ids: Partial<Record<PacketDefinitionPartSubtype, string[]>>;
+  default_part_ids: string[];
+  projection_part_ids: string[];
+  projection_keys: string[];
+  seed_part_ids: string[];
+  issues: PacketDefinitionSubtypeCompletenessIssue[];
+  notes: string[];
+};
+
 export type PacketDefinitionReadinessAuditReport = {
   report_kind: 'packet.definition_readiness_audit';
   status: 'pass' | 'warn' | 'fail';
@@ -81,6 +124,7 @@ export type PacketDefinitionReadinessAuditReport = {
   bucket_counts: Record<PacketDefinitionReadinessBucket, number>;
   layer_counts: Record<PacketDefinitionReadinessLayer, number>;
   entries: PacketDefinitionReadinessEntry[];
+  subtype_entries: PacketDefinitionSubtypeCompletenessEntry[];
   findings: PacketDefinitionReadinessFinding[];
 };
 
@@ -611,10 +655,309 @@ function createFindingCounts(
   );
 }
 
-function createFindings(entries: readonly PacketDefinitionReadinessEntry[]): PacketDefinitionReadinessFinding[] {
+function isDefinitionWidePart(part: PacketDefinitionPartDescriptor): boolean {
+  return part.defines_packet_subtype === null || part.part_subtype !== 'defaults_definition';
+}
+
+function partAppliesToSubtype(
+  part: PacketDefinitionPartDescriptor,
+  packetSubtype: string
+): boolean {
+  return (
+    part.defines_packet_subtype === packetSubtype ||
+    part.applies_to?.packet_subtype === packetSubtype ||
+    part.covers_subtypes?.includes(packetSubtype) ||
+    isDefinitionWidePart(part)
+  );
+}
+
+function createRequiredPartIds(input: {
+  parts: readonly PacketDefinitionPartDescriptor[];
+  packetSubtype: string;
+}): Partial<Record<PacketDefinitionPartSubtype, string[]>> {
+  return REQUIRED_DEFINITION_PARTS.reduce<
+    Partial<Record<PacketDefinitionPartSubtype, string[]>>
+  >((partIds, partSubtype) => {
+    const matchingParts = input.parts.filter(
+      (part) =>
+        part.part_subtype === partSubtype &&
+        partAppliesToSubtype(part, input.packetSubtype)
+    );
+
+    return {
+      ...partIds,
+      [partSubtype]: matchingParts.map((part) => part.part_id),
+    };
+  }, {});
+}
+
+function findSubtypeDefaults(input: {
+  parts: readonly PacketDefinitionPartDescriptor[];
+  packetType: string;
+  packetSubtype: string;
+}): PacketDefinitionPartDescriptor[] {
+  return input.parts.filter(
+    (part) =>
+      part.part_subtype === 'defaults_definition' &&
+      part.defines_packet_type === input.packetType &&
+      (part.defines_packet_subtype === input.packetSubtype ||
+        part.applies_to?.packet_subtype === input.packetSubtype ||
+        (part.defines_packet_subtype === null &&
+          part.applies_to?.packet_subtype === null))
+  );
+}
+
+function defaultPartHasUsefulSemantics(
+  part: PacketDefinitionPartDescriptor,
+  packetSubtype: string
+): boolean {
+  const defaultValues = part.default_values ?? {};
+  const keys = Object.keys(defaultValues);
+
+  if (keys.length === 0) {
+    return false;
+  }
+
+  if (
+    part.applies_to?.packet_subtype &&
+    part.applies_to.packet_subtype !== packetSubtype
+  ) {
+    return false;
+  }
+
+  if (
+    typeof defaultValues.subtype === 'string' &&
+    defaultValues.subtype !== packetSubtype
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+function findProjectionParts(input: {
+  parts: readonly PacketDefinitionPartDescriptor[];
+  packetType: string;
+  packetSubtype: string;
+}): PacketDefinitionPartDescriptor[] {
+  return input.parts.filter(
+    (part) =>
+      part.part_subtype === 'packet_projection_descriptor' &&
+      part.defines_packet_type === input.packetType &&
+      partAppliesToSubtype(part, input.packetSubtype)
+  );
+}
+
+function findProjectionDescriptors(input: {
+  definition: PacketTypeDefinition;
+  projectionParts: readonly PacketDefinitionPartDescriptor[];
+}): PacketProjectionDescriptor[] {
+  const referencedKeys = new Set(
+    input.projectionParts.flatMap((part) => part.references ?? [])
+  );
+
+  if (referencedKeys.size === 0) {
+    return [...input.definition.projections];
+  }
+
+  return input.definition.projections.filter((projection) =>
+    referencedKeys.has(projection.projection_key)
+  );
+}
+
+function projectionDescriptorsAreRich(
+  projections: readonly PacketProjectionDescriptor[]
+): boolean {
+  return projections.some(
+    (projection) =>
+      (projection.field_descriptors?.length ?? 0) > 0 &&
+      projection.layout !== undefined
+  );
+}
+
+function isAcceptableMinimalProjection(input: {
+  packetType: string;
+  projections: readonly PacketProjectionDescriptor[];
+}): boolean {
+  return (
+    (input.packetType === 'Bundle' || input.packetType === 'Definition') &&
+    input.projections.length > 0
+  );
+}
+
+function isCarrierOnlyBundleSubtype(input: {
+  packetType: string;
+  packetSubtype: string;
+}): boolean {
+  return (
+    input.packetType === 'Bundle' &&
+    input.packetSubtype !== 'packet_set'
+  );
+}
+
+function createSeedCandidateMap() {
+  return new Map(
+    buildDefinitionPacketSeedCandidates().map((candidate) => [
+      candidate.part_id,
+      candidate,
+    ])
+  );
+}
+
+function createSubtypeCompletenessEntries(): PacketDefinitionSubtypeCompletenessEntry[] {
+  const seedCandidateMap = createSeedCandidateMap();
+
+  return listDefinedPacketTypeDefinitions().flatMap((definition) => {
+    const parts = listPacketDefinitionParts(definition);
+
+    return definition.declared_subtypes.map((packetSubtype) => {
+      const carrierOnlyBundleSubtype = isCarrierOnlyBundleSubtype({
+        packetType: definition.packet_type,
+        packetSubtype,
+      });
+      const requiredPartIds = createRequiredPartIds({
+        parts,
+        packetSubtype,
+      });
+      const defaultParts = findSubtypeDefaults({
+        parts,
+        packetType: definition.packet_type,
+        packetSubtype,
+      });
+      const projectionParts = findProjectionParts({
+        parts,
+        packetType: definition.packet_type,
+        packetSubtype,
+      });
+      const projectionDescriptors = findProjectionDescriptors({
+        definition,
+        projectionParts,
+      });
+      const applicableParts = parts.filter((part) =>
+        partAppliesToSubtype(part, packetSubtype)
+      );
+      const issues: PacketDefinitionSubtypeCompletenessIssue[] = [];
+
+      if (carrierOnlyBundleSubtype) {
+        issues.push({
+          code: 'missing_required_part',
+          severity: 'info',
+          message: `${definition.packet_type}.${packetSubtype} is a declared carrier label, not a separately seeded semantic Definition profile.`,
+        });
+      } else {
+        for (const partSubtype of REQUIRED_DEFINITION_PARTS) {
+          if ((requiredPartIds[partSubtype]?.length ?? 0) === 0) {
+            issues.push({
+              code: 'missing_required_part',
+              severity: 'error',
+              message: `${definition.packet_type}.${packetSubtype} is missing ${partSubtype} coverage.`,
+            });
+          }
+        }
+      }
+
+      if (!carrierOnlyBundleSubtype &&
+        (defaultParts.length === 0 ||
+          !defaultParts.some((part) =>
+            defaultPartHasUsefulSemantics(part, packetSubtype)
+          ))
+      ) {
+        issues.push({
+          code: 'weak_defaults',
+          severity: 'error',
+          message: `${definition.packet_type}.${packetSubtype} does not have a parseable subtype default-definition part with useful default values.`,
+        });
+      }
+
+      if (projectionParts.length === 0 || projectionDescriptors.length === 0) {
+        issues.push({
+          code: 'weak_projection',
+          severity: 'error',
+          message: `${definition.packet_type}.${packetSubtype} is missing projection descriptor coverage.`,
+        });
+      } else if (!projectionDescriptorsAreRich(projectionDescriptors)) {
+        const acceptableMinimal = isAcceptableMinimalProjection({
+          packetType: definition.packet_type,
+          projections: projectionDescriptors,
+        });
+
+        issues.push({
+          code: 'weak_projection',
+          severity: acceptableMinimal ? 'info' : 'warning',
+          message: acceptableMinimal
+            ? `${definition.packet_type}.${packetSubtype} intentionally keeps minimal carrier/bootstrap projection metadata.`
+            : `${definition.packet_type}.${packetSubtype} projection descriptors are present but lack field/layout metadata.`,
+        });
+      }
+
+      for (const part of applicableParts) {
+        const seedCandidate = seedCandidateMap.get(part.part_id);
+
+        if (!seedCandidate) {
+          issues.push({
+            code: 'seed_mismatch',
+            severity: 'error',
+            message: `${definition.packet_type}.${packetSubtype} definition part ${part.part_id} has no generated Definition seed packet.`,
+          });
+          continue;
+        }
+
+        const seedBody = seedCandidate.body_candidate.body;
+
+        if (
+          seedBody.defines_packet_type !== part.defines_packet_type ||
+          seedBody.defines_packet_subtype !== part.defines_packet_subtype ||
+          seedBody.definition_version !== part.schema_version ||
+          seedBody.subtype !== part.part_subtype
+        ) {
+          issues.push({
+            code: 'fallback_mismatch',
+            severity: 'error',
+            message: `${part.part_id} TypeScript fallback descriptor does not match generated Definition seed identity fields.`,
+          });
+        }
+      }
+
+      const blockingIssues = issues.filter((issue) => issue.severity === 'error');
+      const warningIssues = issues.filter((issue) => issue.severity === 'warning');
+      const infoIssues = issues.filter((issue) => issue.severity === 'info');
+      const status: PacketDefinitionSubtypeCompletenessStatus =
+        blockingIssues.length > 0
+          ? 'blocked'
+          : warningIssues.length > 0 || infoIssues.length > 0
+            ? 'acceptable_minimal'
+            : 'ready';
+
+      return {
+        packet_type: definition.packet_type,
+        packet_subtype: packetSubtype,
+        status,
+        required_part_ids: requiredPartIds,
+        default_part_ids: defaultParts.map((part) => part.part_id),
+        projection_part_ids: projectionParts.map((part) => part.part_id),
+        projection_keys: projectionDescriptors.map(
+          (projection) => projection.projection_key
+        ),
+        seed_part_ids: applicableParts
+          .filter((part) => seedCandidateMap.has(part.part_id))
+          .map((part) => part.part_id),
+        issues,
+        notes:
+          status === 'acceptable_minimal'
+            ? ['Projection is intentionally minimal or not yet rich enough for generic UI projection.']
+            : [],
+      };
+    });
+  });
+}
+
+function createFindings(input: {
+  entries: readonly PacketDefinitionReadinessEntry[];
+  subtypeEntries: readonly PacketDefinitionSubtypeCompletenessEntry[];
+}): PacketDefinitionReadinessFinding[] {
   const findings: PacketDefinitionReadinessFinding[] = [];
 
-  for (const entry of entries) {
+  for (const entry of input.entries) {
     if (entry.buckets.includes('definition_partial')) {
       findings.push({
         severity: 'error',
@@ -665,6 +1008,17 @@ function createFindings(entries: readonly PacketDefinitionReadinessEntry[]): Pac
     }
   }
 
+  for (const subtypeEntry of input.subtypeEntries) {
+    for (const issue of subtypeEntry.issues) {
+      findings.push({
+        severity: issue.severity,
+        packet_type: subtypeEntry.packet_type,
+        code: `subtype_${issue.code}`,
+        message: `${subtypeEntry.packet_type}.${subtypeEntry.packet_subtype}: ${issue.message}`,
+      });
+    }
+  }
+
   return findings;
 }
 
@@ -700,7 +1054,8 @@ export function createPacketDefinitionReadinessAuditReport(): PacketDefinitionRe
     packetType,
     genericPacketTypes,
   }));
-  const findings = createFindings(entries);
+  const subtypeEntries = createSubtypeCompletenessEntries();
+  const findings = createFindings({ entries, subtypeEntries });
   const findingCounts = createFindingCounts(findings);
   const scannedFiles = uniqueSorted([
     MANIFEST_FILE,
@@ -716,6 +1071,7 @@ export function createPacketDefinitionReadinessAuditReport(): PacketDefinitionRe
     bucket_counts: countBuckets(entries),
     layer_counts: countLayers(entries),
     entries,
+    subtype_entries: subtypeEntries,
     findings,
   };
 }

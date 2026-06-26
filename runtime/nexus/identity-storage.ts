@@ -13,6 +13,10 @@ import { type PacketEnvelopeByType } from '@core/schema/packet-schema';
 import type {
   NexusLocalIdentityPreview,
 } from '@runtime/nexus/nexus-api-types';
+import {
+  classifyStoredIdentityForMigration,
+  type StoredIdentityMigrationReadiness,
+} from '@runtime/nexus/identity-migration';
 
 const SESSION_GUEST_IDENTITY_STORAGE_KEY = 'owa-nexus-session-guest-identity';
 const PRESERVED_GUEST_IDENTITY_STORAGE_KEY = 'owa-nexus-preserved-guest-identity';
@@ -160,7 +164,21 @@ export function toStoredIdentityPreview(
     claim_status: record.claim_status,
     stored_kind: record.stored_kind,
     updated_at: record.updated_at,
+    migration_readiness: classifyStoredIdentityForMigration(record),
   };
+}
+
+export type StoredIdentityReadiness = StoredIdentityMigrationReadiness;
+
+export async function readStoredIdentityRecordsWithMigrationStatus(): Promise<
+  (StoredIdentityRecord & { migration_readiness: StoredIdentityReadiness })[]
+> {
+  const records = await readStoredIdentityRecords();
+
+  return records.map((record) => ({
+    ...record,
+    migration_readiness: classifyStoredIdentityForMigration(record),
+  }));
 }
 
 export function toActiveIdentityState(
