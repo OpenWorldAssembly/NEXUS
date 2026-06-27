@@ -8,7 +8,6 @@ import { createHash } from 'node:crypto';
 import {
   createAssemblyPacket,
   createLocationPacket,
-  createPacketEdge,
   createPacketRef,
 } from '@core/packets/builders';
 import { createScopedRelationPacket } from '@core/packets/relations';
@@ -123,12 +122,6 @@ export type LocalityGraphPlanResult = {
   path_results: LocalityPathPlanResult[];
   final_result: NexusLocationSearchResult | null;
 };
-
-function createParentScopeCompatibilityEdge(parentPacketId: string) {
-  return createPacketEdge('parent_scope', {
-    packet_id: parentPacketId,
-  });
-}
 
 type ScopeLocationMetadata = {
   scope_descriptor: LocalityScopeDescriptor | null;
@@ -766,7 +759,6 @@ export async function planCanonicalLocalityPathWithPacketStore(input: LocalityPl
         parentPacketId,
         parentByPacketId,
       }),
-      edges: [createParentScopeCompatibilityEdge(parentPacketId)],
       created_by: createPacketRef(actorPacketId),
       submitted_by: createPacketRef(actorPacketId),
       name: entry.name.trim(),
@@ -830,6 +822,7 @@ export async function planCanonicalLocalityPathWithPacketStore(input: LocalityPl
         scope_descriptor: scopeDescriptor,
         source: {
           kind: 'manual',
+          subtype: 'manual',
         },
       },
     });

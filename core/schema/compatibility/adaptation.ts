@@ -47,6 +47,7 @@ export interface RawPacketHeaderInput {
   packet_id: string;
   revision_id: string;
   type: PacketType;
+  family?: PacketType;
   schema_version?: string;
   protocol_version?: string;
   [key: string]: unknown;
@@ -68,11 +69,43 @@ const RawPacketHeaderInputSchema = z
   .passthrough();
 
 const RawPacketEnvelopeInputSchema = z
-  .object({
-    header: RawPacketHeaderInputSchema,
-    body: z.unknown(),
-  })
-  .strict();
+  .preprocess((input) => {
+    if (typeof input !== 'object' || input === null || Array.isArray(input)) {
+      return input;
+    }
+
+    const envelope = input as { header?: unknown; body?: unknown };
+
+    if (
+      typeof envelope.header !== 'object' ||
+      envelope.header === null ||
+      Array.isArray(envelope.header)
+    ) {
+      return input;
+    }
+
+    const header = envelope.header as Record<string, unknown>;
+    const { family: legacyFamily, ...headerWithoutLegacyFamily } = header;
+    const type =
+      typeof header.type === 'string'
+        ? header.type
+        : typeof legacyFamily === 'string'
+          ? legacyFamily
+          : undefined;
+
+    return {
+      ...envelope,
+      header: {
+        ...headerWithoutLegacyFamily,
+        ...(type ? { type } : {}),
+      },
+    };
+  }, z
+    .object({
+      header: RawPacketHeaderInputSchema,
+      body: z.unknown(),
+    })
+    .strict());
 
 function createAdaptationChange(input: {
   kind: PacketAdaptationChange['kind'];

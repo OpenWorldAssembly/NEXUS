@@ -3,7 +3,7 @@
  * Description: Temporary legacy identity migration helpers for current-schema Nexus identity packets.
  */
 
-import type { PacketEnvelopeByType } from '@core/schema/packet-schema';
+import { inspectPacketEnvelope, type PacketEnvelopeByType } from '@core/schema/packet-schema';
 import { canonicalizeJson } from '@core/crypto/canonical-json';
 import {
   createIdentityKeyBinding,
@@ -61,6 +61,33 @@ function getPublicJwkFromPacket(
     : null;
 }
 
+function inspectStoredPersonIdentityPacket(packet: unknown): {
+  packet: PacketEnvelopeByType['Element'];
+  writable_as_is: boolean;
+} | null {
+  try {
+    const compatibilityRead = inspectPacketEnvelope(packet);
+    const adaptedPacket = compatibilityRead.adapted_packet;
+
+    if (
+      adaptedPacket.header.type !== 'Element' ||
+      adaptedPacket.body.subtype !== 'person' ||
+      !adaptedPacket.body.identity
+    ) {
+      return null;
+    }
+
+    return {
+      packet: adaptedPacket as PacketEnvelopeByType['Element'],
+      writable_as_is:
+        compatibilityRead.status.writable_as_is &&
+        !compatibilityRead.status.interpreted_as_legacy_profile,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function classifyStoredIdentityForMigration(
   record: StoredIdentityRecord
 ): StoredIdentityMigrationReadiness {
@@ -77,15 +104,26 @@ export function classifyStoredIdentityForMigration(
       return 'unsupported_legacy';
     }
 
+    const inspectedPersonPacket = inspectStoredPersonIdentityPacket(
+      record.actor_packet
+    );
+
+    if (!inspectedPersonPacket) {
+      return 'corrupt_or_unreadable';
+    }
+
+    const adaptedPersonPacket = inspectedPersonPacket.packet;
+
     if (
-      hasEmbeddedSignature(record.actor_packet) &&
-      record.actor_packet.body.identity.claim_status === 'claimed' &&
-      record.actor_packet.body.identity.public_key_bindings.length > 0
+      inspectedPersonPacket.writable_as_is &&
+      hasEmbeddedSignature(adaptedPersonPacket) &&
+      adaptedPersonPacket.body.identity.claim_status === 'claimed' &&
+      adaptedPersonPacket.body.identity.public_key_bindings.length > 0
     ) {
       return 'current';
     }
 
-    if (!getPublicJwkFromPacket(record.actor_packet) && !record.public_jwk) {
+    if (!getPublicJwkFromPacket(adaptedPersonPacket) && !record.public_jwk) {
       return 'corrupt_or_unreadable';
     }
 
@@ -148,6 +186,11 @@ export async function buildSignedMigratedIdentityPacket(input: {
   });
   const legacyPacketId = input.legacyActorPacket.header.packet_id;
   const canReusePacketId = isSafeIdentityPacketId(legacyPacketId);
+  const tentativePacketId =
+    input.tentativePacketId ??
+    (canReusePacketId
+      ? legacyPacketId
+      : `nexus:element/migrated-${Date.now().toString(36)}`);
   const locationDisclosure =
     input.legacyActorPacket.body.identity?.location_disclosure &&
     typeof input.legacyActorPacket.body.identity.location_disclosure.scope === 'string' &&
@@ -159,15 +202,12 @@ export async function buildSignedMigratedIdentityPacket(input: {
     alias: createIdentityLabel(input.legacyActorPacket),
     legacyActorPacketId: legacyPacketId,
     publicKeyBinding,
-    tentativePacketId:
-      input.tentativePacketId ??
-      (canReusePacketId
-        ? legacyPacketId
-        : `nexus:element/migrated-${Date.now().toString(36)}`),
+    tentativePacketId,
     createdAt,
     locationDisclosure,
     migrationVersion: migrationPolicy.migration_version,
-    packetIdPolicy: canReusePacketId ? 'reused_legacy_id' : 'reminted_id',
+    packetIdPolicy:
+      tentativePacketId === legacyPacketId ? 'reused_legacy_id' : 'reminted_id',
   });
 
   return signPacketWithIdentity({

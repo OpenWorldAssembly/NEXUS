@@ -43,14 +43,14 @@ test('final readiness handoff keeps accepted transitions visible but non-blockin
   assert.equal(report.blockers.length, 0);
 });
 
-test('final readiness handoff classifies legacy seed cleanup candidates', () => {
+test('final readiness handoff has no parent_scope seed cleanup candidates', () => {
   const report = finalReadinessReport;
 
-  assert.ok(report.cleanup_candidates.length > 0);
-  assert.ok(
+  assert.equal(
     report.cleanup_candidates.some((candidate) =>
       candidate.includes('parent_scope')
-    )
+    ),
+    false
   );
 });
 

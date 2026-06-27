@@ -14,7 +14,10 @@ import {
   IdentityInput,
   IdentityPageShell,
 } from '@app/components/nexus/features/identity';
-import { useIdentityShell } from '@app/components/nexus/identity-shell-context';
+import {
+  useIdentityShell,
+  type PreparedStoredIdentityMigration,
+} from '@app/components/nexus/identity-shell-context';
 import { useNexusShell } from '@app/components/nexus/nexus-shell-context';
 import {
   NexusActionButton,
@@ -34,6 +37,11 @@ import type {
   NexusLocalIdentityPreview,
 } from '@runtime/nexus/nexus-api-types';
 import { fetchNexusIdentitySearchPayload } from '@runtime/nexus/nexus-query-api';
+import {
+  getIdentityResultSelectionState,
+  getSelectedIdentityActionState,
+  localIdentityMatchesQuery,
+} from '@runtime/nexus/identity-sign-in-state';
 import {
   validateEncryptedBundleJson,
   validatePassphrase,
@@ -115,7 +123,8 @@ export default function NexusIdentitySignInPage() {
     rememberClaimedSessions,
     restoreIdentityFromBundle,
     signInStoredIdentity,
-    migrateStoredIdentity,
+    prepareStoredIdentityMigration,
+    confirmPreparedIdentityMigration,
     signInWithPasskey,
     storedIdentityPreviews,
   } = useIdentityShell();
@@ -126,6 +135,9 @@ export default function NexusIdentitySignInPage() {
   const [activeMode, setActiveMode] = useState<SignInMode>('local');
   const [identityQuery, setIdentityQuery] = useState('');
   const [selectedIdentityId, setSelectedIdentityId] = useState('');
+  const [selectedIdentityLocked, setSelectedIdentityLocked] = useState(false);
+  const [preparedMigration, setPreparedMigration] =
+    useState<PreparedStoredIdentityMigration | null>(null);
   const [identityResults, setIdentityResults] = useState<
     NexusIdentitySearchResultPayload[]
   >([]);
@@ -161,6 +173,8 @@ export default function NexusIdentitySignInPage() {
 
   useEffect(() => {
     let isMounted = true;
+    let operationId: string | null = null;
+    const abortController = new AbortController();
 
     if (normalizedIdentityQuery.length < 2) {
       setIdentityResults([]);
@@ -172,8 +186,11 @@ export default function NexusIdentitySignInPage() {
     }
 
     setIsSearchingIdentities(true);
+    const abortTimeoutHandle = setTimeout(() => {
+      abortController.abort();
+    }, 12_000);
     const timeoutHandle = setTimeout(() => {
-      const operationId = loading.beginLoading(
+      operationId = loading.beginLoading(
         IDENTITY_SIGN_IN_RESULTS_LOADING_SCOPE,
         { label: 'Searching identities...' }
       );
@@ -181,6 +198,7 @@ export default function NexusIdentitySignInPage() {
       void fetchNexusIdentitySearchPayload({
         query: identityQuery,
         savedActorPacketIds: claimedIdentities.map((identity) => identity.actor_packet_id),
+        signal: abortController.signal,
       })
         .then((payload) => {
           if (!isMounted) {
@@ -195,6 +213,10 @@ export default function NexusIdentitySignInPage() {
             return;
           }
 
+          if (nextError instanceof Error && nextError.name === 'AbortError') {
+            return;
+          }
+
           setIdentityResults([]);
           setIdentitySearchError(
             nextError instanceof Error
@@ -203,54 +225,63 @@ export default function NexusIdentitySignInPage() {
           );
         })
         .finally(() => {
+          clearTimeout(abortTimeoutHandle);
           if (isMounted) {
             setIsSearchingIdentities(false);
           }
-          loading.endLoading(operationId);
+          if (operationId) {
+            loading.endLoading(operationId);
+          }
         });
     }, 220);
 
     return () => {
       isMounted = false;
       clearTimeout(timeoutHandle);
+      clearTimeout(abortTimeoutHandle);
+      abortController.abort();
+      if (operationId) {
+        loading.endLoading(operationId);
+      }
     };
   }, [claimedIdentities, identityQuery, loading, normalizedIdentityQuery]);
 
-  const visibleIdentities = useMemo(() => {
-    if (normalizedIdentityQuery.length === 0) {
-      return dedupeIdentityOptions(
-        claimedIdentities.map((identity) => ({
-          actor_packet_id: identity.actor_packet_id,
-          display_alias: identity.alias,
-          claim_status: identity.claim_status,
-          saved_on_device: true,
-          match_source: 'alias' as const,
-          migration_readiness: identity.migration_readiness,
-        }))
-      );
-    }
-
-    return dedupeIdentityOptions(identityResults);
-  }, [claimedIdentities, identityResults, normalizedIdentityQuery]);
-  const selectableIdentityMap = useMemo(() => {
-    const nextMap = new Map<string, LocalIdentityOption>();
-
-    claimedIdentities.forEach((identity) => {
-      nextMap.set(identity.actor_packet_id, {
+  const localIdentityOptions = useMemo(
+    () =>
+      claimedIdentities.map((identity) => ({
         actor_packet_id: identity.actor_packet_id,
         display_alias: identity.alias,
         claim_status: identity.claim_status,
         saved_on_device: true,
-        match_source: 'alias',
+        match_source: 'alias' as const,
         migration_readiness: identity.migration_readiness,
-      });
+      })),
+    [claimedIdentities]
+  );
+  const visibleIdentities = useMemo(() => {
+    if (normalizedIdentityQuery.length === 0) {
+      return dedupeIdentityOptions(localIdentityOptions);
+    }
+
+    return dedupeIdentityOptions([
+      ...localIdentityOptions.filter((identity) =>
+        localIdentityMatchesQuery(identity, normalizedIdentityQuery)
+      ),
+      ...identityResults,
+    ]);
+  }, [identityResults, localIdentityOptions, normalizedIdentityQuery]);
+  const selectableIdentityMap = useMemo(() => {
+    const nextMap = new Map<string, LocalIdentityOption>();
+
+    localIdentityOptions.forEach((identity) => {
+      nextMap.set(identity.actor_packet_id, identity);
     });
     identityResults.forEach((identity) => {
       nextMap.set(identity.actor_packet_id, identity);
     });
 
     return nextMap;
-  }, [claimedIdentities, identityResults]);
+  }, [identityResults, localIdentityOptions]);
 
   useEffect(() => {
     if (visibleIdentities.length > 0 && selectedIdentityId.length === 0) {
@@ -264,38 +295,33 @@ export default function NexusIdentitySignInPage() {
   }, [normalizedIdentityQuery.length, selectedIdentityId, visibleIdentities]);
 
   const selectedIdentity = selectableIdentityMap.get(selectedIdentityId) ?? null;
-  const showIdentityResults =
-    visibleIdentities.length > 0 &&
-    (!selectedIdentity ||
-      normalizedIdentityQuery.length === 0 ||
-      normalizedIdentityQuery !==
-        (selectedIdentity.display_alias || selectedIdentity.actor_packet_id)
-          .trim()
-          .toLowerCase());
+  useEffect(() => {
+    if (
+      selectedIdentityLocked &&
+      selectedIdentityId.length > 0 &&
+      !selectableIdentityMap.has(selectedIdentityId)
+    ) {
+      setSelectedIdentityLocked(false);
+      setPreparedMigration(null);
+    }
+  }, [selectableIdentityMap, selectedIdentityId, selectedIdentityLocked]);
+
+  const showIdentityResults = visibleIdentities.length > 0 && !selectedIdentityLocked;
   const showSelectedIdentityCard = selectedIdentity !== null && !showIdentityResults;
   const selectedIdentityIsCurrentActor =
     selectedIdentity?.actor_packet_id === currentActorPacketId;
-  const selectedIdentityNeedsMigration =
-    selectedIdentity?.saved_on_device === true &&
-    selectedIdentity.migration_readiness === 'migration_required';
-  const bundleActionLabel =
-    isBusy === 'bundle'
-      ? selectedIdentityNeedsMigration
-        ? 'Migrating...'
-        : 'Signing in...'
-      : selectedIdentityNeedsMigration
-        ? 'Migrate and sign in'
-      : selectedIdentityIsCurrentActor && currentMode === 'claimed' && !hasActiveClaimedSession
-        ? 'Resume this identity'
-        : selectedIdentityIsCurrentActor &&
-            currentMode === 'claimed' &&
-            hasActiveClaimedSession &&
-            !isCurrentIdentityUnlocked
-          ? 'Unlock this identity'
-          : 'Sign in';
-
   const passphraseError =
     passphrase.length > 0 ? validatePassphrase(passphrase) : 'Passphrase is required.';
+  const selectedIdentityActionState = getSelectedIdentityActionState({
+    selectedIdentity,
+    visibleIdentityCount: visibleIdentities.length,
+    selectedIdentityIsCurrentActor,
+    currentMode,
+    hasActiveClaimedSession,
+    isCurrentIdentityUnlocked,
+    isBusy: isBusy !== null,
+    passphraseError,
+  });
   const bundleJsonError =
     bundleJson.length > 0
       ? validateEncryptedBundleJson(bundleJson)
@@ -310,23 +336,47 @@ export default function NexusIdentitySignInPage() {
     setErrorMessage(null);
 
     try {
-      if (selectedIdentityNeedsMigration) {
-        await migrateStoredIdentity({
+      if (selectedIdentityActionState.can_prepare_migration) {
+        const nextPreparedMigration = await prepareStoredIdentityMigration({
           actorPacketId: selectedIdentityId,
           passphrase,
-          keepMeLoggedIn: rememberClaimedSessions,
         });
+        setPreparedMigration(nextPreparedMigration);
       } else {
         await signInStoredIdentity({
           actorPacketId: selectedIdentityId,
           passphrase,
           keepMeLoggedIn: rememberClaimedSessions,
         });
+        navigateAfterIdentitySuccess();
       }
-      navigateAfterIdentitySuccess();
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : 'Unable to sign in right now.'
+      );
+    } finally {
+      setIsBusy(null);
+    }
+  };
+
+  const handleConfirmMigration = async () => {
+    if (!preparedMigration) {
+      return;
+    }
+
+    setIsBusy('bundle');
+    setErrorMessage(null);
+
+    try {
+      await confirmPreparedIdentityMigration({
+        preparedMigration,
+        passphrase,
+        keepMeLoggedIn: rememberClaimedSessions,
+      });
+      navigateAfterIdentitySuccess();
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : 'Unable to migrate this identity.'
       );
     } finally {
       setIsBusy(null);
@@ -429,7 +479,12 @@ export default function NexusIdentitySignInPage() {
             >
               <NexusSearchField
                 value={identityQuery}
-                onChangeText={setIdentityQuery}
+                onChangeText={(nextValue) => {
+                  setIdentityQuery(nextValue);
+                  setSelectedIdentityId('');
+                  setSelectedIdentityLocked(false);
+                  setPreparedMigration(null);
+                }}
                 placeholder="Search claimed identities in Nexus"
               />
             </IdentityField>
@@ -443,18 +498,17 @@ export default function NexusIdentitySignInPage() {
                     {selectedIdentity.actor_packet_id}
                   </Text>
                   <Text className={appearance.itemMetaClass}>
-                    {selectedIdentityNeedsMigration
-                      ? 'Needs migration on this device'
-                      : selectedIdentity.saved_on_device
-                      ? 'Saved on this device'
-                      : 'Known in Nexus, but not saved on this device'}
+                    {selectedIdentityActionState.status_label}
+                  </Text>
+                  <Text className={appearance.itemMetaClass}>
+                    {selectedIdentityActionState.detail}
                   </Text>
                 </View>
               </View>
             ) : null}
 
             {isSearchingIdentities ? (
-              <NexusSearchStatusText>Searching identities…</NexusSearchStatusText>
+              <NexusSearchStatusText>Searching identities...</NexusSearchStatusText>
             ) : null}
 
             <NexusSearchResultsBoundary
@@ -464,7 +518,7 @@ export default function NexusIdentitySignInPage() {
               {visibleIdentities.length === 0 ? (
               <NexusSearchEmptyState className={`gap-3 p-4 ${appearance.cardInsetClass}`}>
                 {normalizedIdentityQuery.length > 0
-                  ? 'No claimed identities match this search in Nexus.'
+                  ? 'No saved local identities or Nexus identities match this search.'
                   : 'No claimed identities are saved on this device yet.'}
               </NexusSearchEmptyState>
               ) : showIdentityResults ? (
@@ -477,8 +531,20 @@ export default function NexusIdentitySignInPage() {
                       key={identity.actor_packet_id}
                       isSelected={isSelected}
                       onPress={() => {
-                        setSelectedIdentityId(identity.actor_packet_id);
-                        setIdentityQuery(identity.display_alias ?? '');
+                        const selectionState = getIdentityResultSelectionState({
+                          actorPacketId: identity.actor_packet_id,
+                        });
+
+                        setSelectedIdentityId(selectionState.selected_identity_id);
+                        setSelectedIdentityLocked(
+                          selectionState.selected_identity_locked
+                        );
+                        if (selectionState.next_identity_query !== null) {
+                          setIdentityQuery(selectionState.next_identity_query);
+                        }
+                        if (selectionState.should_clear_prepared_migration) {
+                          setPreparedMigration(null);
+                        }
                       }}
                     >
                       <Text className={appearance.itemTitleClass}>
@@ -512,37 +578,95 @@ export default function NexusIdentitySignInPage() {
             >
               <IdentityInput
                 value={passphrase}
-                onChangeText={setPassphrase}
+                onChangeText={(nextValue) => {
+                  setPassphrase(nextValue);
+                  setPreparedMigration(null);
+                }}
                 placeholder="Passphrase for the selected saved identity"
                 secureTextEntry
                 returnKeyType="go"
                 onSubmitEditing={() => {
-                  if (
-                    visibleIdentities.length > 0 &&
-                    selectedIdentityId.length > 0 &&
-                    selectedIdentity?.saved_on_device &&
-                    !passphraseError &&
-                    isBusy === null
-                  ) {
+                  if (selectedIdentityActionState.can_submit_bundle && isBusy === null) {
                     void handleBundleSignIn();
                   }
                 }}
               />
             </IdentityField>
 
+            {selectedIdentityActionState.bundle_disabled_reason ? (
+              <Text className="text-sm text-nexus-rose">
+                {selectedIdentityActionState.bundle_disabled_reason}
+              </Text>
+            ) : null}
+
+            {selectedIdentity && !selectedIdentity.saved_on_device ? (
+              <View className="flex-row flex-wrap gap-3">
+                <NexusActionButton
+                  label={isBusy === 'passkey' ? 'Checking passkey...' : 'Use passkey'}
+                  variant="primary"
+                  onPress={() => {
+                    void handlePasskeySignIn();
+                  }}
+                  disabled={isBusy !== null || !isPasskeySupported}
+                />
+                <NexusActionButton
+                  label="Import bundle"
+                  onPress={() => setActiveMode('import')}
+                  disabled={isBusy !== null}
+                />
+              </View>
+            ) : null}
+
+            {preparedMigration ? (
+              <View className="gap-3 rounded-[18px] border border-nexus-gold/70 bg-nexus-gold/10 px-4 py-3">
+                <Text className={appearance.itemTitleClass}>Review identity migration</Text>
+                <Text className={appearance.itemBodyClass}>
+                  Confirming will mint the migrated identity packet, save the new encrypted bundle on this device, and sign in.
+                </Text>
+                <View className="gap-1">
+                  <Text className={appearance.itemMetaClass}>
+                    Alias: {preparedMigration.alias}
+                  </Text>
+                  <Text className={appearance.itemMetaClass}>
+                    Old actor: {preparedMigration.legacy_actor_packet_id}
+                  </Text>
+                  <Text className={appearance.itemMetaClass}>
+                    New actor: {preparedMigration.tentative_actor_packet_id}
+                  </Text>
+                  <Text className={appearance.itemMetaClass}>
+                    Packet id policy: {preparedMigration.packet_id_policy}
+                  </Text>
+                  <Text className={appearance.itemMetaClass}>
+                    Location disclosure: {preparedMigration.location_disclosure
+                      ? `${preparedMigration.location_disclosure.scope}:${preparedMigration.location_disclosure.value}`
+                      : 'none'}
+                  </Text>
+                </View>
+                <View className="flex-row flex-wrap gap-3">
+                  <NexusActionButton
+                    label={isBusy === 'bundle' ? 'Migrating...' : 'Confirm migration'}
+                    variant="primary"
+                    onPress={() => {
+                      void handleConfirmMigration();
+                    }}
+                    disabled={isBusy !== null}
+                  />
+                  <NexusActionButton
+                    label="Cancel"
+                    onPress={() => setPreparedMigration(null)}
+                    disabled={isBusy !== null}
+                  />
+                </View>
+              </View>
+            ) : null}
+
             <NexusActionButton
-              label={bundleActionLabel}
+              label={selectedIdentityActionState.bundle_action_label}
               variant="primary"
               onPress={() => {
                 void handleBundleSignIn();
               }}
-              disabled={
-                isBusy !== null ||
-                visibleIdentities.length === 0 ||
-                selectedIdentityId.length === 0 ||
-                !selectedIdentity?.saved_on_device ||
-                Boolean(passphraseError)
-              }
+              disabled={!selectedIdentityActionState.can_submit_bundle}
             />
           </View>
         ) : null}

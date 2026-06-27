@@ -10,6 +10,7 @@ type RouteClassification =
   | 'dispatch_write_corridor'
   | 'deprecated_410'
   | 'auth_identity_or_session_infrastructure'
+  | 'local_maintenance_reseed'
   | 'query_or_preview_post'
   | 'packet_explorer_exchange_import_export'
   | 'guest_shell_compatibility'
@@ -143,6 +144,22 @@ function classifyRoute(filePath: string, source: string): RouteAuditEntry {
       methods,
       classification: 'guest_shell_compatibility',
       reason: 'Guest shell compatibility state writes cookies/local compatibility state; claimed Preference.element writes use the signed mutation corridor.',
+    };
+  }
+
+  if (filePath === 'src/app/api/nexus/reseed+api.ts') {
+    const hasLocalGate =
+      source.includes('NEXUS_RESEED_ENABLED') &&
+      source.includes('RAILWAY_ENVIRONMENT') &&
+      source.includes('NEXUS_RESEED_TOKEN');
+    return {
+      file_path: filePath,
+      methods,
+      classification: hasLocalGate
+        ? 'local_maintenance_reseed'
+        : 'unclassified_write_route',
+      reason:
+        'Local reseed is a guarded maintenance route for applying canonical seed packets before exporting a local default bundle; remote runtimes require an explicit maintenance token.',
     };
   }
 

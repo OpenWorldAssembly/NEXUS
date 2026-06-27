@@ -46,6 +46,21 @@ function getParentPacketId(packet: PacketEnvelopeByType['Element']): string | nu
   );
 }
 
+function getCreatedDefaultAncestryParentPacketId(input: {
+  packet: PacketEnvelopeByType['Element'];
+  createdPackets: readonly PacketEnvelope[];
+}): string | null {
+  const relationPacket = input.createdPackets.find(
+    (candidate): candidate is PacketEnvelopeByType['Relation'] =>
+      candidate.header.type === 'Relation' &&
+      candidate.body.subtype === 'default_ancestry_parent' &&
+      candidate.body.subject_ref.packet_id === input.packet.header.packet_id &&
+      candidate.body.status === 'active'
+  );
+
+  return relationPacket?.body.target_ref.packet_id ?? null;
+}
+
 function getResolvedLocalityScopePacketId(entry: {
   existing_result?: { scope_id?: string | null } | null;
   planned_scope_packet_id?: string | null;
@@ -230,8 +245,14 @@ export async function planLocalityGraphApplyPackets(input: {
   );
   const localityGoverningScopePacket = firstCreatedScopePacket
     ? await requireElementPacketFromStoreOrPrepared({
-        packetStore: input.packetStore,
-        packetId: getParentPacketId(firstCreatedScopePacket) ?? firstCreatedScopePacket.header.packet_id,
+      packetStore: input.packetStore,
+        packetId:
+          getCreatedDefaultAncestryParentPacketId({
+            packet: firstCreatedScopePacket,
+            createdPackets: plannedResult.created_packets,
+          }) ??
+          getParentPacketId(firstCreatedScopePacket) ??
+          firstCreatedScopePacket.header.packet_id,
         preparedElementPacketsById,
       })
     : null;

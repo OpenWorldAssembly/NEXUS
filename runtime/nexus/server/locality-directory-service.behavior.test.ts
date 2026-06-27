@@ -198,10 +198,10 @@ test('planCanonicalLocalityPath emits locality, ancestry, location, and location
         4
       );
       assert.equal(
-        elementPackets.every((packet) =>
+        elementPackets.some((packet) =>
           packet.header.edges.some((edge) => edge.edge_type === 'parent_scope')
         ),
-        true
+        false
       );
       assert.equal(
         locationPackets.every(

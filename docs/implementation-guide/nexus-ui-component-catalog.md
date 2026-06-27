@@ -48,7 +48,7 @@ The broad `nexus-ui.tsx` primitive file has been split into focused component-ty
 - chrome, appearance, bevel, and section-header helpers live in `ui/layout/*`
 - attached tab rails live in `ui/tabs/nexus-attached-tab-rail.tsx`
 
-Nexus callers should import from `@app/components/nexus/ui` or a direct family path. `app/components/nexus/nexus-ui.tsx` remains only as a temporary bridge for compatibility and should not be the source for new imports.
+Nexus callers should import from `@app/components/nexus/ui` or a direct component-group path. `app/components/nexus/nexus-ui.tsx` remains only as a temporary bridge for compatibility and should not be the source for new imports.
 
 ## Primitive adoption checkpoint
 

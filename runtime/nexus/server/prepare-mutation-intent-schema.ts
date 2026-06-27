@@ -60,6 +60,7 @@ const MutationIntentSchemaOptions = [
       subtype: z.string().min(1).optional().nullable().default(null),
       summary: z.string().min(1).optional().nullable().default(null),
       locality_label: z.string().min(1).optional().nullable().default(null),
+      initiative_packet_id: z.string().min(1).optional().nullable().default(null),
       seed_discussions: z.boolean().optional().default(true),
       add_association: z.boolean().optional().default(true),
       association_note: z.string().min(1).optional().nullable().default(null),
@@ -229,6 +230,7 @@ const MutationIntentSchemaOptions = [
     .object({
       kind: z.literal('discussion.surfaces.ensure'),
       scope_id: z.string().min(1),
+      initiative_packet_id: z.string().min(1).optional().nullable().default(null),
       created_at: z.string().optional().nullable().default(null),
       mutation_nonce: z.string().optional().nullable().default(null),
     })
@@ -311,4 +313,3 @@ export const PrepareMutationRequestSchema = z
     intent: MutationIntentSchema,
   })
   .strict();
-

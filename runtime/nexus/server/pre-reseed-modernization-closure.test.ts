@@ -106,6 +106,17 @@ test('legacy bridge mutation intents are retired before reseed readiness', () =>
   assert.deepEqual(report.follow_on_pass_queue, []);
 });
 
+test('node preference workflow remains closed as descriptor-only pre-reseed coverage', () => {
+  const report = preReseedClosureReport;
+  const workflowEntry = report.workflow_plans.find(
+    (entry) => entry.subject_id === 'preference.node.set.workflow.v0'
+  );
+
+  assert.ok(workflowEntry);
+  assert.equal(workflowEntry.status, 'closed');
+  assert.equal(workflowEntry.reason.includes('descriptor-only'), true);
+});
+
 test('composite workflow mutation intents are closed as live generic-composite work', () => {
   const report = preReseedClosureReport;
   const closureByIntent = new Map(

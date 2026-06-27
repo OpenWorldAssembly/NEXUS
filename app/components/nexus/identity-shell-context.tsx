@@ -7,6 +7,7 @@ import type { PropsWithChildren } from 'react';
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
+  type ActorAssertion,
   createActorAssertion,
   createIdentityKeyBinding,
   decryptIdentityBundle,
@@ -69,6 +70,7 @@ import {
   type NexusStorageMode,
 } from '@runtime/nexus/identity-storage';
 import {
+  LEGACY_IDENTITY_MIGRATION_POLICY,
   buildSignedMigratedIdentityPacket,
   classifyStoredIdentityForMigration,
 } from '@runtime/nexus/identity-migration';
@@ -101,6 +103,19 @@ type UnlockedActiveIdentity = ActiveIdentityState & { privateJwk: JsonWebKey };
 type FreshUnlockedIdentityHandoff = {
   identity: UnlockedActiveIdentity;
   expiresAtMs: number;
+};
+
+export type PreparedStoredIdentityMigration = {
+  legacy_actor_packet_id: string;
+  tentative_actor_packet_id: string;
+  alias: string;
+  location_disclosure: IdentityLocationDisclosure | null;
+  packet_id_policy: 'reused_legacy_id' | 'reminted_id';
+  migration_version: number;
+  migrated_actor_packet: ActiveIdentityState['actorPacket'];
+  actor_assertion: ActorAssertion;
+  encrypted_bundle_json: string;
+  public_jwk: JsonWebKey;
 };
 
 type IdentityShellContextValue = {
@@ -152,6 +167,15 @@ type IdentityShellContextValue = {
     passphrase: string;
     keepMeLoggedIn: boolean;
   }) => Promise<NexusAuthSessionPayload>;
+  prepareStoredIdentityMigration: (input: {
+    actorPacketId: string;
+    passphrase: string;
+  }) => Promise<PreparedStoredIdentityMigration>;
+  confirmPreparedIdentityMigration: (input: {
+    preparedMigration: PreparedStoredIdentityMigration;
+    passphrase: string;
+    keepMeLoggedIn: boolean;
+  }) => Promise<NexusAuthSessionPayload>;
   migrateStoredIdentity: (input: {
     actorPacketId: string;
     passphrase: string;
@@ -194,6 +218,18 @@ type IdentityShellContextValue = {
 };
 
 const IdentityShellContext = createContext<IdentityShellContextValue | null>(null);
+
+function createRemintedIdentityPacketId(alias: string): string {
+  const slug =
+    alias
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 32) || 'claimed-identity';
+
+  return `nexus:element/migrated-${slug}-${Date.now().toString(36)}`;
+}
 
 async function createSignedIdentityBundle(input: {
   alias: string;
@@ -1678,6 +1714,22 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
     passphrase: string;
     keepMeLoggedIn: boolean;
   }) => {
+    const preparedMigration = await prepareStoredIdentityMigration({
+      actorPacketId: input.actorPacketId,
+      passphrase: input.passphrase,
+    });
+
+    return confirmPreparedIdentityMigration({
+      preparedMigration,
+      passphrase: input.passphrase,
+      keepMeLoggedIn: input.keepMeLoggedIn,
+    });
+  };
+
+  const prepareStoredIdentityMigration = async (input: {
+    actorPacketId: string;
+    passphrase: string;
+  }): Promise<PreparedStoredIdentityMigration> => {
     if (currentIdentity && currentIdentity.claimStatus !== 'claimed') {
       storePreservedGuestIdentity(currentIdentity);
     }
@@ -1706,6 +1758,7 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
       public_jwk: JsonWebKey;
       private_jwk: JsonWebKey;
     };
+    const alias = createIdentityLabel(targetRecord.actor_packet);
     const migratedActorPacket = await buildSignedMigratedIdentityPacket({
       legacyActorPacket: targetRecord.actor_packet,
       bundle: {
@@ -1713,6 +1766,7 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
         publicJwk: decryptedBundle.public_jwk,
         privateJwk: decryptedBundle.private_jwk,
       },
+      tentativePacketId: createRemintedIdentityPacketId(alias),
     });
     const privateKey = await importPrivateKeyFromJwk(decryptedBundle.private_jwk);
     const activeKeyBinding =
@@ -1740,24 +1794,61 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
         private_jwk: decryptedBundle.private_jwk,
       },
     });
+    const migrationMetadata =
+      migratedActorPacket.body.custody_hints?.migration &&
+      typeof migratedActorPacket.body.custody_hints.migration === 'object' &&
+      !Array.isArray(migratedActorPacket.body.custody_hints.migration)
+        ? migratedActorPacket.body.custody_hints.migration as Record<string, unknown>
+        : {};
+
+    return {
+      legacy_actor_packet_id: targetRecord.actor_packet_id,
+      tentative_actor_packet_id: migratedActorPacket.header.packet_id,
+      alias,
+      location_disclosure:
+        migratedActorPacket.body.identity?.location_disclosure ?? null,
+      packet_id_policy:
+        migrationMetadata.packet_id_policy === 'reused_legacy_id'
+          ? 'reused_legacy_id'
+          : 'reminted_id',
+      migration_version:
+        typeof migrationMetadata.migration_version === 'number'
+          ? migrationMetadata.migration_version
+          : LEGACY_IDENTITY_MIGRATION_POLICY.migration_version,
+      migrated_actor_packet: migratedActorPacket,
+      actor_assertion: actorAssertion,
+      encrypted_bundle_json: JSON.stringify(encryptedBundle),
+      public_jwk: decryptedBundle.public_jwk,
+    };
+  };
+
+  const confirmPreparedIdentityMigration = async (input: {
+    preparedMigration: PreparedStoredIdentityMigration;
+    passphrase: string;
+    keepMeLoggedIn: boolean;
+  }): Promise<NexusAuthSessionPayload> => {
+    const migrationBody = {
+      migrated_actor_packet: input.preparedMigration.migrated_actor_packet,
+      legacy_actor_packet_id: input.preparedMigration.legacy_actor_packet_id,
+    };
 
     await fetchJsonOrThrow('/api/nexus/auth/migrate', {
       method: 'POST',
       body: {
         ...migrationBody,
-        actor_assertion: actorAssertion,
+        actor_assertion: input.preparedMigration.actor_assertion,
       },
     });
 
     const record: StoredIdentityRecord = {
-      actor_packet_id: migratedActorPacket.header.packet_id,
-      alias: createIdentityLabel(migratedActorPacket),
+      actor_packet_id: input.preparedMigration.migrated_actor_packet.header.packet_id,
+      alias: createIdentityLabel(input.preparedMigration.migrated_actor_packet),
       claim_status: 'claimed',
       stored_kind: 'claimed',
-      actor_packet: migratedActorPacket,
-      public_jwk: decryptedBundle.public_jwk,
+      actor_packet: input.preparedMigration.migrated_actor_packet,
+      public_jwk: input.preparedMigration.public_jwk,
       private_jwk: null,
-      encrypted_bundle_json: JSON.stringify(encryptedBundle),
+      encrypted_bundle_json: input.preparedMigration.encrypted_bundle_json,
       updated_at: new Date().toISOString(),
     };
 
@@ -2130,6 +2221,8 @@ export function IdentityShellProvider({ children }: PropsWithChildren) {
         createClaimedIdentity,
         claimCurrentGuest,
         signInStoredIdentity,
+        prepareStoredIdentityMigration,
+        confirmPreparedIdentityMigration,
         migrateStoredIdentity,
         signInWithPasskey,
         registerCurrentPasskey,

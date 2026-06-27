@@ -4,6 +4,7 @@
  */
 
 import { buildElementDefaultDiscussionPackets } from '@core/packets/defaults/element-discussion-defaults';
+import { resolveOwaElementDiscussionDefaultOverrides } from '@core/packets/defaults/owa-discussion-defaults.ts';
 import type {
   PacketEnvelopeByType,
   PacketRef,
@@ -32,8 +33,15 @@ function createDefaultDiscussionSurfacePackets(input: {
   elementSubtype?: PacketEnvelopeByType['Element']['body']['subtype'] | null;
   createdAt: string;
   applicableScopeRefs: PacketRef[];
+  initiativeRef?: PacketRef | null;
   includeProposalsForum?: boolean;
 }): PacketEnvelopeByType['Discussion'][] {
+  const defaultOverrides = resolveOwaElementDiscussionDefaultOverrides({
+    elementName: input.elementName,
+    initiativeRef: input.initiativeRef,
+    applicableScopeRefs: input.applicableScopeRefs,
+  });
+
   return buildElementDefaultDiscussionPackets({
     elementRef: { packet_id: input.elementPacketId },
     elementName: input.elementName,
@@ -42,6 +50,8 @@ function createDefaultDiscussionSurfacePackets(input: {
     applicableScopeRefs: input.applicableScopeRefs,
     includeProposalsForum: input.includeProposalsForum,
     includeReportsForum: input.elementSubtype !== 'person',
+    welcomeThread: defaultOverrides?.welcomeThread,
+    forumSummaryOverrides: defaultOverrides?.forumSummaryOverrides,
   });
 }
 
@@ -50,6 +60,7 @@ export async function planDefaultDiscussionSurfaces(input: {
   scopePacketId: string;
   scopeName: string;
   applicableScopeRefs: PacketRef[];
+  initiativeRef?: PacketRef | null;
   elementSubtype?: PacketEnvelopeByType['Element']['body']['subtype'] | null;
   includeProposalsForum?: boolean;
 }): Promise<PacketEnvelopeByType['Discussion'][]> {
@@ -60,6 +71,7 @@ export async function planDefaultDiscussionSurfaces(input: {
     elementSubtype: input.elementSubtype,
     createdAt: new Date().toISOString(),
     applicableScopeRefs: input.applicableScopeRefs,
+    initiativeRef: input.initiativeRef,
     includeProposalsForum: input.includeProposalsForum,
   });
 
@@ -85,6 +97,7 @@ export async function ensureDefaultDiscussionSurfaces(input: {
   scopePacketId: string;
   scopeName: string;
   applicableScopeRefs: PacketRef[];
+  initiativeRef?: PacketRef | null;
   elementSubtype?: PacketEnvelopeByType['Element']['body']['subtype'] | null;
   includeProposalsForum?: boolean;
 }): Promise<PacketEnvelopeByType['Discussion'][]> {

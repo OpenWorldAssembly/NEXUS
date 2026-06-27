@@ -21,7 +21,6 @@ import type {
   PacketRevisionMode,
 } from '@core/schema/packet-ontology';
 import {
-  PACKET_ADAPTATION_CHANGE_KINDS as CHANGE_KINDS,
   DEFAULT_SCHEMA_VERSION,
   PACKET_TYPES,
   PACKET_TYPE_REVISION_MODES,
@@ -29,7 +28,6 @@ import {
 } from '@core/schema/packet-ontology';
 import {
   ActionBodySchema,
-  ReactionBodySchema,
   BundleBodySchema,
   ClaimBodySchema,
   DefinitionBodySchema,
@@ -63,7 +61,7 @@ const RESERVED_BODY_KEYS = new Set([
   'producer',
 ]);
 
-const ElementBodySchemaV1_0 = ElementBodySchema.omit({
+const ElementBodySchemaV1_0Base = ElementBodySchema.omit({
   scope_system: true,
   status: true,
   aliases: true,
@@ -71,12 +69,37 @@ const ElementBodySchemaV1_0 = ElementBodySchema.omit({
   custody_hints: true,
 });
 
-const LegacyElementBodySchema = ElementBodySchemaV1_0.omit({
-  claimed_role_refs: true,
-  locality: true,
-}).extend({
-  claimed_role_refs: z.array(PacketRefSchema).optional(),
-});
+function normalizeLegacyElementSubtypeInput(input: unknown): unknown {
+  if (typeof input !== 'object' || input === null || Array.isArray(input)) {
+    return input;
+  }
+
+  const body = input as Record<string, unknown>;
+
+  if (body.subtype !== 'claimed_identity') {
+    return input;
+  }
+
+  return {
+    ...body,
+    subtype: 'person',
+  };
+}
+
+const ElementBodySchemaV1_0 = z.preprocess(
+  normalizeLegacyElementSubtypeInput,
+  ElementBodySchemaV1_0Base
+);
+
+const LegacyElementBodySchema = z.preprocess(
+  normalizeLegacyElementSubtypeInput,
+  ElementBodySchemaV1_0Base.omit({
+    claimed_role_refs: true,
+    locality: true,
+  }).extend({
+    claimed_role_refs: z.array(PacketRefSchema).optional(),
+  })
+);
 
 const PolicyBodySchemaV1_0 = PolicyBodySchema.omit({
   dependencies_policy: true,
@@ -1671,4 +1694,3 @@ export function listPacketCompatibilityAuditSummaries(): PacketCompatibilityAudi
 export function getPacketCurrentSchemaVersion(type: PacketType): string {
   return PACKET_COMPATIBILITY_REGISTRY[type].current_schema_version;
 }
-

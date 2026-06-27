@@ -124,6 +124,38 @@ export interface PreferredHeadConsistencyReport {
   issues: PreferredHeadConsistencyIssue[];
 }
 
+export interface PacketStoreSchemaCompatibilityStatus {
+  database_path: string;
+  status: 'current' | 'blocked';
+  repaired_legacy_columns: string[];
+  remaining_legacy_columns: string[];
+  missing_current_columns: string[];
+  blockers: string[];
+}
+
+const LEGACY_SCHEMA_COLUMN_RENAMES = [
+  {
+    table: 'packets',
+    legacyColumn: 'family',
+    currentColumn: 'type',
+  },
+  {
+    table: 'packet_revisions',
+    legacyColumn: 'family',
+    currentColumn: 'type',
+  },
+  {
+    table: 'packet_search_index',
+    legacyColumn: 'family',
+    currentColumn: 'type',
+  },
+  {
+    table: 'packet_edges',
+    legacyColumn: 'source_family',
+    currentColumn: 'source_type',
+  },
+] as const;
+
 /**
  * Inputs: a serialized JSON string and a fallback value.
  * Output: parsed JSON when valid, otherwise the fallback.
@@ -167,6 +199,28 @@ function hasSameMembers(left: Set<string>, right: Set<string>): boolean {
   }
 
   return true;
+}
+
+function getTableColumnNames(database: DatabaseSync, tableName: string): Set<string> {
+  const rows = database.prepare(`PRAGMA table_info(${tableName})`).all() as {
+    name: string;
+  }[];
+
+  return new Set(rows.map((row) => row.name));
+}
+
+function getTableNames(database: DatabaseSync): Set<string> {
+  const rows = database
+    .prepare(
+      `
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table'
+      `
+    )
+    .all() as { name: string }[];
+
+  return new Set(rows.map((row) => row.name));
 }
 
 function toVerificationSummary(
@@ -278,6 +332,7 @@ function toNamedParameters(
  */
 export class NodeSQLitePacketStore implements PacketStore {
   private readonly database: DatabaseSync;
+  private readonly repairedLegacyColumns: string[] = [];
   readonly databasePath: string;
 
   constructor(
@@ -290,8 +345,79 @@ export class NodeSQLitePacketStore implements PacketStore {
     this.databasePath = databasePath;
     mkdirSync(dirname(databasePath), { recursive: true });
     this.database = new DatabaseSync(databasePath);
+    this.repairLegacyPacketStoreColumns();
     this.database.exec(PACKET_STORE_SCHEMA_SQL);
     this.ensureVerificationIndexColumns();
+  }
+
+  private repairLegacyPacketStoreColumns(): void {
+    const tableNames = getTableNames(this.database);
+
+    for (const columnRename of LEGACY_SCHEMA_COLUMN_RENAMES) {
+      if (!tableNames.has(columnRename.table)) {
+        continue;
+      }
+
+      const columnNames = getTableColumnNames(this.database, columnRename.table);
+
+      if (
+        columnNames.has(columnRename.currentColumn) ||
+        !columnNames.has(columnRename.legacyColumn)
+      ) {
+        continue;
+      }
+
+      this.database.exec(
+        `ALTER TABLE ${columnRename.table} RENAME COLUMN ${columnRename.legacyColumn} TO ${columnRename.currentColumn}`
+      );
+      this.repairedLegacyColumns.push(
+        `${columnRename.table}.${columnRename.legacyColumn}->${columnRename.currentColumn}`
+      );
+    }
+  }
+
+  auditSchemaCompatibility(): PacketStoreSchemaCompatibilityStatus {
+    const tableNames = getTableNames(this.database);
+    const remainingLegacyColumns: string[] = [];
+    const missingCurrentColumns: string[] = [];
+
+    for (const columnRename of LEGACY_SCHEMA_COLUMN_RENAMES) {
+      if (!tableNames.has(columnRename.table)) {
+        continue;
+      }
+
+      const columnNames = getTableColumnNames(this.database, columnRename.table);
+
+      if (columnNames.has(columnRename.legacyColumn)) {
+        remainingLegacyColumns.push(
+          `${columnRename.table}.${columnRename.legacyColumn}`
+        );
+      }
+
+      if (!columnNames.has(columnRename.currentColumn)) {
+        missingCurrentColumns.push(
+          `${columnRename.table}.${columnRename.currentColumn}`
+        );
+      }
+    }
+
+    const blockers = [
+      ...remainingLegacyColumns.map(
+        (column) => `Legacy packet-store column remains after repair: ${column}.`
+      ),
+      ...missingCurrentColumns.map(
+        (column) => `Current packet-store column is missing: ${column}.`
+      ),
+    ];
+
+    return {
+      database_path: this.databasePath,
+      status: blockers.length > 0 ? 'blocked' : 'current',
+      repaired_legacy_columns: [...this.repairedLegacyColumns],
+      remaining_legacy_columns: remainingLegacyColumns,
+      missing_current_columns: missingCurrentColumns,
+      blockers,
+    };
   }
 
   private ensureVerificationIndexColumns(): void {

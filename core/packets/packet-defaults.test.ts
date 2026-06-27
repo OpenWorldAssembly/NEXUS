@@ -113,7 +113,7 @@ test('policy default sections can reference default definitions and override res
   assert.equal(localBehavior.require_local_ratification, true);
 });
 
-test('OWA domain defaults are resolved for Action, Proposal, and Decision packet families', () => {
+test('OWA domain defaults are resolved for Action, Proposal, and Decision packet types', () => {
   const actionDefinition = getDefinedPacketTypeDefinition('Action');
   const proposalDefinition = getDefinedPacketTypeDefinition('Proposal');
   const decisionDefinition = getDefinedPacketTypeDefinition('Decision');

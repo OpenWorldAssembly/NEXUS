@@ -103,6 +103,16 @@
 5. The Explorer `Verification` rail now exposes a direct `Verify` / `Reverify` control that refreshes the current packet payload after a local validation pass.
 6. If a later preferred revision replaces the revision a local report targeted, that older report remains visible as history but is surfaced as stale rather than current verification state.
 
+### Local reseed maintenance
+
+1. `/api/nexus/reseed` is a guarded local maintenance route, not a public product mutation surface.
+2. `GET /api/nexus/reseed` returns a dry-run report for applying the canonical seed packet set to the active local packet store.
+3. `POST /api/nexus/reseed` with `{ "mode": "commit" }` writes missing canonical seed revisions and refuses dirty packet-id conflicts where a non-seed revision already exists.
+4. `POST /api/nexus/reseed` with `{ "action": "wipe", "mode": "dry_run" }` reports the rows that would be removed before a clean reseed.
+5. `POST /api/nexus/reseed` with `{ "action": "wipe", "mode": "commit", "confirmation": "WIPE NEXUS PACKET STORE" }` clears packet, derived index, validator identity, auth/session, and local preference rows while preserving the SQLite schema.
+6. The route is disabled on Railway unless `NEXUS_RESEED_ENABLED=1` is set explicitly and the request supplies the configured `NEXUS_RESEED_TOKEN` through `x-nexus-maintenance-token` or `Authorization: Bearer`.
+7. After a wipe commit, run the reseed commit and then use Packet Explorer full-store export to create the reseed bundle artifact.
+
 ## Shell behavior
 
 The Nexus shell currently provides:

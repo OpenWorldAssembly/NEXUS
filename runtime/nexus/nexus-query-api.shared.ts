@@ -78,6 +78,7 @@ export async function fetchMutationJsonOrThrow<TPayload>(input: {
   method: 'POST' | 'PUT';
   body: unknown;
   headers?: Record<string, string>;
+  signal?: AbortSignal;
 }): Promise<TPayload> {
   const response = await fetch(input.path, {
     method: input.method,
@@ -86,6 +87,7 @@ export async function fetchMutationJsonOrThrow<TPayload>(input: {
       ...(input.headers ?? {}),
     },
     body: JSON.stringify(input.body),
+    signal: input.signal,
   });
 
   if (!response.ok) {

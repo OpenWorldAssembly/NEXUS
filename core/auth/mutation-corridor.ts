@@ -49,6 +49,7 @@ export type AssemblyElementCreateMutationIntent = {
   subtype?: string | null;
   summary?: string | null;
   locality_label?: string | null;
+  initiative_packet_id?: string | null;
   seed_discussions?: boolean;
   add_association?: boolean;
   association_note?: string | null;
@@ -163,6 +164,7 @@ export type LocalityGraphApplyMutationIntent = {
 export type DiscussionSurfacesEnsureMutationIntent = {
   kind: 'discussion.surfaces.ensure';
   scope_id: string;
+  initiative_packet_id?: string | null;
   created_at?: string | null;
   mutation_nonce?: string | null;
 };

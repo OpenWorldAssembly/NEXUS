@@ -340,7 +340,7 @@ function classifyFile(input: {
   ) {
     return {
       category: 'definition_adapter',
-      reason: 'Preference adapter converts runtime compatibility state and Definition metadata for the Preference packet family.',
+      reason: 'Preference adapter converts runtime compatibility state and Definition metadata for the Preference packet type.',
     };
   }
 
@@ -361,7 +361,7 @@ function classifyFile(input: {
   ) {
     return {
       category: 'projection_definition',
-      reason: 'Packet-family projection/runtime helper remains behavior-preserving for now and is queued for definition-driven projection extraction.',
+      reason: 'Packet-type projection/runtime helper remains behavior-preserving for now and is queued for definition-driven projection extraction.',
     };
   }
 
@@ -373,7 +373,7 @@ function classifyFile(input: {
   ) {
     return {
       category: 'tool_adapter',
-      reason: 'Packet Explorer/tooling code may inspect or label packet families but should delegate writes to trusted coordinators.',
+      reason: 'Packet Explorer/tooling code may inspect or label packet types but should delegate writes to trusted coordinators.',
     };
   }
 
@@ -389,14 +389,14 @@ function classifyFile(input: {
   ) {
     return {
       category: 'runtime_composition',
-      reason: 'Service composition/infrastructure may mention packet families to wire runtime surfaces without owning packet definitions.',
+      reason: 'Service composition/infrastructure may mention packet types to wire runtime surfaces without owning packet definitions.',
     };
   }
 
   if (name.includes('shell-preferences')) {
     return {
       category: 'ui_adapter',
-      reason: 'Shell preference compatibility adapter is UI/runtime state around the Preference.element packet family.',
+      reason: 'Shell preference compatibility adapter is UI/runtime state around the Preference.element packet type.',
     };
   }
 

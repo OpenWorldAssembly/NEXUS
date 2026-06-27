@@ -18,7 +18,7 @@ After this snapshot, the first safe folder foundation pass moved stable shared m
 
 The first consolidation pass after the folder foundation added `app/components/nexus/ui/overlays/*` and moved repeated modal chrome in dashboard validation, packet Explorer import outcomes, and locality create/reuse/picker dialogs onto `NexusModalShell` while preserving existing visual classes and handlers.
 
-The broad `app/components/nexus/nexus-ui.tsx` primitive file has since been split into focused `ui/actions`, `ui/cards`, `ui/feedback`, `ui/forms`, `ui/layout`, and `ui/tabs` modules. `nexus-ui.tsx` remains as a compatibility bridge only; new shared UI imports should use `@app/components/nexus/ui` or direct family paths.
+The broad `app/components/nexus/nexus-ui.tsx` primitive file has since been split into focused `ui/actions`, `ui/cards`, `ui/feedback`, `ui/forms`, `ui/layout`, and `ui/tabs` modules. `nexus-ui.tsx` remains as a compatibility bridge only; new shared UI imports should use `@app/components/nexus/ui` or direct component-group paths.
 
 The discussions route has since started its feature extraction into `app/components/nexus/features/discussions/*`. Feed/thread/post panels, feed/root post cards, vote/reply-count pills, recursive reply tree controls, and post/reply composers now live there, while `src/app/nexus/discussions.tsx` remains the route controller for query state, loading, mutations, auth gates, and reply branch state.
 
@@ -114,7 +114,7 @@ These are the files most likely to contain local button, modal, form, scroll, or
 
 These files already behave like shared UI substrate or close relatives. They should generally be reorganized before route files are rewritten.
 
-| File | Lines | Exported/public components | Local component helpers | Families | Shared primitives referenced |
+| File | Lines | Exported/public components | Local component helpers | Groups | Shared primitives referenced |
 | --- | ---: | --- | --- | --- | --- |
 | `app/components/nexus/action-card/nexus-action-card.tsx` | 81 | NexusActionCard | — | actions, cards | NexusActionCard 1, NexusCard 4 |
 | `app/components/nexus/action-card/nexus-action-menu-controller.tsx` | 159 | NexusActionMenuControllerProvider | NexusActionMenuControllerContext | actions, cards | NexusActionMenu 2 |
@@ -135,7 +135,7 @@ These files already behave like shared UI substrate or close relatives. They sho
 
 These files are feature-specific compositions. Most should keep their domain/controller logic but gradually consume shared `ui/*` templates for chrome, forms, overlays, panels, and feedback.
 
-| File | Lines | Component candidates | Families | Raw primitives | Shared primitives referenced |
+| File | Lines | Component candidates | Groups | Raw primitives | Shared primitives referenced |
 | --- | ---: | --- | --- | --- | --- |
 | `app/components/nexus/features/discussions/*` | post-inventory extraction | DiscussionFeedPanel, DiscussionThreadPanel, DiscussionPostPanel, DiscussionThreadToolbar, DiscussionFeedPostCard, DiscussionRootPostCard, DiscussionReplyTree, DiscussionVotePill, DiscussionReplyCountPill, DiscussionPostComposer, DiscussionReplyComposer | cards, actions, forms, feedback, layout | Pressable retained only inside feature controls | NexusActionButton, NexusCard, NexusBadge, NexusLoadingBoundary, NexusTextInput, NexusTextArea |
 | `app/components/nexus/discussions/nexus-discussion-focus-panel.tsx` | 127 | NexusDiscussionFocusPanel | cards, layout | Pressable 3 | NexusActionButton 2, NexusCard 3, NexusBadge 3 |
@@ -166,7 +166,7 @@ These files are feature-specific compositions. Most should keep their domain/con
 
 Route-local components are the highest-risk extraction zone because they often blend controller state, data fetching, and UI chrome. They should be audited for behavior before any extraction.
 
-| Route file | Lines | Local component candidates | Families | Raw primitives | Shared primitives referenced |
+| Route file | Lines | Local component candidates | Groups | Raw primitives | Shared primitives referenced |
 | --- | ---: | --- | --- | --- | --- |
 | `src/app/nexus/_layout.tsx` | 71 | NexusLayoutContent, NexusLayout | layout | — | — |
 | `src/app/nexus/account.tsx` | 203 | NexusAccountPage | forms | Outer route shell now uses `NexusScrollFrame`, Switch 1 | NexusActionButton 7, NexusCard 9, NexusSectionHeader 2, NexusBadge 9 |
@@ -245,6 +245,6 @@ app/components/nexus/ui/
 
 - Do not make packet-type-specific UI decisions inside generic templates. Generic templates receive slots, labels, state, handlers, and scope strings.
 
-- Prefer one migration family per pass. A pass that touches overlays, tabs, forms, and route controllers at once is too wide.
+- Prefer one migration group per pass. A pass that touches overlays, tabs, forms, and route controllers at once is too wide.
 
 - Update this hard inventory or the component catalog after each consolidation pass so the map does not rot into wall art.

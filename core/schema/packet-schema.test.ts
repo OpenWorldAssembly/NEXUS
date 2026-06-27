@@ -18,7 +18,6 @@ import {
   createReactionPacket,
   createBundlePacket,
   createClaimPacket,
-  createDefinitionPacket,
   createDiscussionPacket,
   createLocationPacket,
   createPersonPacket,
@@ -34,6 +33,7 @@ import {
   buildElementDefaultDiscussionPackets,
   createElementDiscussionForumId,
 } from '@core/packets/defaults/element-discussion-defaults.ts';
+import { createOwaElementDiscussionDefaultOverrides } from '@core/packets/defaults/owa-discussion-defaults.ts';
 
 const ACTIVE_PACKET_TYPES = [
   'Definition',
@@ -325,6 +325,41 @@ test('default discussion recipe creates different baselines for people and assem
     ),
     true
   );
+
+  const genericWelcomePost = assemblyPackets.find(
+    (packet) =>
+      packet.body.subtype === 'post' &&
+      packet.body.title === 'Scope welcome'
+  );
+  assert.ok(genericWelcomePost);
+  assert.equal(
+    genericWelcomePost.body.content_markdown?.includes('Nexus'),
+    false
+  );
+
+  const owaDefaults = createOwaElementDiscussionDefaultOverrides({
+    elementName: 'Scope',
+  });
+  const owaAssemblyPackets = buildElementDefaultDiscussionPackets({
+    elementRef: { packet_id: 'nexus:element/owa-scope' },
+    elementName: 'Scope',
+    profile: 'locality_assembly',
+    createdAt: '2026-04-18T00:00:00.000Z',
+    applicableScopeRefs: [{ packet_id: 'nexus:element/owa-scope' }],
+    includeProposalsForum: true,
+    welcomeThread: owaDefaults.welcomeThread,
+    forumSummaryOverrides: owaDefaults.forumSummaryOverrides,
+  });
+  const owaWelcomePost = owaAssemblyPackets.find(
+    (packet) =>
+      packet.body.subtype === 'post' &&
+      packet.body.title === 'Scope community welcome'
+  );
+  assert.ok(owaWelcomePost);
+  assert.equal(
+    owaWelcomePost.body.content_markdown?.includes('invite neighbors into Nexus'),
+    true
+  );
 });
 
 test('Claim schema keeps support and dispute vocabulary out of stale claim subtypes', () => {
@@ -372,6 +407,14 @@ test('active canonical source does not use packet family terminology', () => {
     join('docs', 'public', 'version-records'),
     'node_modules',
   ];
+  const ignoredPaths = new Set([
+    join('core', 'schema', 'compatibility', 'adaptation.ts'),
+    join('core', 'schema', 'compatibility', 'registry.ts'),
+    join('runtime', 'storage', 'node-sqlite-packet-store.ts'),
+    join('runtime', 'storage', 'node-sqlite-packet-store.compatibility.test.ts'),
+    join('runtime', 'nexus', 'identity-migration.test.ts'),
+    join('runtime', 'nexus', 'server', 'nexus-reseed.test.ts'),
+  ]);
   const forbiddenPatterns = [
     /\bPacketFamily\b/,
     /\bPACKET_FAMILIES\b/,
@@ -396,7 +439,10 @@ test('active canonical source does not use packet family terminology', () => {
         continue;
       }
 
-      if (path === join('core', 'schema', 'packet-schema.test.ts')) {
+      if (
+        path === join('core', 'schema', 'packet-schema.test.ts') ||
+        ignoredPaths.has(path)
+      ) {
         continue;
       }
 

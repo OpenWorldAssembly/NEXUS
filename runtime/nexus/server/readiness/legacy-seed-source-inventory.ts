@@ -89,12 +89,21 @@ function classifyMarker(input: {
 
   if (
     input.marker === 'parent_scope' &&
-    (input.filePath === 'core/packets/seeds.ts' ||
-      input.filePath.includes('trusted_composite_workflow_coordinator.ts'))
+    input.filePath === 'core/packets/seeds.ts'
   ) {
     return {
       classification: 'stale_seed_candidate',
       reason: 'Fresh scope structure prefers packet-native relation projection, but this edge remains in current seed/composite material until the reseed graph pass replaces it.',
+    };
+  }
+
+  if (
+    input.marker === 'parent_scope' &&
+    input.filePath.includes('trusted_composite_workflow_coordinator.ts')
+  ) {
+    return {
+      classification: 'compatibility_read_only',
+      reason: 'Composite workflow code may still read or name parent_scope compatibility inputs, but fresh writes emit packet-native ancestry relations.',
     };
   }
 

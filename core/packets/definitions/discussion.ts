@@ -602,7 +602,7 @@ const DISCUSSION_ELEMENT_SURFACE_DEFAULTS_PART: PacketDefinitionPartDescriptor =
     default_builder: 'buildElementDefaultDiscussionPackets',
     default_packet_family: 'Element discussion space, forums, starter topics, starter posts, and optional seeded replies',
     forum_kind_semantics: {
-      visitor_lobby: 'public newcomer orientation and locality routing',
+      visitor_lobby: 'public welcome, introductions, and scope discovery',
       general: 'broad scope/member discussion',
       proposals: 'proposal drafting, review, and amendment context',
       reports: 'reports, after-action reviews, and learning records',
@@ -705,6 +705,6 @@ export const discussionPacketDefinition = {
   notes: [
     ...genericDiscussionPacketDefinition.notes,
     'Discussion is the first aggregate-projection pilot: workspace/feed/thread/composer layout and action contracts are definition-owned while child packet aggregation stays adapter/runtime-owned.',
-    `Definition overlay keeps required definition part families explicit: ${DISCUSSION_REQUIRED_PART_SUBTYPES.join(', ')}.`,
+    `Definition overlay keeps required definition part groups explicit: ${DISCUSSION_REQUIRED_PART_SUBTYPES.join(', ')}.`,
   ],
 } as const satisfies PacketTypeDefinition;

@@ -5,7 +5,10 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { DatabaseSync } from 'node:sqlite';
 
-import { preparePacketEnvelopeForVersionedWrite } from '@core/schema/packet-schema';
+import {
+  inspectPacketEnvelope,
+  preparePacketEnvelopeForVersionedWrite,
+} from '@core/schema/packet-schema';
 
 import { NodeSQLitePacketStore } from './node-sqlite-packet-store.ts';
 
@@ -123,6 +126,61 @@ function createCurrentElementPacket() {
   };
 }
 
+function createLegacyFamilyClaimedIdentityPacket() {
+  const currentPacket = createCurrentElementPacket();
+  const { type: _type, ...headerWithoutType } = currentPacket.header;
+
+  return {
+    header: {
+      ...headerWithoutType,
+      packet_id: 'nexus:element/test-legacy-claimed-identity',
+      revision_id: 'nexus:element/test-legacy-claimed-identity@r1',
+      family: 'Element',
+      schema_version: '1.0.0',
+    },
+    body: {
+      ...currentPacket.body,
+      name: 'Legacy Claimed Identity',
+      subtype: 'claimed_identity',
+      identity: {
+        alias: 'Legacy Claimed Identity',
+        claim_status: 'claimed',
+        location_disclosure: null,
+        public_key_bindings: [
+          {
+            kid: 'legacy-key',
+            alg: 'ES256',
+            kty: 'EC',
+            crv: 'P-256',
+            public_jwk: {
+              kty: 'EC',
+              crv: 'P-256',
+              x: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+              y: 'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB',
+            },
+            status: 'active',
+            added_at: '2026-04-18T00:00:00.000Z',
+            revoked_at: null,
+          },
+        ],
+      },
+    },
+  };
+}
+
+function downgradePacketStoreColumnsToLegacy(databasePath: string): void {
+  const database = new DatabaseSync(databasePath);
+
+  try {
+    database.exec('ALTER TABLE packets RENAME COLUMN type TO family');
+    database.exec('ALTER TABLE packet_revisions RENAME COLUMN type TO family');
+    database.exec('ALTER TABLE packet_search_index RENAME COLUMN type TO family');
+    database.exec('ALTER TABLE packet_edges RENAME COLUMN source_type TO source_family');
+  } finally {
+    database.close();
+  }
+}
+
 test('packet store preserves legacy raw revisions while serving adapted packets by default', async () => {
   const directory = mkdtempSync(join(tmpdir(), 'owa-packet-store-compat-'));
   const packetStore = new NodeSQLitePacketStore({
@@ -214,6 +272,62 @@ test('packet store preserves legacy raw revisions while serving adapted packets 
     );
   } finally {
     packetStore.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('packet compatibility adapts legacy family headers and claimed identity subtypes', () => {
+  const legacyPacket = createLegacyFamilyClaimedIdentityPacket();
+  const compatibilityRead = inspectPacketEnvelope(legacyPacket);
+
+  assert.equal(compatibilityRead.adapted_packet.header.type, 'Element');
+  assert.equal(compatibilityRead.adapted_packet.header.schema_version, '1.1.0');
+  assert.equal(compatibilityRead.adapted_packet.body.subtype, 'person');
+});
+
+test('packet store repairs legacy family columns before serving packets by type', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'owa-packet-store-family-'));
+  const databasePath = join(directory, 'owa-packets.db');
+  let packetStore: NodeSQLitePacketStore | null = new NodeSQLitePacketStore({
+    databasePath,
+  });
+  const legacyPacket = createLegacyFamilyClaimedIdentityPacket();
+
+  try {
+    await packetStore.importBundle(
+      JSON.stringify({
+        bundle_version: 1,
+        exported_at: '2026-04-18T00:00:00.000Z',
+        packets: [legacyPacket],
+      })
+    );
+    packetStore.close();
+    packetStore = null;
+
+    downgradePacketStoreColumnsToLegacy(databasePath);
+
+    packetStore = new NodeSQLitePacketStore({ databasePath });
+
+    const schemaStatus = packetStore.auditSchemaCompatibility();
+    const elementPackets = await packetStore.listPreferredPacketsByType('Element');
+    const rawPacket = await packetStore.readByRevision(
+      {
+        packet_id: legacyPacket.header.packet_id,
+        revision_id: legacyPacket.header.revision_id,
+      },
+      { mode: 'raw' }
+    );
+
+    assert.equal(schemaStatus.status, 'current');
+    assert.deepEqual(schemaStatus.remaining_legacy_columns, []);
+    assert.ok(
+      schemaStatus.repaired_legacy_columns.includes('packets.family->type')
+    );
+    assert.equal(elementPackets.length, 1);
+    assert.equal(elementPackets[0]?.body.subtype, 'person');
+    assert.deepEqual(rawPacket, legacyPacket);
+  } finally {
+    packetStore?.close();
     rmSync(directory, { recursive: true, force: true });
   }
 });

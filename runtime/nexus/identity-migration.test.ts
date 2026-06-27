@@ -62,6 +62,34 @@ async function createLegacyStoredRecord(input?: {
   };
 }
 
+async function createSignedLegacyFamilyStoredRecord(): Promise<StoredIdentityRecord> {
+  const record = await createLegacyStoredRecord({ signed: true });
+  const { type: _type, ...headerWithoutType } = record.actor_packet.header;
+  const {
+    scope_system: _scopeSystem,
+    status: _status,
+    aliases: _aliases,
+    display_aliases: _displayAliases,
+    custody_hints: _custodyHints,
+    ...bodyWithoutCurrentFields
+  } = record.actor_packet.body;
+
+  return {
+    ...record,
+    actor_packet: {
+      header: {
+        ...headerWithoutType,
+        family: 'Element',
+        schema_version: '1.0.0',
+      },
+      body: {
+        ...bodyWithoutCurrentFields,
+        subtype: 'claimed_identity',
+      },
+    } as unknown as StoredIdentityRecord['actor_packet'],
+  };
+}
+
 test('identity migration classifies unsigned claimed stored identity as migration required', async () => {
   const record = await createLegacyStoredRecord();
 
@@ -72,6 +100,12 @@ test('identity migration classifies signed claimed stored identity as current', 
   const record = await createLegacyStoredRecord({ signed: true });
 
   assert.equal(classifyStoredIdentityForMigration(record), 'current');
+});
+
+test('identity migration classifies signed legacy family identity as migration required', async () => {
+  const record = await createSignedLegacyFamilyStoredRecord();
+
+  assert.equal(classifyStoredIdentityForMigration(record), 'migration_required');
 });
 
 test('identity migration builds signed current claimed packet with reused id and custody hints', async () => {
@@ -101,6 +135,34 @@ test('identity migration builds signed current claimed packet with reused id and
     'reused_legacy_id'
   );
   assert.equal(migratedPacket.header.integrity.embedded_signatures.length, 1);
+});
+
+test('identity migration records reminted custody when a tentative packet id is supplied', async () => {
+  const record = await createLegacyStoredRecord();
+  const migratedPacket = await buildSignedMigratedIdentityPacket({
+    legacyActorPacket: record.actor_packet,
+    bundle: {
+      actorPacket: record.actor_packet,
+      publicJwk: record.public_jwk,
+      privateJwk: record.privateJwk,
+    },
+    tentativePacketId: 'nexus:element/migrated-testy-mcgee',
+    createdAt: '2026-05-02T00:00:00.000Z',
+  });
+
+  assert.equal(migratedPacket.header.packet_id, 'nexus:element/migrated-testy-mcgee');
+  assert.equal(
+    migratedPacket.body.custody_hints?.migration &&
+      (migratedPacket.body.custody_hints.migration as Record<string, unknown>)
+        .legacy_actor_packet_id,
+    record.actor_packet_id
+  );
+  assert.equal(
+    migratedPacket.body.custody_hints?.migration &&
+      (migratedPacket.body.custody_hints.migration as Record<string, unknown>)
+        .packet_id_policy,
+    'reminted_id'
+  );
 });
 
 test('identity migration refuses to build while policy is disabled', async () => {

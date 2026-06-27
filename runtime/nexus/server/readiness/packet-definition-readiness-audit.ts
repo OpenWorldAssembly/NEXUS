@@ -524,9 +524,9 @@ function createNotes(input: {
   if (input.packetType === 'Discussion') {
     notes.push('Discussion has a native overlay for aggregate workspace/feed/thread/composer projection descriptors while preserving the generic base definition.');
   } else if (input.layer === 'owa_domain' && input.owaDomainDefaultsResolved) {
-    notes.push('Generic packet-family definition is present and OWA-specific default/seed semantics are explicitly recorded for the reseed pass.');
+    notes.push('Generic packet-type definition is present and OWA-specific default/seed semantics are explicitly recorded for the reseed pass.');
   } else if (input.layer === 'owa_domain') {
-    notes.push('Generic packet-family definition is present; OWA-specific defaults and seed semantics still need product/domain decisions.');
+    notes.push('Generic packet-type definition is present; OWA-specific defaults and seed semantics still need product/domain decisions.');
   }
 
   if (input.packetType === 'Preference') {
@@ -559,11 +559,11 @@ function createNextStep(input: {
   if (input.layer === 'owa_domain') {
     return input.owaDomainDefaultsResolved
       ? 'Use the recorded OWA default semantics when building reseed fixtures and default packet sets.'
-      : 'Decide the OWA default packets/policies for this generic family before reseed.';
+      : 'Decide the OWA default packets/policies for this generic packet type before reseed.';
   }
 
   if (input.buckets.includes('projection_incomplete')) {
-    return 'Add field/layout projection metadata only if this packet family needs packet-agnostic UI projection before reseed.';
+    return 'Add field/layout projection metadata only if this packet type needs packet-agnostic UI projection before reseed.';
   }
 
   if (input.buckets.includes('write_incomplete')) {

@@ -57,6 +57,25 @@ test('prepare route accepts Preference.element set intents and resolves prefligh
   }
 });
 
+test('prepare route accepts optional initiative refs for default-surface intents', () => {
+  const assemblyIntent = MutationIntentSchema.parse({
+    kind: 'assembly.element.create',
+    name: 'District 9',
+    parent_scope_packet_id: 'nexus:element/city',
+    initiative_packet_id: 'nexus:action/owa',
+  });
+  assert.equal(assemblyIntent.kind, 'assembly.element.create');
+  assert.equal(assemblyIntent.initiative_packet_id, 'nexus:action/owa');
+
+  const discussionIntent = MutationIntentSchema.parse({
+    kind: 'discussion.surfaces.ensure',
+    scope_id: 'district-9',
+    initiative_packet_id: 'nexus:action/owa',
+  });
+  assert.equal(discussionIntent.kind, 'discussion.surfaces.ensure');
+  assert.equal(discussionIntent.initiative_packet_id, 'nexus:action/owa');
+});
+
 test('prepare route rejects empty Preference.element set intents', () => {
   assert.throws(
     () =>

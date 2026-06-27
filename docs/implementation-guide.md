@@ -40,6 +40,7 @@ For the implementation guide, the chapter files under `docs/implementation-guide
 
 - [Packet Definition Manifest R&D](implementation-guide/packet-definition-manifest-rd.md)
 - [Packet Runtime Modernization](implementation-guide/packet-runtime-modernization.md)
+- [Nexus Reseed Audit](implementation-guide/nexus-reseed-audit.md)
 - [Runtime Responsibility Audit](implementation-guide/runtime-responsibility-audit.md)
 
 - [Architecture And Layers](implementation-guide/architecture-and-layers.md)

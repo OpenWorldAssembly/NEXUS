@@ -31,6 +31,10 @@ import {
   createElementDiscussionThreadId,
   type ElementDiscussionStarterThreadInput,
 } from '@core/packets/defaults/element-discussion-defaults';
+import { createOwaElementDiscussionDefaultOverrides } from '@core/packets/defaults/owa-discussion-defaults.ts';
+import {
+  buildCuratedGlobalGeographySeedPackets,
+} from '@core/packets/curated-geography-seeds.ts';
 
 export const SEED_CREATED_AT = '2026-04-08T00:00:00.000Z';
 export const DISCUSSION_SEED_VERSION = '2026-04-11-discussions-membership-v1';
@@ -189,6 +193,10 @@ function createScopeDiscussionPackets(input: ScopeSeedConfig): PacketEnvelope[] 
   }
 
   const packets: PacketEnvelope[] = buildElementDefaultDiscussionPackets({
+    ...createOwaElementDiscussionDefaultOverrides({
+      elementName: input.scopeName,
+      relatedRefs: [PERSONAL_TREE_REFS.visitor_lobby_policy],
+    }),
     elementRef: input.packetRef,
     elementName: input.scopeName,
     profile: 'locality_assembly',
@@ -197,27 +205,6 @@ function createScopeDiscussionPackets(input: ScopeSeedConfig): PacketEnvelope[] 
     authorRef: input.authorRef,
     includeProposalsForum: true,
     includeReportsForum: true,
-    welcomeThread: {
-      forumKind: 'visitor_lobby',
-      suffix: 'welcome',
-      title:
-        input.scopeName === 'Global Commons'
-          ? 'Start here if you do not know your locality yet'
-          : `${input.scopeName} newcomer thread`,
-      body:
-        input.scopeName === 'Global Commons'
-          ? [
-              'Guests can browse first, ask questions here, and narrow down to a local assembly later.',
-              '',
-              'If you already know your general area, mention it and we can point you toward the right branch.',
-            ].join('\n\n')
-          : [
-              `This is the public newcomer thread for ${input.scopeName}.`,
-              '',
-              'Reply here with your question, area, or intent and we can help route you to the right next step.',
-            ].join('\n\n'),
-      relatedRefs: [PERSONAL_TREE_REFS.visitor_lobby_policy],
-    },
     starterThreads,
   });
 
@@ -363,9 +350,6 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     created_at: SEED_CREATED_AT,
     authority_scope_ref: PERSONAL_TREE_REFS.united_states,
     applicable_scope_refs: unitedStatesApplicableScopeRefs,
-    edges: [
-      createPacketEdge('parent_scope', PERSONAL_TREE_REFS.global_commons),
-    ],
     name: 'United States',
     subtype: 'nation',
     summary:
@@ -385,7 +369,6 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     created_at: SEED_CREATED_AT,
     authority_scope_ref: PERSONAL_TREE_REFS.california,
     applicable_scope_refs: californiaApplicableScopeRefs,
-    edges: [createPacketEdge('parent_scope', PERSONAL_TREE_REFS.united_states)],
     name: 'California',
     subtype: 'state',
     summary: 'A statewide assembly branch for California civic coordination.',
@@ -404,7 +387,6 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     created_at: SEED_CREATED_AT,
     authority_scope_ref: PERSONAL_TREE_REFS.moreno_valley,
     applicable_scope_refs: morenoValleyApplicableScopeRefs,
-    edges: [createPacketEdge('parent_scope', PERSONAL_TREE_REFS.california)],
     name: 'Moreno Valley',
     subtype: 'city',
     summary: 'A city assembly branch for Moreno Valley.',
@@ -423,7 +405,6 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     created_at: SEED_CREATED_AT,
     authority_scope_ref: PERSONAL_TREE_REFS.sunnymead_ranch,
     applicable_scope_refs: sunnymeadApplicableScopeRefs,
-    edges: [createPacketEdge('parent_scope', PERSONAL_TREE_REFS.moreno_valley)],
     name: 'Sunnymead Ranch',
     subtype: 'neighborhood',
     summary:
@@ -555,9 +536,9 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
     body_markdown: [
       '# Visitor Lobby Baseline',
       '',
-      '- Guests may introduce themselves and ask locality questions.',
+      '- Guests may introduce themselves, share local context, and invite others into Nexus.',
       '- Deeper posting rights remain trust-gated.',
-      '- Moderation actions should preserve public orientation where possible.',
+      '- Moderation actions should preserve public community participation where possible.',
     ].join('\n'),
     status: 'active',
   });
@@ -788,11 +769,18 @@ export function createPersonalSeedPackets(): PacketEnvelope[] {
 }
 
 export const PERSONAL_SEED_PACKETS = createPersonalSeedPackets();
+export const CURATED_GLOBAL_GEOGRAPHY_SEED_PACKETS =
+  buildCuratedGlobalGeographySeedPackets({
+    rootRef: PERSONAL_TREE_REFS.global_commons,
+    createdAt: SEED_CREATED_AT,
+    createdByRef: PERSONAL_TREE_REFS.global_commons,
+  });
 export const DEFINITION_PROFILE_SEED_PACKETS = [
   ...buildDefinitionPacketSeedEnvelopes(),
   buildDefinitionBundleSeedEnvelope(),
 ];
 export const CANONICAL_SEED_PACKETS = [
   ...PERSONAL_SEED_PACKETS,
+  ...CURATED_GLOBAL_GEOGRAPHY_SEED_PACKETS,
   ...DEFINITION_PROFILE_SEED_PACKETS,
 ];

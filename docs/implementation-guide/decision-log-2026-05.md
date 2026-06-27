@@ -74,7 +74,7 @@ This monthly log condenses the May 2026 decisions that remain most important for
 ## 2026-05 Nexus UI primitive split
 
 - The broad `app/components/nexus/nexus-ui.tsx` primitive file is now a compatibility bridge over focused `app/components/nexus/ui/*` component-type modules.
-- Cards, actions, badges, forms, layout/chrome helpers, and attached tab rails now have canonical family homes while preserving their existing classes and behavior.
+- Cards, actions, badges, forms, layout/chrome helpers, and attached tab rails now have canonical component-group homes while preserving their existing classes and behavior.
 - Nexus callers have moved to the canonical `@app/components/nexus/ui` import path; future work should not add new primitive imports from `nexus-ui.tsx`.
 
 ## 2026-05 feature-status explainers
@@ -453,13 +453,16 @@ This monthly log condenses the May 2026 decisions that remain most important for
 
 - Discussion defaults now have packet-definition material for the Element discussion surface recipe: person, assembly, and locality assembly profiles; deterministic space/forum/thread/post/reply id strategy; forum-kind semantics; and the `buildElementDefaultDiscussionPackets` recipe are carried as a `Discussion` `defaults_definition` part.
 - Discussion subtype defaults remain separate from the workflow recipe, so resolving `Discussion.post` defaults does not pollute post bodies with surface-level profile data.
-- OWA-domain generic packet families now record default semantics for `Action`, `Proposal`, and `Decision` in definition defaults. Actions carry hierarchy/policy/template/default-packet-set refs, Proposals remain deliberation records, and Decisions stay recorded outcomes linked to proposal/vote material by refs.
+- OWA-domain generic packet types now record default semantics for `Action`, `Proposal`, and `Decision` in definition defaults. Actions carry hierarchy/policy/template/default-packet-set refs, Proposals remain deliberation records, and Decisions stay recorded outcomes linked to proposal/vote material by refs.
 - The packet-definition readiness audit now treats Action, Proposal, Decision, and Discussion OWA-default decisions as closed when their definition-backed defaults are present, leaving reseed fixture construction as the next step rather than another terminology/design pass.
 
 ### 2026-05-31 - Temporary identity migration bridge
 
 - Legacy locally stored Nexus identities now migrate through an explicit, key-proven auth flow instead of silently becoming current identities during sign-in.
 - Old local records are migration candidates only: the user must unlock the encrypted bundle, sign a current-schema claimed identity packet, submit it to `/api/nexus/auth/migrate`, and wait for server acceptance before local IndexedDB is replaced.
+- The sign-in route now separates search text from selected identity state. Selecting a Nexus result settles into a selected card without rewriting the search query, and bundle passphrase actions are available only when the encrypted local bundle exists on the device.
+- Legacy local identities use a prepare/review/confirm ceremony: unlock the saved bundle, review the signed migrated packet candidate and custody metadata, then explicitly consent before `/api/nexus/auth/migrate` is called. Nexus-only identities are routed toward passkey sign-in or bundle import instead of disabled bundle login with no explanation.
+- Storage compatibility is handled below the identity bridge. `NodeSQLitePacketStore` repairs legacy SQLite columns such as `family` to current `type` names before normal schema initialization, and raw packet compatibility adapts legacy `header.family` plus `Element.claimed_identity` material into current `Element.person` reads without deleting packet history.
 - The bridge is versioned with `migration_version: 1` custody metadata and a finite reseed-transition policy. It is not a permanent provisional-id framework; migrated packets are current-schema identities and remain valid after the bridge is removed.
 - Migration carries only identity continuity material: alias, safe packet-id reuse when allowed, active public key binding, readable location disclosure, and migration custody hints. Old preferences, relations, posts, votes, attestations, graph edges, authored packets, and history are intentionally not migrated.
 

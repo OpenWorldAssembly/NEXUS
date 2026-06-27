@@ -214,11 +214,12 @@ function classifyStorageTouch(input: {
     filePath === 'runtime/nexus/server/locality/locality-directory-service.ts' ||
     filePath === 'runtime/nexus/server/identity/auth-service.ts' ||
     filePath === 'runtime/nexus/server/verification-service.ts' ||
-    filePath === 'runtime/nexus/server/definition-packet-revisions.ts'
+    filePath === 'runtime/nexus/server/definition-packet-revisions.ts' ||
+    filePath === 'runtime/nexus/server/nexus-reseed.ts'
   ) {
     return {
       category: 'allowed_infrastructure',
-      reason: 'Classified infrastructure writer: bootstrap, identity custody, locality seed path, generic definition revision seam, or verification report backfill.',
+      reason: 'Classified infrastructure writer: bootstrap, identity custody, locality seed path, generic definition revision seam, local reseed maintenance, or verification report backfill.',
     };
   }
 

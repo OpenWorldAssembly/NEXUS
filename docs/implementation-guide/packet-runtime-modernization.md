@@ -63,7 +63,7 @@ The audit modules are the working checklist for the next implementation passes. 
 
 Current modernization direction is to organize secure runtime work around enrolled Trusted Runtime Coordinators rather than route-local write code.
 
-Target coordinator families:
+Target coordinator groups:
 
 - Interface Event Coordinator for client-side UI event shaping before requests leave the interface
 - Trusted Dispatch Coordinator for user/API intent routing, request normalization, and fail-closed preflight
@@ -432,6 +432,8 @@ Actor write-policy update is mechanically promoted through the composite seam, a
 
 The pre-reseed packet model now treats `Action(subtype: initiative)` as the forward initiative/work hierarchy anchor. `Action` packets can carry hierarchy refs plus packet-backed policy, template, and default packet-set refs so OWA defaults can be overridden without adding OWA-specific fields to `Element` or hardcoding defaults in runtime.
 
+Element discussion defaults keep the generic Nexus recipe product-neutral. `assembly.element.create` and `discussion.surfaces.ensure` may carry an optional `initiative_packet_id`; when that ref is the OWA Action initiative, the discussion surface planner applies OWA/community copy overrides while preserving the generic packet builder and Discussion schema.
+
 Canonical discussion shape now reserves `Discussion(subtype: post)` for top-level multimedia forum artifacts that start a thread, while `Discussion(subtype: message)` remains the reply/comment shape. Legacy thread/post/reply packet types are pruned from fresh canon.
 
 Governance hooks remain schema-ready rather than workflow-complete: quorum, minimum trust, voter eligibility, approval thresholds, and voting gates should be expressed through packet-backed Policy/default material linked from the applicable initiative Action, scope, proposal, or definition context. `Decision` is the formal outcome packet; `Report(subtype: decision_report)` is reserved for future tally/evidence/process closure material.
@@ -467,7 +469,7 @@ The final readiness handoff lives in runtime audit code as `createFinalPreReseed
 
 The final handoff now separates report output into `blockers`, `accepted_transition_notes`, and `cleanup_candidates`. `findings` remains a temporary compatibility alias for `blockers`, so the reseed gate passes only when `blockers.length === 0`. Accepted transition notes keep known bootstrap states visible without blocking reseed: TypeScript fallback definitions and generated Definition seed packets are both active pre-reseed sources, Definition and Bundle keep intentionally minimal projection metadata, Bundle transport labels are carrier labels rather than semantic subtypes, and synthetic coordinator debug-audit candidates are not treated as live write failures.
 
-The final gate also includes a legacy seed/source inventory. It scans current seed, builder, discussion default, compatibility, runtime helper, and readiness doc material for pruned packet type names, old seed-batch labels, old Vote/Attestation naming, retired mutation intents, split discussion helper names, and `parent_scope` seed edges. The inventory classifies each hit as fresh canon, compatibility-read-only, test-fixture-only, stale seed candidate, or remove-now. No remove-now artifact was deleted in this pass; `parent_scope` remains an explicit cleanup candidate because it is still present as a compatibility/read-model edge rather than an active fresh-canon seed requirement.
+The final gate also includes a legacy seed/source inventory. It scans current seed, builder, discussion default, compatibility, runtime helper, and readiness doc material for pruned packet type names, old seed-batch labels, old Vote/Attestation naming, retired mutation intents, split discussion helper names, and `parent_scope` seed edges. The inventory classifies each hit as fresh canon, compatibility-read-only, test-fixture-only, stale seed candidate, or remove-now. Fresh seed and composite creation now emit packet-native ancestry relations instead of `parent_scope`; remaining `parent_scope` mentions are compatibility-read-only for older archive material and route/query compatibility.
 
 ## Definition Packetization and Preference Dispatch Promotion
 
@@ -493,7 +495,7 @@ Current pre-reseed canon collapses lightweight votes, packet signals, support/di
 
 ## Trusted Resolution Coordinator and Projection Definition Pass
 
-The trusted runtime coordinator family now has a shared home under `runtime/trusted_coordinators/*`. Direct generic workflow promotion, composite workflow promotion, composite adapters, resolution, and projection share this layer instead of living as one-off files under the Nexus server adapter folder.
+The trusted runtime coordinator group now has a shared home under `runtime/trusted_coordinators/*`. Direct generic workflow promotion, composite workflow promotion, composite adapters, resolution, and projection share this layer instead of living as one-off files under the Nexus server adapter folder.
 
 A portable resolution DSL now lives in core as declaration language, not executable behavior. It defines shared binding shapes, resolution steps, and preset descriptors such as primitive bindings, packet refs, policy gates, dependency gates, relation lookup, discussion thread context, role scope context, compatibility projection, and UI card projection. Packet definitions and workflow descriptors may point at preset IDs, while trusted runtime coordinators decide how those presets are actually resolved locally.
 

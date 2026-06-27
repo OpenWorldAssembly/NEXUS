@@ -243,7 +243,7 @@ export function createDefinitionDslCapabilityAuditReport(): DefinitionDslCapabil
         `${counts.workflow_condition_steps} condition-step declarations found, so branchable workflows are already modeled at definition level.`,
       ],
       next_step:
-        'Do not build a full live interpreter yet; enroll only the next operation family that needs runtime execution.',
+        'Do not build a full live interpreter yet; enroll only the next operation lane that needs runtime execution.',
     }),
     createEntry({
       area: 'projection_language',

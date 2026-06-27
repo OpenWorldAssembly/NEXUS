@@ -54,6 +54,7 @@ export function previewNexusLocalityPath(
 export function fetchNexusIdentitySearchPayload(input: {
   query: string;
   savedActorPacketIds: string[];
+  signal?: AbortSignal;
 }): Promise<NexusIdentitySearchPayload> {
   return fetchMutationJsonOrThrow<NexusIdentitySearchPayload>({
     path: '/api/nexus/identity-search',
@@ -62,5 +63,6 @@ export function fetchNexusIdentitySearchPayload(input: {
       query: input.query,
       saved_actor_packet_ids: input.savedActorPacketIds,
     },
+    signal: input.signal,
   });
 }

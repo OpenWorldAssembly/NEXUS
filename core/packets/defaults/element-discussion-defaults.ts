@@ -57,6 +57,10 @@ export type ElementDiscussionForumPlan = {
   };
 };
 
+export type ElementDiscussionForumSummaryOverrides = Partial<
+  Record<ElementDiscussionForumKind, string>
+>;
+
 const DEFAULT_MEMBER_PARTICIPATION_RULES = {
   top_level_actor_classes: ['scope_member', 'trusted_member', 'steward'],
   reply_actor_classes: ['scope_member', 'trusted_member', 'steward'],
@@ -94,7 +98,7 @@ export const ELEMENT_DISCUSSION_DEFAULT_PROFILES = {
     default_welcome_forum_kind: 'visitor_lobby',
     include_proposals_by_default: true,
     include_reports_by_default: true,
-    guest_access: 'visitor lobby allows anonymous guest locality routing by default; proposal/report forums are member-gated.',
+    guest_access: 'visitor lobby allows anonymous guest orientation by default; proposal/report forums are member-gated.',
   },
 } as const;
 
@@ -222,11 +226,11 @@ function createDefaultWelcomeThread(input: {
   return {
     forumKind: 'visitor_lobby',
     suffix: 'welcome',
-    title: `${input.elementName} newcomer thread`,
+    title: `${input.elementName} welcome`,
     body: [
-      `This is the public newcomer thread for ${input.elementName}.`,
+      `This is the public welcome thread for ${input.elementName}.`,
       '',
-      'Reply here with your question, area, or intent and we can help route you to the right next step.',
+      'Use it for introductions, public context, and coordination that should stay attached to this Element.',
     ].join('\n\n'),
     relatedRefs: input.relatedRefs ?? [],
   };
@@ -281,6 +285,7 @@ export function buildElementDiscussionForumPlans(input: {
   includeProposalsForum?: boolean;
   includeReportsForum?: boolean;
   roleForums?: ElementDiscussionRoleForumInput[];
+  forumSummaryOverrides?: ElementDiscussionForumSummaryOverrides;
 }): ElementDiscussionForumPlan[] {
   const plans: ElementDiscussionForumPlan[] = [];
 
@@ -289,7 +294,8 @@ export function buildElementDiscussionForumPlans(input: {
       forumKind: 'visitor_lobby',
       title: `${input.elementName} visitor lobby`,
       summary:
-        'Public newcomer space for orientation, introductions, and locality routing.',
+        input.forumSummaryOverrides?.visitor_lobby ??
+        'Public welcome space for introductions, orientation, and scope discovery.',
       defaultSort: 'new',
       participationRules: createActorRules(GUEST_FORUM_ACTORS),
     });
@@ -366,6 +372,7 @@ export function buildElementDefaultDiscussionPackets(input: {
   includeProposalsForum?: boolean;
   includeReportsForum?: boolean;
   roleForums?: ElementDiscussionRoleForumInput[];
+  forumSummaryOverrides?: ElementDiscussionForumSummaryOverrides;
 }): PacketEnvelopeByType['Discussion'][] {
   const discussionSpaceRef = createPacketRef(
     createElementDiscussionSpaceId(input.elementRef.packet_id)
@@ -376,6 +383,7 @@ export function buildElementDefaultDiscussionPackets(input: {
     includeProposalsForum: input.includeProposalsForum,
     includeReportsForum: input.includeReportsForum,
     roleForums: input.roleForums,
+    forumSummaryOverrides: input.forumSummaryOverrides,
   });
   const forumKinds = new Set(forumPlans.map((forumPlan) => forumPlan.forumKind));
   const requestedStarterThreads = [

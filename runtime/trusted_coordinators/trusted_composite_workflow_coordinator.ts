@@ -21,7 +21,6 @@ import { createElementPolicyRefsRevision } from '@core/packets/identity';
 import {
   createAssemblyPacket,
   createReactionPacket,
-  createPacketEdge,
   createPacketRef,
   createPolicyPacket,
 } from '@core/packets/builders';
@@ -33,6 +32,7 @@ import type {
   ReactionAttestationValue,
   PacketEnvelope,
   PacketEnvelopeByType,
+  PacketRef,
 } from '@core/schema/packet-schema';
 import { planDefaultDiscussionSurfaces } from '@runtime/nexus/server/default-discussion-surfaces';
 import { toRouteScopeId } from '@runtime/nexus/server/discussion-service.scope';
@@ -220,6 +220,32 @@ function createApplicableScopeRefs(input: {
   }
 
   return refs;
+}
+
+function appendPacketRefIfMissing(
+  refs: PacketRef[],
+  packetId?: string | null
+): PacketRef[] {
+  const normalizedPacketId = packetId?.trim();
+
+  if (
+    !normalizedPacketId ||
+    refs.some((ref) => ref.packet_id === normalizedPacketId)
+  ) {
+    return refs;
+  }
+
+  return [...refs, { packet_id: normalizedPacketId }];
+}
+
+function appendPacketRefsIfMissing(
+  refs: PacketRef[],
+  additionalRefs: readonly PacketRef[]
+): PacketRef[] {
+  return additionalRefs.reduce<PacketRef[]>(
+    (mergedRefs, ref) => appendPacketRefIfMissing(mergedRefs, ref.packet_id),
+    refs
+  );
 }
 
 function createNextRevisionId(
@@ -808,22 +834,23 @@ export async function resolveTrustedAssemblyElementCompositePlan(
   );
   const createdAt = input.intent.created_at ?? new Date().toISOString();
   const assemblyPacketId = createAssemblyPacketId(input.intent.name);
-  const applicableScopeRefs = createApplicableScopeRefs({
-    scopePacketId: assemblyPacketId,
-    parentPacketId: parentScopePacket.header.packet_id,
-    parentByPacketId,
-  });
+  const initiativeRef = input.intent.initiative_packet_id
+    ? { packet_id: input.intent.initiative_packet_id }
+    : null;
+  const applicableScopeRefs = appendPacketRefIfMissing(
+    createApplicableScopeRefs({
+      scopePacketId: assemblyPacketId,
+      parentPacketId: parentScopePacket.header.packet_id,
+      parentByPacketId,
+    }),
+    initiativeRef?.packet_id
+  );
   const assemblyPacket = createAssemblyPacket({
     packet_id: assemblyPacketId,
     created_at: createdAt,
     authority_scope_ref: { packet_id: assemblyPacketId },
     applicable_scope_refs: applicableScopeRefs,
     created_by: { packet_id: input.actorPacket.header.packet_id },
-    edges: [
-      createPacketEdge('parent_scope', {
-        packet_id: parentScopePacket.header.packet_id,
-      }),
-    ],
     name: input.intent.name.trim(),
     subtype: input.intent.subtype?.trim() ?? 'local',
     summary: input.intent.summary?.trim() ?? null,
@@ -831,7 +858,22 @@ export async function resolveTrustedAssemblyElementCompositePlan(
     tags: ['assembly', 'local'],
     metadata_tags: ['assembly', 'local'],
   });
-  const packets: PacketEnvelope[] = [assemblyPacket];
+  const parentRelationPacket = createScopedRelationPacket({
+    subtype: 'default_ancestry_parent',
+    subjectPacketId: assemblyPacket.header.packet_id,
+    targetPacketId: parentScopePacket.header.packet_id,
+    scopePacketId: assemblyPacket.header.packet_id,
+    applicableScopeRefs,
+    createdByPacketId: input.actorPacket.header.packet_id,
+    status: 'active',
+    packetId: createRelationPacketId({
+      subtype: 'default_ancestry_parent',
+      subjectPacketId: assemblyPacket.header.packet_id,
+      targetPacketId: parentScopePacket.header.packet_id,
+      scopePacketId: assemblyPacket.header.packet_id,
+    }),
+  });
+  const packets: PacketEnvelope[] = [assemblyPacket, parentRelationPacket];
   const actionIds: MutationActionId[] = ['assembly.element.create'];
 
   if (input.intent.seed_discussions !== false) {
@@ -840,6 +882,7 @@ export async function resolveTrustedAssemblyElementCompositePlan(
       scopePacketId: assemblyPacket.header.packet_id,
       scopeName: assemblyPacket.body.name,
       applicableScopeRefs,
+      initiativeRef,
       elementSubtype: assemblyPacket.body.subtype,
     });
     packets.push(...discussionPackets);
@@ -1142,10 +1185,16 @@ export async function resolveTrustedDiscussionSurfacesCompositePlan(
     packetStore: input.packetStore,
     scopePacketId: scopeNode.packetId,
     scopeName: scopeNode.name,
-    applicableScopeRefs: buildApplicableScopeRefsFromNodes({
-      scopePacketId: scopeNode.packetId,
-      scopeNodes,
-    }),
+    applicableScopeRefs: appendPacketRefsIfMissing(
+      buildApplicableScopeRefsFromNodes({
+        scopePacketId: scopeNode.packetId,
+        scopeNodes,
+      }),
+      scopeNode.packet.header.applicable_scope_refs
+    ),
+    initiativeRef: intent.initiative_packet_id
+      ? { packet_id: intent.initiative_packet_id }
+      : null,
     elementSubtype: scopeNode.subtype,
   });
   const mergedPolicyDecision = await input.policyGate.resolveScopePolicyDecision({

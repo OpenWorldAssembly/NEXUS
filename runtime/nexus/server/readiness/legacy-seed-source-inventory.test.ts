@@ -16,12 +16,15 @@ test('legacy seed source inventory classifies every discovered marker without re
   assert.ok(report.entries.length > 0);
 });
 
-test('legacy seed source inventory keeps parent_scope as an explicit cleanup candidate', () => {
+test('legacy seed source inventory keeps fresh seed cleanup candidates closed', () => {
   const report = createLegacySeedSourceInventoryReport();
 
+  assert.deepEqual(report.cleanup_candidates, []);
   assert.ok(
-    report.cleanup_candidates.some((candidate) =>
-      candidate.includes('parent_scope')
+    report.entries.some(
+      (entry) =>
+        entry.marker === 'parent_scope' &&
+        entry.classification === 'compatibility_read_only'
     )
   );
 });

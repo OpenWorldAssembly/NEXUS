@@ -112,6 +112,9 @@ const TRUSTED_COMPOSITE_WORKFLOW_ADAPTER_IDS = [
   'composite.actor_write_policy.update.v0',
 ] as const;
 
+const DESCRIPTOR_ONLY_PRE_RESEED_WORKFLOW_PLANS = new Set<string>([
+  'preference.node.set.workflow.v0',
+]);
 
 function listTrustedWorkflowPlans() {
   return listPacketWorkflowPlanDescriptorsFromDefinitions({
@@ -173,20 +176,28 @@ function createWorkflowPlanEntries(): PreReseedClosureLedgerEntry[] {
     const closesLiveIntent = plan.mutation_intents.some((intent) =>
       CLOSED_RUNTIME_MUTATION_INTENTS.has(intent)
     );
+    const descriptorOnlyPreReseed =
+      DESCRIPTOR_ONLY_PRE_RESEED_WORKFLOW_PLANS.has(plan.workflow_plan_id);
 
     return {
       subject_kind: 'workflow_plan',
       subject_id: plan.workflow_plan_id,
-      status: closesLiveIntent ? 'closed' : 'queued_pre_reseed',
-      queue: closesLiveIntent
+      status: closesLiveIntent || descriptorOnlyPreReseed
+        ? 'closed'
+        : 'queued_pre_reseed',
+      queue: closesLiveIntent || descriptorOnlyPreReseed
         ? 'first_generic_promotion'
         : 'relation_claim_reaction_generic_enrollment',
-      reason: closesLiveIntent
-        ? 'This workflow plan is exercised by a trusted generic prepare path.'
-        : 'Workflow plan remains definition/alignment coverage until its owning runtime intent is explicitly enrolled.',
-      next_step: closesLiveIntent
-        ? 'Keep parity tests green while promoting the next workflow.'
-        : 'Promote the owning mutation intent in a pre-reseed enrollment pass.',
+      reason: descriptorOnlyPreReseed
+        ? 'This workflow plan is canonical descriptor-only pre-reseed coverage; it is not a live Dispatch enrollment requirement before reseed.'
+        : closesLiveIntent
+          ? 'This workflow plan is exercised by a trusted generic prepare path.'
+          : 'Workflow plan remains definition/alignment coverage until its owning runtime intent is explicitly enrolled.',
+      next_step: descriptorOnlyPreReseed
+        ? 'Keep unresolved node-preference resolver/dependency labels visible as accepted transition notes until a node administration surface enrolls live writes.'
+        : closesLiveIntent
+          ? 'Keep parity tests green while promoting the next workflow.'
+          : 'Promote the owning mutation intent in a pre-reseed enrollment pass.',
     };
   });
 }
